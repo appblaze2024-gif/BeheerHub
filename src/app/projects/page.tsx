@@ -27,8 +27,10 @@ import {
   addDocumentNonBlocking,
   updateDocumentNonBlocking,
   deleteDocumentNonBlocking,
+  useFirebaseApp,
 } from '@/firebase';
 import { collection, doc, deleteDoc } from 'firebase/firestore';
+import { getStorage, ref, deleteObject } from 'firebase/storage';
 import { AfspraakDialog } from '@/components/afspraak-dialog';
 import { OrganisatieContactDialog } from '@/components/organisatie-contact-dialog';
 import { ProjectBestandenDialog } from '@/components/project-bestanden-dialog';
@@ -370,6 +372,7 @@ function OrganisatieTab({ projectId }: { projectId: string | undefined }) {
 
 function BestandenTab({ projectId }: { projectId: string | undefined }) {
   const firestore = useFirestore();
+  const app = useFirebaseApp();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
 
   const bestandenCollection = useMemoFirebase(() => {
@@ -387,6 +390,21 @@ function BestandenTab({ projectId }: { projectId: string | undefined }) {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
   }
+
+  const handleDeleteBestand = async (e: React.MouseEvent, bestand: Bestand) => {
+    e.preventDefault();
+    if (!firestore || !app || !projectId) return;
+
+    const bestandDocRef = doc(firestore, 'projects', projectId, 'bestanden', bestand.id);
+    const storageRef = ref(getStorage(app), bestand.storagePath);
+    
+    try {
+      await deleteObject(storageRef);
+      await deleteDoc(bestandDocRef);
+    } catch (error) {
+      console.error("Fout bij het verwijderen van het bestand:", error);
+    }
+  };
 
   if (!projectId) {
     return (
@@ -427,7 +445,7 @@ function BestandenTab({ projectId }: { projectId: string | undefined }) {
                 <div>{formatBytes(bestand.size)}</div>
                 <div>{new Date(bestand.uploadedAt).toLocaleDateString('nl-NL')}</div>
                 <div className='flex items-center gap-2 justify-end'>
-                   <Button variant='ghost' size='icon' onClick={(e) => { e.preventDefault(); /* TODO: Implement delete */}}>
+                   <Button variant='ghost' size='icon' onClick={(e) => handleDeleteBestand(e, bestand)}>
                     <Trash2 className='h-4 w-4 text-destructive' />
                   </Button>
                 </div>
@@ -485,11 +503,11 @@ export default function ProjectsPage() {
   };
 
   const handleNew = () => {
-    setSelectedProjectId(undefined);
     setCurrentProject({
       ...EMPTY_PROJECT,
       projectnummer: generateProjectNumber(),
     });
+    setSelectedProjectId(undefined);
   };
   
   const handleProjectSelect = (projectId: string) => {
