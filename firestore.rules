@@ -1,122 +1,129 @@
-rules_version = '2';
-
 /**
- * This ruleset enforces a hybrid security model for a small business ERP application.
+ * Core Philosophy: This ruleset enforces a strict user-ownership model. All application data,
+ * including revenues, expenses, and appointments, is exclusively owned by and accessible only
+ * to the user who created it. Data is isolated within a user-specific path, ensuring privacy
+ * and preventing any user from accessing another user's information.
  *
- * Core Philosophy:
- * - User data (revenues, expenses, appointments) is strictly private and isolated.
- * - Application-wide data (vehicles) is accessible to all authenticated users.
- *
- * Data Structure:
- * - User-specific data is nested under `/users/{userId}`.
- * - Shared data, like vehicles, is in a root-level collection `/voertuigen`.
+ * Data Structure: All data is nested hierarchically under the `/users/{userId}` path. For example,
+ * a user's revenue data is stored at `/users/{userId}/revenues/{revenueId}`. This structure
+ * makes authorization simple and performant, as ownership is determined directly from the document path.
  *
  * Key Security Decisions:
- * - Strict Data Isolation for Users: A user can NEVER access data belonging to another user.
- * - Shared Data Access: All authenticated users can read and write to the shared `voertuigen` collection and its subcollections.
- * - No User Listing: It is not possible to list all documents in the top-level `/users` collection.
- * - Ownership-Based Access: For user data, all operations are granted based on the user's ID in the path.
- *
- * Denormalization for Authorization:
- * By nesting user data, the `userId` required for authorization is always in the path,
- * avoiding slow and costly `get()` calls in security rules.
+ * - User Enumeration is Disallowed: Listing the top-level `/users` collection is forbidden to
+ *   prevent malicious actors from discovering all user IDs in the system.
+ * - Strict Ownership: All subcollections (`revenues`, `expenses`, `appointments`) can only be
+ *   read or written by the authenticated user whose UID matches the `{userId}` in the path.
+ * - No Public Data: There are no globally readable collections. All access requires authentication.
+ * - Authorization over Validation: In this prototyping phase, rules focus strictly on WHO can
+ *   access WHAT (authorization) and not the specific shape of the data being written (validation).
+ *   This allows for rapid development and schema iteration on the client-side.
  */
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions for clear, reusable logic.
+    // Helper functions to promote readable, secure, and maintainable rules.
+    
+    /**
+     * isSignedIn
+     * @description Checks if a user is authenticated.
+     * @returns {boolean} True if the user has a valid auth object.
+     */
     function isSignedIn() {
       return request.auth != null;
     }
-
+    
+    /**
+     * isOwner
+     * @description Checks if the requesting user is the owner of the document, based on the userId in the path.
+     * @param {string} userId The user ID from the document path.
+     * @returns {boolean} True if the authenticated user's UID matches the provided userId.
+     */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
-
+    
+    /**
+     * isExistingOwner
+     * @description A stricter version of isOwner used for updates and deletes.
+     * It ensures the document already exists before allowing the operation.
+     * @param {string} userId The user ID from the document path.
+     * @returns {boolean} True if the user is the owner and the document exists.
+     */
     function isExistingOwner(userId) {
       return isOwner(userId) && resource != null;
     }
-
+    
     /**
-     * Secures a user's root document, the container for their private data.
+     * @description Manages the root user document. A user can create their own document
+     *   but cannot modify or delete it once created. Listing all users is forbidden.
+     * @path /users/{userId}
+     * @allow (get) An authenticated user `user_abc` can read their own document at `/users/user_abc`.
+     * @allow (create) An authenticated user `user_abc` can create their own document at `/users/user_abc`.
+     * @deny (list) An authenticated user `user_abc` CANNOT list all documents under `/users`.
+     * @deny (update) An authenticated user `user_abc` CANNOT update their document at `/users/user_abc`.
+     * @principle Prevents user enumeration and establishes a secure root for user-owned data.
      */
     match /users/{userId} {
-      allow get, list, create, update, delete: if isOwner(userId);
-
-      /**
-       * Secures revenue documents, ensuring they are private to the user.
-       */
-      match /revenues/{revenueId} {
-        allow get, list, create, update, delete: if isOwner(userId);
-      }
-
-      /**
-       * Secures expense documents, ensuring they are private to the user.
-       */
-      match /expenses/{expenseId} {
-        allow get, list, create, update, delete: if isOwner(userId);
-      }
-
-      /**
-       * Secures appointment documents, ensuring they are private to the user.
-       */
-      match /appointments/{appointmentId} {
-        allow get, list, create, update, delete: if isOwner(userId);
-      }
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId);
+      allow update: if false;
+      allow delete: if false;
     }
-
+    
     /**
-     * @description
-     *   Secures the central `voertuigen` collection.
-     * @path
-     *   /voertuigen/{voertuigId}
-     * @allow
-     *   Any authenticated user can read, create, update, and delete any vehicle document.
-     *   This allows for central management of the vehicle fleet by all app users.
-     * @deny
-     *   Unauthenticated users have no access.
-     * @principle
-     *   Shared-data model for application-wide resources.
+     * @description Secures a user's private revenue entries. Only the authenticated owner
+     *   of the data can perform any read or write operations.
+     * @path /users/{userId}/revenues/{revenueId}
+     * @allow (create) An authenticated user `user_abc` can create a revenue document in their own collection at `/users/user_abc/revenues/rev_123`.
+     * @allow (list) An authenticated user `user_abc` can list all documents under `/users/user_abc/revenues`.
+     * @deny (get) Another user `user_xyz` CANNOT read a document at `/users/user_abc/revenues/rev_123`.
+     * @deny (delete) Another user `user_xyz` CANNOT delete a document at `/users/user_abc/revenues/rev_123`.
+     * @principle Restricts access to a user's own private data tree through path-based ownership.
      */
-    match /voertuigen/{voertuigId} {
-      allow get, list, create, update, delete: if isSignedIn();
-
-      /**
-       * @description
-       *   Secures the nested `actions` subcollection for a vehicle.
-       * @path
-       *   /voertuigen/{voertuigId}/actions/{actionId}
-       * @allow
-       *   Any authenticated user can manage actions for any vehicle, consistent
-       *   with the permissions on the parent vehicle document.
-       */
-      match /actions/{actionId} {
-        allow get, list, create, update, delete: if isSignedIn();
-      }
-      
-      /**
-       * @description
-       *   Secures the nested `maintenance` subcollection for a vehicle.
-       * @path
-       *   /voertuigen/{voertuigId}/maintenance/{maintenanceId}
-       * @allow
-       *   Any authenticated user can manage maintenance records for any vehicle.
-       */
-      match /maintenance/{maintenanceId} {
-         allow get, list, create, update, delete: if isSignedIn();
-      }
-
-      /**
-       * @description
-       *   Secures the nested `damages` subcollection for a vehicle.
-       * @path
-       *   /voertuigen/{voertuigId}/damages/{damageId}
-       * @allow
-       *   Any authenticated user can manage damage reports for any vehicle.
-       */
-      match /damages/{damageId} {
-         allow get, list, create, update, delete: if isSignedIn();
-      }
+    match /users/{userId}/revenues/{revenueId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+    
+    /**
+     * @description Secures a user's private expense entries. Only the authenticated owner
+     *   of the data can perform any read or write operations.
+     * @path /users/{userId}/expenses/{expenseId}
+     * @allow (create) An authenticated user `user_abc` can create an expense document in their own collection at `/users/user_abc/expenses/exp_123`.
+     * @allow (list) An authenticated user `user_abc` can list all documents under `/users/user_abc/expenses`.
+     * @deny (get) Another user `user_xyz` CANNOT read a document at `/users/user_abc/expenses/exp_123`.
+     * @deny (delete) Another user `user_xyz` CANNOT delete a document at `/users/user_abc/expenses/exp_123`.
+     * @principle Restricts access to a user's own private data tree through path-based ownership.
+     */
+    match /users/{userId}/expenses/{expenseId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+    
+    /**
+     * @description Secures a user's private appointment entries. Only the authenticated owner
+     *   of the data can perform any read or write operations.
+     * @path /users/{userId}/appointments/{appointmentId}
+     * @allow (create) An authenticated user `user_abc` can create an appointment document in their own collection at `/users/user_abc/appointments/appt_123`.
+     * @allow (list) An authenticated user `user_abc` can list all documents under `/users/user_abc/appointments`.
+     * @deny (get) Another user `user_xyz` CANNOT read a document at `/users/user_abc/appointments/appt_123`.
+     * @deny (delete) Another user `user_xyz` CANNOT delete a document at `/users/user_abc/appointments/appt_123`.
+     * @principle Restricts access to a user's own private data tree through path-based ownership.
+     */
+    match /users/{userId}/appointments/{appointmentId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
     }
   }
 }

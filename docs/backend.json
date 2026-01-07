@@ -4,7 +4,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Revenue",
       "type": "object",
-      "description": "Represents a single revenue stream for the business.",
+      "description": "Represents a single revenue stream.",
       "properties": {
         "id": {
           "type": "string",
@@ -34,7 +34,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Expense",
       "type": "object",
-      "description": "Represents a single expense incurred by the business.",
+      "description": "Represents a single expense.",
       "properties": {
         "id": {
           "type": "string",
@@ -52,17 +52,12 @@
         "description": {
           "type": "string",
           "description": "Description of the expense."
-        },
-        "category": {
-          "type": "string",
-          "description": "Category of the expense (e.g., supplies, rent, utilities)."
         }
       },
       "required": [
         "id",
         "date",
-        "amount",
-        "category"
+        "amount"
       ]
     },
     "Appointment": {
@@ -77,175 +72,23 @@
         },
         "startTime": {
           "type": "string",
-          "description": "The starting date and time of the appointment.",
+          "description": "Start time of the appointment.",
           "format": "date-time"
         },
         "endTime": {
           "type": "string",
-          "description": "The ending date and time of the appointment.",
+          "description": "End time of the appointment.",
           "format": "date-time"
         },
         "description": {
           "type": "string",
           "description": "Description of the appointment."
-        },
-        "attendees": {
-          "type": "string",
-          "description": "Attendees of the appointment. Can be a list of names or references to a User/Contact entity."
         }
       },
       "required": [
         "id",
         "startTime",
-        "endTime",
-        "description"
-      ]
-    },
-    "Vehicle": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Vehicle",
-      "type": "object",
-      "description": "Represents a single vehicle in the fleet.",
-      "properties": {
-        "kenteken": {
-          "type": "string",
-          "description": "The license plate of the vehicle, used as the unique identifier."
-        },
-        "merk": {
-          "type": "string",
-          "description": "The make of the vehicle (e.g., VOLKSWAGEN)."
-        },
-        "model": {
-          "type": "string",
-          "description": "The model of the vehicle (e.g., CADDY)."
-        },
-        "voertuignummer": {
-          "type": "string",
-          "description": "Internal vehicle number."
-        },
-        "bouwjaar": {
-          "type": "string",
-          "description": "The year the vehicle was manufactured."
-        },
-        "brandstof": {
-          "type": "string",
-          "description": "The type of fuel the vehicle uses."
-        },
-        "apk_vervaldatum": {
-          "type": "string",
-          "description": "The expiration date of the APK.",
-          "format": "date"
-        },
-        "status": {
-          "type": "string",
-          "description": "Current status of the vehicle (e.g., Actief)."
-        }
-      },
-      "required": [
-        "kenteken",
-        "merk",
-        "model"
-      ]
-    },
-    "Action": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Action",
-      "type": "object",
-      "description": "Represents a specific action or task related to a vehicle.",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "The name or description of the action."
-        },
-        "type": {
-          "type": "string",
-          "description": "The type or category of the action."
-        },
-        "date": {
-          "type": "string",
-          "description": "The date the action was performed or is due.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "name",
-        "type",
-        "date"
-      ]
-    },
-    "Maintenance": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Maintenance",
-      "type": "object",
-      "description": "Represents a single maintenance task for a vehicle.",
-      "properties": {
-        "description": {
-          "type": "string",
-          "description": "A description of the maintenance performed."
-        },
-        "type": {
-          "type": "string",
-          "description": "The type of maintenance (e.g., Routine, Repair)."
-        },
-        "date": {
-          "type": "string",
-          "description": "The date the maintenance was performed.",
-          "format": "date-time"
-        },
-        "cost": {
-          "type": "number",
-          "description": "The cost of the maintenance."
-        },
-        "details": {
-          "type": "string",
-          "description": "Additional details about the maintenance."
-        }
-      },
-      "required": [
-        "description",
-        "type",
-        "date",
-        "cost"
-      ]
-    },
-     "Damage": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Damage",
-      "type": "object",
-      "description": "Represents a single damage report for a vehicle.",
-      "properties": {
-        "date": {
-          "type": "string",
-          "description": "The date the damage was reported.",
-          "format": "date-time"
-        },
-        "description": {
-          "type": "string",
-          "description": "A description of the damage."
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the damage report (e.g., Open, In Repair, Closed).",
-          "default": "Open"
-        },
-        "files": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "name": { "type": "string" },
-              "url": { "type": "string", "format": "uri" },
-              "size": { "type": "number" },
-              "type": { "type": "string" }
-            },
-            "required": ["name", "url"]
-          },
-          "description": "A list of files (e.g., photos) associated with the damage report."
-        }
-      },
-      "required": [
-        "date",
-        "description"
+        "endTime"
       ]
     }
   },
@@ -258,37 +101,21 @@
   "firestore": {
     "structure": [
       {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "user",
-          "schema": {
-            "$ref": "#/backend/entities/user"
-          },
-          "description": "Collection to store user profiles. (Although the user entity wasn't explicitly defined, this path is necessary for user-specific data.)",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            }
-          ]
-        }
-      },
-      {
         "path": "/users/{userId}/revenues/{revenueId}",
         "definition": {
           "entityName": "Revenue",
           "schema": {
             "$ref": "#/backend/entities/Revenue"
           },
-          "description": "Collection to store revenue entries for a specific user.",
+          "description": "Stores revenue data for a specific user. Path-based ownership ensures only the user can access their revenue data.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier of the user."
+              "description": "The ID of the user who owns the revenue data."
             },
             {
               "name": "revenueId",
-              "description": "The unique identifier of the revenue entry."
+              "description": "The ID of the revenue entry."
             }
           ]
         }
@@ -300,15 +127,15 @@
           "schema": {
             "$ref": "#/backend/entities/Expense"
           },
-          "description": "Collection to store expense entries for a specific user.",
+          "description": "Stores expense data for a specific user. Path-based ownership ensures only the user can access their expense data.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier of the user."
+              "description": "The ID of the user who owns the expense data."
             },
             {
               "name": "expenseId",
-              "description": "The unique identifier of the expense entry."
+              "description": "The ID of the expense entry."
             }
           ]
         }
@@ -320,96 +147,20 @@
           "schema": {
             "$ref": "#/backend/entities/Appointment"
           },
-          "description": "Collection to store appointment entries for a specific user.",
+          "description": "Stores appointment data for a specific user. Path-based ownership ensures only the user can access their appointment data.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier of the user."
+              "description": "The ID of the user who owns the appointment data."
             },
             {
               "name": "appointmentId",
-              "description": "The unique identifier of the appointment entry."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/voertuigen/{voertuigId}",
-        "definition": {
-          "entityName": "Vehicle",
-          "schema": {
-            "$ref": "#/backend/entities/Vehicle"
-          },
-          "description": "Root collection to store all vehicles, independent of users. The document ID is the vehicle's license plate.",
-          "params": [
-            {
-              "name": "voertuigId",
-              "description": "The unique identifier of the vehicle (license plate)."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/voertuigen/{voertuigId}/actions/{actionId}",
-        "definition": {
-          "entityName": "Action",
-          "schema": {
-            "$ref": "#/backend/entities/Action"
-          },
-          "description": "Subcollection to store actions related to a specific vehicle.",
-          "params": [
-            {
-              "name": "voertuigId",
-              "description": "The unique identifier of the vehicle."
-            },
-            {
-              "name": "actionId",
-              "description": "The unique identifier of the action."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/voertuigen/{voertuigId}/maintenance/{maintenanceId}",
-        "definition": {
-          "entityName": "Maintenance",
-          "schema": {
-            "$ref": "#/backend/entities/Maintenance"
-          },
-          "description": "Subcollection to store maintenance records related to a specific vehicle.",
-          "params": [
-            {
-              "name": "voertuigId",
-              "description": "The unique identifier of the vehicle."
-            },
-            {
-              "name": "maintenanceId",
-              "description": "The unique identifier of the maintenance record."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/voertuigen/{voertuigId}/damages/{damageId}",
-        "definition": {
-          "entityName": "Damage",
-          "schema": {
-            "$ref": "#/backend/entities/Damage"
-          },
-          "description": "Subcollection to store damage reports for a specific vehicle.",
-          "params": [
-            {
-              "name": "voertuigId",
-              "description": "The unique identifier of the vehicle."
-            },
-            {
-              "name": "damageId",
-              "description": "The unique identifier of the damage report."
+              "description": "The ID of the appointment entry."
             }
           ]
         }
       }
     ],
-    "reasoning": "The Firestore data structure is designed to support a basic ERP system. User-specific data (revenue, expenses, appointments) is segregated under `/users/{userId}` for privacy and security. A root-level `voertuigen` collection is added to store fleet information centrally, with nested `actions`, `maintenance`, and `damages` collections for vehicle-specific tasks and reports. This hybrid structure supports both private, user-owned data and shared, application-wide data, with security rules adapted accordingly."
+    "reasoning": "The Firestore structure is designed to provide a secure and scalable foundation for the BizBoard application, focusing on clear ownership and authorization. Each user's data (revenues, expenses, and appointments) is stored under their respective user ID, ensuring data isolation and simplified security rules. This design avoids complex queries and `get()` calls in security rules, which aligns with the principles of Authorization Independence and facilitates easier debugging. The use of path-based ownership `/users/{userId}/revenues/{revenueId}` makes it straightforward to implement security rules that grant access only to the owner of the data.\n\n*   **Authorization Independence:** Achieved by structuring data under user-specific paths, eliminating the need for `get()` calls to parent documents for authorization. All data needed for authorization is implicitly available in the path.\n*   **QAPs:** Secure list operations are supported by the path-based ownership model. Listing revenues, expenses, or appointments is always scoped to a specific user, preventing unauthorized access to other users' data.\n\nBy adhering to these principles, the data structure promotes a maintainable and secure application."
   }
 }
