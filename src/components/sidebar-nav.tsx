@@ -51,46 +51,46 @@ export function SidebarNav() {
   const pathname = usePathname();
 
   return (
-    <>
-      <SidebarContent className="flex flex-col">
-        <SidebarMenu>
-          {menuItems.map((item) => (
-            <SidebarMenuItem key={item.label}>
-              <Link href={item.href}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === item.href}
-                  tooltip={item.label}
-                >
-                  <span>
-                    <item.icon />
-                    <span className="sr-only">{item.label}</span>
-                  </span>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
+    <SidebarContent className="flex flex-col">
+      <SidebarMenu>
+        {menuItems.map((item) => (
+          <SidebarMenuItem key={item.label}>
+            <Link href={item.href}>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === item.href}
+                tooltip={item.label}
+              >
+                <span>
+                  <item.icon />
+                  <span>{item.label}</span>
+                </span>
+              </SidebarMenuButton>
+            </Link>
+          </SidebarMenuItem>
+        ))}
+      </SidebarMenu>
 
-        <SidebarMenu className="mt-auto">
-          {bottomMenuItems.map((item) => (
-            <SidebarMenuItem key={item.label}>
-              <Link href={item.href}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === item.href}
-                  tooltip={item.label}
-                >
-                  <span>
-                    <item.icon />
-                    <span className="sr-only">{item.label}</span>
-                  </span>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
-      </SidebarContent>
-    </>
+      <SidebarMenu className="mt-auto">
+        {bottomMenuItems.map((item) => (
+          <SidebarMenuItem key={item.label}>
+            <Link href={item.href}>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === item.href}
+                tooltip={item.label}
+              >
+                <span>
+                  <item.icon />
+                  <span>{item.label}</span>
+                </span>
+              </SidebarMenuButton>
+            </Link>
+          </SidebarMenuItem>
+        ))}
+      </SidebarMenu>
+    </SidebarContent>
   );
 }
+
+    
