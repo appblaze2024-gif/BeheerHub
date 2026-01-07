@@ -3,17 +3,16 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     
-    // Allow reads from anyone for simplicity. In a real app, you'd likely restrict this.
+    // Sta leesbewerkingen toe voor alle bestanden. Dit is nodig zodat de app 
+    // de geüploade bestanden kan weergeven. In een productie-app zou je dit 
+    // wellicht verder willen beveiligen.
     match /{allPaths=**} {
       allow read;
     }
 
-    // Secure the damages folder
+    // Beveilig de 'damages' map specifiek.
+    // Alleen een ingelogde gebruiker (request.auth != null) mag bestanden schrijven (uploaden).
     match /damages/{vehicleId}/{damageId}/{fileName} {
-      // Only authenticated users can upload files.
-      // The user must be uploading to a path that matches the vehicle and damage ID.
-      // This is a basic check; a more robust rule would verify that the damageId actually
-      // exists in Firestore before allowing the upload.
       allow write: if request.auth != null;
     }
   }
