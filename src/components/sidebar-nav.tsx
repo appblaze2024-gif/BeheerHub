@@ -41,7 +41,7 @@ export function SidebarNav() {
 
   return (
     <>
-      <SidebarContent className="pt-4">
+      <SidebarContent>
         <SidebarMenu>
           {menuItems.map((item) => (
             <SidebarMenuItem key={item.label}>
