@@ -81,8 +81,8 @@ export default function VehiclesPage() {
         </Button>
       </PageHeader>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 mt-6 flex-1 min-h-0">
-        <Card className="flex flex-col h-full min-h-0">
+      <div className="flex-1 flex gap-6 mt-6 min-h-0">
+        <Card className="w-[300px] flex flex-col h-full min-h-0">
           <CardContent className="p-2 flex-1 min-h-0 overflow-y-auto">
             <div className="flex flex-col space-y-1 pr-2">
               {isLoading ? (
@@ -128,7 +128,7 @@ export default function VehiclesPage() {
           </CardContent>
         </Card>
 
-        <div className="flex flex-col gap-6 min-h-0">
+        <div className="flex-1 flex flex-col gap-6 min-h-0">
           {selectedVehicle ? (
             <>
               <Card>
@@ -237,7 +237,7 @@ export default function VehiclesPage() {
                 </TabsList>
                 <TabsContent
                   value="actions"
-                  className="flex-1 flex flex-col min-h-0 mt-2"
+                  className="flex-1 flex flex-col min-h-0"
                 >
                   <Card className="h-full flex flex-col">
                     <CardHeader>
@@ -271,7 +271,7 @@ export default function VehiclesPage() {
                     </CardContent>
                   </Card>
                 </TabsContent>
-                <TabsContent value="maintenance" className="flex-1 flex flex-col min-h-0 mt-2">
+                <TabsContent value="maintenance" className="flex-1 flex flex-col min-h-0">
                   <Card className="h-full flex flex-col">
                     <CardHeader>
                       <div className="flex justify-between items-center">
@@ -297,7 +297,7 @@ export default function VehiclesPage() {
                     </CardContent>
                   </Card>
                 </TabsContent>
-                <TabsContent value="damage" className="flex-1 flex flex-col min-h-0 mt-2">
+                <TabsContent value="damage" className="flex-1 flex flex-col min-h-0">
                   <Card className="h-full flex flex-col">
                     <CardHeader>
                       <CardTitle>Schade</CardTitle>
@@ -309,7 +309,7 @@ export default function VehiclesPage() {
                     </CardContent>
                   </Card>
                 </TabsContent>
-                <TabsContent value="documents" className="flex-1 flex flex-col min-h-0 mt-2">
+                <TabsContent value="documents" className="flex-1 flex flex-col min-h-0">
                   <Card className="h-full flex flex-col">
                     <CardHeader>
                       <CardTitle>Documenten</CardTitle>
