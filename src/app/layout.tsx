@@ -48,7 +48,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <body className={cn('font-body antialiased flex h-svh overflow-hidden')}>
+    <div className={cn('font-body antialiased flex h-svh overflow-hidden')}>
       <Sheet>
         <Sidebar>
           <SidebarHeader>
@@ -96,7 +96,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
           </Sidebar>
         </SheetContent>
       </Sheet>
-    </body>
+    </div>
   );
 }
 
