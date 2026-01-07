@@ -51,6 +51,9 @@ const vehicles = [
   { id: 'K-123-ABC', make: 'FORD', model: 'TRANSIT' },
   { id: 'L-456-DEF', make: 'RENAULT', model: 'TRAFIC' },
   { id: 'M-789-GHI', make: 'PEUGEOT', model: 'BOXER' },
+  { id: 'N-012-JKL', make: 'FIAT', model: 'DUCATO' },
+  { id: 'P-345-MNO', make: 'CITROEN', model: 'JUMPER' },
+  { id: 'R-678-PQR', make: 'OPEL', model: 'MOVANO' },
 ];
 
 export default function VehiclesPage() {
@@ -58,7 +61,7 @@ export default function VehiclesPage() {
   const mainImage = PlaceHolderImages.find((p) => p.id === 'vehicle-side');
 
   return (
-    <div className="flex flex-col flex-1 p-6 min-h-0 bg-background">
+    <div className="flex flex-col flex-1 p-6 min-h-0">
       <PageHeader title="Voertuigen">
         <div className="relative w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -82,7 +85,7 @@ export default function VehiclesPage() {
                     key={vehicle.id}
                     onClick={() => setSelectedVehicle(vehicle)}
                     className={`flex items-center justify-between p-3 rounded-md text-left cursor-pointer ${
-                      selectedVehicle.id === vehicle.id
+                      selectedVehicle?.id === vehicle.id
                         ? 'bg-blue-100 dark:bg-blue-900'
                         : 'hover:bg-gray-100 dark:hover:bg-gray-800'
                     }`}
@@ -90,7 +93,7 @@ export default function VehiclesPage() {
                     <div>
                       <p
                         className={`font-semibold ${
-                          selectedVehicle.id === vehicle.id
+                          selectedVehicle?.id === vehicle.id
                             ? 'text-blue-600 dark:text-blue-300'
                             : ''
                         }`}
@@ -115,9 +118,9 @@ export default function VehiclesPage() {
           <Card>
             <CardHeader className="flex flex-row items-start justify-between">
               <div>
-                <h2 className="text-2xl font-bold">{selectedVehicle.id}</h2>
+                <h2 className="text-2xl font-bold">{selectedVehicle?.id}</h2>
                 <p className="text-muted-foreground">
-                  {selectedVehicle.make} {selectedVehicle.model}
+                  {selectedVehicle?.make} {selectedVehicle?.model}
                 </p>
               </div>
               <Badge
@@ -147,23 +150,27 @@ export default function VehiclesPage() {
                   <div className="grid grid-cols-2 gap-x-8 gap-y-4">
                     <div className="flex justify-between border-b pb-2">
                       <span className="text-muted-foreground">Kenteken</span>
-                      <span className="font-medium">{selectedVehicle.id}</span>
+                      <span className="font-medium">{selectedVehicle?.id}</span>
                     </div>
                     <div className="flex justify-between border-b pb-2">
                       <span className="text-muted-foreground">
                         Voertuignummer
                       </span>
                       <span className="font-medium">
-                        {selectedVehicle.vehicleNumber}
+                        {selectedVehicle?.vehicleNumber ?? '-'}
                       </span>
                     </div>
                     <div className="flex justify-between border-b pb-2">
                       <span className="text-muted-foreground">Merk</span>
-                      <span className="font-medium">{selectedVehicle.make}</span>
+                      <span className="font-medium">
+                        {selectedVehicle?.make}
+                      </span>
                     </div>
                     <div className="flex justify-between border-b pb-2">
                       <span className="text-muted-foreground">Model</span>
-                      <span className="font-medium">{selectedVehicle.model}</span>
+                      <span className="font-medium">
+                        {selectedVehicle?.model}
+                      </span>
                     </div>
                     <div className="flex justify-between border-b pb-2">
                       <span className="text-muted-foreground">Type</span>
@@ -171,18 +178,22 @@ export default function VehiclesPage() {
                     </div>
                     <div className="flex justify-between border-b pb-2">
                       <span className="text-muted-foreground">Bouwjaar</span>
-                      <span className="font-medium">{selectedVehicle.year}</span>
+                      <span className="font-medium">
+                        {selectedVehicle?.year ?? '-'}
+                      </span>
                     </div>
                     <div className="flex justify-between border-b pb-2">
                       <span className="text-muted-foreground">Brandstof</span>
-                      <span className="font-medium">{selectedVehicle.fuel}</span>
+                      <span className="font-medium">
+                        {selectedVehicle?.fuel ?? '-'}
+                      </span>
                     </div>
                     <div className="flex justify-between border-b pb-2">
                       <span className="text-muted-foreground">
                         APK vervaldatum
                       </span>
                       <span className="font-medium">
-                        {selectedVehicle.apkDate}
+                        {selectedVehicle?.apkDate ?? '-'}
                       </span>
                     </div>
                   </div>
@@ -190,14 +201,20 @@ export default function VehiclesPage() {
               </div>
             </CardContent>
           </Card>
-          <Tabs defaultValue="actions" className="flex-1 flex flex-col min-h-0">
+          <Tabs
+            defaultValue="actions"
+            className="flex-1 flex flex-col min-h-0"
+          >
             <TabsList>
               <TabsTrigger value="actions">Acties</TabsTrigger>
               <TabsTrigger value="maintenance">Onderhoud</TabsTrigger>
               <TabsTrigger value="damage">Schade</TabsTrigger>
               <TabsTrigger value="documents">Documenten</TabsTrigger>
             </TabsList>
-            <TabsContent value="actions" className="flex-1 mt-4 min-h-0">
+            <TabsContent
+              value="actions"
+              className="flex-1 mt-4 min-h-0 flex flex-col"
+            >
               <Card className="h-full flex flex-col">
                 <CardHeader>
                   <div className="flex justify-between items-center">
@@ -229,7 +246,10 @@ export default function VehiclesPage() {
                 </CardContent>
               </Card>
             </TabsContent>
-            <TabsContent value="maintenance" className="flex-1 mt-4 min-h-0">
+            <TabsContent
+              value="maintenance"
+              className="flex-1 mt-4 min-h-0"
+            >
               <Card className="h-full">
                 <CardHeader>
                   <CardTitle>Onderhoud</CardTitle>
@@ -253,7 +273,10 @@ export default function VehiclesPage() {
                 </CardContent>
               </Card>
             </TabsContent>
-            <TabsContent value="documents" className="flex-1 mt-4 min-h-0">
+            <TabsContent
+              value="documents"
+              className="flex-1 mt-4 min-h-0"
+            >
               <Card className="h-full">
                 <CardHeader>
                   <CardTitle>Documenten</CardTitle>
