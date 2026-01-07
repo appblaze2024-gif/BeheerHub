@@ -27,6 +27,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import Image from 'next/image';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const vehicles = [
   {
@@ -50,13 +51,25 @@ const vehicles = [
   { id: 'V-836-XT', make: 'IVECO', model: '35C14N' },
   { id: 'V-92-DZZ', make: 'MERCEDES', model: 'SPRINTER' },
   { id: 'VBT-53-H', make: 'IVECO', model: '35C14N' },
+  { id: '8-ZFL-67a', make: 'VOLKSWAGEN', model: 'UP' },
+  { id: '82-PRS-8a', make: 'VOLKSWAGEN', model: 'CADDY' },
+  { id: 'G-948-ZZa', make: 'VOLKSWAGEN', model: 'CADDY' },
+  { id: 'G-950-ZZa', make: 'VOLKSWAGEN', model: 'CADDY' },
+  { id: 'V-42-FRHa', make: 'MERCEDES', model: 'SPRINTER' },
+  { id: 'V-51-GKBa', make: 'VOLKSWAGEN', model: 'CADDY' },
+  { id: 'V-53-DZKa', make: 'MERCEDES', model: 'SPRINTER' },
+  { id: 'V-55-DZKa', make: 'MERCEDES', model: 'SPRINTER' },
+  { id: 'V-66-DZXa', make: 'MERCEDES', model: 'SPRINTER' },
+  { id: 'V-836-XTa', make: 'IVECO', model: '35C14N' },
+  { id: 'V-92-DZza', make: 'MERCEDES', model: 'SPRINTER' },
+  { id: 'VBT-53-Ha', make: 'IVECO', model: '35C14N' },
 ];
 
 export default function VehiclesPage() {
   const [selectedVehicle, setSelectedVehicle] = React.useState(vehicles[0]);
 
   return (
-    <div className="bg-gray-50 p-6 dark:bg-gray-900">
+    <div className="bg-gray-50 p-6 dark:bg-gray-900 flex flex-col flex-1 h-full">
       <PageHeader title="Voertuigen">
         <div className="relative w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -69,215 +82,219 @@ export default function VehiclesPage() {
           Bulkacties <ChevronDown className="ml-2 h-4 w-4" />
         </Button>
       </PageHeader>
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[300px_1fr]">
-        <Card className="lg:h-full">
-          <CardContent className="p-2">
-            <div className="flex flex-col space-y-1">
-              {vehicles.map((vehicle) => (
-                <div
-                  key={vehicle.id}
-                  onClick={() =>
-                    setSelectedVehicle(
-                      vehicles.find((v) => v.id === vehicle.id) || vehicles[0]
-                    )
-                  }
-                  className={`flex items-center justify-between p-3 rounded-md text-left cursor-pointer ${
-                    selectedVehicle.id === vehicle.id
-                      ? 'bg-blue-100 dark:bg-blue-900'
-                      : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                  }`}
-                >
-                  <div>
-                    <p
-                      className={`font-semibold ${
-                        selectedVehicle.id === vehicle.id
-                          ? 'text-blue-600 dark:text-blue-300'
-                          : ''
-                      }`}
-                    >
-                      {vehicle.id}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {vehicle.make} {vehicle.model}
-                    </p>
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-        <div className="flex flex-col gap-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold">{selectedVehicle.id}</h2>
-                  <p className="text-muted-foreground">
-                    {selectedVehicle.make} {selectedVehicle.model}
-                  </p>
-                </div>
-                <Badge variant="outline" className="text-green-600 border-green-600 bg-green-50 dark:bg-green-900/10">
-                  Actief
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-6">
-                <div className="w-full h-64 relative rounded-md overflow-hidden border">
-                  <Image
-                    src="https://picsum.photos/seed/truck-side/400/300"
-                    alt="Vehicle"
-                    layout="fill"
-                    objectFit="cover"
-                    data-ai-hint="pickup truck side"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                   <div className="w-full h-[124px] relative rounded-md overflow-hidden border">
-                     <Image
-                       src="https://picsum.photos/seed/truck-front/200/150"
-                       alt="Vehicle front"
-                       layout="fill"
-                       objectFit="cover"
-                       data-ai-hint="pickup truck front"
-                     />
-                   </div>
-                   <div className="w-full h-[124px] relative rounded-md overflow-hidden border">
-                     <Image
-                       src="https://picsum.photos/seed/truck-back/200/150"
-                       alt="Vehicle back"
-                       layout="fill"
-                       objectFit="cover"
-                       data-ai-hint="pickup truck back"
-                     />
-                   </div>
-                   <div className="w-full h-[124px] relative rounded-md overflow-hidden border">
-                     <Image
-                       src="https://picsum.photos/seed/truck-top/200/150"
-                       alt="Vehicle top"
-                       layout="fill"
-                       objectFit="cover"
-                       data-ai-hint="pickup truck top"
-                     />
-                   </div>
-                    <div className="w-full h-[124px] relative rounded-md overflow-hidden border">
-                     <Image
-                       src="https://picsum.photos/seed/truck-bed/200/150"
-                       alt="Vehicle bed"
-                       layout="fill"
-                       objectFit="cover"
-                       data-ai-hint="pickup truck bed"
-                     />
-                   </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Algemene gegevens</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                <div className="flex justify-between border-b pb-2">
-                  <span className="text-muted-foreground">Kenteken</span>
-                  <span className="font-medium">{selectedVehicle.id}</span>
-                </div>
-                <div className="flex justify-between border-b pb-2">
-                  <span className="text-muted-foreground">Voertuignummer</span>
-                  <span className="font-medium">
-                    {selectedVehicle.vehicleNumber}
-                  </span>
-                </div>
-                <div className="flex justify-between border-b pb-2">
-                  <span className="text-muted-foreground">Merk</span>
-                  <span className="font-medium">{selectedVehicle.make}</span>
-                </div>
-                <div className="flex justify-between border-b pb-2">
-                  <span className="text-muted-foreground">Model</span>
-                  <span className="font-medium">{selectedVehicle.model}</span>
-                </div>
-                <div className="flex justify-between border-b pb-2">
-                  <span className="text-muted-foreground">Type</span>
-                  <span className="font-medium">-</span>
-                </div>
-                <div className="flex justify-between border-b pb-2">
-                  <span className="text-muted-foreground">Bouwjaar</span>
-                  <span className="font-medium">{selectedVehicle.year}</span>
-                </div>
-                <div className="flex justify-between border-b pb-2">
-                  <span className="text-muted-foreground">Brandstof</span>
-                  <span className="font-medium">{selectedVehicle.fuel}</span>
-                </div>
-                <div className="flex justify-between border-b pb-2">
-                  <span className="text-muted-foreground">APK vervaldatum</span>
-                  <span className="font-medium">
-                    {selectedVehicle.apkDate}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Tabs defaultValue="actions">
-            <TabsList>
-              <TabsTrigger value="actions">Acties</TabsTrigger>
-              <TabsTrigger value="maintenance">Onderhoud</TabsTrigger>
-              <TabsTrigger value="damage">Schade</TabsTrigger>
-              <TabsTrigger value="documents">Documenten</TabsTrigger>
-            </TabsList>
-            <TabsContent value="actions">
-              <Card>
-                <CardHeader>
-                  <div className="flex justify-between items-center">
-                    <CardTitle>Acties</CardTitle>
-                    <Button>
-                      <Plus className="mr-2 h-4 w-4" /> Actie toevoegen
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[300px_1fr] flex-1 min-h-0">
+        <Card className="lg:h-full flex flex-col">
+          <CardContent className="p-2 flex-1 min-h-0">
+            <ScrollArea className="h-full">
+              <div className="flex flex-col space-y-1 pr-2">
+                {vehicles.map((vehicle) => (
+                  <div
+                    key={vehicle.id}
+                    onClick={() =>
+                      setSelectedVehicle(
+                        vehicles.find((v) => v.id === vehicle.id) || vehicles[0]
+                      )
+                    }
+                    className={`flex items-center justify-between p-3 rounded-md text-left cursor-pointer ${
+                      selectedVehicle.id === vehicle.id
+                        ? 'bg-blue-100 dark:bg-blue-900'
+                        : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                    }`}
+                  >
+                    <div>
+                      <p
+                        className={`font-semibold ${
+                          selectedVehicle.id === vehicle.id
+                            ? 'text-blue-600 dark:text-blue-300'
+                            : ''
+                        }`}
+                      >
+                        {vehicle.id}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {vehicle.make} {vehicle.model}
+                      </p>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Naam</TableHead>
-                        <TableHead>Type actie</TableHead>
-                        <TableHead>Datum</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell colSpan={3} className="text-center h-24">
-                          Nog geen acties geregistreerd.
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
-             <TabsContent value="maintenance">
-              <Card>
-                <CardHeader><CardTitle>Onderhoud</CardTitle></CardHeader>
-                <CardContent><p className="text-center text-muted-foreground">Geen onderhoudsgegevens beschikbaar.</p></CardContent>
-              </Card>
-            </TabsContent>
-             <TabsContent value="damage">
-              <Card>
-                <CardHeader><CardTitle>Schade</CardTitle></CardHeader>
-                <CardContent><p className="text-center text-muted-foreground">Geen schadegevallen geregistreerd.</p></CardContent>
-              </Card>
-            </TabsContent>
-             <TabsContent value="documents">
-              <Card>
-                <CardHeader><CardTitle>Documenten</CardTitle></CardHeader>
-                <CardContent><p className="text-center text-muted-foreground">Geen documenten beschikbaar.</p></CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
+                ))}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+        <ScrollArea className="h-full">
+          <div className="flex flex-col gap-6 pr-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold">{selectedVehicle.id}</h2>
+                    <p className="text-muted-foreground">
+                      {selectedVehicle.make} {selectedVehicle.model}
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="text-green-600 border-green-600 bg-green-50 dark:bg-green-900/10">
+                    Actief
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="w-full h-64 relative rounded-md overflow-hidden border">
+                    <Image
+                      src="https://picsum.photos/seed/truck-side/400/300"
+                      alt="Vehicle"
+                      fill
+                      objectFit="cover"
+                      data-ai-hint="pickup truck side"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                     <div className="w-full h-[124px] relative rounded-md overflow-hidden border">
+                       <Image
+                         src="https://picsum.photos/seed/truck-front/200/150"
+                         alt="Vehicle front"
+                         fill
+                         objectFit="cover"
+                         data-ai-hint="pickup truck front"
+                       />
+                     </div>
+                     <div className="w-full h-[124px] relative rounded-md overflow-hidden border">
+                       <Image
+                         src="https://picsum.photos/seed/truck-back/200/150"
+                         alt="Vehicle back"
+                         fill
+                         objectFit="cover"
+                         data-ai-hint="pickup truck back"
+                       />
+                     </div>
+                     <div className="w-full h-[124px] relative rounded-md overflow-hidden border">
+                       <Image
+                         src="https://picsum.photos/seed/truck-top/200/150"
+                         alt="Vehicle top"
+                         fill
+                         objectFit="cover"
+                         data-ai-hint="pickup truck top"
+                       />
+                     </div>
+                      <div className="w-full h-[124px] relative rounded-md overflow-hidden border">
+                       <Image
+                         src="https://picsum.photos/seed/truck-bed/200/150"
+                         alt="Vehicle bed"
+                         fill
+                         objectFit="cover"
+                         data-ai-hint="pickup truck bed"
+                       />
+                     </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Algemene gegevens</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                  <div className="flex justify-between border-b pb-2">
+                    <span className="text-muted-foreground">Kenteken</span>
+                    <span className="font-medium">{selectedVehicle.id}</span>
+                  </div>
+                  <div className="flex justify-between border-b pb-2">
+                    <span className="text-muted-foreground">Voertuignummer</span>
+                    <span className="font-medium">
+                      {selectedVehicle.vehicleNumber}
+                    </span>
+                  </div>
+                  <div className="flex justify-between border-b pb-2">
+                    <span className="text-muted-foreground">Merk</span>
+                    <span className="font-medium">{selectedVehicle.make}</span>
+                  </div>
+                  <div className="flex justify-between border-b pb-2">
+                    <span className="text-muted-foreground">Model</span>
+                    <span className="font-medium">{selectedVehicle.model}</span>
+                  </div>
+                  <div className="flex justify-between border-b pb-2">
+                    <span className="text-muted-foreground">Type</span>
+                    <span className="font-medium">-</span>
+                  </div>
+                  <div className="flex justify-between border-b pb-2">
+                    <span className="text-muted-foreground">Bouwjaar</span>
+                    <span className="font-medium">{selectedVehicle.year}</span>
+                  </div>
+                  <div className="flex justify-between border-b pb-2">
+                    <span className="text-muted-foreground">Brandstof</span>
+                    <span className="font-medium">{selectedVehicle.fuel}</span>
+                  </div>
+                  <div className="flex justify-between border-b pb-2">
+                    <span className="text-muted-foreground">APK vervaldatum</span>
+                    <span className="font-medium">
+                      {selectedVehicle.apkDate}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Tabs defaultValue="actions">
+              <TabsList>
+                <TabsTrigger value="actions">Acties</TabsTrigger>
+                <TabsTrigger value="maintenance">Onderhoud</TabsTrigger>
+                <TabsTrigger value="damage">Schade</TabsTrigger>
+                <TabsTrigger value="documents">Documenten</TabsTrigger>
+              </TabsList>
+              <TabsContent value="actions">
+                <Card>
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                      <CardTitle>Acties</CardTitle>
+                      <Button>
+                        <Plus className="mr-2 h-4 w-4" /> Actie toevoegen
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Naam</TableHead>
+                          <TableHead>Type actie</TableHead>
+                          <TableHead>Datum</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center h-24">
+                            Nog geen acties geregistreerd.
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+               <TabsContent value="maintenance">
+                <Card>
+                  <CardHeader><CardTitle>Onderhoud</CardTitle></CardHeader>
+                  <CardContent><p className="text-center text-muted-foreground">Geen onderhoudsgegevens beschikbaar.</p></CardContent>
+                </Card>
+              </TabsContent>
+               <TabsContent value="damage">
+                <Card>
+                  <CardHeader><CardTitle>Schade</CardTitle></CardHeader>
+                  <CardContent><p className="text-center text-muted-foreground">Geen schadegevallen geregistreerd.</p></CardContent>
+                </Card>
+              </TabsContent>
+               <TabsContent value="documents">
+                <Card>
+                  <CardHeader><CardTitle>Documenten</CardTitle></CardHeader>
+                  <CardContent><p className="text-center text-muted-foreground">Geen documenten beschikbaar.</p></CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </ScrollArea>
       </div>
     </div>
   );
