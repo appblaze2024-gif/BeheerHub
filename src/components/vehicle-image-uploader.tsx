@@ -100,7 +100,7 @@ export function VehicleImageUploader({
           src={imageUrl}
           alt={imageHint || 'Voertuig afbeelding'}
           fill
-          className={cn('object-cover transition-opacity', isUploadingState && 'opacity-30')}
+          className={cn('object-contain transition-opacity', isUploadingState && 'opacity-30')}
           data-ai-hint={imageHint}
         />
       )}
