@@ -2,8 +2,16 @@
 
 import * as React from 'react';
 import Image from 'next/image';
-import { MoreHorizontal, Plus, Search, Upload, Download } from 'lucide-react';
-import { collection } from 'firebase/firestore';
+import {
+  MoreHorizontal,
+  Plus,
+  Search,
+  Upload,
+  Download,
+  Trash2,
+  Pencil,
+} from 'lucide-react';
+import { collection, doc, deleteDoc } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,11 +25,129 @@ import { PageHeader } from '@/components/page-header';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import {
+  useCollection,
+  useFirestore,
+  useMemoFirebase,
+  useFirebaseApp,
+} from '@/firebase';
 import { VehicleImportDialog } from '@/components/vehicle-import-dialog';
 import { AddActionDialog } from '@/components/add-action-dialog';
 import { AddMaintenanceDialog } from '@/components/add-maintenance-dialog';
 import { AddDamageDialog } from '@/components/add-damage-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { toast } from '@/hooks/use-toast';
+import { getStorage, ref, deleteObject } from 'firebase/storage';
+
+function DeleteDamageDialog({
+  vehicleId,
+  damage,
+  onDeleted,
+}: {
+  vehicleId: string;
+  damage: any;
+  onDeleted: () => void;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const firestore = useFirestore();
+  const app = useFirebaseApp();
+
+  const handleDelete = async () => {
+    if (!firestore || !app) return;
+    setIsDeleting(true);
+
+    try {
+      // 1. Delete associated files from Storage
+      if (damage.files && damage.files.length > 0) {
+        const storage = getStorage(app);
+        for (const file of damage.files) {
+          if (file.storagePath) {
+            const fileRef = ref(storage, file.storagePath);
+            await deleteObject(fileRef).catch((error) => {
+              // Log error but don't block deletion of Firestore doc
+              console.error(
+                `Failed to delete file ${file.storagePath}:`,
+                error
+              );
+            });
+          }
+        }
+      }
+
+      // 2. Delete the Firestore document
+      const damageDocRef = doc(
+        firestore,
+        'voertuigen',
+        vehicleId,
+        'damages',
+        damage.id
+      );
+      await deleteDoc(damageDocRef);
+
+      toast({
+        title: 'Schade verwijderd',
+        description: 'De schademelding is succesvol verwijderd.',
+      });
+      onDeleted();
+      setOpen(false);
+    } catch (error) {
+      console.error('Error deleting damage:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Verwijderen mislukt',
+        description:
+          'Kon de schademelding niet verwijderen. Probeer het opnieuw.',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  return (
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+        <div
+          className="flex items-center w-full text-destructive"
+          onClick={() => setOpen(true)}
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          Verwijderen
+        </div>
+      </DropdownMenuItem>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Deze actie kan niet ongedaan worden gemaakt. Dit zal de
+            schademelding en alle bijbehorende bestanden permanent verwijderen.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isDeleting}>Annuleren</AlertDialogCancel>
+          <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
+            {isDeleting ? 'Bezig...' : 'Verwijderen'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
 
 export default function VehiclesPage() {
   const firestore = useFirestore();
@@ -81,6 +207,25 @@ export default function VehiclesPage() {
 
   const handleImportSuccess = () => {
     setIsImporting(false);
+  };
+  
+  const [editingDamage, setEditingDamage] = React.useState<any | null>(null);
+  const [isDamageDialogOpen, setIsDamageDialogOpen] = React.useState(false);
+
+
+  const handleEditDamage = (damage: any) => {
+    setEditingDamage(damage);
+    setIsDamageDialogOpen(true);
+  };
+
+  const handleAddNewDamage = () => {
+    setEditingDamage(null);
+    setIsDamageDialogOpen(true);
+  };
+  
+  const onDamageDialogClose = () => {
+    setEditingDamage(null);
+    setIsDamageDialogOpen(false);
   };
 
   return (
@@ -374,19 +519,18 @@ export default function VehiclesPage() {
                   <Card className="h-full flex flex-col">
                     <CardHeader className="flex-row items-center justify-between">
                       <CardTitle>Schade</CardTitle>
-                       <AddDamageDialog vehicleId={selectedVehicle.id}>
-                         <Button size="sm">
-                          <Plus className="mr-2 h-4 w-4" />
-                          Schade melden
-                        </Button>
-                      </AddDamageDialog>
+                      <Button size="sm" onClick={handleAddNewDamage}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Schade melden
+                      </Button>
                     </CardHeader>
                     <CardContent className="flex-1 flex flex-col gap-4 overflow-y-auto pt-2">
                        <div className="text-sm text-muted-foreground">
-                        <div className="flex justify-between px-4 py-2 font-medium">
-                          <span className="w-1/3">Omschrijving</span>
-                          <span className="w-1/3">Datum</span>
-                          <span className="w-1/3 text-right">Status</span>
+                        <div className="grid grid-cols-[2fr_1fr_1fr_auto] gap-4 px-4 py-2 font-medium">
+                          <span>Omschrijving</span>
+                          <span>Datum</span>
+                          <span >Status</span>
+                          <span className='w-8'></span>
                         </div>
                         <Separator />
                       </div>
@@ -397,10 +541,28 @@ export default function VehiclesPage() {
                       ) : damages && damages.length > 0 ? (
                          <div className="flex-1 overflow-y-auto">
                           {damages.map((item) => (
-                             <div key={item.id} className="flex justify-between items-center px-4 py-3 border-b">
-                               <span className="w-1/3">{item.description}</span>
-                               <span className="w-1/3">{new Date(item.date).toLocaleDateString('nl-NL')}</span>
-                               <span className="w-1/3 text-right">{item.status}</span>
+                             <div key={item.id} className="grid grid-cols-[2fr_1fr_1fr_auto] gap-4 items-center px-4 py-3 border-b">
+                               <span className="truncate">{item.description}</span>
+                               <span>{new Date(item.date).toLocaleDateString('nl-NL')}</span>
+                               <span>{item.status}</span>
+                               <DropdownMenu>
+                                 <DropdownMenuTrigger asChild>
+                                   <Button variant="ghost" size="icon" className='h-8 w-8'>
+                                    <MoreHorizontal className='h-4 w-4'/>
+                                   </Button>
+                                 </DropdownMenuTrigger>
+                                 <DropdownMenuContent align="end">
+                                   <DropdownMenuItem onClick={() => handleEditDamage(item)}>
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                     Bewerken
+                                   </DropdownMenuItem>
+                                   <DeleteDamageDialog 
+                                      vehicleId={selectedVehicle.id}
+                                      damage={item}
+                                      onDeleted={() => { /* Optionally refresh data */}}
+                                    />
+                                 </DropdownMenuContent>
+                               </DropdownMenu>
                              </div>
                           ))}
                         </div>
@@ -424,6 +586,12 @@ export default function VehiclesPage() {
                   </Card>
                 </TabsContent>
               </Tabs>
+              <AddDamageDialog
+                open={isDamageDialogOpen}
+                onOpenChange={onDamageDialogClose}
+                vehicleId={selectedVehicle.id}
+                damage={editingDamage}
+              />
             </>
           ) : isLoading ? (
             <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -440,3 +608,5 @@ export default function VehiclesPage() {
     </div>
   );
 }
+
+    
