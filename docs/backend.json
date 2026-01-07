@@ -207,6 +207,46 @@
         "date",
         "cost"
       ]
+    },
+     "Damage": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Damage",
+      "type": "object",
+      "description": "Represents a single damage report for a vehicle.",
+      "properties": {
+        "date": {
+          "type": "string",
+          "description": "The date the damage was reported.",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the damage."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the damage report (e.g., Open, In Repair, Closed).",
+          "default": "Open"
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "url": { "type": "string", "format": "uri" },
+              "size": { "type": "number" },
+              "type": { "type": "string" }
+            },
+            "required": ["name", "url"]
+          },
+          "description": "A list of files (e.g., photos) associated with the damage report."
+        }
+      },
+      "required": [
+        "date",
+        "description"
+      ]
     }
   },
   "auth": {
@@ -329,7 +369,7 @@
           ]
         }
       },
-       {
+      {
         "path": "/voertuigen/{voertuigId}/maintenance/{maintenanceId}",
         "definition": {
           "entityName": "Maintenance",
@@ -348,8 +388,28 @@
             }
           ]
         }
+      },
+      {
+        "path": "/voertuigen/{voertuigId}/damages/{damageId}",
+        "definition": {
+          "entityName": "Damage",
+          "schema": {
+            "$ref": "#/backend/entities/Damage"
+          },
+          "description": "Subcollection to store damage reports for a specific vehicle.",
+          "params": [
+            {
+              "name": "voertuigId",
+              "description": "The unique identifier of the vehicle."
+            },
+            {
+              "name": "damageId",
+              "description": "The unique identifier of the damage report."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore data structure is designed to support a basic ERP system. User-specific data (revenue, expenses, appointments) is segregated under `/users/{userId}` for privacy and security. A root-level `voertuigen` collection is added to store fleet information centrally, with nested `actions` and `maintenance` collections for vehicle-specific tasks. This hybrid structure supports both private, user-owned data and shared, application-wide data, with security rules adapted accordingly."
+    "reasoning": "The Firestore data structure is designed to support a basic ERP system. User-specific data (revenue, expenses, appointments) is segregated under `/users/{userId}` for privacy and security. A root-level `voertuigen` collection is added to store fleet information centrally, with nested `actions`, `maintenance`, and `damages` collections for vehicle-specific tasks and reports. This hybrid structure supports both private, user-owned data and shared, application-wide data, with security rules adapted accordingly."
   }
 }

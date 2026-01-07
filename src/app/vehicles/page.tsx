@@ -21,6 +21,7 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { VehicleImportDialog } from '@/components/vehicle-import-dialog';
 import { AddActionDialog } from '@/components/add-action-dialog';
 import { AddMaintenanceDialog } from '@/components/add-maintenance-dialog';
+import { AddDamageDialog } from '@/components/add-damage-dialog';
 
 export default function VehiclesPage() {
   const firestore = useFirestore();
@@ -44,14 +45,27 @@ export default function VehiclesPage() {
 
   const { data: actions, isLoading: actionsLoading } =
     useCollection<any>(actionsCollection);
-    
+
   const maintenanceCollection = useMemoFirebase(() => {
     if (!firestore || !selectedVehicle) return null;
-    return collection(firestore, 'voertuigen', selectedVehicle.id, 'maintenance');
+    return collection(
+      firestore,
+      'voertuigen',
+      selectedVehicle.id,
+      'maintenance'
+    );
   }, [firestore, selectedVehicle]);
 
   const { data: maintenance, isLoading: maintenanceLoading } =
     useCollection<any>(maintenanceCollection);
+
+  const damagesCollection = useMemoFirebase(() => {
+    if (!firestore || !selectedVehicle) return null;
+    return collection(firestore, 'voertuigen', selectedVehicle.id, 'damages');
+  }, [firestore, selectedVehicle]);
+
+  const { data: damages, isLoading: damagesLoading } =
+    useCollection<any>(damagesCollection);
 
   const mainImage = PlaceHolderImages.find((p) => p.id === 'vehicle-side');
 
@@ -68,7 +82,7 @@ export default function VehiclesPage() {
   const handleImportSuccess = () => {
     setIsImporting(false);
   };
-  
+
   return (
     <div className="grid grid-rows-[auto_1fr] flex-1 min-h-0">
       <PageHeader title="Voertuigen">
@@ -257,7 +271,7 @@ export default function VehiclesPage() {
                     <CardHeader className="flex-row items-center justify-between">
                       <CardTitle>Acties</CardTitle>
                       <AddActionDialog vehicleId={selectedVehicle.id}>
-                         <Button size="sm">
+                        <Button size="sm">
                           <Plus className="mr-2 h-4 w-4" />
                           Actie toevoegen
                         </Button>
@@ -279,11 +293,18 @@ export default function VehiclesPage() {
                       ) : actions && actions.length > 0 ? (
                         <div className="flex-1 overflow-y-auto">
                           {actions.map((action) => (
-                             <div key={action.id} className="flex justify-between items-center px-4 py-3 border-b">
-                               <span className="w-1/3">{action.name}</span>
-                               <span className="w-1/3">{action.type}</span>
-                               <span className="w-1/3 text-right">{new Date(action.date).toLocaleDateString('nl-NL')}</span>
-                             </div>
+                            <div
+                              key={action.id}
+                              className="flex justify-between items-center px-4 py-3 border-b"
+                            >
+                              <span className="w-1/3">{action.name}</span>
+                              <span className="w-1/3">{action.type}</span>
+                              <span className="w-1/3 text-right">
+                                {new Date(action.date).toLocaleDateString(
+                                  'nl-NL'
+                                )}
+                              </span>
+                            </div>
                           ))}
                         </div>
                       ) : (
@@ -307,7 +328,7 @@ export default function VehiclesPage() {
                       </AddMaintenanceDialog>
                     </CardHeader>
                     <CardContent className="flex-1 flex flex-col gap-4 overflow-y-auto pt-2">
-                       <div className="text-sm text-muted-foreground">
+                      <div className="text-sm text-muted-foreground">
                         <div className="flex justify-between px-4 py-2 font-medium">
                           <span className="w-1/4">Omschrijving</span>
                           <span className="w-1/4">Type</span>
@@ -317,18 +338,27 @@ export default function VehiclesPage() {
                         <Separator />
                       </div>
                       {maintenanceLoading ? (
-                         <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                        <div className="flex-1 flex items-center justify-center text-muted-foreground">
                           Onderhoudsgegevens laden...
                         </div>
                       ) : maintenance && maintenance.length > 0 ? (
-                         <div className="flex-1 overflow-y-auto">
+                        <div className="flex-1 overflow-y-auto">
                           {maintenance.map((item) => (
-                             <div key={item.id} className="flex justify-between items-center px-4 py-3 border-b">
-                               <span className="w-1/4">{item.description}</span>
-                               <span className="w-1/4">{item.type}</span>
-                               <span className="w-1/4">{new Date(item.date).toLocaleDateString('nl-NL')}</span>
-                               <span className="w-1/4 text-right">€ {item.cost.toFixed(2)}</span>
-                             </div>
+                            <div
+                              key={item.id}
+                              className="flex justify-between items-center px-4 py-3 border-b"
+                            >
+                              <span className="w-1/4">{item.description}</span>
+                              <span className="w-1/4">{item.type}</span>
+                              <span className="w-1/4">
+                                {new Date(item.date).toLocaleDateString(
+                                  'nl-NL'
+                                )}
+                              </span>
+                              <span className="w-1/4 text-right">
+                                € {item.cost.toFixed(2)}
+                              </span>
+                            </div>
                           ))}
                         </div>
                       ) : (
@@ -342,11 +372,43 @@ export default function VehiclesPage() {
 
                 <TabsContent value="damages" className="h-full">
                   <Card className="h-full flex flex-col">
-                    <CardHeader>
+                    <CardHeader className="flex-row items-center justify-between">
                       <CardTitle>Schade</CardTitle>
+                       <AddDamageDialog vehicleId={selectedVehicle.id}>
+                         <Button size="sm">
+                          <Plus className="mr-2 h-4 w-4" />
+                          Schade melden
+                        </Button>
+                      </AddDamageDialog>
                     </CardHeader>
-                    <CardContent className="flex-1 flex items-center justify-center text-muted-foreground overflow-y-auto">
-                      <p>Nog geen schade geregistreerd.</p>
+                    <CardContent className="flex-1 flex flex-col gap-4 overflow-y-auto pt-2">
+                       <div className="text-sm text-muted-foreground">
+                        <div className="flex justify-between px-4 py-2 font-medium">
+                          <span className="w-1/3">Omschrijving</span>
+                          <span className="w-1/3">Datum</span>
+                          <span className="w-1/3 text-right">Status</span>
+                        </div>
+                        <Separator />
+                      </div>
+                      {damagesLoading ? (
+                         <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                          Schadegegevens laden...
+                        </div>
+                      ) : damages && damages.length > 0 ? (
+                         <div className="flex-1 overflow-y-auto">
+                          {damages.map((item) => (
+                             <div key={item.id} className="flex justify-between items-center px-4 py-3 border-b">
+                               <span className="w-1/3">{item.description}</span>
+                               <span className="w-1/3">{new Date(item.date).toLocaleDateString('nl-NL')}</span>
+                               <span className="w-1/3 text-right">{item.status}</span>
+                             </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                          Nog geen schade geregistreerd.
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>

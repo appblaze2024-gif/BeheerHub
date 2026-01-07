@@ -13,7 +13,7 @@ rules_version = '2';
  *
  * Key Security Decisions:
  * - Strict Data Isolation for Users: A user can NEVER access data belonging to another user.
- * - Shared Data Access: All authenticated users can read and write to the shared `voertuigen` collection.
+ * - Shared Data Access: All authenticated users can read and write to the shared `voertuigen` collection and its subcollections.
  * - No User Listing: It is not possible to list all documents in the top-level `/users` collection.
  * - Ownership-Based Access: For user data, all operations are granted based on the user's ID in the path.
  *
@@ -103,6 +103,18 @@ service cloud.firestore {
        *   Any authenticated user can manage maintenance records for any vehicle.
        */
       match /maintenance/{maintenanceId} {
+         allow get, list, create, update, delete: if isSignedIn();
+      }
+
+      /**
+       * @description
+       *   Secures the nested `damages` subcollection for a vehicle.
+       * @path
+       *   /voertuigen/{voertuigId}/damages/{damageId}
+       * @allow
+       *   Any authenticated user can manage damage reports for any vehicle.
+       */
+      match /damages/{damageId} {
          allow get, list, create, update, delete: if isSignedIn();
       }
     }
