@@ -20,7 +20,10 @@ import {
   Package,
   Bell,
   Home,
-  Newspaper
+  Newspaper,
+  User,
+  Settings,
+  LogOut,
 } from "lucide-react";
 
 const menuItems = [
@@ -38,14 +41,39 @@ const menuItems = [
   { href: "/issues", label: "Meldingen", icon: Bell },
 ];
 
+const bottomMenuItems = [
+  { href: "/profile", label: "Profiel", icon: User },
+  { href: "/settings", label: "Instellingen", icon: Settings },
+  { href: "/logout", label: "Uitloggen", icon: LogOut },
+];
+
 export function SidebarNav() {
   const pathname = usePathname();
 
   return (
     <>
-      <SidebarContent>
+      <SidebarContent className="flex flex-col">
         <SidebarMenu>
           {menuItems.map((item) => (
+            <SidebarMenuItem key={item.label}>
+              <Link href={item.href}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === item.href}
+                  tooltip={item.label}
+                >
+                  <span>
+                    <item.icon />
+                    <span className="sr-only">{item.label}</span>
+                  </span>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+
+        <SidebarMenu className="mt-auto">
+          {bottomMenuItems.map((item) => (
             <SidebarMenuItem key={item.label}>
               <Link href={item.href}>
                 <SidebarMenuButton
