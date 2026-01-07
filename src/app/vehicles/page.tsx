@@ -169,7 +169,7 @@ export default function VehiclesPage() {
                   >
                     <div>
                       <p
-                        className={`font-semibold ${
+                        className={`font-medium ${
                           selectedVehicle?.id === vehicle.id
                             ? 'text-sidebar-accent-foreground'
                             : ''
