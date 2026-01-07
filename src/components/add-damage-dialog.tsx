@@ -7,11 +7,11 @@ import { z } from 'zod';
 import { CalendarIcon, Upload, Trash2, File as FileIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
+import { collection, doc, updateDoc, arrayUnion, arrayRemove, addDoc, DocumentReference } from 'firebase/firestore';
+import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 
 import { cn } from '@/lib/utils';
-import { useFirestore, addDocumentNonBlocking, useDoc } from '@/firebase';
-import { collection, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
-import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { useFirestore, useDoc, addDocumentNonBlocking } from '@/firebase';
 import { toast } from '@/hooks/use-toast';
 
 import {
@@ -64,6 +64,7 @@ export function AddDamageDialog({
   const [isUploading, setIsUploading] = React.useState(false);
   const [uploadProgress, setUploadProgress] = React.useState(0);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   
   const damageDocRef = React.useMemo(() => {
     if (!firestore || !vehicleId || !damageId) return null;
@@ -80,6 +81,46 @@ export function AddDamageDialog({
     },
   });
 
+  const uploadFile = (file: File, damageDoc: DocumentReference) => {
+    return new Promise<void>((resolve, reject) => {
+      if (!storage || !vehicleId) {
+        return reject(new Error("Storage of voertuig-ID niet beschikbaar."));
+      }
+
+      setIsUploading(true);
+      setUploadProgress(0);
+
+      const storageRef = ref(storage, `damages/${vehicleId}/${damageDoc.id}/${file.name}`);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      uploadTask.on('state_changed',
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setUploadProgress(progress);
+        },
+        (error) => {
+          console.error("Upload mislukt:", error);
+          setIsUploading(false);
+          reject(error);
+        },
+        () => {
+          getDownloadURL(uploadTask.snapshot.ref).then(async (downloadURL) => {
+            const fileData = {
+              name: file.name,
+              url: downloadURL,
+              size: file.size,
+              type: file.type,
+              uploadedAt: new Date().toISOString()
+            };
+            await updateDoc(damageDoc, { files: arrayUnion(fileData) });
+            setIsUploading(false);
+            resolve();
+          });
+        }
+      );
+    });
+  };
+
   const onSubmit = async (data: DamageFormValues) => {
     if (!firestore || !vehicleId) {
       toast({
@@ -90,14 +131,10 @@ export function AddDamageDialog({
       return;
     }
 
+    setIsSubmitting(true);
+
     try {
-      const damagesColRef = collection(
-        firestore,
-        'voertuigen',
-        vehicleId,
-        'damages'
-      );
-      
+      const damagesColRef = collection(firestore, 'voertuigen', vehicleId, 'damages');
       const newDamageData = {
         ...data,
         date: data.date.toISOString(),
@@ -105,16 +142,26 @@ export function AddDamageDialog({
         files: []
       };
 
-      const docRef = await addDocumentNonBlocking(damagesColRef, newDamageData);
+      // 1. Create the document first to get an ID
+      const damageDoc = await addDoc(damagesColRef, newDamageData);
+      setDamageId(damageDoc.id);
+
+      // 2. If there's a file, upload it
+      const file = fileInputRef.current?.files?.[0];
+      if (file) {
+        await uploadFile(file, damageDoc);
+        toast({ title: 'Bestand geüpload', description: `${file.name} is succesvol toegevoegd.` });
+      }
+
+      toast({
+        title: 'Schade gemeld!',
+        description: 'De schademelding is succesvol aangemaakt.',
+      });
       
-      if(docRef) {
-        setDamageId(docRef.id);
-        toast({
-            title: 'Schade gemeld!',
-            description: 'Je kunt nu bestanden uploaden.',
-        });
-      } else {
-         throw new Error("Kon geen documentreferentie krijgen na aanmaken.");
+      // Keep dialog open if a file was just uploaded to show it in the list.
+      // Otherwise, close it.
+      if (!file) {
+        handleClose();
       }
 
     } catch (error) {
@@ -122,12 +169,13 @@ export function AddDamageDialog({
       toast({
         variant: 'destructive',
         title: 'Oh nee! Er is iets misgegaan.',
-        description:
-          'Kon de schade niet melden. Controleer de console voor details.',
+        description: 'Kon de schade niet melden. Controleer de console voor details.',
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
-  
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !damageId || !vehicleId || !storage) return;
@@ -175,14 +223,13 @@ export function AddDamageDialog({
     }
   };
 
+
   const handleFileDelete = async (fileToDelete: any) => {
     if (!damageDocRef) return;
     try {
       await updateDoc(damageDocRef, {
         files: arrayRemove(fileToDelete)
       });
-      // Note: This does not delete the file from Storage to prevent accidental data loss.
-      // A more robust solution might involve a Cloud Function to handle deletions.
       toast({title: 'Bestand verwijderd', description: `${fileToDelete.name} is uit de lijst verwijderd.`});
     } catch (error) {
       console.error("Failed to delete file reference:", error);
@@ -196,6 +243,10 @@ export function AddDamageDialog({
     setOpen(false);
     setIsUploading(false);
     setUploadProgress(0);
+    setIsSubmitting(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   }
 
   return (
@@ -262,14 +313,19 @@ export function AddDamageDialog({
 
             <div className="space-y-2">
                 <FormLabel>Bestanden</FormLabel>
-                 <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-                <Button type="button" variant="outline" disabled={!damageId || isUploading} onClick={() => fileInputRef.current?.click()}>
+                <input type="file" ref={fileInputRef} onChange={!damageId ? undefined : handleFileChange} className="hidden" />
+                <Button type="button" variant="outline" disabled={isUploading || !!damageId} onClick={() => fileInputRef.current?.click()}>
                     <Upload className="mr-2 h-4 w-4" />
                     Bestand kiezen
                 </Button>
-                {!damageId && <p className="text-xs text-muted-foreground">Sla het item eerst op om bestanden te kunnen uploaden.</p>}
+                {damageId && (
+                  <Button type="button" variant="outline" disabled={isUploading} onClick={() => fileInputRef.current?.click()}>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Nog een bestand kiezen
+                  </Button>
+                )}
             </div>
-
+            
             {isUploading && (
                 <div className="space-y-1">
                     <Progress value={uploadProgress} className="w-full" />
@@ -313,7 +369,9 @@ export function AddDamageDialog({
             <DialogFooter>
                 <Button type="button" variant="ghost" onClick={handleClose}>Sluiten</Button>
                  {!damageId ? (
-                   <Button type="submit">Meld schade en ga verder</Button>
+                   <Button type="submit" disabled={isSubmitting || isUploading}>
+                     {isSubmitting ? 'Bezig...' : 'Meld schade'}
+                   </Button>
                  ) : (
                     <Button onClick={handleClose}>Klaar</Button>
                  )}
