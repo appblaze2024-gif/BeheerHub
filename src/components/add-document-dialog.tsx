@@ -4,9 +4,8 @@ import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { CalendarIcon, Upload, Trash2, File as FileIcon, Loader2 } from 'lucide-react';
+import { Upload, Trash2, File as FileIcon, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { nl } from 'date-fns/locale';
 import {
   collection,
   doc,
@@ -23,7 +22,6 @@ import {
   deleteObject,
 } from 'firebase/storage';
 
-import { cn } from '@/lib/utils';
 import { useFirestore, useFirebaseApp } from '@/firebase';
 
 import {
@@ -59,7 +57,8 @@ import { Progress } from './ui/progress';
 import { Input } from './ui/input';
 
 const documentFormSchema = z.object({
-  description: z.string().min(1, { message: 'Omschrijving is verplicht.' }),
+  title: z.string().min(1, { message: 'Titel is verplicht.' }),
+  description: z.string().optional(),
 });
 
 type DocumentFormValues = z.infer<typeof documentFormSchema>;
@@ -108,9 +107,11 @@ export function AddDocumentDialog({
       form.reset(
         docToEdit
           ? {
-              description: docToEdit.description,
+              title: docToEdit.title,
+              description: docToEdit.description || '',
             }
           : {
+              title: '',
               description: '',
             }
       );
@@ -300,13 +301,29 @@ export function AddDocumentDialog({
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Titel</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Bijv. Kentekenbewijs"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
               name="description"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Omschrijving</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="Bijv. Kentekenbewijs"
+                    <Textarea
+                      placeholder="Optionele omschrijving van het document..."
                       {...field}
                     />
                   </FormControl>

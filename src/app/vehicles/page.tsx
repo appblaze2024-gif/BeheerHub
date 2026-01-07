@@ -530,9 +530,12 @@ export default function VehiclesPage() {
                             <div
                               key={doc.id}
                               onClick={() => handleEditDocument(doc)}
-                              className="grid grid-cols-[1fr] gap-4 items-center px-4 py-3 border-b hover:bg-muted/50 cursor-pointer rounded-md"
+                              className="grid grid-cols-1 gap-4 items-center px-4 py-3 border-b hover:bg-muted/50 cursor-pointer rounded-md"
                             >
-                              <div className="font-medium truncate">{doc.description}</div>
+                               <div>
+                                <div className="font-medium truncate">{doc.title}</div>
+                                {doc.description && <div className="text-sm text-muted-foreground truncate">{doc.description}</div>}
+                               </div>
                               {doc.files?.map((file: any) => (
                                 <div key={file.url} className='flex items-center justify-between pl-4'>
                                     <a
