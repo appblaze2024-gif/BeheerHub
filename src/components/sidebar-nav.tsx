@@ -24,15 +24,15 @@ import {
 
 const menuItems = [
   { href: "/", label: "Dashboard", icon: Home },
-  { href: "/users", label: "Users", icon: Users },
-  { href: "/projects", label: "Projects", icon: ClipboardList },
-  { href: "/reports", label: "Reports", icon: FileText },
-  { href: "/health", label: "Health", icon: HeartPulse },
-  { href: "/tools", label: "Tools", icon: Wrench },
-  { href: "/location", label: "Location", icon: MapPin },
+  { href: "/users", label: "Gebruikers", icon: Users },
+  { href: "/projects", label: "Projecten", icon: ClipboardList },
+  { href: "/reports", label: "Rapporten", icon: FileText },
+  { href: "/health", label: "Gezondheid", icon: HeartPulse },
+  { href: "/tools", label: "Gereedschap", icon: Wrench },
+  { href: "/location", label: "Locatie", icon: MapPin },
   { href: "/routes", label: "Routes", icon: Route },
-  { href: "/notifications", label: "Notifications", icon: Bell },
-  { href: "/messages", label: "Messages", icon: MessageSquare },
+  { href: "/notifications", label: "Notificaties", icon: Bell },
+  { href: "/messages", label: "Berichten", icon: MessageSquare },
   { href: "/camera", label: "Camera", icon: Camera },
 ];
 

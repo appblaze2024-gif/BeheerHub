@@ -21,7 +21,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="nl" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
@@ -47,15 +47,15 @@ export default function RootLayout({
                 </span>
                 <Button variant="ghost" size="icon">
                   <User className="h-5 w-5" />
-                  <span className="sr-only">Profile</span>
+                  <span className="sr-only">Profiel</span>
                 </Button>
                 <Button variant="ghost" size="icon">
                   <Settings className="h-5 w-5" />
-                  <span className="sr-only">Settings</span>
+                  <span className="sr-only">Instellingen</span>
                 </Button>
                 <Button variant="ghost" size="icon">
                   <LogOut className="h-5 w-5" />
-                  <span className="sr-only">Logout</span>
+                  <span className="sr-only">Uitloggen</span>
                 </Button>
               </div>
             </header>
