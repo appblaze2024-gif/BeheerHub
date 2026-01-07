@@ -56,7 +56,7 @@ const vehicles = [
   { id: 'V-42-FRHa', make: 'MERCEDES', model: 'SPRINTER' },
   { id: 'V-51-GKBa', make: 'VOLKSWAGEN', model: 'CADDY' },
   { id: 'V-53-DZKa', make: 'MERCEDES', model: 'SPRINTER' },
-  { id: 'V-55-DZKa', make' : 'MERCEDES', model: 'SPRINTER' },
+  { id: 'V-55-DZKa', make: 'MERCEDES', model: 'SPRINTER' },
   { id: 'V-836-XTa', make: 'IVECO', model: '35C14N' },
   { id: 'V-92-DZza', make: 'MERCEDES', model: 'SPRINTER' },
   { id: 'VBT-53-Ha', make: 'IVECO', model: '35C14N' },
