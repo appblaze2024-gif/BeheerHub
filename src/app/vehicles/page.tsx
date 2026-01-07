@@ -161,23 +161,20 @@ export default function VehiclesPage() {
                   <div
                     key={vehicle.id}
                     onClick={() => setSelectedVehicle(vehicle)}
-                    className={`flex items-center justify-between p-3 rounded-md text-left cursor-pointer ${
+                    className={`flex items-start justify-between p-3 rounded-md text-left cursor-pointer ${
                       selectedVehicle?.id === vehicle.id
                         ? 'bg-sidebar-accent'
                         : 'hover:bg-gray-100 dark:hover:bg-gray-800'
                     }`}
                   >
-                    <div>
-                      <p
-                        className={`font-medium ${
-                          selectedVehicle?.id === vehicle.id
-                            ? 'text-sidebar-accent-foreground'
-                            : ''
-                        }`}
-                      >
-                        {vehicle.id}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
+                    <div className="flex-1">
+                       <div className="inline-flex items-center bg-yellow-400 rounded-sm border-2 border-black overflow-hidden font-mono font-bold text-black text-sm">
+                        <div className="bg-blue-600 px-1 py-0.5 text-white text-xs">
+                           <span className='font-sans'>NL</span>
+                        </div>
+                        <span className="px-2 py-0.5 tracking-wider">{vehicle.id}</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">
                         {vehicle.merk} {vehicle.model}
                       </p>
                       {(vehicle.type || vehicle.bouwjaar) && (
