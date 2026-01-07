@@ -60,7 +60,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="bg-background dark:bg-gray-900 p-6 flex flex-col flex-1">
+    <div className="flex flex-col flex-1 p-6">
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {overviewData.map((data) => (
           <StatCard key={data.title} {...data} />
