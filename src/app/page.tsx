@@ -7,10 +7,7 @@ import {
   Newspaper,
   Activity,
 } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
-import { PageHeader } from "@/components/page-header";
-import { Button } from "@/components/ui/button";
-import { User, Settings, LogOut } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 type StatCardProps = {
   title: string;
@@ -64,28 +61,11 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-1 flex-col bg-gray-100 dark:bg-gray-900">
-       <header className="flex h-16 items-center justify-end border-b bg-white px-6 dark:bg-gray-800">
-        <div className="flex items-center gap-4">
-          <span className="text-sm font-medium">dstoutenburg@meerlanden.nl</span>
-          <Button variant="ghost" size="icon">
-            <User className="h-5 w-5" />
-            <span className="sr-only">Profile</span>
-          </Button>
-          <Button variant="ghost" size="icon">
-            <Settings className="h-5 w-5" />
-            <span className="sr-only">Settings</span>
-          </Button>
-          <Button variant="ghost" size="icon">
-            <LogOut className="h-5 w-5" />
-            <span className="sr-only">Logout</span>
-          </Button>
-        </div>
-      </header>
       <main className="flex-1 p-6">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {overviewData.map((data) => (
-                <StatCard key={data.title} {...data} />
-            ))}
+          {overviewData.map((data) => (
+            <StatCard key={data.title} {...data} />
+          ))}
         </div>
       </main>
     </div>
