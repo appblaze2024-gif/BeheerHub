@@ -75,6 +75,37 @@
       },
       "required": ["projectnummer", "projectnaam"]
     },
+    "Bestand": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Bestand",
+      "type": "object",
+      "description": "Represents a file with its metadata.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "size": {
+          "type": "number"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "uploadedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "storagePath": {
+          "type": "string"
+        }
+      }
+    },
     "Revenue": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Revenue",
@@ -226,6 +257,26 @@
             {
               "name": "projectId",
               "description": "The ID of the project."
+            }
+          ]
+        }
+      },
+       {
+        "path": "/projects/{projectId}/bestanden/{bestandId}",
+        "definition": {
+          "entityName": "Bestand",
+          "schema": {
+            "$ref": "#/backend/entities/Bestand"
+          },
+          "description": "Stores files for a specific project.",
+          "params": [
+            {
+              "name": "projectId",
+              "description": "The ID of the project."
+            },
+            {
+              "name": "bestandId",
+              "description": "The ID of the file."
             }
           ]
         }

@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { FilePenLine, Plus, Trash2 } from 'lucide-react';
+import { FilePenLine, Plus, Trash2, Upload } from 'lucide-react';
 import {
   useFirestore,
   useCollection,
@@ -31,6 +31,7 @@ import {
 import { collection, doc, deleteDoc } from 'firebase/firestore';
 import { AfspraakDialog } from '@/components/afspraak-dialog';
 import { OrganisatieContactDialog } from '@/components/organisatie-contact-dialog';
+import { ProjectBestandenDialog } from '@/components/project-bestanden-dialog';
 
 type Werksoort = {
   id: string;
@@ -73,6 +74,16 @@ export type OrganisatieContact = {
   telefoon: string;
   email: string;
 }
+
+export type Bestand = {
+    id: string;
+    name: string;
+    type: string;
+    size: number;
+    url: string;
+    uploadedAt: string;
+    storagePath: string;
+};
 
 const EMPTY_PROJECT: Project = {
   projectnummer: '',
@@ -357,6 +368,85 @@ function OrganisatieTab({ projectId }: { projectId: string | undefined }) {
   );
 }
 
+function BestandenTab({ projectId }: { projectId: string | undefined }) {
+  const firestore = useFirestore();
+  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+
+  const bestandenCollection = useMemoFirebase(() => {
+    if (!firestore || !projectId) return null;
+    return collection(firestore, 'projects', projectId, 'bestanden');
+  }, [firestore, projectId]);
+
+  const { data: bestanden, isLoading } = useCollection<Bestand>(bestandenCollection);
+  
+  const formatBytes = (bytes: number, decimals = 2) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  }
+
+  if (!projectId) {
+    return (
+      <div className="flex items-center justify-center h-full text-muted-foreground">
+        Selecteer eerst een project om bestanden te bekijken of te uploaden.
+      </div>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className='flex-row items-center justify-between'>
+        <CardTitle className="text-lg">Bestanden</CardTitle>
+        <Button size="sm" onClick={() => setIsDialogOpen(true)}><Upload className='mr-2 h-4 w-4' /> Bestanden uploaden</Button>
+      </CardHeader>
+      <CardContent>
+        <div className="border rounded-md">
+          <div className="grid grid-cols-[3fr_1fr_1fr_1fr_auto] gap-x-4 p-4 font-semibold bg-muted">
+            <div>Bestandsnaam</div>
+            <div>Type</div>
+            <div>Grootte</div>
+            <div>Datum</div>
+            <div />
+          </div>
+          {isLoading ? (
+            <div className='p-4 text-center text-muted-foreground'>Bestanden laden...</div>
+          ) : bestanden && bestanden.length > 0 ? (
+            bestanden.map(bestand => (
+              <a 
+                key={bestand.id} 
+                href={bestand.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="grid grid-cols-[3fr_1fr_1fr_1fr_auto] items-center gap-x-4 p-4 border-t hover:bg-muted/50 cursor-pointer"
+              >
+                <div className='truncate font-medium text-primary'>{bestand.name}</div>
+                <div className="truncate">{bestand.type}</div>
+                <div>{formatBytes(bestand.size)}</div>
+                <div>{new Date(bestand.uploadedAt).toLocaleDateString('nl-NL')}</div>
+                <div className='flex items-center gap-2 justify-end'>
+                   <Button variant='ghost' size='icon' onClick={(e) => { e.preventDefault(); /* TODO: Implement delete */}}>
+                    <Trash2 className='h-4 w-4 text-destructive' />
+                  </Button>
+                </div>
+              </a>
+            ))
+          ) : (
+             <div className='p-4 text-center text-muted-foreground'>Nog geen bestanden geüpload voor dit project.</div>
+          )}
+        </div>
+      </CardContent>
+      <ProjectBestandenDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        projectId={projectId}
+      />
+    </Card>
+  );
+}
+
 
 export default function ProjectsPage() {
   const firestore = useFirestore();
@@ -565,6 +655,12 @@ export default function ProjectsPage() {
           className="flex-1 overflow-y-auto pt-6 pb-2 px-6"
         >
           <OrganisatieTab projectId={selectedProjectId} />
+        </TabsContent>
+         <TabsContent
+          value="bestanden"
+          className="flex-1 overflow-y-auto pt-6 pb-2 px-6"
+        >
+          <BestandenTab projectId={selectedProjectId} />
         </TabsContent>
       </Tabs>
     </div>

@@ -55,6 +55,13 @@ service cloud.firestore {
        allow read, write: if isSignedIn();
 
        /**
+        * @description Secures project-specific files. Any authenticated user can manage them.
+        */
+       match /bestanden/{bestandId} {
+         allow read, write: if isSignedIn();
+       }
+
+       /**
         * @description Secures project-specific appointments. Any authenticated user can manage them.
         */
        match /afspraken/{afspraakId} {

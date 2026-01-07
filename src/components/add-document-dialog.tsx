@@ -248,7 +248,7 @@ export function AddDocumentDialog({
 
   const onSubmit = async (data: DocumentFormValues) => {
     if (!firestore || !vehicleId || !documentIdRef.current) return;
-    
+
     setIsSubmitting(true);
     const documentId = documentIdRef.current;
     const documentDocRef = doc(
@@ -344,7 +344,7 @@ export function AddDocumentDialog({
                 onChange={handleFileChange}
                 className="hidden"
                 multiple
-                accept="image/png, image/jpeg, application/pdf"
+                accept="image/png, image/jpeg, application/pdf, .doc,.docx,.xml,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
               />
             </div>
             
