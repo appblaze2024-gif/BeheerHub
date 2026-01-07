@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import Image from "next/image";
+import Link from "next/link";
 import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
 import { Sidebar, SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { SidebarNav } from "@/components/sidebar-nav";
-import { Logo } from "@/components/icons";
-import { SidebarHeader, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarHeader } from "@/components/ui/sidebar";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -34,7 +35,15 @@ export default function RootLayout({
         <SidebarProvider>
           <Sidebar collapsible="icon">
             <SidebarHeader>
-              <Logo />
+              <Link href="/">
+                <Image
+                  src="https://i.ibb.co/C3FgZFmf/8739741b-c5cd-451e-a742-9da981e051fa.png"
+                  alt="Logo"
+                  width={150}
+                  height={50}
+                  className="w-auto h-auto"
+                />
+              </Link>
             </SidebarHeader>
             <SidebarNav />
           </Sidebar>
