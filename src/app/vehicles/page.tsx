@@ -47,13 +47,6 @@ const vehicles = [
   { id: 'V-66-DZX', make: 'MERCEDES', model: 'SPRINTER' },
   { id: 'V-836-XT', make: 'IVECO', model: '35C14N' },
   { id: 'V-92-DZZ', make: 'MERCEDES', model: 'SPRINTER' },
-  { id: 'VBT-53-H', make: 'IVECO', model: '35C14N' },
-  { id: 'K-123-ABC', make: 'FORD', model: 'TRANSIT' },
-  { id: 'L-456-DEF', make: 'RENAULT', model: 'TRAFIC' },
-  { id: 'M-789-GHI', make: 'PEUGEOT', model: 'BOXER' },
-  { id: 'N-012-JKL', make: 'FIAT', model: 'DUCATO' },
-  { id: 'P-345-MNO', make: 'CITROEN', model: 'JUMPER' },
-  { id: 'R-678-PQR', make: 'OPEL', model: 'MOVANO' },
 ];
 
 export default function VehiclesPage() {
