@@ -34,7 +34,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex h-screen w-screen flex-col items-center justify-center gap-8 bg-background">
+    <div className="flex h-screen w-screen flex-col items-center justify-center gap-8 bg-gradient-to-br from-stone-50 to-stone-200 dark:from-stone-800 dark:to-stone-950">
       <Image
         src="https://i.ibb.co/C3FgZFmf/8739741b-c5cd-451e-a742-9da981e051fa.png"
         alt="Logo"
