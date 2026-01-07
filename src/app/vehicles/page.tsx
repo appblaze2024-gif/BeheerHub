@@ -27,7 +27,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { VehicleImportDialog } from '@/components/vehicle-import-dialog';
-import { Separator } from '@/components/ui/separator';
 
 export default function VehiclesPage() {
   const firestore = useFirestore();
@@ -46,11 +45,9 @@ export default function VehiclesPage() {
   const mainImage = PlaceHolderImages.find((p) => p.id === 'vehicle-side');
 
   React.useEffect(() => {
-    // Set initial selected vehicle if not already set
     if (!selectedVehicle && vehicles && vehicles.length > 0) {
       setSelectedVehicle(vehicles[0]);
     } else if (selectedVehicle && vehicles) {
-      // If the selected vehicle is no longer in the list (e.g., deleted), update selection
       if (!vehicles.find((v) => v.id === selectedVehicle.id)) {
         setSelectedVehicle(vehicles.length > 0 ? vehicles[0] : null);
       }
@@ -59,7 +56,6 @@ export default function VehiclesPage() {
 
   const handleImportSuccess = () => {
     setIsImporting(false);
-    // Optionally refetch data or rely on real-time updates from useCollection
   };
 
   return (
@@ -135,7 +131,7 @@ export default function VehiclesPage() {
           </CardContent>
         </Card>
 
-        <div className="flex-1 flex flex-col gap-6 min-h-0">
+        <div className="flex-1 flex flex-col min-h-0">
           {selectedVehicle ? (
             <>
               <Card>
@@ -237,7 +233,7 @@ export default function VehiclesPage() {
 
               <Tabs
                 defaultValue="actions"
-                className="flex-1 flex flex-col min-h-0"
+                className="flex-1 flex flex-col min-h-0 mt-6"
               >
                 <TabsList>
                   <TabsTrigger value="actions">Acties</TabsTrigger>
