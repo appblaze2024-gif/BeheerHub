@@ -15,19 +15,11 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/page-header';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { VehicleImportDialog } from '@/components/vehicle-import-dialog';
-import { Separator } from '@/components/ui/separator';
 
 export default function VehiclesPage() {
   const firestore = useFirestore();
@@ -134,23 +126,25 @@ export default function VehiclesPage() {
 
         <div className="flex-1 flex flex-col min-h-0">
           {selectedVehicle ? (
-            <div className="flex flex-col flex-1 min-h-0">
+            <div className="flex flex-col flex-1 min-h-0 gap-6">
               <Card>
-                <CardHeader className="flex flex-row items-start justify-between">
-                  <div>
-                    <h2 className="text-2xl font-bold">
-                      {selectedVehicle?.id}
-                    </h2>
-                    <p className="text-muted-foreground">
-                      {selectedVehicle?.merk} {selectedVehicle?.model}
-                    </p>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h2 className="text-2xl font-bold">
+                        {selectedVehicle?.id}
+                      </h2>
+                      <p className="text-muted-foreground">
+                        {selectedVehicle?.merk} {selectedVehicle?.model}
+                      </p>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className="text-green-600 border-green-600 bg-green-50 dark:bg-green-900/10"
+                    >
+                      Actief
+                    </Badge>
                   </div>
-                  <Badge
-                    variant="outline"
-                    className="text-green-600 border-green-600 bg-green-50 dark:bg-green-900/10"
-                  >
-                    Actief
-                  </Badge>
                 </CardHeader>
                 <CardContent>
                   <div className="flex gap-6">
@@ -234,7 +228,7 @@ export default function VehiclesPage() {
 
               <Tabs
                 defaultValue="actions"
-                className="flex-1 flex flex-col min-h-0 mt-6"
+                className="flex-1 flex flex-col min-h-0"
               >
                 <TabsList>
                   <TabsTrigger value="actions">Acties</TabsTrigger>
@@ -283,7 +277,7 @@ export default function VehiclesPage() {
                           Onderhoud toevoegen
                         </Button>
                     </CardHeader>
-                    <CardContent className="flex-1 flex flex-col gap-4 overflow-y-auto pt-2">
+                     <CardContent className="flex-1 flex flex-col gap-4 overflow-y-auto pt-2">
                        <div className="text-sm text-muted-foreground">
                         <div className="flex justify-between px-4 py-2">
                            <span className="w-1/4">Omschrijving</span>
