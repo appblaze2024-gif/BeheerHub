@@ -47,6 +47,19 @@ const vehicles = [
   { id: 'V-66-DZX', make: 'MERCEDES', model: 'SPRINTER' },
   { id: 'V-836-XT', make: 'IVECO', model: '35C14N' },
   { id: 'V-92-DZZ', make: 'MERCEDES', model: 'SPRINTER' },
+  { id: 'VBT-53-H', make: 'IVECO', model: '35C14N' },
+  { id: '8-ZFL-67a', make: 'VOLKSWAGEN', model: 'UP' },
+  { id: '82-PRS-8a', make: 'VOLKSWAGEN', model: 'CADDY' },
+  { id: 'G-948-ZZa', make: 'VOLKSWAGEN', model: 'CADDY' },
+  { id: 'G-950-ZZa', make: 'VOLKSWAGEN', model: 'CADDY' },
+  { id: 'V-42-FRHa', make: 'MERCEDES', model: 'SPRINTER' },
+  { id: 'V-51-GKBa', make: 'VOLKSWAGEN', model: 'CADDY' },
+  { id: 'V-53-DZKa', make: 'MERCEDES', model: 'SPRINTER' },
+  { id: 'V-55-DZKa', make: 'MERCEDES', model: 'SPRINTER' },
+  { id: 'V-66-DZXa', make: 'MERCEDES', model: 'SPRINTER' },
+  { id: 'V-836-XTa', make: 'IVECO', model: '35C14N' },
+  { id: 'V-92-DZza', make: 'MERCEDES', model: 'SPRINTER' },
+  { id: 'VBT-53-Ha', make: 'IVECO', model: '35C14N' },
 ];
 
 export default function VehiclesPage() {
@@ -125,7 +138,7 @@ export default function VehiclesPage() {
             </CardHeader>
             <CardContent>
               <div className="flex flex-col md:flex-row gap-6">
-                <div className="relative w-full md:max-w-xs aspect-video rounded-md overflow-hidden border">
+                <div className="relative w-full max-w-xs aspect-video rounded-md overflow-hidden border">
                   {mainImage && (
                     <Image
                       src={mainImage.imageUrl}
