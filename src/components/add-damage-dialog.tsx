@@ -11,7 +11,7 @@ import { collection, doc, setDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 
 import { cn } from '@/lib/utils';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useFirebaseApp } from '@/firebase';
 import { toast } from '@/hooks/use-toast';
 
 import {
@@ -67,7 +67,7 @@ export function AddDamageDialog({
   vehicleId,
 }: AddDamageDialogProps) {
   const firestore = useFirestore();
-  const storage = getStorage();
+  const app = useFirebaseApp(); // Correctly get the Firebase App instance
   const [open, setOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [uploadProgress, setUploadProgress] = React.useState(0);
@@ -89,6 +89,7 @@ export function AddDamageDialog({
     const file = event.target.files?.[0];
     if (!file) return;
 
+    const storage = getStorage(app); // Pass the app instance to getStorage
     if (!storage || !vehicleId) {
       toast({ variant: 'destructive', title: 'Fout', description: "Storage of voertuig-ID niet beschikbaar." });
       return;
@@ -136,6 +137,7 @@ export function AddDamageDialog({
   };
   
   const handleFileDelete = async (fileToDelete: UploadedFile) => {
+      const storage = getStorage(app); // Pass the app instance to getStorage
       if (!storage) return;
 
       const fileRef = ref(storage, fileToDelete.storagePath);
