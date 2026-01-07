@@ -61,12 +61,15 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="flex flex-col flex-1 p-6">
+    <div className="flex flex-col flex-1 p-6 min-h-0">
       <PageHeader title="Dashboard" />
       <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {overviewData.map((data) => (
           <StatCard key={data.title} {...data} />
         ))}
+      </div>
+      <div className="flex-1 mt-6">
+        {/* Additional content can go here and will be contained */}
       </div>
     </div>
   );

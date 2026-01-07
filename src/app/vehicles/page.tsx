@@ -72,7 +72,7 @@ export default function VehiclesPage() {
   const mainImage = PlaceHolderImages.find((p) => p.id === 'vehicle-side');
 
   return (
-    <div className="flex flex-col flex-1 p-6 bg-background">
+    <div className="flex flex-col flex-1 p-6 min-h-0 bg-background">
       <PageHeader title="Voertuigen">
         <div className="relative w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
