@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { CalendarIcon, Upload, Trash2, File as FileIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
-import { collection, doc, updateDoc, arrayUnion, addDoc, DocumentReference } from 'firebase/firestore';
+import { collection, updateDoc, addDoc, DocumentReference } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 
 import { cn } from '@/lib/utils';
@@ -89,7 +89,6 @@ export function AddDamageDialog({
         },
         (error) => {
           console.error("Upload mislukt:", error);
-          setUploadProgress(0);
           reject(error);
         },
         () => {
@@ -101,7 +100,7 @@ export function AddDamageDialog({
               type: file.type,
               uploadedAt: new Date().toISOString()
             };
-            await updateDoc(damageDocRef, { files: arrayUnion(fileData) });
+            await updateDoc(damageDocRef, { files: [fileData] });
             resolve();
           }).catch(reject);
         }
@@ -124,17 +123,16 @@ export function AddDamageDialog({
 
     try {
       const damagesColRef = collection(firestore, 'voertuigen', vehicleId, 'damages');
+      
       const newDamageData = {
         ...data,
         date: data.date.toISOString(),
         status: 'Open',
-        files: []
+        files: [] 
       };
 
-      // Create the document first to get an ID
       const damageDocRef = await addDoc(damagesColRef, newDamageData);
       
-      // If there's a file, upload it and update the document
       if (selectedFile) {
         await uploadFile(selectedFile, damageDocRef);
       }
@@ -155,7 +153,6 @@ export function AddDamageDialog({
       });
     } finally {
       setIsSubmitting(false);
-      setUploadProgress(0);
     }
   };
 
@@ -164,15 +161,9 @@ export function AddDamageDialog({
     if (file) {
       setSelectedFile(file);
     }
-    // Clear the input value to allow re-selecting the same file
     if (fileInputRef.current) {
         fileInputRef.current.value = "";
     }
-  };
-
-
-  const handleFileDelete = () => {
-    setSelectedFile(null);
   };
 
   const handleClose = () => {
@@ -283,7 +274,7 @@ export function AddDamageDialog({
                         <span>{(selectedFile.size / 1024).toFixed(2)} KB</span>
                         <span>{format(new Date(), 'dd-MM-yy')}</span>
                         <div className='flex justify-end'>
-                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleFileDelete} disabled={isSubmitting}>
+                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedFile(null)} disabled={isSubmitting}>
                               <Trash2 className="h-4 w-4 text-destructive"/>
                            </Button>
                         </div>
