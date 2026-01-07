@@ -248,11 +248,7 @@ export function AddDocumentDialog({
 
   const onSubmit = async (data: DocumentFormValues) => {
     if (!firestore || !vehicleId || !documentIdRef.current) return;
-    if (uploadedFiles.length === 0) {
-      alert("Voeg minimaal één bestand toe.");
-      return;
-    }
-
+    
     setIsSubmitting(true);
     const documentId = documentIdRef.current;
     const documentDocRef = doc(
