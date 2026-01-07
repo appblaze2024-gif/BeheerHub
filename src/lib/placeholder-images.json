@@ -2,9 +2,9 @@
   "placeholderImages": [
     {
       "id": "vehicle-side",
-      "description": "Side view of a white pickup truck.",
-      "imageUrl": "https://images.unsplash.com/photo-1605893477799-b99e3b8b93fe?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxwaWNrdXAlMjB0cnVja3xlbnwwfHx8fDE3Njc3NTg2OTh8MA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "pickup truck"
+      "description": "Side view of a white van.",
+      "imageUrl": "https://i.ibb.co/Q7RxKMCt/istockphoto-1144092062-612x612.jpg",
+      "imageHint": "white van"
     },
     {
       "id": "vehicle-front",
