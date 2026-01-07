@@ -1,15 +1,25 @@
 'use client';
 
 import * as React from 'react';
-import { PageHeader } from '@/components/page-header';
+import Image from 'next/image';
+import {
+  ChevronDown,
+  MoreHorizontal,
+  Plus,
+  Search,
+} from 'lucide-react';
+
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { PageHeader } from '@/components/page-header';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Table,
   TableBody,
@@ -19,15 +29,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import {
-  Search,
-  Plus,
-  MoreHorizontal,
-  ChevronDown,
-} from 'lucide-react';
-import Image from 'next/image';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const vehicles = [
@@ -68,8 +69,7 @@ const vehicles = [
 
 export default function VehiclesPage() {
   const [selectedVehicle, setSelectedVehicle] = React.useState(vehicles[0]);
-
-  const mainImage = PlaceHolderImages.find(p => p.id === 'vehicle-side');
+  const mainImage = PlaceHolderImages.find((p) => p.id === 'vehicle-side');
 
   return (
     <div className="flex flex-col flex-1 p-6 bg-background">
@@ -85,19 +85,17 @@ export default function VehiclesPage() {
           Bulkacties <ChevronDown className="ml-2 h-4 w-4" />
         </Button>
       </PageHeader>
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[300px_1fr] flex-1 min-h-0">
-        <Card className="lg:h-full flex flex-col">
+
+      <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 mt-6 flex-1 min-h-0">
+        {/* Left Column: Vehicle List */}
+        <Card className="flex flex-col h-full">
           <CardContent className="p-2 flex-1 min-h-0">
             <ScrollArea className="h-full">
               <div className="flex flex-col space-y-1 pr-2">
                 {vehicles.map((vehicle) => (
                   <div
                     key={vehicle.id}
-                    onClick={() =>
-                      setSelectedVehicle(
-                        vehicles.find((v) => v.id === vehicle.id) || vehicles[0]
-                      )
-                    }
+                    onClick={() => setSelectedVehicle(vehicle)}
                     className={`flex items-center justify-between p-3 rounded-md text-left cursor-pointer ${
                       selectedVehicle.id === vehicle.id
                         ? 'bg-blue-100 dark:bg-blue-900'
@@ -127,19 +125,25 @@ export default function VehiclesPage() {
             </ScrollArea>
           </CardContent>
         </Card>
+
+        {/* Right Column: Details and Tabs */}
         <div className="flex flex-col gap-6 min-h-0">
+          {/* Top Card: Details */}
           <Card>
-             <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold">{selectedVehicle.id}</h2>
-                  <p className="text-muted-foreground">
-                    {selectedVehicle.make} {selectedVehicle.model}
-                  </p>
-                </div>
-                <Badge variant="outline" className="text-green-600 border-green-600 bg-green-50 dark:bg-green-900/10">
-                  Actief
-                </Badge>
-              </CardHeader>
+            <CardHeader className="flex flex-row items-start justify-between">
+              <div>
+                <h2 className="text-2xl font-bold">{selectedVehicle.id}</h2>
+                <p className="text-muted-foreground">
+                  {selectedVehicle.make} {selectedVehicle.model}
+                </p>
+              </div>
+              <Badge
+                variant="outline"
+                className="text-green-600 border-green-600 bg-green-50 dark:bg-green-900/10"
+              >
+                Actief
+              </Badge>
+            </CardHeader>
             <CardContent className="grid grid-cols-2 gap-6">
               {mainImage && (
                 <div className="relative aspect-video rounded-md overflow-hidden border">
@@ -153,56 +157,65 @@ export default function VehiclesPage() {
                 </div>
               )}
               <div>
-                <h3 className="text-lg font-semibold mb-4">Algemene gegevens</h3>
+                <h3 className="text-lg font-semibold mb-4">
+                  Algemene gegevens
+                </h3>
                 <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                    <div className="flex justify-between border-b pb-2">
-                        <span className="text-muted-foreground">Kenteken</span>
-                        <span className="font-medium">{selectedVehicle.id}</span>
-                    </div>
-                    <div className="flex justify-between border-b pb-2">
-                        <span className="text-muted-foreground">Voertuignummer</span>
-                        <span className="font-medium">
-                        {selectedVehicle.vehicleNumber}
-                        </span>
-                    </div>
-                    <div className="flex justify-between border-b pb-2">
-                        <span className="text-muted-foreground">Merk</span>
-                        <span className="font-medium">{selectedVehicle.make}</span>
-                    </div>
-                    <div className="flex justify-between border-b pb-2">
-                        <span className="text-muted-foreground">Model</span>
-                        <span className="font-medium">{selectedVehicle.model}</span>
-                    </div>
-                    <div className="flex justify-between border-b pb-2">
-                        <span className="text-muted-foreground">Type</span>
-                        <span className="font-medium">-</span>
-                    </div>
-                    <div className="flex justify-between border-b pb-2">
-                        <span className="text-muted-foreground">Bouwjaar</span>
-                        <span className="font-medium">{selectedVehicle.year}</span>
-                    </div>
-                    <div className="flex justify-between border-b pb-2">
-                        <span className="text-muted-foreground">Brandstof</span>
-                        <span className="font-medium">{selectedVehicle.fuel}</span>
-                    </div>
-                    <div className="flex justify-between border-b pb-2">
-                        <span className="text-muted-foreground">APK vervaldatum</span>
-                        <span className="font-medium">
-                        {selectedVehicle.apkDate}
-                        </span>
-                    </div>
+                  <div className="flex justify-between border-b pb-2">
+                    <span className="text-muted-foreground">Kenteken</span>
+                    <span className="font-medium">{selectedVehicle.id}</span>
+                  </div>
+                  <div className="flex justify-between border-b pb-2">
+                    <span className="text-muted-foreground">
+                      Voertuignummer
+                    </span>
+                    <span className="font-medium">
+                      {selectedVehicle.vehicleNumber}
+                    </span>
+                  </div>
+                  <div className="flex justify-between border-b pb-2">
+                    <span className="text-muted-foreground">Merk</span>
+                    <span className="font-medium">{selectedVehicle.make}</span>
+                  </div>
+                  <div className="flex justify-between border-b pb-2">
+                    <span className="text-muted-foreground">Model</span>
+                    <span className="font-medium">{selectedVehicle.model}</span>
+                  </div>
+                  <div className="flex justify-between border-b pb-2">
+                    <span className="text-muted-foreground">Type</span>
+                    <span className="font-medium">-</span>
+                  </div>
+                  <div className="flex justify-between border-b pb-2">
+                    <span className="text-muted-foreground">Bouwjaar</span>
+                    <span className="font-medium">{selectedVehicle.year}</span>
+                  </div>
+                  <div className="flex justify-between border-b pb-2">
+                    <span className="text-muted-foreground">Brandstof</span>
+                    <span className="font-medium">{selectedVehicle.fuel}</span>
+                  </div>
+                  <div className="flex justify-between border-b pb-2">
+                    <span className="text-muted-foreground">
+                      APK vervaldatum
+                    </span>
+                    <span className="font-medium">
+                      {selectedVehicle.apkDate}
+                    </span>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
+
+          {/* Bottom Card: Tabs */}
           <Tabs defaultValue="actions" className="flex flex-col flex-1 min-h-0">
-            <TabsList className='flex-shrink-0'>
+            <TabsList>
               <TabsTrigger value="actions">Acties</TabsTrigger>
               <TabsTrigger value="maintenance">Onderhoud</TabsTrigger>
               <TabsTrigger value="damage">Schade</TabsTrigger>
               <TabsTrigger value="documents">Documenten</TabsTrigger>
             </TabsList>
-            <TabsContent value="actions" className="flex flex-col flex-1 min-h-0 mt-4">
+
+            <TabsContent value="actions" className="flex-1 mt-4 min-h-0">
               <Card className="h-full flex flex-col">
                 <CardHeader>
                   <div className="flex justify-between items-center">
@@ -234,19 +247,20 @@ export default function VehiclesPage() {
                 </CardContent>
               </Card>
             </TabsContent>
-             <TabsContent value="maintenance"  className="flex-1 min-h-0 mt-4">
+            
+            <TabsContent value="maintenance"  className="flex-1 mt-4 min-h-0">
               <Card className="h-full">
                 <CardHeader><CardTitle>Onderhoud</CardTitle></CardHeader>
                 <CardContent><p className="text-center text-muted-foreground">Geen onderhoudsgegevens beschikbaar.</p></CardContent>
               </Card>
             </TabsContent>
-             <TabsContent value="damage"  className="flex-1 min-h-0 mt-4">
+             <TabsContent value="damage"  className="flex-1 mt-4 min-h-0">
               <Card className="h-full">
                 <CardHeader><CardTitle>Schade</CardTitle></CardHeader>
                 <CardContent><p className="text-center text-muted-foreground">Geen schadegevallen geregistreerd.</p></CardContent>
               </Card>
             </TabsContent>
-             <TabsContent value="documents"  className="flex-1 min-h-0 mt-4">
+             <TabsContent value="documents"  className="flex-1 mt-4 min-h-0">
               <Card className="h-full">
                 <CardHeader><CardTitle>Documenten</CardTitle></CardHeader>
                 <CardContent><p className="text-center text-muted-foreground">Geen documenten beschikbaar.</p></CardContent>
