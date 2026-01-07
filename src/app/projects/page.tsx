@@ -577,7 +577,7 @@ export default function ProjectsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div>
                         <Label htmlFor="projectnummer" className="text-xs font-semibold">Projectnummer</Label>
-                        <Input id="projectnummer" value={currentProject.projectnummer} onChange={(e) => handleInputChange('projectnummer', e.target.value)} />
+                        <Input id="projectnummer" value={currentProject.projectnummer} onChange={(e) => handleInputChange('projectnummer', e.target.value)} disabled />
                     </div>
                      <div>
                         <Label htmlFor="projectnaam" className="text-xs font-semibold">Projectnaam</Label>
