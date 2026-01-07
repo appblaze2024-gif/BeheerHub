@@ -68,6 +68,16 @@ interface AddVehicleDialogProps {
 }
 
 const carBrands = Object.keys(carData);
+const fuelTypes = [
+    "Benzine",
+    "Diesel",
+    "Elektrisch",
+    "Hybride (benzine)",
+    "Hybride (diesel)",
+    "LPG",
+    "CNG (Aardgas)",
+    "Waterstof"
+];
 
 export function AddVehicleDialog({ children, vehicle = null, open: controlledOpen, onOpenChange: controlledOnOpenChange }: AddVehicleDialogProps) {
   const firestore = useFirestore();
@@ -118,17 +128,20 @@ export function AddVehicleDialog({ children, vehicle = null, open: controlledOpe
   }, [open, vehicle, form]);
 
   React.useEffect(() => {
-    if (form.formState.isDirty && form.getValues('merk') !== (vehicle?.merk ?? '')) {
+    const isBrandChanged = form.getValues('merk') !== (vehicle?.merk ?? '');
+    if (form.formState.isDirty && isBrandChanged && vehicle) {
       form.setValue('model', '');
       form.setValue('type', '');
     }
   }, [selectedBrand, form, vehicle]);
 
   React.useEffect(() => {
-    if (form.formState.isDirty && form.getValues('model') !== (vehicle?.model ?? '')) {
+    const isModelChanged = form.getValues('model') !== (vehicle?.model ?? '');
+    if (form.formState.isDirty && isModelChanged && vehicle) {
       form.setValue('type', '');
     }
   }, [selectedModel, form, vehicle]);
+
 
   const onSubmit = async (data: VehicleFormValues) => {
     if (!firestore) {
@@ -317,9 +330,18 @@ export function AddVehicleDialog({ children, vehicle = null, open: controlledOpe
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Brandstof</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Diesel" {...field} />
-                    </FormControl>
+                     <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecteer brandstof" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {fuelTypes.map(fuel => (
+                            <SelectItem key={fuel} value={fuel}>{fuel}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
