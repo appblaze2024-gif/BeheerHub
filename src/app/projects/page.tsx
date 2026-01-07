@@ -478,6 +478,20 @@ export default function ProjectsPage() {
     }
   }, [selectedProjectId, projects]);
 
+  const generateProjectNumber = () => {
+    const year = new Date().getFullYear();
+    const randomNumber = Math.floor(10000 + Math.random() * 90000);
+    return `${year}-${randomNumber}`;
+  };
+
+  const handleNew = () => {
+    setSelectedProjectId(undefined);
+    setCurrentProject({
+      ...EMPTY_PROJECT,
+      projectnummer: generateProjectNumber(),
+    });
+  };
+  
   const handleProjectSelect = (projectId: string) => {
     if (projectId === 'new') {
       handleNew();
@@ -504,19 +518,6 @@ export default function ProjectsPage() {
     }
   };
   
-  const generateProjectNumber = () => {
-    const year = new Date().getFullYear();
-    const randomNumber = Math.floor(10000 + Math.random() * 90000);
-    return `${year}-${randomNumber}`;
-  };
-
-  const handleNew = () => {
-    setSelectedProjectId(undefined);
-    setCurrentProject({
-      ...EMPTY_PROJECT,
-      projectnummer: generateProjectNumber(),
-    });
-  };
 
   const handleDelete = async () => {
     if (!firestore || !currentProject.id) return;
