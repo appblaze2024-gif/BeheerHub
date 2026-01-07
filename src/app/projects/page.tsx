@@ -10,7 +10,6 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PageHeader } from '@/components/page-header';
 import {
   Select,
   SelectContent,
@@ -21,27 +20,15 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Trash2 } from 'lucide-react';
-
-function FormField({
-  id,
-  label,
-  value,
-  className,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  className?: string;
-}) {
-  return (
-    <div className={className}>
-      <Label htmlFor={id} className="text-xs font-semibold">
-        {label}
-      </Label>
-      <Input id={id} defaultValue={value} />
-    </div>
-  );
-}
+import {
+  useFirestore,
+  useCollection,
+  useMemoFirebase,
+  addDocumentNonBlocking,
+  updateDocumentNonBlocking,
+  deleteDocumentNonBlocking,
+} from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 
 type Werksoort = {
   id: string;
@@ -52,18 +39,44 @@ type Werksoort = {
   uurprijs: string;
 };
 
-function WerksoortenTab() {
-  const [werksoorten, setWerksoorten] = React.useState<Werksoort[]>([
-    {
-      id: '1',
-      postnummer: '00001',
-      werksoort: 'veegkipper incl. chauffeur',
-      eenheid: 'stuk',
-      fictieveH: '1',
-      uurprijs: '89,36',
-    },
-  ]);
+type Project = {
+  id?: string;
+  projectnummer: string;
+  projectnaam: string;
+  locatie: string;
+  opdrachtgever: string;
+  startdatum: string;
+  einddatum: string;
+  bestek: string;
+  besteknummer: string;
+  versie: string;
+  datum: string;
+  omschrijving: string;
+  werksoorten: Werksoort[];
+};
 
+const EMPTY_PROJECT: Project = {
+  projectnummer: '',
+  projectnaam: '',
+  locatie: '',
+  opdrachtgever: '',
+  startdatum: '',
+  einddatum: '',
+  bestek: '',
+  besteknummer: '',
+  versie: '',
+  datum: '',
+  omschrijving: '',
+  werksoorten: [],
+};
+
+function WerksoortenTab({
+  werksoorten,
+  setWerksoorten,
+}: {
+  werksoorten: Werksoort[];
+  setWerksoorten: React.Dispatch<React.SetStateAction<Werksoort[]>>;
+}) {
   const addRow = () => {
     setWerksoorten([
       ...werksoorten,
@@ -154,6 +167,69 @@ function WerksoortenTab() {
 }
 
 export default function ProjectsPage() {
+  const firestore = useFirestore();
+  const [selectedProjectId, setSelectedProjectId] = React.useState<
+    string | undefined
+  >();
+  const [currentProject, setCurrentProject] = React.useState<Project>(EMPTY_PROJECT);
+
+  const projectsCollection = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'projects');
+  }, [firestore]);
+
+  const { data: projects, isLoading } = useCollection<Project>(
+    projectsCollection
+  );
+
+  React.useEffect(() => {
+    if (selectedProjectId) {
+      const project = projects?.find((p) => p.id === selectedProjectId);
+      if (project) {
+        setCurrentProject(project);
+      } else {
+        setCurrentProject(EMPTY_PROJECT);
+        setSelectedProjectId(undefined);
+      }
+    } else {
+        setCurrentProject(EMPTY_PROJECT);
+    }
+  }, [selectedProjectId, projects]);
+
+  const handleProjectSelect = (projectId: string) => {
+    setSelectedProjectId(projectId);
+  };
+  
+  const handleInputChange = (field: keyof Project, value: string) => {
+      setCurrentProject(prev => ({...prev, [field]: value}));
+  }
+
+  const handleSave = async () => {
+    if (!firestore) return;
+    const projectsColRef = collection(firestore, 'projects');
+    const projectToSave = {...currentProject};
+
+    if (currentProject.id) {
+      const projectRef = doc(firestore, 'projects', currentProject.id);
+      updateDocumentNonBlocking(projectRef, projectToSave);
+    } else {
+      const newDocRef = await addDocumentNonBlocking(projectsColRef, projectToSave);
+      setSelectedProjectId(newDocRef.id);
+    }
+  };
+
+  const handleNew = () => {
+    setSelectedProjectId(undefined);
+    setCurrentProject(EMPTY_PROJECT);
+  };
+
+  const handleDelete = async () => {
+    if (!firestore || !currentProject.id) return;
+    const projectRef = doc(firestore, 'projects', currentProject.id);
+    await deleteDocumentNonBlocking(projectRef);
+    handleNew();
+  };
+
   return (
     <div className="flex flex-col flex-1 min-h-0">
       <Tabs defaultValue="project" className="flex-1 flex flex-col min-h-0">
@@ -174,14 +250,20 @@ export default function ProjectsPage() {
           >
             Selecteer Project:
           </Label>
-          <Select defaultValue="gemeente-aalsmeer">
+          <Select
+            value={selectedProjectId}
+            onValueChange={handleProjectSelect}
+            disabled={isLoading}
+          >
             <SelectTrigger className="w-full max-w-lg">
               <SelectValue placeholder="Selecteer een project" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="gemeente-aalsmeer">
-                Gemeente Aalsmeer [DVO Aalsmeer]
-              </SelectItem>
+              {projects?.map((project) => (
+                <SelectItem key={project.id} value={project.id}>
+                  {project.projectnaam} [{project.projectnummer}]
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -197,32 +279,30 @@ export default function ProjectsPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <FormField
-                    id="projectnummer"
-                    label="Projectnummer"
-                    value="2026-67502"
-                  />
-                  <FormField
-                    id="projectnaam"
-                    label="Projectnaam"
-                    value="DVO Aalsmeer"
-                  />
-                  <FormField id="locatie" label="Locatie" value="Aalsmeer" />
-                  <FormField
-                    id="opdrachtgever"
-                    label="Opdrachtgever"
-                    value="Gemeente Aalsmeer"
-                  />
-                  <FormField
-                    id="startdatum"
-                    label="Startdatum"
-                    value="01-01-2026"
-                  />
-                  <FormField
-                    id="einddatum"
-                    label="Einddatum"
-                    value="31-12-2026"
-                  />
+                    <div>
+                        <Label htmlFor="projectnummer" className="text-xs font-semibold">Projectnummer</Label>
+                        <Input id="projectnummer" value={currentProject.projectnummer} onChange={(e) => handleInputChange('projectnummer', e.target.value)} />
+                    </div>
+                     <div>
+                        <Label htmlFor="projectnaam" className="text-xs font-semibold">Projectnaam</Label>
+                        <Input id="projectnaam" value={currentProject.projectnaam} onChange={(e) => handleInputChange('projectnaam', e.target.value)} />
+                    </div>
+                     <div>
+                        <Label htmlFor="locatie" className="text-xs font-semibold">Locatie</Label>
+                        <Input id="locatie" value={currentProject.locatie} onChange={(e) => handleInputChange('locatie', e.target.value)} />
+                    </div>
+                     <div>
+                        <Label htmlFor="opdrachtgever" className="text-xs font-semibold">Opdrachtgever</Label>
+                        <Input id="opdrachtgever" value={currentProject.opdrachtgever} onChange={(e) => handleInputChange('opdrachtgever', e.target.value)} />
+                    </div>
+                     <div>
+                        <Label htmlFor="startdatum" className="text-xs font-semibold">Startdatum</Label>
+                        <Input id="startdatum" type="date" value={currentProject.startdatum} onChange={(e) => handleInputChange('startdatum', e.target.value)} />
+                    </div>
+                     <div>
+                        <Label htmlFor="einddatum" className="text-xs font-semibold">Einddatum</Label>
+                        <Input id="einddatum" type="date" value={currentProject.einddatum} onChange={(e) => handleInputChange('einddatum', e.target.value)} />
+                    </div>
                 </div>
               </CardContent>
             </Card>
@@ -233,14 +313,22 @@ export default function ProjectsPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <FormField id="bestek" label="Bestek" value="Beeldbestek" />
-                  <FormField
-                    id="besteknummer"
-                    label="Besteknummer"
-                    value="U456tres"
-                  />
-                  <FormField id="versie" label="Versie" value="1" />
-                  <FormField id="datum" label="Datum" value="01-01-2026" />
+                   <div>
+                        <Label htmlFor="bestek" className="text-xs font-semibold">Bestek</Label>
+                        <Input id="bestek" value={currentProject.bestek} onChange={(e) => handleInputChange('bestek', e.target.value)} />
+                    </div>
+                     <div>
+                        <Label htmlFor="besteknummer" className="text-xs font-semibold">Besteknummer</Label>
+                        <Input id="besteknummer" value={currentProject.besteknummer} onChange={(e) => handleInputChange('besteknummer', e.target.value)} />
+                    </div>
+                     <div>
+                        <Label htmlFor="versie" className="text-xs font-semibold">Versie</Label>
+                        <Input id="versie" value={currentProject.versie} onChange={(e) => handleInputChange('versie', e.target.value)} />
+                    </div>
+                     <div>
+                        <Label htmlFor="datum" className="text-xs font-semibold">Datum</Label>
+                        <Input id="datum" type="date" value={currentProject.datum} onChange={(e) => handleInputChange('datum', e.target.value)} />
+                    </div>
                 </div>
               </CardContent>
             </Card>
@@ -252,14 +340,14 @@ export default function ProjectsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <Textarea rows={4} />
+                <Textarea rows={4} value={currentProject.omschrijving} onChange={(e) => handleInputChange('omschrijving', e.target.value)} />
               </CardContent>
             </Card>
 
             <div className="flex justify-start gap-2">
-              <Button>Opslaan</Button>
-              <Button variant="outline">Nieuw</Button>
-              <Button variant="destructive">Verwijder</Button>
+              <Button onClick={handleSave}>Opslaan</Button>
+              <Button variant="outline" onClick={handleNew}>Nieuw</Button>
+              <Button variant="destructive" onClick={handleDelete} disabled={!currentProject.id}>Verwijder</Button>
             </div>
           </div>
         </TabsContent>
@@ -267,7 +355,7 @@ export default function ProjectsPage() {
           value="werksoorten"
           className="flex-1 overflow-y-auto pt-6 pb-2 px-6"
         >
-          <WerksoortenTab />
+          <WerksoortenTab werksoorten={currentProject.werksoorten} setWerksoorten={(newWerksoorten) => setCurrentProject(prev => ({...prev, werksoorten: typeof newWerksoorten === 'function' ? newWerksoorten(prev.werksoorten) : newWerksoorten}))}/>
         </TabsContent>
       </Tabs>
     </div>

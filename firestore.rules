@@ -47,6 +47,13 @@ service cloud.firestore {
     function isExistingOwner(userId) {
       return isOwner(userId) && resource != null;
     }
+
+    /**
+     * @description Manages the root projects collection. Any authenticated user can manage projects.
+     */
+    match /projects/{projectId} {
+       allow read, write: if isSignedIn();
+    }
     
     /**
      * @description Manages the root user document. A user can create their own document

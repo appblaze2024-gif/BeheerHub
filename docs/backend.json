@@ -1,5 +1,80 @@
 {
   "entities": {
+    "Project": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Project",
+      "type": "object",
+      "description": "Represents a project.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the project."
+        },
+        "projectnummer": {
+          "type": "string"
+        },
+        "projectnaam": {
+          "type": "string"
+        },
+        "locatie": {
+          "type": "string"
+        },
+        "opdrachtgever": {
+          "type": "string"
+        },
+        "startdatum": {
+          "type": "string",
+          "format": "date"
+        },
+        "einddatum": {
+          "type": "string",
+          "format": "date"
+        },
+        "bestek": {
+          "type": "string"
+        },
+        "besteknummer": {
+          "type": "string"
+        },
+        "versie": {
+          "type": "string"
+        },
+        "datum": {
+          "type": "string",
+          "format": "date"
+        },
+        "omschrijving": {
+          "type": "string"
+        },
+        "werksoorten": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "postnummer": {
+                "type": "string"
+              },
+              "werksoort": {
+                "type": "string"
+              },
+              "eenheid": {
+                "type": "string"
+              },
+              "fictieveH": {
+                "type": "string"
+              },
+              "uurprijs": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "required": ["projectnummer", "projectnaam"]
+    },
     "Revenue": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Revenue",
@@ -100,6 +175,22 @@
   },
   "firestore": {
     "structure": [
+      {
+        "path": "/projects/{projectId}",
+        "definition": {
+          "entityName": "Project",
+          "schema": {
+            "$ref": "#/backend/entities/Project"
+          },
+          "description": "Stores all projects for the application.",
+          "params": [
+            {
+              "name": "projectId",
+              "description": "The ID of the project."
+            }
+          ]
+        }
+      },
       {
         "path": "/users/{userId}/revenues/{revenueId}",
         "definition": {
