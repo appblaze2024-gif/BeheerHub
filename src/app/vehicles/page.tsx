@@ -2,12 +2,7 @@
 
 import * as React from 'react';
 import Image from 'next/image';
-import {
-  ChevronDown,
-  MoreHorizontal,
-  Plus,
-  Search,
-} from 'lucide-react';
+import { ChevronDown, MoreHorizontal, Plus, Search } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -49,7 +44,7 @@ const vehicles = [
   { id: 'V-51-GKB', make: 'VOLKSWAGEN', model: 'CADDY' },
   { id: 'V-53-DZK', make: 'MERCEDES', model: 'SPRINTER' },
   { id: 'V-55-DZK', make: 'MERCEDES', model: 'SPRINTER' },
-  { id: 'V-66-DZX', make: 'MERCEDES', model: 'SPRINTER' },
+  { id: 'V-66-DZXa', make: 'MERCEDES', model: 'SPRINTER' },
   { id: 'V-836-XT', make: 'IVECO', model: '35C14N' },
   { id: 'V-92-DZZ', make: 'MERCEDES', model: 'SPRINTER' },
   { id: 'VBT-53-H', make: 'IVECO', model: '35C14N' },
