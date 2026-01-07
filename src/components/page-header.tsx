@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
 type PageHeaderProps = {
@@ -17,7 +16,7 @@ export function PageHeader({
 }: PageHeaderProps) {
   return (
     <header
-      className={cn("flex items-center justify-between gap-4", className)}
+      className={cn("flex items-center justify-between gap-4 p-6", className)}
     >
       <div className="grid gap-1">
         <h1 className="font-headline text-2xl font-bold tracking-tight md:text-3xl">
@@ -29,9 +28,6 @@ export function PageHeader({
       </div>
       <div className="flex items-center gap-2">
         {children}
-        <div className="md:hidden">
-          <SidebarTrigger />
-        </div>
       </div>
     </header>
   );

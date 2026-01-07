@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   SidebarContent,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-} from "@/components/ui/sidebar";
+} from '@/components/ui/sidebar';
 import {
   Users,
   ClipboardList,
@@ -24,31 +24,43 @@ import {
   User,
   Settings,
   LogOut,
-} from "lucide-react";
+} from 'lucide-react';
+import { useAuth } from '@/firebase';
+import { signOut } from 'firebase/auth';
 
 const menuItems = [
-  { href: "/", label: "Dashboard", icon: Home },
-  { href: "/projects", label: "Projecten", icon: ClipboardList },
-  { href: "/employees", label: "Medewerkers", icon: Users },
-  { href: "/work-planning", label: "Werkplanning", icon: CalendarCheck },
-  { href: "/weekly-reports", label: "Weekstaten", icon: Newspaper },
-  { href: "/reports", label: "Rapportages", icon: FileText },
-  { href: "/vehicles", label: "Voertuigen", icon: Truck },
-  { href: "/machine-management", label: "Machinebeheer", icon: Wrench },
-  { href: "/objects", label: "Objecten", icon: Building2 },
-  { href: "/routes", label: "Routes", icon: Route },
-  { href: "/inventory", label: "Voorraadbeheer", icon: Package },
-  { href: "/issues", label: "Meldingen", icon: Bell },
-];
-
-const bottomMenuItems = [
-  { href: "/profile", label: "Profiel", icon: User },
-  { href: "/settings", label: "Instellingen", icon: Settings },
-  { href: "/logout", label: "Uitloggen", icon: LogOut },
+  { href: '/', label: 'Dashboard', icon: Home },
+  { href: '/projects', label: 'Projecten', icon: ClipboardList },
+  { href: '/employees', label: 'Medewerkers', icon: Users },
+  { href: '/work-planning', label: 'Werkplanning', icon: CalendarCheck },
+  { href: '/weekly-reports', label: 'Weekstaten', icon: Newspaper },
+  { href: '/reports', label: 'Rapportages', icon: FileText },
+  { href: '/vehicles', label: 'Voertuigen', icon: Truck },
+  { href: '/machine-management', label: 'Machinebeheer', icon: Wrench },
+  { href: '/objects', label: 'Objecten', icon: Building2 },
+  { href: '/routes', label: 'Routes', icon: Route },
+  { href: '/inventory', label: 'Voorraadbeheer', icon: Package },
+  { href: '/issues', label: 'Meldingen', icon: Bell },
 ];
 
 export function SidebarNav() {
   const pathname = usePathname();
+  const auth = useAuth();
+
+  const handleLogout = async () => {
+    await signOut(auth);
+  };
+
+  const bottomMenuItems = [
+    { href: '/profile', label: 'Profiel', icon: User },
+    { href: '/settings', label: 'Instellingen', icon: Settings },
+    {
+      label: 'Uitloggen',
+      icon: LogOut,
+      onClick: handleLogout,
+      href: '#',
+    },
+  ];
 
   return (
     <SidebarContent>
@@ -71,15 +83,26 @@ export function SidebarNav() {
       <SidebarMenu className="mt-auto">
         {bottomMenuItems.map((item) => (
           <SidebarMenuItem key={item.label}>
-            <Link href={item.href}>
+            {item.onClick ? (
               <SidebarMenuButton
-                isActive={pathname === item.href}
+                onClick={item.onClick}
                 tooltip={item.label}
+                className="w-full"
               >
                 <item.icon />
                 <span>{item.label}</span>
               </SidebarMenuButton>
-            </Link>
+            ) : (
+              <Link href={item.href}>
+                <SidebarMenuButton
+                  isActive={pathname === item.href}
+                  tooltip={item.label}
+                >
+                  <item.icon />
+                  <span>{item.label}</span>
+                </SidebarMenuButton>
+              </Link>
+            )}
           </SidebarMenuItem>
         ))}
       </SidebarMenu>
