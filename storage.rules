@@ -15,5 +15,11 @@ service firebase.storage {
     match /damages/{vehicleId}/{damageId}/{fileName} {
       allow write: if request.auth != null;
     }
+    
+    // Voeg een regel toe om het uploaden van voertuigafbeeldingen toe te staan
+    // voor ingelogde gebruikers.
+    match /vehicles/{vehicleId}/main_image/{fileName} {
+      allow write: if request.auth != null;
+    }
   }
 }
