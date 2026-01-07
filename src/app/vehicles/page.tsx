@@ -249,7 +249,7 @@ export default function VehiclesPage() {
                           onOpenChange={setIsVehicleDialogOpen}
                         >
                           <Button variant="ghost" size="icon">
-                            <Wrench className="h-4 w-4" />
+                            <Pencil className="h-4 w-4" />
                           </Button>
                         </AddVehicleDialog>
                       </div>
