@@ -39,8 +39,8 @@ export default function RootLayout({
           <Sidebar collapsible="icon" side="left">
             <SidebarNav />
           </Sidebar>
-          <SidebarInset>
-            <header className="flex h-16 items-center justify-end border-b bg-gray-300 px-6 dark:bg-gray-800">
+          <SidebarInset className="flex flex-col">
+            <header className="flex h-16 shrink-0 items-center justify-end border-b bg-gray-300 px-6 dark:bg-gray-800">
               <div className="flex items-center gap-4">
                 <span className="text-sm font-medium">
                   dstoutenburg@meerlanden.nl
@@ -59,7 +59,7 @@ export default function RootLayout({
                 </Button>
               </div>
             </header>
-            {children}
+            <div className="flex-1 overflow-y-auto">{children}</div>
           </SidebarInset>
         </SidebarProvider>
         <Toaster />
