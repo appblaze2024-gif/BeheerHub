@@ -76,6 +76,7 @@ export function AddDamageDialog({
     resolver: zodResolver(damageFormSchema),
     defaultValues: {
       description: '',
+      date: new Date(),
     },
   });
 
@@ -190,7 +191,7 @@ export function AddDamageDialog({
   };
 
   const handleClose = () => {
-    form.reset({description: ''});
+    form.reset({description: '', date: new Date()});
     setDamageId(null);
     setOpen(false);
     setIsUploading(false);
