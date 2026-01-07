@@ -81,6 +81,7 @@ interface AddDamageDialogProps {
   onOpenChange: (open: boolean) => void;
   vehicleId: string;
   damage?: any | null;
+  form: any;
 }
 
 export function AddDamageDialog({
@@ -88,6 +89,7 @@ export function AddDamageDialog({
   onOpenChange,
   vehicleId,
   damage = null,
+  form,
 }: AddDamageDialogProps) {
   const firestore = useFirestore();
   const app = useFirebaseApp();
@@ -101,33 +103,14 @@ export function AddDamageDialog({
 
   const damageIdRef = React.useRef(damage?.id || doc(collection(firestore, 'temp')).id);
 
-  const form = useForm<DamageFormValues>({
-    resolver: zodResolver(damageFormSchema),
-  });
-
   React.useEffect(() => {
     if (open) {
-      if (damage) {
-        form.reset({
-          description: damage.description,
-          date: new Date(damage.date),
-          status: damage.status,
-        });
-        setUploadedFiles(damage.files || []);
-        damageIdRef.current = damage.id;
-      } else {
-        form.reset({
-          description: '',
-          date: new Date(),
-          status: 'Open',
-        });
-        setUploadedFiles([]);
-        damageIdRef.current = doc(collection(firestore, 'temp')).id;
-      }
+      setUploadedFiles(damage?.files || []);
+      damageIdRef.current = damage?.id || doc(collection(firestore, 'temp')).id;
       setUploads({});
       setIsSubmitting(false);
     }
-  }, [damage, open, form, firestore]);
+  }, [damage, open, firestore]);
 
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -441,6 +424,7 @@ export function AddDamageDialog({
                       <span>{format(new Date(file.uploadedAt), 'dd-MM-yy')}</span>
                       <div className="flex justify-end">
                         <Button
+                          type="button"
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"

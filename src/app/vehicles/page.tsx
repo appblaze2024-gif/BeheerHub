@@ -53,6 +53,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from '@/hooks/use-toast';
 import { getStorage, ref, deleteObject } from 'firebase/storage';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 
 function DeleteDamageDialog({
   vehicleId,
@@ -149,6 +152,12 @@ function DeleteDamageDialog({
   );
 }
 
+const damageFormSchema = z.object({
+  date: z.date({ required_error: 'Een datum is verplicht.' }),
+  description: z.string().min(1, { message: 'Omschrijving is verplicht.' }),
+  status: z.string().min(1, { message: 'Status is verplicht.' }),
+});
+
 export default function VehiclesPage() {
   const firestore = useFirestore();
   const [isImporting, setIsImporting] = React.useState(false);
@@ -212,20 +221,37 @@ export default function VehiclesPage() {
   const [editingDamage, setEditingDamage] = React.useState<any | null>(null);
   const [isDamageDialogOpen, setIsDamageDialogOpen] = React.useState(false);
 
+  const damageForm = useForm({
+    resolver: zodResolver(damageFormSchema),
+  });
 
   const handleEditDamage = (damage: any) => {
     setEditingDamage(damage);
+    damageForm.reset({
+      description: damage.description,
+      date: new Date(damage.date),
+      status: damage.status,
+    });
     setIsDamageDialogOpen(true);
   };
 
   const handleAddNewDamage = () => {
     setEditingDamage(null);
+    damageForm.reset({
+      description: '',
+      date: new Date(),
+      status: 'Open',
+    });
     setIsDamageDialogOpen(true);
   };
   
-  const onDamageDialogClose = () => {
-    setEditingDamage(null);
-    setIsDamageDialogOpen(false);
+  const onDamageDialogClose = (open: boolean) => {
+    if (!open) {
+      setEditingDamage(null);
+      setIsDamageDialogOpen(false);
+    } else {
+      setIsDamageDialogOpen(true);
+    }
   };
 
   return (
@@ -586,12 +612,15 @@ export default function VehiclesPage() {
                   </Card>
                 </TabsContent>
               </Tabs>
-              <AddDamageDialog
-                open={isDamageDialogOpen}
-                onOpenChange={onDamageDialogClose}
-                vehicleId={selectedVehicle.id}
-                damage={editingDamage}
-              />
+              {isDamageDialogOpen && (
+                <AddDamageDialog
+                  open={isDamageDialogOpen}
+                  onOpenChange={onDamageDialogClose}
+                  vehicleId={selectedVehicle.id}
+                  damage={editingDamage}
+                  form={damageForm}
+                />
+              )}
             </>
           ) : isLoading ? (
             <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -608,5 +637,3 @@ export default function VehiclesPage() {
     </div>
   );
 }
-
-    
