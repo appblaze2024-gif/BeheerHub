@@ -391,6 +391,27 @@ function BestandenTab({ projectId }: { projectId: string | undefined }) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
   }
 
+  const handleDownload = async (bestand: Bestand) => {
+    try {
+      const response = await fetch(bestand.url);
+      if (!response.ok) {
+        throw new Error('Netwerkrespons was niet ok.');
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = bestand.name;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+    } catch (error) {
+      console.error('Fout bij het downloaden van het bestand:', error);
+    }
+  };
+
   const handleDeleteBestand = async (e: React.MouseEvent, bestand: Bestand) => {
     e.stopPropagation();
     e.preventDefault();
@@ -450,11 +471,9 @@ function BestandenTab({ projectId }: { projectId: string | undefined }) {
                 <div>{formatBytes(bestand.size)}</div>
                 <div>{new Date(bestand.uploadedAt).toLocaleDateString('nl-NL')}</div>
                 <div className='flex items-center gap-1 justify-end'>
-                    <a href={bestand.url} download={bestand.name}>
-                      <Button variant='ghost' size='icon'>
-                        <Download className='h-4 w-4' />
-                      </Button>
-                    </a>
+                    <Button variant='ghost' size='icon' onClick={() => handleDownload(bestand)}>
+                      <Download className='h-4 w-4' />
+                    </Button>
                    <Button variant='ghost' size='icon' onClick={(e) => handleDeleteBestand(e, bestand)}>
                     <Trash2 className='h-4 w-4 text-destructive' />
                   </Button>
