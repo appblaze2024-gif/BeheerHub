@@ -70,6 +70,7 @@ export function AddMaintenanceDialog({
       type: '',
       cost: 0,
       details: '',
+      date: new Date(),
     },
   });
 
@@ -155,7 +156,7 @@ export function AddMaintenanceDialog({
                 control={form.control}
                 name="date"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel>Datum</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
