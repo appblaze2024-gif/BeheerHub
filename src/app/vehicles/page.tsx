@@ -60,7 +60,7 @@ const vehicles = [
   { id: 'V-51-GKBa', make: 'VOLKSWAGEN', model: 'CADDY' },
   { id: 'V-53-DZKa', make: 'MERCEDES', model: 'SPRINTER' },
   { id: 'V-55-DZKa', make: 'MERCEDES', model: 'SPRINTER' },
-  { id: 'V-66-DZXa', make 'MERCEDES', model: 'SPRINTER' },
+  { id: 'V-66-DZXa', make: 'MERCEDES', model: 'SPRINTER' },
   { id: 'V-836-XTa', make: 'IVECO', model: '35C14N' },
   { id: 'V-92-DZza', make: 'MERCEDES', model: 'SPRINTER' },
   { id: 'VBT-53-Ha', make: 'IVECO', model: '35C14N' },
@@ -72,7 +72,7 @@ export default function VehiclesPage() {
   const mainImage = PlaceHolderImages.find(p => p.id === 'vehicle-side');
 
   return (
-    <div className="flex flex-col flex-1 p-6 bg-background min-h-0">
+    <div className="flex flex-col flex-1 p-6 bg-background">
       <PageHeader title="Voertuigen">
         <div className="relative w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
