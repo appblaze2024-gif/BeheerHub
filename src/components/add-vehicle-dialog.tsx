@@ -86,14 +86,26 @@ export function AddVehicleDialog({ children }: AddVehicleDialogProps) {
   });
 
   const selectedBrand = form.watch('merk');
-  const models = selectedBrand ? carData[selectedBrand] : [];
+  const selectedModel = form.watch('model');
+  
+  const models = selectedBrand ? Object.keys(carData[selectedBrand] || {}) : [];
+  const types = selectedBrand && selectedModel ? (carData[selectedBrand]?.[selectedModel] || []) : [];
 
   React.useEffect(() => {
-    // Reset model when brand changes
+    // Reset model and type when brand changes
     if (selectedBrand) {
       form.setValue('model', '');
+      form.setValue('type', '');
     }
   }, [selectedBrand, form]);
+
+  React.useEffect(() => {
+    // Reset type when model changes
+    if (selectedModel) {
+        form.setValue('type', '');
+    }
+  }, [selectedModel, form]);
+
 
   const onSubmit = async (data: VehicleFormValues) => {
     if (!firestore) {
@@ -211,9 +223,18 @@ export function AddVehicleDialog({ children }: AddVehicleDialogProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Type</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Bestel" {...field} />
-                    </FormControl>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={!selectedModel || types.length === 0}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecteer een type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {types.map(type => (
+                            <SelectItem key={type} value={type}>{type}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -228,7 +249,7 @@ export function AddVehicleDialog({ children }: AddVehicleDialogProps) {
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecteer status" />
-                        </SelectTrigger>
+                        </Trigger>
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="Actief">Actief</SelectItem>
