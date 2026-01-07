@@ -38,6 +38,7 @@ import { AddMaintenanceDialog } from '@/components/add-maintenance-dialog';
 import { AddDamageDialog } from '@/components/add-damage-dialog';
 import { getStorage, ref, deleteObject } from 'firebase/storage';
 import { AddVehicleDialog } from '@/components/add-vehicle-dialog';
+import { VehicleImageUploader } from '@/components/vehicle-image-uploader';
 
 export default function VehiclesPage() {
   const firestore = useFirestore();
@@ -232,17 +233,11 @@ export default function VehiclesPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="flex gap-6">
-                    <div className="relative w-full max-w-[250px] aspect-video rounded-md overflow-hidden border">
-                      {mainImage && (
-                        <Image
-                          src={mainImage.imageUrl}
-                          alt={mainImage.description}
-                          fill
-                          className="object-cover"
-                          data-ai-hint={mainImage.imageHint}
-                        />
-                      )}
-                    </div>
+                    <VehicleImageUploader
+                      vehicleId={selectedVehicle.id}
+                      imageUrl={selectedVehicle.imageUrl ?? mainImage?.imageUrl}
+                      imageHint={selectedVehicle.imageUrl ? `${selectedVehicle.merk} ${selectedVehicle.model}` : mainImage?.imageHint}
+                    />
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-semibold">
@@ -512,4 +507,5 @@ export default function VehiclesPage() {
   );
 }
 
+    
     

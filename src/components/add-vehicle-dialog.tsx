@@ -56,6 +56,7 @@ const vehicleFormSchema = z.object({
   bouwjaar: z.string().optional(),
   brandstof: z.string().optional(),
   apk_vervaldatum: z.date().optional(),
+  imageUrl: z.string().url().optional().nullable(),
 });
 
 type VehicleFormValues = z.infer<typeof vehicleFormSchema>;
@@ -110,6 +111,7 @@ export function AddVehicleDialog({ children, vehicle = null, open: controlledOpe
           bouwjaar: vehicle.bouwjaar || '',
           brandstof: vehicle.brandstof || '',
           apk_vervaldatum: vehicle.apk_vervaldatum ? new Date(vehicle.apk_vervaldatum) : undefined,
+          imageUrl: vehicle.imageUrl ?? null,
         });
       } else {
         form.reset({
@@ -122,22 +124,21 @@ export function AddVehicleDialog({ children, vehicle = null, open: controlledOpe
           bouwjaar: '',
           brandstof: '',
           apk_vervaldatum: undefined,
+          imageUrl: null,
         });
       }
     }
   }, [open, vehicle, form]);
 
   React.useEffect(() => {
-    const isBrandChanged = form.getValues('merk') !== (vehicle?.merk ?? '');
-    if (form.formState.isDirty && isBrandChanged && vehicle) {
+    if (form.formState.isDirty && selectedBrand !== vehicle?.merk) {
       form.setValue('model', '');
       form.setValue('type', '');
     }
   }, [selectedBrand, form, vehicle]);
 
   React.useEffect(() => {
-    const isModelChanged = form.getValues('model') !== (vehicle?.model ?? '');
-    if (form.formState.isDirty && isModelChanged && vehicle) {
+    if (form.formState.isDirty && selectedModel !== vehicle?.model) {
       form.setValue('type', '');
     }
   }, [selectedModel, form, vehicle]);
@@ -406,3 +407,5 @@ export function AddVehicleDialog({ children, vehicle = null, open: controlledOpe
     </Dialog>
   );
 }
+
+    
