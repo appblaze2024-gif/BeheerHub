@@ -10,6 +10,7 @@ import {
   Download,
   Trash2,
   Pencil,
+  Wrench,
 } from 'lucide-react';
 import { collection, doc, deleteDoc } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
@@ -103,6 +104,7 @@ export default function VehiclesPage() {
   
   const [editingDamage, setEditingDamage] = React.useState<any | null>(null);
   const [isDamageDialogOpen, setIsDamageDialogOpen] = React.useState(false);
+  const [isVehicleDialogOpen, setIsVehicleDialogOpen] = React.useState(false);
 
   const handleEditDamage = (damage: any) => {
     setEditingDamage(damage);
@@ -112,6 +114,10 @@ export default function VehiclesPage() {
   const handleAddNewDamage = () => {
     setEditingDamage(null);
     setIsDamageDialogOpen(true);
+  };
+
+  const handleEditVehicle = () => {
+    setIsVehicleDialogOpen(true);
   };
 
   return (
@@ -131,7 +137,7 @@ export default function VehiclesPage() {
           onOpenChange={setIsImporting}
           onSuccess={handleImportSuccess}
         >
-          <Button variant="outline" onClick={() => setIsImporting(true)}>
+          <Button variant="outline">
             <Upload className="mr-2 h-4 w-4" />
             Import
           </Button>
@@ -204,10 +210,18 @@ export default function VehiclesPage() {
                       </p>
                     </div>
                     <Badge
-                      variant="outline"
-                      className="text-green-600 border-green-600 bg-green-50 dark:bg-green-900/10"
+                      variant={
+                        selectedVehicle?.status === 'Actief'
+                          ? 'outline'
+                          : 'destructive'
+                      }
+                      className={
+                        selectedVehicle?.status === 'Actief'
+                          ? 'text-green-600 border-green-600 bg-green-50 dark:bg-green-900/10'
+                          : ''
+                      }
                     >
-                      Actief
+                      {selectedVehicle?.status ?? 'Onbekend'}
                     </Badge>
                   </div>
                 </CardHeader>
@@ -225,9 +239,20 @@ export default function VehiclesPage() {
                       )}
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-lg font-semibold mb-4">
-                        Algemene gegevens
-                      </h3>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold">
+                          Algemene gegevens
+                        </h3>
+                        <AddVehicleDialog
+                          vehicle={selectedVehicle}
+                          open={isVehicleDialogOpen}
+                          onOpenChange={setIsVehicleDialogOpen}
+                        >
+                          <Button variant="ghost" size="icon">
+                            <Wrench className="h-4 w-4" />
+                          </Button>
+                        </AddVehicleDialog>
+                      </div>
                       <div className="grid grid-cols-2 gap-x-8 gap-y-4">
                         <div className="flex justify-between border-b pb-2">
                           <span className="text-muted-foreground">
@@ -259,7 +284,9 @@ export default function VehiclesPage() {
                         </div>
                         <div className="flex justify-between border-b pb-2">
                           <span className="text-muted-foreground">Type</span>
-                          <span className="font-medium">-</span>
+                          <span className="font-medium">
+                            {selectedVehicle?.type ?? '-'}
+                          </span>
                         </div>
                         <div className="flex justify-between border-b pb-2">
                           <span className="text-muted-foreground">
@@ -414,10 +441,9 @@ export default function VehiclesPage() {
                     </CardHeader>
                     <CardContent className="flex-1 flex flex-col gap-4 overflow-y-auto pt-2">
                        <div className="text-sm text-muted-foreground">
-                        <div className="grid grid-cols-[2fr_1fr_1fr] gap-4 px-4 py-2 font-medium">
+                        <div className="grid grid-cols-[2fr_1fr] gap-4 px-4 py-2 font-medium">
                           <span>Omschrijving</span>
                           <span>Datum</span>
-                          <span >Status</span>
                         </div>
                         <Separator />
                       </div>
@@ -431,11 +457,10 @@ export default function VehiclesPage() {
                             <div
                               key={item.id}
                               onClick={() => handleEditDamage(item)}
-                              className="grid grid-cols-[2fr_1fr_1fr] gap-4 items-center px-4 py-3 border-b hover:bg-muted/50 cursor-pointer rounded-md"
+                              className="grid grid-cols-[2fr_1fr] gap-4 items-center px-4 py-3 border-b hover:bg-muted/50 cursor-pointer rounded-md"
                             >
                               <span className="truncate">{item.description}</span>
                               <span>{new Date(item.date).toLocaleDateString('nl-NL')}</span>
-                              <span>{item.status}</span>
                             </div>
                           ))}
                         </div>
@@ -481,5 +506,3 @@ export default function VehiclesPage() {
     </div>
   );
 }
-
-    

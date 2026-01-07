@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc } from 'firebase/firestore';
 
 import { cn } from '@/lib/utils';
 import { useFirestore } from '@/firebase';
@@ -61,28 +61,24 @@ const vehicleFormSchema = z.object({
 type VehicleFormValues = z.infer<typeof vehicleFormSchema>;
 
 interface AddVehicleDialogProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
+  vehicle?: any | null;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 const carBrands = Object.keys(carData);
 
-export function AddVehicleDialog({ children }: AddVehicleDialogProps) {
+export function AddVehicleDialog({ children, vehicle = null, open: controlledOpen, onOpenChange: controlledOnOpenChange }: AddVehicleDialogProps) {
   const firestore = useFirestore();
-  const [open, setOpen] = React.useState(false);
+  const [isLocallyOpen, setLocallyOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  const open = controlledOpen !== undefined ? controlledOpen : isLocallyOpen;
+  const onOpenChange = controlledOnOpenChange !== undefined ? controlledOnOpenChange : setLocallyOpen;
 
   const form = useForm<VehicleFormValues>({
     resolver: zodResolver(vehicleFormSchema),
-    defaultValues: {
-      kenteken: '',
-      voertuignummer: '',
-      merk: '',
-      model: '',
-      type: '',
-      status: 'Actief',
-      bouwjaar: '',
-      brandstof: '',
-    },
   });
 
   const selectedBrand = form.watch('merk');
@@ -92,20 +88,49 @@ export function AddVehicleDialog({ children }: AddVehicleDialogProps) {
   const types = selectedBrand && selectedModel ? (carData[selectedBrand]?.[selectedModel] || []) : [];
 
   React.useEffect(() => {
-    // Reset model and type when brand changes
-    if (selectedBrand) {
-      form.setValue('model', '');
-      form.setValue('type', '');
+    if (open) {
+      if (vehicle) {
+        form.reset({
+          kenteken: vehicle.id || '',
+          voertuignummer: vehicle.voertuignummer || '',
+          merk: vehicle.merk || '',
+          model: vehicle.model || '',
+          type: vehicle.type || '',
+          status: vehicle.status || 'Actief',
+          bouwjaar: vehicle.bouwjaar || '',
+          brandstof: vehicle.brandstof || '',
+          apk_vervaldatum: vehicle.apk_vervaldatum ? new Date(vehicle.apk_vervaldatum) : undefined,
+        });
+      } else {
+        form.reset({
+          kenteken: '',
+          voertuignummer: '',
+          merk: '',
+          model: '',
+          type: '',
+          status: 'Actief',
+          bouwjaar: '',
+          brandstof: '',
+          apk_vervaldatum: undefined,
+        });
+      }
     }
-  }, [selectedBrand, form]);
+  }, [open, vehicle, form]);
 
   React.useEffect(() => {
-    // Reset type when model changes
-    if (selectedModel) {
+    // Reset model and type when brand changes, but not on initial load
+    if (form.formState.isDirty) {
+        form.setValue('model', '');
         form.setValue('type', '');
     }
-  }, [selectedModel, form]);
+  }, [selectedBrand, form.formState.isDirty]); // only trigger when brand changes due to user interaction
 
+  React.useEffect(() => {
+    // Reset type when model changes, but not on initial load
+    if (form.formState.isDirty) {
+        form.setValue('type', '');
+    }
+  }, [selectedModel, form.formState.isDirty]); // only trigger when model changes due to user interaction
 
   const onSubmit = async (data: VehicleFormValues) => {
     if (!firestore) {
@@ -121,24 +146,37 @@ export function AddVehicleDialog({ children }: AddVehicleDialogProps) {
         ...data,
         apk_vervaldatum: data.apk_vervaldatum ? format(data.apk_vervaldatum, 'yyyy-MM-dd') : null,
       };
+      
+      // Kenteken cannot be changed for existing vehicles
+      if (vehicle && vehicle.id !== data.kenteken) {
+          console.error("Changing kenteken is not allowed.");
+          // maybe show a toast or error message to user
+          setIsSubmitting(false);
+          return
+      }
 
-      await setDoc(vehicleRef, vehicleData, { merge: true });
+      if (vehicle) {
+        await updateDoc(vehicleRef, vehicleData);
+      } else {
+        await setDoc(vehicleRef, vehicleData, { merge: false });
+      }
 
-      form.reset();
-      setOpen(false);
+      onOpenChange(false);
     } catch (error) {
-      console.error('Error adding vehicle: ', error);
+      console.error('Error saving vehicle: ', error);
     } finally {
         setIsSubmitting(false);
     }
   };
+  
+  const DialogTriggerComponent = children ? <DialogTrigger asChild>{children}</DialogTrigger> : null;
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      {DialogTriggerComponent}
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Voertuig Toevoegen</DialogTitle>
+          <DialogTitle>{vehicle ? 'Voertuig Bewerken' : 'Voertuig Toevoegen'}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -150,7 +188,7 @@ export function AddVehicleDialog({ children }: AddVehicleDialogProps) {
                   <FormItem>
                     <FormLabel>Kenteken</FormLabel>
                     <FormControl>
-                      <Input placeholder="12-ABC-3" {...field} />
+                      <Input placeholder="12-ABC-3" {...field} disabled={!!vehicle} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -177,7 +215,7 @@ export function AddVehicleDialog({ children }: AddVehicleDialogProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Merk</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecteer een merk" />
@@ -340,7 +378,7 @@ export function AddVehicleDialog({ children }: AddVehicleDialogProps) {
                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                      Bezig...
                     </>
-                ) : "Toevoegen"}
+                ) : vehicle ? 'Wijzigingen opslaan' : 'Toevoegen'}
               </Button>
             </DialogFooter>
           </form>
