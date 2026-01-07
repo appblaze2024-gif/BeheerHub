@@ -156,12 +156,8 @@ function WerksoortenTab() {
 export default function ProjectsPage() {
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <div className='px-6 pt-6'>
-        <PageHeader title="Projecten" />
-      </div>
-
-      <Tabs defaultValue="project" className="flex-1 flex flex-col min-h-0 mt-6">
-        <div className="px-6">
+      <Tabs defaultValue="project" className="flex-1 flex flex-col min-h-0">
+        <div className="px-6 pt-6">
           <TabsList>
             <TabsTrigger value="project">Project</TabsTrigger>
             <TabsTrigger value="werksoorten">Werksoorten</TabsTrigger>
@@ -170,9 +166,12 @@ export default function ProjectsPage() {
             <TabsTrigger value="bestanden">Bestanden</TabsTrigger>
           </TabsList>
         </div>
-        
+
         <div className="flex items-center gap-4 mt-6 px-6">
-          <Label htmlFor="select-project" className="font-semibold whitespace-nowrap">
+          <Label
+            htmlFor="select-project"
+            className="font-semibold whitespace-nowrap"
+          >
             Selecteer Project:
           </Label>
           <Select defaultValue="gemeente-aalsmeer">
@@ -209,7 +208,7 @@ export default function ProjectsPage() {
                     value="DVO Aalsmeer"
                   />
                   <FormField id="locatie" label="Locatie" value="Aalsmeer" />
-                   <FormField
+                  <FormField
                     id="opdrachtgever"
                     label="Opdrachtgever"
                     value="Gemeente Aalsmeer"
@@ -241,7 +240,7 @@ export default function ProjectsPage() {
                     value="U456tres"
                   />
                   <FormField id="versie" label="Versie" value="1" />
-                   <FormField id="datum" label="Datum" value="01-01-2026" />
+                  <FormField id="datum" label="Datum" value="01-01-2026" />
                 </div>
               </CardContent>
             </Card>
