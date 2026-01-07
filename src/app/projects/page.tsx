@@ -1,12 +1,159 @@
-import { PageHeader } from "@/components/page-header";
+'use client';
+
+import * as React from 'react';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { PageHeader } from '@/components/page-header';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+
+function FormField({
+  id,
+  label,
+  value,
+  className,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <Label htmlFor={id} className="text-xs font-semibold">
+        {label}
+      </Label>
+      <Input id={id} defaultValue={value} />
+    </div>
+  );
+}
 
 export default function ProjectsPage() {
   return (
     <div className="flex flex-col flex-1 p-6 min-h-0">
       <PageHeader title="Projecten" />
-      <div className="flex-1 mt-6">
-        {/* Page content goes here */}
-      </div>
+
+      <Tabs defaultValue="project" className="flex-1 flex flex-col min-h-0 mt-6">
+        <TabsList>
+          <TabsTrigger value="project">Project</TabsTrigger>
+          <TabsTrigger value="werksoorten">Werksoorten</TabsTrigger>
+          <TabsTrigger value="afspraken">Afspraken</TabsTrigger>
+          <TabsTrigger value="organisatie">Organisatie</TabsTrigger>
+          <TabsTrigger value="bestanden">Bestanden</TabsTrigger>
+        </TabsList>
+
+        <TabsContent
+          value="project"
+          className="flex-1 overflow-y-auto pt-6 pb-2"
+        >
+          <div className="space-y-6">
+            <div className="flex items-center gap-4">
+              <Label htmlFor="select-project" className="font-semibold">
+                Selecteer Project:
+              </Label>
+              <Select defaultValue="gemeente-aalsmeer">
+                <SelectTrigger className="w-[350px]">
+                  <SelectValue placeholder="Selecteer een project" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="gemeente-aalsmeer">
+                    Gemeente Aalsmeer [DVO Aalsmeer]
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Project</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-3 gap-6">
+                  <FormField
+                    id="projectnummer"
+                    label="Projectnummer"
+                    value="2026-67502"
+                  />
+                  <FormField
+                    id="projectnaam"
+                    label="Projectnaam"
+                    value="DVO Aalsmeer"
+                  />
+                  <FormField id="locatie" label="Locatie" value="Aalsmeer" />
+                </div>
+                <div className="grid grid-cols-3 gap-6">
+                  <FormField
+                    id="opdrachtgever"
+                    label="Opdrachtgever"
+                    value="Gemeente Aalsmeer"
+                  />
+                  <FormField
+                    id="startdatum"
+                    label="Startdatum"
+                    value="01-01-2026"
+                  />
+                  <FormField
+                    id="einddatum"
+                    label="Einddatum"
+                    value="31-12-2026"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Bestek</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-3 gap-6">
+                  <FormField id="bestek" label="Bestek" value="Beeldbestek" />
+                  <FormField
+                    id="besteknummer"
+                    label="Besteknummer"
+                    value="U456tres"
+                  />
+                  <FormField id="versie" label="Versie" value="1" />
+                </div>
+                <div className="grid grid-cols-3 gap-6">
+                  <FormField id="datum" label="Datum" value="01-01-2026" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">
+                  Korte omschrijving werkzaamheden
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Textarea rows={6} />
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-start gap-2">
+              <Button>Opslaan</Button>
+              <Button variant="outline">Nieuw</Button>
+              <Button variant="destructive">Verwijder</Button>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
