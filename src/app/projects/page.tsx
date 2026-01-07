@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { Trash2 } from 'lucide-react';
 
 function FormField({
   id,
@@ -42,41 +43,155 @@ function FormField({
   );
 }
 
+type Werksoort = {
+  id: string;
+  postnummer: string;
+  werksoort: string;
+  eenheid: string;
+  fictieveH: string;
+  uurprijs: string;
+};
+
+function WerksoortenTab() {
+  const [werksoorten, setWerksoorten] = React.useState<Werksoort[]>([
+    {
+      id: '1',
+      postnummer: '00001',
+      werksoort: 'veegkipper incl. chauffeur',
+      eenheid: 'stuk',
+      fictieveH: '1',
+      uurprijs: '89,36',
+    },
+  ]);
+
+  const addRow = () => {
+    setWerksoorten([
+      ...werksoorten,
+      {
+        id: new Date().toISOString(),
+        postnummer: '',
+        werksoort: '',
+        eenheid: '',
+        fictieveH: '',
+        uurprijs: '',
+      },
+    ]);
+  };
+
+  const removeRow = (id: string) => {
+    setWerksoorten(werksoorten.filter((w) => w.id !== id));
+  };
+
+  const handleInputChange = (
+    id: string,
+    field: keyof Werksoort,
+    value: string
+  ) => {
+    setWerksoorten(
+      werksoorten.map((w) => (w.id === id ? { ...w, [field]: value } : w))
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-[1fr_2fr_1fr_1fr_1fr_auto] gap-x-4 px-1 text-sm font-semibold">
+        <Label>Postnummer</Label>
+        <Label>Werksoort</Label>
+        <Label>Eenheid</Label>
+        <Label>Fictieve H.</Label>
+        <Label>Uurprijs</Label>
+        <span />
+      </div>
+      {werksoorten.map((werksoort) => (
+        <div
+          key={werksoort.id}
+          className="grid grid-cols-[1fr_2fr_1fr_1fr_1fr_auto] items-center gap-x-4"
+        >
+          <Input
+            value={werksoort.postnummer}
+            onChange={(e) =>
+              handleInputChange(werksoort.id, 'postnummer', e.target.value)
+            }
+          />
+          <Input
+            value={werksoort.werksoort}
+            onChange={(e) =>
+              handleInputChange(werksoort.id, 'werksoort', e.target.value)
+            }
+          />
+          <Input
+            value={werksoort.eenheid}
+            onChange={(e) =>
+              handleInputChange(werksoort.id, 'eenheid', e.target.value)
+            }
+          />
+          <Input
+            value={werksoort.fictieveH}
+            onChange={(e) =>
+              handleInputChange(werksoort.id, 'fictieveH', e.target.value)
+            }
+          />
+          <Input
+            value={werksoort.uurprijs}
+            onChange={(e) =>
+              handleInputChange(werksoort.id, 'uurprijs', e.target.value)
+            }
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => removeRow(werksoort.id)}
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        </div>
+      ))}
+      <Button variant="outline" onClick={addRow}>
+        Regel toevoegen
+      </Button>
+    </div>
+  );
+}
+
 export default function ProjectsPage() {
   return (
     <div className="flex flex-col flex-1 pt-6 min-h-0">
-      <PageHeader title="Projecten" />
+      <div className='px-6'>
+        <PageHeader title="Projecten" />
+      </div>
 
-      <Tabs defaultValue="project" className="flex-1 flex flex-col min-h-0 mt-6 px-6">
-        <TabsList>
-          <TabsTrigger value="project">Project</TabsTrigger>
-          <TabsTrigger value="werksoorten">Werksoorten</TabsTrigger>
-          <TabsTrigger value="afspraken">Afspraken</TabsTrigger>
-          <TabsTrigger value="organisatie">Organisatie</TabsTrigger>
-          <TabsTrigger value="bestanden">Bestanden</TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="project" className="flex-1 flex flex-col min-h-0 mt-6">
+        <div className="px-6">
+          <TabsList>
+            <TabsTrigger value="project">Project</TabsTrigger>
+            <TabsTrigger value="werksoorten">Werksoorten</TabsTrigger>
+            <TabsTrigger value="afspraken">Afspraken</TabsTrigger>
+            <TabsTrigger value="organisatie">Organisatie</TabsTrigger>
+            <TabsTrigger value="bestanden">Bestanden</TabsTrigger>
+          </TabsList>
+        </div>
+        
+        <div className="flex items-center gap-4 mt-6 px-6">
+          <Label htmlFor="select-project" className="font-semibold whitespace-nowrap">
+            Selecteer Project:
+          </Label>
+          <Select defaultValue="gemeente-aalsmeer">
+            <SelectTrigger className="w-full max-w-lg">
+              <SelectValue placeholder="Selecteer een project" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="gemeente-aalsmeer">
+                Gemeente Aalsmeer [DVO Aalsmeer]
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
         <TabsContent
           value="project"
-          className="flex-1 overflow-y-auto pt-6 pb-2"
+          className="flex-1 overflow-y-auto pt-6 pb-2 px-6"
         >
           <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <Label htmlFor="select-project" className="font-semibold whitespace-nowrap">
-                Selecteer Project:
-              </Label>
-              <Select defaultValue="gemeente-aalsmeer">
-                <SelectTrigger className="w-full max-w-lg">
-                  <SelectValue placeholder="Selecteer een project" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="gemeente-aalsmeer">
-                    Gemeente Aalsmeer [DVO Aalsmeer]
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Project</CardTitle>
@@ -148,6 +263,12 @@ export default function ProjectsPage() {
               <Button variant="destructive">Verwijder</Button>
             </div>
           </div>
+        </TabsContent>
+        <TabsContent
+          value="werksoorten"
+          className="flex-1 overflow-y-auto pt-6 pb-2 px-6"
+        >
+          <WerksoortenTab />
         </TabsContent>
       </Tabs>
     </div>
