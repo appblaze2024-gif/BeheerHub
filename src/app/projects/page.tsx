@@ -44,10 +44,10 @@ function FormField({
 
 export default function ProjectsPage() {
   return (
-    <div className="flex flex-col flex-1 p-6 min-h-0">
+    <div className="flex flex-col flex-1 pt-6 min-h-0">
       <PageHeader title="Projecten" />
 
-      <Tabs defaultValue="project" className="flex-1 flex flex-col min-h-0 mt-6">
+      <Tabs defaultValue="project" className="flex-1 flex flex-col min-h-0 mt-6 px-6">
         <TabsList>
           <TabsTrigger value="project">Project</TabsTrigger>
           <TabsTrigger value="werksoorten">Werksoorten</TabsTrigger>
