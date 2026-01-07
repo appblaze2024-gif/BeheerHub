@@ -54,7 +54,7 @@ type UploadedFile = {
   size: number;
   type: string;
   uploadedAt: string;
-  storagePath: string; // Add storagePath to track for deletion
+  storagePath: string;
 }
 
 interface AddDamageDialogProps {
@@ -279,7 +279,7 @@ export function AddDamageDialog({
                     <Upload className="mr-2 h-4 w-4" />
                     Bestand kiezen
                 </Button>
-                 <input type="file" id="damage-file-input" onChange={handleFileChange} className="hidden" />
+                 <input type="file" id="damage-file-input" onChange={handleFileChange} className="hidden" accept="image/png, image/jpeg, application/pdf" />
             </div>
             
             {isUploading && (
