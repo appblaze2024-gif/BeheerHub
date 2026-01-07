@@ -21,5 +21,11 @@ service firebase.storage {
     match /vehicles/{vehicleId}/main_image/{fileName} {
       allow write: if request.auth != null;
     }
+
+    // Voeg een regel toe om het uploaden van documenten toe te staan
+    // voor ingelogde gebruikers.
+    match /documents/{vehicleId}/{documentId}/{fileName} {
+      allow write: if request.auth != null;
+    }
   }
 }

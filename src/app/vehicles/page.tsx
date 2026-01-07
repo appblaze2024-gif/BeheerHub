@@ -11,6 +11,7 @@ import {
   Trash2,
   Pencil,
   Wrench,
+  File as FileIcon,
 } from 'lucide-react';
 import { collection, doc, deleteDoc } from 'firebase/firestore';
 import { format } from 'date-fns';
@@ -40,6 +41,7 @@ import { AddDamageDialog } from '@/components/add-damage-dialog';
 import { getStorage, ref, deleteObject } from 'firebase/storage';
 import { AddVehicleDialog } from '@/components/add-vehicle-dialog';
 import { VehicleImageUploader } from '@/components/vehicle-image-uploader';
+import { AddDocumentDialog } from '@/components/add-document-dialog';
 
 export default function VehiclesPage() {
   const firestore = useFirestore();
@@ -84,6 +86,14 @@ export default function VehiclesPage() {
 
   const { data: damages, isLoading: damagesLoading } =
     useCollection<any>(damagesCollection);
+  
+  const documentsCollection = useMemoFirebase(() => {
+    if (!firestore || !selectedVehicle) return null;
+    return collection(firestore, 'voertuigen', selectedVehicle.id, 'documents');
+  }, [firestore, selectedVehicle]);
+
+  const { data: documents, isLoading: documentsLoading } =
+    useCollection<any>(documentsCollection);
 
   const mainImage = PlaceHolderImages.find((p) => p.id === 'vehicle-side');
 
@@ -110,6 +120,8 @@ export default function VehiclesPage() {
   
   const [editingDamage, setEditingDamage] = React.useState<any | null>(null);
   const [isDamageDialogOpen, setIsDamageDialogOpen] = React.useState(false);
+  const [editingDocument, setEditingDocument] = React.useState<any | null>(null);
+  const [isDocumentDialogOpen, setIsDocumentDialogOpen] = React.useState(false);
   const [isVehicleDialogOpen, setIsVehicleDialogOpen] = React.useState(false);
 
   const handleEditDamage = (damage: any) => {
@@ -120,6 +132,16 @@ export default function VehiclesPage() {
   const handleAddNewDamage = () => {
     setEditingDamage(null);
     setIsDamageDialogOpen(true);
+  };
+
+  const handleEditDocument = (doc: any) => {
+    setEditingDocument(doc);
+    setIsDocumentDialogOpen(true);
+  };
+
+  const handleAddNewDocument = () => {
+    setEditingDocument(null);
+    setIsDocumentDialogOpen(true);
   };
 
   const handleEditVehicle = () => {
@@ -482,11 +504,58 @@ export default function VehiclesPage() {
 
                 <TabsContent value="documents" className="h-full">
                   <Card className="h-full flex flex-col">
-                    <CardHeader>
+                    <CardHeader className="flex-row items-center justify-between">
                       <CardTitle>Documenten</CardTitle>
+                      <Button size="sm" onClick={handleAddNewDocument}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Document toevoegen
+                      </Button>
                     </CardHeader>
-                    <CardContent className="flex-1 flex items-center justify-center text-muted-foreground overflow-y-auto">
-                      <p>Nog geen documenten gevonden.</p>
+                    <CardContent className="flex-1 flex flex-col gap-4 overflow-y-auto pt-2">
+                      <div className="text-sm text-muted-foreground">
+                        <div className="grid grid-cols-[2fr_1fr_1fr] gap-4 px-4 py-2 font-medium">
+                          <span>Bestandsnaam</span>
+                          <span>Type</span>
+                          <span>Grootte</span>
+                        </div>
+                        <Separator />
+                      </div>
+                      {documentsLoading ? (
+                        <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                          Documenten laden...
+                        </div>
+                      ) : documents && documents.length > 0 ? (
+                        <div className="flex-1 overflow-y-auto">
+                          {documents.map((doc) => (
+                            <div
+                              key={doc.id}
+                              onClick={() => handleEditDocument(doc)}
+                              className="grid grid-cols-[1fr] gap-4 items-center px-4 py-3 border-b hover:bg-muted/50 cursor-pointer rounded-md"
+                            >
+                              <div className="font-medium truncate">{doc.description}</div>
+                              {doc.files?.map((file: any) => (
+                                <div key={file.url} className='flex items-center justify-between pl-4'>
+                                    <a
+                                    href={file.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 text-sm text-blue-600 hover:underline"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <FileIcon className="h-4 w-4" />
+                                    <span className="truncate">{file.name}</span>
+                                  </a>
+                                  <span className='text-sm text-muted-foreground'>{(file.size / 1024).toFixed(2)} KB</span>
+                                </div>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                          Nog geen documenten gevonden.
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -496,6 +565,12 @@ export default function VehiclesPage() {
                 onOpenChange={setIsDamageDialogOpen}
                 vehicleId={selectedVehicle.id}
                 damage={editingDamage}
+              />
+              <AddDocumentDialog
+                open={isDocumentDialogOpen}
+                onOpenChange={setIsDocumentDialogOpen}
+                vehicleId={selectedVehicle.id}
+                document={editingDocument}
               />
             </>
           ) : isLoading ? (
