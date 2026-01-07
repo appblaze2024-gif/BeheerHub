@@ -130,6 +130,7 @@ export function AddDamageDialog({
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
+    if (!app) return;
     const storage = getStorage(app);
     if (!storage || !vehicleId) {
       toast({
@@ -199,6 +200,7 @@ export function AddDamageDialog({
   };
 
   const handleFileDelete = async (fileToDelete: UploadedFile) => {
+    if (!app) return;
     const storage = getStorage(app);
     if (!storage) return;
 
@@ -465,5 +467,3 @@ export function AddDamageDialog({
     </Dialog>
   );
 }
-
-    
