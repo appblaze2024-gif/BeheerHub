@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { Trash2 } from 'lucide-react';
+import { FilePenLine, Plus, Trash2 } from 'lucide-react';
 import {
   useFirestore,
   useCollection,
@@ -28,7 +28,8 @@ import {
   updateDocumentNonBlocking,
   deleteDocumentNonBlocking,
 } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { collection, doc, deleteDoc } from 'firebase/firestore';
+import { AfspraakDialog } from '@/components/afspraak-dialog';
 
 type Werksoort = {
   id: string;
@@ -54,6 +55,14 @@ type Project = {
   omschrijving: string;
   werksoorten: Werksoort[];
 };
+
+export type Afspraak = {
+  id?: string;
+  onderwerp: string;
+  datum: string;
+  tijd: string;
+  notities: string;
+}
 
 const EMPTY_PROJECT: Project = {
   projectnummer: '',
@@ -166,6 +175,92 @@ function WerksoortenTab({
   );
 }
 
+function AfsprakenTab({ projectId }: { projectId: string | undefined }) {
+  const firestore = useFirestore();
+  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [selectedAfspraak, setSelectedAfspraak] = React.useState<Afspraak | undefined>();
+
+  const afsprakenCollection = useMemoFirebase(() => {
+    if (!firestore || !projectId) return null;
+    return collection(firestore, 'projects', projectId, 'afspraken');
+  }, [firestore, projectId]);
+
+  const { data: afspraken, isLoading } = useCollection<Afspraak>(afsprakenCollection);
+
+  const handleNewAfspraak = () => {
+    setSelectedAfspraak(undefined);
+    setIsDialogOpen(true);
+  };
+
+  const handleEditAfspraak = (afspraak: Afspraak) => {
+    setSelectedAfspraak(afspraak);
+    setIsDialogOpen(true);
+  };
+  
+  const handleDeleteAfspraak = async (afspraakId: string) => {
+    if (!firestore || !projectId) return;
+    const afspraakRef = doc(firestore, 'projects', projectId, 'afspraken', afspraakId);
+    await deleteDoc(afspraakRef);
+  }
+
+  if (!projectId) {
+    return (
+      <div className="flex items-center justify-center h-full text-muted-foreground">
+        Selecteer eerst een project om afspraken te bekijken of toe te voegen.
+      </div>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className='flex-row items-center justify-between'>
+        <CardTitle className="text-lg">Afspraken</CardTitle>
+        <Button size="sm" onClick={handleNewAfspraak}><Plus className='mr-2 h-4 w-4' /> Nieuwe afspraak</Button>
+      </CardHeader>
+      <CardContent>
+        <div className="border rounded-md">
+          <div className="grid grid-cols-[2fr_1fr_1fr_2fr_auto] gap-x-4 p-4 font-semibold bg-muted">
+            <div>Onderwerp</div>
+            <div>Datum</div>
+            <div>Tijd</div>
+            <div>Notities</div>
+            <div />
+          </div>
+          {isLoading ? (
+            <div className='p-4 text-center text-muted-foreground'>Afspraken laden...</div>
+          ) : afspraken && afspraken.length > 0 ? (
+            afspraken.map(afspraak => (
+              <div key={afspraak.id} className="grid grid-cols-[2fr_1fr_1fr_2fr_auto] items-center gap-x-4 p-4 border-t">
+                <div className='truncate'>{afspraak.onderwerp}</div>
+                <div>{afspraak.datum}</div>
+                <div>{afspraak.tijd}</div>
+                <div className='truncate'>{afspraak.notities}</div>
+                <div className='flex items-center gap-2'>
+                  <Button variant='ghost' size='icon' onClick={() => handleEditAfspraak(afspraak)}>
+                    <FilePenLine className='h-4 w-4' />
+                  </Button>
+                   <Button variant='ghost' size='icon' onClick={() => handleDeleteAfspraak(afspraak.id!)}>
+                    <Trash2 className='h-4 w-4 text-destructive' />
+                  </Button>
+                </div>
+              </div>
+            ))
+          ) : (
+             <div className='p-4 text-center text-muted-foreground'>Nog geen afspraken voor dit project.</div>
+          )}
+        </div>
+      </CardContent>
+      <AfspraakDialog 
+        open={isDialogOpen} 
+        onOpenChange={setIsDialogOpen}
+        projectId={projectId}
+        afspraak={selectedAfspraak}
+      />
+    </Card>
+  );
+}
+
+
 export default function ProjectsPage() {
   const firestore = useFirestore();
   const [selectedProjectId, setSelectedProjectId] = React.useState<
@@ -197,7 +292,11 @@ export default function ProjectsPage() {
   }, [selectedProjectId, projects]);
 
   const handleProjectSelect = (projectId: string) => {
-    setSelectedProjectId(projectId);
+    if (projectId === 'new') {
+      handleNew();
+    } else {
+      setSelectedProjectId(projectId);
+    }
   };
   
   const handleInputChange = (field: keyof Project, value: string) => {
@@ -259,6 +358,7 @@ export default function ProjectsPage() {
               <SelectValue placeholder="Selecteer een project" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="new">-- Nieuw Project --</SelectItem>
               {projects?.map((project) => (
                 <SelectItem key={project.id} value={project.id}>
                   {project.projectnaam} [{project.projectnummer}]
@@ -356,6 +456,12 @@ export default function ProjectsPage() {
           className="flex-1 overflow-y-auto pt-6 pb-2 px-6"
         >
           <WerksoortenTab werksoorten={currentProject.werksoorten} setWerksoorten={(newWerksoorten) => setCurrentProject(prev => ({...prev, werksoorten: typeof newWerksoorten === 'function' ? newWerksoorten(prev.werksoorten) : newWerksoorten}))}/>
+        </TabsContent>
+        <TabsContent
+          value="afspraken"
+          className="flex-1 overflow-y-auto pt-6 pb-2 px-6"
+        >
+          <AfsprakenTab projectId={selectedProjectId} />
         </TabsContent>
       </Tabs>
     </div>

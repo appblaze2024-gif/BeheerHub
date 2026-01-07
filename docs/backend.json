@@ -145,25 +145,30 @@
           "type": "string",
           "description": "Unique identifier for the appointment."
         },
-        "startTime": {
+        "onderwerp": {
           "type": "string",
-          "description": "Start time of the appointment.",
-          "format": "date-time"
+          "description": "Subject of the appointment."
         },
-        "endTime": {
+        "datum": {
           "type": "string",
-          "description": "End time of the appointment.",
-          "format": "date-time"
+          "format": "date",
+          "description": "Date of the appointment."
         },
-        "description": {
+        "tijd": {
           "type": "string",
-          "description": "Description of the appointment."
+          "format": "time",
+          "description": "Time of the appointment."
+        },
+        "notities": {
+          "type": "string",
+          "description": "Notes for the appointment."
         }
       },
       "required": [
         "id",
-        "startTime",
-        "endTime"
+        "onderwerp",
+        "datum",
+        "tijd"
       ]
     }
   },
@@ -187,6 +192,26 @@
             {
               "name": "projectId",
               "description": "The ID of the project."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/projects/{projectId}/afspraken/{afspraakId}",
+        "definition": {
+          "entityName": "Appointment",
+          "schema": {
+            "$ref": "#/backend/entities/Appointment"
+          },
+          "description": "Stores appointments for a specific project.",
+          "params": [
+            {
+              "name": "projectId",
+              "description": "The ID of the project."
+            },
+            {
+              "name": "afspraakId",
+              "description": "The ID of the appointment."
             }
           ]
         }
