@@ -155,8 +155,8 @@ function WerksoortenTab() {
 
 export default function ProjectsPage() {
   return (
-    <div className="flex flex-col flex-1 pt-6 min-h-0">
-      <div className='px-6'>
+    <div className="flex flex-col flex-1 min-h-0">
+      <div className='px-6 pt-6'>
         <PageHeader title="Projecten" />
       </div>
 
