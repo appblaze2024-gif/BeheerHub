@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+html, body, #__next {
+  height: 100%;
+  max-height: 100svh;
+  overflow: hidden;
+}
+
 body {
   font-family: 'PT Sans', sans-serif;
 }
