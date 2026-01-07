@@ -3,13 +3,13 @@
 import * as React from 'react';
 import Image from 'next/image';
 import {
-  ChevronDown,
   MoreHorizontal,
   Plus,
   Search,
   Upload,
   Download,
 } from 'lucide-react';
+import { collection } from 'firebase/firestore';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,6 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/page-header';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Table,
   TableBody,
@@ -32,13 +31,36 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-
-const vehicles: any[] = [];
+import { useAuth, useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { doc } from 'firebase/firestore';
 
 export default function VehiclesPage() {
-  const [selectedVehicle, setSelectedVehicle] = React.useState(vehicles[0]);
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  const vehiclesCollection = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return collection(firestore, 'users', user.uid, 'vehicles');
+  }, [firestore, user?.uid]);
+  
+  const { data: vehicles, isLoading } = useCollection<any>(vehiclesCollection);
+
+  const [selectedVehicle, setSelectedVehicle] = React.useState<any | null>(null);
   const mainImage = PlaceHolderImages.find((p) => p.id === 'vehicle-side');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (!selectedVehicle && vehicles && vehicles.length > 0) {
+      setSelectedVehicle(vehicles[0]);
+    } else if (selectedVehicle && vehicles) {
+      // If the selected vehicle is no longer in the list, clear it
+      if (!vehicles.find(v => v.id === selectedVehicle.id)) {
+        setSelectedVehicle(vehicles.length > 0 ? vehicles[0] : null);
+      }
+    }
+  }, [vehicles, selectedVehicle]);
+
 
   const handleImportClick = () => {
     fileInputRef.current?.click();
@@ -46,10 +68,42 @@ export default function VehiclesPage() {
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      console.log('Selected file:', file.name);
-      // Here you can add logic to read and process the CSV file
+    if (!file || !user || !firestore) {
+      return;
     }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      const lines = text.split('\n').filter(line => line.trim() !== '');
+      if (lines.length === 0) return;
+
+      const header = lines[0].split(',').map(h => h.trim());
+      const dataLines = lines.slice(1);
+
+      dataLines.forEach((line) => {
+        const values = line.split(',').map(v => v.trim());
+        const vehicleData: { [key: string]: any } = {};
+        
+        let kenteken = '';
+
+        header.forEach((key, index) => {
+          const lowerKey = key.toLowerCase();
+          vehicleData[lowerKey] = values[index];
+          if(lowerKey === 'kenteken') {
+            kenteken = values[index];
+          }
+        });
+
+        if (kenteken) {
+          const docRef = doc(firestore, 'users', user.uid, 'vehicles', kenteken);
+          setDocumentNonBlocking(docRef, vehicleData, { merge: true });
+        }
+      });
+    };
+    reader.readAsText(file);
+    // Reset file input
+    event.target.value = '';
   };
 
   return (
@@ -81,44 +135,48 @@ export default function VehiclesPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 mt-6 flex-1 min-h-0">
         <Card className="flex flex-col h-full min-h-0">
-          <CardContent className="p-2">
-              <div className="flex flex-col space-y-1 pr-2">
-                {vehicles.length > 0 ? (
-                  vehicles.map((vehicle) => (
-                    <div
-                      key={vehicle.id}
-                      onClick={() => setSelectedVehicle(vehicle)}
-                      className={`flex items-center justify-between p-3 rounded-md text-left cursor-pointer ${
-                        selectedVehicle?.id === vehicle.id
-                          ? 'bg-sidebar-accent'
-                          : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                      }`}
-                    >
-                      <div>
-                        <p
-                          className={`font-semibold ${
-                            selectedVehicle?.id === vehicle.id
-                              ? 'text-sidebar-accent-foreground'
-                              : ''
-                          }`}
-                        >
-                          {vehicle.id}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {vehicle.make} {vehicle.model}
-                        </p>
-                      </div>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))
-                ) : (
+          <CardContent className="p-2 flex-1 min-h-0">
+            <div className="flex flex-col space-y-1 pr-2">
+              {isLoading ? (
                   <div className="text-center text-muted-foreground p-4">
-                    Geen voertuigen gevonden.
+                    Laden...
                   </div>
-                )}
-              </div>
+              ) : vehicles && vehicles.length > 0 ? (
+                vehicles.map((vehicle) => (
+                  <div
+                    key={vehicle.id}
+                    onClick={() => setSelectedVehicle(vehicle)}
+                    className={`flex items-center justify-between p-3 rounded-md text-left cursor-pointer ${
+                      selectedVehicle?.id === vehicle.id
+                        ? 'bg-sidebar-accent'
+                        : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                    }`}
+                  >
+                    <div>
+                      <p
+                        className={`font-semibold ${
+                          selectedVehicle?.id === vehicle.id
+                            ? 'text-sidebar-accent-foreground'
+                            : ''
+                        }`}
+                      >
+                        {vehicle.id}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {vehicle.make} {vehicle.model}
+                      </p>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center text-muted-foreground p-4">
+                  Geen voertuigen gevonden.
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -245,7 +303,6 @@ export default function VehiclesPage() {
                       </div>
                     </CardHeader>
                     <CardContent className="flex-1 min-h-0">
-                      <ScrollArea className="h-full">
                         <Table>
                           <TableHeader>
                             <TableRow>
@@ -265,7 +322,6 @@ export default function VehiclesPage() {
                             </TableRow>
                           </TableBody>
                         </Table>
-                      </ScrollArea>
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -309,7 +365,7 @@ export default function VehiclesPage() {
             </>
           ) : (
             <div className="flex items-center justify-center h-full text-muted-foreground">
-              Selecteer een voertuig om de details te bekijken.
+              Selecteer een voertuig om de details te bekijken of importeer voertuigen.
             </div>
           )}
         </div>

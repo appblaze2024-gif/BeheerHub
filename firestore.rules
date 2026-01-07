@@ -145,6 +145,26 @@ service cloud.firestore {
         allow update: if isExistingOwner(userId);
         allow delete: if isExistingOwner(userId);
       }
+      
+      /**
+       * @description
+       *   Secures vehicle documents, ensuring they are private to the user who created them.
+       * @path
+       *   /users/{userId}/vehicles/{vehicleId}
+       * @allow
+       *   User 'user_abc' can create, read, update, and delete their own vehicle documents.
+       * @deny
+       *   User 'user_xyz' cannot access vehicle documents of 'user_abc'.
+       * @principle
+       *   Enforces strict document ownership for all CRUD operations on vehicle data.
+       */
+      match /vehicles/{vehicleId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update: if isExistingOwner(userId);
+        allow delete: if isExistingOwner(userId);
+      }
     }
   }
 }

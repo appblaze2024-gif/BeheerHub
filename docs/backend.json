@@ -87,7 +87,7 @@
         },
         "description": {
           "type": "string",
-          "description": "Description of the appointment."
+description": "Description of the appointment."
         },
         "attendees": {
           "type": "string",
@@ -99,6 +99,52 @@
         "startTime",
         "endTime",
         "description"
+      ]
+    },
+    "Vehicle": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Vehicle",
+      "type": "object",
+      "description": "Represents a single vehicle in the fleet.",
+      "properties": {
+        "kenteken": {
+          "type": "string",
+          "description": "The license plate of the vehicle, used as the unique identifier."
+        },
+        "merk": {
+          "type": "string",
+          "description": "The make of the vehicle (e.g., VOLKSWAGEN)."
+        },
+        "model": {
+          "type": "string",
+          "description": "The model of the vehicle (e.g., CADDY)."
+        },
+        "voertuignummer": {
+          "type": "string",
+          "description": "Internal vehicle number."
+        },
+        "bouwjaar": {
+          "type": "string",
+          "description": "The year the vehicle was manufactured."
+        },
+        "brandstof": {
+          "type": "string",
+          "description": "The type of fuel the vehicle uses."
+        },
+        "apk_vervaldatum": {
+          "type": "string",
+          "description": "The expiration date of the APK.",
+          "format": "date"
+        },
+        "status": {
+          "type": "string",
+          "description": "Current status of the vehicle (e.g., Actief)."
+        }
+      },
+      "required": [
+        "kenteken",
+        "merk",
+        "model"
       ]
     }
   },
@@ -185,8 +231,28 @@
             }
           ]
         }
+      },
+      {
+        "path": "/users/{userId}/vehicles/{vehicleId}",
+        "definition": {
+          "entityName": "Vehicle",
+          "schema": {
+            "$ref": "#/backend/entities/Vehicle"
+          },
+          "description": "Collection to store vehicle entries for a specific user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "vehicleId",
+              "description": "The unique identifier of the vehicle entry (license plate)."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore data structure is designed to support a basic ERP system for small businesses, focusing on revenue, expenses, and appointments.  User data is segregated under `/users/{userId}` for private data. Revenue, Expenses, and Appointments are stored as subcollections under each user's document to ensure data isolation and ownership. This structure facilitates simple security rules based on the authenticated user's ID. The structure enforces Authorization Independence. No `get()` operations are required in rules. Each collection under `/users/{userId}` is effectively private to that user, enabling straightforward read/write rules based on `request.auth.uid`. QAPs are supported because list operations will be scoped to the user's own data, ensuring that users can only access their own revenue, expenses, and appointments."
+    "reasoning": "The Firestore data structure is designed to support a basic ERP system for small businesses, focusing on revenue, expenses, and appointments.  User data is segregated under `/users/{userId}` for private data. Revenue, Expenses, and Appointments are stored as subcollections under each user's document to ensure data isolation and ownership. A `vehicles` collection is added to store fleet information per user. This structure facilitates simple security rules based on the authenticated user's ID. The structure enforces Authorization Independence. No `get()` operations are required in rules. Each collection under `/users/{userId}` is effectively private to that user, enabling straightforward read/write rules based on `request.auth.uid`. QAPs are supported because list operations will be scoped to the user's own data, ensuring that users can only access their own revenue, expenses, appointments, and vehicles."
   }
 }
