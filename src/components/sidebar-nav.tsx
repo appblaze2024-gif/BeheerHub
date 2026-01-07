@@ -12,28 +12,30 @@ import {
   Users,
   ClipboardList,
   FileText,
-  HeartPulse,
+  CalendarCheck,
+  Truck,
   Wrench,
-  MapPin,
+  Building2,
   Route,
+  Package,
   Bell,
-  MessageSquare,
-  Camera,
   Home,
+  Newspaper
 } from "lucide-react";
 
 const menuItems = [
   { href: "/", label: "Dashboard", icon: Home },
-  { href: "/users", label: "Gebruikers", icon: Users },
   { href: "/projects", label: "Projecten", icon: ClipboardList },
-  { href: "/reports", label: "Rapporten", icon: FileText },
-  { href: "/health", label: "Gezondheid", icon: HeartPulse },
-  { href: "/tools", label: "Gereedschap", icon: Wrench },
-  { href: "/location", label: "Locatie", icon: MapPin },
+  { href: "/employees", label: "Medewerkers", icon: Users },
+  { href: "/work-planning", label: "Werkplanning", icon: CalendarCheck },
+  { href: "/weekly-reports", label: "Weekstaten", icon: Newspaper },
+  { href: "/reports", label: "Rapportages", icon: FileText },
+  { href: "/vehicles", label: "Voertuigen", icon: Truck },
+  { href: "/machine-management", label: "Machinebeheer", icon: Wrench },
+  { href: "/objects", label: "Objecten", icon: Building2 },
   { href: "/routes", label: "Routes", icon: Route },
-  { href: "/notifications", label: "Notificaties", icon: Bell },
-  { href: "/messages", label: "Berichten", icon: MessageSquare },
-  { href: "/camera", label: "Camera", icon: Camera },
+  { href: "/inventory", label: "Voorraadbeheer", icon: Package },
+  { href: "/issues", label: "Meldingen", icon: Bell },
 ];
 
 export function SidebarNav() {
