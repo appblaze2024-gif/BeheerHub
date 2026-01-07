@@ -63,18 +63,10 @@ import {
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Progress } from './ui/progress';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from './ui/select';
 
 const damageFormSchema = z.object({
   date: z.date({ required_error: 'Een datum is verplicht.' }),
   description: z.string().min(1, { message: 'Omschrijving is verplicht.' }),
-  status: z.string().min(1, { message: 'Status is verplicht.' }),
 });
 
 type DamageFormValues = z.infer<typeof damageFormSchema>;
@@ -125,12 +117,10 @@ export function AddDamageDialog({
           ? {
               description: damage.description,
               date: new Date(damage.date),
-              status: damage.status,
             }
           : {
               description: '',
               date: new Date(),
-              status: 'Open',
             }
       );
     } else {
@@ -308,6 +298,7 @@ export function AddDamageDialog({
       id: damageId,
       date: data.date.toISOString(),
       files: uploadedFiles,
+      status: damage ? damage.status : 'Open', // Keep existing status or default to Open
       updatedAt: serverTimestamp(),
     };
 
@@ -354,7 +345,7 @@ export function AddDamageDialog({
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <FormField
                 control={form.control}
                 name="date"
@@ -389,34 +380,6 @@ export function AddDamageDialog({
                         />
                       </PopoverContent>
                     </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecteer een status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Open">Open</SelectItem>
-                        <SelectItem value="In behandeling">
-                          In behandeling
-                        </SelectItem>
-                        <SelectItem value="Afgehandeld">Afgehandeld</SelectItem>
-                      </SelectContent>
-                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -562,3 +525,5 @@ export function AddDamageDialog({
     </Dialog>
   );
 }
+
+    
