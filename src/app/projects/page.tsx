@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { FilePenLine, Plus, Trash2, Upload } from 'lucide-react';
+import { FilePenLine, Plus, Trash2, Upload, Download } from 'lucide-react';
 import {
   useFirestore,
   useCollection,
@@ -392,6 +392,7 @@ function BestandenTab({ projectId }: { projectId: string | undefined }) {
   }
 
   const handleDeleteBestand = async (e: React.MouseEvent, bestand: Bestand) => {
+    e.stopPropagation();
     e.preventDefault();
     if (!firestore || !app || !projectId) return;
 
@@ -433,23 +434,32 @@ function BestandenTab({ projectId }: { projectId: string | undefined }) {
             <div className='p-4 text-center text-muted-foreground'>Bestanden laden...</div>
           ) : bestanden && bestanden.length > 0 ? (
             bestanden.map(bestand => (
-              <a 
+              <div
                 key={bestand.id} 
-                href={bestand.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="grid grid-cols-[3fr_1fr_1fr_1fr_auto] items-center gap-x-4 p-4 border-t hover:bg-muted/50 cursor-pointer"
+                className="grid grid-cols-[3fr_1fr_1fr_1fr_auto] items-center gap-x-4 p-4 border-t"
               >
-                <div className='truncate font-medium text-primary'>{bestand.name}</div>
+                <a 
+                  href={bestand.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className='truncate font-medium text-blue-600 hover:underline'
+                >
+                  {bestand.name}
+                </a>
                 <div className="truncate">{bestand.type}</div>
                 <div>{formatBytes(bestand.size)}</div>
                 <div>{new Date(bestand.uploadedAt).toLocaleDateString('nl-NL')}</div>
-                <div className='flex items-center gap-2 justify-end'>
+                <div className='flex items-center gap-1 justify-end'>
+                    <a href={bestand.url} download={bestand.name}>
+                      <Button variant='ghost' size='icon'>
+                        <Download className='h-4 w-4' />
+                      </Button>
+                    </a>
                    <Button variant='ghost' size='icon' onClick={(e) => handleDeleteBestand(e, bestand)}>
                     <Trash2 className='h-4 w-4 text-destructive' />
                   </Button>
                 </div>
-              </a>
+              </div>
             ))
           ) : (
              <div className='p-4 text-center text-muted-foreground'>Nog geen bestanden geüpload voor dit project.</div>
@@ -503,11 +513,11 @@ export default function ProjectsPage() {
   };
 
   const handleNew = () => {
+    setSelectedProjectId(undefined);
     setCurrentProject({
       ...EMPTY_PROJECT,
       projectnummer: generateProjectNumber(),
     });
-    setSelectedProjectId(undefined);
   };
   
   const handleProjectSelect = (projectId: string) => {
