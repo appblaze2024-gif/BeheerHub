@@ -80,6 +80,19 @@ service cloud.firestore {
      */
     match /voertuigen/{voertuigId} {
       allow get, list, create, update, delete: if isSignedIn();
+
+      /**
+       * @description
+       *   Secures the nested `actions` subcollection for a vehicle.
+       * @path
+       *   /voertuigen/{voertuigId}/actions/{actionId}
+       * @allow
+       *   Any authenticated user can manage actions for any vehicle, consistent
+       *   with the permissions on the parent vehicle document.
+       */
+      match /actions/{actionId} {
+        allow get, list, create, update, delete: if isSignedIn();
+      }
     }
   }
 }
