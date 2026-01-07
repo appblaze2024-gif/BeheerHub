@@ -27,6 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { VehicleImportDialog } from '@/components/vehicle-import-dialog';
+import { Separator } from '@/components/ui/separator';
 
 export default function VehiclesPage() {
   const firestore = useFirestore();
@@ -133,7 +134,7 @@ export default function VehiclesPage() {
 
         <div className="flex-1 flex flex-col min-h-0">
           {selectedVehicle ? (
-            <>
+            <div className="flex flex-col flex-1 min-h-0">
               <Card>
                 <CardHeader className="flex flex-row items-start justify-between">
                   <div>
@@ -247,36 +248,25 @@ export default function VehiclesPage() {
                   className="flex-1 flex flex-col min-h-0 mt-2"
                 >
                   <Card className="h-full flex flex-col">
-                    <CardHeader>
+                    <CardHeader className='flex-row items-center justify-between'>
                       <CardTitle>Acties</CardTitle>
-                      <CardDescription>
-                        Overzicht van alle acties voor dit voertuig.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex-1 flex flex-col gap-4 overflow-y-auto">
-                      <div className="flex justify-end">
-                        <Button size="sm">
+                      <Button size="sm">
                           <Plus className="mr-2 h-4 w-4" />
                           Actie toevoegen
-                        </Button>
+                      </Button>
+                    </CardHeader>
+                    <CardContent className="flex-1 flex flex-col gap-4 overflow-y-auto pt-2">
+                      <div className="text-sm text-muted-foreground">
+                        <div className="flex justify-between px-4 py-2">
+                           <span className="w-1/3">Naam</span>
+                           <span className="w-1/3">Type actie</span>
+                           <span className="w-1/3">Datum</span>
+                        </div>
+                        <Separator />
                       </div>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Naam</TableHead>
-                            <TableHead>Type actie</TableHead>
-                            <TableHead>Datum</TableHead>
-                            <TableHead className="text-right">Acties</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          <TableRow>
-                            <TableCell colSpan={4} className="text-center h-24">
-                              Nog geen acties geregistreerd.
-                            </TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
+                      <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                        Nog geen acties geregistreerd.
+                      </div>
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -286,37 +276,26 @@ export default function VehiclesPage() {
                   className="flex-1 flex flex-col min-h-0 mt-2"
                 >
                   <Card className="h-full flex flex-col">
-                    <CardHeader>
+                    <CardHeader className='flex-row items-center justify-between'>
                       <CardTitle>Onderhoud</CardTitle>
-                      <CardDescription>
-                        Overzicht van al het onderhoud voor dit voertuig.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex-1 flex flex-col gap-4 overflow-y-auto">
-                       <div className="flex justify-end">
-                        <Button size="sm">
+                       <Button size="sm">
                           <Plus className="mr-2 h-4 w-4" />
                           Onderhoud toevoegen
                         </Button>
+                    </CardHeader>
+                    <CardContent className="flex-1 flex flex-col gap-4 overflow-y-auto pt-2">
+                       <div className="text-sm text-muted-foreground">
+                        <div className="flex justify-between px-4 py-2">
+                           <span className="w-1/4">Omschrijving</span>
+                           <span className="w-1/4">Type</span>
+                           <span className="w-1/4">Datum</span>
+                           <span className="w-1/4">Kosten</span>
+                        </div>
+                        <Separator />
                       </div>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Omschrijving</TableHead>
-                            <TableHead>Type</TableHead>
-                            <TableHead>Datum</TableHead>
-                            <TableHead>Kosten</TableHead>
-                             <TableHead className="text-right">Acties</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          <TableRow>
-                            <TableCell colSpan={5} className="text-center h-24">
-                              Nog geen onderhoud geregistreerd.
-                            </TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
+                       <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                        Nog geen onderhoud geregistreerd.
+                      </div>
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -328,9 +307,6 @@ export default function VehiclesPage() {
                   <Card className="h-full flex flex-col">
                      <CardHeader>
                       <CardTitle>Schade</CardTitle>
-                      <CardDescription>
-                        Overzicht van alle schadegevallen voor dit voertuig.
-                      </CardDescription>
                     </CardHeader>
                      <CardContent className="flex-1 flex items-center justify-center text-muted-foreground overflow-y-auto">
                        <p>Nog geen schade geregistreerd.</p>
@@ -345,9 +321,6 @@ export default function VehiclesPage() {
                   <Card className="h-full flex flex-col">
                      <CardHeader>
                       <CardTitle>Documenten</CardTitle>
-                      <CardDescription>
-                        Alle documenten gerelateerd aan dit voertuig.
-                      </CardDescription>
                     </CardHeader>
                      <CardContent className="flex-1 flex items-center justify-center text-muted-foreground overflow-y-auto">
                        <p>Nog geen documenten gevonden.</p>
@@ -355,7 +328,7 @@ export default function VehiclesPage() {
                   </Card>
                 </TabsContent>
               </Tabs>
-            </>
+            </div>
           ) : isLoading ? (
             <div className="flex items-center justify-center h-full text-muted-foreground">
               Voertuigen laden...
