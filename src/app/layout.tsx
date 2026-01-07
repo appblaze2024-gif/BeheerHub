@@ -9,8 +9,8 @@ import { SidebarNav } from "@/components/sidebar-nav";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "BizBoard",
-  description: "A basic ERP for small businesses.",
+  title: "Dashboard",
+  description: "Dashboard",
 };
 
 export default function RootLayout({
@@ -33,8 +33,8 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <SidebarProvider>
-          <Sidebar>
+        <SidebarProvider defaultOpen={false}>
+          <Sidebar collapsible="icon" side="left">
             <SidebarNav />
           </Sidebar>
           <SidebarInset>{children}</SidebarInset>

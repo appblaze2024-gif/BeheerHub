@@ -3,29 +3,35 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Sidebar,
   SidebarContent,
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { Separator } from "@/components/ui/separator";
-import { Logo } from "@/components/icons";
-import { Home, Sparkles } from "lucide-react";
-import { cn } from "@/lib/utils";
+import {
+  Users,
+  ClipboardList,
+  FileText,
+  HeartPulse,
+  Wrench,
+  MapPin,
+  Route,
+  Bell,
+  MessageSquare,
+  Camera,
+} from "lucide-react";
 
 const menuItems = [
-  {
-    href: "/",
-    label: "Dashboard",
-    icon: Home,
-  },
-  {
-    href: "/ai-tools",
-    label: "AI Tools",
-    icon: Sparkles,
-  },
+  { href: "#", label: "Users", icon: Users },
+  { href: "#", label: "Projects", icon: ClipboardList },
+  { href: "#", label: "Reports", icon: FileText },
+  { href: "#", label: "Health", icon: HeartPulse },
+  { href: "#", label: "Tools", icon: Wrench },
+  { href: "#", label: "Location", icon: MapPin },
+  { href: "#", label: "Routes", icon: Route },
+  { href: "#", label: "Notifications", icon: Bell },
+  { href: "#", label: "Messages", icon: MessageSquare },
+  { href: "#", label: "Camera", icon: Camera },
 ];
 
 export function SidebarNav() {
@@ -33,14 +39,7 @@ export function SidebarNav() {
 
   return (
     <>
-      <SidebarHeader>
-        <div className="flex items-center gap-2">
-          <Logo className="size-8 text-primary" />
-          <span className="text-lg font-semibold">BizBoard</span>
-        </div>
-      </SidebarHeader>
-      <Separator />
-      <SidebarContent>
+      <SidebarContent className="pt-4">
         <SidebarMenu>
           {menuItems.map((item) => (
             <SidebarMenuItem key={item.href}>
@@ -52,7 +51,7 @@ export function SidebarNav() {
                 >
                   <a>
                     <item.icon />
-                    <span>{item.label}</span>
+                    <span className="sr-only">{item.label}</span>
                   </a>
                 </SidebarMenuButton>
               </Link>
