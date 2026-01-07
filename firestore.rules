@@ -79,7 +79,7 @@ service cloud.firestore {
      *   Shared-data model for application-wide resources.
      */
     match /voertuigen/{voertuigId} {
-      allow read, write: if isSignedIn();
+      allow get, list, create, update, delete: if isSignedIn();
     }
   }
 }
