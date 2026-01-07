@@ -69,7 +69,7 @@ export default function VehiclesPage() {
   const [selectedVehicle, setSelectedVehicle] = React.useState(vehicles[0]);
 
   return (
-    <div className="bg-background p-6 dark:bg-gray-900 flex flex-col flex-1">
+    <div className="bg-background p-6 flex flex-col flex-1">
       <PageHeader title="Voertuigen">
         <div className="relative w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
