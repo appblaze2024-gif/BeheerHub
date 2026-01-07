@@ -53,7 +53,7 @@ export const carData: CarData = {
   Citroën: {
     Berlingo: ["M", "XL"],
     Jumpy: ["M", "XL"],
-    Jumper: ["L2H2", "L3H2"],
+    Jumper: ["L2H2", "L3H2", "L4H2"],
     C3: [],
     "C3 Aircross": [],
     C4: [],
@@ -93,7 +93,7 @@ export const carData: CarData = {
     "500X": [],
     Panda: [],
     Tipo: [],
-    Ducato: ["L2H2", "L3H2", "E-Tech"],
+    Ducato: ["L2H2", "L3H2", "L4H2", "E-Tech"],
     Scudo: [],
     Doblò: [],
   },
@@ -126,6 +126,11 @@ export const carData: CarData = {
     "Santa Fe": [],
     "Ioniq 5": [],
     "Ioniq 6": [],
+  },
+  Iveco: {
+    Daily: ["Gesloten bestelwagen", "Chassis-cabine", "Trekker"],
+    Eurocargo: [],
+    "S-Way": [],
   },
   Jaguar: {
     "F-Pace": [],
@@ -184,7 +189,7 @@ export const carData: CarData = {
     "MX-5": [],
   },
   "Mercedes-Benz": {
-    Sprinter: ["314 CDI", "316 CDI", "319 CDI", "516 CDI", "519 CDI"],
+    Sprinter: ["314 CDI", "316 CDI", "319 CDI", "516 CDI", "519 CDI", "eSprinter"],
     Vito: ["110 CDI", "114 CDI", "116 CDI", "119 CDI", "e-Vito"],
     Citan: ["108 CDI", "109 CDI", "111 CDI", "e-Citan"],
     "A-Klasse": [],
@@ -230,7 +235,7 @@ export const carData: CarData = {
     Leaf: [],
     Townstar: [],
     Primastar: ["Acenta", "Tekna"],
-    Interstar: [],
+    Interstar: ["L2H2", "L3H2"],
   },
   Opel: {
     Corsa: [],
@@ -238,7 +243,7 @@ export const carData: CarData = {
     Mokka: [],
     "Crossland": [],
     "Grandland": [],
-    Combo: [],
+    Combo: ["Edition", "Elegance"],
     Vivaro: ["Edition", "Elegance"],
     Movano: ["L2H2", "L3H2"],
   },
@@ -362,3 +367,5 @@ export const carData: CarData = {
     EX90: [],
   },
 };
+
+    
