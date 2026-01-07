@@ -46,6 +46,7 @@ import { AddDocumentDialog } from '@/components/add-document-dialog';
 export default function VehiclesPage() {
   const firestore = useFirestore();
   const [isImporting, setIsImporting] = React.useState(false);
+  const [searchTerm, setSearchTerm] = React.useState('');
 
   const vehiclesCollection = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -53,6 +54,19 @@ export default function VehiclesPage() {
   }, [firestore]);
 
   const { data: vehicles, isLoading } = useCollection<any>(vehiclesCollection);
+
+  const filteredVehicles = React.useMemo(() => {
+    if (!vehicles) return [];
+    if (!searchTerm) return vehicles;
+
+    return vehicles.filter(vehicle =>
+        (vehicle.id && vehicle.id.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (vehicle.merk && vehicle.merk.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (vehicle.model && vehicle.model.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (vehicle.type && vehicle.type.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (vehicle.voertuignummer && vehicle.voertuignummer.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  }, [vehicles, searchTerm]);
 
   const [selectedVehicle, setSelectedVehicle] = React.useState<any | null>(
     null
@@ -98,20 +112,16 @@ export default function VehiclesPage() {
   const mainImage = PlaceHolderImages.find((p) => p.id === 'vehicle-side');
 
   React.useEffect(() => {
-    if (!selectedVehicle && vehicles && vehicles.length > 0) {
-      setSelectedVehicle(vehicles[0]);
-    } else if (selectedVehicle && vehicles) {
-      // If the selected vehicle is no longer in the list (e.g., deleted),
-      // select the first one, or null if the list is empty.
-      const updatedSelectedVehicle = vehicles.find((v) => v.id === selectedVehicle.id)
-      if (updatedSelectedVehicle) {
-        setSelectedVehicle(updatedSelectedVehicle);
-      }
-      else if (!vehicles.find((v) => v.id === selectedVehicle.id)) {
-        setSelectedVehicle(vehicles.length > 0 ? vehicles[0] : null);
+    if (!selectedVehicle && filteredVehicles && filteredVehicles.length > 0) {
+      setSelectedVehicle(filteredVehicles[0]);
+    } else if (selectedVehicle && filteredVehicles) {
+      // If the selected vehicle is no longer in the list (e.g., deleted or filtered out),
+      // select the first one in the filtered list, or null if the list is empty.
+      if (!filteredVehicles.find((v) => v.id === selectedVehicle.id)) {
+        setSelectedVehicle(filteredVehicles.length > 0 ? filteredVehicles[0] : null);
       }
     }
-  }, [vehicles, selectedVehicle]);
+  }, [filteredVehicles, selectedVehicle]);
 
   const handleImportSuccess = () => {
     setIsImporting(false);
@@ -153,7 +163,12 @@ export default function VehiclesPage() {
       <PageHeader title="Voertuigen">
         <div className="relative w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Zoek voertuig..." className="pl-9" />
+          <Input 
+            placeholder="Zoek voertuig..." 
+            className="pl-9" 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
         <AddVehicleDialog>
           <Button>
@@ -184,8 +199,8 @@ export default function VehiclesPage() {
                 <div className="text-center text-muted-foreground p-4">
                   Laden...
                 </div>
-              ) : vehicles && vehicles.length > 0 ? (
-                vehicles.map((vehicle) => (
+              ) : filteredVehicles && filteredVehicles.length > 0 ? (
+                filteredVehicles.map((vehicle) => (
                   <div
                     key={vehicle.id}
                     onClick={() => setSelectedVehicle(vehicle)}
