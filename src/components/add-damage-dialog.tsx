@@ -67,14 +67,13 @@ export function AddDamageDialog({
   vehicleId,
 }: AddDamageDialogProps) {
   const firestore = useFirestore();
-  const app = useFirebaseApp(); // Correctly get the Firebase App instance
+  const app = useFirebaseApp(); 
   const [open, setOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [uploadProgress, setUploadProgress] = React.useState(0);
   const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
   const [isUploading, setIsUploading] = React.useState(false);
 
-  // Generate a unique ID for the damage report upfront and keep it stable
   const damageIdRef = React.useRef(doc(collection(firestore, 'voertuigen', vehicleId, 'damages')).id);
 
   const form = useForm<DamageFormValues>({
@@ -89,7 +88,7 @@ export function AddDamageDialog({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const storage = getStorage(app); // Pass the app instance to getStorage
+    const storage = getStorage(app); 
     if (!storage || !vehicleId) {
       toast({ variant: 'destructive', title: 'Fout', description: "Storage of voertuig-ID niet beschikbaar." });
       return;
@@ -137,7 +136,7 @@ export function AddDamageDialog({
   };
   
   const handleFileDelete = async (fileToDelete: UploadedFile) => {
-      const storage = getStorage(app); // Pass the app instance to getStorage
+      const storage = getStorage(app); 
       if (!storage) return;
 
       const fileRef = ref(storage, fileToDelete.storagePath);
@@ -176,7 +175,7 @@ export function AddDamageDialog({
         id: damageId,
         date: data.date.toISOString(),
         status: 'Open',
-        files: uploadedFiles.map(({ storagePath, ...fileData }) => fileData), // Don't store storagePath in firestore
+        files: uploadedFiles.map(({ storagePath, ...fileData }) => fileData), 
       };
 
       await setDoc(damageDocRef, newDamageData);
@@ -208,7 +207,7 @@ export function AddDamageDialog({
     setIsUploading(false);
     setUploadProgress(0);
     setUploadedFiles([]);
-    // Generate new ID for next time dialog is opened
+    
     damageIdRef.current = doc(collection(firestore, 'voertuigen', vehicleId, 'damages')).id;
   }
 
