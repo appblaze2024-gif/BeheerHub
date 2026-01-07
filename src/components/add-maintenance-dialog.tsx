@@ -155,7 +155,7 @@ export function AddMaintenanceDialog({
                 control={form.control}
                 name="date"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
+                  <FormItem>
                     <FormLabel>Datum</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
