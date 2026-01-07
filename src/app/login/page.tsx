@@ -14,7 +14,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/firebase';
 import {
-  createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from 'firebase/auth';
 
@@ -28,15 +27,6 @@ export default function LoginPage() {
     setError(null);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-    } catch (e: any) {
-      setError(e.message);
-    }
-  };
-
-  const handleSignUp = async () => {
-    setError(null);
-    try {
-      await createUserWithEmailAndPassword(auth, email, password);
     } catch (e: any) {
       setError(e.message);
     }
@@ -78,9 +68,6 @@ export default function LoginPage() {
         <CardFooter className="flex flex-col gap-4">
           <Button className="w-full" onClick={handleSignIn}>
             Inloggen
-          </Button>
-          <Button variant="outline" className="w-full" onClick={handleSignUp}>
-            Registreren
           </Button>
         </CardFooter>
       </Card>
