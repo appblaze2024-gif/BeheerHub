@@ -11,7 +11,6 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/page-header';
@@ -52,7 +51,7 @@ export default function VehiclesPage() {
   };
 
   return (
-    <div className="flex flex-col flex-1 p-6 min-h-0">
+    <div className="grid grid-rows-[auto_1fr] flex-1 min-h-0">
       <PageHeader title="Voertuigen">
         <div className="relative w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -77,8 +76,8 @@ export default function VehiclesPage() {
         </Button>
       </PageHeader>
 
-      <div className="flex-1 flex gap-6 mt-6 min-h-0">
-        <Card className="w-[300px] flex flex-col h-full min-h-0">
+      <div className="grid grid-cols-[300px_1fr] gap-6 px-6 pb-6 min-h-0">
+        <Card className="flex flex-col h-full min-h-0">
           <CardContent className="p-2 flex-1 min-h-0 overflow-y-auto">
             <div className="flex flex-col space-y-1 pr-2">
               {isLoading ? (
@@ -124,9 +123,9 @@ export default function VehiclesPage() {
           </CardContent>
         </Card>
 
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex flex-col gap-6 min-h-0">
           {selectedVehicle ? (
-            <div className="flex flex-col flex-1 min-h-0 gap-6">
+            <>
               <Card>
                 <CardHeader>
                   <div className="flex items-start justify-between">
@@ -322,7 +321,7 @@ export default function VehiclesPage() {
                   </Card>
                 </TabsContent>
               </Tabs>
-            </div>
+            </>
           ) : isLoading ? (
             <div className="flex items-center justify-center h-full text-muted-foreground">
               Voertuigen laden...
