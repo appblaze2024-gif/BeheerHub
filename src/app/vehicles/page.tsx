@@ -72,13 +72,6 @@ export default function VehiclesPage() {
   const vehicleImages = PlaceHolderImages.filter(p => p.id.startsWith('vehicle-'));
 
   const mainImage = vehicleImages.find(img => img.id === 'vehicle-side');
-  const otherImages = [
-    vehicleImages.find(img => img.id === 'vehicle-front'),
-    vehicleImages.find(img => img.id === 'vehicle-back'),
-    vehicleImages.find(img => img.id === 'vehicle-top'),
-    vehicleImages.find(img => img.id === 'vehicle-bed'),
-  ].filter(Boolean) as typeof PlaceHolderImages;
-
 
   return (
     <div className="flex flex-col flex-1 p-6 bg-background min-h-0">
@@ -150,30 +143,17 @@ export default function VehiclesPage() {
                 </Badge>
               </CardHeader>
             <CardContent className="grid grid-cols-2 gap-6">
-               <div className="grid grid-cols-2 gap-4">
-                  {mainImage && (
-                    <div className="col-span-2 row-span-2 relative aspect-video rounded-md overflow-hidden border">
-                      <Image
-                        src={mainImage.imageUrl}
-                        alt={mainImage.description}
-                        fill
-                        className="object-cover"
-                        data-ai-hint={mainImage.imageHint}
-                      />
-                    </div>
-                  )}
-                  {otherImages.map(image => (
-                     <div key={image.id} className="relative aspect-video rounded-md overflow-hidden border">
-                        <Image
-                           src={image.imageUrl}
-                           alt={image.description}
-                           fill
-                           className="object-cover"
-                           data-ai-hint={image.imageHint}
-                        />
-                     </div>
-                  ))}
-               </div>
+              {mainImage && (
+                <div className="relative aspect-video rounded-md overflow-hidden border">
+                  <Image
+                    src={mainImage.imageUrl}
+                    alt={mainImage.description}
+                    fill
+                    className="object-cover"
+                    data-ai-hint={mainImage.imageHint}
+                  />
+                </div>
+              )}
               <div>
                 <h3 className="text-lg font-semibold mb-4">Algemene gegevens</h3>
                 <div className="grid grid-cols-2 gap-x-8 gap-y-4">
