@@ -42,7 +42,7 @@ export function SidebarNav() {
       <SidebarContent className="pt-4">
         <SidebarMenu>
           {menuItems.map((item) => (
-            <SidebarMenuItem key={item.href}>
+            <SidebarMenuItem key={item.label}>
               <Link href={item.href} legacyBehavior passHref>
                 <SidebarMenuButton
                   isActive={pathname === item.href}
