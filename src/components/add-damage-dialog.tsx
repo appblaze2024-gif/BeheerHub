@@ -11,7 +11,7 @@ import { collection, doc, updateDoc, arrayUnion, arrayRemove, addDoc, DocumentRe
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 
 import { cn } from '@/lib/utils';
-import { useFirestore, useDoc, addDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useDoc } from '@/firebase';
 import { toast } from '@/hooks/use-toast';
 
 import {
@@ -65,6 +65,7 @@ export function AddDamageDialog({
   const [uploadProgress, setUploadProgress] = React.useState(0);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
   
   const damageDocRef = React.useMemo(() => {
     if (!firestore || !vehicleId || !damageId) return null;
@@ -142,15 +143,13 @@ export function AddDamageDialog({
         files: []
       };
 
-      // 1. Create the document first to get an ID
       const damageDoc = await addDoc(damagesColRef, newDamageData);
       setDamageId(damageDoc.id);
 
-      // 2. If there's a file, upload it
-      const file = fileInputRef.current?.files?.[0];
-      if (file) {
-        await uploadFile(file, damageDoc);
-        toast({ title: 'Bestand geüpload', description: `${file.name} is succesvol toegevoegd.` });
+      if (selectedFile) {
+        await uploadFile(selectedFile, damageDoc);
+        toast({ title: 'Bestand geüpload', description: `${selectedFile.name} is succesvol toegevoegd.` });
+        setSelectedFile(null); // Clear after upload
       }
 
       toast({
@@ -158,9 +157,7 @@ export function AddDamageDialog({
         description: 'De schademelding is succesvol aangemaakt.',
       });
       
-      // Keep dialog open if a file was just uploaded to show it in the list.
-      // Otherwise, close it.
-      if (!file) {
+      if (!selectedFile) {
         handleClose();
       }
 
@@ -178,45 +175,51 @@ export function AddDamageDialog({
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !damageId || !vehicleId || !storage) return;
+    if (!file) return;
 
-    setIsUploading(true);
-    setUploadProgress(0);
-    
-    const storageRef = ref(storage, `damages/${vehicleId}/${damageId}/${file.name}`);
-    const uploadTask = uploadBytesResumable(storageRef, file);
+    if (damageId) { // If damage report already exists, upload immediately
+      if (!vehicleId || !storage) return;
 
-    uploadTask.on('state_changed', 
-      (snapshot) => {
-        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        setUploadProgress(progress);
-      }, 
-      (error) => {
-        console.error("Upload failed:", error);
-        toast({ variant: 'destructive', title: 'Upload mislukt', description: 'Het bestand kon niet worden geüpload.'});
-        setIsUploading(false);
-      }, 
-      () => {
-        getDownloadURL(uploadTask.snapshot.ref).then(async (downloadURL) => {
-          const fileData = {
-            name: file.name,
-            url: downloadURL,
-            size: file.size,
-            type: file.type,
-            uploadedAt: new Date().toISOString()
-          };
-          
-          if(damageDocRef){
-            await updateDoc(damageDocRef, {
-              files: arrayUnion(fileData)
-            });
-          }
+      setIsUploading(true);
+      setUploadProgress(0);
+      
+      const storageRef = ref(storage, `damages/${vehicleId}/${damageId}/${file.name}`);
+      const uploadTask = uploadBytesResumable(storageRef, file);
 
-          toast({ title: 'Bestand geüpload', description: `${file.name} is succesvol toegevoegd.`});
+      uploadTask.on('state_changed', 
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setUploadProgress(progress);
+        }, 
+        (error) => {
+          console.error("Upload failed:", error);
+          toast({ variant: 'destructive', title: 'Upload mislukt', description: 'Het bestand kon niet worden geüpload.'});
           setIsUploading(false);
-        });
-      }
-    );
+        }, 
+        () => {
+          getDownloadURL(uploadTask.snapshot.ref).then(async (downloadURL) => {
+            const fileData = {
+              name: file.name,
+              url: downloadURL,
+              size: file.size,
+              type: file.type,
+              uploadedAt: new Date().toISOString()
+            };
+            
+            if(damageDocRef){
+              await updateDoc(damageDocRef, {
+                files: arrayUnion(fileData)
+              });
+            }
+
+            toast({ title: 'Bestand geüpload', description: `${file.name} is succesvol toegevoegd.`});
+            setIsUploading(false);
+          });
+        }
+      );
+    } else { // If new damage report, just set the file in state
+      setSelectedFile(file);
+    }
 
     if(fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -224,7 +227,11 @@ export function AddDamageDialog({
   };
 
 
-  const handleFileDelete = async (fileToDelete: any) => {
+  const handleFileDelete = async (fileToDelete: any, isPreview: boolean = false) => {
+    if (isPreview) {
+      setSelectedFile(null);
+      return;
+    }
     if (!damageDocRef) return;
     try {
       await updateDoc(damageDocRef, {
@@ -244,10 +251,14 @@ export function AddDamageDialog({
     setIsUploading(false);
     setUploadProgress(0);
     setIsSubmitting(false);
+    setSelectedFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   }
+
+  const displayedFiles = damageData?.files || [];
+  const hasFiles = displayedFiles.length > 0 || selectedFile;
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
@@ -312,8 +323,8 @@ export function AddDamageDialog({
             />
 
             <div className="space-y-2">
-                <input type="file" ref={fileInputRef} onChange={!damageId ? undefined : handleFileChange} className="hidden" />
-                <Button type="button" variant="outline" disabled={isUploading || !!damageId} onClick={() => fileInputRef.current?.click()}>
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+                <Button type="button" variant="outline" disabled={isUploading || !!selectedFile} onClick={() => fileInputRef.current?.click()}>
                     <Upload className="mr-2 h-4 w-4" />
                     Bestand kiezen
                 </Button>
@@ -341,9 +352,23 @@ export function AddDamageDialog({
                         <span className="text-right">Acties</span>
                     </div>
                 </div>
-                 {(damageData?.files && damageData.files.length > 0) ? (
+                 {hasFiles ? (
                   <div className='max-h-48 overflow-y-auto'>
-                    {damageData.files.map((file: any, index: number) => (
+                    {selectedFile && (
+                       <div className="grid grid-cols-5 gap-4 items-center px-4 py-2 border-b last:border-b-0">
+                        <span className="col-span-2 truncate flex items-center gap-2">
+                          <FileIcon className="h-4 w-4 shrink-0"/> {selectedFile.name}
+                        </span>
+                        <span>{(selectedFile.size / 1024).toFixed(2)} KB</span>
+                        <span>{format(new Date(), 'dd-MM-yy')}</span>
+                        <div className='flex justify-end'>
+                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleFileDelete(null, true)}>
+                              <Trash2 className="h-4 w-4 text-destructive"/>
+                           </Button>
+                        </div>
+                      </div>
+                    )}
+                    {displayedFiles.map((file: any, index: number) => (
                       <div key={index} className="grid grid-cols-5 gap-4 items-center px-4 py-2 border-b last:border-b-0">
                         <a href={file.url} target="_blank" rel="noopener noreferrer" className="col-span-2 text-primary hover:underline truncate flex items-center gap-2">
                           <FileIcon className="h-4 w-4 shrink-0"/> {file.name}
