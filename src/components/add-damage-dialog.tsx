@@ -312,7 +312,6 @@ export function AddDamageDialog({
             />
 
             <div className="space-y-2">
-                <FormLabel>Bestanden</FormLabel>
                 <input type="file" ref={fileInputRef} onChange={!damageId ? undefined : handleFileChange} className="hidden" />
                 <Button type="button" variant="outline" disabled={isUploading || !!damageId} onClick={() => fileInputRef.current?.click()}>
                     <Upload className="mr-2 h-4 w-4" />
