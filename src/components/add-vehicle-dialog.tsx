@@ -55,7 +55,7 @@ const vehicleFormSchema = z.object({
   status: z.string().default('Actief'),
   bouwjaar: z.string().optional(),
   brandstof: z.string().optional(),
-  apk_vervaldatum: z.date().optional(),
+  apk_vervaldatum: z.string().optional(),
   imageUrl: z.string().url().optional().nullable(),
 });
 
@@ -110,7 +110,7 @@ export function AddVehicleDialog({ children, vehicle = null, open: controlledOpe
           status: vehicle.status || 'Actief',
           bouwjaar: vehicle.bouwjaar || '',
           brandstof: vehicle.brandstof || '',
-          apk_vervaldatum: vehicle.apk_vervaldatum ? new Date(vehicle.apk_vervaldatum) : undefined,
+          apk_vervaldatum: vehicle.apk_vervaldatum,
           imageUrl: vehicle.imageUrl ?? null,
         });
       } else {
@@ -123,7 +123,7 @@ export function AddVehicleDialog({ children, vehicle = null, open: controlledOpe
           status: 'Actief',
           bouwjaar: '',
           brandstof: '',
-          apk_vervaldatum: undefined,
+          apk_vervaldatum: '',
           imageUrl: null,
         });
       }
@@ -131,14 +131,16 @@ export function AddVehicleDialog({ children, vehicle = null, open: controlledOpe
   }, [open, vehicle, form]);
 
   React.useEffect(() => {
-    if (form.formState.isDirty && selectedBrand !== vehicle?.merk) {
+    if (!form.formState.isDirty) return;
+    if (selectedBrand !== vehicle?.merk) {
       form.setValue('model', '');
       form.setValue('type', '');
     }
   }, [selectedBrand, form, vehicle]);
 
   React.useEffect(() => {
-    if (form.formState.isDirty && selectedModel !== vehicle?.model) {
+    if (!form.formState.isDirty) return;
+    if (selectedModel !== vehicle?.model) {
       form.setValue('type', '');
     }
   }, [selectedModel, form, vehicle]);
@@ -155,7 +157,7 @@ export function AddVehicleDialog({ children, vehicle = null, open: controlledOpe
     try {
       const vehicleData = {
         ...data,
-        apk_vervaldatum: data.apk_vervaldatum ? format(data.apk_vervaldatum, 'yyyy-MM-dd') : null,
+        apk_vervaldatum: data.apk_vervaldatum || null,
       };
       
       const vehicleRef = doc(firestore, 'voertuigen', vehicleData.kenteken);
@@ -352,36 +354,11 @@ export function AddVehicleDialog({ children, vehicle = null, open: controlledOpe
               control={form.control}
               name="apk_vervaldatum"
               render={({ field }) => (
-                <FormItem className="flex flex-col">
+                <FormItem>
                   <FormLabel>APK Datum</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={'outline'}
-                          className={cn(
-                            'w-full pl-3 text-left font-normal',
-                            !field.value && 'text-muted-foreground'
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, 'dd-MM-yyyy', { locale: nl })
-                          ) : (
-                            <span>dd-mm-jjjj</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <FormControl>
+                    <Input type='date' {...field} value={field.value ?? ''} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -407,5 +384,3 @@ export function AddVehicleDialog({ children, vehicle = null, open: controlledOpe
     </Dialog>
   );
 }
-
-    
