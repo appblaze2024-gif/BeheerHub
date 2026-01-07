@@ -6,7 +6,13 @@ import { MoreHorizontal, Plus, Search, Upload, Download } from 'lucide-react';
 import { collection } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/page-header';
 import {
@@ -34,7 +40,9 @@ export default function VehiclesPage() {
 
   const { data: vehicles, isLoading } = useCollection<any>(vehiclesCollection);
 
-  const [selectedVehicle, setSelectedVehicle] = React.useState<any | null>(null);
+  const [selectedVehicle, setSelectedVehicle] = React.useState<any | null>(
+    null
+  );
   const mainImage = PlaceHolderImages.find((p) => p.id === 'vehicle-side');
 
   React.useEffect(() => {
@@ -53,7 +61,6 @@ export default function VehiclesPage() {
     setIsImporting(false);
     // Optionally refetch data or rely on real-time updates from useCollection
   };
-
 
   return (
     <div className="flex flex-col flex-1 p-6 min-h-0">
@@ -134,7 +141,9 @@ export default function VehiclesPage() {
               <Card>
                 <CardHeader className="flex flex-row items-start justify-between">
                   <div>
-                    <h2 className="text-2xl font-bold">{selectedVehicle?.id}</h2>
+                    <h2 className="text-2xl font-bold">
+                      {selectedVehicle?.id}
+                    </h2>
                     <p className="text-muted-foreground">
                       {selectedVehicle?.merk} {selectedVehicle?.model}
                     </p>
@@ -225,6 +234,131 @@ export default function VehiclesPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              <Tabs
+                defaultValue="actions"
+                className="flex-1 flex flex-col min-h-0"
+              >
+                <TabsList>
+                  <TabsTrigger value="actions">Acties</TabsTrigger>
+                  <TabsTrigger value="maintenance">Onderhoud</TabsTrigger>
+                  <TabsTrigger value="damages">Schade</TabsTrigger>
+                  <TabsTrigger value="documents">Documenten</TabsTrigger>
+                </TabsList>
+
+                <TabsContent
+                  value="actions"
+                  className="flex-1 flex flex-col min-h-0 mt-2"
+                >
+                  <Card className="h-full flex flex-col">
+                    <CardHeader>
+                      <CardTitle>Acties</CardTitle>
+                      <CardDescription>
+                        Overzicht van alle acties voor dit voertuig.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-1 flex flex-col gap-4 overflow-y-auto">
+                      <div className="flex justify-end">
+                        <Button size="sm">
+                          <Plus className="mr-2 h-4 w-4" />
+                          Actie toevoegen
+                        </Button>
+                      </div>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Naam</TableHead>
+                            <TableHead>Type actie</TableHead>
+                            <TableHead>Datum</TableHead>
+                            <TableHead className="text-right">Acties</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center h-24">
+                              Nog geen acties geregistreerd.
+                            </TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent
+                  value="maintenance"
+                  className="flex-1 flex flex-col min-h-0 mt-2"
+                >
+                  <Card className="h-full flex flex-col">
+                    <CardHeader>
+                      <CardTitle>Onderhoud</CardTitle>
+                      <CardDescription>
+                        Overzicht van al het onderhoud voor dit voertuig.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-1 flex flex-col gap-4 overflow-y-auto">
+                       <div className="flex justify-end">
+                        <Button size="sm">
+                          <Plus className="mr-2 h-4 w-4" />
+                          Onderhoud toevoegen
+                        </Button>
+                      </div>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Omschrijving</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Datum</TableHead>
+                            <TableHead>Kosten</TableHead>
+                             <TableHead className="text-right">Acties</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center h-24">
+                              Nog geen onderhoud geregistreerd.
+                            </TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent
+                  value="damages"
+                  className="flex-1 flex flex-col min-h-0 mt-2"
+                >
+                  <Card className="h-full flex flex-col">
+                     <CardHeader>
+                      <CardTitle>Schade</CardTitle>
+                      <CardDescription>
+                        Overzicht van alle schadegevallen voor dit voertuig.
+                      </CardDescription>
+                    </CardHeader>
+                     <CardContent className="flex-1 flex items-center justify-center text-muted-foreground overflow-y-auto">
+                       <p>Nog geen schade geregistreerd.</p>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent
+                  value="documents"
+                  className="flex-1 flex flex-col min-h-0 mt-2"
+                >
+                  <Card className="h-full flex flex-col">
+                     <CardHeader>
+                      <CardTitle>Documenten</CardTitle>
+                      <CardDescription>
+                        Alle documenten gerelateerd aan dit voertuig.
+                      </CardDescription>
+                    </CardHeader>
+                     <CardContent className="flex-1 flex items-center justify-center text-muted-foreground overflow-y-auto">
+                       <p>Nog geen documenten gevonden.</p>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
             </>
           ) : isLoading ? (
             <div className="flex items-center justify-center h-full text-muted-foreground">
