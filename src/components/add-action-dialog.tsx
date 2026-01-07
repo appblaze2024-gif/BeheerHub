@@ -4,7 +4,7 @@ import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { CalendarIcon, Plus } from 'lucide-react';
+import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 
@@ -53,13 +53,11 @@ type ActionFormValues = z.infer<typeof actionFormSchema>;
 interface AddActionDialogProps {
   children: React.ReactNode;
   vehicleId: string;
-  onActionAdded: () => void;
 }
 
 export function AddActionDialog({
   children,
   vehicleId,
-  onActionAdded,
 }: AddActionDialogProps) {
   const firestore = useFirestore();
   const [open, setOpen] = React.useState(false);
@@ -102,7 +100,6 @@ export function AddActionDialog({
         description: 'De actie is succesvol toegevoegd.',
       });
       form.reset();
-      onActionAdded();
       setOpen(false);
     } catch (error) {
       console.error('Error adding action: ', error);

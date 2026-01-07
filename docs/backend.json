@@ -172,6 +172,41 @@
         "type",
         "date"
       ]
+    },
+    "Maintenance": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Maintenance",
+      "type": "object",
+      "description": "Represents a single maintenance task for a vehicle.",
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "A description of the maintenance performed."
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of maintenance (e.g., Routine, Repair)."
+        },
+        "date": {
+          "type": "string",
+          "description": "The date the maintenance was performed.",
+          "format": "date-time"
+        },
+        "cost": {
+          "type": "number",
+          "description": "The cost of the maintenance."
+        },
+        "details": {
+          "type": "string",
+          "description": "Additional details about the maintenance."
+        }
+      },
+      "required": [
+        "description",
+        "type",
+        "date",
+        "cost"
+      ]
     }
   },
   "auth": {
@@ -293,8 +328,28 @@
             }
           ]
         }
+      },
+       {
+        "path": "/voertuigen/{voertuigId}/maintenance/{maintenanceId}",
+        "definition": {
+          "entityName": "Maintenance",
+          "schema": {
+            "$ref": "#/backend/entities/Maintenance"
+          },
+          "description": "Subcollection to store maintenance records related to a specific vehicle.",
+          "params": [
+            {
+              "name": "voertuigId",
+              "description": "The unique identifier of the vehicle."
+            },
+            {
+              "name": "maintenanceId",
+              "description": "The unique identifier of the maintenance record."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore data structure is designed to support a basic ERP system. User-specific data (revenue, expenses, appointments) is segregated under `/users/{userId}` for privacy and security. A root-level `voertuigen` collection is added to store fleet information centrally, with a nested `actions` collection for vehicle-specific tasks. This hybrid structure supports both private, user-owned data and shared, application-wide data, with security rules adapted accordingly."
+    "reasoning": "The Firestore data structure is designed to support a basic ERP system. User-specific data (revenue, expenses, appointments) is segregated under `/users/{userId}` for privacy and security. A root-level `voertuigen` collection is added to store fleet information centrally, with nested `actions` and `maintenance` collections for vehicle-specific tasks. This hybrid structure supports both private, user-owned data and shared, application-wide data, with security rules adapted accordingly."
   }
 }

@@ -93,6 +93,18 @@ service cloud.firestore {
       match /actions/{actionId} {
         allow get, list, create, update, delete: if isSignedIn();
       }
+      
+      /**
+       * @description
+       *   Secures the nested `maintenance` subcollection for a vehicle.
+       * @path
+       *   /voertuigen/{voertuigId}/maintenance/{maintenanceId}
+       * @allow
+       *   Any authenticated user can manage maintenance records for any vehicle.
+       */
+      match /maintenance/{maintenanceId} {
+         allow get, list, create, update, delete: if isSignedIn();
+      }
     }
   }
 }

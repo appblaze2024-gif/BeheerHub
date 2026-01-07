@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Image from 'next/image';
 import { MoreHorizontal, Plus, Search, Upload, Download } from 'lucide-react';
-import { collection, doc } from 'firebase/firestore';
+import { collection } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,11 +20,11 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { VehicleImportDialog } from '@/components/vehicle-import-dialog';
 import { AddActionDialog } from '@/components/add-action-dialog';
+import { AddMaintenanceDialog } from '@/components/add-maintenance-dialog';
 
 export default function VehiclesPage() {
   const firestore = useFirestore();
   const [isImporting, setIsImporting] = React.useState(false);
-  const [isAddingAction, setIsAddingAction] = React.useState(false);
 
   const vehiclesCollection = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -44,6 +44,14 @@ export default function VehiclesPage() {
 
   const { data: actions, isLoading: actionsLoading } =
     useCollection<any>(actionsCollection);
+    
+  const maintenanceCollection = useMemoFirebase(() => {
+    if (!firestore || !selectedVehicle) return null;
+    return collection(firestore, 'voertuigen', selectedVehicle.id, 'maintenance');
+  }, [firestore, selectedVehicle]);
+
+  const { data: maintenance, isLoading: maintenanceLoading } =
+    useCollection<any>(maintenanceCollection);
 
   const mainImage = PlaceHolderImages.find((p) => p.id === 'vehicle-side');
 
@@ -61,10 +69,6 @@ export default function VehiclesPage() {
     setIsImporting(false);
   };
   
-  const handleActionAdded = () => {
-    setIsAddingAction(false);
-  };
-
   return (
     <div className="grid grid-rows-[auto_1fr] flex-1 min-h-0">
       <PageHeader title="Voertuigen">
@@ -252,7 +256,7 @@ export default function VehiclesPage() {
                   <Card className="h-full flex flex-col">
                     <CardHeader className="flex-row items-center justify-between">
                       <CardTitle>Acties</CardTitle>
-                      <AddActionDialog vehicleId={selectedVehicle.id} onActionAdded={handleActionAdded}>
+                      <AddActionDialog vehicleId={selectedVehicle.id}>
                          <Button size="sm">
                           <Plus className="mr-2 h-4 w-4" />
                           Actie toevoegen
@@ -295,14 +299,16 @@ export default function VehiclesPage() {
                   <Card className="h-full flex flex-col">
                     <CardHeader className="flex-row items-center justify-between">
                       <CardTitle>Onderhoud</CardTitle>
-                      <Button size="sm">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Onderhoud toevoegen
-                      </Button>
+                      <AddMaintenanceDialog vehicleId={selectedVehicle.id}>
+                        <Button size="sm">
+                          <Plus className="mr-2 h-4 w-4" />
+                          Onderhoud toevoegen
+                        </Button>
+                      </AddMaintenanceDialog>
                     </CardHeader>
                     <CardContent className="flex-1 flex flex-col gap-4 overflow-y-auto pt-2">
-                      <div className="text-sm text-muted-foreground">
-                        <div className="flex justify-between px-4 py-2">
+                       <div className="text-sm text-muted-foreground">
+                        <div className="flex justify-between px-4 py-2 font-medium">
                           <span className="w-1/4">Omschrijving</span>
                           <span className="w-1/4">Type</span>
                           <span className="w-1/4">Datum</span>
@@ -310,9 +316,26 @@ export default function VehiclesPage() {
                         </div>
                         <Separator />
                       </div>
-                      <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                        Nog geen onderhoud geregistreerd.
-                      </div>
+                      {maintenanceLoading ? (
+                         <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                          Onderhoudsgegevens laden...
+                        </div>
+                      ) : maintenance && maintenance.length > 0 ? (
+                         <div className="flex-1 overflow-y-auto">
+                          {maintenance.map((item) => (
+                             <div key={item.id} className="flex justify-between items-center px-4 py-3 border-b">
+                               <span className="w-1/4">{item.description}</span>
+                               <span className="w-1/4">{item.type}</span>
+                               <span className="w-1/4">{new Date(item.date).toLocaleDateString('nl-NL')}</span>
+                               <span className="w-1/4 text-right">€ {item.cost.toFixed(2)}</span>
+                             </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                          Nog geen onderhoud geregistreerd.
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>
