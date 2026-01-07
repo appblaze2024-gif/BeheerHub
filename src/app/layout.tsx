@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
+import { Sidebar, SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { SidebarNav } from "@/components/sidebar-nav";
+import { Logo } from "@/components/icons";
+import { SidebarHeader, SidebarTrigger } from "@/components/ui/sidebar";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -27,7 +31,15 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <div className="flex-1 overflow-y-auto">{children}</div>
+        <SidebarProvider>
+          <Sidebar collapsible="icon">
+            <SidebarHeader>
+              <Logo />
+            </SidebarHeader>
+            <SidebarNav />
+          </Sidebar>
+          <SidebarInset>{children}</SidebarInset>
+        </SidebarProvider>
         <Toaster />
       </body>
     </html>
