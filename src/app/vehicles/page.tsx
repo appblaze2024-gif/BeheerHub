@@ -273,12 +273,34 @@ export default function VehiclesPage() {
                 <TabsContent value="maintenance" className="mt-4">
                   <Card>
                     <CardHeader>
-                      <CardTitle>Onderhoud</CardTitle>
+                      <div className="flex justify-between items-center">
+                        <CardTitle>Onderhoud</CardTitle>
+                        <Button>
+                          <Plus className="mr-2 h-4 w-4" /> Onderhoud toevoegen
+                        </Button>
+                      </div>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-center text-muted-foreground">
-                        Geen onderhoudsgegevens beschikbaar.
-                      </p>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Omschrijving</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Datum</TableHead>
+                            <TableHead>Kosten</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          <TableRow>
+                            <TableCell
+                              colSpan={4}
+                              className="text-center h-24"
+                            >
+                              Nog geen onderhoud geregistreerd.
+                            </TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
                     </CardContent>
                   </Card>
                 </TabsContent>
