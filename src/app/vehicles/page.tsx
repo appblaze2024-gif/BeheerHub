@@ -202,9 +202,10 @@ export default function VehiclesPage() {
               <TabsTrigger value="actions">Acties</TabsTrigger>
               <TabsTrigger value="maintenance">Onderhoud</TabsTrigger>
               <TabsTrigger value="damage">Schade</TabsTrigger>
+
               <TabsTrigger value="documents">Documenten</TabsTrigger>
             </TabsList>
-            <TabsContent value="actions" className="flex-1 min-h-0 mt-4">
+            <TabsContent value="actions" className="flex flex-col flex-1 min-h-0 mt-4">
               <Card className="h-full flex flex-col">
                 <CardHeader>
                   <div className="flex justify-between items-center">
@@ -259,4 +260,3 @@ export default function VehiclesPage() {
       </div>
     </div>
   );
-}
