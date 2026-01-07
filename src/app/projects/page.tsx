@@ -60,13 +60,13 @@ export default function ProjectsPage() {
           value="project"
           className="flex-1 overflow-y-auto pt-6 pb-2"
         >
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div className="flex items-center gap-4">
-              <Label htmlFor="select-project" className="font-semibold">
+              <Label htmlFor="select-project" className="font-semibold whitespace-nowrap">
                 Selecteer Project:
               </Label>
               <Select defaultValue="gemeente-aalsmeer">
-                <SelectTrigger className="w-[350px]">
+                <SelectTrigger className="w-full max-w-lg">
                   <SelectValue placeholder="Selecteer een project" />
                 </SelectTrigger>
                 <SelectContent>
@@ -82,7 +82,7 @@ export default function ProjectsPage() {
                 <CardTitle className="text-lg">Project</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <FormField
                     id="projectnummer"
                     label="Projectnummer"
@@ -94,9 +94,7 @@ export default function ProjectsPage() {
                     value="DVO Aalsmeer"
                   />
                   <FormField id="locatie" label="Locatie" value="Aalsmeer" />
-                </div>
-                <div className="grid grid-cols-3 gap-6">
-                  <FormField
+                   <FormField
                     id="opdrachtgever"
                     label="Opdrachtgever"
                     value="Gemeente Aalsmeer"
@@ -120,7 +118,7 @@ export default function ProjectsPage() {
                 <CardTitle className="text-lg">Bestek</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <FormField id="bestek" label="Bestek" value="Beeldbestek" />
                   <FormField
                     id="besteknummer"
@@ -128,9 +126,7 @@ export default function ProjectsPage() {
                     value="U456tres"
                   />
                   <FormField id="versie" label="Versie" value="1" />
-                </div>
-                <div className="grid grid-cols-3 gap-6">
-                  <FormField id="datum" label="Datum" value="01-01-2026" />
+                   <FormField id="datum" label="Datum" value="01-01-2026" />
                 </div>
               </CardContent>
             </Card>
@@ -142,7 +138,7 @@ export default function ProjectsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <Textarea rows={6} />
+                <Textarea rows={4} />
               </CardContent>
             </Card>
 
