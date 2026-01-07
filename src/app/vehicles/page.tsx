@@ -180,9 +180,10 @@ export default function VehiclesPage() {
                       <p className="text-sm text-muted-foreground">
                         {vehicle.merk} {vehicle.model}
                       </p>
-                      {vehicle.type && (
+                      {(vehicle.type || vehicle.bouwjaar) && (
                         <p className="text-xs text-muted-foreground">
                           {vehicle.type}
+                          {vehicle.bouwjaar && ` (${vehicle.bouwjaar})`}
                         </p>
                       )}
                     </div>
