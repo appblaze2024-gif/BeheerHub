@@ -96,7 +96,7 @@ export function AddDamageDialog({
     Record<string, { progress: number; file: File }>
   >({});
   const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>(
-    damage?.files ?? []
+    []
   );
 
   const damageIdRef = React.useRef(damage?.id || doc(collection(firestore, 'temp')).id);
@@ -106,31 +106,34 @@ export function AddDamageDialog({
   });
 
   React.useEffect(() => {
-    if (damage) {
-      form.reset({
-        description: damage.description,
-        date: new Date(damage.date),
-        status: damage.status,
-      });
-      setUploadedFiles(damage.files || []);
-      damageIdRef.current = damage.id;
-    } else {
-      form.reset({
-        description: '',
-        date: new Date(),
-        status: 'Open',
-      });
-      setUploadedFiles([]);
-      damageIdRef.current = doc(collection(firestore, 'temp')).id;
+    if (open) {
+      if (damage) {
+        form.reset({
+          description: damage.description,
+          date: new Date(damage.date),
+          status: damage.status,
+        });
+        setUploadedFiles(damage.files || []);
+        damageIdRef.current = damage.id;
+      } else {
+        form.reset({
+          description: '',
+          date: new Date(),
+          status: 'Open',
+        });
+        setUploadedFiles([]);
+        damageIdRef.current = doc(collection(firestore, 'temp')).id;
+      }
+      setUploads({});
+      setIsSubmitting(false);
     }
-  }, [damage, open, form]);
+  }, [damage, open, form, firestore]);
 
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0 || !app) return;
 
-    if (!app) return;
     const storage = getStorage(app);
     if (!storage || !vehicleId) {
       toast({
@@ -216,11 +219,22 @@ export function AddDamageDialog({
       });
     } catch (error: any) {
       console.error('Kon bestand niet verwijderen:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Verwijderen mislukt',
-        description: `Kon ${fileToDelete.name} niet verwijderen. ${error.message}`,
-      });
+      if (error.code === 'storage/object-not-found') {
+        setUploadedFiles((prev) =>
+          prev.filter((f) => f.storagePath !== fileToDelete.storagePath)
+        );
+        toast({
+            variant: 'destructive',
+            title: 'Bestand niet gevonden in storage',
+            description: `Het bestand ${fileToDelete.name} was al verwijderd.`,
+          });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Verwijderen mislukt',
+          description: `Kon ${fileToDelete.name} niet verwijderen. ${error.message}`,
+        });
+      }
     }
   };
 
@@ -336,6 +350,7 @@ export function AddDamageDialog({
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
+                      value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -450,6 +465,7 @@ export function AddDamageDialog({
                 type="button"
                 variant="ghost"
                 onClick={() => onOpenChange(false)}
+                disabled={isSubmitting || isUploading}
               >
                 Annuleren
               </Button>
