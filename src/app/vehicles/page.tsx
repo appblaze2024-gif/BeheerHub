@@ -2,7 +2,14 @@
 
 import * as React from 'react';
 import Image from 'next/image';
-import { ChevronDown, MoreHorizontal, Plus, Search } from 'lucide-react';
+import {
+  ChevronDown,
+  MoreHorizontal,
+  Plus,
+  Search,
+  Upload,
+  Download,
+} from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -77,7 +84,12 @@ export default function VehiclesPage() {
           <Plus className="mr-2 h-4 w-4" /> Voertuig toevoegen
         </Button>
         <Button variant="outline">
-          Bulkacties <ChevronDown className="ml-2 h-4 w-4" />
+          <Upload className="mr-2 h-4 w-4" />
+          Import
+        </Button>
+        <Button variant="outline">
+          <Download className="mr-2 h-4 w-4" />
+          Export
         </Button>
       </PageHeader>
 
