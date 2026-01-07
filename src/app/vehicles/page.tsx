@@ -74,14 +74,14 @@ export default function VehiclesPage() {
           <CardContent className="p-2">
             <div className="flex flex-col space-y-1">
               {vehicles.map((vehicle) => (
-                <button
+                <div
                   key={vehicle.id}
                   onClick={() =>
                     setSelectedVehicle(
                       vehicles.find((v) => v.id === vehicle.id) || vehicles[0]
                     )
                   }
-                  className={`flex items-center justify-between p-3 rounded-md text-left ${
+                  className={`flex items-center justify-between p-3 rounded-md text-left cursor-pointer ${
                     selectedVehicle.id === vehicle.id
                       ? 'bg-blue-100 dark:bg-blue-900'
                       : 'hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -104,7 +104,7 @@ export default function VehiclesPage() {
                   <Button variant="ghost" size="icon" className="h-8 w-8">
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
-                </button>
+                </div>
               ))}
             </div>
           </CardContent>
