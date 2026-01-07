@@ -72,6 +72,19 @@ const vehicles = [
 export default function VehiclesPage() {
   const [selectedVehicle, setSelectedVehicle] = React.useState(vehicles[0]);
   const mainImage = PlaceHolderImages.find((p) => p.id === 'vehicle-side');
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      console.log('Selected file:', file.name);
+      // Here you can add logic to read and process the CSV file
+    }
+  };
 
   return (
     <div className="flex flex-col flex-1 p-6 min-h-0">
@@ -83,7 +96,14 @@ export default function VehiclesPage() {
         <Button>
           <Plus className="mr-2 h-4 w-4" /> Voertuig toevoegen
         </Button>
-        <Button variant="outline">
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          className="hidden"
+          accept=".csv"
+        />
+        <Button variant="outline" onClick={handleImportClick}>
           <Upload className="mr-2 h-4 w-4" />
           Import
         </Button>
@@ -104,7 +124,7 @@ export default function VehiclesPage() {
                     onClick={() => setSelectedVehicle(vehicle)}
                     className={`flex items-center justify-between p-3 rounded-md text-left cursor-pointer ${
                       selectedVehicle?.id === vehicle.id
-                        ? 'bg-blue-100 dark:bg-blue-900'
+                        ? 'bg-sidebar-accent'
                         : 'hover:bg-gray-100 dark:hover:bg-gray-800'
                     }`}
                   >
@@ -112,7 +132,7 @@ export default function VehiclesPage() {
                       <p
                         className={`font-semibold ${
                           selectedVehicle?.id === vehicle.id
-                            ? 'text-blue-600 dark:text-blue-300'
+                            ? 'text-sidebar-accent-foreground'
                             : ''
                         }`}
                       >
