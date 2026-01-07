@@ -180,6 +180,11 @@ export default function VehiclesPage() {
                       <p className="text-sm text-muted-foreground">
                         {vehicle.merk} {vehicle.model}
                       </p>
+                      {vehicle.type && (
+                        <p className="text-xs text-muted-foreground">
+                          {vehicle.type}
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))
