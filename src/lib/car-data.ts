@@ -1,0 +1,22 @@
+export const carData: Record<string, string[]> = {
+  "Mercedes-Benz": ["A-Class", "C-Class", "E-Class", "S-Class", "GLC", "GLE", "Sprinter", "Vito", "Citan"],
+  "Volkswagen": ["Golf", "Polo", "Passat", "Tiguan", "T-Roc", "Transporter", "Caddy", "Crafter", "ID.3", "ID.4"],
+  "BMW": ["1-Series", "3-Series", "5-Series", "X1", "X3", "X5", "i3", "i4"],
+  "Ford": ["Fiesta", "Focus", "Mustang", "Transit", "Transit Custom", "Ranger"],
+  "Audi": ["A1", "A3", "A4", "A6", "Q3", "Q5", "e-tron"],
+  "Opel": ["Corsa", "Astra", "Vivaro", "Movano"],
+  "Renault": ["Clio", "Captur", "Trafic", "Master"],
+  "Peugeot": ["208", "308", "2008", "3008", "Partner", "Expert", "Boxer"],
+  "Toyota": ["Yaris", "Corolla", "RAV4", "Proace"],
+  "Fiat": ["500", "Panda", "Ducato"],
+  "Citroën": ["C3", "C4", "Berlingo", "Jumpy", "Jumper"],
+  "Volvo": ["V60", "XC40", "XC60", "XC90"],
+  "Skoda": ["Fabia", "Octavia", "Superb"],
+  "Kia": ["Picanto", "Niro", "Sportage"],
+  "Hyundai": ["i10", "i20", "Kona"],
+  "Nissan": ["Qashqai", "Juke", "Leaf", "Primastar"],
+  "Seat": ["Ibiza", "Leon", "Ateca"],
+  "Suzuki": ["Swift", "Ignis"],
+  "Mazda": ["2", "3", "CX-5"],
+  "Mitsubishi": ["Space Star", "ASX"]
+};

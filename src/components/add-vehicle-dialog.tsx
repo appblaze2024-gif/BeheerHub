@@ -11,6 +11,7 @@ import { doc, setDoc } from 'firebase/firestore';
 
 import { cn } from '@/lib/utils';
 import { useFirestore } from '@/firebase';
+import { carData } from '@/lib/car-data';
 
 import {
   Dialog,
@@ -18,7 +19,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogDescription,
   DialogTrigger,
   DialogClose,
 } from '@/components/ui/dialog';
@@ -50,7 +50,7 @@ const vehicleFormSchema = z.object({
   kenteken: z.string().min(1, { message: 'Kenteken is verplicht.' }),
   voertuignummer: z.string().optional(),
   merk: z.string().min(1, { message: 'Selecteer een merk.' }),
-  model: z.string().min(1, { message: 'Model is verplicht.' }),
+  model: z.string().min(1, { message: 'Selecteer een model.' }),
   type: z.string().optional(),
   status: z.string().default('Actief'),
   bouwjaar: z.string().optional(),
@@ -64,12 +64,7 @@ interface AddVehicleDialogProps {
   children: React.ReactNode;
 }
 
-const carBrands = [
-    "Mercedes-Benz", "Volkswagen", "BMW", "Ford", "Audi", "Opel", 
-    "Renault", "Peugeot", "Toyota", "Fiat", "Citroën", "Volvo",
-    "Skoda", "Kia", "Hyundai", "Nissan", "Seat", "Suzuki", 
-    "Mazda", "Mitsubishi"
-];
+const carBrands = Object.keys(carData);
 
 export function AddVehicleDialog({ children }: AddVehicleDialogProps) {
   const firestore = useFirestore();
@@ -89,6 +84,16 @@ export function AddVehicleDialog({ children }: AddVehicleDialogProps) {
       brandstof: '',
     },
   });
+
+  const selectedBrand = form.watch('merk');
+  const models = selectedBrand ? carData[selectedBrand] : [];
+
+  React.useEffect(() => {
+    // Reset model when brand changes
+    if (selectedBrand) {
+      form.setValue('model', '');
+    }
+  }, [selectedBrand, form]);
 
   const onSubmit = async (data: VehicleFormValues) => {
     if (!firestore) {
@@ -182,9 +187,18 @@ export function AddVehicleDialog({ children }: AddVehicleDialogProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Model</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Caddy" {...field} />
-                    </FormControl>
+                     <Select onValueChange={field.onChange} value={field.value} disabled={!selectedBrand}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecteer een model" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {models.map(model => (
+                            <SelectItem key={model} value={model}>{model}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
