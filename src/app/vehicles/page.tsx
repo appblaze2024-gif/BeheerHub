@@ -53,9 +53,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from '@/hooks/use-toast';
 import { getStorage, ref, deleteObject } from 'firebase/storage';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 
 function DeleteDamageDialog({
   vehicleId,
@@ -152,15 +149,10 @@ function DeleteDamageDialog({
   );
 }
 
-const damageFormSchema = z.object({
-  date: z.date({ required_error: 'Een datum is verplicht.' }),
-  description: z.string().min(1, { message: 'Omschrijving is verplicht.' }),
-  status: z.string().min(1, { message: 'Status is verplicht.' }),
-});
-
 export default function VehiclesPage() {
   const firestore = useFirestore();
   const [isImporting, setIsImporting] = React.useState(false);
+  const [refreshKey, setRefreshKey] = React.useState(0);
 
   const vehiclesCollection = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -176,7 +168,7 @@ export default function VehiclesPage() {
   const actionsCollection = useMemoFirebase(() => {
     if (!firestore || !selectedVehicle) return null;
     return collection(firestore, 'voertuigen', selectedVehicle.id, 'actions');
-  }, [firestore, selectedVehicle]);
+  }, [firestore, selectedVehicle, refreshKey]);
 
   const { data: actions, isLoading: actionsLoading } =
     useCollection<any>(actionsCollection);
@@ -189,7 +181,7 @@ export default function VehiclesPage() {
       selectedVehicle.id,
       'maintenance'
     );
-  }, [firestore, selectedVehicle]);
+  }, [firestore, selectedVehicle, refreshKey]);
 
   const { data: maintenance, isLoading: maintenanceLoading } =
     useCollection<any>(maintenanceCollection);
@@ -197,7 +189,7 @@ export default function VehiclesPage() {
   const damagesCollection = useMemoFirebase(() => {
     if (!firestore || !selectedVehicle) return null;
     return collection(firestore, 'voertuigen', selectedVehicle.id, 'damages');
-  }, [firestore, selectedVehicle]);
+  }, [firestore, selectedVehicle, refreshKey]);
 
   const { data: damages, isLoading: damagesLoading } =
     useCollection<any>(damagesCollection);
@@ -208,6 +200,8 @@ export default function VehiclesPage() {
     if (!selectedVehicle && vehicles && vehicles.length > 0) {
       setSelectedVehicle(vehicles[0]);
     } else if (selectedVehicle && vehicles) {
+      // If the selected vehicle is no longer in the list (e.g., deleted),
+      // select the first one, or null if the list is empty.
       if (!vehicles.find((v) => v.id === selectedVehicle.id)) {
         setSelectedVehicle(vehicles.length > 0 ? vehicles[0] : null);
       }
@@ -216,42 +210,26 @@ export default function VehiclesPage() {
 
   const handleImportSuccess = () => {
     setIsImporting(false);
+    // You might want to refresh the vehicles list here if the import adds new ones
   };
   
   const [editingDamage, setEditingDamage] = React.useState<any | null>(null);
   const [isDamageDialogOpen, setIsDamageDialogOpen] = React.useState(false);
 
-  const damageForm = useForm({
-    resolver: zodResolver(damageFormSchema),
-  });
 
   const handleEditDamage = (damage: any) => {
     setEditingDamage(damage);
-    damageForm.reset({
-      description: damage.description,
-      date: new Date(damage.date),
-      status: damage.status,
-    });
     setIsDamageDialogOpen(true);
   };
 
   const handleAddNewDamage = () => {
     setEditingDamage(null);
-    damageForm.reset({
-      description: '',
-      date: new Date(),
-      status: 'Open',
-    });
     setIsDamageDialogOpen(true);
   };
   
-  const onDamageDialogClose = (open: boolean) => {
-    if (!open) {
-      setEditingDamage(null);
-      setIsDamageDialogOpen(false);
-    } else {
-      setIsDamageDialogOpen(true);
-    }
+  // This function will be called by the dialog on success to trigger a re-fetch
+  const handleDamageSuccess = () => {
+    setRefreshKey(oldKey => oldKey + 1);
   };
 
   return (
@@ -585,7 +563,7 @@ export default function VehiclesPage() {
                                    <DeleteDamageDialog 
                                       vehicleId={selectedVehicle.id}
                                       damage={item}
-                                      onDeleted={() => { /* Optionally refresh data */}}
+                                      onDeleted={handleDamageSuccess}
                                     />
                                  </DropdownMenuContent>
                                </DropdownMenu>
@@ -612,15 +590,13 @@ export default function VehiclesPage() {
                   </Card>
                 </TabsContent>
               </Tabs>
-              {isDamageDialogOpen && (
-                <AddDamageDialog
-                  open={isDamageDialogOpen}
-                  onOpenChange={onDamageDialogClose}
-                  vehicleId={selectedVehicle.id}
-                  damage={editingDamage}
-                  form={damageForm}
-                />
-              )}
+              <AddDamageDialog
+                open={isDamageDialogOpen}
+                onOpenChange={setIsDamageDialogOpen}
+                vehicleId={selectedVehicle.id}
+                damage={editingDamage}
+                onSuccess={handleDamageSuccess}
+              />
             </>
           ) : isLoading ? (
             <div className="flex items-center justify-center h-full text-muted-foreground">

@@ -81,7 +81,7 @@ interface AddDamageDialogProps {
   onOpenChange: (open: boolean) => void;
   vehicleId: string;
   damage?: any | null;
-  form: any;
+  onSuccess: () => void;
 }
 
 export function AddDamageDialog({
@@ -89,106 +89,130 @@ export function AddDamageDialog({
   onOpenChange,
   vehicleId,
   damage = null,
-  form,
+  onSuccess,
 }: AddDamageDialogProps) {
   const firestore = useFirestore();
   const app = useFirebaseApp();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [uploads, setUploads] = React.useState<
-    Record<string, { progress: number; file: File }>
-  >({});
-  const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>(
-    []
-  );
-
+  const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
+  const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
   const damageIdRef = React.useRef(damage?.id || doc(collection(firestore, 'temp')).id);
+
+  const form = useForm<DamageFormValues>({
+    resolver: zodResolver(damageFormSchema),
+    defaultValues: {
+      description: '',
+      date: new Date(),
+      status: 'Open',
+    }
+  });
 
   React.useEffect(() => {
     if (open) {
-      setUploadedFiles(damage?.files || []);
       damageIdRef.current = damage?.id || doc(collection(firestore, 'temp')).id;
-      setUploads({});
-      setIsSubmitting(false);
+      setUploadedFiles(damage?.files || []);
+      form.reset(
+        damage
+          ? {
+              description: damage.description,
+              date: new Date(damage.date),
+              status: damage.status,
+            }
+          : {
+              description: '',
+              date: new Date(),
+              status: 'Open',
+            }
+      );
+    } else {
+        // Reset everything when dialog is closed
+        setTimeout(() => {
+            setUploadedFiles([]);
+            setUploadProgress({});
+            setIsSubmitting(false);
+            form.reset({
+                description: '',
+                date: new Date(),
+                status: 'Open',
+            });
+        }, 150); // Small delay to prevent visual glitch
     }
-  }, [damage, open, firestore]);
+  }, [open, damage, form]);
 
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const uploadFile = (file: File, damageId: string): Promise<UploadedFile> => {
+    return new Promise((resolve, reject) => {
+        if (!app) {
+            reject(new Error("Firebase app not available"));
+            return;
+        }
+        const storage = getStorage(app);
+        const uniqueFileName = `${new Date().getTime()}-${file.name}`;
+        const storagePath = `damages/${vehicleId}/${damageId}/${uniqueFileName}`;
+        const storageRef = ref(storage, storagePath);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+
+        uploadTask.on(
+            'state_changed',
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                setUploadProgress(prev => ({...prev, [uniqueFileName]: progress}));
+            },
+            (error) => {
+                console.error('Upload mislukt:', error);
+                setUploadProgress(prev => {
+                    const newProgress = {...prev};
+                    delete newProgress[uniqueFileName];
+                    return newProgress;
+                });
+                reject(error);
+            },
+            () => {
+                getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+                    const newFile: UploadedFile = {
+                        name: file.name,
+                        url: downloadURL,
+                        size: file.size,
+                        type: file.type,
+                        uploadedAt: new Date().toISOString(),
+                        storagePath: storagePath,
+                    };
+                    resolve(newFile);
+                    setUploadProgress(prev => {
+                      const newProgress = {...prev};
+                      delete newProgress[uniqueFileName];
+                      return newProgress;
+                  });
+                });
+            }
+        );
+    });
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files || files.length === 0 || !app) return;
-
-    const storage = getStorage(app);
-    if (!storage || !vehicleId) {
-      toast({
-        variant: 'destructive',
-        title: 'Fout',
-        description: 'Storage of voertuig-ID niet beschikbaar.',
-      });
-      return;
-    }
+    if (!files || files.length === 0) return;
 
     const damageId = damageIdRef.current;
     
     for (const file of Array.from(files)) {
-      const uniqueFileName = `${new Date().getTime()}-${file.name}`;
-      const storagePath = `damages/${vehicleId}/${damageId}/${uniqueFileName}`;
-      const storageRef = ref(storage, storagePath);
-      const uploadTask = uploadBytesResumable(storageRef, file);
-
-      setUploads(prev => ({
-        ...prev,
-        [uniqueFileName]: { progress: 0, file }
-      }));
-
-      uploadTask.on(
-        'state_changed',
-        (snapshot) => {
-          const progress =
-            (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-           setUploads(prev => ({
-            ...prev,
-            [uniqueFileName]: { ...prev[uniqueFileName], progress }
-          }));
-        },
-        (error) => {
-          console.error('Upload mislukt:', error);
-          toast({
+      try {
+        const uploadedFile = await uploadFile(file, damageId);
+        setUploadedFiles(prev => [...prev, uploadedFile]);
+      } catch (error) {
+        toast({
             variant: 'destructive',
             title: 'Upload mislukt',
-            description: `Er is een fout opgetreden bij ${file.name}: ${error.message}`,
-          });
-          setUploads(prev => {
-            const newUploads = {...prev};
-            delete newUploads[uniqueFileName];
-            return newUploads;
-          });
-        },
-        () => {
-          getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-            const newFile: UploadedFile = {
-              name: file.name,
-              url: downloadURL,
-              size: file.size,
-              type: file.type,
-              uploadedAt: new Date().toISOString(),
-              storagePath: storagePath,
-            };
-            setUploadedFiles((prev) => [...prev, newFile]);
-            setUploads(prev => {
-                const newUploads = {...prev};
-                delete newUploads[uniqueFileName];
-                return newUploads;
-            });
-          });
-        }
-      );
+            description: `Kon ${file.name} niet uploaden.`,
+        });
+      }
     }
   };
+
 
   const handleFileDelete = async (fileToDelete: UploadedFile) => {
     if (!app) return;
     const storage = getStorage(app);
-    if (!storage) return;
 
     const fileRef = ref(storage, fileToDelete.storagePath);
     try {
@@ -202,22 +226,17 @@ export function AddDamageDialog({
       });
     } catch (error: any) {
       console.error('Kon bestand niet verwijderen:', error);
+       // Also remove from state if it's already gone from storage
       if (error.code === 'storage/object-not-found') {
         setUploadedFiles((prev) =>
           prev.filter((f) => f.storagePath !== fileToDelete.storagePath)
         );
-        toast({
-            variant: 'destructive',
-            title: 'Bestand niet gevonden in storage',
-            description: `Het bestand ${fileToDelete.name} was al verwijderd.`,
-          });
-      } else {
-        toast({
+      }
+      toast({
           variant: 'destructive',
           title: 'Verwijderen mislukt',
-          description: `Kon ${fileToDelete.name} niet verwijderen. ${error.message}`,
+          description: `Kon ${fileToDelete.name} niet verwijderen.`,
         });
-      }
     }
   };
 
@@ -256,6 +275,7 @@ export function AddDamageDialog({
           description: 'De schademelding is succesvol aangemaakt.',
         });
       }
+      onSuccess();
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving damage: ', error);
@@ -269,8 +289,8 @@ export function AddDamageDialog({
       setIsSubmitting(false);
     }
   };
-
-  const isUploading = Object.keys(uploads).length > 0;
+  
+  const isUploading = Object.keys(uploadProgress).length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -391,9 +411,9 @@ export function AddDamageDialog({
               />
             </div>
             
-             {Object.entries(uploads).map(([name, { progress, file }]) => (
+             {Object.entries(uploadProgress).map(([name, progress]) => (
               <div key={name} className="space-y-1 mt-2">
-                <p className="text-sm font-medium">{file.name}</p>
+                <p className="text-sm font-medium">{name}</p>
                 <Progress value={progress} className="w-full" />
                 <p className="text-sm text-muted-foreground">{`Uploaden... ${Math.round(
                   progress
