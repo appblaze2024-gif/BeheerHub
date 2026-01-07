@@ -121,15 +121,6 @@ function DeleteDamageDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
-      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-        <div
-          className="flex items-center w-full text-destructive"
-          onClick={() => setOpen(true)}
-        >
-          <Trash2 className="mr-2 h-4 w-4" />
-          Verwijderen
-        </div>
-      </DropdownMenuItem>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
@@ -214,6 +205,8 @@ export default function VehiclesPage() {
   
   const [editingDamage, setEditingDamage] = React.useState<any | null>(null);
   const [isDamageDialogOpen, setIsDamageDialogOpen] = React.useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+  const [deletingDamage, setDeletingDamage] = React.useState<any | null>(null);
 
 
   const handleEditDamage = (damage: any) => {
@@ -226,8 +219,14 @@ export default function VehiclesPage() {
     setIsDamageDialogOpen(true);
   };
   
+  const handleDeleteDamage = (damage: any) => {
+    setDeletingDamage(damage);
+    setIsDeleteDialogOpen(true);
+  }
+
   const handleDamageDeleted = () => {
-     // Data will refresh automatically due to useCollection hook
+     setIsDeleteDialogOpen(false);
+     setDeletingDamage(null);
   };
 
   return (
@@ -528,11 +527,10 @@ export default function VehiclesPage() {
                     </CardHeader>
                     <CardContent className="flex-1 flex flex-col gap-4 overflow-y-auto pt-2">
                        <div className="text-sm text-muted-foreground">
-                        <div className="grid grid-cols-[2fr_1fr_1fr_auto] gap-4 px-4 py-2 font-medium">
+                        <div className="grid grid-cols-[2fr_1fr_1fr] gap-4 px-4 py-2 font-medium">
                           <span>Omschrijving</span>
                           <span>Datum</span>
                           <span >Status</span>
-                          <span className='w-8'></span>
                         </div>
                         <Separator />
                       </div>
@@ -543,29 +541,25 @@ export default function VehiclesPage() {
                       ) : damages && damages.length > 0 ? (
                          <div className="flex-1 overflow-y-auto">
                           {damages.map((item) => (
-                             <div key={item.id} className="grid grid-cols-[2fr_1fr_1fr_auto] gap-4 items-center px-4 py-3 border-b">
-                               <span className="truncate">{item.description}</span>
-                               <span>{new Date(item.date).toLocaleDateString('nl-NL')}</span>
-                               <span>{item.status}</span>
-                               <DropdownMenu>
-                                 <DropdownMenuTrigger asChild>
-                                   <Button variant="ghost" size="icon" className='h-8 w-8'>
-                                    <MoreHorizontal className='h-4 w-4'/>
-                                   </Button>
-                                 </DropdownMenuTrigger>
-                                 <DropdownMenuContent align="end">
-                                   <DropdownMenuItem onClick={() => handleEditDamage(item)}>
-                                    <Pencil className="mr-2 h-4 w-4" />
-                                     Bewerken
-                                   </DropdownMenuItem>
-                                   <DeleteDamageDialog 
-                                      vehicleId={selectedVehicle.id}
-                                      damage={item}
-                                      onDeleted={handleDamageDeleted}
-                                    />
-                                 </DropdownMenuContent>
-                               </DropdownMenu>
-                             </div>
+                             <DropdownMenu key={item.id}>
+                               <DropdownMenuTrigger asChild>
+                                  <div className="grid grid-cols-[2fr_1fr_1fr] gap-4 items-center px-4 py-3 border-b hover:bg-muted/50 cursor-pointer rounded-md">
+                                    <span className="truncate">{item.description}</span>
+                                    <span>{new Date(item.date).toLocaleDateString('nl-NL')}</span>
+                                    <span>{item.status}</span>
+                                  </div>
+                               </DropdownMenuTrigger>
+                               <DropdownMenuContent align="end">
+                                 <DropdownMenuItem onSelect={() => handleEditDamage(item)}>
+                                  <Pencil className="mr-2 h-4 w-4" />
+                                   Bewerken
+                                 </DropdownMenuItem>
+                                 <DropdownMenuItem onSelect={() => handleDeleteDamage(item)} className="text-destructive">
+                                   <Trash2 className="mr-2 h-4 w-4" />
+                                   Verwijderen
+                                 </DropdownMenuItem>
+                               </DropdownMenuContent>
+                             </DropdownMenu>
                           ))}
                         </div>
                       ) : (
@@ -594,6 +588,13 @@ export default function VehiclesPage() {
                 vehicleId={selectedVehicle.id}
                 damage={editingDamage}
               />
+              {deletingDamage && (
+                <DeleteDamageDialog 
+                  vehicleId={selectedVehicle.id}
+                  damage={deletingDamage}
+                  onDeleted={handleDamageDeleted}
+                />
+              )}
             </>
           ) : isLoading ? (
             <div className="flex items-center justify-center h-full text-muted-foreground">
