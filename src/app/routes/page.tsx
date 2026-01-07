@@ -4,6 +4,9 @@ export default function RoutesPage() {
   return (
     <div className="flex flex-col flex-1 p-6">
       <PageHeader title="Routes" />
+      <div className="flex-1 mt-6">
+        {/* Page content goes here */}
+      </div>
     </div>
   );
 }

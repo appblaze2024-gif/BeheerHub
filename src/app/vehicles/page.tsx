@@ -60,7 +60,7 @@ const vehicles = [
   { id: 'V-51-GKBa', make: 'VOLKSWAGEN', model: 'CADDY' },
   { id: 'V-53-DZKa', make: 'MERCEDES', model: 'SPRINTER' },
   { id: 'V-55-DZKa', make: 'MERCEDES', model: 'SPRINTER' },
-  { id: 'V-66-DZXa', make: 'MERCEDES', model: 'SPRINTER' },
+  { id: 'V-66-DZXa', make 'MERCEDES', model: 'SPRINTER' },
   { id: 'V-836-XTa', make: 'IVECO', model: '35C14N' },
   { id: 'V-92-DZza', make: 'MERCEDES', model: 'SPRINTER' },
   { id: 'VBT-53-Ha', make: 'IVECO', model: '35C14N' },
@@ -69,9 +69,7 @@ const vehicles = [
 export default function VehiclesPage() {
   const [selectedVehicle, setSelectedVehicle] = React.useState(vehicles[0]);
 
-  const vehicleImages = PlaceHolderImages.filter(p => p.id.startsWith('vehicle-'));
-
-  const mainImage = vehicleImages.find(img => img.id === 'vehicle-side');
+  const mainImage = PlaceHolderImages.find(p => p.id === 'vehicle-side');
 
   return (
     <div className="flex flex-col flex-1 p-6 bg-background min-h-0">
@@ -202,7 +200,6 @@ export default function VehiclesPage() {
               <TabsTrigger value="actions">Acties</TabsTrigger>
               <TabsTrigger value="maintenance">Onderhoud</TabsTrigger>
               <TabsTrigger value="damage">Schade</TabsTrigger>
-
               <TabsTrigger value="documents">Documenten</TabsTrigger>
             </TabsList>
             <TabsContent value="actions" className="flex flex-col flex-1 min-h-0 mt-4">
@@ -260,3 +257,4 @@ export default function VehiclesPage() {
       </div>
     </div>
   );
+}

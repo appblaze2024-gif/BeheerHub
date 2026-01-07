@@ -8,6 +8,7 @@ import {
   Activity,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
 
 type StatCardProps = {
   title: string;
@@ -61,7 +62,8 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col flex-1 p-6">
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <PageHeader title="Dashboard" />
+      <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {overviewData.map((data) => (
           <StatCard key={data.title} {...data} />
         ))}
