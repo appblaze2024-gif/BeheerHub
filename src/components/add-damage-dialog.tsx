@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { CalendarIcon, Upload, Trash2, File as FileIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
-import { collection, updateDoc, addDoc, DocumentReference } from 'firebase/firestore';
+import { collection, doc, setDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 
 import { cn } from '@/lib/utils';
@@ -48,6 +48,14 @@ const damageFormSchema = z.object({
 
 type DamageFormValues = z.infer<typeof damageFormSchema>;
 
+type UploadedFile = {
+  name: string;
+  url: string;
+  size: number;
+  type: string;
+  uploadedAt: string;
+}
+
 interface AddDamageDialogProps {
   children: React.ReactNode;
   vehicleId: string;
@@ -62,8 +70,11 @@ export function AddDamageDialog({
   const [open, setOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [uploadProgress, setUploadProgress] = React.useState(0);
-  const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
+  const [isUploading, setIsUploading] = React.useState(false);
+
+  // Generate a unique ID for the damage report upfront
+  const damageIdRef = React.useRef(doc(collection(firestore, 'voertuigen', vehicleId, 'damages')).id);
   
   const form = useForm<DamageFormValues>({
     resolver: zodResolver(damageFormSchema),
@@ -73,13 +84,17 @@ export function AddDamageDialog({
     },
   });
 
-  const uploadFile = (file: File, damageDocRef: DocumentReference) => {
-    return new Promise<void>((resolve, reject) => {
+  const uploadFile = (file: File) => {
+    return new Promise<UploadedFile>((resolve, reject) => {
       if (!storage || !vehicleId) {
         return reject(new Error("Storage of voertuig-ID niet beschikbaar."));
       }
 
-      const storageRef = ref(storage, `damages/${vehicleId}/${damageDocRef.id}/${file.name}`);
+      setIsUploading(true);
+      setUploadProgress(0);
+      
+      const damageId = damageIdRef.current;
+      const storageRef = ref(storage, `damages/${vehicleId}/${damageId}/${file.name}`);
       const uploadTask = uploadBytesResumable(storageRef, file);
 
       uploadTask.on('state_changed',
@@ -89,19 +104,22 @@ export function AddDamageDialog({
         },
         (error) => {
           console.error("Upload mislukt:", error);
+          setIsUploading(false);
+          setUploadProgress(0);
           reject(error);
         },
         () => {
-          getDownloadURL(uploadTask.snapshot.ref).then(async (downloadURL) => {
-            const fileData = {
+          getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+            const fileData: UploadedFile = {
               name: file.name,
               url: downloadURL,
               size: file.size,
               type: file.type,
               uploadedAt: new Date().toISOString()
             };
-            await updateDoc(damageDocRef, { files: [fileData] });
-            resolve();
+            setUploadedFiles(prev => [...prev, fileData]);
+            setIsUploading(false);
+            resolve(fileData);
           }).catch(reject);
         }
       );
@@ -110,32 +128,25 @@ export function AddDamageDialog({
 
   const onSubmit = async (data: DamageFormValues) => {
     if (!firestore || !vehicleId) {
-      toast({
-        variant: 'destructive',
-        title: 'Fout',
-        description: 'Kan geen verbinding maken met de database.',
-      });
+      toast({ variant: 'destructive', title: 'Fout', description: 'Kan geen verbinding maken met de database.' });
       return;
     }
 
     setIsSubmitting(true);
-    setUploadProgress(0);
-
+    
     try {
-      const damagesColRef = collection(firestore, 'voertuigen', vehicleId, 'damages');
+      const damageId = damageIdRef.current;
+      const damageDocRef = doc(firestore, 'voertuigen', vehicleId, 'damages', damageId);
       
       const newDamageData = {
         ...data,
+        id: damageId,
         date: data.date.toISOString(),
         status: 'Open',
-        files: [] 
+        files: uploadedFiles,
       };
 
-      const damageDocRef = await addDoc(damagesColRef, newDamageData);
-      
-      if (selectedFile) {
-        await uploadFile(selectedFile, damageDocRef);
-      }
+      await setDoc(damageDocRef, newDamageData);
 
       toast({
         title: 'Schade gemeld!',
@@ -156,13 +167,22 @@ export function AddDamageDialog({
     }
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      setSelectedFile(file);
-    }
-    if (fileInputRef.current) {
-        fileInputRef.current.value = "";
+      try {
+        await uploadFile(file);
+        toast({
+          title: "Upload gelukt!",
+          description: `${file.name} is succesvol geüpload.`
+        })
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Upload mislukt",
+          description: `Er is een fout opgetreden bij het uploaden van ${file.name}.`
+        })
+      }
     }
   };
 
@@ -170,11 +190,11 @@ export function AddDamageDialog({
     form.reset({description: '', date: new Date()});
     setOpen(false);
     setIsSubmitting(false);
+    setIsUploading(false);
     setUploadProgress(0);
-    setSelectedFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    setUploadedFiles([]);
+    // Generate new ID for next time
+    damageIdRef.current = doc(collection(firestore, 'voertuigen', vehicleId, 'damages')).id;
   }
 
   return (
@@ -242,14 +262,14 @@ export function AddDamageDialog({
             />
 
             <div>
-                <Button type="button" variant="outline" disabled={isSubmitting || !!selectedFile} onClick={() => fileInputRef.current?.click()}>
+                <Button type="button" variant="outline" disabled={isUploading || isSubmitting} onClick={() => document.getElementById('damage-file-input')?.click()}>
                     <Upload className="mr-2 h-4 w-4" />
                     Bestand kiezen
                 </Button>
-                 <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+                 <input type="file" id="damage-file-input" onChange={handleFileChange} className="hidden" />
             </div>
             
-            {isSubmitting && selectedFile && (
+            {isUploading && (
                 <div className="space-y-1">
                     <Progress value={uploadProgress} className="w-full" />
                     <p className="text-sm text-muted-foreground">{`Uploaden... ${Math.round(uploadProgress)}%`}</p>
@@ -265,24 +285,26 @@ export function AddDamageDialog({
                         <span className="text-right">Acties</span>
                     </div>
                 </div>
-                 {selectedFile ? (
+                 {uploadedFiles.length > 0 ? (
                   <div className='max-h-48 overflow-y-auto'>
-                       <div className="grid grid-cols-5 gap-4 items-center px-4 py-2 border-b last:border-b-0">
+                    {uploadedFiles.map((file, index) => (
+                       <div key={index} className="grid grid-cols-5 gap-4 items-center px-4 py-2 border-b last:border-b-0">
                         <span className="col-span-2 truncate flex items-center gap-2">
-                          <FileIcon className="h-4 w-4 shrink-0"/> {selectedFile.name}
+                          <FileIcon className="h-4 w-4 shrink-0"/> {file.name}
                         </span>
-                        <span>{(selectedFile.size / 1024).toFixed(2)} KB</span>
-                        <span>{format(new Date(), 'dd-MM-yy')}</span>
+                        <span>{(file.size / 1024).toFixed(2)} KB</span>
+                        <span>{format(new Date(file.uploadedAt), 'dd-MM-yy')}</span>
                         <div className='flex justify-end'>
-                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedFile(null)} disabled={isSubmitting}>
+                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setUploadedFiles(files => files.filter((_, i) => i !== index))} disabled={isSubmitting}>
                               <Trash2 className="h-4 w-4 text-destructive"/>
                            </Button>
                         </div>
                       </div>
+                    ))}
                   </div>
                  ) : (
                     <div className="flex items-center justify-center text-muted-foreground h-24">
-                      Nog geen bestand geselecteerd.
+                      Nog geen bestand geüpload.
                     </div>
                  )}
             </div>
@@ -291,7 +313,7 @@ export function AddDamageDialog({
                 <DialogClose asChild>
                     <Button type="button" variant="ghost">Annuleren</Button>
                 </DialogClose>
-                <Button type="submit" disabled={isSubmitting}>
+                <Button type="submit" disabled={isSubmitting || isUploading}>
                   {isSubmitting ? 'Bezig...' : 'Meld schade'}
                 </Button>
             </DialogFooter>
