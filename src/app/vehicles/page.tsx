@@ -270,8 +270,8 @@ export default function VehiclesPage() {
                     </CardContent>
                   </Card>
                 </TabsContent>
-                <TabsContent value="maintenance" className="mt-4">
-                  <Card>
+                <TabsContent value="maintenance" className="mt-4 flex-1 flex flex-col min-h-0">
+                  <Card className="h-full flex flex-col">
                     <CardHeader>
                       <div className="flex justify-between items-center">
                         <CardTitle>Onderhoud</CardTitle>
@@ -280,7 +280,7 @@ export default function VehiclesPage() {
                         </Button>
                       </div>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="flex-1 min-h-0">
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -304,25 +304,25 @@ export default function VehiclesPage() {
                     </CardContent>
                   </Card>
                 </TabsContent>
-                <TabsContent value="damage" className="mt-4">
-                  <Card>
+                <TabsContent value="damage" className="mt-4 flex-1 flex flex-col min-h-0">
+                  <Card className="h-full flex flex-col">
                     <CardHeader>
                       <CardTitle>Schade</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <p className="text-center text-muted-foreground">
+                    <CardContent className="flex-1 min-h-0 text-center text-muted-foreground">
+                      <p>
                         Geen schadegevallen geregistreerd.
                       </p>
                     </CardContent>
                   </Card>
                 </TabsContent>
-                <TabsContent value="documents" className="mt-4">
-                  <Card>
+                <TabsContent value="documents" className="mt-4 flex-1 flex flex-col min-h-0">
+                  <Card className="h-full flex flex-col">
                     <CardHeader>
                       <CardTitle>Documenten</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <p className="text-center text-muted-foreground">
+                    <CardContent className="flex-1 min-h-0 text-center text-muted-foreground">
+                      <p>
                         Geen documenten beschikbaar.
                       </p>
                     </CardContent>
