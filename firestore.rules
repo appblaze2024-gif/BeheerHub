@@ -1,170 +1,85 @@
 rules_version = '2';
 
 /**
- * This ruleset enforces a strict user-ownership model for a small business ERP application.
+ * This ruleset enforces a hybrid security model for a small business ERP application.
  *
  * Core Philosophy:
- * Every user has their own isolated data tree within Firestore. All business data,
- * including revenues, expenses, and appointments, is private and can only be accessed
- * by the user who created it. There is no concept of shared or public data in this model.
+ * - User data (revenues, expenses, appointments) is strictly private and isolated.
+ * - Application-wide data (vehicles) is accessible to all authenticated users.
  *
  * Data Structure:
- * All application data is nested under the `/users/{userId}` path. For example, a user's
- * expenses are stored in `/users/{userId}/expenses/{expenseId}`. This hierarchical
- * structure is the foundation of the security model.
+ * - User-specific data is nested under `/users/{userId}`.
+ * - Shared data, like vehicles, is in a root-level collection `/voertuigen`.
  *
  * Key Security Decisions:
- * - Strict Data Isolation: A user can NEVER read, write, or list data belonging to another user.
- *   Access is determined by comparing the `userId` in the document path with the authenticated
- *   user's ID (`request.auth.uid`).
- * - No User Listing: It is not possible to list all documents in the top-level `/users`
- *   collection, preventing enumeration of the user base.
- * - Ownership-Based Access: All operations (read, write, delete) are granted based on the
- *   principle of document ownership, which is enforced via the document's path.
+ * - Strict Data Isolation for Users: A user can NEVER access data belonging to another user.
+ * - Shared Data Access: All authenticated users can read and write to the shared `voertuigen` collection.
+ * - No User Listing: It is not possible to list all documents in the top-level `/users` collection.
+ * - Ownership-Based Access: For user data, all operations are granted based on the user's ID in the path.
  *
  * Denormalization for Authorization:
- * This ruleset leverages a path-based security model, which is a form of structural
- * denormalization. By placing a user's data in a subcollection under their own user document,
- * the `userId` required for authorization is present in the path of every request. This avoids
- * slow and costly `get()` calls to other documents, resulting in highly performant and
- * secure rules.
+ * By nesting user data, the `userId` required for authorization is always in the path,
+ * avoiding slow and costly `get()` calls in security rules.
  */
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions to provide clear, reusable logic.
-
-    /**
-     * Checks if a user is authenticated.
-     */
+    // Helper functions for clear, reusable logic.
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * Checks if the currently authenticated user is the owner of the document
-     * based on the userId provided from the path.
-     */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /**
-     * For update and delete operations, checks for ownership AND ensures the
-     * document actually exists before allowing the operation to proceed.
-     * This prevents unauthorized actions on non-existent paths.
-     */
     function isExistingOwner(userId) {
       return isOwner(userId) && resource != null;
     }
 
     /**
-     * @description
-     *   Controls access to a user's root document, which acts as the container
-     *   for all their private data subcollections.
-     * @path
-     *   /users/{userId}
-     * @allow
-     *   An authenticated user (auth.uid: 'user_abc') can create their own profile document
-     *   at path `/users/user_abc`. (create)
-     * @deny
-     *   An authenticated user (auth.uid: 'user_abc') CANNOT get another user's profile
-     *   at path `/users/user_xyz`. (get)
-     * @principle
-     *   Restricts access to a user's own data tree and allows a user to establish their
-     *   own root document upon sign-up.
+     * Secures a user's root document, the container for their private data.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      allow get, list, create, update, delete: if isOwner(userId);
 
       /**
-       * @description
-       *   Secures revenue documents, ensuring they are private to the user who created them.
-       * @path
-       *   /users/{userId}/revenues/{revenueId}
-       * @allow
-       *   User 'user_abc' can create a revenue document at path
-       *   `/users/user_abc/revenues/rev_123`. (create)
-       * @deny
-       *   User 'user_xyz' CANNOT read a revenue document at path
-       *   `/users/user_abc/revenues/rev_123`. (get)
-       * @principle
-       *   Enforces strict document ownership for all CRUD operations based on the document's path.
+       * Secures revenue documents, ensuring they are private to the user.
        */
       match /revenues/{revenueId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
-        allow create: if isOwner(userId);
-        allow update: if isExistingOwner(userId);
-        allow delete: if isExistingOwner(userId);
+        allow get, list, create, update, delete: if isOwner(userId);
       }
 
       /**
-       * @description
-       *   Secures expense documents, ensuring they are private to the user who created them.
-       * @path
-       *   /users/{userId}/expenses/{expenseId}
-       * @allow
-       *   User 'user_abc' can list all their expense documents from the collection
-       *   `/users/user_abc/expenses`. (list)
-       * @deny
-       *   User 'user_xyz' CANNOT delete an expense document at path
-       *   `/users/user_abc/expenses/exp_456`. (delete)
-       * @principle
-       *   Enforces strict document ownership for all CRUD operations based on the document's path.
+       * Secures expense documents, ensuring they are private to the user.
        */
       match /expenses/{expenseId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
-        allow create: if isOwner(userId);
-        allow update: if isExistingOwner(userId);
-        allow delete: if isExistingOwner(userId);
+        allow get, list, create, update, delete: if isOwner(userId);
       }
 
       /**
-       * @description
-       *   Secures appointment documents, ensuring they are private to the user who created them.
-       * @path
-       *   /users/{userId}/appointments/{appointmentId}
-       * @allow
-       *   User 'user_abc' can update their own appointment at path
-       *   `/users/user_abc/appointments/appt_789`. (update)
-       * @deny
-       *   An unauthenticated user CANNOT create an appointment at any path. (create)
-       * @principle
-       *   Enforces strict document ownership for all CRUD operations based on the document's path.
+       * Secures appointment documents, ensuring they are private to the user.
        */
       match /appointments/{appointmentId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
-        allow create: if isOwner(userId);
-        allow update: if isExistingOwner(userId);
-        allow delete: if isExistingOwner(userId);
+        allow get, list, create, update, delete: if isOwner(userId);
       }
-      
-      /**
-       * @description
-       *   Secures vehicle documents, ensuring they are private to the user who created them.
-       * @path
-       *   /users/{userId}/vehicles/{vehicleId}
-       * @allow
-       *   User 'user_abc' can create, read, update, and delete their own vehicle documents.
-       * @deny
-       *   User 'user_xyz' cannot access vehicle documents of 'user_abc'.
-       * @principle
-       *   Enforces strict document ownership for all CRUD operations on vehicle data.
-       */
-      match /vehicles/{vehicleId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
-        allow create: if isOwner(userId);
-        allow update: if isExistingOwner(userId);
-        allow delete: if isExistingOwner(userId);
-      }
+    }
+
+    /**
+     * @description
+     *   Secures the central `voertuigen` collection.
+     * @path
+     *   /voertuigen/{voertuigId}
+     * @allow
+     *   Any authenticated user can read, create, update, and delete any vehicle document.
+     *   This allows for central management of the vehicle fleet by all app users.
+     * @deny
+     *   Unauthenticated users have no access.
+     * @principle
+     *   Shared-data model for application-wide resources.
+     */
+    match /voertuigen/{voertuigId} {
+      allow read, write: if isSignedIn();
     }
   }
 }

@@ -2,23 +2,11 @@
 
 import * as React from 'react';
 import Image from 'next/image';
-import {
-  MoreHorizontal,
-  Plus,
-  Search,
-  Upload,
-  Download,
-} from 'lucide-react';
+import { MoreHorizontal, Plus, Search, Upload, Download } from 'lucide-react';
 import { collection } from 'firebase/firestore';
-
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/page-header';
 import {
@@ -31,80 +19,40 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { useAuth, useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { doc } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { VehicleImportDialog } from '@/components/vehicle-import-dialog';
 
 export default function VehiclesPage() {
-  const { user } = useUser();
   const firestore = useFirestore();
+  const [isImporting, setIsImporting] = React.useState(false);
 
   const vehiclesCollection = useMemoFirebase(() => {
-    if (!firestore || !user?.uid) return null;
-    return collection(firestore, 'users', user.uid, 'vehicles');
-  }, [firestore, user?.uid]);
-  
+    if (!firestore) return null;
+    return collection(firestore, 'voertuigen');
+  }, [firestore]);
+
   const { data: vehicles, isLoading } = useCollection<any>(vehiclesCollection);
 
   const [selectedVehicle, setSelectedVehicle] = React.useState<any | null>(null);
   const mainImage = PlaceHolderImages.find((p) => p.id === 'vehicle-side');
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
+    // Set initial selected vehicle if not already set
     if (!selectedVehicle && vehicles && vehicles.length > 0) {
       setSelectedVehicle(vehicles[0]);
     } else if (selectedVehicle && vehicles) {
-      // If the selected vehicle is no longer in the list, clear it
-      if (!vehicles.find(v => v.id === selectedVehicle.id)) {
+      // If the selected vehicle is no longer in the list (e.g., deleted), update selection
+      if (!vehicles.find((v) => v.id === selectedVehicle.id)) {
         setSelectedVehicle(vehicles.length > 0 ? vehicles[0] : null);
       }
     }
   }, [vehicles, selectedVehicle]);
 
-
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
+  const handleImportSuccess = () => {
+    setIsImporting(false);
+    // Optionally refetch data or rely on real-time updates from useCollection
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !user || !firestore) {
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
-      const lines = text.split('\n').filter(line => line.trim() !== '');
-      if (lines.length === 0) return;
-
-      const header = lines[0].split(',').map(h => h.trim());
-      const dataLines = lines.slice(1);
-
-      dataLines.forEach((line) => {
-        const values = line.split(',').map(v => v.trim());
-        const vehicleData: { [key: string]: any } = {};
-        
-        let kenteken = '';
-
-        header.forEach((key, index) => {
-          const lowerKey = key.toLowerCase();
-          vehicleData[lowerKey] = values[index];
-          if(lowerKey === 'kenteken') {
-            kenteken = values[index];
-          }
-        });
-
-        if (kenteken) {
-          const docRef = doc(firestore, 'users', user.uid, 'vehicles', kenteken);
-          setDocumentNonBlocking(docRef, vehicleData, { merge: true });
-        }
-      });
-    };
-    reader.readAsText(file);
-    // Reset file input
-    event.target.value = '';
-  };
 
   return (
     <div className="flex flex-col flex-1 p-6 min-h-0">
@@ -116,17 +64,16 @@ export default function VehiclesPage() {
         <Button>
           <Plus className="mr-2 h-4 w-4" /> Voertuig toevoegen
         </Button>
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileChange}
-          className="hidden"
-          accept=".csv"
-        />
-        <Button variant="outline" onClick={handleImportClick}>
-          <Upload className="mr-2 h-4 w-4" />
-          Import
-        </Button>
+        <VehicleImportDialog
+          open={isImporting}
+          onOpenChange={setIsImporting}
+          onSuccess={handleImportSuccess}
+        >
+          <Button variant="outline" onClick={() => setIsImporting(true)}>
+            <Upload className="mr-2 h-4 w-4" />
+            Import
+          </Button>
+        </VehicleImportDialog>
         <Button variant="outline">
           <Download className="mr-2 h-4 w-4" />
           Export
@@ -138,9 +85,9 @@ export default function VehiclesPage() {
           <CardContent className="p-2 flex-1 min-h-0 overflow-y-auto">
             <div className="flex flex-col space-y-1 pr-2">
               {isLoading ? (
-                  <div className="text-center text-muted-foreground p-4">
-                    Laden...
-                  </div>
+                <div className="text-center text-muted-foreground p-4">
+                  Laden...
+                </div>
               ) : vehicles && vehicles.length > 0 ? (
                 vehicles.map((vehicle) => (
                   <div
@@ -186,9 +133,7 @@ export default function VehiclesPage() {
               <Card>
                 <CardHeader className="flex flex-row items-start justify-between">
                   <div>
-                    <h2 className="text-2xl font-bold">
-                      {selectedVehicle?.id}
-                    </h2>
+                    <h2 className="text-2xl font-bold">{selectedVehicle?.id}</h2>
                     <p className="text-muted-foreground">
                       {selectedVehicle?.merk} {selectedVehicle?.model}
                     </p>
@@ -303,25 +248,25 @@ export default function VehiclesPage() {
                       </div>
                     </CardHeader>
                     <CardContent className="flex-1 min-h-0">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Naam</TableHead>
-                              <TableHead>Type actie</TableHead>
-                              <TableHead>Datum</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            <TableRow>
-                              <TableCell
-                                colSpan={3}
-                                className="text-center h-24"
-                              >
-                                Nog geen acties geregistreerd.
-                              </TableCell>
-                            </TableRow>
-                          </TableBody>
-                        </Table>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Naam</TableHead>
+                            <TableHead>Type actie</TableHead>
+                            <TableHead>Datum</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          <TableRow>
+                            <TableCell
+                              colSpan={3}
+                              className="text-center h-24"
+                            >
+                              Nog geen acties geregistreerd.
+                            </TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -363,9 +308,14 @@ export default function VehiclesPage() {
                 </TabsContent>
               </Tabs>
             </>
+          ) : isLoading ? (
+            <div className="flex items-center justify-center h-full text-muted-foreground">
+              Voertuigen laden...
+            </div>
           ) : (
             <div className="flex items-center justify-center h-full text-muted-foreground">
-              Selecteer een voertuig om de details te bekijken of importeer voertuigen.
+              Selecteer een voertuig om de details te bekijken of importeer
+              voertuigen.
             </div>
           )}
         </div>
