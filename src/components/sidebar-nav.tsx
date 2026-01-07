@@ -51,20 +51,20 @@ export function SidebarNav() {
   const pathname = usePathname();
 
   return (
-    <SidebarContent className="flex flex-col">
+    <SidebarContent>
       <SidebarMenu>
         {menuItems.map((item) => (
           <SidebarMenuItem key={item.label}>
-            <Link href={item.href}>
+            <Link href={item.href} passHref legacyBehavior>
               <SidebarMenuButton
                 asChild
                 isActive={pathname === item.href}
                 tooltip={item.label}
               >
-                <span>
+                <a>
                   <item.icon />
                   <span>{item.label}</span>
-                </span>
+                </a>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
@@ -74,16 +74,16 @@ export function SidebarNav() {
       <SidebarMenu className="mt-auto">
         {bottomMenuItems.map((item) => (
           <SidebarMenuItem key={item.label}>
-            <Link href={item.href}>
+            <Link href={item.href} passHref legacyBehavior>
               <SidebarMenuButton
                 asChild
                 isActive={pathname === item.href}
                 tooltip={item.label}
               >
-                <span>
+                <a>
                   <item.icon />
                   <span>{item.label}</span>
-                </span>
+                </a>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
@@ -92,5 +92,3 @@ export function SidebarNav() {
     </SidebarContent>
   );
 }
-
-    
