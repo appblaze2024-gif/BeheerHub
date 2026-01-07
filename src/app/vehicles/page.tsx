@@ -46,19 +46,6 @@ const vehicles = [
   { id: 'V-55-DZK', make: 'MERCEDES', model: 'SPRINTER' },
   { id: 'V-66-DZXa', make: 'MERCEDES', model: 'SPRINTER' },
   { id: 'V-836-XT', make: 'IVECO', model: '35C14N' },
-  { id: 'V-92-DZZ', make: 'MERCEDES', model: 'SPRINTER' },
-  { id: 'VBT-53-H', make: 'IVECO', model: '35C14N' },
-  { id: '8-ZFL-67a', make: 'VOLKSWAGEN', model: 'UP' },
-  { id: '82-PRS-8a', make: 'VOLKSWAGEN', model: 'CADDY' },
-  { id: 'G-948-ZZa', make: 'VOLKSWAGEN', model: 'CADDY' },
-  { id: 'G-950-ZZa', make: 'VOLKSWAGEN', model: 'CADDY' },
-  { id: 'V-42-FRHa', make: 'MERCEDES', model: 'SPRINTER' },
-  { id: 'V-51-GKBa', make: 'VOLKSWAGEN', model: 'CADDY' },
-  { id: 'V-53-DZKa', make: 'MERCEDES', model: 'SPRINTER' },
-  { id: 'V-55-DZKa', make: 'MERCEDES', model: 'SPRINTER' },
-  { id: 'V-836-XTa', make: 'IVECO', model: '35C14N' },
-  { id: 'V-92-DZza', make: 'MERCEDES', model: 'SPRINTER' },
-  { id: 'VBT-53-Ha', make: 'IVECO', model: '35C14N' },
 ];
 
 export default function VehiclesPage() {
@@ -81,7 +68,6 @@ export default function VehiclesPage() {
       </PageHeader>
 
       <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 mt-6 flex-1 min-h-0">
-        {/* Left Column: Vehicle List */}
         <Card className="flex flex-col h-full">
           <CardContent className="p-2 flex-1 min-h-0">
             <ScrollArea className="h-full">
@@ -120,9 +106,7 @@ export default function VehiclesPage() {
           </CardContent>
         </Card>
 
-        {/* Right Column: Details and Tabs */}
         <div className="flex flex-col gap-6 min-h-0">
-          {/* Top Card: Details */}
           <Card>
             <CardHeader className="flex flex-row items-start justify-between">
               <div>
@@ -139,17 +123,15 @@ export default function VehiclesPage() {
               </Badge>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-6">
-              <div className="grid grid-cols-1 gap-4">
+              <div className="relative aspect-video rounded-md overflow-hidden border">
                 {mainImage && (
-                  <div className="relative aspect-video rounded-md overflow-hidden border">
-                    <Image
-                      src={mainImage.imageUrl}
-                      alt={mainImage.description}
-                      fill
-                      className="object-cover"
-                      data-ai-hint={mainImage.imageHint}
-                    />
-                  </div>
+                  <Image
+                    src={mainImage.imageUrl}
+                    alt={mainImage.description}
+                    fill
+                    className="object-cover"
+                    data-ai-hint={mainImage.imageHint}
+                  />
                 )}
               </div>
               <div>
@@ -202,7 +184,6 @@ export default function VehiclesPage() {
             </CardContent>
           </Card>
 
-          {/* Bottom Card: Tabs */}
           <Tabs defaultValue="actions" className="flex-1 flex flex-col min-h-0">
             <TabsList>
               <TabsTrigger value="actions">Acties</TabsTrigger>
