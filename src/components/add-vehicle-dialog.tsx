@@ -118,19 +118,17 @@ export function AddVehicleDialog({ children, vehicle = null, open: controlledOpe
   }, [open, vehicle, form]);
 
   React.useEffect(() => {
-    // Reset model and type when brand changes, but not on initial load
-    if (form.formState.isDirty) {
-        form.setValue('model', '');
-        form.setValue('type', '');
+    if (form.formState.isDirty && form.getValues('merk') !== (vehicle?.merk ?? '')) {
+      form.setValue('model', '');
+      form.setValue('type', '');
     }
-  }, [selectedBrand, form.formState.isDirty]); // only trigger when brand changes due to user interaction
+  }, [selectedBrand, form, vehicle]);
 
   React.useEffect(() => {
-    // Reset type when model changes, but not on initial load
-    if (form.formState.isDirty) {
-        form.setValue('type', '');
+    if (form.formState.isDirty && form.getValues('model') !== (vehicle?.model ?? '')) {
+      form.setValue('type', '');
     }
-  }, [selectedModel, form.formState.isDirty]); // only trigger when model changes due to user interaction
+  }, [selectedModel, form, vehicle]);
 
   const onSubmit = async (data: VehicleFormValues) => {
     if (!firestore) {
@@ -141,21 +139,20 @@ export function AddVehicleDialog({ children, vehicle = null, open: controlledOpe
     setIsSubmitting(true);
 
     try {
-      const vehicleRef = doc(firestore, 'voertuigen', data.kenteken);
       const vehicleData = {
         ...data,
         apk_vervaldatum: data.apk_vervaldatum ? format(data.apk_vervaldatum, 'yyyy-MM-dd') : null,
       };
       
-      // Kenteken cannot be changed for existing vehicles
-      if (vehicle && vehicle.id !== data.kenteken) {
-          console.error("Changing kenteken is not allowed.");
-          // maybe show a toast or error message to user
-          setIsSubmitting(false);
-          return
-      }
-
+      const vehicleRef = doc(firestore, 'voertuigen', vehicleData.kenteken);
+      
       if (vehicle) {
+        // Kenteken cannot be changed for existing vehicles
+        if (vehicle.id !== data.kenteken) {
+            console.error("Changing kenteken is not allowed.");
+            setIsSubmitting(false);
+            return
+        }
         await updateDoc(vehicleRef, vehicleData);
       } else {
         await setDoc(vehicleRef, vehicleData, { merge: false });
