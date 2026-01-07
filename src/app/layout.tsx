@@ -40,7 +40,7 @@ export default function RootLayout({
             <SidebarNav />
           </Sidebar>
           <SidebarInset>
-            <header className="flex h-16 items-center justify-end border-b bg-white px-6 dark:bg-gray-800">
+            <header className="flex h-16 items-center justify-end border-b bg-gray-100 px-6 dark:bg-gray-800">
               <div className="flex items-center gap-4">
                 <span className="text-sm font-medium">
                   dstoutenburg@meerlanden.nl
