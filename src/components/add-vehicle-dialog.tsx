@@ -249,7 +249,7 @@ export function AddVehicleDialog({ children }: AddVehicleDialogProps) {
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecteer status" />
-                        </Trigger>
+                        </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="Actief">Actief</SelectItem>
