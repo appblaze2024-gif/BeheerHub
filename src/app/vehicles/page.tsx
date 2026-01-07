@@ -35,110 +35,8 @@ import { VehicleImportDialog } from '@/components/vehicle-import-dialog';
 import { AddActionDialog } from '@/components/add-action-dialog';
 import { AddMaintenanceDialog } from '@/components/add-maintenance-dialog';
 import { AddDamageDialog } from '@/components/add-damage-dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { toast } from '@/hooks/use-toast';
 import { getStorage, ref, deleteObject } from 'firebase/storage';
-
-function DeleteDamageDialog({
-  vehicleId,
-  damage,
-  onDeleted,
-}: {
-  vehicleId: string;
-  damage: any;
-  onDeleted: () => void;
-}) {
-  const [open, setOpen] = React.useState(false);
-  const [isDeleting, setIsDeleting] = React.useState(false);
-  const firestore = useFirestore();
-  const app = useFirebaseApp();
-
-  const handleDelete = async () => {
-    if (!firestore || !app) return;
-    setIsDeleting(true);
-
-    try {
-      // 1. Delete associated files from Storage
-      if (damage.files && damage.files.length > 0) {
-        const storage = getStorage(app);
-        for (const file of damage.files) {
-          if (file.storagePath) {
-            const fileRef = ref(storage, file.storagePath);
-            await deleteObject(fileRef).catch((error) => {
-              // Log error but don't block deletion of Firestore doc
-              console.error(
-                `Failed to delete file ${file.storagePath}:`,
-                error
-              );
-            });
-          }
-        }
-      }
-
-      // 2. Delete the Firestore document
-      const damageDocRef = doc(
-        firestore,
-        'voertuigen',
-        vehicleId,
-        'damages',
-        damage.id
-      );
-      await deleteDoc(damageDocRef);
-
-      toast({
-        title: 'Schade verwijderd',
-        description: 'De schademelding is succesvol verwijderd.',
-      });
-      onDeleted();
-      setOpen(false);
-    } catch (error) {
-      console.error('Error deleting damage:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Verwijderen mislukt',
-        description:
-          'Kon de schademelding niet verwijderen. Probeer het opnieuw.',
-      });
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Deze actie kan niet ongedaan worden gemaakt. Dit zal de
-            schademelding en alle bijbehorende bestanden permanent verwijderen.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isDeleting}>Annuleren</AlertDialogCancel>
-          <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
-            {isDeleting ? 'Bezig...' : 'Verwijderen'}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
 
 export default function VehiclesPage() {
   const firestore = useFirestore();
@@ -205,9 +103,6 @@ export default function VehiclesPage() {
   
   const [editingDamage, setEditingDamage] = React.useState<any | null>(null);
   const [isDamageDialogOpen, setIsDamageDialogOpen] = React.useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
-  const [deletingDamage, setDeletingDamage] = React.useState<any | null>(null);
-
 
   const handleEditDamage = (damage: any) => {
     setEditingDamage(damage);
@@ -217,16 +112,6 @@ export default function VehiclesPage() {
   const handleAddNewDamage = () => {
     setEditingDamage(null);
     setIsDamageDialogOpen(true);
-  };
-  
-  const handleDeleteDamage = (damage: any) => {
-    setDeletingDamage(damage);
-    setIsDeleteDialogOpen(true);
-  }
-
-  const handleDamageDeleted = () => {
-     setIsDeleteDialogOpen(false);
-     setDeletingDamage(null);
   };
 
   return (
@@ -541,25 +426,15 @@ export default function VehiclesPage() {
                       ) : damages && damages.length > 0 ? (
                          <div className="flex-1 overflow-y-auto">
                           {damages.map((item) => (
-                             <DropdownMenu key={item.id}>
-                               <DropdownMenuTrigger asChild>
-                                  <div className="grid grid-cols-[2fr_1fr_1fr] gap-4 items-center px-4 py-3 border-b hover:bg-muted/50 cursor-pointer rounded-md">
-                                    <span className="truncate">{item.description}</span>
-                                    <span>{new Date(item.date).toLocaleDateString('nl-NL')}</span>
-                                    <span>{item.status}</span>
-                                  </div>
-                               </DropdownMenuTrigger>
-                               <DropdownMenuContent align="end">
-                                 <DropdownMenuItem onSelect={() => handleEditDamage(item)}>
-                                  <Pencil className="mr-2 h-4 w-4" />
-                                   Bewerken
-                                 </DropdownMenuItem>
-                                 <DropdownMenuItem onSelect={() => handleDeleteDamage(item)} className="text-destructive">
-                                   <Trash2 className="mr-2 h-4 w-4" />
-                                   Verwijderen
-                                 </DropdownMenuItem>
-                               </DropdownMenuContent>
-                             </DropdownMenu>
+                            <div
+                              key={item.id}
+                              onClick={() => handleEditDamage(item)}
+                              className="grid grid-cols-[2fr_1fr_1fr] gap-4 items-center px-4 py-3 border-b hover:bg-muted/50 cursor-pointer rounded-md"
+                            >
+                              <span className="truncate">{item.description}</span>
+                              <span>{new Date(item.date).toLocaleDateString('nl-NL')}</span>
+                              <span>{item.status}</span>
+                            </div>
                           ))}
                         </div>
                       ) : (
@@ -588,13 +463,6 @@ export default function VehiclesPage() {
                 vehicleId={selectedVehicle.id}
                 damage={editingDamage}
               />
-              {deletingDamage && (
-                <DeleteDamageDialog 
-                  vehicleId={selectedVehicle.id}
-                  damage={deletingDamage}
-                  onDeleted={handleDamageDeleted}
-                />
-              )}
             </>
           ) : isLoading ? (
             <div className="flex items-center justify-center h-full text-muted-foreground">

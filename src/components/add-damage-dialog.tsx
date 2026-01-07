@@ -4,7 +4,7 @@ import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { CalendarIcon, Upload, Trash2, File as FileIcon } from 'lucide-react';
+import { CalendarIcon, Upload, Trash2, File as FileIcon, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import {
@@ -13,6 +13,7 @@ import {
   setDoc,
   updateDoc,
   serverTimestamp,
+  deleteDoc,
 } from 'firebase/firestore';
 import {
   getStorage,
@@ -34,6 +35,17 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -92,6 +104,7 @@ export function AddDamageDialog({
   const firestore = useFirestore();
   const app = useFirebaseApp();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
   const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
   const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
   
@@ -104,7 +117,9 @@ export function AddDamageDialog({
   React.useEffect(() => {
     if (open) {
       damageIdRef.current = damage?.id || doc(collection(firestore, 'temp')).id;
-      setUploadedFiles(damage?.files || []);
+      const initialFiles = damage?.files || [];
+      setUploadedFiles(initialFiles);
+      
       form.reset(
         damage
           ? {
@@ -120,9 +135,13 @@ export function AddDamageDialog({
       );
     } else {
         // Reset when dialog closes
-        setUploadedFiles([]);
-        setUploadProgress({});
-        setIsSubmitting(false);
+        setTimeout(() => {
+            setUploadedFiles([]);
+            setUploadProgress({});
+            setIsSubmitting(false);
+            setIsDeleting(false);
+            form.reset();
+        }, 200); // Allow closing animation
     }
   }, [open, damage, form, firestore]);
 
@@ -228,6 +247,49 @@ export function AddDamageDialog({
     }
   };
 
+  const handleDeleteDamage = async () => {
+    if (!firestore || !app || !damage || !damage.id) {
+        toast({ variant: 'destructive', title: 'Fout', description: 'Kon schade niet identificeren.'});
+        return;
+    };
+    setIsDeleting(true);
+
+    try {
+      // 1. Delete associated files from Storage
+      if (damage.files && damage.files.length > 0) {
+        const storage = getStorage(app);
+        for (const file of damage.files) {
+          if (file.storagePath) {
+            const fileRef = ref(storage, file.storagePath);
+            await deleteObject(fileRef).catch((error) => {
+              console.error(`Kon bestand ${file.storagePath} niet verwijderen:`, error);
+            });
+          }
+        }
+      }
+
+      // 2. Delete the Firestore document
+      const damageDocRef = doc(firestore, 'voertuigen', vehicleId, 'damages', damage.id);
+      await deleteDoc(damageDocRef);
+
+      toast({
+        title: 'Schade verwijderd',
+        description: 'De schademelding is succesvol verwijderd.',
+      });
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error deleting damage:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Verwijderen mislukt',
+        description: 'Kon de schademelding niet verwijderen. Probeer het opnieuw.',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+
   const onSubmit = async (data: DamageFormValues) => {
     if (!firestore || !vehicleId || !damageIdRef.current) return;
 
@@ -263,7 +325,7 @@ export function AddDamageDialog({
           description: 'De schademelding is succesvol aangemaakt.',
         });
       }
-      onOpenChange(false); // Close the dialog on success
+      onOpenChange(false);
     } catch (error) {
       console.error('Error saving damage: ', error);
       toast({
@@ -451,22 +513,48 @@ export function AddDamageDialog({
               )}
             </div>
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => onOpenChange(false)}
-                disabled={isSubmitting || isUploading}
-              >
-                Annuleren
-              </Button>
-              <Button type="submit" disabled={isSubmitting || isUploading}>
-                {isSubmitting
-                  ? 'Bezig...'
-                  : damage
-                  ? 'Wijzigingen opslaan'
-                  : 'Meld schade'}
-              </Button>
+            <DialogFooter className='flex justify-between w-full'>
+              <div>
+                {damage && (
+                   <AlertDialog>
+                   <AlertDialogTrigger asChild>
+                     <Button type="button" variant="destructive" disabled={isDeleting || isSubmitting}>
+                       {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                       Verwijderen
+                     </Button>
+                   </AlertDialogTrigger>
+                   <AlertDialogContent>
+                     <AlertDialogHeader>
+                       <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
+                       <AlertDialogDescription>
+                         Deze actie kan niet ongedaan worden gemaakt. Dit zal de schademelding en alle bijbehorende bestanden permanent verwijderen.
+                       </AlertDialogDescription>
+                     </AlertDialogHeader>
+                     <AlertDialogFooter>
+                       <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                       <AlertDialogAction onClick={handleDeleteDamage}>Doorgaan</AlertDialogAction>
+                     </AlertDialogFooter>
+                   </AlertDialogContent>
+                 </AlertDialog>
+                )}
+              </div>
+              <div className='flex gap-2'>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => onOpenChange(false)}
+                  disabled={isSubmitting || isUploading}
+                >
+                  Annuleren
+                </Button>
+                <Button type="submit" disabled={isSubmitting || isUploading}>
+                  {isSubmitting
+                    ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Bezig...</>
+                    : damage
+                    ? 'Wijzigingen opslaan'
+                    : 'Meld schade'}
+                </Button>
+              </div>
             </DialogFooter>
           </form>
         </Form>
