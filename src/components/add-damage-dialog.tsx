@@ -7,11 +7,11 @@ import { z } from 'zod';
 import { CalendarIcon, Upload, Trash2, File as FileIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
-import { collection, doc, updateDoc, arrayUnion, arrayRemove, addDoc, DocumentReference } from 'firebase/firestore';
+import { collection, doc, updateDoc, arrayUnion, addDoc, DocumentReference } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 
 import { cn } from '@/lib/utils';
-import { useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { toast } from '@/hooks/use-toast';
 
 import {
@@ -131,8 +131,10 @@ export function AddDamageDialog({
         files: []
       };
 
+      // Create the document first to get an ID
       const damageDocRef = await addDoc(damagesColRef, newDamageData);
       
+      // If there's a file, upload it and update the document
       if (selectedFile) {
         await uploadFile(selectedFile, damageDocRef);
       }
