@@ -81,7 +81,7 @@ export default function VehiclesPage() {
 
 
   return (
-    <div className="flex flex-col flex-1 p-6 bg-gray-50">
+    <div className="flex flex-col flex-1 p-6 bg-background">
       <PageHeader title="Voertuigen">
         <div className="relative w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
