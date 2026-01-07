@@ -1,0 +1,192 @@
+{
+  "entities": {
+    "Revenue": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Revenue",
+      "type": "object",
+      "description": "Represents a single revenue stream for the business.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the revenue entry."
+        },
+        "date": {
+          "type": "string",
+          "description": "Date the revenue was received.",
+          "format": "date-time"
+        },
+        "amount": {
+          "type": "number",
+          "description": "The amount of revenue received."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the revenue source."
+        }
+      },
+      "required": [
+        "id",
+        "date",
+        "amount"
+      ]
+    },
+    "Expense": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Expense",
+      "type": "object",
+      "description": "Represents a single expense incurred by the business.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the expense entry."
+        },
+        "date": {
+          "type": "string",
+          "description": "Date the expense was incurred.",
+          "format": "date-time"
+        },
+        "amount": {
+          "type": "number",
+          "description": "The amount of the expense."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the expense."
+        },
+        "category": {
+          "type": "string",
+          "description": "Category of the expense (e.g., supplies, rent, utilities)."
+        }
+      },
+      "required": [
+        "id",
+        "date",
+        "amount",
+        "category"
+      ]
+    },
+    "Appointment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Appointment",
+      "type": "object",
+      "description": "Represents a scheduled appointment.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the appointment."
+        },
+        "startTime": {
+          "type": "string",
+          "description": "The starting date and time of the appointment.",
+          "format": "date-time"
+        },
+        "endTime": {
+          "type": "string",
+          "description": "The ending date and time of the appointment.",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the appointment."
+        },
+        "attendees": {
+          "type": "string",
+          "description": "Attendees of the appointment. Can be a list of names or references to a User/Contact entity."
+        }
+      },
+      "required": [
+        "id",
+        "startTime",
+        "endTime",
+        "description"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "user",
+          "schema": {
+            "$ref": "#/backend/entities/user"
+          },
+          "description": "Collection to store user profiles. (Although the user entity wasn't explicitly defined, this path is necessary for user-specific data.)",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/revenues/{revenueId}",
+        "definition": {
+          "entityName": "Revenue",
+          "schema": {
+            "$ref": "#/backend/entities/Revenue"
+          },
+          "description": "Collection to store revenue entries for a specific user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "revenueId",
+              "description": "The unique identifier of the revenue entry."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/expenses/{expenseId}",
+        "definition": {
+          "entityName": "Expense",
+          "schema": {
+            "$ref": "#/backend/entities/Expense"
+          },
+          "description": "Collection to store expense entries for a specific user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "expenseId",
+              "description": "The unique identifier of the expense entry."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/appointments/{appointmentId}",
+        "definition": {
+          "entityName": "Appointment",
+          "schema": {
+            "$ref": "#/backend/entities/Appointment"
+          },
+          "description": "Collection to store appointment entries for a specific user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "appointmentId",
+              "description": "The unique identifier of the appointment entry."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to support a basic ERP system for small businesses, focusing on revenue, expenses, and appointments.  User data is segregated under `/users/{userId}` for private data. Revenue, Expenses, and Appointments are stored as subcollections under each user's document to ensure data isolation and ownership. This structure facilitates simple security rules based on the authenticated user's ID. The structure enforces Authorization Independence. No `get()` operations are required in rules. Each collection under `/users/{userId}` is effectively private to that user, enabling straightforward read/write rules based on `request.auth.uid`. QAPs are supported because list operations will be scoped to the user's own data, ensuring that users can only access their own revenue, expenses, and appointments."
+  }
+}
