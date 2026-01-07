@@ -236,24 +236,21 @@ export default function VehiclesPage() {
                   <TabsTrigger value="documents">Documenten</TabsTrigger>
                 </TabsList>
 
-                <TabsContent
-                  value="actions"
-                  className="flex-1 flex flex-col min-h-0 mt-2"
-                >
+                <TabsContent value="actions" className="h-full">
                   <Card className="h-full flex flex-col">
-                    <CardHeader className='flex-row items-center justify-between'>
+                    <CardHeader className="flex-row items-center justify-between">
                       <CardTitle>Acties</CardTitle>
                       <Button size="sm">
-                          <Plus className="mr-2 h-4 w-4" />
-                          Actie toevoegen
+                        <Plus className="mr-2 h-4 w-4" />
+                        Actie toevoegen
                       </Button>
                     </CardHeader>
                     <CardContent className="flex-1 flex flex-col gap-4 overflow-y-auto pt-2">
                       <div className="text-sm text-muted-foreground">
                         <div className="flex justify-between px-4 py-2">
-                           <span className="w-1/3">Naam</span>
-                           <span className="w-1/3">Type actie</span>
-                           <span className="w-1/3">Datum</span>
+                          <span className="w-1/3">Naam</span>
+                          <span className="w-1/3">Type actie</span>
+                          <span className="w-1/3">Datum</span>
                         </div>
                         <Separator />
                       </div>
@@ -264,59 +261,50 @@ export default function VehiclesPage() {
                   </Card>
                 </TabsContent>
 
-                <TabsContent
-                  value="maintenance"
-                  className="flex-1 flex flex-col min-h-0 mt-2"
-                >
+                <TabsContent value="maintenance" className="h-full">
                   <Card className="h-full flex flex-col">
-                    <CardHeader className='flex-row items-center justify-between'>
+                    <CardHeader className="flex-row items-center justify-between">
                       <CardTitle>Onderhoud</CardTitle>
-                       <Button size="sm">
-                          <Plus className="mr-2 h-4 w-4" />
-                          Onderhoud toevoegen
-                        </Button>
+                      <Button size="sm">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Onderhoud toevoegen
+                      </Button>
                     </CardHeader>
-                     <CardContent className="flex-1 flex flex-col gap-4 overflow-y-auto pt-2">
-                       <div className="text-sm text-muted-foreground">
+                    <CardContent className="flex-1 flex flex-col gap-4 overflow-y-auto pt-2">
+                      <div className="text-sm text-muted-foreground">
                         <div className="flex justify-between px-4 py-2">
-                           <span className="w-1/4">Omschrijving</span>
-                           <span className="w-1/4">Type</span>
-                           <span className="w-1/4">Datum</span>
-                           <span className="w-1/4">Kosten</span>
+                          <span className="w-1/4">Omschrijving</span>
+                          <span className="w-1/4">Type</span>
+                          <span className="w-1/4">Datum</span>
+                          <span className="w-1/4">Kosten</span>
                         </div>
                         <Separator />
                       </div>
-                       <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                      <div className="flex-1 flex items-center justify-center text-muted-foreground">
                         Nog geen onderhoud geregistreerd.
                       </div>
                     </CardContent>
                   </Card>
                 </TabsContent>
 
-                <TabsContent
-                  value="damages"
-                  className="flex-1 flex flex-col min-h-0 mt-2"
-                >
+                <TabsContent value="damages" className="h-full">
                   <Card className="h-full flex flex-col">
-                     <CardHeader>
+                    <CardHeader>
                       <CardTitle>Schade</CardTitle>
                     </CardHeader>
-                     <CardContent className="flex-1 flex items-center justify-center text-muted-foreground overflow-y-auto">
-                       <p>Nog geen schade geregistreerd.</p>
+                    <CardContent className="flex-1 flex items-center justify-center text-muted-foreground overflow-y-auto">
+                      <p>Nog geen schade geregistreerd.</p>
                     </CardContent>
                   </Card>
                 </TabsContent>
 
-                <TabsContent
-                  value="documents"
-                  className="flex-1 flex flex-col min-h-0 mt-2"
-                >
+                <TabsContent value="documents" className="h-full">
                   <Card className="h-full flex flex-col">
-                     <CardHeader>
+                    <CardHeader>
                       <CardTitle>Documenten</CardTitle>
                     </CardHeader>
-                     <CardContent className="flex-1 flex items-center justify-center text-muted-foreground overflow-y-auto">
-                       <p>Nog geen documenten gevonden.</p>
+                    <CardContent className="flex-1 flex items-center justify-center text-muted-foreground overflow-y-auto">
+                      <p>Nog geen documenten gevonden.</p>
                     </CardContent>
                   </Card>
                 </TabsContent>
