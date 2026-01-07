@@ -96,19 +96,15 @@ export function AddDamageDialog({
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
   const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
-  const damageIdRef = React.useRef(damage?.id || doc(collection(firestore, 'temp')).id);
+  const damageIdRef = React.useRef(damage?.id);
 
   const form = useForm<DamageFormValues>({
     resolver: zodResolver(damageFormSchema),
-    defaultValues: {
-      description: '',
-      date: new Date(),
-      status: 'Open',
-    }
   });
 
   React.useEffect(() => {
     if (open) {
+      // Set or generate a stable ID for the duration of the dialog being open
       damageIdRef.current = damage?.id || doc(collection(firestore, 'temp')).id;
       setUploadedFiles(damage?.files || []);
       form.reset(
@@ -124,20 +120,8 @@ export function AddDamageDialog({
               status: 'Open',
             }
       );
-    } else {
-        // Reset everything when dialog is closed
-        setTimeout(() => {
-            setUploadedFiles([]);
-            setUploadProgress({});
-            setIsSubmitting(false);
-            form.reset({
-                description: '',
-                date: new Date(),
-                status: 'Open',
-            });
-        }, 150); // Small delay to prevent visual glitch
     }
-  }, [open, damage, form]);
+  }, [open, damage, form, firestore]);
 
 
   const uploadFile = (file: File, damageId: string): Promise<UploadedFile> => {
@@ -194,6 +178,7 @@ export function AddDamageDialog({
     if (!files || files.length === 0) return;
 
     const damageId = damageIdRef.current;
+    if (!damageId) return;
     
     for (const file of Array.from(files)) {
       try {
@@ -241,7 +226,7 @@ export function AddDamageDialog({
   };
 
   const onSubmit = async (data: DamageFormValues) => {
-    if (!firestore || !vehicleId) return;
+    if (!firestore || !vehicleId || !damageIdRef.current) return;
 
     setIsSubmitting(true);
     const damageId = damageIdRef.current;
@@ -276,7 +261,6 @@ export function AddDamageDialog({
         });
       }
       onSuccess();
-      onOpenChange(false);
     } catch (error) {
       console.error('Error saving damage: ', error);
       toast({

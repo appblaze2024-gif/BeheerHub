@@ -230,6 +230,7 @@ export default function VehiclesPage() {
   // This function will be called by the dialog on success to trigger a re-fetch
   const handleDamageSuccess = () => {
     setRefreshKey(oldKey => oldKey + 1);
+    setIsDamageDialogOpen(false); // Close the dialog
   };
 
   return (
