@@ -44,8 +44,13 @@ const vehicles = [
   { id: 'V-51-GKB', make: 'VOLKSWAGEN', model: 'CADDY' },
   { id: 'V-53-DZK', make: 'MERCEDES', model: 'SPRINTER' },
   { id: 'V-55-DZK', make: 'MERCEDES', model: 'SPRINTER' },
-  { id: 'V-66-DZXa', make: 'MERCEDES', model: 'SPRINTER' },
+  { id: 'V-66-DZX', make: 'MERCEDES', model: 'SPRINTER' },
   { id: 'V-836-XT', make: 'IVECO', model: '35C14N' },
+  { id: 'V-92-DZZ', make: 'MERCEDES', model: 'SPRINTER' },
+  { id: 'VBT-53-H', make: 'IVECO', model: '35C14N' },
+  { id: 'K-123-ABC', make: 'FORD', model: 'TRANSIT' },
+  { id: 'L-456-DEF', make: 'RENAULT', model: 'TRAFIC' },
+  { id: 'M-789-GHI', make: 'PEUGEOT', model: 'BOXER' },
 ];
 
 export default function VehiclesPage() {
@@ -122,68 +127,69 @@ export default function VehiclesPage() {
                 Actief
               </Badge>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-6">
-              <div className="relative aspect-video rounded-md overflow-hidden border">
-                {mainImage && (
-                  <Image
-                    src={mainImage.imageUrl}
-                    alt={mainImage.description}
-                    fill
-                    className="object-cover"
-                    data-ai-hint={mainImage.imageHint}
-                  />
-                )}
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold mb-4">
-                  Algemene gegevens
-                </h3>
-                <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-muted-foreground">Kenteken</span>
-                    <span className="font-medium">{selectedVehicle.id}</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-muted-foreground">
-                      Voertuignummer
-                    </span>
-                    <span className="font-medium">
-                      {selectedVehicle.vehicleNumber}
-                    </span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-muted-foreground">Merk</span>
-                    <span className="font-medium">{selectedVehicle.make}</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-muted-foreground">Model</span>
-                    <span className="font-medium">{selectedVehicle.model}</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-muted-foreground">Type</span>
-                    <span className="font-medium">-</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-muted-foreground">Bouwjaar</span>
-                    <span className="font-medium">{selectedVehicle.year}</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-muted-foreground">Brandstof</span>
-                    <span className="font-medium">{selectedVehicle.fuel}</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-muted-foreground">
-                      APK vervaldatum
-                    </span>
-                    <span className="font-medium">
-                      {selectedVehicle.apkDate}
-                    </span>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="relative aspect-video rounded-md overflow-hidden border">
+                  {mainImage && (
+                    <Image
+                      src={mainImage.imageUrl}
+                      alt={mainImage.description}
+                      fill
+                      className="object-cover"
+                      data-ai-hint={mainImage.imageHint}
+                    />
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">
+                    Algemene gegevens
+                  </h3>
+                  <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                    <div className="flex justify-between border-b pb-2">
+                      <span className="text-muted-foreground">Kenteken</span>
+                      <span className="font-medium">{selectedVehicle.id}</span>
+                    </div>
+                    <div className="flex justify-between border-b pb-2">
+                      <span className="text-muted-foreground">
+                        Voertuignummer
+                      </span>
+                      <span className="font-medium">
+                        {selectedVehicle.vehicleNumber}
+                      </span>
+                    </div>
+                    <div className="flex justify-between border-b pb-2">
+                      <span className="text-muted-foreground">Merk</span>
+                      <span className="font-medium">{selectedVehicle.make}</span>
+                    </div>
+                    <div className="flex justify-between border-b pb-2">
+                      <span className="text-muted-foreground">Model</span>
+                      <span className="font-medium">{selectedVehicle.model}</span>
+                    </div>
+                    <div className="flex justify-between border-b pb-2">
+                      <span className="text-muted-foreground">Type</span>
+                      <span className="font-medium">-</span>
+                    </div>
+                    <div className="flex justify-between border-b pb-2">
+                      <span className="text-muted-foreground">Bouwjaar</span>
+                      <span className="font-medium">{selectedVehicle.year}</span>
+                    </div>
+                    <div className="flex justify-between border-b pb-2">
+                      <span className="text-muted-foreground">Brandstof</span>
+                      <span className="font-medium">{selectedVehicle.fuel}</span>
+                    </div>
+                    <div className="flex justify-between border-b pb-2">
+                      <span className="text-muted-foreground">
+                        APK vervaldatum
+                      </span>
+                      <span className="font-medium">
+                        {selectedVehicle.apkDate}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
-
           <Tabs defaultValue="actions" className="flex-1 flex flex-col min-h-0">
             <TabsList>
               <TabsTrigger value="actions">Acties</TabsTrigger>
@@ -191,7 +197,6 @@ export default function VehiclesPage() {
               <TabsTrigger value="damage">Schade</TabsTrigger>
               <TabsTrigger value="documents">Documenten</TabsTrigger>
             </TabsList>
-
             <TabsContent value="actions" className="flex-1 mt-4 min-h-0">
               <Card className="h-full flex flex-col">
                 <CardHeader>
@@ -224,23 +229,40 @@ export default function VehiclesPage() {
                 </CardContent>
               </Card>
             </TabsContent>
-            
-            <TabsContent value="maintenance"  className="flex-1 mt-4 min-h-0">
+            <TabsContent value="maintenance" className="flex-1 mt-4 min-h-0">
               <Card className="h-full">
-                <CardHeader><CardTitle>Onderhoud</CardTitle></CardHeader>
-                <CardContent><p className="text-center text-muted-foreground">Geen onderhoudsgegevens beschikbaar.</p></CardContent>
+                <CardHeader>
+                  <CardTitle>Onderhoud</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-center text-muted-foreground">
+                    Geen onderhoudsgegevens beschikbaar.
+                  </p>
+                </CardContent>
               </Card>
             </TabsContent>
-             <TabsContent value="damage"  className="flex-1 mt-4 min-h-0">
+            <TabsContent value="damage" className="flex-1 mt-4 min-h-0">
               <Card className="h-full">
-                <CardHeader><CardTitle>Schade</CardTitle></CardHeader>
-                <CardContent><p className="text-center text-muted-foreground">Geen schadegevallen geregistreerd.</p></CardContent>
+                <CardHeader>
+                  <CardTitle>Schade</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-center text-muted-foreground">
+                    Geen schadegevallen geregistreerd.
+                  </p>
+                </CardContent>
               </Card>
             </TabsContent>
-             <TabsContent value="documents"  className="flex-1 mt-4 min-h-0">
+            <TabsContent value="documents" className="flex-1 mt-4 min-h-0">
               <Card className="h-full">
-                <CardHeader><CardTitle>Documenten</CardTitle></CardHeader>
-                <CardContent><p className="text-center text-muted-foreground">Geen documenten beschikbaar.</p></CardContent>
+                <CardHeader>
+                  <CardTitle>Documenten</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-center text-muted-foreground">
+                    Geen documenten beschikbaar.
+                  </p>
+                </CardContent>
               </Card>
             </TabsContent>
           </Tabs>
