@@ -219,7 +219,7 @@ export default function VehiclesPage() {
             </TabsList>
             <TabsContent
               value="actions"
-              className="flex-1 mt-4 min-h-0 flex flex-col"
+              className="mt-4 flex-1 flex flex-col min-h-0"
             >
               <Card className="h-full flex flex-col">
                 <CardHeader>
@@ -252,11 +252,8 @@ export default function VehiclesPage() {
                 </CardContent>
               </Card>
             </TabsContent>
-            <TabsContent
-              value="maintenance"
-              className="flex-1 mt-4 min-h-0 flex flex-col"
-            >
-              <Card className="h-full">
+            <TabsContent value="maintenance" className="mt-4">
+              <Card>
                 <CardHeader>
                   <CardTitle>Onderhoud</CardTitle>
                 </CardHeader>
@@ -267,8 +264,8 @@ export default function VehiclesPage() {
                 </CardContent>
               </Card>
             </TabsContent>
-            <TabsContent value="damage" className="flex-1 mt-4 min-h-0 flex flex-col">
-              <Card className="h-full">
+            <TabsContent value="damage" className="mt-4">
+              <Card>
                 <CardHeader>
                   <CardTitle>Schade</CardTitle>
                 </CardHeader>
@@ -279,11 +276,8 @@ export default function VehiclesPage() {
                 </CardContent>
               </Card>
             </TabsContent>
-            <TabsContent
-              value="documents"
-              className="flex-1 mt-4 min-h-0 flex flex-col"
-            >
-              <Card className="h-full">
+            <TabsContent value="documents" className="mt-4">
+              <Card>
                 <CardHeader>
                   <CardTitle>Documenten</CardTitle>
                 </CardHeader>
