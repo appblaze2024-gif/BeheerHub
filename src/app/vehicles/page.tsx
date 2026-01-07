@@ -35,8 +35,8 @@ import { VehicleImportDialog } from '@/components/vehicle-import-dialog';
 import { AddActionDialog } from '@/components/add-action-dialog';
 import { AddMaintenanceDialog } from '@/components/add-maintenance-dialog';
 import { AddDamageDialog } from '@/components/add-damage-dialog';
-import { toast } from '@/hooks/use-toast';
 import { getStorage, ref, deleteObject } from 'firebase/storage';
+import { AddVehicleDialog } from '@/components/add-vehicle-dialog';
 
 export default function VehiclesPage() {
   const firestore = useFirestore();
@@ -121,9 +121,11 @@ export default function VehiclesPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Zoek voertuig..." className="pl-9" />
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" /> Voertuig toevoegen
-        </Button>
+        <AddVehicleDialog>
+          <Button>
+            <Plus className="mr-2 h-4 w-4" /> Voertuig toevoegen
+          </Button>
+        </AddVehicleDialog>
         <VehicleImportDialog
           open={isImporting}
           onOpenChange={setIsImporting}
