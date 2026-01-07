@@ -11,7 +11,7 @@ import { collection, doc, setDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 
 import { cn } from '@/lib/utils';
-import { useFirestore }s from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { toast } from '@/hooks/use-toast';
 
 import {
