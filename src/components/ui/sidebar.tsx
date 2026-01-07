@@ -5,12 +5,10 @@ import { Slot } from '@radix-ui/react-slot';
 import { VariantProps, cva } from 'class-variance-authority';
 import { PanelLeft } from 'lucide-react';
 
-import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Tooltip,
@@ -18,8 +16,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-
-const SIDEBAR_WIDTH = '200px';
 
 const Sidebar = React.forwardRef<
   HTMLDivElement,
@@ -29,7 +25,7 @@ const Sidebar = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        'hidden md:flex flex-col h-full w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border',
+        'flex flex-col h-full w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border',
         className
       )}
       {...props}
@@ -40,23 +36,6 @@ const Sidebar = React.forwardRef<
 });
 Sidebar.displayName = 'Sidebar';
 
-
-const SidebarInset = React.forwardRef<
-  HTMLDivElement,
-  React.ComponentProps<'main'>
->(({ className, ...props }, ref) => {
-  return (
-    <main
-      ref={ref}
-      className={cn(
-        'relative flex flex-1 flex-col bg-background overflow-hidden',
-        className
-      )}
-      {...props}
-    />
-  );
-});
-SidebarInset.displayName = 'SidebarInset';
 
 const SidebarInput = React.forwardRef<
   React.ElementRef<typeof Input>,
@@ -461,7 +440,6 @@ export {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarInput,
-  SidebarInset,
   SidebarMenu,
   SidebarMenuAction,
   SidebarMenuBadge,

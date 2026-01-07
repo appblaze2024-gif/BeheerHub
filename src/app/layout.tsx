@@ -5,18 +5,13 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
-import { Sidebar, SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import { Sidebar } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/sidebar-nav';
 import { SidebarHeader } from '@/components/ui/sidebar';
 import { FirebaseClientProvider, useUser } from '@/firebase';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { PageHeader } from '@/components/page-header';
-import { PanelLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
-
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -49,53 +44,23 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={cn('font-body antialiased flex h-svh overflow-hidden')}>
-      <Sheet>
-        <Sidebar>
-          <SidebarHeader>
-            <Link href="/">
-              <Image
-                src="https://i.ibb.co/C3FgZFmf/8739741b-c5cd-451e-a742-9da981e051fa.png"
-                alt="Logo"
-                width={150}
-                height={50}
-                className="w-auto h-auto"
-              />
-            </Link>
-          </SidebarHeader>
-          <SidebarNav />
-        </Sidebar>
-
-        <div className="flex flex-1 flex-col min-h-0">
-          <header className="flex items-center justify-between gap-4 p-4 md:hidden">
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className={cn('h-7 w-7')}>
-                <PanelLeft />
-                <span className="sr-only">Zijbalk wisselen</span>
-              </Button>
-            </SheetTrigger>
-          </header>
-          <main className="flex-1 overflow-auto bg-background">
-            {children}
-          </main>
-        </div>
-
-        <SheetContent side="left" className="p-0 w-64">
-          <Sidebar>
-            <SidebarHeader>
-              <Link href="/">
-                <Image
-                  src="https://i.ibb.co/C3FgZFmf/8739741b-c5cd-451e-a742-9da981e051fa.png"
-                  alt="Logo"
-                  width={150}
-                  height={50}
-                  className="w-auto h-auto"
-                />
-              </Link>
-            </SidebarHeader>
-            <SidebarNav />
-          </Sidebar>
-        </SheetContent>
-      </Sheet>
+      <Sidebar>
+        <SidebarHeader>
+          <Link href="/">
+            <Image
+              src="https://i.ibb.co/C3FgZFmf/8739741b-c5cd-451e-a742-9da981e051fa.png"
+              alt="Logo"
+              width={150}
+              height={50}
+              className="w-auto h-auto"
+            />
+          </Link>
+        </SidebarHeader>
+        <SidebarNav />
+      </Sidebar>
+      <main className="flex-1 flex flex-col overflow-auto bg-background">
+        {children}
+      </main>
     </div>
   );
 }

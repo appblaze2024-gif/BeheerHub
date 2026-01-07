@@ -135,7 +135,7 @@ export default function VehiclesPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 mt-6 flex-1 min-h-0">
         <Card className="flex flex-col h-full min-h-0">
-          <CardContent className="p-2 flex-1 min-h-0">
+          <CardContent className="p-2 flex-1 min-h-0 overflow-y-auto">
             <div className="flex flex-col space-y-1 pr-2">
               {isLoading ? (
                   <div className="text-center text-muted-foreground p-4">
@@ -163,7 +163,7 @@ export default function VehiclesPage() {
                         {vehicle.id}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {vehicle.make} {vehicle.model}
+                        {vehicle.merk} {vehicle.model}
                       </p>
                     </div>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -190,7 +190,7 @@ export default function VehiclesPage() {
                       {selectedVehicle?.id}
                     </h2>
                     <p className="text-muted-foreground">
-                      {selectedVehicle?.make} {selectedVehicle?.model}
+                      {selectedVehicle?.merk} {selectedVehicle?.model}
                     </p>
                   </div>
                   <Badge
@@ -231,13 +231,13 @@ export default function VehiclesPage() {
                             Voertuignummer
                           </span>
                           <span className="font-medium">
-                            {selectedVehicle?.vehicleNumber ?? '-'}
+                            {selectedVehicle?.voertuignummer ?? '-'}
                           </span>
                         </div>
                         <div className="flex justify-between border-b pb-2">
                           <span className="text-muted-foreground">Merk</span>
                           <span className="font-medium">
-                            {selectedVehicle?.make}
+                            {selectedVehicle?.merk}
                           </span>
                         </div>
                         <div className="flex justify-between border-b pb-2">
@@ -255,7 +255,7 @@ export default function VehiclesPage() {
                             Bouwjaar
                           </span>
                           <span className="font-medium">
-                            {selectedVehicle?.year ?? '-'}
+                            {selectedVehicle?.bouwjaar ?? '-'}
                           </span>
                         </div>
                         <div className="flex justify-between border-b pb-2">
@@ -263,7 +263,7 @@ export default function VehiclesPage() {
                             Brandstof
                           </span>
                           <span className="font-medium">
-                            {selectedVehicle?.fuel ?? '-'}
+                            {selectedVehicle?.brandstof ?? '-'}
                           </span>
                         </div>
                         <div className="flex justify-between border-b pb-2">
@@ -271,7 +271,7 @@ export default function VehiclesPage() {
                             APK vervaldatum
                           </span>
                           <span className="font-medium">
-                            {selectedVehicle?.apkDate ?? '-'}
+                            {selectedVehicle?.apk_vervaldatum ?? '-'}
                           </span>
                         </div>
                       </div>
