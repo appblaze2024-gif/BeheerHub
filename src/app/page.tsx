@@ -60,7 +60,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="flex flex-1 flex-col bg-gray-100 dark:bg-gray-900">
+    <div className="flex flex-1 flex-col bg-gray-50 dark:bg-gray-900">
       <main className="flex-1 p-6">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {overviewData.map((data) => (
