@@ -55,16 +55,13 @@ export function SidebarNav() {
       <SidebarMenu>
         {menuItems.map((item) => (
           <SidebarMenuItem key={item.label}>
-            <Link href={item.href} passHref legacyBehavior>
+            <Link href={item.href}>
               <SidebarMenuButton
-                asChild
                 isActive={pathname === item.href}
                 tooltip={item.label}
               >
-                <a>
-                  <item.icon />
-                  <span>{item.label}</span>
-                </a>
+                <item.icon />
+                <span>{item.label}</span>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
@@ -74,16 +71,13 @@ export function SidebarNav() {
       <SidebarMenu className="mt-auto">
         {bottomMenuItems.map((item) => (
           <SidebarMenuItem key={item.label}>
-            <Link href={item.href} passHref legacyBehavior>
+            <Link href={item.href}>
               <SidebarMenuButton
-                asChild
                 isActive={pathname === item.href}
                 tooltip={item.label}
               >
-                <a>
-                  <item.icon />
-                  <span>{item.label}</span>
-                </a>
+                <item.icon />
+                <span>{item.label}</span>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
