@@ -32,7 +32,7 @@ type SidebarContext = {
   setOpen: (open: boolean) => void
   openMobile: boolean
   setOpenMobile: (open: boolean) => void
-  isMobile: boolean
+  isMobile: boolean | undefined
   toggleSidebar: () => void
 }
 
@@ -140,7 +140,7 @@ const SidebarProvider = React.forwardRef<
         state,
         open: finalOpen,
         setOpen: finalSetOpen,
-        isMobile: !!isMobile,
+        isMobile: isMobile,
         openMobile,
         setOpenMobile,
         toggleSidebar,
@@ -217,6 +217,10 @@ const Sidebar = React.forwardRef<
           {children}
         </div>
       )
+    }
+    
+    if (isMobile === undefined) {
+      return null;
     }
 
     if (isMobile) {

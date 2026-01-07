@@ -82,7 +82,7 @@ export default function VehiclesPage() {
       </PageHeader>
 
       <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 mt-6 flex-1 min-h-0">
-        <Card className="flex flex-col h-full">
+        <Card className="flex flex-col h-full min-h-0">
           <CardContent className="p-2 flex-1 min-h-0">
             <ScrollArea className="h-full">
               <div className="flex flex-col space-y-1 pr-2">
@@ -138,16 +138,18 @@ export default function VehiclesPage() {
             </CardHeader>
             <CardContent>
               <div className="flex flex-col md:flex-row gap-6">
-                <div className="relative w-full max-w-xs aspect-video rounded-md overflow-hidden border">
-                  {mainImage && (
-                    <Image
-                      src={mainImage.imageUrl}
-                      alt={mainImage.description}
-                      fill
-                      className="object-cover"
-                      data-ai-hint={mainImage.imageHint}
-                    />
-                  )}
+                <div className="flex-shrink-0">
+                   <div className="relative w-full max-w-xs aspect-video rounded-md overflow-hidden border">
+                    {mainImage && (
+                      <Image
+                        src={mainImage.imageUrl}
+                        alt={mainImage.description}
+                        fill
+                        className="object-cover"
+                        data-ai-hint={mainImage.imageHint}
+                      />
+                    )}
+                  </div>
                 </div>
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold mb-4">
@@ -254,7 +256,7 @@ export default function VehiclesPage() {
             </TabsContent>
             <TabsContent
               value="maintenance"
-              className="flex-1 mt-4 min-h-0"
+              className="flex-1 mt-4 min-h-0 flex flex-col"
             >
               <Card className="h-full">
                 <CardHeader>
@@ -267,7 +269,7 @@ export default function VehiclesPage() {
                 </CardContent>
               </Card>
             </TabsContent>
-            <TabsContent value="damage" className="flex-1 mt-4 min-h-0">
+            <TabsContent value="damage" className="flex-1 mt-4 min-h-0 flex flex-col">
               <Card className="h-full">
                 <CardHeader>
                   <CardTitle>Schade</CardTitle>
@@ -281,7 +283,7 @@ export default function VehiclesPage() {
             </TabsContent>
             <TabsContent
               value="documents"
-              className="flex-1 mt-4 min-h-0"
+              className="flex-1 mt-4 min-h-0 flex flex-col"
             >
               <Card className="h-full">
                 <CardHeader>
