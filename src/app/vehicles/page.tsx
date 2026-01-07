@@ -56,7 +56,6 @@ const vehicles = [
   { id: 'V-51-GKBa', make: 'VOLKSWAGEN', model: 'CADDY' },
   { id: 'V-53-DZKa', make: 'MERCEDES', model: 'SPRINTER' },
   { id: 'V-55-DZKa', make: 'MERCEDES', model: 'SPRINTER' },
-  { id: 'V-66-DZXa', make: 'MERCEDES', model: 'SPRINTER' },
   { id: 'V-836-XTa', make: 'IVECO', model: '35C14N' },
   { id: 'V-92-DZza', make: 'MERCEDES', model: 'SPRINTER' },
   { id: 'VBT-53-Ha', make: 'IVECO', model: '35C14N' },
@@ -140,17 +139,19 @@ export default function VehiclesPage() {
               </Badge>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-6">
-              {mainImage && (
-                <div className="relative aspect-video rounded-md overflow-hidden border">
-                  <Image
-                    src={mainImage.imageUrl}
-                    alt={mainImage.description}
-                    fill
-                    className="object-cover"
-                    data-ai-hint={mainImage.imageHint}
-                  />
-                </div>
-              )}
+              <div className="grid grid-cols-1 gap-4">
+                {mainImage && (
+                  <div className="relative aspect-video rounded-md overflow-hidden border">
+                    <Image
+                      src={mainImage.imageUrl}
+                      alt={mainImage.description}
+                      fill
+                      className="object-cover"
+                      data-ai-hint={mainImage.imageHint}
+                    />
+                  </div>
+                )}
+              </div>
               <div>
                 <h3 className="text-lg font-semibold mb-4">
                   Algemene gegevens
