@@ -81,7 +81,6 @@ interface AddDamageDialogProps {
   onOpenChange: (open: boolean) => void;
   vehicleId: string;
   damage?: any | null;
-  onSuccess: () => void;
 }
 
 export function AddDamageDialog({
@@ -89,22 +88,21 @@ export function AddDamageDialog({
   onOpenChange,
   vehicleId,
   damage = null,
-  onSuccess,
 }: AddDamageDialogProps) {
   const firestore = useFirestore();
   const app = useFirebaseApp();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
   const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
-  const damageIdRef = React.useRef(damage?.id);
-
+  
   const form = useForm<DamageFormValues>({
     resolver: zodResolver(damageFormSchema),
   });
 
+  const damageIdRef = React.useRef(damage?.id);
+
   React.useEffect(() => {
     if (open) {
-      // Set or generate a stable ID for the duration of the dialog being open
       damageIdRef.current = damage?.id || doc(collection(firestore, 'temp')).id;
       setUploadedFiles(damage?.files || []);
       form.reset(
@@ -120,6 +118,11 @@ export function AddDamageDialog({
               status: 'Open',
             }
       );
+    } else {
+        // Reset when dialog closes
+        setUploadedFiles([]);
+        setUploadProgress({});
+        setIsSubmitting(false);
     }
   }, [open, damage, form, firestore]);
 
@@ -260,7 +263,7 @@ export function AddDamageDialog({
           description: 'De schademelding is succesvol aangemaakt.',
         });
       }
-      onSuccess();
+      onOpenChange(false); // Close the dialog on success
     } catch (error) {
       console.error('Error saving damage: ', error);
       toast({

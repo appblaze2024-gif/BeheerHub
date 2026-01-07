@@ -152,7 +152,6 @@ function DeleteDamageDialog({
 export default function VehiclesPage() {
   const firestore = useFirestore();
   const [isImporting, setIsImporting] = React.useState(false);
-  const [refreshKey, setRefreshKey] = React.useState(0);
 
   const vehiclesCollection = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -168,7 +167,7 @@ export default function VehiclesPage() {
   const actionsCollection = useMemoFirebase(() => {
     if (!firestore || !selectedVehicle) return null;
     return collection(firestore, 'voertuigen', selectedVehicle.id, 'actions');
-  }, [firestore, selectedVehicle, refreshKey]);
+  }, [firestore, selectedVehicle]);
 
   const { data: actions, isLoading: actionsLoading } =
     useCollection<any>(actionsCollection);
@@ -181,7 +180,7 @@ export default function VehiclesPage() {
       selectedVehicle.id,
       'maintenance'
     );
-  }, [firestore, selectedVehicle, refreshKey]);
+  }, [firestore, selectedVehicle]);
 
   const { data: maintenance, isLoading: maintenanceLoading } =
     useCollection<any>(maintenanceCollection);
@@ -189,7 +188,7 @@ export default function VehiclesPage() {
   const damagesCollection = useMemoFirebase(() => {
     if (!firestore || !selectedVehicle) return null;
     return collection(firestore, 'voertuigen', selectedVehicle.id, 'damages');
-  }, [firestore, selectedVehicle, refreshKey]);
+  }, [firestore, selectedVehicle]);
 
   const { data: damages, isLoading: damagesLoading } =
     useCollection<any>(damagesCollection);
@@ -210,7 +209,7 @@ export default function VehiclesPage() {
 
   const handleImportSuccess = () => {
     setIsImporting(false);
-    // You might want to refresh the vehicles list here if the import adds new ones
+    // Data will refresh automatically due to useCollection hook
   };
   
   const [editingDamage, setEditingDamage] = React.useState<any | null>(null);
@@ -227,10 +226,8 @@ export default function VehiclesPage() {
     setIsDamageDialogOpen(true);
   };
   
-  // This function will be called by the dialog on success to trigger a re-fetch
-  const handleDamageSuccess = () => {
-    setRefreshKey(oldKey => oldKey + 1);
-    setIsDamageDialogOpen(false); // Close the dialog
+  const handleDamageDeleted = () => {
+     // Data will refresh automatically due to useCollection hook
   };
 
   return (
@@ -564,7 +561,7 @@ export default function VehiclesPage() {
                                    <DeleteDamageDialog 
                                       vehicleId={selectedVehicle.id}
                                       damage={item}
-                                      onDeleted={handleDamageSuccess}
+                                      onDeleted={handleDamageDeleted}
                                     />
                                  </DropdownMenuContent>
                                </DropdownMenu>
@@ -596,7 +593,6 @@ export default function VehiclesPage() {
                 onOpenChange={setIsDamageDialogOpen}
                 vehicleId={selectedVehicle.id}
                 damage={editingDamage}
-                onSuccess={handleDamageSuccess}
               />
             </>
           ) : isLoading ? (
