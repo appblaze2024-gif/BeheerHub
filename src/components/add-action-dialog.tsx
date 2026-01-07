@@ -11,7 +11,6 @@ import { nl } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useFirestore, addDocumentNonBlocking } from '@/firebase';
 import { collection } from 'firebase/firestore';
-import { toast } from '@/hooks/use-toast';
 
 import {
   Dialog,
@@ -72,11 +71,7 @@ export function AddActionDialog({
 
   const onSubmit = async (data: ActionFormValues) => {
     if (!firestore || !vehicleId) {
-      toast({
-        variant: 'destructive',
-        title: 'Fout',
-        description: 'Kan geen verbinding maken met de database.',
-      });
+      console.error('Firestore not available');
       return;
     }
 
@@ -95,20 +90,10 @@ export function AddActionDialog({
 
       await addDocumentNonBlocking(actionsColRef, actionData);
 
-      toast({
-        title: 'Succes!',
-        description: 'De actie is succesvol toegevoegd.',
-      });
       form.reset();
       setOpen(false);
     } catch (error) {
       console.error('Error adding action: ', error);
-      toast({
-        variant: 'destructive',
-        title: 'Oh nee! Er is iets misgegaan.',
-        description:
-          'Kon de actie niet toevoegen. Controleer de console voor details.',
-      });
     }
   };
 

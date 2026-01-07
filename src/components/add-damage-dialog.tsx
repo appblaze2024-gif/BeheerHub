@@ -25,7 +25,6 @@ import {
 
 import { cn } from '@/lib/utils';
 import { useFirestore, useFirebaseApp } from '@/firebase';
-import { toast } from '@/hooks/use-toast';
 
 import {
   Dialog,
@@ -124,14 +123,13 @@ export function AddDamageDialog({
             }
       );
     } else {
-        // Reset when dialog closes
         setTimeout(() => {
             setUploadedFiles([]);
             setUploadProgress({});
             setIsSubmitting(false);
             setIsDeleting(false);
             form.reset();
-        }, 200); // Allow closing animation
+        }, 200);
     }
   }, [open, damage, form, firestore]);
 
@@ -197,11 +195,7 @@ export function AddDamageDialog({
         const uploadedFile = await uploadFile(file, damageId);
         setUploadedFiles(prev => [...prev, uploadedFile]);
       } catch (error) {
-        toast({
-            variant: 'destructive',
-            title: 'Upload mislukt',
-            description: `Kon ${file.name} niet uploaden.`,
-        });
+        console.error(`Kon ${file.name} niet uploaden.`);
       }
     }
   };
@@ -217,35 +211,24 @@ export function AddDamageDialog({
       setUploadedFiles((prev) =>
         prev.filter((f) => f.storagePath !== fileToDelete.storagePath)
       );
-      toast({
-        title: 'Bestand verwijderd',
-        description: `${fileToDelete.name} is verwijderd.`,
-      });
     } catch (error: any) {
       console.error('Kon bestand niet verwijderen:', error);
-       // Also remove from state if it's already gone from storage
       if (error.code === 'storage/object-not-found') {
         setUploadedFiles((prev) =>
           prev.filter((f) => f.storagePath !== fileToDelete.storagePath)
         );
       }
-      toast({
-          variant: 'destructive',
-          title: 'Verwijderen mislukt',
-          description: `Kon ${fileToDelete.name} niet verwijderen.`,
-        });
     }
   };
 
   const handleDeleteDamage = async () => {
     if (!firestore || !app || !damage || !damage.id) {
-        toast({ variant: 'destructive', title: 'Fout', description: 'Kon schade niet identificeren.'});
+        console.error('Kon schade niet identificeren.');
         return;
     };
     setIsDeleting(true);
 
     try {
-      // 1. Delete associated files from Storage
       if (damage.files && damage.files.length > 0) {
         const storage = getStorage(app);
         for (const file of damage.files) {
@@ -258,22 +241,12 @@ export function AddDamageDialog({
         }
       }
 
-      // 2. Delete the Firestore document
       const damageDocRef = doc(firestore, 'voertuigen', vehicleId, 'damages', damage.id);
       await deleteDoc(damageDocRef);
 
-      toast({
-        title: 'Schade verwijderd',
-        description: 'De schademelding is succesvol verwijderd.',
-      });
       onOpenChange(false);
     } catch (error) {
       console.error('Error deleting damage:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Verwijderen mislukt',
-        description: 'Kon de schademelding niet verwijderen. Probeer het opnieuw.',
-      });
     } finally {
       setIsDeleting(false);
     }
@@ -298,33 +271,18 @@ export function AddDamageDialog({
       id: damageId,
       date: data.date.toISOString(),
       files: uploadedFiles,
-      status: damage ? damage.status : 'Open', // Keep existing status or default to Open
       updatedAt: serverTimestamp(),
     };
 
     try {
       if (damage) {
         await updateDoc(damageDocRef, damageData);
-        toast({
-          title: 'Schade bijgewerkt!',
-          description: 'De schademelding is succesvol bijgewerkt.',
-        });
       } else {
-        await setDoc(damageDocRef, { ...damageData, createdAt: serverTimestamp() });
-        toast({
-          title: 'Schade gemeld!',
-          description: 'De schademelding is succesvol aangemaakt.',
-        });
+        await setDoc(damageDocRef, { ...damageData, createdAt: serverTimestamp(), status: 'Open' });
       }
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving damage: ', error);
-      toast({
-        variant: 'destructive',
-        title: 'Oh nee! Er is iets misgegaan.',
-        description:
-          'Kon de schade niet opslaan. Controleer de console voor details.',
-      });
     } finally {
       setIsSubmitting(false);
     }
@@ -525,5 +483,3 @@ export function AddDamageDialog({
     </Dialog>
   );
 }
-
-    

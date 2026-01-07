@@ -24,7 +24,6 @@ import { collection, doc, writeBatch } from 'firebase/firestore';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { AlertCircle, CheckCircle } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
 
 interface VehicleImportDialogProps {
   children: React.ReactNode;
@@ -115,11 +114,7 @@ export function VehicleImportDialog({
     
     const kentekenCsvHeader = mapping['kenteken'];
     if (!kentekenCsvHeader) {
-        toast({
-            variant: "destructive",
-            title: "Fout bij importeren",
-            description: "Het veld 'kenteken' moet worden gekoppeld aan een CSV-kolom.",
-        });
+        console.error("Het veld 'kenteken' moet worden gekoppeld aan een CSV-kolom.");
         return;
     }
     
@@ -160,18 +155,8 @@ export function VehicleImportDialog({
       }
       
       onSuccess();
-      toast({
-        title: "Import succesvol!",
-        description: `${data.length} voertuigen zijn geïmporteerd.`,
-      });
-
     } catch (error) {
       console.error("Error importing vehicles: ", error);
-      toast({
-        variant: "destructive",
-        title: "Oh nee! Er is iets misgegaan.",
-        description: "Kon de voertuigen niet importeren. Controleer de console voor details.",
-      });
     } finally {
         setIsImporting(false);
     }

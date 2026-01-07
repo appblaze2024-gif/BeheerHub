@@ -11,7 +11,6 @@ import { nl } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useFirestore, addDocumentNonBlocking } from '@/firebase';
 import { collection } from 'firebase/firestore';
-import { toast } from '@/hooks/use-toast';
 
 import {
   Dialog,
@@ -76,11 +75,7 @@ export function AddMaintenanceDialog({
 
   const onSubmit = async (data: MaintenanceFormValues) => {
     if (!firestore || !vehicleId) {
-      toast({
-        variant: 'destructive',
-        title: 'Fout',
-        description: 'Kan geen verbinding maken met de database.',
-      });
+      console.error('Firestore not available');
       return;
     }
 
@@ -99,20 +94,10 @@ export function AddMaintenanceDialog({
 
       await addDocumentNonBlocking(maintenanceColRef, maintenanceData);
 
-      toast({
-        title: 'Succes!',
-        description: 'Het onderhoud is succesvol toegevoegd.',
-      });
       form.reset();
       setOpen(false);
     } catch (error) {
       console.error('Error adding maintenance: ', error);
-      toast({
-        variant: 'destructive',
-        title: 'Oh nee! Er is iets misgegaan.',
-        description:
-          'Kon het onderhoud niet toevoegen. Controleer de console voor details.',
-      });
     }
   };
 

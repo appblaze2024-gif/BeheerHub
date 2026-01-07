@@ -3,7 +3,6 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
 import { Sidebar } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/sidebar-nav';
@@ -89,7 +88,6 @@ export default function RootLayout({
         <FirebaseClientProvider>
           <AppLayout>{children}</AppLayout>
         </FirebaseClientProvider>
-        <Toaster />
       </body>
     </html>
   );
