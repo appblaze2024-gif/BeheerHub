@@ -30,6 +30,7 @@ import {
 } from '@/firebase';
 import { collection, doc, deleteDoc } from 'firebase/firestore';
 import { AfspraakDialog } from '@/components/afspraak-dialog';
+import { OrganisatieContactDialog } from '@/components/organisatie-contact-dialog';
 
 type Werksoort = {
   id: string;
@@ -62,6 +63,15 @@ export type Afspraak = {
   datum: string;
   tijd: string;
   notities: string;
+}
+
+export type OrganisatieContact = {
+  id?: string;
+  naam: string;
+  rol: string;
+  bedrijf: string;
+  telefoon: string;
+  email: string;
 }
 
 const EMPTY_PROJECT: Project = {
@@ -255,6 +265,93 @@ function AfsprakenTab({ projectId }: { projectId: string | undefined }) {
         onOpenChange={setIsDialogOpen}
         projectId={projectId}
         afspraak={selectedAfspraak}
+      />
+    </Card>
+  );
+}
+
+function OrganisatieTab({ projectId }: { projectId: string | undefined }) {
+  const firestore = useFirestore();
+  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [selectedContact, setSelectedContact] = React.useState<OrganisatieContact | undefined>();
+
+  const organisatieCollection = useMemoFirebase(() => {
+    if (!firestore || !projectId) return null;
+    return collection(firestore, 'projects', projectId, 'organisatie');
+  }, [firestore, projectId]);
+
+  const { data: contacten, isLoading } = useCollection<OrganisatieContact>(organisatieCollection);
+
+  const handleNewContact = () => {
+    setSelectedContact(undefined);
+    setIsDialogOpen(true);
+  };
+
+  const handleEditContact = (contact: OrganisatieContact) => {
+    setSelectedContact(contact);
+    setIsDialogOpen(true);
+  };
+
+  const handleDeleteContact = async (contactId: string) => {
+    if (!firestore || !projectId) return;
+    const contactRef = doc(firestore, 'projects', projectId, 'organisatie', contactId);
+    await deleteDoc(contactRef);
+  };
+
+  if (!projectId) {
+    return (
+      <div className="flex items-center justify-center h-full text-muted-foreground">
+        Selecteer eerst een project om contacten te bekijken of toe te voegen.
+      </div>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className='flex-row items-center justify-between'>
+        <CardTitle className="text-lg">Organisatie</CardTitle>
+        <Button size="sm" onClick={handleNewContact}><Plus className='mr-2 h-4 w-4' /> Nieuw Contact</Button>
+      </CardHeader>
+      <CardContent>
+        <div className="border rounded-md">
+          <div className="grid grid-cols-[2fr_2fr_2fr_1fr_1fr_auto] gap-x-4 p-4 font-semibold bg-muted">
+            <div>Naam</div>
+            <div>Rol</div>
+            <div>Bedrijf</div>
+            <div>Telefoon</div>
+            <div>Email</div>
+            <div />
+          </div>
+          {isLoading ? (
+            <div className='p-4 text-center text-muted-foreground'>Contacten laden...</div>
+          ) : contacten && contacten.length > 0 ? (
+            contacten.map(contact => (
+              <div key={contact.id} className="grid grid-cols-[2fr_2fr_2fr_1fr_1fr_auto] items-center gap-x-4 p-4 border-t">
+                <div className='truncate'>{contact.naam}</div>
+                <div className='truncate'>{contact.rol}</div>
+                <div className='truncate'>{contact.bedrijf}</div>
+                <div className='truncate'>{contact.telefoon}</div>
+                <div className='truncate'>{contact.email}</div>
+                <div className='flex items-center gap-2'>
+                  <Button variant='ghost' size='icon' onClick={() => handleEditContact(contact)}>
+                    <FilePenLine className='h-4 w-4' />
+                  </Button>
+                   <Button variant='ghost' size='icon' onClick={() => handleDeleteContact(contact.id!)}>
+                    <Trash2 className='h-4 w-4 text-destructive' />
+                  </Button>
+                </div>
+              </div>
+            ))
+          ) : (
+             <div className='p-4 text-center text-muted-foreground'>Nog geen contacten voor dit project.</div>
+          )}
+        </div>
+      </CardContent>
+      <OrganisatieContactDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        projectId={projectId}
+        contact={selectedContact}
       />
     </Card>
   );
@@ -462,6 +559,12 @@ export default function ProjectsPage() {
           className="flex-1 overflow-y-auto pt-6 pb-2 px-6"
         >
           <AfsprakenTab projectId={selectedProjectId} />
+        </TabsContent>
+        <TabsContent
+          value="organisatie"
+          className="flex-1 overflow-y-auto pt-6 pb-2 px-6"
+        >
+          <OrganisatieTab projectId={selectedProjectId} />
         </TabsContent>
       </Tabs>
     </div>

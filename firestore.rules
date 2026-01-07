@@ -60,6 +60,12 @@ service cloud.firestore {
        match /afspraken/{afspraakId} {
          allow read, write: if isSignedIn();
        }
+       /**
+        * @description Secures project-specific organization contacts. Any authenticated user can manage them.
+        */
+       match /organisatie/{contactId} {
+         allow read, write: if isSignedIn();
+       }
     }
     
     /**

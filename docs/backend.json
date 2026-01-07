@@ -170,6 +170,40 @@
         "datum",
         "tijd"
       ]
+    },
+    "OrganisatieContact": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "OrganisatieContact",
+      "type": "object",
+      "description": "Represents a contact person in the organization for a project.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the contact."
+        },
+        "naam": {
+          "type": "string",
+          "description": "Name of the contact person."
+        },
+        "rol": {
+          "type": "string",
+          "description": "Role of the contact person in the project."
+        },
+        "bedrijf": {
+          "type": "string",
+          "description": "Company of the contact person."
+        },
+        "telefoon": {
+          "type": "string",
+          "description": "Phone number of the contact person."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Email address of the contact person."
+        }
+      },
+      "required": ["id", "naam", "rol"]
     }
   },
   "auth": {
@@ -212,6 +246,26 @@
             {
               "name": "afspraakId",
               "description": "The ID of the appointment."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/projects/{projectId}/organisatie/{contactId}",
+        "definition": {
+          "entityName": "OrganisatieContact",
+          "schema": {
+            "$ref": "#/backend/entities/OrganisatieContact"
+          },
+          "description": "Stores contact persons for a specific project.",
+          "params": [
+            {
+              "name": "projectId",
+              "description": "The ID of the project."
+            },
+            {
+              "name": "contactId",
+              "description": "The ID of the contact."
             }
           ]
         }
