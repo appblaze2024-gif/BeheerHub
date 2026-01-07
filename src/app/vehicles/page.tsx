@@ -124,8 +124,8 @@ export default function VehiclesPage() {
               </Badge>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="relative aspect-video rounded-md overflow-hidden border">
+              <div className="flex flex-col md:flex-row gap-6">
+                <div className="relative w-full md:max-w-xs aspect-video rounded-md overflow-hidden border">
                   {mainImage && (
                     <Image
                       src={mainImage.imageUrl}
@@ -136,7 +136,7 @@ export default function VehiclesPage() {
                     />
                   )}
                 </div>
-                <div>
+                <div className="flex-1">
                   <h3 className="text-lg font-semibold mb-4">
                     Algemene gegevens
                   </h3>
