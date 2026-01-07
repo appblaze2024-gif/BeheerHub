@@ -91,7 +91,11 @@ export default function VehiclesPage() {
     } else if (selectedVehicle && vehicles) {
       // If the selected vehicle is no longer in the list (e.g., deleted),
       // select the first one, or null if the list is empty.
-      if (!vehicles.find((v) => v.id === selectedVehicle.id)) {
+      const updatedSelectedVehicle = vehicles.find((v) => v.id === selectedVehicle.id)
+      if (updatedSelectedVehicle) {
+        setSelectedVehicle(updatedSelectedVehicle);
+      }
+      else if (!vehicles.find((v) => v.id === selectedVehicle.id)) {
         setSelectedVehicle(vehicles.length > 0 ? vehicles[0] : null);
       }
     }
@@ -180,7 +184,8 @@ export default function VehiclesPage() {
                       {(vehicle.type || vehicle.bouwjaar) && (
                         <p className="text-xs text-muted-foreground">
                           {vehicle.type}
-                          {vehicle.bouwjaar && ` (${vehicle.bouwjaar})`}
+                          {vehicle.type && vehicle.bouwjaar && ' ' }
+                          {vehicle.bouwjaar && `(${vehicle.bouwjaar})`}
                         </p>
                       )}
                     </div>
@@ -248,7 +253,7 @@ export default function VehiclesPage() {
                           open={isVehicleDialogOpen}
                           onOpenChange={setIsVehicleDialogOpen}
                         >
-                          <Button variant="ghost" size="icon">
+                          <Button variant="ghost" size="icon" onClick={handleEditVehicle}>
                             <Pencil className="h-4 w-4" />
                           </Button>
                         </AddVehicleDialog>
@@ -506,3 +511,5 @@ export default function VehiclesPage() {
     </div>
   );
 }
+
+    
