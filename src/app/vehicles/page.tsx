@@ -13,6 +13,7 @@ import {
   Wrench,
 } from 'lucide-react';
 import { collection, doc, deleteDoc } from 'firebase/firestore';
+import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -296,6 +297,7 @@ export default function VehiclesPage() {
                             {selectedVehicle?.bouwjaar ?? '-'}
                           </span>
                         </div>
+
                         <div className="flex justify-between border-b pb-2">
                           <span className="text-muted-foreground">
                             Brandstof
@@ -309,7 +311,12 @@ export default function VehiclesPage() {
                             APK vervaldatum
                           </span>
                           <span className="font-medium">
-                            {selectedVehicle?.apk_vervaldatum ?? '-'}
+                            {selectedVehicle?.apk_vervaldatum
+                              ? format(
+                                  new Date(selectedVehicle.apk_vervaldatum),
+                                  'dd-MM-yyyy'
+                                )
+                              : '-'}
                           </span>
                         </div>
                       </div>
@@ -506,6 +513,3 @@ export default function VehiclesPage() {
     </div>
   );
 }
-
-    
-    
