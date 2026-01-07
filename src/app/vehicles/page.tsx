@@ -124,137 +124,137 @@ export default function VehiclesPage() {
             </ScrollArea>
           </CardContent>
         </Card>
-        <ScrollArea className="h-full">
-          <div className="flex flex-col gap-6 pr-4">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-2xl font-bold">{selectedVehicle.id}</h2>
-                    <p className="text-muted-foreground">
-                      {selectedVehicle.make} {selectedVehicle.model}
-                    </p>
-                  </div>
-                  <Badge variant="outline" className="text-green-600 border-green-600 bg-green-50 dark:bg-green-900/10">
-                    Actief
-                  </Badge>
+        <div className="flex flex-col gap-6 min-h-0">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold">{selectedVehicle.id}</h2>
+                  <p className="text-muted-foreground">
+                    {selectedVehicle.make} {selectedVehicle.model}
+                  </p>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="w-full h-64 relative rounded-md overflow-hidden border">
-                    <Image
-                      src="https://picsum.photos/seed/truck-side/400/300"
-                      alt="Vehicle"
-                      fill
-                      objectFit="cover"
-                      data-ai-hint="pickup truck side"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                     <div className="w-full h-[124px] relative rounded-md overflow-hidden border">
-                       <Image
-                         src="https://picsum.photos/seed/truck-front/200/150"
-                         alt="Vehicle front"
-                         fill
-                         objectFit="cover"
-                         data-ai-hint="pickup truck front"
-                       />
-                     </div>
-                     <div className="w-full h-[124px] relative rounded-md overflow-hidden border">
-                       <Image
-                         src="https://picsum.photos/seed/truck-back/200/150"
-                         alt="Vehicle back"
-                         fill
-                         objectFit="cover"
-                         data-ai-hint="pickup truck back"
-                       />
-                     </div>
-                     <div className="w-full h-[124px] relative rounded-md overflow-hidden border">
-                       <Image
-                         src="https://picsum.photos/seed/truck-top/200/150"
-                         alt="Vehicle top"
-                         fill
-                         objectFit="cover"
-                         data-ai-hint="pickup truck top"
-                       />
-                     </div>
-                      <div className="w-full h-[124px] relative rounded-md overflow-hidden border">
-                       <Image
-                         src="https://picsum.photos/seed/truck-bed/200/150"
-                         alt="Vehicle bed"
-                         fill
-                         objectFit="cover"
-                         data-ai-hint="pickup truck bed"
-                       />
-                     </div>
-                  </div>
+                <Badge variant="outline" className="text-green-600 border-green-600 bg-green-50 dark:bg-green-900/10">
+                  Actief
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-6">
+                <div className="w-full h-64 relative rounded-md overflow-hidden border">
+                  <Image
+                    src="https://picsum.photos/seed/truck-side/400/300"
+                    alt="Vehicle"
+                    fill
+                    objectFit="cover"
+                    data-ai-hint="pickup truck side"
+                  />
                 </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Algemene gegevens</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-muted-foreground">Kenteken</span>
-                    <span className="font-medium">{selectedVehicle.id}</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-muted-foreground">Voertuignummer</span>
-                    <span className="font-medium">
-                      {selectedVehicle.vehicleNumber}
-                    </span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-muted-foreground">Merk</span>
-                    <span className="font-medium">{selectedVehicle.make}</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-muted-foreground">Model</span>
-                    <span className="font-medium">{selectedVehicle.model}</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-muted-foreground">Type</span>
-                    <span className="font-medium">-</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-muted-foreground">Bouwjaar</span>
-                    <span className="font-medium">{selectedVehicle.year}</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-muted-foreground">Brandstof</span>
-                    <span className="font-medium">{selectedVehicle.fuel}</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-muted-foreground">APK vervaldatum</span>
-                    <span className="font-medium">
-                      {selectedVehicle.apkDate}
-                    </span>
-                  </div>
+                <div className="grid grid-cols-2 gap-2">
+                   <div className="w-full h-[124px] relative rounded-md overflow-hidden border">
+                     <Image
+                       src="https://picsum.photos/seed/truck-front/200/150"
+                       alt="Vehicle front"
+                       fill
+                       objectFit="cover"
+                       data-ai-hint="pickup truck front"
+                     />
+                   </div>
+                   <div className="w-full h-[124px] relative rounded-md overflow-hidden border">
+                     <Image
+                       src="https://picsum.photos/seed/truck-back/200/150"
+                       alt="Vehicle back"
+                       fill
+                       objectFit="cover"
+                       data-ai-hint="pickup truck back"
+                     />
+                   </div>
+                   <div className="w-full h-[124px] relative rounded-md overflow-hidden border">
+                     <Image
+                       src="https://picsum.photos/seed/truck-top/200/150"
+                       alt="Vehicle top"
+                       fill
+                       objectFit="cover"
+                       data-ai-hint="pickup truck top"
+                     />
+                   </div>
+                    <div className="w-full h-[124px] relative rounded-md overflow-hidden border">
+                     <Image
+                       src="https://picsum.photos/seed/truck-bed/200/150"
+                       alt="Vehicle bed"
+                       fill
+                       objectFit="cover"
+                       data-ai-hint="pickup truck bed"
+                     />
+                   </div>
                 </div>
-              </CardContent>
-            </Card>
-            <Tabs defaultValue="actions">
-              <TabsList>
-                <TabsTrigger value="actions">Acties</TabsTrigger>
-                <TabsTrigger value="maintenance">Onderhoud</TabsTrigger>
-                <TabsTrigger value="damage">Schade</TabsTrigger>
-                <TabsTrigger value="documents">Documenten</TabsTrigger>
-              </TabsList>
-              <TabsContent value="actions">
-                <Card>
-                  <CardHeader>
-                    <div className="flex justify-between items-center">
-                      <CardTitle>Acties</CardTitle>
-                      <Button>
-                        <Plus className="mr-2 h-4 w-4" /> Actie toevoegen
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Algemene gegevens</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-muted-foreground">Kenteken</span>
+                  <span className="font-medium">{selectedVehicle.id}</span>
+                </div>
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-muted-foreground">Voertuignummer</span>
+                  <span className="font-medium">
+                    {selectedVehicle.vehicleNumber}
+                  </span>
+                </div>
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-muted-foreground">Merk</span>
+                  <span className="font-medium">{selectedVehicle.make}</span>
+                </div>
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-muted-foreground">Model</span>
+                  <span className="font-medium">{selectedVehicle.model}</span>
+                </div>
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-muted-foreground">Type</span>
+                  <span className="font-medium">-</span>
+                </div>
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-muted-foreground">Bouwjaar</span>
+                  <span className="font-medium">{selectedVehicle.year}</span>
+                </div>
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-muted-foreground">Brandstof</span>
+                  <span className="font-medium">{selectedVehicle.fuel}</span>
+                </div>
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-muted-foreground">APK vervaldatum</span>
+                  <span className="font-medium">
+                    {selectedVehicle.apkDate}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Tabs defaultValue="actions" className="flex flex-col flex-1 min-h-0">
+            <TabsList>
+              <TabsTrigger value="actions">Acties</TabsTrigger>
+              <TabsTrigger value="maintenance">Onderhoud</TabsTrigger>
+              <TabsTrigger value="damage">Schade</TabsTrigger>
+              <TabsTrigger value="documents">Documenten</TabsTrigger>
+            </TabsList>
+            <TabsContent value="actions" className="flex-1 min-h-0">
+              <Card className="h-full flex flex-col">
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <CardTitle>Acties</CardTitle>
+                    <Button>
+                      <Plus className="mr-2 h-4 w-4" /> Actie toevoegen
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-1 min-h-0">
+                  <ScrollArea className="h-full">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -271,30 +271,30 @@ export default function VehiclesPage() {
                         </TableRow>
                       </TableBody>
                     </Table>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-               <TabsContent value="maintenance">
-                <Card>
-                  <CardHeader><CardTitle>Onderhoud</CardTitle></CardHeader>
-                  <CardContent><p className="text-center text-muted-foreground">Geen onderhoudsgegevens beschikbaar.</p></CardContent>
-                </Card>
-              </TabsContent>
-               <TabsContent value="damage">
-                <Card>
-                  <CardHeader><CardTitle>Schade</CardTitle></CardHeader>
-                  <CardContent><p className="text-center text-muted-foreground">Geen schadegevallen geregistreerd.</p></CardContent>
-                </Card>
-              </TabsContent>
-               <TabsContent value="documents">
-                <Card>
-                  <CardHeader><CardTitle>Documenten</CardTitle></CardHeader>
-                  <CardContent><p className="text-center text-muted-foreground">Geen documenten beschikbaar.</p></CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </div>
-        </ScrollArea>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </TabsContent>
+             <TabsContent value="maintenance">
+              <Card>
+                <CardHeader><CardTitle>Onderhoud</CardTitle></CardHeader>
+                <CardContent><p className="text-center text-muted-foreground">Geen onderhoudsgegevens beschikbaar.</p></CardContent>
+              </Card>
+            </TabsContent>
+             <TabsContent value="damage">
+              <Card>
+                <CardHeader><CardTitle>Schade</CardTitle></CardHeader>
+                <CardContent><p className="text-center text-muted-foreground">Geen schadegevallen geregistreerd.</p></CardContent>
+              </Card>
+            </TabsContent>
+             <TabsContent value="documents">
+              <Card>
+                <CardHeader><CardTitle>Documenten</CardTitle></CardHeader>
+                <CardContent><p className="text-center text-muted-foreground">Geen documenten beschikbaar.</p></CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
     </div>
   );
