@@ -1,3 +1,34 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "vehicle-side",
+      "description": "Side view of a white pickup truck.",
+      "imageUrl": "https://images.unsplash.com/photo-1605893477799-b99e3b8b93fe?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxwaWNrdXAlMjB0cnVja3xlbnwwfHx8fDE3Njc3NTg2OTh8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "pickup truck"
+    },
+    {
+      "id": "vehicle-front",
+      "description": "Front view of a white pickup truck.",
+      "imageUrl": "https://images.unsplash.com/photo-1624339024061-b435d9261c1d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxwaWNrdXAlMjB0cnVja3xlbnwwfHx8fDE3Njc3NTg2OTh8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "pickup truck"
+    },
+    {
+      "id": "vehicle-back",
+      "description": "Back view of a white pickup truck.",
+      "imageUrl": "https://images.unsplash.com/photo-1649793395985-967862a3b73f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxwaWNrdXAlMjB0cnVja3xlbnwwfHx8fDE3Njc3NTg2OTh8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "pickup truck"
+    },
+    {
+      "id": "vehicle-top",
+      "description": "Top view of a white pickup truck.",
+      "imageUrl": "https://images.unsplash.com/photo-1612057473117-3e16246121e6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8cGlja3VwJTIwdHJ1Y2t8ZW58MHx8fHwxNzY3NzU4Njk4fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "pickup truck"
+    },
+    {
+      "id": "vehicle-bed",
+      "description": "Bed of a white pickup truck.",
+      "imageUrl": "https://images.unsplash.com/photo-1764366795887-60097bb15e6a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHx0cnVjayUyMGJlZHxlbnwwfHx8fDE3Njc3ODczMjh8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "truck bed"
+    }
+  ]
 }
