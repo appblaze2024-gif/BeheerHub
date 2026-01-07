@@ -19,19 +19,21 @@ import {
   Bell,
   MessageSquare,
   Camera,
+  Home,
 } from "lucide-react";
 
 const menuItems = [
-  { href: "#", label: "Users", icon: Users },
-  { href: "#", label: "Projects", icon: ClipboardList },
-  { href: "#", label: "Reports", icon: FileText },
-  { href: "#", label: "Health", icon: HeartPulse },
-  { href: "#", label: "Tools", icon: Wrench },
-  { href: "#", label: "Location", icon: MapPin },
-  { href: "#", label: "Routes", icon: Route },
-  { href: "#", label: "Notifications", icon: Bell },
-  { href: "#", label: "Messages", icon: MessageSquare },
-  { href: "#", label: "Camera", icon: Camera },
+  { href: "/", label: "Dashboard", icon: Home },
+  { href: "/users", label: "Users", icon: Users },
+  { href: "/projects", label: "Projects", icon: ClipboardList },
+  { href: "/reports", label: "Reports", icon: FileText },
+  { href: "/health", label: "Health", icon: HeartPulse },
+  { href: "/tools", label: "Tools", icon: Wrench },
+  { href: "/location", label: "Location", icon: MapPin },
+  { href: "/routes", label: "Routes", icon: Route },
+  { href: "/notifications", label: "Notifications", icon: Bell },
+  { href: "/messages", label: "Messages", icon: MessageSquare },
+  { href: "/camera", label: "Camera", icon: Camera },
 ];
 
 export function SidebarNav() {
@@ -43,7 +45,7 @@ export function SidebarNav() {
         <SidebarMenu>
           {menuItems.map((item) => (
             <SidebarMenuItem key={item.label}>
-              <Link href={item.href} passHref>
+              <Link href={item.href}>
                 <SidebarMenuButton
                   asChild
                   isActive={pathname === item.href}
