@@ -21,6 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { VehicleImportDialog } from '@/components/vehicle-import-dialog';
+import { Separator } from '@/components/ui/separator';
 
 export default function VehiclesPage() {
   const firestore = useFirestore();
@@ -280,27 +281,19 @@ export default function VehiclesPage() {
                         </Button>
                       </div>
                     </CardHeader>
-                    <CardContent className="flex-1 min-h-0">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Omschrijving</TableHead>
-                            <TableHead>Type</TableHead>
-                            <TableHead>Datum</TableHead>
-                            <TableHead>Kosten</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          <TableRow>
-                            <TableCell
-                              colSpan={4}
-                              className="text-center h-24"
-                            >
-                              Nog geen onderhoud geregistreerd.
-                            </TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
+                    <CardContent className="flex-1 flex flex-col">
+                      <div className="px-1 text-sm text-muted-foreground">
+                        <div className="grid grid-cols-4 gap-4 py-2">
+                          <div>Omschrijving</div>
+                          <div>Type</div>
+                          <div>Datum</div>
+                          <div>Kosten</div>
+                        </div>
+                        <Separator />
+                      </div>
+                      <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
+                        Nog geen onderhoud geregistreerd.
+                      </div>
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -309,7 +302,7 @@ export default function VehiclesPage() {
                     <CardHeader>
                       <CardTitle>Schade</CardTitle>
                     </CardHeader>
-                    <CardContent className="flex-1 min-h-0 text-center text-muted-foreground">
+                    <CardContent className="flex-1 min-h-0 text-center text-muted-foreground flex items-center justify-center">
                       <p>
                         Geen schadegevallen geregistreerd.
                       </p>
@@ -321,7 +314,7 @@ export default function VehiclesPage() {
                     <CardHeader>
                       <CardTitle>Documenten</CardTitle>
                     </CardHeader>
-                    <CardContent className="flex-1 min-h-0 text-center text-muted-foreground">
+                    <CardContent className="flex-1 min-h-0 text-center text-muted-foreground flex items-center justify-center">
                       <p>
                         Geen documenten beschikbaar.
                       </p>
