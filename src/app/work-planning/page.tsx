@@ -172,9 +172,6 @@ export default function WorkPlanningPage() {
                       <Clock className="h-3 w-3" />
                       <span>0u 0m / {formatHours(getWeekContractHours(medewerker))}</span>
                     </div>
-                    <p className="text-xs text-green-600 font-semibold">
-                      +8u 0m
-                    </p>
                   </div>
                 </div>
                 {weekDays.map((day, index) => (
