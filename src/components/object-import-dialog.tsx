@@ -129,19 +129,26 @@ export function ObjectImportDialog({
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
-    if (!selectedFile) return;
+    if (!selectedFile) {
+      setStep(1);
+      return;
+    }
 
     setFile(selectedFile);
 
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result as string;
-      if (!text) return;
+      if (!text) {
+        setStep(1);
+        return;
+      };
       
       const parsedData = parseCSV(text);
       
       if (parsedData.length < 2) {
         console.error("CSV must have at least a header row and one data row.");
+        setStep(1);
         return;
       };
 
@@ -237,6 +244,8 @@ export function ObjectImportDialog({
                 }
             }
           }
+          
+          objectData['id'] = objectId;
 
           if (Object.keys(objectData).length > 0 && objectData.id) {
               const docRef = doc(objectsColRef, objectId);
@@ -302,14 +311,14 @@ export function ObjectImportDialog({
                   <Select
                     value={mapping[field] || ''}
                     onValueChange={(value) =>
-                      setMapping((prev) => ({ ...prev, [field]: value }))
+                      setMapping((prev) => ({ ...prev, [field]: value === '--ignore--' ? '' : value }))
                     }
                   >
                     <SelectTrigger id={`mapping-${field}`}>
                       <SelectValue placeholder="Selecteer een kolom" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">-- Negeer --</SelectItem>
+                      <SelectItem value="--ignore--">-- Negeer --</SelectItem>
                       {headers.map((header) => (
                         <SelectItem key={header} value={header}>
                           {header}
