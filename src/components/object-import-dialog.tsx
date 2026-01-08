@@ -47,6 +47,60 @@ const objectFields = [
   'vulgraad',
 ];
 
+// Simple but more robust CSV parser
+const parseCSV = (text: string): string[][] => {
+    const rows = [];
+    let currentRow = [];
+    let currentField = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+
+        if (inQuotes) {
+            if (char === '"') {
+                if (i + 1 < text.length && text[i + 1] === '"') {
+                    // Escaped quote
+                    currentField += '"';
+                    i++;
+                } else {
+                    inQuotes = false;
+                }
+            } else {
+                currentField += char;
+            }
+        } else {
+            if (char === '"') {
+                inQuotes = true;
+            } else if (char === ',') {
+                currentRow.push(currentField.trim());
+                currentField = '';
+            } else if (char === '\n' || char === '\r') {
+                if (currentField.length > 0 || currentRow.length > 0) {
+                    currentRow.push(currentField.trim());
+                    rows.push(currentRow);
+                }
+                currentRow = [];
+                currentField = '';
+                // Handle CRLF
+                if (char === '\r' && i + 1 < text.length && text[i + 1] === '\n') {
+                    i++;
+                }
+            } else {
+                currentField += char;
+            }
+        }
+    }
+    // Add the last field and row if they exist
+    if (currentField.length > 0 || currentRow.length > 0) {
+        currentRow.push(currentField.trim());
+        rows.push(currentRow);
+    }
+    
+    return rows;
+};
+
+
 export function ObjectImportDialog({
   children,
   open,
@@ -90,11 +144,12 @@ export function ObjectImportDialog({
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result as string;
-      const lines = text.split('\n').filter((line) => line.trim() !== '');
-      if (lines.length === 0) return;
+      const parsedData = parseCSV(text);
+      
+      if (parsedData.length === 0) return;
 
-      const fileHeaders = lines[0].split(',').map((h) => h.trim());
-      const fileData = lines.slice(1).map((line) => line.split(',').map((v) => v.trim()));
+      const fileHeaders = parsedData[0];
+      const fileData = parsedData.slice(1);
 
       setHeaders(fileHeaders);
       setData(fileData);
@@ -127,7 +182,6 @@ export function ObjectImportDialog({
 
     const objectsColRef = collection(firestore, 'objects');
     const batchSize = 500; // Firestore batch limit
-    const totalBatches = Math.ceil(data.length / batchSize);
 
     try {
       for (let i = 0; i < data.length; i += batchSize) {
@@ -137,6 +191,12 @@ export function ObjectImportDialog({
         chunk.forEach(row => {
             const objectData: Record<string, any> = {};
             let objectId = '';
+            
+            // Check if row has the same number of columns as headers
+            if (row.length !== headers.length) {
+              console.warn("Skipping malformed row:", row);
+              return;
+            }
 
             headers.forEach((header, index) => {
                 const objectField = Object.keys(mapping).find(key => mapping[key] === header);
