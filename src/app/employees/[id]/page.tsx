@@ -326,7 +326,7 @@ export default function EmployeeDetailPage() {
           <TabsTrigger value="rooster">Rooster</TabsTrigger>
           <TabsTrigger value="contracten">Contracten</TabsTrigger>
         </TabsList>
-        <TabsContent value="overzicht" className="flex-1 flex flex-col gap-6 pt-6">
+        <TabsContent value="overzicht" className="flex-1 flex flex-col gap-6">
           <Card>
             <CardHeader>
               <CardTitle>Persoonsgegevens</CardTitle>
@@ -390,15 +390,15 @@ export default function EmployeeDetailPage() {
             </Card>
           </div>
         </TabsContent>
-        <TabsContent value="afwezigheid" className="flex-1 pt-6">
+        <TabsContent value="afwezigheid" className="flex-1">
           <AfwezigheidTab />
         </TabsContent>
-        <TabsContent value="rooster" className="flex-1 pt-6">
+        <TabsContent value="rooster" className="flex-1">
           <div className="flex h-full items-center justify-center text-muted-foreground">
             Rooster is nog niet geïmplementeerd.
           </div>
         </TabsContent>
-        <TabsContent value="contracten" className="flex-1 pt-6">
+        <TabsContent value="contracten" className="flex-1">
           <div className="flex h-full items-center justify-center text-muted-foreground">
             Contracten zijn nog niet geïmplementeerd.
           </div>
