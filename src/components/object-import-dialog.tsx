@@ -44,6 +44,7 @@ const objectFields = [
   'straatnaam',
   'huisnummer',
   'waarschuwing',
+  'vulgraad',
 ];
 
 export function ObjectImportDialog({
@@ -141,7 +142,7 @@ export function ObjectImportDialog({
                 const objectField = Object.keys(mapping).find(key => mapping[key] === header);
                 if (objectField) {
                     const value = row[index];
-                     if (objectField === 'latitude' || objectField === 'longitude') {
+                     if (objectField === 'latitude' || objectField === 'longitude' || objectField === 'vulgraad') {
                         objectData[objectField] = parseFloat(value) || 0;
                     } else if (objectField === 'isActief') {
                         objectData[objectField] = value.toLowerCase() === 'true' || value === '1';
