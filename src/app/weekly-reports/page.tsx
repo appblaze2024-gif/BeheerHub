@@ -75,7 +75,7 @@ export default function WeeklyReportsPage() {
   const firestore = useFirestore();
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | undefined>();
   const [currentDate, setCurrentDate] = React.useState(new Date());
-  const isMobile = useIsMobile(1280);
+  const isMobile = useIsMobile(1024);
 
   const projectsCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -97,8 +97,6 @@ export default function WeeklyReportsPage() {
   const dienstenQuery = React.useMemo(() => {
     if (!firestore || !selectedProjectId) return null;
     
-    // These values are derived from `currentDate` which is stable between renders
-    // unless explicitly changed by user interaction.
     const startDateString = format(start, 'yyyy-MM-dd');
     const endDateString = format(end, 'yyyy-MM-dd');
 
@@ -107,7 +105,6 @@ export default function WeeklyReportsPage() {
       where('datum', '>=', startDateString),
       where('datum', '<=', endDateString)
     );
-    // The dependency array is now much more stable.
   }, [firestore, selectedProjectId, start, end]);
 
 
@@ -232,18 +229,17 @@ export default function WeeklyReportsPage() {
   return (
     <div className="flex flex-col flex-1 p-6 min-h-0 bg-gray-50 dark:bg-gray-900/50">
       <header className="bg-white dark:bg-card p-4 rounded-lg shadow-sm mb-6">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {renderActionButtons()}
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">Project:</span>
+          <div className="flex flex-wrap items-center justify-end gap-2 flex-1 min-w-0">
             <Select
                 value={selectedProjectId}
                 onValueChange={setSelectedProjectId}
                 disabled={isLoadingProjects}
             >
-              <SelectTrigger className="w-[250px]">
+              <SelectTrigger className="w-full min-w-[200px] md:w-auto md:max-w-xs">
                 <SelectValue placeholder="Selecteer een project" />
               </SelectTrigger>
               <SelectContent>
@@ -254,11 +250,10 @@ export default function WeeklyReportsPage() {
                 ))}
               </SelectContent>
             </Select>
-            <span className="text-sm font-medium">Weekcode:</span>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-md">
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={prevWeek}><ChevronLeft className='h-4 w-4'/></Button>
                 <Select value={weekNumber.toString()} onValueChange={handleWeekChange}>
-                <SelectTrigger className="w-[80px]">
+                <SelectTrigger className="w-[80px] h-8">
                     <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -268,7 +263,7 @@ export default function WeeklyReportsPage() {
                 </SelectContent>
                 </Select>
                 <Select value={currentYear.toString()} onValueChange={handleYearChange}>
-                <SelectTrigger className="w-[100px]">
+                <SelectTrigger className="w-[100px] h-8">
                     <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -279,10 +274,7 @@ export default function WeeklyReportsPage() {
                 </Select>
                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={nextWeek}><ChevronRight className='h-4 w-4'/></Button>
             </div>
-            <div className="flex items-center gap-2 text-sm font-medium bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-md">
-              <span>{format(start, 'dd-MM-yyyy')} - {format(end, 'dd-MM-yyyy')}</span>
-            </div>
-            <Input placeholder="Postnummer" className="w-[150px]" />
+            <Input placeholder="Postnummer" className="w-full md:w-auto h-10" />
           </div>
         </div>
       </header>
