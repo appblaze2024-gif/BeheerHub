@@ -18,6 +18,7 @@ import {
   MoreHorizontal,
   Info,
   Copy,
+  GanttChart,
 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 import { doc } from 'firebase/firestore';

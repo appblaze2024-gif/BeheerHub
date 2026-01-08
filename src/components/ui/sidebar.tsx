@@ -17,15 +17,20 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
+export interface SidebarProps extends React.ComponentProps<'div'> {
+    isCollapsed: boolean;
+}
+
 const Sidebar = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<'div'>
->(({ className, children, ...props }, ref) => {
+  SidebarProps
+>(({ className, children, isCollapsed, ...props }, ref) => {
   return (
     <div
       ref={ref}
       className={cn(
-        'flex flex-col h-full w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border',
+        'flex flex-col h-full bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-all duration-300 ease-in-out',
+        isCollapsed ? 'w-[52px]' : 'w-64',
         className
       )}
       {...props}
@@ -55,30 +60,44 @@ const SidebarInput = React.forwardRef<
 });
 SidebarInput.displayName = 'SidebarInput';
 
+interface SidebarHeaderProps extends React.ComponentProps<'div'> {
+    isCollapsed?: boolean;
+}
+
 const SidebarHeader = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<'div'>
->(({ className, ...props }, ref) => {
+  SidebarHeaderProps
+>(({ className, isCollapsed, ...props }, ref) => {
   return (
     <div
       ref={ref}
       data-sidebar="header"
-      className={cn('flex flex-col gap-2 p-2', className)}
+      className={cn(
+        'flex flex-col gap-2 p-2 min-h-[52px] items-center', 
+        !isCollapsed && 'items-start',
+        className)}
       {...props}
     />
   );
 });
 SidebarHeader.displayName = 'SidebarHeader';
 
+interface SidebarFooterProps extends React.ComponentProps<'div'> {
+    isCollapsed?: boolean;
+}
+
 const SidebarFooter = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<'div'>
->(({ className, ...props }, ref) => {
+  SidebarFooterProps
+>(({ className, isCollapsed, ...props }, ref) => {
   return (
     <div
       ref={ref}
       data-sidebar="footer"
-      className={cn('flex flex-col gap-2 p-2', className)}
+      className={cn(
+        'flex flex-col gap-2 p-2 mt-auto',
+        isCollapsed ? 'items-center' : '',
+        className)}
       {...props}
     />
   );

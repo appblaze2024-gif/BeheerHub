@@ -27,6 +27,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
+import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 const menuItems = [
   { href: '/', label: 'Dashboard', icon: Home },
@@ -43,7 +45,7 @@ const menuItems = [
   { href: '/issues', label: 'Meldingen', icon: Bell },
 ];
 
-export function SidebarNav() {
+export function SidebarNav({ isCollapsed }: { isCollapsed: boolean }) {
   const pathname = usePathname();
   const auth = useAuth();
 
@@ -62,20 +64,45 @@ export function SidebarNav() {
     },
   ];
 
+  const renderMenuItem = (item: any) => {
+    const content = (
+      <SidebarMenuButton
+        isActive={pathname === item.href}
+        className={cn('w-full', isCollapsed && 'justify-center')}
+        onClick={item.onClick}
+      >
+        <item.icon />
+        <span className={cn(isCollapsed && 'hidden')}>{item.label}</span>
+      </SidebarMenuButton>
+    );
+
+    const link = item.onClick ? (
+      content
+    ) : (
+      <Link href={item.href}>{content}</Link>
+    );
+
+    if (isCollapsed) {
+      return (
+        <TooltipProvider delayDuration={0}>
+            <Tooltip>
+                <TooltipTrigger asChild>{link}</TooltipTrigger>
+                <TooltipContent side="right">
+                    <p>{item.label}</p>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+      );
+    }
+    return link;
+  }
+
   return (
     <SidebarContent>
       <SidebarMenu>
         {menuItems.map((item) => (
           <SidebarMenuItem key={item.label}>
-            <Link href={item.href}>
-              <SidebarMenuButton
-                isActive={pathname === item.href}
-                tooltip={item.label}
-              >
-                <item.icon />
-                <span>{item.label}</span>
-              </SidebarMenuButton>
-            </Link>
+            {renderMenuItem(item)}
           </SidebarMenuItem>
         ))}
       </SidebarMenu>
@@ -83,26 +110,7 @@ export function SidebarNav() {
       <SidebarMenu className="mt-auto">
         {bottomMenuItems.map((item) => (
           <SidebarMenuItem key={item.label}>
-            {item.onClick ? (
-              <SidebarMenuButton
-                onClick={item.onClick}
-                tooltip={item.label}
-                className="w-full"
-              >
-                <item.icon />
-                <span>{item.label}</span>
-              </SidebarMenuButton>
-            ) : (
-              <Link href={item.href}>
-                <SidebarMenuButton
-                  isActive={pathname === item.href}
-                  tooltip={item.label}
-                >
-                  <item.icon />
-                  <span>{item.label}</span>
-                </SidebarMenuButton>
-              </Link>
-            )}
+            {renderMenuItem(item)}
           </SidebarMenuItem>
         ))}
       </SidebarMenu>
