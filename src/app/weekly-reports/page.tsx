@@ -105,7 +105,7 @@ export default function WeeklyReportsPage() {
       where('datum', '>=', startDateString),
       where('datum', '<=', endDateString)
     );
-  }, [firestore, selectedProjectId, start, end]);
+  }, [firestore, selectedProjectId, currentDate]);
 
 
   const { data: diensten, isLoading: isLoadingDiensten } = useCollection<Dienst>(dienstenQuery);
@@ -229,11 +229,11 @@ export default function WeeklyReportsPage() {
   return (
     <div className="flex flex-col flex-1 p-6 min-h-0 bg-gray-50 dark:bg-gray-900/50">
       <header className="bg-white dark:bg-card p-4 rounded-lg shadow-sm mb-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 flex-shrink-0">
             {renderActionButtons()}
           </div>
-          <div className="flex flex-wrap items-center justify-end gap-2 flex-1 min-w-0">
+          <div className="flex items-center justify-end gap-2 flex-1 min-w-0">
             <Select
                 value={selectedProjectId}
                 onValueChange={setSelectedProjectId}
@@ -349,3 +349,5 @@ export default function WeeklyReportsPage() {
     </div>
   );
 }
+
+    
