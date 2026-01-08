@@ -159,13 +159,24 @@ export function ObjectImportDialog({
       const newMapping: Record<string, string> = {};
       const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/gi, '');
       
+      const specialMappings: Record<string, string[]> = {
+        latitude: ['lat', 'latitude'],
+        longitude: ['lon', 'long', 'longitude']
+      };
+
       objectFields.forEach(field => {
         const normalizedField = normalize(field);
-        const foundHeader = fileHeaders.find(header => normalize(header) === normalizedField);
-        if (foundHeader) {
-          newMapping[field] = foundHeader;
+        const aliases = specialMappings[field] ? specialMappings[field].map(normalize) : [normalizedField];
+
+        for (const alias of aliases) {
+            const foundHeader = fileHeaders.find(header => normalize(header) === alias);
+            if (foundHeader) {
+                newMapping[field] = foundHeader;
+                break; // Stop after first match
+            }
         }
       });
+
       setMapping(newMapping);
       setStep(2);
     };
