@@ -53,6 +53,13 @@ service cloud.firestore {
      */
     match /projects/{projectId} {
        allow read, write: if isSignedIn();
+       
+       /**
+        * @description Secures project-specific shifts. Any authenticated user can manage them.
+        */
+       match /diensten/{dienstId} {
+         allow read, write: if isSignedIn();
+       }
 
        /**
         * @description Secures project-specific files. Any authenticated user can manage them.
@@ -144,7 +151,7 @@ service cloud.firestore {
     
     /**
      * @description Secures vehicle-related subcollections like actions, maintenance, and damages.
-     *   Any authenticated user can read and write to these collections, facilitating
+     *   Any authenticated user can read and write to these collections, a
      *   collaborative management of vehicle data.
      */
     match /voertuigen/{vehicleId}/{subcollection}/{docId} {

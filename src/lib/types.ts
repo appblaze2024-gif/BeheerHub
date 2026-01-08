@@ -20,7 +20,6 @@ export type Medewerker = {
     maandag?: number;
     dinsdag?: number;
     woensdag?: number;
-    woensdag?: number;
     donderdag?: number;
     vrijdag?: number;
     zaterdag?: number;
@@ -40,3 +39,19 @@ export type Medewerker = {
   bankrekening?: string;
   personeelsnummer?: string;
 };
+
+export type Dienst = {
+    id: string;
+    medewerkerId: string;
+    projectId: string;
+    werksoort: string;
+    starttijd: string;
+    eindtijd: string;
+    datum: string; 
+    onbetaaldePauze: number;
+    verbergEindtijd: boolean;
+    herhaalDienst: boolean;
+    goedkeuringVereist: boolean;
+    informeerMedewerkers: boolean;
+    voertuigId: string | null;
+}

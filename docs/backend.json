@@ -331,6 +331,27 @@
         }
       },
       "required": ["voornaam", "achternaam"]
+    },
+     "Dienst": {
+      "title": "Dienst",
+      "type": "object",
+      "description": "Represents a single shift or service for an employee on a project.",
+      "properties": {
+        "id": { "type": "string" },
+        "medewerkerId": { "type": "string" },
+        "projectId": { "type": "string" },
+        "werksoort": { "type": "string" },
+        "starttijd": { "type": "string", "format": "time" },
+        "eindtijd": { "type": "string", "format": "time" },
+        "datum": { "type": "string", "format": "date" },
+        "onbetaaldePauze": { "type": "number", "description": "Unpaid break in minutes." },
+        "verbergEindtijd": { "type": "boolean" },
+        "herhaalDienst": { "type": "boolean" },
+        "goedkeuringVereist": { "type": "boolean" },
+        "informeerMedewerkers": { "type": "boolean" },
+        "voertuigId": { "type": ["string", "null"] }
+      },
+      "required": ["medewerkerId", "projectId", "werksoort", "starttijd", "eindtijd", "datum"]
     }
   },
   "auth": {
@@ -354,6 +375,18 @@
               "name": "projectId",
               "description": "The ID of the project."
             }
+          ]
+        }
+      },
+       {
+        "path": "/projects/{projectId}/diensten/{dienstId}",
+        "definition": {
+          "entityName": "Dienst",
+          "schema": { "$ref": "#/backend/entities/Dienst" },
+          "description": "Stores all shifts for a specific project.",
+          "params": [
+            { "name": "projectId", "description": "The ID of the project." },
+            { "name": "dienstId", "description": "The ID of the shift." }
           ]
         }
       },

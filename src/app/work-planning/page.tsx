@@ -9,9 +9,10 @@ import {
   format,
   add,
   sub,
+  isSameDay,
 } from 'date-fns';
 import { nl } from 'date-fns/locale';
-import { collection } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
@@ -28,7 +29,9 @@ import {
   useFirestore,
   useMemoFirebase,
 } from '@/firebase';
-import type { Medewerker } from '@/lib/types';
+import type { Medewerker, Dienst } from '@/lib/types';
+import { DienstToevoegenDialog } from '@/components/dienst-toevoegen-dialog';
+import { Badge } from '@/components/ui/badge';
 
 const getInitials = (firstName?: string, lastName?: string) => {
     const firstInitial = firstName?.[0] || '';
@@ -37,8 +40,7 @@ const getInitials = (firstName?: string, lastName?: string) => {
 };
 
 const getWeekContractHours = (medewerker: Medewerker): number => {
-    if (!medewerker.urenPerDag) {
-      // Default to 40 hours if not specified
+    if (!medewerker || !medewerker.urenPerDag) {
       return 40;
     }
     const { maandag = 0, dinsdag = 0, woensdag = 0, donderdag = 0, vrijdag = 0, zaterdag = 0, zondag = 0 } = medewerker.urenPerDag;
@@ -55,11 +57,19 @@ type Project = {
   id: string;
   projectnaam: string;
   projectnummer: string;
+  werksoorten?: {id: string, werksoort: string}[];
 };
+
+type DialogState = {
+  open: boolean;
+  medewerker?: Medewerker;
+  datum?: Date;
+}
 
 export default function WorkPlanningPage() {
   const [currentDate, setCurrentDate] = React.useState(new Date());
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | undefined>();
+  const [dialogState, setDialogState] = React.useState<DialogState>({ open: false });
   const firestore = useFirestore();
 
   const medewerkersCollection = useMemoFirebase(() => {
@@ -80,15 +90,36 @@ export default function WorkPlanningPage() {
 
   const start = startOfWeek(currentDate, { weekStartsOn: 1 });
   const end = endOfWeek(currentDate, { weekStartsOn: 1 });
+  
+  const dienstenQuery = useMemoFirebase(() => {
+    if (!firestore || !selectedProjectId) return null;
+    return query(
+        collection(firestore, 'projects', selectedProjectId, 'diensten'),
+        where('datum', '>=', format(start, 'yyyy-MM-dd')),
+        where('datum', '<=', format(end, 'yyyy-MM-dd'))
+    );
+  }, [firestore, selectedProjectId, start, end]);
+
+  const { data: diensten, isLoading: isLoadingDiensten } = useCollection<Dienst>(dienstenQuery);
+  
+
   const weekDays = eachDayOfInterval({ start, end });
 
   const prevWeek = () => setCurrentDate(sub(currentDate, { weeks: 1 }));
   const nextWeek = () => setCurrentDate(add(currentDate, { weeks: 1 }));
+  
+  const openDialog = (medewerker: Medewerker, datum: Date) => {
+    setDialogState({ open: true, medewerker, datum });
+  }
 
   React.useEffect(() => {
     if (!selectedProjectId && projects && projects.length > 0) {
       setSelectedProjectId(projects[0].id);
     }
+  }, [projects, selectedProjectId]);
+  
+  const selectedProject = React.useMemo(() => {
+    return projects?.find(p => p.id === selectedProjectId);
   }, [projects, selectedProjectId]);
 
   return (
@@ -174,21 +205,40 @@ export default function WorkPlanningPage() {
                     </div>
                   </div>
                 </div>
-                {weekDays.map((day, index) => (
-                  <div
-                    key={day.toISOString()}
-                    className="group relative p-2 border-b border-r min-h-[80px]"
-                  >
-                    <Button variant="ghost" size="icon" className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Plus className="h-5 w-5" />
-                    </Button>
-                  </div>
-                ))}
+                {weekDays.map((day) => {
+                  const dienstenForDay = diensten?.filter(d => 
+                      d.medewerkerId === medewerker.id && 
+                      isSameDay(new Date(d.datum), day)
+                  );
+                  return (
+                    <div
+                        key={day.toISOString()}
+                        className="group relative p-2 border-b border-r min-h-[80px] flex flex-col gap-1"
+                    >
+                        {dienstenForDay?.map(dienst => (
+                            <Badge key={dienst.id} variant="secondary" className="w-full justify-start text-left font-normal truncate py-1">
+                                <span className='font-semibold mr-1'>{dienst.starttijd}</span> {dienst.werksoort}
+                            </Badge>
+                        ))}
+                        <Button variant="ghost" size="icon" className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => openDialog(medewerker, day)}>
+                          <Plus className="h-5 w-5" />
+                        </Button>
+                    </div>
+                )})}
               </React.Fragment>
             ))
           )}
         </div>
       </div>
+      {dialogState.open && selectedProject && (
+        <DienstToevoegenDialog 
+            open={dialogState.open}
+            onOpenChange={(open) => setDialogState({ ...dialogState, open })}
+            medewerker={dialogState.medewerker!}
+            datum={dialogState.datum!}
+            project={selectedProject}
+        />
+      )}
     </div>
   );
 }
