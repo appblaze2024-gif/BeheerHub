@@ -193,15 +193,15 @@ export function ObjectImportDialog({
     setImportProgress(0);
 
     const headerIndexMap = new Map(headers.map((h, i) => [h, i]));
-    const fieldToIndexMap = new Map<string, number>();
-    for (const field in mapping) {
-        const csvHeader = mapping[field];
+    const fieldMapping: Record<string, number> = {};
+    for (const objectField in mapping) {
+        const csvHeader = mapping[objectField];
         if (csvHeader && headerIndexMap.has(csvHeader)) {
-            fieldToIndexMap.set(field, headerIndexMap.get(csvHeader)!);
+            fieldMapping[objectField] = headerIndexMap.get(csvHeader)!;
         }
     }
 
-    if (!fieldToIndexMap.has('id')) {
+    if (!('id' in fieldMapping)) {
         console.error("ID column mapping is essential for import.");
         setIsImporting(false);
         return;
@@ -216,12 +216,9 @@ export function ObjectImportDialog({
         const chunk = data.slice(i, i + batchSize);
 
         chunk.forEach(row => {
-          if (row.length < headers.length) {
-            console.warn("Skipping malformed row:", row);
-            return;
-          }
-          
-          const objectId = row[fieldToIndexMap.get('id')!];
+          const idIndex = fieldMapping['id'];
+          const objectId = row[idIndex];
+
           if (!objectId) {
             console.warn("Skipping row with empty ID:", row);
             return;
@@ -229,7 +226,8 @@ export function ObjectImportDialog({
 
           const objectData: Record<string, any> = {};
 
-          for(const [field, index] of fieldToIndexMap.entries()) {
+          for(const field in fieldMapping) {
+            const index = fieldMapping[field];
             const value = row[index];
 
             if (value !== undefined && value !== '') {
