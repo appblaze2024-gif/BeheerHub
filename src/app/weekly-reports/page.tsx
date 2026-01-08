@@ -91,9 +91,7 @@ export default function WeeklyReportsPage() {
 
   const start = startOfWeek(currentDate, { weekStartsOn: 1 });
   const end = endOfWeek(currentDate, { weekStartsOn: 1 });
-  const weekNumber = getISOWeek(currentDate);
-  const currentYear = getYear(currentDate);
-
+  
   const dienstenQuery = React.useMemo(() => {
     if (!firestore || !selectedProjectId) return null;
 
@@ -110,6 +108,9 @@ export default function WeeklyReportsPage() {
 
   const { data: diensten, isLoading: isLoadingDiensten } = useCollection<Dienst>(dienstenQuery);
   
+  const weekNumber = getISOWeek(currentDate);
+  const currentYear = getYear(currentDate);
+
   const handleWeekChange = (week: string) => {
     const newDate = setISOWeek(currentDate, parseInt(week));
     setCurrentDate(newDate);
@@ -283,55 +284,55 @@ export default function WeeklyReportsPage() {
         <Table className="min-w-full border-collapse">
           <TableHeader className="bg-gray-100/50 dark:bg-gray-800/20 sticky top-0 z-10">
             <TableRow>
-              <TableHead className="w-[100px] p-2 border-b border-r">Postnummer</TableHead>
-              <TableHead className="w-[250px] p-2 border-b border-r">Omschrijving</TableHead>
-              <TableHead className="p-2 border-b border-r">Eenheid</TableHead>
-              <TableHead className="p-2 border-b border-r">Calculatie uren</TableHead>
-              <TableHead className="p-2 border-b border-r">Prijs per 1h</TableHead>
-              <TableHead className="p-2 border-b border-r">Tot vorige periode</TableHead>
-              <TableHead className="p-2 border-b border-r bg-yellow-100/50 dark:bg-yellow-900/20">In week</TableHead>
-              <TableHead className="p-2 border-b border-r">t/m periode</TableHead>
-              <TableHead className="p-2 border-b border-r">Restant</TableHead>
-              <TableHead className="p-2 border-b border-r">% Gereed</TableHead>
-              <TableHead className="p-2 border-b border-r bg-yellow-100/50 dark:bg-yellow-900/20 text-right">Totaal in periode</TableHead>
-              <TableHead className="p-2 border-b text-right">totaal t/m week</TableHead>
+              <TableHead className="w-[100px] p-1 border-b border-r">Postnummer</TableHead>
+              <TableHead className="w-[250px] p-1 border-b border-r">Omschrijving</TableHead>
+              <TableHead className="p-1 border-b border-r">Eenheid</TableHead>
+              <TableHead className="p-1 border-b border-r">Calculatie uren</TableHead>
+              <TableHead className="p-1 border-b border-r">Prijs per 1h</TableHead>
+              <TableHead className="p-1 border-b border-r">Tot vorige periode</TableHead>
+              <TableHead className="p-1 border-b border-r bg-yellow-100/50 dark:bg-yellow-900/20">In week</TableHead>
+              <TableHead className="p-1 border-b border-r">t/m periode</TableHead>
+              <TableHead className="p-1 border-b border-r">Restant</TableHead>
+              <TableHead className="p-1 border-b border-r">% Gereed</TableHead>
+              <TableHead className="p-1 border-b border-r bg-yellow-100/50 dark:bg-yellow-900/20 text-right">Totaal in periode</TableHead>
+              <TableHead className="p-1 border-b text-right">totaal t/m week</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoadingProjects || (isLoadingDiensten && !reportData.length && selectedProjectId) ? (
                 <TableRow>
-                    <TableCell colSpan={12} className="text-center h-24 p-2">Rapportgegevens laden...</TableCell>
+                    <TableCell colSpan={12} className="text-center h-24 p-1">Rapportgegevens laden...</TableCell>
                 </TableRow>
             ) : reportData.length > 0 ? (
               reportData.map((item, index) => (
                 <TableRow key={index} className="h-auto">
-                  <TableCell className="p-2 border-b border-r">{item.postnummer}</TableCell>
-                  <TableCell className="p-2 border-b border-r">{item.omschrijving}</TableCell>
-                  <TableCell className="p-2 border-b border-r">{item.eenheid}</TableCell>
-                  <TableCell className="p-2 border-b border-r">
+                  <TableCell className="p-1 border-b border-r">{item.postnummer}</TableCell>
+                  <TableCell className="p-1 border-b border-r">{item.omschrijving}</TableCell>
+                  <TableCell className="p-1 border-b border-r">{item.eenheid}</TableCell>
+                  <TableCell className="p-1 border-b border-r">
                     <Input
                       type="number"
                       defaultValue={item.calculatieUren.toFixed(2)}
                       className="w-24 h-8"
                     />
                   </TableCell>
-                  <TableCell className="p-2 border-b border-r">{item.prijsPer1h.toFixed(2)}</TableCell>
-                  <TableCell className="p-2 border-b border-r">{item.totVorigePeriode.toFixed(2)}</TableCell>
-                  <TableCell className="p-2 border-b border-r bg-yellow-100/50 dark:bg-yellow-900/20 font-medium">{item.inWeek.toFixed(2)}</TableCell>
-                  <TableCell className="p-2 border-b border-r">{item.tmPeriode.toFixed(2)}</TableCell>
-                  <TableCell className={`p-2 border-b border-r ${item.restant < 0 ? "text-red-600" : ""}`}>{item.restant.toFixed(2)}</TableCell>
-                  <TableCell className="p-2 border-b border-r">{item.procentGereed.toFixed(1)}%</TableCell>
-                  <TableCell className="p-2 border-b border-r bg-yellow-100/50 dark:bg-yellow-900/20 text-right font-medium">
+                  <TableCell className="p-1 border-b border-r">{item.prijsPer1h.toFixed(2)}</TableCell>
+                  <TableCell className="p-1 border-b border-r">{item.totVorigePeriode.toFixed(2)}</TableCell>
+                  <TableCell className="p-1 border-b border-r bg-yellow-100/50 dark:bg-yellow-900/20 font-medium">{item.inWeek.toFixed(2)}</TableCell>
+                  <TableCell className="p-1 border-b border-r">{item.tmPeriode.toFixed(2)}</TableCell>
+                  <TableCell className={`p-1 border-b border-r ${item.restant < 0 ? "text-red-600" : ""}`}>{item.restant.toFixed(2)}</TableCell>
+                  <TableCell className="p-1 border-b border-r">{item.procentGereed.toFixed(1)}%</TableCell>
+                  <TableCell className="p-1 border-b border-r bg-yellow-100/50 dark:bg-yellow-900/20 text-right font-medium">
                     {formatCurrency(item.totaalInPeriode)}
                   </TableCell>
-                  <TableCell className="p-2 border-b text-right font-medium">
+                  <TableCell className="p-1 border-b text-right font-medium">
                     {formatCurrency(item.totaalTmWeek)}
                   </TableCell>
                 </TableRow>
               ))
             ) : (
                  <TableRow>
-                    <TableCell colSpan={12} className="text-center h-24 p-2">
+                    <TableCell colSpan={12} className="text-center h-24 p-1">
                         { selectedProject ? "Geen werksoorten gevonden voor dit project. Voeg werksoorten toe op de projectpagina." : "Selecteer een project om de weekstaat te bekijken." }
                     </TableCell>
                 </TableRow>
@@ -339,9 +340,9 @@ export default function WeeklyReportsPage() {
           </TableBody>
           <TableFooter className="sticky bottom-0 bg-gray-100/50 dark:bg-gray-800/20">
             <TableRow className="h-auto">
-              <TableCell colSpan={10} className="p-2 border-r" />
-              <TableCell className="p-2 border-r bg-yellow-100/50 dark:bg-yellow-900/20 text-right font-bold">Subtotaal</TableCell>
-              <TableCell className="p-2 text-right font-bold">{formatCurrency(subtotal)}</TableCell>
+              <TableCell colSpan={10} className="p-1 border-r" />
+              <TableCell className="p-1 border-r bg-yellow-100/50 dark:bg-yellow-900/20 text-right font-bold">Subtotaal</TableCell>
+              <TableCell className="p-1 text-right font-bold">{formatCurrency(subtotal)}</TableCell>
             </TableRow>
           </TableFooter>
         </Table>
