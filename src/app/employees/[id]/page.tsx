@@ -119,23 +119,25 @@ export default function EmployeeDetailPage() {
             <CardHeader>
               <CardTitle>Persoonsgegevens</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 gap-x-12 md:grid-cols-2">
+            <CardContent className="grid grid-cols-1 gap-x-12 md:grid-cols-3">
               <div>
                 <DetailField label="Voornaam" value={medewerker.voornaam} onEdit={() => handleEdit('voornaam')} />
                 <DetailField label="Tussenvoegsel" value={medewerker.tussenvoegsel} onEdit={() => handleEdit('tussenvoegsel')} />
                 <DetailField label="Achternaam" value={medewerker.achternaam} onEdit={() => handleEdit('achternaam')} />
+                <DetailField label="Geboortedatum" value={medewerker.geboortedatum} onEdit={() => handleEdit('geboortedatum')} />
+                <DetailField label="Geboorteplaats" value={medewerker.geboorteplaats} onEdit={() => handleEdit('geboorteplaats')} />
+              </div>
+              <div>
                 <DetailField label="Telefoonnr." value={medewerker.telefoonnummer} onEdit={() => handleEdit('telefoonnummer')} />
                 <DetailField label="Mobiel nr." value={medewerker.mobiel} onEdit={() => handleEdit('mobiel')} />
                 <DetailField label="Nood nr." value={medewerker.noodnummer} onEdit={() => handleEdit('noodnummer')} />
-                <DetailField label="Geboortedatum" value={medewerker.geboortedatum} onEdit={() => handleEdit('geboortedatum')} />
-                <DetailField label="Geboorteplaats" value={medewerker.geboorteplaats} onEdit={() => handleEdit('geboorteplaats')} />
-                <DetailField label="Nationaliteit" value={medewerker.nationaliteit} onEdit={() => handleEdit('nationaliteit')} />
-                <DetailField label="BSN" value={medewerker.bsn} onEdit={() => handleEdit('bsn')} />
-              </div>
-              <div>
                 <DetailField label="Adres" value={medewerker.adres} onEdit={() => handleEdit('adres')} />
                 <DetailField label="Postcode" value={medewerker.postcode} onEdit={() => handleEdit('postcode')} />
                 <DetailField label="Plaats" value={medewerker.plaats} onEdit={() => handleEdit('plaats')} />
+              </div>
+              <div>
+                <DetailField label="Nationaliteit" value={medewerker.nationaliteit} onEdit={() => handleEdit('nationaliteit')} />
+                <DetailField label="BSN" value={medewerker.bsn} onEdit={() => handleEdit('bsn')} />
                 <DetailField label="ID/Paspoort nr." value={medewerker.paspoortnummer} onEdit={() => handleEdit('paspoortnummer')} />
                 <DetailField label="Bankrekening" value={medewerker.bankrekening} onEdit={() => handleEdit('bankrekening')} />
                 <DetailField label="Datum in dienst" value={medewerker.indiensttreding} onEdit={() => handleEdit('indiensttreding')} />
