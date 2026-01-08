@@ -8,37 +8,96 @@ import {
   Plus,
   Search,
   FileText,
+  Check,
+  X,
 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
-import { doc } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import {
+  useDoc,
+  useFirestore,
+  useMemoFirebase,
+  updateDocumentNonBlocking,
+} from '@/firebase';
 import type { Medewerker } from '@/lib/types';
 import { MedewerkerDialog } from '@/components/medewerker-dialog';
 
 function DetailField({
   label,
   value,
-  onEdit,
+  fieldName,
+  medewerkerId,
 }: {
   label: string;
   value: string | undefined | null;
-  onEdit: () => void;
+  fieldName: keyof Medewerker;
+  medewerkerId: string;
 }) {
+  const firestore = useFirestore();
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [currentValue, setCurrentValue] = React.useState(value || '');
+
+  React.useEffect(() => {
+    setCurrentValue(value || '');
+  }, [value]);
+
+  const handleSave = async () => {
+    if (!firestore || !medewerkerId) return;
+    const medewerkerRef = doc(firestore, 'medewerkers', medewerkerId);
+
+    try {
+      await updateDocumentNonBlocking(medewerkerRef, {
+        [fieldName]: currentValue,
+      });
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Fout bij bijwerken:', error);
+    }
+  };
+
+  const handleCancel = () => {
+    setCurrentValue(value || '');
+    setIsEditing(false);
+  };
+
   return (
-    <div className="flex items-center justify-between border-b py-3">
-      <div>
+    <div className="flex items-center justify-between border-b py-2">
+      <div className="flex-1">
         <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="text-sm font-medium">{value || '-'}</p>
+        {isEditing ? (
+          <Input
+            value={currentValue}
+            onChange={(e) => setCurrentValue(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+            className="h-8 text-sm"
+            autoFocus
+          />
+        ) : (
+          <p className="text-sm font-medium min-h-[2rem] flex items-center">{currentValue || '-'}</p>
+        )}
       </div>
-      <Button variant="ghost" size="icon" onClick={onEdit}>
-        <Pencil className="h-4 w-4 text-muted-foreground" />
-      </Button>
+      <div className="flex items-center gap-1 ml-2">
+        {isEditing ? (
+          <>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleSave}>
+              <Check className="h-4 w-4 text-green-600" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCancel}>
+              <X className="h-4 w-4 text-destructive" />
+            </Button>
+          </>
+        ) : (
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsEditing(true)}>
+            <Pencil className="h-4 w-4 text-muted-foreground" />
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
@@ -48,7 +107,6 @@ export default function EmployeeDetailPage() {
   const params = useParams();
   const firestore = useFirestore();
   const id = params.id as string;
-  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
 
   const employeeRef = useMemoFirebase(() => {
     if (!firestore || !id) return null;
@@ -61,10 +119,6 @@ export default function EmployeeDetailPage() {
     const firstInitial = firstName?.[0] || '';
     const lastInitial = lastName?.[0] || '';
     return `${firstInitial}${lastInitial}`.toUpperCase();
-  };
-
-  const handleEdit = () => {
-    setIsDialogOpen(true);
   };
 
   if (isLoading) {
@@ -122,27 +176,27 @@ export default function EmployeeDetailPage() {
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-x-12 md:grid-cols-3">
               <div>
-                <DetailField label="Voornaam" value={medewerker.voornaam} onEdit={handleEdit} />
-                <DetailField label="Tussenvoegsel" value={medewerker.tussenvoegsel} onEdit={handleEdit} />
-                <DetailField label="Achternaam" value={medewerker.achternaam} onEdit={handleEdit} />
-                <DetailField label="Geboortedatum" value={medewerker.geboortedatum} onEdit={handleEdit} />
-                <DetailField label="Geboorteplaats" value={medewerker.geboorteplaats} onEdit={handleEdit} />
+                <DetailField label="Voornaam" value={medewerker.voornaam} fieldName="voornaam" medewerkerId={id} />
+                <DetailField label="Tussenvoegsel" value={medewerker.tussenvoegsel} fieldName="tussenvoegsel" medewerkerId={id} />
+                <DetailField label="Achternaam" value={medewerker.achternaam} fieldName="achternaam" medewerkerId={id} />
+                <DetailField label="Geboortedatum" value={medewerker.geboortedatum} fieldName="geboortedatum" medewerkerId={id} />
+                <DetailField label="Geboorteplaats" value={medewerker.geboorteplaats} fieldName="geboorteplaats" medewerkerId={id} />
               </div>
               <div>
-                <DetailField label="Telefoonnr." value={medewerker.telefoonnummer} onEdit={handleEdit} />
-                <DetailField label="Mobiel nr." value={medewerker.mobiel} onEdit={handleEdit} />
-                <DetailField label="Nood nr." value={medewerker.noodnummer} onEdit={handleEdit} />
-                <DetailField label="Adres" value={medewerker.adres} onEdit={handleEdit} />
-                <DetailField label="Postcode" value={medewerker.postcode} onEdit={handleEdit} />
-                <DetailField label="Plaats" value={medewerker.plaats} onEdit={handleEdit} />
+                <DetailField label="Telefoonnr." value={medewerker.telefoonnummer} fieldName="telefoonnummer" medewerkerId={id} />
+                <DetailField label="Mobiel nr." value={medewerker.mobiel} fieldName="mobiel" medewerkerId={id} />
+                <DetailField label="Nood nr." value={medewerker.noodnummer} fieldName="noodnummer" medewerkerId={id} />
+                <DetailField label="Adres" value={medewerker.adres} fieldName="adres" medewerkerId={id} />
+                <DetailField label="Postcode" value={medewerker.postcode} fieldName="postcode" medewerkerId={id} />
+                <DetailField label="Plaats" value={medewerker.plaats} fieldName="plaats" medewerkerId={id} />
               </div>
               <div>
-                <DetailField label="Nationaliteit" value={medewerker.nationaliteit} onEdit={handleEdit} />
-                <DetailField label="BSN" value={medewerker.bsn} onEdit={handleEdit} />
-                <DetailField label="ID/Paspoort nr." value={medewerker.paspoortnummer} onEdit={handleEdit} />
-                <DetailField label="Bankrekening" value={medewerker.bankrekening} onEdit={handleEdit} />
-                <DetailField label="Datum in dienst" value={medewerker.indiensttreding} onEdit={handleEdit} />
-                <DetailField label="Personeels nr." value={medewerker.personeelsnummer} onEdit={handleEdit} />
+                <DetailField label="Nationaliteit" value={medewerker.nationaliteit} fieldName="nationaliteit" medewerkerId={id} />
+                <DetailField label="BSN" value={medewerker.bsn} fieldName="bsn" medewerkerId={id} />
+                <DetailField label="ID/Paspoort nr." value={medewerker.paspoortnummer} fieldName="paspoortnummer" medewerkerId={id} />
+                <DetailField label="Bankrekening" value={medewerker.bankrekening} fieldName="bankrekening" medewerkerId={id} />
+                <DetailField label="Datum in dienst" value={medewerker.indiensttreding} fieldName="indiensttreding" medewerkerId={id} />
+                <DetailField label="Personeels nr." value={medewerker.personeelsnummer} fieldName="personeelsnummer" medewerkerId={id} />
               </div>
             </CardContent>
           </Card>
@@ -180,11 +234,6 @@ export default function EmployeeDetailPage() {
           </div>
         </TabsContent>
       </Tabs>
-      <MedewerkerDialog 
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        medewerker={medewerker}
-      />
     </div>
   );
 }
