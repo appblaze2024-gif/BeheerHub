@@ -23,7 +23,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { cn } from '@/lib/utils';
 import {
   useCollection,
   useFirestore,
@@ -35,6 +34,21 @@ const getInitials = (firstName?: string, lastName?: string) => {
     const firstInitial = firstName?.[0] || '';
     const lastInitial = lastName?.[0] || '';
     return `${firstInitial}${lastInitial}`.toUpperCase();
+};
+
+const getWeekContractHours = (medewerker: Medewerker): number => {
+    if (!medewerker.urenPerDag) {
+      // Default to 40 hours if not specified
+      return 40;
+    }
+    const { maandag = 0, dinsdag = 0, woensdag = 0, donderdag = 0, vrijdag = 0, zaterdag = 0, zondag = 0 } = medewerker.urenPerDag;
+    return maandag + dinsdag + woensdag + donderdag + vrijdag + zaterdag + zondag;
+};
+
+const formatHours = (totalHours: number) => {
+    const hours = Math.floor(totalHours);
+    const minutes = Math.round((totalHours - hours) * 60);
+    return `${hours},${minutes.toString().padStart(2, '0')}u`;
 };
 
 type Project = {
@@ -156,7 +170,7 @@ export default function WorkPlanningPage() {
                   <div className="mt-1 pl-11 space-y-0.5">
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Clock className="h-3 w-3" />
-                      <span>0u 0m / 8,00u</span>
+                      <span>0u 0m / {formatHours(getWeekContractHours(medewerker))}</span>
                     </div>
                     <p className="text-xs text-green-600 font-semibold">
                       +8u 0m
