@@ -281,7 +281,7 @@ export default function WeeklyReportsPage() {
 
       <div className="flex-1 overflow-x-auto bg-white dark:bg-card rounded-lg shadow-sm">
         <Table className="min-w-full">
-          <TableHeader className="bg-gray-100/50 dark:bg-gray-800/20">
+          <TableHeader className="bg-gray-100/50 dark:bg-gray-800/20 sticky top-0">
             <TableRow>
               <TableHead className="w-[100px]">Postnummer</TableHead>
               <TableHead className="w-[250px]">Omschrijving</TableHead>
@@ -338,7 +338,7 @@ export default function WeeklyReportsPage() {
             )}
           </TableBody>
           <TableFooter>
-            <TableRow className="bg-gray-100/50 dark:bg-gray-800/20">
+            <TableRow className="bg-gray-100/50 dark:bg-gray-800/20 sticky bottom-0">
               <TableCell colSpan={10} />
               <TableCell className="bg-yellow-100/50 dark:bg-yellow-900/20 text-right font-bold">Subtotaal</TableCell>
               <TableCell className="text-right font-bold">{formatCurrency(subtotal)}</TableCell>
@@ -349,5 +349,3 @@ export default function WeeklyReportsPage() {
     </div>
   );
 }
-
-    
