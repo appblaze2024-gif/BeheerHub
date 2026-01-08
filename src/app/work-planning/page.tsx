@@ -216,9 +216,10 @@ export default function WorkPlanningPage() {
                         className="group relative p-2 border-b border-r min-h-[80px] flex flex-col gap-1"
                     >
                         {dienstenForDay?.map(dienst => (
-                            <Badge key={dienst.id} variant="secondary" className="w-full justify-start text-left font-normal truncate py-1">
-                                <span className='font-semibold mr-1'>{dienst.starttijd}</span> {dienst.werksoort}
-                            </Badge>
+                            <div key={dienst.id} className="bg-secondary text-secondary-foreground rounded-md p-2 text-xs">
+                                <p className="font-semibold truncate">{dienst.starttijd} - {dienst.eindtijd}</p>
+                                <p className="truncate">{dienst.werksoort}</p>
+                            </div>
                         ))}
                         <Button variant="ghost" size="icon" className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => openDialog(medewerker, day)}>
                           <Plus className="h-5 w-5" />
