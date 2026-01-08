@@ -140,7 +140,7 @@ export function DienstToevoegenDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>Dienst Toevoegen: {formattedDate}</DialogTitle>
         </DialogHeader>
