@@ -55,8 +55,8 @@ const medewerkerFormSchema = z.object({
   soortMedewerker: z.string().optional(),
   kostprijs: z.coerce.number().optional(),
   verkoopprijs: z.coerce.number().optional(),
-  indiensttreding: z.date().optional(),
-  uitdiensttreding: z.date().optional(),
+  indiensttreding: z.date().optional().nullable(),
+  uitdiensttreding: z.date().optional().nullable(),
   contractType: z.string().optional(),
   urenPerWeek: z.coerce.number().optional(),
   afwezig: z.object({
@@ -127,11 +127,20 @@ export function MedewerkerDialog({
     }
   });
 
-  const dateToJSDate = (date: any) => {
+  const dateToJSDate = (date: any): Date | undefined => {
     if (!date) return undefined;
     if (date.toDate) return date.toDate(); // Firestore Timestamp
-    if (typeof date === 'string' || typeof date === 'number') return new Date(date);
-    return date;
+    if (typeof date === 'string' || typeof date === 'number') {
+      const parsedDate = new Date(date);
+      // Check if the parsed date is valid
+      if (!isNaN(parsedDate.getTime())) {
+        return parsedDate;
+      }
+    }
+    if (date instanceof Date && !isNaN(date.getTime())) {
+        return date;
+    }
+    return undefined;
   }
   
   React.useEffect(() => {
@@ -453,7 +462,7 @@ export function MedewerkerDialog({
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
-                            selected={field.value}
+                            selected={field.value ?? undefined}
                             onSelect={field.onChange}
                             initialFocus
                           />
@@ -491,7 +500,7 @@ export function MedewerkerDialog({
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
-                            selected={field.value}
+                            selected={field.value ?? undefined}
                             onSelect={field.onChange}
                             initialFocus
                           />
