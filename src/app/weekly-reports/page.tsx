@@ -86,12 +86,6 @@ export default function WeeklyReportsPage() {
     return projects?.find((p) => p.id === selectedProjectId);
   }, [projects, selectedProjectId]);
 
-  React.useEffect(() => {
-    if (!selectedProjectId && projects && projects.length > 0) {
-      setSelectedProjectId(projects[0].id);
-    }
-  }, [projects, selectedProjectId]);
-
   const start = startOfWeek(currentDate, { weekStartsOn: 1 });
   const end = endOfWeek(currentDate, { weekStartsOn: 1 });
   const weekNumber = getISOWeek(currentDate);
@@ -279,7 +273,7 @@ export default function WeeklyReportsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoadingProjects || (isLoadingDiensten && !reportData.length) ? (
+            {isLoadingProjects || (isLoadingDiensten && !reportData.length && selectedProjectId) ? (
                 <TableRow>
                     <TableCell colSpan={12} className="text-center h-24">Rapportgegevens laden...</TableCell>
                 </TableRow>

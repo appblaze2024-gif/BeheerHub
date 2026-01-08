@@ -116,12 +116,6 @@ export default function WorkPlanningPage() {
   const openEditDienstDialog = (dienst: Dienst, medewerker: Medewerker) => {
     setDialogState({ open: true, medewerker, datum: new Date(dienst.datum), dienst });
   }
-
-  React.useEffect(() => {
-    if (!selectedProjectId && projects && projects.length > 0) {
-      setSelectedProjectId(projects[0].id);
-    }
-  }, [projects, selectedProjectId]);
   
   const selectedProject = React.useMemo(() => {
     return projects?.find(p => p.id === selectedProjectId);
