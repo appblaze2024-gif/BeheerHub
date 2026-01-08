@@ -157,7 +157,7 @@ export function ObjectImportDialog({
       // Auto-map based on header name similarity
       const newMapping: Record<string, string> = {};
       objectFields.forEach(field => {
-        const foundHeader = fileHeaders.find(header => header.toLowerCase() === field.toLowerCase());
+        const foundHeader = fileHeaders.find(header => header.toLowerCase().replace(/\s/g, '') === field.toLowerCase());
         if (foundHeader) {
           newMapping[field] = foundHeader;
         }
@@ -170,18 +170,42 @@ export function ObjectImportDialog({
 
   const handleImport = async () => {
     if (!firestore || data.length === 0) return;
-    
+
     const idCsvHeader = mapping['id'];
     if (!idCsvHeader) {
-        console.error("Het veld 'id' moet worden gekoppeld aan een CSV-kolom.");
-        return;
+      console.error("Het veld 'id' moet worden gekoppeld aan een CSV-kolom.");
+      // You might want to show an error to the user here.
+      return;
     }
-    
+
     setIsImporting(true);
     setImportProgress(0);
 
+    // Create a map from header name to its index
+    const headerIndexMap: Record<string, number> = {};
+    headers.forEach((header, index) => {
+      headerIndexMap[header] = index;
+    });
+
+    // Create a map from Firestore field to the CSV column index
+    const fieldMapping: Record<string, number> = {};
+    for (const field in mapping) {
+      const csvHeader = mapping[field];
+      if (csvHeader && headerIndexMap[csvHeader] !== undefined) {
+        fieldMapping[field] = headerIndexMap[csvHeader];
+      }
+    }
+    
+    const idIndex = fieldMapping['id'];
+    if (idIndex === undefined) {
+        console.error("ID column mapping is missing.");
+        setIsImporting(false);
+        return;
+    }
+
+
     const objectsColRef = collection(firestore, 'objects');
-    const batchSize = 500; // Firestore batch limit
+    const batchSize = 500; // Firestore batch limit is 500 writes
 
     try {
       for (let i = 0; i < data.length; i += batchSize) {
@@ -189,49 +213,48 @@ export function ObjectImportDialog({
         const chunk = data.slice(i, i + batchSize);
 
         chunk.forEach(row => {
-            const objectData: Record<string, any> = {};
-            let objectId = '';
-            
-            // Check if row has the same number of columns as headers
-            if (row.length !== headers.length) {
-              console.warn("Skipping malformed row:", row);
-              return;
-            }
+          if (row.length !== headers.length) {
+            console.warn("Skipping malformed row:", row);
+            return; // Skip rows that don't have the correct number of columns
+          }
+          
+          const objectId = row[idIndex];
+          if (!objectId) {
+            console.warn("Skipping row with empty ID:", row);
+            return; // Skip rows without an ID
+          }
 
-            headers.forEach((header, index) => {
-                const objectField = Object.keys(mapping).find(key => mapping[key] === header);
-                if (objectField) {
-                    const value = row[index];
-                     if (objectField === 'latitude' || objectField === 'longitude' || objectField === 'vulgraad') {
-                        objectData[objectField] = parseFloat(value) || 0;
-                    } else if (objectField === 'isActief') {
-                        objectData[objectField] = value.toLowerCase() === 'true' || value === '1';
-                    }
-                    else {
-                        objectData[objectField] = value;
-                    }
+          const objectData: Record<string, any> = {};
+
+          for(const field in fieldMapping) {
+            const index = fieldMapping[field];
+            const value = row[index];
+
+            if (value !== undefined) {
+                if (field === 'latitude' || field === 'longitude' || field === 'vulgraad') {
+                    objectData[field] = parseFloat(value.replace(',', '.')) || 0;
+                } else if (field === 'isActief') {
+                    objectData[field] = value.toLowerCase() === 'true' || value === '1';
+                } else {
+                    objectData[field] = value;
                 }
-                if (header === idCsvHeader) {
-                    objectId = row[index];
-                }
-            });
-            
-            if (objectId) {
-                const docRef = doc(objectsColRef, objectId);
-                batch.set(docRef, objectData, { merge: true });
             }
+          }
+
+          const docRef = doc(objectsColRef, objectId);
+          batch.set(docRef, objectData, { merge: true });
         });
-        
+
         await batch.commit();
         setImportProgress(((i + chunk.length) / data.length) * 100);
       }
-      
+
       onSuccess();
       setStep(3); // Go to success step
     } catch (error) {
       console.error("Error importing objects: ", error);
     } finally {
-        setIsImporting(false);
+      setIsImporting(false);
     }
   };
   
