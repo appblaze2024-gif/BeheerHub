@@ -232,11 +232,11 @@ export default function WeeklyReportsPage() {
   return (
     <div className="flex flex-col flex-1 p-6 min-h-0 bg-gray-50 dark:bg-gray-900/50">
       <header className="bg-white dark:bg-card p-4 rounded-lg shadow-sm mb-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             {renderActionButtons()}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2">
             <span className="text-sm font-medium">Project:</span>
             <Select
                 value={selectedProjectId}
