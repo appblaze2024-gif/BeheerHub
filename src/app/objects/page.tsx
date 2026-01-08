@@ -223,30 +223,31 @@ export default function ObjectsPage() {
             </Accordion>
             
             <Card>
-              <CardContent className="p-4">
-                 <label htmlFor="warning" className="text-sm font-medium">
-                    Waarschuwing
-                  </label>
-                  <Textarea id="warning" placeholder="Voeg een waarschuwing toe..." />
-              </CardContent>
-            </Card>
-            
-            <Card>
                 <CardContent className="p-4 space-y-4">
+                    <div>
+                        <label htmlFor="warning" className="text-sm font-medium">
+                            Waarschuwing
+                        </label>
+                        <Textarea id="warning" placeholder="Voeg een waarschuwing toe..." />
+                    </div>
+                    <Separator/>
                     <div className="flex justify-between items-center">
                         <h3 className="font-medium">Eigenschappen</h3>
                         <Button size="sm" variant="secondary">
                             <Plus className="mr-2 h-4 w-4" />
                         </Button>
                     </div>
-                    <div className="flex justify-between items-center">
-                        <h3 className="font-medium">Locatie werkgebieden</h3>
-                         <Button size="sm" variant="secondary">
-                            <Plus className="mr-2 h-4 w-4" />
-                        </Button>
-                    </div>
-                     <div className="flex flex-wrap gap-2">
-                        <div className="bg-muted text-muted-foreground px-3 py-1 rounded-full text-sm">Afvalbakken</div>
+                     <Separator/>
+                    <div>
+                        <div className="flex justify-between items-center mb-2">
+                            <h3 className="font-medium">Locatie werkgebieden</h3>
+                            <Button size="sm" variant="secondary">
+                                <Plus className="mr-2 h-4 w-4" />
+                            </Button>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            <div className="bg-muted text-muted-foreground px-3 py-1 rounded-full text-sm">Afvalbakken</div>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
