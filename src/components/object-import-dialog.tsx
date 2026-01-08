@@ -141,6 +141,8 @@ export function ObjectImportDialog({
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result as string;
+      if (!text) return;
+
       const parsedData = parseCSV(text);
       
       if (parsedData.length < 2) {
@@ -155,7 +157,7 @@ export function ObjectImportDialog({
       setHeaders(fileHeaders);
       setData(fileData);
 
-      // Auto-map based on header name similarity (case-insensitive)
+      // Auto-map based on header name similarity (case-insensitive, ignores spaces)
       const newMapping: Record<string, string> = {};
       const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/gi, '');
       
@@ -192,16 +194,22 @@ export function ObjectImportDialog({
     setIsImporting(true);
     setImportProgress(0);
 
-    const headerIndexMap = new Map(headers.map((h, i) => [h, i]));
-    const fieldMapping: Record<string, number> = {};
-    for (const objectField in mapping) {
-        const csvHeader = mapping[objectField];
-        if (csvHeader && headerIndexMap.has(csvHeader)) {
-            fieldMapping[objectField] = headerIndexMap.get(csvHeader)!;
-        }
+    // Create a map from CSV header name to its column index
+    const headerIndexMap: { [key: string]: number } = {};
+    headers.forEach((header, index) => {
+      headerIndexMap[header] = index;
+    });
+
+    // Create a map from the database field to the column index in the CSV
+    const fieldIndexMap: { [key: string]: number } = {};
+    for (const field in mapping) {
+      const csvHeader = mapping[field];
+      if (csvHeader && headerIndexMap.hasOwnProperty(csvHeader)) {
+        fieldIndexMap[field] = headerIndexMap[csvHeader];
+      }
     }
 
-    if (!('id' in fieldMapping)) {
+    if (!fieldIndexMap.hasOwnProperty('id')) {
         console.error("ID column mapping is essential for import.");
         setIsImporting(false);
         return;
@@ -216,7 +224,7 @@ export function ObjectImportDialog({
         const chunk = data.slice(i, i + batchSize);
 
         chunk.forEach(row => {
-          const idIndex = fieldMapping['id'];
+          const idIndex = fieldIndexMap['id'];
           const objectId = row[idIndex];
 
           if (!objectId) {
@@ -226,8 +234,8 @@ export function ObjectImportDialog({
 
           const objectData: Record<string, any> = {};
 
-          for(const field in fieldMapping) {
-            const index = fieldMapping[field];
+          for(const field in fieldIndexMap) {
+            const index = fieldIndexMap[field];
             const value = row[index];
 
             if (value !== undefined && value !== '') {
