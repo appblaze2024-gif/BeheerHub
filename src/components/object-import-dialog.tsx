@@ -24,7 +24,7 @@ import { useFirestore } from '@/firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle } from 'lucide-react';
 
 interface ObjectImportDialogProps {
   children: React.ReactNode;
@@ -331,11 +331,19 @@ export function ObjectImportDialog({
           </div>
         )}
 
-        {(isImporting || step === 3) && (
+        {isImporting && (
             <div className='flex flex-col gap-4 py-8'>
-                <p>{isImporting ? 'Objecten importeren...' : 'Importeren voltooid!'}</p>
+                <p>Objecten importeren...</p>
                 <Progress value={importProgress} />
                 <p className='text-sm text-muted-foreground text-center'>{Math.round(importProgress)}% voltooid</p>
+            </div>
+        )}
+        
+        {step === 3 && !isImporting && (
+             <div className='flex flex-col items-center gap-4 py-8'>
+                <CheckCircle className="h-16 w-16 text-green-500" />
+                <p className='font-medium text-lg'>Importeren voltooid!</p>
+                <p className='text-sm text-muted-foreground'>{data.length} objecten zijn succesvol verwerkt.</p>
             </div>
         )}
 
@@ -351,8 +359,8 @@ export function ObjectImportDialog({
               </Button>
             </>
           )}
-          {step === 3 && (
-               <Button onClick={handleClose}>
+          {(step === 3 || isImporting) && (
+               <Button onClick={handleClose} disabled={isImporting}>
                 Sluiten
             </Button>
           )}
