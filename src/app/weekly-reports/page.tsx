@@ -279,8 +279,8 @@ export default function WeeklyReportsPage() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-auto bg-white dark:bg-card rounded-lg shadow-sm">
-        <Table className="min-w-full border-collapse">
+      <div className="overflow-auto bg-white dark:bg-card rounded-lg shadow-sm">
+        <Table className="min-w-full border-collapse h-full">
           <TableHeader className="bg-gray-100/50 dark:bg-gray-800/20 sticky top-0 z-10">
             <TableRow>
               <TableHead className="w-[100px] p-1 border-t border-b border-r border-black">Postnummer</TableHead>
@@ -337,13 +337,15 @@ export default function WeeklyReportsPage() {
                 </TableRow>
             )}
           </TableBody>
-          <TableFooter className="sticky bottom-0 bg-gray-50 dark:bg-gray-900/50">
-            <TableRow className="h-auto">
-              <TableCell colSpan={10} className="p-1 border-r border-black" />
-              <TableCell className="p-1 border-b border-r border-black text-right font-bold bg-gray-100/50 dark:bg-gray-800/20">Subtotaal</TableCell>
-              <TableCell className="p-1 border-b border-black text-right font-bold bg-gray-100/50 dark:bg-gray-800/20">{formatCurrency(subtotal)}</TableCell>
-            </TableRow>
-          </TableFooter>
+          {reportData.length > 0 && (
+            <TableFooter className="sticky bottom-0 bg-gray-50 dark:bg-gray-900/50">
+                <TableRow className="h-auto">
+                <TableCell colSpan={10} className="p-1 border-r border-black" />
+                <TableCell className="p-1 border-b border-r border-black text-right font-bold bg-gray-100/50 dark:bg-gray-800/20">Subtotaal</TableCell>
+                <TableCell className="p-1 border-b border-black text-right font-bold bg-gray-100/50 dark:bg-gray-800/20">{formatCurrency(subtotal)}</TableCell>
+                </TableRow>
+            </TableFooter>
+          )}
         </Table>
       </div>
     </div>
