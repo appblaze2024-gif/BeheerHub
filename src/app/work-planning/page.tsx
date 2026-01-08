@@ -27,7 +27,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   useCollection,
   useFirestore,
-  useMemoFirebase,
 } from '@/firebase';
 import type { Medewerker, Dienst } from '@/lib/types';
 import { DienstToevoegenDialog } from '@/components/dienst-toevoegen-dialog';
@@ -73,7 +72,7 @@ export default function WorkPlanningPage() {
   const [dialogState, setDialogState] = React.useState<DialogState>({ open: false });
   const firestore = useFirestore();
 
-  const medewerkersCollection = useMemoFirebase(() => {
+  const medewerkersCollection = React.useMemo(() => {
     if (!firestore) return null;
     return collection(firestore, 'medewerkers');
   }, [firestore]);
@@ -81,7 +80,7 @@ export default function WorkPlanningPage() {
   const { data: medewerkers, isLoading: isLoadingMedewerkers } =
     useCollection<Medewerker>(medewerkersCollection);
 
-  const projectsCollection = useMemoFirebase(() => {
+  const projectsCollection = React.useMemo(() => {
     if (!firestore) return null;
     return collection(firestore, 'projects');
   }, [firestore]);
@@ -92,7 +91,7 @@ export default function WorkPlanningPage() {
   const start = startOfWeek(currentDate, { weekStartsOn: 1 });
   const end = endOfWeek(currentDate, { weekStartsOn: 1 });
   
-  const dienstenQuery = useMemoFirebase(() => {
+  const dienstenQuery = React.useMemo(() => {
     if (!firestore || !selectedProjectId) return null;
     return query(
         collection(firestore, 'projects', selectedProjectId, 'diensten'),

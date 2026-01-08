@@ -46,7 +46,6 @@ import { Input } from '@/components/ui/input';
 import {
   useDoc,
   useFirestore,
-  useMemoFirebase,
   updateDocumentNonBlocking,
 } from '@/firebase';
 import type { Medewerker } from '@/lib/types';
@@ -414,7 +413,7 @@ export default function EmployeeDetailPage() {
   const id = params.id as string;
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
 
-  const employeeRef = useMemoFirebase(() => {
+  const employeeRef = React.useMemo(() => {
     if (!firestore || !id) return null;
     return doc(firestore, 'medewerkers', id);
   }, [firestore, id]);

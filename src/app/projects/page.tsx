@@ -23,7 +23,6 @@ import { FilePenLine, Plus, Trash2, Upload, Download } from 'lucide-react';
 import {
   useFirestore,
   useCollection,
-  useMemoFirebase,
   addDocumentNonBlocking,
   updateDocumentNonBlocking,
   deleteDocumentNonBlocking,
@@ -203,7 +202,7 @@ function AfsprakenTab({ projectId }: { projectId: string | undefined }) {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedAfspraak, setSelectedAfspraak] = React.useState<Afspraak | undefined>();
 
-  const afsprakenCollection = useMemoFirebase(() => {
+  const afsprakenCollection = React.useMemo(() => {
     if (!firestore || !projectId) return null;
     return collection(firestore, 'projects', projectId, 'afspraken');
   }, [firestore, projectId]);
@@ -288,7 +287,7 @@ function OrganisatieTab({ projectId }: { projectId: string | undefined }) {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedContact, setSelectedContact] = React.useState<OrganisatieContact | undefined>();
 
-  const organisatieCollection = useMemoFirebase(() => {
+  const organisatieCollection = React.useMemo(() => {
     if (!firestore || !projectId) return null;
     return collection(firestore, 'projects', projectId, 'organisatie');
   }, [firestore, projectId]);
@@ -375,7 +374,7 @@ function BestandenTab({ projectId }: { projectId: string | undefined }) {
   const app = useFirebaseApp();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
 
-  const bestandenCollection = useMemoFirebase(() => {
+  const bestandenCollection = React.useMemo(() => {
     if (!firestore || !projectId) return null;
     return collection(firestore, 'projects', projectId, 'bestanden');
   }, [firestore, projectId]);
@@ -483,7 +482,7 @@ export default function ProjectsPage() {
   >();
   const [currentProject, setCurrentProject] = React.useState<Project>(EMPTY_PROJECT);
 
-  const projectsCollection = useMemoFirebase(() => {
+  const projectsCollection = React.useMemo(() => {
     if (!firestore) return null;
     return collection(firestore, 'projects');
   }, [firestore]);

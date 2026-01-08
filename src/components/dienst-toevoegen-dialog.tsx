@@ -8,7 +8,6 @@ import { Loader2 } from 'lucide-react';
 import {
   useFirestore,
   useCollection,
-  useMemoFirebase,
   addDocumentNonBlocking,
   updateDocumentNonBlocking,
 } from '@/firebase';
@@ -80,7 +79,7 @@ export function DienstToevoegenDialog({
   const firestore = useFirestore();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  const voertuigenCollection = useMemoFirebase(() => {
+  const voertuigenCollection = React.useMemo(() => {
     if (!firestore) return null;
     return collection(firestore, 'voertuigen');
   }, [firestore]);

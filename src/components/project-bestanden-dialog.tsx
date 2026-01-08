@@ -19,7 +19,7 @@ import {
   deleteObject,
 } from 'firebase/storage';
 
-import { useFirestore, useFirebaseApp, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useFirebaseApp, useCollection } from '@/firebase';
 import type { Bestand } from '@/app/projects/page';
 
 import {
@@ -59,7 +59,7 @@ export function ProjectBestandenDialog({
   const [isUploading, setIsUploading] = React.useState(false);
   const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
 
-  const bestandenCollectionRef = useMemoFirebase(() => {
+  const bestandenCollectionRef = React.useMemo(() => {
     if (!firestore || !projectId) return null;
     return collection(firestore, 'projects', projectId, 'bestanden');
   }, [firestore, projectId]);

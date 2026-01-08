@@ -31,7 +31,6 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import {
   useCollection,
   useFirestore,
-  useMemoFirebase,
   useFirebaseApp,
 } from '@/firebase';
 import { VehicleImportDialog } from '@/components/vehicle-import-dialog';
@@ -48,7 +47,7 @@ export default function VehiclesPage() {
   const [isImporting, setIsImporting] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');
 
-  const vehiclesCollection = useMemoFirebase(() => {
+  const vehiclesCollection = React.useMemo(() => {
     if (!firestore) return null;
     return collection(firestore, 'voertuigen');
   }, [firestore]);
@@ -72,7 +71,7 @@ export default function VehiclesPage() {
     null
   );
 
-  const actionsCollection = useMemoFirebase(() => {
+  const actionsCollection = React.useMemo(() => {
     if (!firestore || !selectedVehicle) return null;
     return collection(firestore, 'voertuigen', selectedVehicle.id, 'actions');
   }, [firestore, selectedVehicle]);
@@ -80,7 +79,7 @@ export default function VehiclesPage() {
   const { data: actions, isLoading: actionsLoading } =
     useCollection<any>(actionsCollection);
 
-  const maintenanceCollection = useMemoFirebase(() => {
+  const maintenanceCollection = React.useMemo(() => {
     if (!firestore || !selectedVehicle) return null;
     return collection(
       firestore,
@@ -93,7 +92,7 @@ export default function VehiclesPage() {
   const { data: maintenance, isLoading: maintenanceLoading } =
     useCollection<any>(maintenanceCollection);
 
-  const damagesCollection = useMemoFirebase(() => {
+  const damagesCollection = React.useMemo(() => {
     if (!firestore || !selectedVehicle) return null;
     return collection(firestore, 'voertuigen', selectedVehicle.id, 'damages');
   }, [firestore, selectedVehicle]);
@@ -101,7 +100,7 @@ export default function VehiclesPage() {
   const { data: damages, isLoading: damagesLoading } =
     useCollection<any>(damagesCollection);
   
-  const documentsCollection = useMemoFirebase(() => {
+  const documentsCollection = React.useMemo(() => {
     if (!firestore || !selectedVehicle) return null;
     return collection(firestore, 'voertuigen', selectedVehicle.id, 'documents');
   }, [firestore, selectedVehicle]);

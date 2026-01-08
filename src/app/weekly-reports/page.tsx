@@ -20,7 +20,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Printer, Upload, Calendar, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import {
   startOfWeek,
@@ -74,7 +74,7 @@ export default function WeeklyReportsPage() {
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | undefined>();
   const [currentDate, setCurrentDate] = React.useState(new Date());
 
-  const projectsCollection = useMemoFirebase(() => {
+  const projectsCollection = React.useMemo(() => {
     if (!firestore) return null;
     return collection(firestore, 'projects');
   }, [firestore]);
@@ -91,7 +91,7 @@ export default function WeeklyReportsPage() {
   const weekNumber = getISOWeek(currentDate);
   const currentYear = getYear(currentDate);
 
-  const dienstenQuery = useMemoFirebase(() => {
+  const dienstenQuery = React.useMemo(() => {
     if (!firestore || !selectedProjectId) return null;
     const startDate = format(start, 'yyyy-MM-dd');
     const endDate = format(end, 'yyyy-MM-dd');

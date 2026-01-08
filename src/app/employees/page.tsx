@@ -22,7 +22,6 @@ import { PageHeader } from '@/components/page-header';
 import {
   useCollection,
   useFirestore,
-  useMemoFirebase,
   deleteDocumentNonBlocking,
 } from '@/firebase';
 import { MedewerkerDialog } from '@/components/medewerker-dialog';
@@ -57,7 +56,7 @@ export default function EmployeesPage() {
   const [selectedMedewerker, setSelectedMedewerker] = React.useState<Medewerker | null>(null);
   const [selectedRows, setSelectedRows] = React.useState<string[]>([]);
 
-  const medewerkersCollection = useMemoFirebase(() => {
+  const medewerkersCollection = React.useMemo(() => {
     if (!firestore) return null;
     return collection(firestore, 'medewerkers');
   }, [firestore]);
