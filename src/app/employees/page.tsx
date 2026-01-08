@@ -198,10 +198,10 @@ export default function EmployeesPage() {
                             {getInitials(medewerker.voornaam, medewerker.achternaam)}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="font-medium truncate">{`${medewerker.voornaam} ${medewerker.achternaam}`}</span>
+                        <span className="font-medium truncate">{`${medewerker.voornaam || ''} ${medewerker.tussenvoegsel || ''} ${medewerker.achternaam || ''}`.trim()}</span>
                       </div>
-                      <span className="truncate">{medewerker.email}</span>
-                      <span className="truncate">{medewerker.telefoon || '-'}</span>
+                      <span className="truncate">{medewerker.email || '-'}</span>
+                      <span className="truncate">{medewerker.telefoonnummer || '-'}</span>
                       <span className="truncate">{medewerker.mobiel || '-'}</span>
                       <Badge
                         variant={medewerker.status === 'Actief' ? 'outline' : 'secondary'}
