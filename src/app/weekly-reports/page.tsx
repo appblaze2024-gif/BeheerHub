@@ -93,15 +93,20 @@ export default function WeeklyReportsPage() {
 
   const dienstenQuery = React.useMemo(() => {
     if (!firestore || !selectedProjectId) return null;
-    const startDate = format(start, 'yyyy-MM-dd');
-    const endDate = format(end, 'yyyy-MM-dd');
     
+    // These values are derived from `currentDate` which is stable between renders
+    // unless explicitly changed by user interaction.
+    const startDateString = format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+    const endDateString = format(endOfWeek(currentDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+
     return query(
       collection(firestore, 'projects', selectedProjectId, 'diensten'),
-      where('datum', '>=', startDate),
-      where('datum', '<=', endDate)
+      where('datum', '>=', startDateString),
+      where('datum', '<=', endDateString)
     );
-  }, [firestore, selectedProjectId, start, end]);
+    // The dependency array is now much more stable.
+  }, [firestore, selectedProjectId, currentDate]);
+
 
   const { data: diensten, isLoading: isLoadingDiensten } = useCollection<Dienst>(dienstenQuery);
   
