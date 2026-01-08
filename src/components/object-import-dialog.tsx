@@ -49,8 +49,8 @@ const objectFields = [
 
 // Simple but more robust CSV parser
 const parseCSV = (text: string): string[][] => {
-    const rows = [];
-    let currentRow = [];
+    const rows: string[][] = [];
+    let currentRow: string[] = [];
     let currentField = '';
     let inQuotes = false;
 
@@ -62,10 +62,10 @@ const parseCSV = (text: string): string[][] => {
 
         if (inQuotes) {
             if (char === '"') {
+                // Check for escaped quote
                 if (i + 1 < normalizedText.length && normalizedText[i + 1] === '"') {
-                    // Escaped quote
                     currentField += '"';
-                    i++;
+                    i++; // Skip next quote
                 } else {
                     inQuotes = false;
                 }
@@ -76,10 +76,10 @@ const parseCSV = (text: string): string[][] => {
             if (char === '"') {
                 inQuotes = true;
             } else if (char === ',') {
-                currentRow.push(currentField.trim());
+                currentRow.push(currentField);
                 currentField = '';
             } else if (char === '\n') {
-                currentRow.push(currentField.trim());
+                currentRow.push(currentField);
                 rows.push(currentRow);
                 currentRow = [];
                 currentField = '';
@@ -90,11 +90,12 @@ const parseCSV = (text: string): string[][] => {
     }
     // Add the last field and row if they exist
     if (currentField.length > 0 || currentRow.length > 0) {
-        currentRow.push(currentField.trim());
+        currentRow.push(currentField);
         rows.push(currentRow);
     }
     
-    return rows.filter(row => row.length > 0 && row.some(field => field.length > 0));
+    // Filter out empty rows that might result from trailing newlines
+    return rows.filter(row => row.length > 0 && row.some(field => field.trim().length > 0));
 };
 
 
@@ -142,7 +143,7 @@ export function ObjectImportDialog({
     reader.onload = (e) => {
       const text = e.target?.result as string;
       if (!text) return;
-
+      
       const parsedData = parseCSV(text);
       
       if (parsedData.length < 2) {
@@ -194,11 +195,13 @@ export function ObjectImportDialog({
     setIsImporting(true);
     setImportProgress(0);
 
+    // Map the selected CSV header name back to its original index
     const headerIndexMap: { [key: string]: number } = {};
     headers.forEach((header, index) => {
       headerIndexMap[header] = index;
     });
 
+    // Create a map from the database field to the CSV column index
     const fieldIndexMap: { [key: string]: number | undefined } = {};
     for (const field of objectFields) {
         const csvHeader = mapping[field];
@@ -212,8 +215,6 @@ export function ObjectImportDialog({
         setIsImporting(false);
         return;
     }
-    
-    const idColumnIndex = fieldIndexMap['id'];
 
     const objectsColRef = collection(firestore, 'objects');
     const batchSize = 500;
@@ -224,9 +225,10 @@ export function ObjectImportDialog({
         const chunk = data.slice(i, i + batchSize);
 
         chunk.forEach(row => {
+          const idColumnIndex = fieldIndexMap['id'];
           if (idColumnIndex === undefined) return;
-          const objectId = row[idColumnIndex];
-          if (!objectId) return;
+          const objectId = row[idColumnIndex]?.trim();
+          if (!objectId) return; // Skip rows without an ID
 
           const objectData: { [key: string]: any } = {};
 
@@ -234,7 +236,8 @@ export function ObjectImportDialog({
             const index = fieldIndexMap[field];
             if (index === undefined) continue;
 
-            const value = row[index];
+            const value = row[index]?.trim();
+            
             if (value !== undefined && value !== '') {
                 if (field === 'latitude' || field === 'longitude' || field === 'vulgraad') {
                     const numValue = parseFloat(value.replace(',', '.'));
@@ -367,7 +370,7 @@ export function ObjectImportDialog({
               </Button>
             </>
           )}
-          {step === 3 && (
+          {step === 3 && !isImporting && (
                <Button onClick={handleClose}>
                 Sluiten
             </Button>
