@@ -7,7 +7,6 @@ import { z } from 'zod';
 import { Info, Loader2, CalendarIcon } from 'lucide-react';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
-import { format } from 'date-fns';
 
 import {
   Dialog,
@@ -36,10 +35,8 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import type { Medewerker } from '@/lib/types';
 import { Separator } from './ui/separator';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { Calendar } from './ui/calendar';
-import { cn } from '@/lib/utils';
 import { Textarea } from './ui/textarea';
+import { format } from 'date-fns';
 
 const medewerkerFormSchema = z.object({
   voornaam: z.string().min(1, 'Voornaam is verplicht.'),
@@ -54,8 +51,8 @@ const medewerkerFormSchema = z.object({
   soortMedewerker: z.string().optional(),
   kostprijs: z.coerce.number().optional(),
   verkoopprijs: z.coerce.number().optional(),
-  indiensttreding: z.date().optional().nullable(),
-  uitdiensttreding: z.date().optional().nullable(),
+  indiensttreding: z.string().optional().nullable(),
+  uitdiensttreding: z.string().optional().nullable(),
   contractType: z.string().optional(),
   urenPerDag: z.object({
     maandag: z.coerce.number().optional(),
@@ -121,19 +118,23 @@ export function MedewerkerDialog({
     }
   });
 
-  const dateToJSDate = (date: any): Date | undefined => {
+  const dateToInputString = (date: any): string | undefined => {
     if (!date) return undefined;
-    if (date.toDate) return date.toDate(); // Firestore Timestamp
-    if (typeof date === 'string' || typeof date === 'number') {
-      const parsedDate = new Date(date);
-      if (!isNaN(parsedDate.getTime())) {
-        return parsedDate;
-      }
+    
+    let d: Date;
+    if (date.toDate) { // Firestore Timestamp
+      d = date.toDate();
+    } else if (date instanceof Date) {
+      d = date;
+    } else if (typeof date === 'string') {
+      d = new Date(date);
+    } else {
+        return undefined;
     }
-    if (date instanceof Date && !isNaN(date.getTime())) {
-        return date;
-    }
-    return undefined;
+    
+    if (isNaN(d.getTime())) return undefined;
+
+    return format(d, 'yyyy-MM-dd');
   }
   
   React.useEffect(() => {
@@ -156,16 +157,16 @@ export function MedewerkerDialog({
           contractType: '',
           urenPerDag: defaultUren,
           notities: '',
-          indiensttreding: undefined,
-          uitdiensttreding: undefined,
+          indiensttreding: '',
+          uitdiensttreding: '',
       };
 
       if (medewerker) {
           form.reset({
             ...defaultValues,
             ...medewerker,
-            indiensttreding: dateToJSDate(medewerker.indiensttreding),
-            uitdiensttreding: dateToJSDate(medewerker.uitdiensttreding),
+            indiensttreding: dateToInputString(medewerker.indiensttreding),
+            uitdiensttreding: dateToInputString(medewerker.uitdiensttreding),
             urenPerDag: medewerker.urenPerDag ? { ...defaultUren, ...medewerker.urenPerDag } : defaultUren
           });
       } else {
@@ -210,8 +211,8 @@ export function MedewerkerDialog({
             contractType: '',
             urenPerDag: defaultUren,
             notities: '',
-            indiensttreding: undefined,
-            uitdiensttreding: undefined,
+            indiensttreding: '',
+            uitdiensttreding: '',
         });
         setActiveTab("Basis");
         setIsSubmitting(false);
@@ -433,36 +434,11 @@ export function MedewerkerDialog({
                   control={form.control}
                   name="indiensttreding"
                   render={({ field }) => (
-                    <FormItem className="flex flex-col">
+                    <FormItem>
                       <FormLabel>Indiensttreding</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                format(field.value, "PPP")
-                              ) : (
-                                <span>Kies een datum</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value ?? undefined}
-                            onSelect={field.onChange}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <FormControl>
+                        <Input type="date" {...field} value={field.value ?? ''} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -471,36 +447,11 @@ export function MedewerkerDialog({
                   control={form.control}
                   name="uitdiensttreding"
                   render={({ field }) => (
-                    <FormItem className="flex flex-col">
+                    <FormItem>
                       <FormLabel>Uitdiensttreding</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                format(field.value, "PPP")
-                              ) : (
-                                <span>Kies een datum</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value ?? undefined}
-                            onSelect={field.onChange}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <FormControl>
+                        <Input type="date" {...field} value={field.value ?? ''} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -527,7 +478,7 @@ export function MedewerkerDialog({
               <div>
                 <FormLabel>Uren per dag</FormLabel>
                 <div className="grid grid-cols-7 gap-2 mt-2">
-                  {weekDagen.map((day, index) => (
+                  {weekDagen.map((day) => (
                     <FormField
                       key={day}
                       control={form.control}
