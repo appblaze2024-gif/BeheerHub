@@ -339,21 +339,7 @@ function RoosterTab() {
 
 function ContractenTab() {
   // Placeholder data
-  const contracts = [
-    {
-      id: '1',
-      contract: 'nuluren',
-      locatie: '4449-Reinging Almere',
-      afdeling: 'Schoonbestek 2025',
-      functie: 'Servicemedewerker',
-      plusMin: 'Ja',
-      vakantieUren: 'Contract',
-      uren: '0:00',
-      uurloon: '€ 0,00',
-      start: '-',
-      eind: '-',
-    },
-  ];
+  const contracts: any[] = [];
 
   return (
     <div className="p-6">
@@ -383,31 +369,37 @@ function ContractenTab() {
               <span />
             </div>
             <Separator />
-            {contracts.map((contract) => (
-              <div
-                key={contract.id}
-                className="grid grid-cols-[repeat(10,auto)_min-content] items-center gap-x-4 px-4 py-3 border-b last:border-b-0"
-              >
-                <span className="font-medium">{contract.contract}</span>
-                <span>{contract.locatie}</span>
-                <span>{contract.afdeling}</span>
-                <span>{contract.functie}</span>
-                <span>{contract.plusMin}</span>
-                <span>{contract.vakantieUren}</span>
-                <span>{contract.uren}</span>
-                <span>{contract.uurloon}</span>
-                <span>{contract.start}</span>
-                <span>{contract.eind}</span>
-                <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <Copy className="h-4 w-4" />
-                  </Button>
+            {contracts.length > 0 ? (
+              contracts.map((contract) => (
+                <div
+                  key={contract.id}
+                  className="grid grid-cols-[repeat(10,auto)_min-content] items-center gap-x-4 px-4 py-3 border-b last:border-b-0"
+                >
+                  <span className="font-medium">{contract.contract}</span>
+                  <span>{contract.locatie}</span>
+                  <span>{contract.afdeling}</span>
+                  <span>{contract.functie}</span>
+                  <span>{contract.plusMin}</span>
+                  <span>{contract.vakantieUren}</span>
+                  <span>{contract.uren}</span>
+                  <span>{contract.uurloon}</span>
+                  <span>{contract.start}</span>
+                  <span>{contract.eind}</span>
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
+              ))
+            ) : (
+              <div className="text-center text-muted-foreground p-8">
+                Geen contracten gevonden.
               </div>
-            ))}
+            )}
           </div>
         </CardContent>
       </Card>
