@@ -50,10 +50,10 @@ function AppLayout({ children }: { children: React.ReactNode }) {
         <SidebarHeader isCollapsed={isCollapsed}>
           <Link href="/">
             <Image
-              src="https://i.ibb.co/Myx69z8G/Chat-GPT-Image-8-jan-2026-20-56-49.png"
+              src="https://i.ibb.co/pFvkdLH/Chat-GPT-Image-8-jan-2026-20-56-49-removebg-preview.png"
               alt="Logo"
-              width={150}
-              height={50}
+              width={300}
+              height={100}
               className={cn(
                 'w-auto h-auto transition-all',
                 isCollapsed ? 'h-0 w-0' : 'h-auto w-auto'
@@ -61,10 +61,10 @@ function AppLayout({ children }: { children: React.ReactNode }) {
             />
              <div className={cn(isCollapsed ? 'block' : 'hidden')}>
                  <Image
-                    src="https://i.ibb.co/Myx69z8G/Chat-GPT-Image-8-jan-2026-20-56-49.png"
+                    src="https://i.ibb.co/pFvkdLH/Chat-GPT-Image-8-jan-2026-20-56-49-removebg-preview.png"
                     alt="Logo Icon"
-                    width={24}
-                    height={24}
+                    width={48}
+                    height={48}
                     />
             </div>
           </Link>
