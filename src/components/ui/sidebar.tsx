@@ -30,7 +30,7 @@ const Sidebar = React.forwardRef<
       ref={ref}
       className={cn(
         'flex flex-col h-full bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-all duration-300 ease-in-out',
-        isCollapsed ? 'w-[52px]' : 'w-64',
+        isCollapsed ? 'w-16' : 'w-64',
         className
       )}
       {...props}
