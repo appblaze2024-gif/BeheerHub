@@ -1,12 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import {
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-} from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
 import {
   startOfWeek,
   endOfWeek,
@@ -16,6 +11,7 @@ import {
   sub,
 } from 'date-fns';
 import { nl } from 'date-fns/locale';
+import { collection } from 'firebase/firestore';
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
@@ -28,9 +24,31 @@ import {
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import {
+  useCollection,
+  useFirestore,
+  useMemoFirebase,
+} from '@/firebase';
+import type { Medewerker } from '@/lib/types';
+
+
+const getInitials = (firstName?: string, lastName?: string) => {
+    const firstInitial = firstName?.[0] || '';
+    const lastInitial = lastName?.[0] || '';
+    return `${firstInitial}${lastInitial}`.toUpperCase();
+};
 
 export default function WorkPlanningPage() {
   const [currentDate, setCurrentDate] = React.useState(new Date());
+  const firestore = useFirestore();
+
+  const medewerkersCollection = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'medewerkers');
+  }, [firestore]);
+
+  const { data: medewerkers, isLoading } =
+    useCollection<Medewerker>(medewerkersCollection);
 
   const start = startOfWeek(currentDate, { weekStartsOn: 1 });
   const end = endOfWeek(currentDate, { weekStartsOn: 1 });
@@ -90,34 +108,46 @@ export default function WorkPlanningPage() {
             </div>
           ))}
 
-          {/* Data Row */}
-          <div className="flex flex-col justify-center p-3 border-b border-r">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback>DS</AvatarFallback>
-              </Avatar>
-              <span className="font-semibold text-sm">Django Stoutenburg</span>
+          {/* Data Rows */}
+          {isLoading ? (
+            <div className="col-span-8 p-4 text-center text-muted-foreground">
+              Medewerkers laden...
             </div>
-            <div className="mt-1 pl-11 space-y-0.5">
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Clock className="h-3 w-3" />
-                <span>0u 0m / 8,00u</span>
-              </div>
-              <p className="text-xs text-green-600 font-semibold">+8u 0m</p>
-            </div>
-          </div>
-          {weekDays.map((day, index) => (
-            <div key={day.toISOString()} className="p-2 border-b border-r min-h-[80px]">
-              {index === 0 && (
-                <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-md border border-blue-200 dark:border-blue-800">
-                  <p className="font-semibold text-xs">
-                    veegkipper incl. chauffeur
-                  </p>
-                  <p className="text-xs text-muted-foreground">07:00 - 15:00</p>
+          ) : (
+            medewerkers?.map((medewerker) => (
+              <React.Fragment key={medewerker.id}>
+                <div className="flex flex-col justify-center p-3 border-b border-r">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8">
+                       <AvatarImage
+                            src={medewerker.avatarUrl}
+                            alt={`${medewerker.voornaam} ${medewerker.achternaam}`}
+                          />
+                      <AvatarFallback>{getInitials(medewerker.voornaam, medewerker.achternaam)}</AvatarFallback>
+                    </Avatar>
+                    <span className="font-semibold text-sm truncate">{`${medewerker.voornaam || ''} ${medewerker.tussenvoegsel || ''} ${medewerker.achternaam || ''}`.trim()}</span>
+                  </div>
+                  <div className="mt-1 pl-11 space-y-0.5">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      <span>0u 0m / 8,00u</span>
+                    </div>
+                    <p className="text-xs text-green-600 font-semibold">
+                      +8u 0m
+                    </p>
+                  </div>
                 </div>
-              )}
-            </div>
-          ))}
+                {weekDays.map((day, index) => (
+                  <div
+                    key={day.toISOString()}
+                    className="p-2 border-b border-r min-h-[80px]"
+                  >
+                    {/* Placeholder for planning items */}
+                  </div>
+                ))}
+              </React.Fragment>
+            ))
+          )}
         </div>
       </div>
     </div>
