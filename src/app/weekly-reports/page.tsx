@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Printer, Upload, Calendar, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Printer, Upload, Calendar, CalendarDays, ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import {
@@ -36,6 +36,8 @@ import {
 } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import type { Dienst } from '@/lib/types';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 
 
 type Werksoort = {
@@ -73,6 +75,7 @@ export default function WeeklyReportsPage() {
   const firestore = useFirestore();
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | undefined>();
   const [currentDate, setCurrentDate] = React.useState(new Date());
+  const isMobile = useIsMobile(1280);
 
   const projectsCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -96,8 +99,8 @@ export default function WeeklyReportsPage() {
     
     // These values are derived from `currentDate` which is stable between renders
     // unless explicitly changed by user interaction.
-    const startDateString = format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
-    const endDateString = format(endOfWeek(currentDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+    const startDateString = format(start, 'yyyy-MM-dd');
+    const endDateString = format(end, 'yyyy-MM-dd');
 
     return query(
       collection(firestore, 'projects', selectedProjectId, 'diensten'),
@@ -105,7 +108,7 @@ export default function WeeklyReportsPage() {
       where('datum', '<=', endDateString)
     );
     // The dependency array is now much more stable.
-  }, [firestore, selectedProjectId, currentDate]);
+  }, [firestore, selectedProjectId, start, end]);
 
 
   const { data: diensten, isLoading: isLoadingDiensten } = useCollection<Dienst>(dienstenQuery);
@@ -190,23 +193,48 @@ export default function WeeklyReportsPage() {
 
   const years = Array.from({ length: 10 }, (_, i) => getYear(new Date()) - 5 + i);
 
+  const renderActionButtons = () => {
+    const buttons = [
+      <Button key="print" variant="outline">
+        <Printer className="mr-2 h-4 w-4" /> Afdrukken
+      </Button>,
+      <Button key="import" variant="outline">
+        <Upload className="mr-2 h-4 w-4" /> Importeren
+      </Button>,
+      <Button key="termijn" variant="outline">
+        <Calendar className="mr-2 h-4 w-4" /> Termijn
+      </Button>,
+      <Button key="maand" variant="outline">
+        <CalendarDays className="mr-2 h-4 w-4" /> Maand
+      </Button>,
+    ];
+
+    if (isMobile) {
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {buttons.map((button, index) => (
+              <DropdownMenuItem key={index} asChild>{React.cloneElement(button, { variant: 'ghost', className: 'w-full justify-start' })}</DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    }
+
+    return buttons;
+  }
+
   return (
     <div className="flex flex-col flex-1 p-6 min-h-0 bg-gray-50 dark:bg-gray-900/50">
       <header className="bg-white dark:bg-card p-4 rounded-lg shadow-sm mb-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <Button variant="outline">
-              <Printer className="mr-2 h-4 w-4" /> Afdrukken
-            </Button>
-            <Button variant="outline">
-              <Upload className="mr-2 h-4 w-4" /> Importeren
-            </Button>
-            <Button variant="outline">
-              <Calendar className="mr-2 h-4 w-4" /> Termijn
-            </Button>
-            <Button variant="outline">
-              <CalendarDays className="mr-2 h-4 w-4" /> Maand
-            </Button>
+            {renderActionButtons()}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-medium">Project:</span>
