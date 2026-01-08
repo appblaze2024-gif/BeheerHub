@@ -38,14 +38,14 @@ body {
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    --sidebar-background: 120 4% 89%;
-    --sidebar-foreground: 240 10% 3.9%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 120 4% 92%;
-    --sidebar-accent-foreground: 240 10% 3.9%;
-    --sidebar-border: 120 4% 85%;
-    --sidebar-ring: 240 5.9% 10%;
+    --sidebar-background: 240 5% 20%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 0 0% 98%;
+    --sidebar-primary-foreground: 240 5.9% 10%;
+    --sidebar-accent: 240 5% 25%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 240 5% 25%;
+    --sidebar-ring: 0 0% 98%;
   }
   .dark {
     --background: 240 10% 3.9%;
