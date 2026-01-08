@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { ChevronDown, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Clock, Plus } from 'lucide-react';
 import {
   startOfWeek,
   endOfWeek,
@@ -140,9 +140,11 @@ export default function WorkPlanningPage() {
                 {weekDays.map((day, index) => (
                   <div
                     key={day.toISOString()}
-                    className="p-2 border-b border-r min-h-[80px]"
+                    className="group relative p-2 border-b border-r min-h-[80px]"
                   >
-                    {/* Placeholder for planning items */}
+                    <Button variant="ghost" size="icon" className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Plus className="h-5 w-5" />
+                    </Button>
                   </div>
                 ))}
               </React.Fragment>
