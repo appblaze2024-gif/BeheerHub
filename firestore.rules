@@ -75,6 +75,13 @@ service cloud.firestore {
        }
     }
     
+     /**
+     * @description Manages the root employees collection. Any authenticated user can manage employees.
+     */
+    match /medewerkers/{medewerkerId} {
+      allow read, write: if isSignedIn();
+    }
+    
     /**
      * @description Manages the root user document. A user can create their own document
      *   but cannot modify or delete it once created. Listing all users is forbidden.

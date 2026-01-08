@@ -73,7 +73,10 @@
           }
         }
       },
-      "required": ["projectnummer", "projectnaam"]
+      "required": [
+        "projectnummer",
+        "projectnaam"
+      ]
     },
     "Bestand": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -234,7 +237,59 @@
           "description": "Email address of the contact person."
         }
       },
-      "required": ["id", "naam", "rol"]
+      "required": [
+        "id",
+        "naam",
+        "rol"
+      ]
+    },
+    "Medewerker": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Medewerker",
+      "type": "object",
+      "description": "Represents an employee in the system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the employee."
+        },
+        "voornaam": {
+          "type": "string",
+          "description": "First name of the employee."
+        },
+        "achternaam": {
+          "type": "string",
+          "description": "Last name of the employee."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Email address of the employee."
+        },
+        "telefoon": {
+          "type": "string",
+          "description": "Phone number of the employee."
+        },
+        "mobiel": {
+          "type": "string",
+          "description": "Mobile phone number of the employee."
+        },
+        "functie": {
+          "type": "string",
+          "description": "Job title of the employee."
+        },
+        "status": {
+          "type": "string",
+          "description": "Current status of the employee (e.g., 'Actief', 'Inactief').",
+          "enum": ["Actief", "Inactief", "Niet uitgenodigd"]
+        },
+        "avatarUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the employee's avatar image."
+        }
+      },
+      "required": ["voornaam", "achternaam", "email"]
     }
   },
   "auth": {
@@ -261,7 +316,7 @@
           ]
         }
       },
-       {
+      {
         "path": "/projects/{projectId}/bestanden/{bestandId}",
         "definition": {
           "entityName": "Bestand",
@@ -319,6 +374,17 @@
               "description": "The ID of the contact."
             }
           ]
+        }
+      },
+      {
+        "path": "/medewerkers/{medewerkerId}",
+        "definition": {
+            "entityName": "Medewerker",
+            "schema": { "$ref": "#/backend/entities/Medewerker" },
+            "description": "Stores all employees for the application.",
+            "params": [
+                { "name": "medewerkerId", "description": "The ID of the employee." }
+            ]
         }
       },
       {
