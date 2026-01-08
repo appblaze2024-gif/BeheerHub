@@ -279,9 +279,9 @@ export default function WeeklyReportsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoadingProjects ? (
+            {isLoadingProjects || (isLoadingDiensten && !reportData.length) ? (
                 <TableRow>
-                    <TableCell colSpan={12} className="text-center h-24">Projecten laden...</TableCell>
+                    <TableCell colSpan={12} className="text-center h-24">Rapportgegevens laden...</TableCell>
                 </TableRow>
             ) : reportData.length > 0 ? (
               reportData.map((item, index) => (
@@ -292,8 +292,8 @@ export default function WeeklyReportsPage() {
                   <TableCell>
                     <Input
                       type="number"
-                      defaultValue={item.calculatieUren}
-                      className="w-20"
+                      defaultValue={item.calculatieUren.toFixed(2)}
+                      className="w-24"
                     />
                   </TableCell>
                   <TableCell>{item.prijsPer1h.toFixed(2)}</TableCell>
@@ -301,7 +301,7 @@ export default function WeeklyReportsPage() {
                   <TableCell className="bg-yellow-100/50 dark:bg-yellow-900/20 font-medium">{item.inWeek.toFixed(2)}</TableCell>
                   <TableCell>{item.tmPeriode.toFixed(2)}</TableCell>
                   <TableCell className={item.restant < 0 ? "text-red-600" : ""}>{item.restant.toFixed(2)}</TableCell>
-                  <TableCell>{item.procentGereed.toFixed(1)}</TableCell>
+                  <TableCell>{item.procentGereed.toFixed(1)}%</TableCell>
                   <TableCell className="bg-yellow-100/50 dark:bg-yellow-900/20 text-right font-medium">
                     {formatCurrency(item.totaalInPeriode)}
                   </TableCell>
@@ -322,7 +322,7 @@ export default function WeeklyReportsPage() {
             <TableRow className="bg-gray-100/50 dark:bg-gray-800/20">
               <TableCell colSpan={10} />
               <TableCell className="bg-yellow-100/50 dark:bg-yellow-900/20 text-right font-bold">Subtotaal</TableCell>
-              <TableCell className="text-right font-bold">{formatCurrency(totalTmWeek)}</TableCell>
+              <TableCell className="text-right font-bold">{formatCurrency(subtotal)}</TableCell>
             </TableRow>
           </TableFooter>
         </Table>
@@ -330,5 +330,3 @@ export default function WeeklyReportsPage() {
     </div>
   );
 }
-
-    
