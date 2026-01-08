@@ -15,6 +15,7 @@ import {
   CalendarDays,
   CheckCircle,
   Clock,
+  MoreHorizontal,
 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 import { doc } from 'firebase/firestore';
@@ -28,6 +29,10 @@ import {
   sub,
   isToday,
   isSameDay,
+  startOfMonth,
+  endOfMonth,
+  eachWeekOfInterval,
+  isSameMonth,
 } from 'date-fns';
 import { nl } from 'date-fns/locale';
 
@@ -45,6 +50,7 @@ import {
 import type { Medewerker } from '@/lib/types';
 import { MedewerkerDialog } from '@/components/medewerker-dialog';
 import { cn } from '@/lib/utils';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent } from '@/components/ui/dropdown-menu';
 
 function DetailField({
   label,
@@ -248,6 +254,89 @@ function AfwezigheidTab() {
   );
 }
 
+function RoosterTab() {
+  const [currentDate, setCurrentDate] = React.useState(new Date());
+
+  const firstDayOfMonth = startOfMonth(currentDate);
+  const lastDayOfMonth = endOfMonth(currentDate);
+
+  const prevMonth = () => setCurrentDate(sub(currentDate, { months: 1 }));
+  const nextMonth = () => setCurrentDate(add(currentDate, { months: 1 }));
+
+  const weeks = eachWeekOfInterval(
+    {
+      start: firstDayOfMonth,
+      end: lastDayOfMonth,
+    },
+    { weekStartsOn: 1 }
+  );
+
+  const daysOfWeek = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'];
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between mb-4">
+        <div className='flex items-center gap-4'>
+            <h2 className="text-xl font-bold capitalize">
+            {format(currentDate, 'MMMM yyyy', { locale: nl })}
+            </h2>
+            <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={prevMonth}>
+                    <ChevronLeft className="h-5 w-5" />
+                </Button>
+                 <span className='text-sm font-medium text-muted-foreground'>
+                    {format(firstDayOfMonth, 'd MMM', { locale: nl })} - {format(lastDayOfMonth, 'd MMM', { locale: nl })}
+                </span>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={nextMonth}>
+                    <ChevronRight className="h-5 w-5" />
+                </Button>
+            </div>
+        </div>
+        <div className="flex items-center gap-2">
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="outline">Acties</Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                    {/* Acties hier */}
+                </DropdownMenuContent>
+            </DropdownMenu>
+            <Button>
+                <Plus className='h-4 w-4 mr-2'/>
+                Beschikbaarheid toevoegen
+            </Button>
+        </div>
+      </div>
+      <div className="flex-1 grid grid-rows-[auto_1fr] border rounded-lg overflow-hidden">
+        <div className="grid grid-cols-[repeat(7,1fr)_120px] text-xs font-semibold text-center border-b">
+           {daysOfWeek.map((day) => (
+             <div key={day} className="p-2 border-r last:border-r-0">{day}</div>
+           ))}
+           <div className='p-2 bg-muted/50'>Beschikbaarheid</div>
+        </div>
+        <div className="grid grid-cols-1 grid-rows-5 flex-1 bg-gray-200">
+           {weeks.map((weekStart, weekIndex) => {
+              const daysInWeek = eachDayOfInterval({start: weekStart, end: endOfWeek(weekStart, {weekStartsOn: 1})})
+              return (
+                <div key={weekIndex} className="grid grid-cols-[repeat(7,1fr)_120px] border-t first:border-t-0 bg-white">
+                  {daysInWeek.map((day, dayIndex) => (
+                    <div key={day.toISOString()} className={cn("p-2 border-r", !isSameMonth(day, currentDate) && 'bg-muted/30')}>
+                        <span className={cn('text-xs font-semibold', !isSameMonth(day, currentDate) && 'text-muted-foreground/50', isToday(day) && 'flex items-center justify-center h-5 w-5 rounded-full bg-blue-600 text-white')}>{format(day, 'd')}</span>
+                    </div>
+                  ))}
+                  <div className='p-2 flex items-center justify-center'>
+                     {/* Dummy data, replace with real logic */}
+                     {format(weekStart, 'w') % 2 === 0 && <CheckCircle className='h-5 w-5 text-green-500'/>}
+                  </div>
+                </div>
+              )
+           })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function EmployeeDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -401,8 +490,8 @@ export default function EmployeeDetailPage() {
             </div>
           </TabsContent>
           <TabsContent value="rooster" className="flex-1 overflow-y-auto">
-            <div className="p-6 flex h-full items-center justify-center text-muted-foreground">
-              Rooster is nog niet geïmplementeerd.
+            <div className="p-6 h-full flex flex-col">
+              <RoosterTab />
             </div>
           </TabsContent>
           <TabsContent value="contracten" className="flex-1 overflow-y-auto">
