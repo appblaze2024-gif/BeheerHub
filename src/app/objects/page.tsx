@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Image as ImageIcon,
   Upload,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,14 +39,22 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { MapboxView } from '@/components/mapbox-view';
 import { ObjectImportDialog } from '@/components/object-import-dialog';
-import { useCollection, useFirestore } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useCollection, useFirestore, updateDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
+
+const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
 export default function ObjectsPage() {
   const firestore = useFirestore();
   const [isImporting, setIsImporting] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');
   const [selectedObject, setSelectedObject] = React.useState<any | null>(null);
+
+  // States for generated address
+  const [generatedStreet, setGeneratedStreet] = React.useState('');
+  const [generatedHouseNumber, setGeneratedHouseNumber] = React.useState('');
+  const [isFetchingAddress, setIsFetchingAddress] = React.useState(false);
+
 
   const objectsCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -73,6 +82,51 @@ export default function ObjectsPage() {
         }
     }
   }, [filteredObjects, selectedObject]);
+  
+  React.useEffect(() => {
+    if (selectedObject?.longitude && selectedObject?.latitude) {
+      fetchAddress(selectedObject.longitude, selectedObject.latitude);
+    } else {
+        setGeneratedStreet('');
+        setGeneratedHouseNumber('');
+    }
+  }, [selectedObject]);
+
+  const fetchAddress = async (longitude: number, latitude: number) => {
+    setIsFetchingAddress(true);
+    setGeneratedStreet('');
+    setGeneratedHouseNumber('');
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${MAPBOX_TOKEN}`
+      );
+      const data = await response.json();
+      if (data.features && data.features.length > 0) {
+        const feature = data.features[0];
+        setGeneratedStreet(feature.text || '');
+        setGeneratedHouseNumber(feature.address || '');
+      }
+    } catch (error) {
+      console.error('Error fetching address:', error);
+    } finally {
+        setIsFetchingAddress(false);
+    }
+  };
+
+  const handleSaveAddress = () => {
+    if (!firestore || !selectedObject || !generatedStreet) return;
+    const objectRef = doc(firestore, 'objects', selectedObject.id);
+    updateDocumentNonBlocking(objectRef, {
+        straatnaam: generatedStreet,
+        huisnummer: generatedHouseNumber
+    });
+    // Optimistically update local state
+    setSelectedObject((prev: any) => ({
+        ...prev,
+        straatnaam: generatedStreet,
+        huisnummer: generatedHouseNumber,
+    }));
+  }
 
   const handleImportSuccess = () => {
     setIsImporting(false);
@@ -230,23 +284,47 @@ export default function ObjectsPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="md:col-span-2">
-                        <label htmlFor="street-name" className="text-sm font-medium">
-                          Straatnaam
-                        </label>
-                        <Input
-                          id="street-name"
-                          value={selectedObject.straatnaam || ''}
-                          readOnly
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="house-number" className="text-sm font-medium">
-                          Huisnummer
-                        </label>
-                        <Input id="house-number" value={selectedObject.huisnummer || ''} readOnly/>
-                      </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                        <div className="md:col-span-2">
+                            <label htmlFor="street-name" className="text-sm font-medium">
+                            Straatnaam
+                            </label>
+                            <Input
+                            id="street-name"
+                            value={generatedStreet || selectedObject.straatnaam || ''}
+                            readOnly={!generatedStreet}
+                            onChange={(e) => setGeneratedStreet(e.target.value)}
+                            />
+                        </div>
+                        <div>
+                            <label htmlFor="house-number" className="text-sm font-medium">
+                            Huisnummer
+                            </label>
+                            <Input 
+                                id="house-number" 
+                                value={generatedHouseNumber || selectedObject.huisnummer || ''} 
+                                readOnly={!generatedHouseNumber}
+                                onChange={(e) => setGeneratedHouseNumber(e.target.value)}
+                            />
+                        </div>
+                         <div className='md:col-span-3 flex items-center justify-end gap-2'>
+                           <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => fetchAddress(selectedObject.longitude, selectedObject.latitude)}
+                                disabled={isFetchingAddress || !selectedObject.longitude || !selectedObject.latitude}
+                            >
+                                <RefreshCw className={`mr-2 h-4 w-4 ${isFetchingAddress ? 'animate-spin' : ''}`} />
+                                Adres ophalen
+                            </Button>
+                            <Button
+                                size="sm"
+                                onClick={handleSaveAddress}
+                                disabled={!generatedStreet && !generatedHouseNumber}
+                            >
+                                Adres opslaan
+                            </Button>
+                        </div>
                     </div>
 
                     <div>
