@@ -6,12 +6,28 @@ import { MapPin } from 'lucide-react';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
-export function MapboxView() {
+interface MapboxViewProps {
+    longitude?: number;
+    latitude?: number;
+}
+
+export function MapboxView({ longitude, latitude }: MapboxViewProps) {
   const [viewport, setViewport] = React.useState({
-    longitude: 5.2913, // Center of the Netherlands
-    latitude: 52.1326,
-    zoom: 7,
+    longitude: longitude || 5.2913,
+    latitude: latitude || 52.1326,
+    zoom: longitude && latitude ? 15 : 7,
   });
+
+  React.useEffect(() => {
+    if (longitude && latitude) {
+        setViewport(prev => ({
+            ...prev,
+            longitude,
+            latitude,
+            zoom: 15
+        }));
+    }
+  }, [longitude, latitude]);
 
   return (
     <Map
@@ -21,10 +37,11 @@ export function MapboxView() {
       mapStyle="mapbox://styles/mapbox/streets-v11"
       mapboxAccessToken={MAPBOX_TOKEN}
     >
-      {/* You can add markers here if needed */}
-      {/* <Marker longitude={5.2913} latitude={52.1326} anchor="bottom" >
-        <MapPin className="h-6 w-6 text-blue-500 fill-current" />
-      </Marker> */}
+      {longitude && latitude && (
+        <Marker longitude={longitude} latitude={latitude} anchor="bottom" >
+          <MapPin className="h-6 w-6 text-blue-500 fill-current" />
+        </Marker>
+      )}
     </Map>
   );
 }

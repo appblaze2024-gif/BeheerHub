@@ -38,10 +38,41 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { MapboxView } from '@/components/mapbox-view';
 import { ObjectImportDialog } from '@/components/object-import-dialog';
+import { useCollection, useFirestore } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
 export default function ObjectsPage() {
-  const [isActief, setIsActief] = React.useState(true);
+  const firestore = useFirestore();
   const [isImporting, setIsImporting] = React.useState(false);
+  const [searchTerm, setSearchTerm] = React.useState('');
+  const [selectedObject, setSelectedObject] = React.useState<any | null>(null);
+
+  const objectsCollection = React.useMemo(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'objects');
+  }, [firestore]);
+
+  const { data: objects, isLoading } = useCollection<any>(objectsCollection);
+
+  const filteredObjects = React.useMemo(() => {
+    if (!objects) return [];
+    if (!searchTerm) return objects;
+    return objects.filter(
+      (obj) =>
+        obj.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        obj.straatnaam?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [objects, searchTerm]);
+
+  React.useEffect(() => {
+    if (!selectedObject && filteredObjects && filteredObjects.length > 0) {
+      setSelectedObject(filteredObjects[0]);
+    } else if (selectedObject && filteredObjects) {
+        if (!filteredObjects.find((v) => v.id === selectedObject.id)) {
+            setSelectedObject(filteredObjects.length > 0 ? filteredObjects[0] : null);
+        }
+    }
+  }, [filteredObjects, selectedObject]);
 
   const handleImportSuccess = () => {
     setIsImporting(false);
@@ -72,7 +103,7 @@ export default function ObjectsPage() {
           </Button>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Zoek een object" className="pl-9" />
+            <Input placeholder="Zoek een object" className="pl-9" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
            <ObjectImportDialog
             open={isImporting}
@@ -91,36 +122,54 @@ export default function ObjectsPage() {
         {/* Sidebar */}
         <aside className="w-64 bg-card border-r flex flex-col">
           <div className="p-3">
-            <Input placeholder="Filter objecten..." />
+            <Input placeholder="Filter objecten..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
           <Separator />
           <div className="flex-1 overflow-y-auto">
-            <div className="p-2">
-              <div className="bg-secondary rounded-lg p-3">
-                <div className="flex justify-between items-start">
-                  <div className="flex items-start gap-3">
-                    <MapPin className="h-5 w-5 text-muted-foreground mt-1" />
-                    <div>
-                      <p className="font-semibold">A12012</p>
-                      <p className="text-sm text-muted-foreground">
-                        Grijs object
-                      </p>
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
+             <div className="flex flex-col space-y-1 p-2">
+              {isLoading ? (
+                 <div className="text-center text-muted-foreground p-4">
+                  Laden...
                 </div>
-              </div>
+              ) : filteredObjects && filteredObjects.length > 0 ? (
+                filteredObjects.map((obj) => (
+                  <div
+                    key={obj.id}
+                    onClick={() => setSelectedObject(obj)}
+                    className={`flex items-start justify-between p-3 rounded-md text-left cursor-pointer ${
+                      selectedObject?.id === obj.id
+                        ? 'bg-secondary'
+                        : 'hover:bg-muted/50'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <MapPin className="h-5 w-5 text-muted-foreground mt-1" />
+                      <div>
+                        <p className="font-semibold">{obj.id}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {obj.locatieSubType || 'Onbekend type'}
+                        </p>
+                      </div>
+                    </div>
+                     <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))
+              ) : (
+                 <div className="text-center text-muted-foreground p-4">
+                  Geen objecten gevonden.
+                </div>
+              )}
             </div>
-            {/* Other objects would be listed here */}
           </div>
         </aside>
 
         {/* Main Content */}
         <main className="flex-1 p-4 overflow-y-auto grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2 space-y-4">
-            <Card>
+            {selectedObject ? (
+              <Card>
               <CardContent className="p-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-4">
@@ -128,13 +177,13 @@ export default function ObjectsPage() {
                       <label className="text-sm font-medium">
                         Locatie type
                       </label>
-                      <Select defaultValue="grijs-object">
+                      <Select value={selectedObject.locatieType} disabled>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="grijs-object">
-                            Grijs object
+                          <SelectItem value={selectedObject.locatieType}>
+                            {selectedObject.locatieType}
                           </SelectItem>
                         </SelectContent>
                       </Select>
@@ -143,12 +192,14 @@ export default function ObjectsPage() {
                       <label className="text-sm font-medium">
                         Locatie sub type
                       </label>
-                      <Select defaultValue="afvalbak">
+                       <Select value={selectedObject.locatieSubType} disabled>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="afvalbak">Afvalbak</SelectItem>
+                          <SelectItem value={selectedObject.locatieSubType}>
+                            {selectedObject.locatieSubType}
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -156,12 +207,12 @@ export default function ObjectsPage() {
                   <div className="space-y-4">
                     <div>
                       <label className="text-sm font-medium">Kwaliteit</label>
-                      <Select defaultValue="b">
+                      <Select value={selectedObject.kwaliteit} disabled>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="a">A</SelectItem>
+                           <SelectItem value="a">A</SelectItem>
                           <SelectItem value="b">B</SelectItem>
                           <SelectItem value="c">C</SelectItem>
                         </SelectContent>
@@ -171,8 +222,7 @@ export default function ObjectsPage() {
                       <span className="text-sm text-muted-foreground">Automatisch aangemaakt</span>
                       <div className="flex items-center gap-2">
                         <Switch
-                          checked={isActief}
-                          onCheckedChange={setIsActief}
+                          checked={selectedObject.isActief}
                         />
                         <span className="text-sm font-medium">Is actief</span>
                       </div>
@@ -187,14 +237,15 @@ export default function ObjectsPage() {
                     </label>
                     <Input
                       id="street-name"
-                      defaultValue="Marga Klompésingel"
+                      value={selectedObject.straatnaam || ''}
+                      readOnly
                     />
                   </div>
                   <div>
                     <label htmlFor="house-number" className="text-sm font-medium">
                       Huisnummer
                     </label>
-                    <Input id="house-number" defaultValue="235" />
+                    <Input id="house-number" value={selectedObject.huisnummer || ''} readOnly/>
                   </div>
                 </div>
 
@@ -203,7 +254,7 @@ export default function ObjectsPage() {
                     Object-ID
                   </label>
                   <div className="flex gap-2">
-                    <Input id="object-id" defaultValue="A12012" />
+                    <Input id="object-id" value={selectedObject.id || ''} readOnly />
                     <Button variant="outline" size="icon">
                       <QrCode className="h-5 w-5" />
                     </Button>
@@ -235,7 +286,7 @@ export default function ObjectsPage() {
                         <label htmlFor="warning" className="text-sm font-medium">
                             Waarschuwing
                         </label>
-                        <Textarea id="warning" placeholder="Voeg een waarschuwing toe..." />
+                        <Textarea id="warning" placeholder="Voeg een waarschuwing toe..." value={selectedObject.waarschuwing || ''}/>
                     </div>
                     <Separator/>
                     <div className="flex justify-between items-center">
@@ -259,13 +310,21 @@ export default function ObjectsPage() {
                 </div>
               </CardContent>
             </Card>
-
+            ) : (
+                <div className="lg:col-span-2 flex items-center justify-center h-full text-muted-foreground">
+                    {isLoading ? 'Objecten laden...' : 'Selecteer een object om de details te zien.'}
+                </div>
+            )}
           </div>
 
           <div className="space-y-4">
             <Card className="h-64">
               <CardContent className="p-0 h-full">
-                <MapboxView />
+                <MapboxView 
+                   key={selectedObject?.id}
+                   longitude={selectedObject?.longitude}
+                   latitude={selectedObject?.latitude}
+                />
               </CardContent>
             </Card>
             <Card className="h-64">
@@ -277,8 +336,8 @@ export default function ObjectsPage() {
             <Card>
               <CardContent className="p-4">
                 <h3 className="text-sm font-medium mb-2">Vulgraad</h3>
-                <Progress value={0} />
-                <p className="text-center text-sm font-semibold mt-2">0%</p>
+                <Progress value={selectedObject?.vulgraad || 0} />
+                <p className="text-center text-sm font-semibold mt-2">{selectedObject?.vulgraad || 0}%</p>
               </CardContent>
             </Card>
           </div>
