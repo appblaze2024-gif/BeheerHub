@@ -16,6 +16,8 @@ import {
   CheckCircle,
   Clock,
   MoreHorizontal,
+  Info,
+  Copy,
 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 import { doc } from 'firebase/firestore';
@@ -51,6 +53,7 @@ import type { Medewerker } from '@/lib/types';
 import { MedewerkerDialog } from '@/components/medewerker-dialog';
 import { cn } from '@/lib/utils';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent } from '@/components/ui/dropdown-menu';
+import { Separator } from '@/components/ui/separator';
 
 function DetailField({
   label,
@@ -334,6 +337,84 @@ function RoosterTab() {
   )
 }
 
+function ContractenTab() {
+  // Placeholder data
+  const contracts = [
+    {
+      id: '1',
+      contract: 'nuluren',
+      locatie: '4449-Reinging Almere',
+      afdeling: 'Schoonbestek 2025',
+      functie: 'Servicemedewerker',
+      plusMin: 'Ja',
+      vakantieUren: 'Contract',
+      uren: '0:00',
+      uurloon: '€ 0,00',
+      start: '-',
+      eind: '-',
+    },
+  ];
+
+  return (
+    <div className="p-6">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CardTitle>Contracten</CardTitle>
+            <Info className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <Button>
+            <Plus className="mr-2 h-4 w-4" /> Contract toevoegen
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="text-sm">
+            <div className="grid grid-cols-[repeat(10,auto)_min-content] gap-x-4 px-4 py-2 font-semibold text-muted-foreground text-xs uppercase">
+              <span>Contract</span>
+              <span>Locatie</span>
+              <span>Afdeling</span>
+              <span>Functie</span>
+              <span>Plus min</span>
+              <span>Vakantie-uren</span>
+              <span>Uren</span>
+              <span>Uurloon</span>
+              <span>Start</span>
+              <span>Eind</span>
+              <span />
+            </div>
+            <Separator />
+            {contracts.map((contract) => (
+              <div
+                key={contract.id}
+                className="grid grid-cols-[repeat(10,auto)_min-content] items-center gap-x-4 px-4 py-3 border-b last:border-b-0"
+              >
+                <span className="font-medium">{contract.contract}</span>
+                <span>{contract.locatie}</span>
+                <span>{contract.afdeling}</span>
+                <span>{contract.functie}</span>
+                <span>{contract.plusMin}</span>
+                <span>{contract.vakantieUren}</span>
+                <span>{contract.uren}</span>
+                <span>{contract.uurloon}</span>
+                <span>{contract.start}</span>
+                <span>{contract.eind}</span>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function EmployeeDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -488,9 +569,7 @@ export default function EmployeeDetailPage() {
             <RoosterTab />
           </TabsContent>
           <TabsContent value="contracten" className="flex-1 overflow-y-auto">
-            <div className="p-6 flex h-full items-center justify-center text-muted-foreground">
-              Contracten zijn nog niet geïmplementeerd.
-            </div>
+             <ContractenTab />
           </TabsContent>
         </Tabs>
       </div>
