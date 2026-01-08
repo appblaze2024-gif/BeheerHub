@@ -35,6 +35,7 @@ import { Progress } from '@/components/ui/progress';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { MapboxView } from '@/components/mapbox-view';
 
 export default function ObjectsPage() {
   const [isActief, setIsActief] = React.useState(true);
@@ -200,26 +201,26 @@ export default function ObjectsPage() {
                 </div>
                  <Accordion type="single" collapsible className="w-full mt-4">
                     <AccordionItem value="logboek">
-                        <AccordionTrigger className="px-0">Logboek</AccordionTrigger>
+                        <AccordionTrigger className="px-0 py-3">Logboek</AccordionTrigger>
                         <AccordionContent>
                         Hier komt de inhoud van het logboek.
                         </AccordionContent>
                     </AccordionItem>
                     <AccordionItem value="planning">
-                        <AccordionTrigger className="px-0">Planning</AccordionTrigger>
+                        <AccordionTrigger className="px-0 py-3">Planning</AccordionTrigger>
                         <AccordionContent>
                         Hier komt de planning.
                         </AccordionContent>
                     </AccordionItem>
                     <AccordionItem value="bewerk-locatie" className='border-b-0'>
-                        <AccordionTrigger className="px-0">Bewerk locatie</AccordionTrigger>
+                        <AccordionTrigger className="px-0 py-3">Bewerk locatie</AccordionTrigger>
                         <AccordionContent>
                         Hier komen de opties om de locatie te bewerken.
                         </AccordionContent>
                     </AccordionItem>
                 </Accordion>
-                <Separator className='my-4'/>
-                 <div className="space-y-4">
+                <Separator className='my-2'/>
+                 <div className="space-y-4 pt-2">
                     <div>
                         <label htmlFor="warning" className="text-sm font-medium">
                             Waarschuwing
@@ -254,9 +255,7 @@ export default function ObjectsPage() {
           <div className="space-y-4">
             <Card className="h-64">
               <CardContent className="p-0 h-full">
-                <div className="bg-gray-200 h-full flex items-center justify-center text-muted-foreground">
-                  Kaartweergave hier
-                </div>
+                <MapboxView />
               </CardContent>
             </Card>
             <Card className="h-64">

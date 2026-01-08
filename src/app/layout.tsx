@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import './globals.css';
+import 'mapbox-gl/dist/mapbox-gl.css';
 import { Sidebar, SidebarProps } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/sidebar-nav';
 import { SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
