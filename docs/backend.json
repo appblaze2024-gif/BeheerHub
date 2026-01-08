@@ -274,6 +274,43 @@
           "type": "string",
           "description": "Phone number of the employee."
         },
+        "mobiel": {
+            "type": "string"
+        },
+        "noodnummer": {
+            "type": "string"
+        },
+        "geboortedatum": {
+            "type": "string",
+            "format": "date"
+        },
+        "geboorteplaats": {
+            "type": "string"
+        },
+        "nationaliteit": {
+            "type": "string"
+        },
+        "bsn": {
+            "type": "string"
+        },
+        "adres": {
+            "type": "string"
+        },
+        "postcode": {
+            "type": "string"
+        },
+        "plaats": {
+            "type": "string"
+        },
+        "paspoortnummer": {
+            "type": "string"
+        },
+        "bankrekening": {
+            "type": "string"
+        },
+        "personeelsnummer": {
+            "type": "string"
+        },
         "taal": {
           "type": "string",
           "description": "Preferred language of the employee."

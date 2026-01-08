@@ -20,10 +20,23 @@ export type Medewerker = {
     maandag?: number;
     dinsdag?: number;
     woensdag?: number;
+    woensdag?: number;
     donderdag?: number;
     vrijdag?: number;
     zaterdag?: number;
     zondag?: number;
   };
   notities?: string;
+  // New fields for detail page
+  noodnummer?: string;
+  geboortedatum?: string;
+  geboorteplaats?: string;
+  nationaliteit?: string;
+  bsn?: string;
+  adres?: string;
+  postcode?: string;
+  plaats?: string;
+  paspoortnummer?: string;
+  bankrekening?: string;
+  personeelsnummer?: string;
 };

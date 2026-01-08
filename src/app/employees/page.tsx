@@ -9,16 +9,13 @@ import {
   Filter,
 } from 'lucide-react';
 import { collection, doc, deleteDoc } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/page-header';
@@ -54,6 +51,7 @@ import type { Medewerker } from '@/lib/types';
 
 export default function EmployeesPage() {
   const firestore = useFirestore();
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = React.useState('');
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedMedewerker, setSelectedMedewerker] = React.useState<Medewerker | null>(null);
@@ -96,17 +94,23 @@ export default function EmployeesPage() {
     }
   };
 
+  const handleRowClick = (medewerkerId: string) => {
+    router.push(`/employees/${medewerkerId}`);
+  };
+
   const handleAddNew = () => {
     setSelectedMedewerker(null);
     setIsDialogOpen(true);
   };
 
-  const handleEdit = (medewerker: Medewerker) => {
+  const handleEdit = (e: React.MouseEvent, medewerker: Medewerker) => {
+    e.stopPropagation();
     setSelectedMedewerker(medewerker);
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (medewerkerId: string) => {
+  const handleDelete = (e: React.MouseEvent, medewerkerId: string) => {
+    e.stopPropagation();
     if (!firestore) return;
     const medewerkerRef = doc(firestore, 'medewerkers', medewerkerId);
     deleteDocumentNonBlocking(medewerkerRef);
@@ -181,10 +185,14 @@ export default function EmployeesPage() {
                   filteredMedewerkers.map((medewerker) => (
                     <div
                       key={medewerker.id}
-                      className="grid grid-cols-[40px_3fr_3fr_2fr_2fr_2fr_50px] items-center px-4 py-3 text-sm"
+                      onClick={() => handleRowClick(medewerker.id)}
+                      className="grid grid-cols-[40px_3fr_3fr_2fr_2fr_2fr_50px] items-center px-4 py-3 text-sm cursor-pointer hover:bg-muted/50"
                     >
                       <Checkbox
-                        onCheckedChange={(checked) => handleSelectRow(medewerker.id, !!checked)}
+                        onCheckedChange={(checked) => {
+                            handleSelectRow(medewerker.id, !!checked)
+                        }}
+                        onClick={(e) => e.stopPropagation()}
                         checked={selectedRows.includes(medewerker.id)}
                         aria-label={`Selecteer ${medewerker.voornaam} ${medewerker.achternaam}`}
                       />
@@ -211,13 +219,13 @@ export default function EmployeesPage() {
                       </Badge>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
+                          <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
                             <span className="sr-only">Open menu</span>
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEdit(medewerker)}>
+                          <DropdownMenuItem onClick={(e) => handleEdit(e, medewerker)}>
                             Bewerken
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
@@ -234,7 +242,7 @@ export default function EmployeesPage() {
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                 <AlertDialogCancel>Annuleren</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDelete(medewerker.id)}>
+                                <AlertDialogAction onClick={(e) => handleDelete(e, medewerker.id)}>
                                     Doorgaan
                                 </AlertDialogAction>
                                 </AlertDialogFooter>
