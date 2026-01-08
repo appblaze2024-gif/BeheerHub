@@ -50,12 +50,6 @@ export default function ObjectsPage() {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [selectedObject, setSelectedObject] = React.useState<any | null>(null);
 
-  // States for generated address
-  const [generatedStreet, setGeneratedStreet] = React.useState('');
-  const [generatedHouseNumber, setGeneratedHouseNumber] = React.useState('');
-  const [isFetchingAddress, setIsFetchingAddress] = React.useState(false);
-
-
   const objectsCollection = React.useMemo(() => {
     if (!firestore) return null;
     return collection(firestore, 'objects');
@@ -83,54 +77,16 @@ export default function ObjectsPage() {
     }
   }, [filteredObjects, selectedObject]);
   
-  React.useEffect(() => {
-    if (selectedObject?.longitude && selectedObject?.latitude) {
-      fetchAddress(selectedObject.longitude, selectedObject.latitude);
-    } else {
-        setGeneratedStreet('');
-        setGeneratedHouseNumber('');
-    }
-  }, [selectedObject]);
-
-  const fetchAddress = async (longitude: number, latitude: number) => {
-    setIsFetchingAddress(true);
-    setGeneratedStreet('');
-    setGeneratedHouseNumber('');
-    try {
-      const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${MAPBOX_TOKEN}`
-      );
-      const data = await response.json();
-      if (data.features && data.features.length > 0) {
-        const feature = data.features[0];
-        setGeneratedStreet(feature.text || '');
-        setGeneratedHouseNumber(feature.address || '');
-      }
-    } catch (error) {
-      console.error('Error fetching address:', error);
-    } finally {
-        setIsFetchingAddress(false);
-    }
-  };
-
-  const handleSaveAddress = () => {
-    if (!firestore || !selectedObject || !generatedStreet) return;
-    const objectRef = doc(firestore, 'objects', selectedObject.id);
-    updateDocumentNonBlocking(objectRef, {
-        straatnaam: generatedStreet,
-        huisnummer: generatedHouseNumber
-    });
-    // Optimistically update local state
-    setSelectedObject((prev: any) => ({
-        ...prev,
-        straatnaam: generatedStreet,
-        huisnummer: generatedHouseNumber,
-    }));
-  }
-
   const handleImportSuccess = () => {
     setIsImporting(false);
     // Data will refresh automatically due to useCollection hook
+  };
+
+  const handleUpdateField = (field: string, value: any) => {
+    if (!firestore || !selectedObject) return;
+    const objectRef = doc(firestore, 'objects', selectedObject.id);
+    updateDocumentNonBlocking(objectRef, { [field]: value });
+    setSelectedObject((prev: any) => ({ ...prev, [field]: value }));
   };
 
   return (
@@ -231,7 +187,7 @@ export default function ObjectsPage() {
                           <label className="text-sm font-medium">
                             Locatie type
                           </label>
-                          <Select value={selectedObject.locatieType} disabled>
+                          <Select value={selectedObject.locatieType} onValueChange={(v) => handleUpdateField('locatieType', v)}>
                             <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
@@ -246,7 +202,7 @@ export default function ObjectsPage() {
                           <label className="text-sm font-medium">
                             Locatie sub type
                           </label>
-                          <Select value={selectedObject.locatieSubType} disabled>
+                          <Select value={selectedObject.locatieSubType} onValueChange={(v) => handleUpdateField('locatieSubType', v)}>
                             <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
@@ -261,14 +217,14 @@ export default function ObjectsPage() {
                       <div className="space-y-4">
                         <div>
                           <label className="text-sm font-medium">Kwaliteit</label>
-                          <Select value={selectedObject.kwaliteit} disabled>
+                          <Select value={selectedObject.kwaliteit} onValueChange={(v) => handleUpdateField('kwaliteit', v)}>
                             <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="a">A</SelectItem>
-                              <SelectItem value="b">B</SelectItem>
-                              <SelectItem value="c">C</SelectItem>
+                              <SelectItem value="A">A</SelectItem>
+                              <SelectItem value="B">B</SelectItem>
+                              <SelectItem value="C">C</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -277,6 +233,7 @@ export default function ObjectsPage() {
                           <div className="flex items-center gap-2">
                             <Switch
                               checked={selectedObject.isActief}
+                              onCheckedChange={(c) => handleUpdateField('isActief', c)}
                             />
                             <span className="text-sm font-medium">Is actief</span>
                           </div>
@@ -291,9 +248,8 @@ export default function ObjectsPage() {
                             </label>
                             <Input
                             id="street-name"
-                            value={generatedStreet || selectedObject.straatnaam || ''}
-                            readOnly={!generatedStreet}
-                            onChange={(e) => setGeneratedStreet(e.target.value)}
+                            value={selectedObject.straatnaam || ''}
+                            onChange={(e) => handleUpdateField('straatnaam', e.target.value)}
                             />
                         </div>
                         <div>
@@ -302,28 +258,9 @@ export default function ObjectsPage() {
                             </label>
                             <Input 
                                 id="house-number" 
-                                value={generatedHouseNumber || selectedObject.huisnummer || ''} 
-                                readOnly={!generatedHouseNumber}
-                                onChange={(e) => setGeneratedHouseNumber(e.target.value)}
+                                value={selectedObject.huisnummer || ''}
+                                onChange={(e) => handleUpdateField('huisnummer', e.target.value)}
                             />
-                        </div>
-                         <div className='md:col-span-3 flex items-center justify-end gap-2'>
-                           <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => fetchAddress(selectedObject.longitude, selectedObject.latitude)}
-                                disabled={isFetchingAddress || !selectedObject.longitude || !selectedObject.latitude}
-                            >
-                                <RefreshCw className={`mr-2 h-4 w-4 ${isFetchingAddress ? 'animate-spin' : ''}`} />
-                                Adres ophalen
-                            </Button>
-                            <Button
-                                size="sm"
-                                onClick={handleSaveAddress}
-                                disabled={!generatedStreet && !generatedHouseNumber}
-                            >
-                                Adres opslaan
-                            </Button>
                         </div>
                     </div>
 
@@ -365,7 +302,7 @@ export default function ObjectsPage() {
                             <label htmlFor="warning" className="text-sm font-medium">
                                 Waarschuwing
                             </label>
-                            <Textarea id="warning" placeholder="Voeg een waarschuwing toe..." value={selectedObject.waarschuwing || ''} readOnly/>
+                            <Textarea id="warning" placeholder="Voeg een waarschuwing toe..." value={selectedObject.waarschuwing || ''} onChange={(e) => handleUpdateField('waarschuwing', e.target.value)} />
                         </div>
                         <Separator/>
                         <div className="flex justify-between items-center">

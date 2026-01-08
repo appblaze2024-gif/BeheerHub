@@ -39,6 +39,9 @@ const objectFields = [
     'waarschuwing', 'vulgraad'
 ];
 
+const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
+
+
 // Simple but effective CSV parser
 const parseCSV = (csv: string): { headers: string[], data: string[][] } => {
     const lines = csv.split('\n').filter(line => line.trim() !== '');
@@ -46,10 +49,13 @@ const parseCSV = (csv: string): { headers: string[], data: string[][] } => {
         return { headers: [], data: [] };
     }
 
-    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+    // Handle potential semicolon delimiters
+    const delimiter = lines[0].includes(';') ? ';' : ',';
+
+    const headers = lines[0].split(delimiter).map(h => h.trim().replace(/"/g, ''));
     const data = lines.slice(1).map(line => {
         // This is a simplified parser; for complex CSVs, a library might be better
-        return line.split(',').map(v => v.trim().replace(/"/g, ''));
+        return line.split(delimiter).map(v => v.trim().replace(/"/g, ''));
     });
     return { headers, data };
 };
@@ -113,12 +119,12 @@ export function ObjectImportDialog({
       // Auto-map based on header name similarity
       const newMapping: Record<string, string> = {};
       objectFields.forEach(field => {
-        const lowerField = field.toLowerCase();
+        const lowerField = field.toLowerCase().replace(/ /g, '');
         const foundHeader = fileHeaders.find(header => {
-            const lowerHeader = header.toLowerCase();
+            const lowerHeader = header.toLowerCase().replace(/ /g, '');
             if(lowerHeader === lowerField) return true;
             if(lowerField === 'latitude' && (lowerHeader === 'lat' || lowerHeader === 'latitude')) return true;
-            if(lowerField === 'longitude' && (lowerHeader === 'lon' || lowerHeader === 'longitude')) return true;
+            if(lowerField === 'longitude' && (lowerHeader === 'lon' || lowerHeader === 'long' || lowerHeader === 'longitude')) return true;
             return false;
         });
         if (foundHeader) {
@@ -132,6 +138,25 @@ export function ObjectImportDialog({
         setError("Fout bij het lezen van het bestand.");
     }
     reader.readAsText(selectedFile, 'ISO-8859-1'); // Common encoding for CSV
+  };
+
+  const fetchAddress = async (longitude: number, latitude: number): Promise<{ street: string; houseNumber: string }> => {
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${MAPBOX_TOKEN}`
+      );
+      const data = await response.json();
+      if (data.features && data.features.length > 0) {
+        const feature = data.features[0];
+        return {
+          street: feature.text || '',
+          houseNumber: feature.address || '',
+        };
+      }
+    } catch (error) {
+      console.error('Error fetching address:', error);
+    }
+    return { street: '', houseNumber: '' };
   };
 
   const handleImport = async () => {
@@ -160,14 +185,14 @@ export function ObjectImportDialog({
     }
 
     const objectsColRef = collection(firestore, 'objects');
-    const batchSize = 500;
+    const batchSize = 100; // Smaller batch size due to API calls
 
     try {
       for (let i = 0; i < data.length; i += batchSize) {
         const batch = writeBatch(firestore);
         const chunk = data.slice(i, i + batchSize);
 
-        chunk.forEach(row => {
+        for (const row of chunk) {
             const objectData: Record<string, any> = {};
             let objectId = row[fieldIndexMap['id']];
 
@@ -179,6 +204,8 @@ export function ObjectImportDialog({
 
             for(const field in fieldIndexMap) {
                 const index = fieldIndexMap[field];
+                if (index === undefined || index >= row.length) continue;
+
                 const value = row[index] ? row[index].trim() : undefined;
 
                 if (value !== undefined) {
@@ -192,11 +219,17 @@ export function ObjectImportDialog({
                 }
             }
 
+            if (!objectData.straatnaam && objectData.latitude && objectData.longitude) {
+              const { street, houseNumber } = await fetchAddress(objectData.longitude, objectData.latitude);
+              objectData.straatnaam = street;
+              objectData.huisnummer = houseNumber;
+            }
+
             if(objectId) {
                 const docRef = doc(objectsColRef, objectId === "N.B" ? doc(collection(firestore, 'temp')).id : objectId);
                 batch.set(docRef, { ...objectData, id: objectId }, { merge: true });
             }
-        });
+        }
         
         await batch.commit();
         setImportProgress(((i + chunk.length) / data.length) * 100);
@@ -219,6 +252,7 @@ export function ObjectImportDialog({
              <div className='flex flex-col items-center justify-center gap-4 py-8'>
                 <Loader2 className="h-16 w-16 animate-spin text-primary" />
                 <p>Objecten importeren...</p>
+                 <p className="text-sm text-muted-foreground">Dit kan even duren, omdat adresgegevens worden opgehaald.</p>
                 <Progress value={importProgress} className="w-full" />
                 <p className='text-sm text-muted-foreground'>{Math.round(importProgress)}% voltooid</p>
             </div>
@@ -277,7 +311,7 @@ export function ObjectImportDialog({
                         <AlertCircle className="h-4 w-4" />
                         <AlertTitle>{mapping['id'] ? "Klaar om te importeren" : "Opgelet!"}</AlertTitle>
                         <AlertDescription>
-                          {mapping['id'] ? "Het veld 'id' is gekoppeld. U kunt nu importeren." : "Zorg ervoor dat de kolom voor 'id' is gekoppeld, dit wordt gebruikt als de unieke ID voor elk voertuig."}
+                          {mapping['id'] ? "Het veld 'id' is gekoppeld. U kunt nu importeren." : "Zorg ervoor dat de kolom voor 'id' is gekoppeld, dit wordt gebruikt als de unieke ID voor elk object."}
                         </AlertDescription>
                     </Alert>
                     {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
