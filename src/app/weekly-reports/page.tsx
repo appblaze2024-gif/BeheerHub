@@ -283,7 +283,7 @@ export default function WeeklyReportsPage() {
         <Table className="min-w-full border-collapse h-full">
           <TableHeader className="bg-gray-100/50 dark:bg-gray-800/20 sticky top-0 z-10">
             <TableRow>
-              <TableHead className="w-[100px] p-1 border-t border-b border-r border-black">Postnummer</TableHead>
+              <TableHead className="w-[100px] p-1 border-t border-b border-l border-r border-black">Postnummer</TableHead>
               <TableHead className="w-[250px] p-1 border-t border-b border-r border-black">Omschrijving</TableHead>
               <TableHead className="p-1 border-t border-b border-r border-black">Eenheid</TableHead>
               <TableHead className="p-1 border-t border-b border-r border-black">Calculatie uren</TableHead>
@@ -294,18 +294,18 @@ export default function WeeklyReportsPage() {
               <TableHead className="p-1 border-t border-b border-r border-black">Restant</TableHead>
               <TableHead className="p-1 border-t border-b border-r border-black">% Gereed</TableHead>
               <TableHead className="p-1 border-t border-b border-r border-black bg-yellow-100/50 dark:bg-yellow-900/20 text-right">Totaal in periode</TableHead>
-              <TableHead className="p-1 border-t border-b border-black text-right">totaal t/m week</TableHead>
+              <TableHead className="p-1 border-t border-b border-r border-black">totaal t/m week</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoadingProjects || (isLoadingDiensten && !reportData.length && selectedProjectId) ? (
                 <TableRow>
-                    <TableCell colSpan={12} className="text-center h-24 p-1 border-b border-r border-black">Rapportgegevens laden...</TableCell>
+                    <TableCell colSpan={12} className="text-center h-24 p-1 border-b border-l border-r border-black">Rapportgegevens laden...</TableCell>
                 </TableRow>
             ) : reportData.length > 0 ? (
               reportData.map((item, index) => (
                 <TableRow key={index} className="h-auto">
-                  <TableCell className="p-1 border-b border-r border-black">{item.postnummer}</TableCell>
+                  <TableCell className="p-1 border-b border-l border-r border-black">{item.postnummer}</TableCell>
                   <TableCell className="p-1 border-b border-r border-black">{item.omschrijving}</TableCell>
                   <TableCell className="p-1 border-b border-r border-black">{item.eenheid}</TableCell>
                   <TableCell className="p-1 border-b border-r border-black">
@@ -324,14 +324,14 @@ export default function WeeklyReportsPage() {
                   <TableCell className="p-1 border-b border-r border-black bg-yellow-100/50 dark:bg-yellow-900/20 text-right font-medium">
                     {formatCurrency(item.totaalInPeriode)}
                   </TableCell>
-                  <TableCell className="p-1 border-b border-black text-right font-medium">
+                  <TableCell className="p-1 border-b border-r border-black text-right font-medium">
                     {formatCurrency(item.totaalTmWeek)}
                   </TableCell>
                 </TableRow>
               ))
             ) : (
                  <TableRow>
-                    <TableCell colSpan={12} className="text-center h-24 p-1 border-b border-r border-black">
+                    <TableCell colSpan={12} className="text-center h-24 p-1 border-b border-l border-r border-black">
                         { selectedProject ? "Geen werksoorten gevonden voor dit project. Voeg werksoorten toe op de projectpagina." : "Selecteer een project om de weekstaat te bekijken." }
                     </TableCell>
                 </TableRow>
@@ -340,9 +340,9 @@ export default function WeeklyReportsPage() {
           {reportData.length > 0 && (
             <TableFooter className="sticky bottom-0 bg-gray-50 dark:bg-gray-900/50">
                 <TableRow className="h-auto">
-                <TableCell colSpan={10} className="p-1 border-r border-black" />
+                <TableCell colSpan={10} className="p-1 border-b border-l border-r border-black" />
                 <TableCell className="p-1 border-b border-r border-black text-right font-bold bg-gray-100/50 dark:bg-gray-800/20">Subtotaal</TableCell>
-                <TableCell className="p-1 border-b border-black text-right font-bold bg-gray-100/50 dark:bg-gray-800/20">{formatCurrency(subtotal)}</TableCell>
+                <TableCell className="p-1 border-b border-r border-black text-right font-bold bg-gray-100/50 dark:bg-gray-800/20">{formatCurrency(subtotal)}</TableCell>
                 </TableRow>
             </TableFooter>
           )}
