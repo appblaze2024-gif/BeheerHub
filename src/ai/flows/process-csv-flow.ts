@@ -1,118 +1,333 @@
-'use server';
-/**
- * @fileOverview Een Genkit flow voor het verwerken van CSV-bestanden met objectdata.
- *
- * - processCsv - Een functie die de inhoud van een CSV-bestand analyseert,
- *   omzet naar Object-entiteiten en opslaat in Firestore.
- */
+'use client';
 
-import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
-import { getFirestore, collection, writeBatch, doc } from 'firebase/firestore';
-import { initializeFirebase } from '@/firebase';
+import * as React from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useFirestore } from '@/firebase';
+import { collection, doc, writeBatch } from 'firebase/firestore';
+import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 
-// Input schema voor de flow: een string met de CSV-data.
-const ProcessCsvInputSchema = z.string().describe('De volledige inhoud van het CSV-bestand als een enkele string.');
-
-// Output schema voor de flow: een string met een samenvatting van de import.
-const ProcessCsvOutputSchema = z.string().describe('Een samenvatting van het importproces, bijv. "X objecten succesvol verwerkt."');
-
-// Definitie van een enkel object, gebaseerd op backend.json.
-// De AI gebruikt dit schema om de data correct te structureren.
-const ObjectSchema = z.object({
-    id: z.string().describe("Unieke identifier voor het object. Als dit veld ontbreekt in een rij, gebruik de waarde 'N.B'."),
-    latitude: z.number().optional().describe('De breedtegraad.'),
-    longitude: z.number().optional().describe('De lengtegraad.'),
-    locatieType: z.string().optional(),
-    locatieSubType: z.string().optional(),
-    kwaliteit: z.string().optional(),
-    isActief: z.boolean().optional(),
-    straatnaam: z.string().optional(),
-    huisnummer: z.string().optional(),
-    waarschuwing: z.string().optional(),
-    vulgraad: z.number().optional(),
-}).describe("Vertegenwoordigt een fysiek object in de wereld. Zorg ervoor dat velden zoals 'lat' of 'lon' worden gemapt naar 'latitude' en 'longitude'.");
-
-// Schema voor de output van de LLM: een array van Objecten.
-const LlmOutputSchema = z.array(ObjectSchema);
-
-/**
- * Public-facing functie die de Genkit flow aanroept.
- * @param csvContent De inhoud van het CSV-bestand.
- * @returns Een belofte die wordt opgelost met een samenvattingsstring.
- */
-export async function processCsv(csvContent: string): Promise<string> {
-  return processCsvFlow(csvContent);
+interface ObjectImportDialogProps {
+  children: React.ReactNode;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
 }
 
-// Definitie van de Genkit prompt.
-const csvProcessingPrompt = ai.definePrompt({
-  name: 'csvProcessingPrompt',
-  input: { schema: ProcessCsvInputSchema },
-  output: { schema: LlmOutputSchema },
-  prompt: `Je bent een expert in dataverwerking. Analyseer de volgende CSV-data. Converteer elke rij naar een JSON-object dat voldoet aan het 'Object' schema.
-  
-  Belangrijke instructies:
-  1. Identificeer de header-rij om de kolommen te bepalen.
-  2. Koppel de kolommen aan de velden van het Object-schema. Let op veelvoorkomende afkortingen zoals 'lat' voor 'latitude' en 'lon' voor 'longitude'.
-  3. Als de waarde voor 'id' in een rij ontbreekt of leeg is, stel de 'id' in op de string "N.B".
-  4. Converteer numerieke velden ('latitude', 'longitude', 'vulgraad') naar getallen. Als een waarde niet kan worden omgezet, laat het veld dan weg.
-  5. Converteer booleaanse velden ('isActief') naar true/false.
-  
-  Hier is de CSV-data:
-  
-  {{{input}}}
-  `,
-  config: {
-    // Verhoog de temperatuur een beetje voor flexibiliteit bij het parsen.
-    temperature: 0.3,
-  },
-});
+const objectFields = [
+    'id', 'latitude', 'longitude', 'locatieType', 'locatieSubType', 
+    'kwaliteit', 'isActief', 'straatnaam', 'huisnummer', 
+    'waarschuwing', 'vulgraad'
+];
 
-
-/**
- * De Genkit flow die de CSV-verwerking orkestreert.
- */
-const processCsvFlow = ai.defineFlow(
-  {
-    name: 'processCsvFlow',
-    inputSchema: ProcessCsvInputSchema,
-    outputSchema: ProcessCsvOutputSchema,
-  },
-  async (csvContent) => {
-    // Stap 1: Roep de LLM aan om de CSV te parsen naar een lijst van objecten.
-    const { output } = await csvProcessingPrompt(csvContent);
-    
-    if (!output || output.length === 0) {
-      throw new Error('De AI kon geen objecten uit het CSV-bestand extraheren.');
+// Simple but effective CSV parser
+const parseCSV = (csv: string): { headers: string[], data: string[][] } => {
+    const lines = csv.split('\n').filter(line => line.trim() !== '');
+    if (lines.length === 0) {
+        return { headers: [], data: [] };
     }
 
-    // Stap 2: Sla de objecten op in Firestore.
-    // Omdat dit een server-side flow is, moeten we Firebase hier initialiseren.
-    const { firestore } = initializeFirebase();
-    const objectsCollectionRef = collection(firestore, 'objects');
-    
-    const batchSize = 500; // Firestore batch limit
-    let processedCount = 0;
+    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+    const data = lines.slice(1).map(line => {
+        // This is a simplified parser; for complex CSVs, a library might be better
+        return line.split(',').map(v => v.trim().replace(/"/g, ''));
+    });
+    return { headers, data };
+};
 
-    for (let i = 0; i < output.length; i += batchSize) {
-      const batch = writeBatch(firestore);
-      const chunk = output.slice(i, i + batchSize);
 
-      chunk.forEach(obj => {
-        if (obj.id) {
-          const docRef = doc(objectsCollectionRef, obj.id);
-          // Gebruik set met merge: true om bestaande documenten bij te werken
-          // en nieuwe documenten aan te maken.
-          batch.set(docRef, obj, { merge: true });
-          processedCount++;
+export function ObjectImportDialog({
+  children,
+  open,
+  onOpenChange,
+  onSuccess,
+}: ObjectImportDialogProps) {
+  const firestore = useFirestore();
+  const [step, setStep] = React.useState(1);
+  const [file, setFile] = React.useState<File | null>(null);
+  const [headers, setHeaders] = React.useState<string[]>([]);
+  const [data, setData] = React.useState<string[][]>([]);
+  const [mapping, setMapping] = React.useState<Record<string, string>>({});
+  const [isImporting, setIsImporting] = React.useState(false);
+  const [importProgress, setImportProgress] = React.useState(0);
+  const [error, setError] = React.useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (!open) {
+      setTimeout(() => {
+        setStep(1);
+        setFile(null);
+        setHeaders([]);
+        setData([]);
+        setMapping({});
+        setIsImporting(false);
+        setImportProgress(0);
+        setError(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }, 300);
+    }
+  }, [open]);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0];
+    if (!selectedFile) return;
+
+    setFile(selectedFile);
+    setError(null);
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      const { headers: fileHeaders, data: fileData } = parseCSV(text);
+      
+      if(fileHeaders.length === 0) {
+          setError("Kon geen headers vinden in het CSV-bestand.");
+          return;
+      }
+
+      setHeaders(fileHeaders);
+      setData(fileData);
+
+      // Auto-map based on header name similarity
+      const newMapping: Record<string, string> = {};
+      objectFields.forEach(field => {
+        const lowerField = field.toLowerCase();
+        const foundHeader = fileHeaders.find(header => {
+            const lowerHeader = header.toLowerCase();
+            if(lowerHeader === lowerField) return true;
+            if(lowerField === 'latitude' && (lowerHeader === 'lat' || lowerHeader === 'latitude')) return true;
+            if(lowerField === 'longitude' && (lowerHeader === 'lon' || lowerHeader === 'longitude')) return true;
+            return false;
+        });
+        if (foundHeader) {
+          newMapping[field] = foundHeader;
         }
       });
-      
-      await batch.commit();
+      setMapping(newMapping);
+      setStep(2);
+    };
+    reader.onerror = () => {
+        setError("Fout bij het lezen van het bestand.");
+    }
+    reader.readAsText(selectedFile, 'ISO-8859-1'); // Common encoding for CSV
+  };
+
+  const handleImport = async () => {
+    if (!firestore || data.length === 0) {
+        setError("Geen data om te importeren.");
+        return;
     }
     
-    // Stap 3: Retourneer een succesbericht.
-    return `${processedCount} objecten succesvol verwerkt en opgeslagen.`;
+    if (!mapping['id']) {
+        setError("Het veld 'id' moet worden gekoppeld om objecten te kunnen importeren.");
+        return;
+    }
+    
+    setIsImporting(true);
+    setImportProgress(0);
+    setError(null);
+
+    const headerIndexMap: Record<string, number> = {};
+    headers.forEach((h, i) => { headerIndexMap[h] = i; });
+
+    const fieldIndexMap: Record<string, number> = {};
+    for(const field in mapping) {
+        if(mapping[field] && mapping[field] !== '--ignore--') {
+            fieldIndexMap[field] = headerIndexMap[mapping[field]];
+        }
+    }
+
+    const objectsColRef = collection(firestore, 'objects');
+    const batchSize = 500;
+
+    try {
+      for (let i = 0; i < data.length; i += batchSize) {
+        const batch = writeBatch(firestore);
+        const chunk = data.slice(i, i + batchSize);
+
+        chunk.forEach(row => {
+            const objectData: Record<string, any> = {};
+            let objectId = row[fieldIndexMap['id']];
+
+            if (!objectId || objectId.trim() === '') {
+                objectId = "N.B";
+            } else {
+                objectId = objectId.trim();
+            }
+
+            for(const field in fieldIndexMap) {
+                const index = fieldIndexMap[field];
+                const value = row[index] ? row[index].trim() : undefined;
+
+                if (value !== undefined) {
+                    if(['latitude', 'longitude', 'vulgraad'].includes(field)) {
+                        objectData[field] = parseFloat(value.replace(',', '.'));
+                    } else if (field === 'isActief') {
+                        objectData[field] = ['true', '1', 'ja', 'yes'].includes(value.toLowerCase());
+                    } else {
+                        objectData[field] = value;
+                    }
+                }
+            }
+
+            if(objectId) {
+                const docRef = doc(objectsColRef, objectId === "N.B" ? doc(collection(firestore, 'temp')).id : objectId);
+                batch.set(docRef, { ...objectData, id: objectId }, { merge: true });
+            }
+        });
+        
+        await batch.commit();
+        setImportProgress(((i + chunk.length) / data.length) * 100);
+      }
+      
+      setStep(3);
+      onSuccess();
+
+    } catch (error: any) {
+      console.error("Error importing objects: ", error);
+      setError(`Fout tijdens importeren: ${error.message}`);
+    } finally {
+        setIsImporting(false);
+    }
+  };
+
+  const renderContent = () => {
+      if (isImporting) {
+        return (
+             <div className='flex flex-col items-center justify-center gap-4 py-8'>
+                <Loader2 className="h-16 w-16 animate-spin text-primary" />
+                <p>Objecten importeren...</p>
+                <Progress value={importProgress} className="w-full" />
+                <p className='text-sm text-muted-foreground'>{Math.round(importProgress)}% voltooid</p>
+            </div>
+        )
+      }
+      switch(step) {
+          case 1:
+              return (
+                <div className="py-8">
+                    <Label htmlFor="csv-file" className="sr-only">CSV Bestand</Label>
+                    <Input
+                    id="csv-file"
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileChange}
+                    ref={fileInputRef}
+                    className="w-full h-12 text-base"
+                    />
+                     {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+                </div>
+              );
+          case 2:
+              return (
+                 <div>
+                    <p className="text-sm text-muted-foreground mb-4">
+                        We hebben {data.length} rijen gevonden. Koppel de kolommen aan de juiste velden.
+                    </p>
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-6 max-h-64 overflow-y-auto pr-2">
+                    {objectFields.map((field) => (
+                        <div key={field} className="grid grid-cols-2 items-center gap-4">
+                        <Label htmlFor={`mapping-${field}`} className="capitalize text-right">
+                            {field.replace('_', ' ')}
+                        </Label>
+                        <Select
+                            value={mapping[field]}
+                            onValueChange={(value) =>
+                            setMapping((prev) => ({ ...prev, [field]: value }))
+                            }
+                        >
+                            <SelectTrigger id={`mapping-${field}`}>
+                            <SelectValue placeholder="Selecteer een kolom" />
+                            </SelectTrigger>
+                            <SelectContent>
+                            <SelectItem value="--ignore--">-- Negeer --</SelectItem>
+                            {headers.map((header) => (
+                                <SelectItem key={header} value={header}>
+                                {header}
+                                </SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        </div>
+                    ))}
+                    </div>
+                    <Alert variant={mapping['id'] ? "default" : "destructive"}>
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>{mapping['id'] ? "Klaar om te importeren" : "Opgelet!"}</AlertTitle>
+                        <AlertDescription>
+                          {mapping['id'] ? "Het veld 'id' is gekoppeld. U kunt nu importeren." : "Zorg ervoor dat de kolom voor 'id' is gekoppeld, dit wordt gebruikt als de unieke ID voor elk voertuig."}
+                        </AlertDescription>
+                    </Alert>
+                    {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+                </div>
+              );
+          case 3:
+              return (
+                 <div className='flex flex-col items-center gap-4 py-8'>
+                    <CheckCircle className="h-16 w-16 text-green-500" />
+                    <p className='font-medium text-lg'>Importeren voltooid!</p>
+                    <p className='text-sm text-muted-foreground text-center'>{data.length} objecten succesvol verwerkt.</p>
+                </div>
+              )
+      }
   }
-);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogTrigger asChild>{children}</DialogTrigger>
+      <DialogContent className="sm:max-w-[650px]">
+        <DialogHeader>
+          <DialogTitle>Objecten Importeren (CSV)</DialogTitle>
+          <DialogDescription>
+            {step === 1 && 'Selecteer een CSV-bestand om te importeren.'}
+            {step === 2 && 'Koppel uw CSV-kolommen aan de databasevelden.'}
+            {step === 3 && 'De import is succesvol afgerond.'}
+          </DialogDescription>
+        </DialogHeader>
+
+        {renderContent()}
+
+        <DialogFooter>
+          {step === 1 && <Button variant="ghost" onClick={() => onOpenChange(false)}>Annuleren</Button>}
+          {step === 2 && !isImporting && (
+            <>
+              <Button variant="ghost" onClick={() => setStep(1)}>
+                Terug
+              </Button>
+              <Button onClick={handleImport} disabled={!mapping['id']}>
+                Importeer {data.length} Objecten
+              </Button>
+            </>
+          )}
+          {step === 3 && !isImporting && (
+             <Button onClick={() => onOpenChange(false)}>
+                Sluiten
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

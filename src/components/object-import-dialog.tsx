@@ -13,9 +13,18 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useFirestore } from '@/firebase';
+import { collection, doc, writeBatch } from 'firebase/firestore';
+import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
-import { processCsv } from '@/ai/flows/process-csv-flow';
 
 interface ObjectImportDialogProps {
   children: React.ReactNode;
@@ -24,16 +33,42 @@ interface ObjectImportDialogProps {
   onSuccess: () => void;
 }
 
+const objectFields = [
+    'id', 'latitude', 'longitude', 'locatieType', 'locatieSubType', 
+    'kwaliteit', 'isActief', 'straatnaam', 'huisnummer', 
+    'waarschuwing', 'vulgraad'
+];
+
+// Simple but effective CSV parser
+const parseCSV = (csv: string): { headers: string[], data: string[][] } => {
+    const lines = csv.split('\n').filter(line => line.trim() !== '');
+    if (lines.length === 0) {
+        return { headers: [], data: [] };
+    }
+
+    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+    const data = lines.slice(1).map(line => {
+        // This is a simplified parser; for complex CSVs, a library might be better
+        return line.split(',').map(v => v.trim().replace(/"/g, ''));
+    });
+    return { headers, data };
+};
+
+
 export function ObjectImportDialog({
   children,
   open,
   onOpenChange,
   onSuccess,
 }: ObjectImportDialogProps) {
+  const firestore = useFirestore();
   const [step, setStep] = React.useState(1);
   const [file, setFile] = React.useState<File | null>(null);
+  const [headers, setHeaders] = React.useState<string[]>([]);
+  const [data, setData] = React.useState<string[][]>([]);
+  const [mapping, setMapping] = React.useState<Record<string, string>>({});
   const [isImporting, setIsImporting] = React.useState(false);
-  const [importResult, setImportResult] = React.useState<string | null>(null);
+  const [importProgress, setImportProgress] = React.useState(0);
   const [error, setError] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -42,8 +77,11 @@ export function ObjectImportDialog({
       setTimeout(() => {
         setStep(1);
         setFile(null);
+        setHeaders([]);
+        setData([]);
+        setMapping({});
         setIsImporting(false);
-        setImportResult(null);
+        setImportProgress(0);
         setError(null);
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
@@ -54,55 +92,206 @@ export function ObjectImportDialog({
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
-    if (!selectedFile) {
-      setStep(1);
-      return;
-    }
+    if (!selectedFile) return;
+
     setFile(selectedFile);
-    setStep(2);
+    setError(null);
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      const { headers: fileHeaders, data: fileData } = parseCSV(text);
+      
+      if(fileHeaders.length === 0) {
+          setError("Kon geen headers vinden in het CSV-bestand.");
+          return;
+      }
+
+      setHeaders(fileHeaders);
+      setData(fileData);
+
+      // Auto-map based on header name similarity
+      const newMapping: Record<string, string> = {};
+      objectFields.forEach(field => {
+        const lowerField = field.toLowerCase();
+        const foundHeader = fileHeaders.find(header => {
+            const lowerHeader = header.toLowerCase();
+            if(lowerHeader === lowerField) return true;
+            if(lowerField === 'latitude' && (lowerHeader === 'lat' || lowerHeader === 'latitude')) return true;
+            if(lowerField === 'longitude' && (lowerHeader === 'lon' || lowerHeader === 'longitude')) return true;
+            return false;
+        });
+        if (foundHeader) {
+          newMapping[field] = foundHeader;
+        }
+      });
+      setMapping(newMapping);
+      setStep(2);
+    };
+    reader.onerror = () => {
+        setError("Fout bij het lezen van het bestand.");
+    }
+    reader.readAsText(selectedFile, 'ISO-8859-1'); // Common encoding for CSV
   };
 
   const handleImport = async () => {
-    if (!file) {
-      setError('Selecteer alstublieft een bestand.');
-      return;
+    if (!firestore || data.length === 0) {
+        setError("Geen data om te importeren.");
+        return;
+    }
+    
+    if (!mapping['id']) {
+        setError("Het veld 'id' moet worden gekoppeld om objecten te kunnen importeren.");
+        return;
+    }
+    
+    setIsImporting(true);
+    setImportProgress(0);
+    setError(null);
+
+    const headerIndexMap: Record<string, number> = {};
+    headers.forEach((h, i) => { headerIndexMap[h] = i; });
+
+    const fieldIndexMap: Record<string, number> = {};
+    for(const field in mapping) {
+        if(mapping[field] && mapping[field] !== '--ignore--') {
+            fieldIndexMap[field] = headerIndexMap[mapping[field]];
+        }
     }
 
-    setIsImporting(true);
-    setError(null);
-    setImportResult(null);
+    const objectsColRef = collection(firestore, 'objects');
+    const batchSize = 500;
 
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const csvContent = e.target?.result as string;
-      if (!csvContent) {
-        setError('Kon het bestand niet lezen.');
-        setIsImporting(false);
-        return;
+    try {
+      for (let i = 0; i < data.length; i += batchSize) {
+        const batch = writeBatch(firestore);
+        const chunk = data.slice(i, i + batchSize);
+
+        chunk.forEach(row => {
+            const objectData: Record<string, any> = {};
+            let objectId = row[fieldIndexMap['id']];
+
+            if (!objectId || objectId.trim() === '') {
+                objectId = "N.B";
+            } else {
+                objectId = objectId.trim();
+            }
+
+            for(const field in fieldIndexMap) {
+                const index = fieldIndexMap[field];
+                const value = row[index] ? row[index].trim() : undefined;
+
+                if (value !== undefined) {
+                    if(['latitude', 'longitude', 'vulgraad'].includes(field)) {
+                        objectData[field] = parseFloat(value.replace(',', '.'));
+                    } else if (field === 'isActief') {
+                        objectData[field] = ['true', '1', 'ja', 'yes'].includes(value.toLowerCase());
+                    } else {
+                        objectData[field] = value;
+                    }
+                }
+            }
+
+            if(objectId) {
+                const docRef = doc(objectsColRef, objectId === "N.B" ? doc(collection(firestore, 'temp')).id : objectId);
+                batch.set(docRef, { ...objectData, id: objectId }, { merge: true });
+            }
+        });
+        
+        await batch.commit();
+        setImportProgress(((i + chunk.length) / data.length) * 100);
       }
       
-      try {
-        const result = await processCsv(csvContent);
-        setImportResult(result);
-        setStep(3);
-        onSuccess();
-      } catch (err: any) {
-        console.error("Fout bij importeren:", err);
-        setError(err.message || 'Er is een onbekende fout opgetreden tijdens de import.');
-        setStep(2); // Stay on step 2 to allow retry
-      } finally {
+      setStep(3);
+      onSuccess();
+
+    } catch (error: any) {
+      console.error("Error importing objects: ", error);
+      setError(`Fout tijdens importeren: ${error.message}`);
+    } finally {
         setIsImporting(false);
-      }
-    };
-    reader.onerror = () => {
-        setError('Fout bij het lezen van het bestand.');
-        setIsImporting(false);
-    };
-    reader.readAsText(file, 'ISO-8859-1');
+    }
   };
-  
-  const handleClose = () => {
-      onOpenChange(false);
+
+  const renderContent = () => {
+      if (isImporting) {
+        return (
+             <div className='flex flex-col items-center justify-center gap-4 py-8'>
+                <Loader2 className="h-16 w-16 animate-spin text-primary" />
+                <p>Objecten importeren...</p>
+                <Progress value={importProgress} className="w-full" />
+                <p className='text-sm text-muted-foreground'>{Math.round(importProgress)}% voltooid</p>
+            </div>
+        )
+      }
+      switch(step) {
+          case 1:
+              return (
+                <div className="py-8">
+                    <Label htmlFor="csv-file" className="sr-only">CSV Bestand</Label>
+                    <Input
+                    id="csv-file"
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileChange}
+                    ref={fileInputRef}
+                    className="w-full h-12 text-base"
+                    />
+                     {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+                </div>
+              );
+          case 2:
+              return (
+                 <div>
+                    <p className="text-sm text-muted-foreground mb-4">
+                        We hebben {data.length} rijen gevonden. Koppel de kolommen aan de juiste velden.
+                    </p>
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-6 max-h-64 overflow-y-auto pr-2">
+                    {objectFields.map((field) => (
+                        <div key={field} className="grid grid-cols-2 items-center gap-4">
+                        <Label htmlFor={`mapping-${field}`} className="capitalize text-right">
+                            {field.replace('_', ' ')}
+                        </Label>
+                        <Select
+                            value={mapping[field]}
+                            onValueChange={(value) =>
+                            setMapping((prev) => ({ ...prev, [field]: value }))
+                            }
+                        >
+                            <SelectTrigger id={`mapping-${field}`}>
+                            <SelectValue placeholder="Selecteer een kolom" />
+                            </SelectTrigger>
+                            <SelectContent>
+                            <SelectItem value="--ignore--">-- Negeer --</SelectItem>
+                            {headers.map((header) => (
+                                <SelectItem key={header} value={header}>
+                                {header}
+                                </SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        </div>
+                    ))}
+                    </div>
+                    <Alert variant={mapping['id'] ? "default" : "destructive"}>
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>{mapping['id'] ? "Klaar om te importeren" : "Opgelet!"}</AlertTitle>
+                        <AlertDescription>
+                          {mapping['id'] ? "Het veld 'id' is gekoppeld. U kunt nu importeren." : "Zorg ervoor dat de kolom voor 'id' is gekoppeld, dit wordt gebruikt als de unieke ID voor elk voertuig."}
+                        </AlertDescription>
+                    </Alert>
+                    {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+                </div>
+              );
+          case 3:
+              return (
+                 <div className='flex flex-col items-center gap-4 py-8'>
+                    <CheckCircle className="h-16 w-16 text-green-500" />
+                    <p className='font-medium text-lg'>Importeren voltooid!</p>
+                    <p className='text-sm text-muted-foreground text-center'>{data.length} objecten succesvol verwerkt.</p>
+                </div>
+              )
+      }
   }
 
   return (
@@ -110,79 +299,30 @@ export function ObjectImportDialog({
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-[650px]">
         <DialogHeader>
-          <DialogTitle>Objecten Importeren met AI</DialogTitle>
+          <DialogTitle>Objecten Importeren (CSV)</DialogTitle>
           <DialogDescription>
-            {step === 1 && 'Selecteer een CSV-bestand om te importeren. De AI analyseert de inhoud.'}
-            {step === 2 && 'Het geselecteerde bestand wordt geanalyseerd en verwerkt. Dit kan even duren.'}
-            {step === 3 && 'De objecten zijn succesvol geïmporteerd.'}
+            {step === 1 && 'Selecteer een CSV-bestand om te importeren.'}
+            {step === 2 && 'Koppel uw CSV-kolommen aan de databasevelden.'}
+            {step === 3 && 'De import is succesvol afgerond.'}
           </DialogDescription>
         </DialogHeader>
 
-        {step === 1 && (
-          <div className="py-8">
-            <Label htmlFor="csv-file" className="sr-only">
-              CSV Bestand
-            </Label>
-            <Input
-              id="csv-file"
-              type="file"
-              accept=".csv"
-              onChange={handleFileChange}
-              ref={fileInputRef}
-              className="w-full h-12 text-base"
-            />
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className='py-8'>
-            <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Bestand geselecteerd: {file?.name}</AlertTitle>
-                <AlertDescription>
-                    Klik op 'Importeer' om de AI de data te laten verwerken en uploaden. De AI zal automatisch proberen de kolommen te koppelen aan de juiste velden zoals 'latitude' en 'longitude'.
-                </AlertDescription>
-            </Alert>
-            {error && (
-                <Alert variant="destructive" className="mt-4">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Importfout</AlertTitle>
-                    <AlertDescription>{error}</AlertDescription>
-                </Alert>
-            )}
-          </div>
-        )}
-
-        {isImporting && (
-            <div className='flex flex-col items-center justify-center gap-4 py-8'>
-                <Loader2 className="h-16 w-16 animate-spin text-primary" />
-                <p>AI is de CSV aan het verwerken...</p>
-                <p className='text-sm text-muted-foreground'>Dit kan enkele ogenblikken duren, afhankelijk van de grootte van het bestand.</p>
-            </div>
-        )}
-        
-        {step === 3 && !isImporting && (
-             <div className='flex flex-col items-center gap-4 py-8'>
-                <CheckCircle className="h-16 w-16 text-green-500" />
-                <p className='font-medium text-lg'>Importeren voltooid!</p>
-                <p className='text-sm text-muted-foreground text-center'>{importResult}</p>
-            </div>
-        )}
+        {renderContent()}
 
         <DialogFooter>
-          {step === 1 && <Button variant="ghost" onClick={handleClose}>Annuleren</Button>}
+          {step === 1 && <Button variant="ghost" onClick={() => onOpenChange(false)}>Annuleren</Button>}
           {step === 2 && !isImporting && (
             <>
               <Button variant="ghost" onClick={() => setStep(1)}>
                 Terug
               </Button>
-              <Button onClick={handleImport}>
-                Importeer
+              <Button onClick={handleImport} disabled={!mapping['id']}>
+                Importeer {data.length} Objecten
               </Button>
             </>
           )}
-          {(step === 3 || isImporting) && (
-               <Button onClick={handleClose} disabled={isImporting}>
+          {step === 3 && !isImporting && (
+             <Button onClick={() => onOpenChange(false)}>
                 Sluiten
             </Button>
           )}
