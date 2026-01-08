@@ -99,10 +99,13 @@ export default function WeeklyReportsPage() {
 
   const dienstenQuery = useMemoFirebase(() => {
     if (!firestore || !selectedProjectId) return null;
+    const startDate = format(start, 'yyyy-MM-dd');
+    const endDate = format(end, 'yyyy-MM-dd');
+    
     return query(
       collection(firestore, 'projects', selectedProjectId, 'diensten'),
-      where('datum', '>=', format(start, 'yyyy-MM-dd')),
-      where('datum', '<=', format(end, 'yyyy-MM-dd'))
+      where('datum', '>=', startDate),
+      where('datum', '<=', endDate)
     );
   }, [firestore, selectedProjectId, start, end]);
 
@@ -131,6 +134,7 @@ export default function WeeklyReportsPage() {
 
     if (diensten) {
       for (const dienst of diensten) {
+        if (!dienst.starttijd || !dienst.eindtijd) continue;
         const startTijd = parse(dienst.starttijd, 'HH:mm', new Date());
         const eindTijd = parse(dienst.eindtijd, 'HH:mm', new Date());
         let duurInMinuten = (eindTijd.getTime() - startTijd.getTime()) / (1000 * 60);
@@ -173,7 +177,7 @@ export default function WeeklyReportsPage() {
         totaalTmWeek: totaalTmWeek,
       };
     });
-  }, [selectedProject, diensten]);
+  }, [selectedProject?.werksoorten, diensten]);
   
   const subtotal = reportData.reduce((acc, item) => acc + item.totaalInPeriode, 0);
   const totalTmWeek = reportData.reduce((acc, item) => acc + item.totaalTmWeek, 0);
@@ -275,9 +279,9 @@ export default function WeeklyReportsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoadingProjects || isLoadingDiensten ? (
+            {isLoadingProjects ? (
                 <TableRow>
-                    <TableCell colSpan={12} className="text-center h-24">Rapportgegevens laden...</TableCell>
+                    <TableCell colSpan={12} className="text-center h-24">Projecten laden...</TableCell>
                 </TableRow>
             ) : reportData.length > 0 ? (
               reportData.map((item, index) => (
@@ -309,7 +313,7 @@ export default function WeeklyReportsPage() {
             ) : (
                  <TableRow>
                     <TableCell colSpan={12} className="text-center h-24">
-                        Geen werksoorten gevonden voor dit project. Voeg werksoorten toe op de projectpagina.
+                        { selectedProject ? "Geen werksoorten gevonden voor dit project. Voeg werksoorten toe op de projectpagina." : "Selecteer een project om de weekstaat te bekijken." }
                     </TableCell>
                 </TableRow>
             )}
@@ -326,3 +330,5 @@ export default function WeeklyReportsPage() {
     </div>
   );
 }
+
+    
