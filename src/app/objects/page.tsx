@@ -166,181 +166,182 @@ export default function ObjectsPage() {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-4 overflow-y-auto grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2 space-y-4">
-            {selectedObject ? (
-              <Card>
-              <CardContent className="p-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium">
-                        Locatie type
-                      </label>
-                      <Select value={selectedObject.locatieType} disabled>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value={selectedObject.locatieType}>
-                            {selectedObject.locatieType}
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">
-                        Locatie sub type
-                      </label>
-                       <Select value={selectedObject.locatieSubType} disabled>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value={selectedObject.locatieSubType}>
-                            {selectedObject.locatieSubType}
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium">Kwaliteit</label>
-                      <Select value={selectedObject.kwaliteit} disabled>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                           <SelectItem value="a">A</SelectItem>
-                          <SelectItem value="b">B</SelectItem>
-                          <SelectItem value="c">C</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex items-center justify-between pt-6">
-                      <span className="text-sm text-muted-foreground">Automatisch aangemaakt</span>
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          checked={selectedObject.isActief}
-                        />
-                        <span className="text-sm font-medium">Is actief</span>
+        <main className="flex-1 p-4 overflow-y-auto">
+             {selectedObject ? (
+              <Card className="h-full">
+              <CardContent className="p-4 h-full grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="lg:col-span-2 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-sm font-medium">
+                            Locatie type
+                          </label>
+                          <Select value={selectedObject.locatieType} disabled>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={selectedObject.locatieType}>
+                                {selectedObject.locatieType}
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium">
+                            Locatie sub type
+                          </label>
+                          <Select value={selectedObject.locatieSubType} disabled>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={selectedObject.locatieSubType}>
+                                {selectedObject.locatieSubType}
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-sm font-medium">Kwaliteit</label>
+                          <Select value={selectedObject.kwaliteit} disabled>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="a">A</SelectItem>
+                              <SelectItem value="b">B</SelectItem>
+                              <SelectItem value="c">C</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-center justify-between pt-6">
+                          <span className="text-sm text-muted-foreground">Automatisch aangemaakt</span>
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={selectedObject.isActief}
+                            />
+                            <span className="text-sm font-medium">Is actief</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                  <div className="md:col-span-2">
-                    <label htmlFor="street-name" className="text-sm font-medium">
-                      Straatnaam
-                    </label>
-                    <Input
-                      id="street-name"
-                      value={selectedObject.straatnaam || ''}
-                      readOnly
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="house-number" className="text-sm font-medium">
-                      Huisnummer
-                    </label>
-                    <Input id="house-number" value={selectedObject.huisnummer || ''} readOnly/>
-                  </div>
-                </div>
-
-                <div className="mt-4">
-                  <label htmlFor="object-id" className="text-sm font-medium">
-                    Object-ID
-                  </label>
-                  <div className="flex gap-2">
-                    <Input id="object-id" value={selectedObject.id || ''} readOnly />
-                    <Button variant="outline" size="icon">
-                      <QrCode className="h-5 w-5" />
-                    </Button>
-                  </div>
-                </div>
-                 <Accordion type="single" collapsible className="w-full mt-4">
-                    <AccordionItem value="logboek">
-                        <AccordionTrigger className="px-0 py-3">Logboek</AccordionTrigger>
-                        <AccordionContent>
-                        Hier komt de inhoud van het logboek.
-                        </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem value="planning">
-                        <AccordionTrigger className="px-0 py-3">Planning</AccordionTrigger>
-                        <AccordionContent>
-                        Hier komt de planning.
-                        </AccordionContent>
-                    </AccordionItem>
-                    <AccordionItem value="bewerk-locatie" className='border-b-0'>
-                        <AccordionTrigger className="px-0 py-3">Bewerk locatie</AccordionTrigger>
-                        <AccordionContent>
-                        Hier komen de opties om de locatie te bewerken.
-                        </AccordionContent>
-                    </AccordionItem>
-                </Accordion>
-                <Separator className='my-2'/>
-                 <div className="space-y-4 pt-2">
-                    <div>
-                        <label htmlFor="warning" className="text-sm font-medium">
-                            Waarschuwing
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="md:col-span-2">
+                        <label htmlFor="street-name" className="text-sm font-medium">
+                          Straatnaam
                         </label>
-                        <Textarea id="warning" placeholder="Voeg een waarschuwing toe..." value={selectedObject.waarschuwing || ''} readOnly/>
+                        <Input
+                          id="street-name"
+                          value={selectedObject.straatnaam || ''}
+                          readOnly
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="house-number" className="text-sm font-medium">
+                          Huisnummer
+                        </label>
+                        <Input id="house-number" value={selectedObject.huisnummer || ''} readOnly/>
+                      </div>
                     </div>
-                    <Separator/>
-                    <div className="flex justify-between items-center">
-                        <h3 className="font-medium">Eigenschappen</h3>
-                        <Button size="sm" variant="secondary">
-                            <Plus className="mr-2 h-4 w-4" />
-                        </Button>
-                    </div>
-                     <Separator/>
+
                     <div>
-                        <div className="flex justify-between items-center mb-2">
-                            <h3 className="font-medium">Locatie werkgebieden</h3>
+                      <label htmlFor="object-id" className="text-sm font-medium">
+                        Object-ID
+                      </label>
+                      <div className="flex gap-2">
+                        <Input id="object-id" value={selectedObject.id || ''} readOnly />
+                        <Button variant="outline" size="icon">
+                          <QrCode className="h-5 w-5" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <Accordion type="single" collapsible className="w-full">
+                        <AccordionItem value="logboek">
+                            <AccordionTrigger className="px-0 py-3">Logboek</AccordionTrigger>
+                            <AccordionContent>
+                            Hier komt de inhoud van het logboek.
+                            </AccordionContent>
+                        </AccordionItem>
+                        <AccordionItem value="planning">
+                            <AccordionTrigger className="px-0 py-3">Planning</AccordionTrigger>
+                            <AccordionContent>
+                            Hier komt de planning.
+                            </AccordionContent>
+                        </AccordionItem>
+                        <AccordionItem value="bewerk-locatie" className='border-b-0'>
+                            <AccordionTrigger className="px-0 py-3">Bewerk locatie</AccordionTrigger>
+                            <AccordionContent>
+                            Hier komen de opties om de locatie te bewerken.
+                            </AccordionContent>
+                        </AccordionItem>
+                    </Accordion>
+                    <Separator className='my-2'/>
+                    <div className="space-y-4 pt-2">
+                        <div>
+                            <label htmlFor="warning" className="text-sm font-medium">
+                                Waarschuwing
+                            </label>
+                            <Textarea id="warning" placeholder="Voeg een waarschuwing toe..." value={selectedObject.waarschuwing || ''} readOnly/>
+                        </div>
+                        <Separator/>
+                        <div className="flex justify-between items-center">
+                            <h3 className="font-medium">Eigenschappen</h3>
                             <Button size="sm" variant="secondary">
                                 <Plus className="mr-2 h-4 w-4" />
                             </Button>
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                            <div className="bg-muted text-muted-foreground px-3 py-1 rounded-full text-sm">Afvalbakken</div>
+                        <Separator/>
+                        <div>
+                            <div className="flex justify-between items-center mb-2">
+                                <h3 className="font-medium">Locatie werkgebieden</h3>
+                                <Button size="sm" variant="secondary">
+                                    <Plus className="mr-2 h-4 w-4" />
+                                </Button>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                <div className="bg-muted text-muted-foreground px-3 py-1 rounded-full text-sm">Afvalbakken</div>
+                            </div>
                         </div>
                     </div>
+                </div>
+
+                <div className="space-y-4">
+                    <Card className="h-64">
+                    <CardContent className="p-0 h-full">
+                        <MapboxView 
+                        key={selectedObject?.id}
+                        longitude={selectedObject?.longitude}
+                        latitude={selectedObject?.latitude}
+                        />
+                    </CardContent>
+                    </Card>
+                    <Card className="h-64">
+                    <CardContent className="p-4 h-full flex flex-col items-center justify-center text-muted-foreground">
+                        <ImageIcon className="h-12 w-12 text-gray-400" />
+                        <p className="mt-2">Neem een foto</p>
+                    </CardContent>
+                    </Card>
+                    <Card>
+                    <CardContent className="p-4">
+                        <h3 className="text-sm font-medium mb-2">Vulgraad</h3>
+                        <Progress value={selectedObject?.vulgraad || 0} />
+                        <p className="text-center text-sm font-semibold mt-2">{selectedObject?.vulgraad || 0}%</p>
+                    </CardContent>
+                    </Card>
                 </div>
               </CardContent>
             </Card>
             ) : (
-                <div className="lg:col-span-2 flex items-center justify-center h-full text-muted-foreground">
+                <div className="flex items-center justify-center h-full text-muted-foreground">
                     {isLoading ? 'Objecten laden...' : 'Selecteer een object om de details te zien.'}
                 </div>
             )}
-          </div>
-
-          <div className="space-y-4">
-            <Card className="h-64">
-              <CardContent className="p-0 h-full">
-                <MapboxView 
-                   key={selectedObject?.id}
-                   longitude={selectedObject?.longitude}
-                   latitude={selectedObject?.latitude}
-                />
-              </CardContent>
-            </Card>
-            <Card className="h-64">
-              <CardContent className="p-4 h-full flex flex-col items-center justify-center text-muted-foreground">
-                <ImageIcon className="h-12 w-12 text-gray-400" />
-                <p className="mt-2">Neem een foto</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <h3 className="text-sm font-medium mb-2">Vulgraad</h3>
-                <Progress value={selectedObject?.vulgraad || 0} />
-                <p className="text-center text-sm font-semibold mt-2">{selectedObject?.vulgraad || 0}%</p>
-              </CardContent>
-            </Card>
-          </div>
         </main>
       </div>
 
