@@ -286,7 +286,7 @@ export default function ObjectsPage() {
                         <label htmlFor="warning" className="text-sm font-medium">
                             Waarschuwing
                         </label>
-                        <Textarea id="warning" placeholder="Voeg een waarschuwing toe..." value={selectedObject.waarschuwing || ''}/>
+                        <Textarea id="warning" placeholder="Voeg een waarschuwing toe..." value={selectedObject.waarschuwing || ''} readOnly/>
                     </div>
                     <Separator/>
                     <div className="flex justify-between items-center">
