@@ -10,6 +10,11 @@ import {
   FileText,
   Check,
   X,
+  ChevronLeft,
+  ChevronRight,
+  CalendarDays,
+  CheckCircle,
+  Clock,
 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -97,6 +102,111 @@ function DetailField({
             <Pencil className="h-4 w-4 text-muted-foreground" />
           </Button>
         )}
+      </div>
+    </div>
+  );
+}
+
+function AfwezigheidTab() {
+  const weekDays = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'];
+  const dayNumbers = [5, 6, 7, 8, 9, 10, 11];
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2 flex flex-col gap-6">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="icon" className="h-8 w-8">
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" className="h-8">Vandaag</Button>
+                <Button variant="outline" size="icon" className="h-8 w-8">
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="text-sm font-semibold flex items-center gap-2">
+                <span>5 Jan. - 11 Jan. 2026</span>
+                <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded-md">Week 2</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-7 gap-2">
+              {weekDays.map((day) => (
+                <div key={day} className="text-center text-xs font-semibold text-muted-foreground">{day}</div>
+              ))}
+              {dayNumbers.map((day) => (
+                <div key={day} className={`p-2 border rounded-md h-16 ${day === 8 ? 'bg-primary/10 border-primary' : ''}`}>
+                  <span className="text-sm">{day}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-end gap-4 mt-4 text-xs">
+              <div className="flex items-center gap-1">
+                <CheckCircle className="h-3 w-3 text-green-500" />
+                <span>Goedgekeurd</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Clock className="h-3 w-3 text-yellow-500" />
+                <span>Onbeslist</span>
+              </div>
+              <Button variant="link" size="sm" className="text-xs">
+                <CalendarDays className="h-3 w-3 mr-1" />
+                Toevoegen aan kalender
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Afwezigheid</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="aanvragen">
+              <div className="flex justify-between items-start">
+                <TabsList>
+                  <TabsTrigger value="aanvragen">Aanvragen</TabsTrigger>
+                  <TabsTrigger value="nagekeken">Nagekeken</TabsTrigger>
+                  <TabsTrigger value="verleden">Verleden</TabsTrigger>
+                </TabsList>
+                <Button><Plus className="h-4 w-4 mr-2" />Afwezigheid toevoegen</Button>
+              </div>
+              <TabsContent value="aanvragen" className="mt-6">
+                <div className="text-center text-muted-foreground py-12">
+                  <CalendarDays className="h-12 w-12 mx-auto mb-2" />
+                  <p>Geen verzoeken</p>
+                  <Button variant="link" size="sm">Nagekeken afwezigheden bekijken</Button>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="lg:col-span-1">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Saldo's</CardTitle>
+            <p className="text-xs text-muted-foreground">1 januari - 31 december</p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="border rounded-lg p-3">
+              <p className="text-sm font-medium">Verlof</p>
+              <p className="text-xl font-bold text-primary">0u 0m</p>
+              <p className="text-xs text-muted-foreground">Resterend</p>
+            </div>
+             <div className="border rounded-lg p-3">
+              <p className="text-sm font-medium">ADV</p>
+              <p className="text-xl font-bold text-primary">0u 0m</p>
+              <p className="text-xs text-muted-foreground">Resterend</p>
+            </div>
+             <div className="border rounded-lg p-3">
+              <p className="text-sm font-medium">TVT</p>
+              <p className="text-xl font-bold text-primary">0u 0m</p>
+              <p className="text-xs text-muted-foreground">Resterend</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
@@ -231,6 +341,19 @@ export default function EmployeeDetailPage() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+        </TabsContent>
+        <TabsContent value="afwezigheid" className="mt-6 flex-1">
+          <AfwezigheidTab />
+        </TabsContent>
+        <TabsContent value="rooster" className="mt-6 flex-1">
+          <div className="flex h-full items-center justify-center text-muted-foreground">
+            Rooster is nog niet geïmplementeerd.
+          </div>
+        </TabsContent>
+        <TabsContent value="contracten" className="mt-6 flex-1">
+          <div className="flex h-full items-center justify-center text-muted-foreground">
+            Contracten zijn nog niet geïmplementeerd.
           </div>
         </TabsContent>
       </Tabs>
