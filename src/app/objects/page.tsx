@@ -15,6 +15,7 @@ import {
   Image as ImageIcon,
   Upload,
   RefreshCw,
+  List,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,6 +50,7 @@ export default function ObjectsPage() {
   const [isImporting, setIsImporting] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');
   const [selectedObject, setSelectedObject] = React.useState<any | null>(null);
+  const [viewMode, setViewMode] = React.useState<'list' | 'map'>('list');
 
   const objectsCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -100,8 +102,9 @@ export default function ObjectsPage() {
           <Button variant="outline">
             <Save className="mr-2 h-4 w-4" /> Opslaan
           </Button>
-          <Button variant="default">
-            <Map className="mr-2 h-4 w-4" /> Kaartweergave
+          <Button variant="default" onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}>
+            {viewMode === 'list' ? <Map className="mr-2 h-4 w-4" /> : <List className="mr-2 h-4 w-4" />}
+            {viewMode === 'list' ? 'Kaartweergave' : 'Lijstweergave'}
           </Button>
           <Button variant="outline">
             <QrCode className="mr-2 h-4 w-4" /> QR Scan
@@ -128,238 +131,243 @@ export default function ObjectsPage() {
         </div>
       </header>
 
-      <div className="flex flex-1 min-h-0">
-        {/* Sidebar */}
-        <aside className="w-64 bg-card border-r flex flex-col">
-          <div className="p-3">
-            <Input placeholder="Filter objecten..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-          </div>
-          <Separator />
-          <div className="flex-1 overflow-y-auto">
-             <div className="flex flex-col space-y-1 p-2">
-              {isLoading ? (
-                 <div className="text-center text-muted-foreground p-4">
-                  Laden...
-                </div>
-              ) : filteredObjects && filteredObjects.length > 0 ? (
-                filteredObjects.map((obj) => (
-                  <div
-                    key={obj.id}
-                    onClick={() => setSelectedObject(obj)}
-                    className={`flex items-start justify-between p-3 rounded-md text-left cursor-pointer ${
-                      selectedObject?.id === obj.id
-                        ? 'bg-secondary'
-                        : 'hover:bg-muted/50'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <MapPin className="h-5 w-5 text-muted-foreground mt-1" />
-                      <div>
-                        <p className="font-semibold">{obj.id}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {obj.locatieSubType || 'Onbekend type'}
-                        </p>
-                      </div>
-                    </div>
-                     <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))
-              ) : (
-                 <div className="text-center text-muted-foreground p-4">
-                  Geen objecten gevonden.
-                </div>
-              )}
-            </div>
-          </div>
-        </aside>
-
-        {/* Main Content */}
-        <main className="flex-1 p-4 overflow-y-auto">
-             {selectedObject ? (
-              <Card className="h-full">
-              <CardContent className="p-4 h-full grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="lg:col-span-2 space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-4">
-                        <div>
-                          <label className="text-sm font-medium">
-                            Locatie type
-                          </label>
-                          <Select value={selectedObject.locatieType} onValueChange={(v) => handleUpdateField('locatieType', v)}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value={selectedObject.locatieType}>
-                                {selectedObject.locatieType}
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium">
-                            Locatie sub type
-                          </label>
-                          <Select value={selectedObject.locatieSubType} onValueChange={(v) => handleUpdateField('locatieSubType', v)}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value={selectedObject.locatieSubType}>
-                                {selectedObject.locatieSubType}
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <div className="space-y-4">
-                        <div>
-                          <label className="text-sm font-medium">Kwaliteit</label>
-                          <Select value={selectedObject.kwaliteit} onValueChange={(v) => handleUpdateField('kwaliteit', v)}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="A">A</SelectItem>
-                              <SelectItem value="B">B</SelectItem>
-                              <SelectItem value="C">C</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="flex items-center justify-between pt-6">
-                          <span className="text-sm text-muted-foreground">Automatisch aangemaakt</span>
-                          <div className="flex items-center gap-2">
-                            <Switch
-                              checked={selectedObject.isActief}
-                              onCheckedChange={(c) => handleUpdateField('isActief', c)}
-                            />
-                            <span className="text-sm font-medium">Is actief</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                        <div className="md:col-span-2">
-                            <label htmlFor="street-name" className="text-sm font-medium">
-                            Straatnaam
-                            </label>
-                            <Input
-                            id="street-name"
-                            value={selectedObject.straatnaam || ''}
-                            onChange={(e) => handleUpdateField('straatnaam', e.target.value)}
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor="house-number" className="text-sm font-medium">
-                            Huisnummer
-                            </label>
-                            <Input 
-                                id="house-number" 
-                                value={selectedObject.huisnummer || ''}
-                                onChange={(e) => handleUpdateField('huisnummer', e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    <div>
-                      <label htmlFor="object-id" className="text-sm font-medium">
-                        Object-ID
-                      </label>
-                      <div className="flex gap-2">
-                        <Input id="object-id" value={selectedObject.id || ''} readOnly />
-                        <Button variant="outline" size="icon">
-                          <QrCode className="h-5 w-5" />
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <Accordion type="single" collapsible className="w-full">
-                        <AccordionItem value="logboek">
-                            <AccordionTrigger className="px-0 py-3">Logboek</AccordionTrigger>
-                            <AccordionContent>
-                            Hier komt de inhoud van het logboek.
-                            </AccordionContent>
-                        </AccordionItem>
-                        <AccordionItem value="planning">
-                            <AccordionTrigger className="px-0 py-3">Planning</AccordionTrigger>
-                            <AccordionContent>
-                            Hier komt de planning.
-                            </AccordionContent>
-                        </AccordionItem>
-                        <AccordionItem value="bewerk-locatie" className='border-b-0'>
-                            <AccordionTrigger className="px-0 py-3">Bewerk locatie</AccordionTrigger>
-                            <AccordionContent>
-                            Hier komen de opties om de locatie te bewerken.
-                            </AccordionContent>
-                        </AccordionItem>
-                    </Accordion>
-                    <Separator className='my-2'/>
-                    <div className="space-y-4 pt-2">
-                        <div>
-                            <label htmlFor="warning" className="text-sm font-medium">
-                                Waarschuwing
-                            </label>
-                            <Textarea id="warning" placeholder="Voeg een waarschuwing toe..." value={selectedObject.waarschuwing || ''} onChange={(e) => handleUpdateField('waarschuwing', e.target.value)} />
-                        </div>
-                        <Separator/>
-                        <div className="flex justify-between items-center">
-                            <h3 className="font-medium">Eigenschappen</h3>
-                            <Button size="sm" variant="secondary">
-                                <Plus className="mr-2 h-4 w-4" />
-                            </Button>
-                        </div>
-                        <Separator/>
-                        <div>
-                            <div className="flex justify-between items-center mb-2">
-                                <h3 className="font-medium">Locatie werkgebieden</h3>
-                                <Button size="sm" variant="secondary">
-                                    <Plus className="mr-2 h-4 w-4" />
-                                </Button>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                                <div className="bg-muted text-muted-foreground px-3 py-1 rounded-full text-sm">Afvalbakken</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="space-y-4">
-                    <Card className="h-64">
-                    <CardContent className="p-0 h-full">
-                        <MapboxView 
-                        key={selectedObject?.id}
-                        longitude={selectedObject?.longitude}
-                        latitude={selectedObject?.latitude}
-                        />
-                    </CardContent>
-                    </Card>
-                    <Card className="h-64">
-                    <CardContent className="p-4 h-full flex flex-col items-center justify-center text-muted-foreground">
-                        <ImageIcon className="h-12 w-12 text-gray-400" />
-                        <p className="mt-2">Neem een foto</p>
-                    </CardContent>
-                    </Card>
-                    <Card>
-                    <CardContent className="p-4">
-                        <h3 className="text-sm font-medium mb-2">Vulgraad</h3>
-                        <Progress value={selectedObject?.vulgraad || 0} />
-                        <p className="text-center text-sm font-semibold mt-2">{selectedObject?.vulgraad || 0}%</p>
-                    </CardContent>
-                    </Card>
-                </div>
-              </CardContent>
-            </Card>
-            ) : (
-                <div className="flex items-center justify-center h-full text-muted-foreground">
-                    {isLoading ? 'Objecten laden...' : 'Selecteer een object om de details te zien.'}
-                </div>
-            )}
-        </main>
-      </div>
-
+      {viewMode === 'list' ? (
+         <div className="flex flex-1 min-h-0">
+         {/* Sidebar */}
+         <aside className="w-64 bg-card border-r flex flex-col">
+           <div className="p-3">
+             <Input placeholder="Filter objecten..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+           </div>
+           <Separator />
+           <div className="flex-1 overflow-y-auto">
+              <div className="flex flex-col space-y-1 p-2">
+               {isLoading ? (
+                  <div className="text-center text-muted-foreground p-4">
+                   Laden...
+                 </div>
+               ) : filteredObjects && filteredObjects.length > 0 ? (
+                 filteredObjects.map((obj) => (
+                   <div
+                     key={obj.id}
+                     onClick={() => setSelectedObject(obj)}
+                     className={`flex items-start justify-between p-3 rounded-md text-left cursor-pointer ${
+                       selectedObject?.id === obj.id
+                         ? 'bg-secondary'
+                         : 'hover:bg-muted/50'
+                     }`}
+                   >
+                     <div className="flex items-start gap-3">
+                       <MapPin className="h-5 w-5 text-muted-foreground mt-1" />
+                       <div>
+                         <p className="font-semibold">{obj.id}</p>
+                         <p className="text-sm text-muted-foreground">
+                           {obj.locatieSubType || 'Onbekend type'}
+                         </p>
+                       </div>
+                     </div>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                         <MoreVertical className="h-4 w-4" />
+                     </Button>
+                   </div>
+                 ))
+               ) : (
+                  <div className="text-center text-muted-foreground p-4">
+                   Geen objecten gevonden.
+                 </div>
+               )}
+             </div>
+           </div>
+         </aside>
+ 
+         {/* Main Content */}
+         <main className="flex-1 p-4 overflow-y-auto">
+              {selectedObject ? (
+               <Card className="h-full">
+               <CardContent className="p-4 h-full grid grid-cols-1 lg:grid-cols-3 gap-4">
+                 <div className="lg:col-span-2 space-y-4">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                       <div className="space-y-4">
+                         <div>
+                           <label className="text-sm font-medium">
+                             Locatie type
+                           </label>
+                           <Select value={selectedObject.locatieType} onValueChange={(v) => handleUpdateField('locatieType', v)}>
+                             <SelectTrigger>
+                               <SelectValue />
+                             </SelectTrigger>
+                             <SelectContent>
+                               <SelectItem value={selectedObject.locatieType}>
+                                 {selectedObject.locatieType}
+                               </SelectItem>
+                             </SelectContent>
+                           </Select>
+                         </div>
+                         <div>
+                           <label className="text-sm font-medium">
+                             Locatie sub type
+                           </label>
+                           <Select value={selectedObject.locatieSubType} onValueChange={(v) => handleUpdateField('locatieSubType', v)}>
+                             <SelectTrigger>
+                               <SelectValue />
+                             </SelectTrigger>
+                             <SelectContent>
+                               <SelectItem value={selectedObject.locatieSubType}>
+                                 {selectedObject.locatieSubType}
+                               </SelectItem>
+                             </SelectContent>
+                           </Select>
+                         </div>
+                       </div>
+                       <div className="space-y-4">
+                         <div>
+                           <label className="text-sm font-medium">Kwaliteit</label>
+                           <Select value={selectedObject.kwaliteit} onValueChange={(v) => handleUpdateField('kwaliteit', v)}>
+                             <SelectTrigger>
+                               <SelectValue />
+                             </SelectTrigger>
+                             <SelectContent>
+                               <SelectItem value="A">A</SelectItem>
+                               <SelectItem value="B">B</SelectItem>
+                               <SelectItem value="C">C</SelectItem>
+                             </SelectContent>
+                           </Select>
+                         </div>
+                         <div className="flex items-center justify-between pt-6">
+                           <span className="text-sm text-muted-foreground">Automatisch aangemaakt</span>
+                           <div className="flex items-center gap-2">
+                             <Switch
+                               checked={selectedObject.isActief}
+                               onCheckedChange={(c) => handleUpdateField('isActief', c)}
+                             />
+                             <span className="text-sm font-medium">Is actief</span>
+                           </div>
+                         </div>
+                       </div>
+                     </div>
+ 
+                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                         <div className="md:col-span-2">
+                             <label htmlFor="street-name" className="text-sm font-medium">
+                             Straatnaam
+                             </label>
+                             <Input
+                             id="street-name"
+                             value={selectedObject.straatnaam || ''}
+                             onChange={(e) => handleUpdateField('straatnaam', e.target.value)}
+                             />
+                         </div>
+                         <div>
+                             <label htmlFor="house-number" className="text-sm font-medium">
+                             Huisnummer
+                             </label>
+                             <Input 
+                                 id="house-number" 
+                                 value={selectedObject.huisnummer || ''}
+                                 onChange={(e) => handleUpdateField('huisnummer', e.target.value)}
+                             />
+                         </div>
+                     </div>
+ 
+                     <div>
+                       <label htmlFor="object-id" className="text-sm font-medium">
+                         Object-ID
+                       </label>
+                       <div className="flex gap-2">
+                         <Input id="object-id" value={selectedObject.id || ''} readOnly />
+                         <Button variant="outline" size="icon">
+                           <QrCode className="h-5 w-5" />
+                         </Button>
+                       </div>
+                     </div>
+                     
+                     <Accordion type="single" collapsible className="w-full">
+                         <AccordionItem value="logboek">
+                             <AccordionTrigger className="px-0 py-3">Logboek</AccordionTrigger>
+                             <AccordionContent>
+                             Hier komt de inhoud van het logboek.
+                             </AccordionContent>
+                         </AccordionItem>
+                         <AccordionItem value="planning">
+                             <AccordionTrigger className="px-0 py-3">Planning</AccordionTrigger>
+                             <AccordionContent>
+                             Hier komt de planning.
+                             </AccordionContent>
+                         </AccordionItem>
+                         <AccordionItem value="bewerk-locatie" className='border-b-0'>
+                             <AccordionTrigger className="px-0 py-3">Bewerk locatie</AccordionTrigger>
+                             <AccordionContent>
+                             Hier komen de opties om de locatie te bewerken.
+                             </AccordionContent>
+                         </AccordionItem>
+                     </Accordion>
+                     <Separator className='my-2'/>
+                     <div className="space-y-4 pt-2">
+                         <div>
+                             <label htmlFor="warning" className="text-sm font-medium">
+                                 Waarschuwing
+                             </label>
+                             <Textarea id="warning" placeholder="Voeg een waarschuwing toe..." value={selectedObject.waarschuwing || ''} onChange={(e) => handleUpdateField('waarschuwing', e.target.value)} />
+                         </div>
+                         <Separator/>
+                         <div className="flex justify-between items-center">
+                             <h3 className="font-medium">Eigenschappen</h3>
+                             <Button size="sm" variant="secondary">
+                                 <Plus className="mr-2 h-4 w-4" />
+                             </Button>
+                         </div>
+                         <Separator/>
+                         <div>
+                             <div className="flex justify-between items-center mb-2">
+                                 <h3 className="font-medium">Locatie werkgebieden</h3>
+                                 <Button size="sm" variant="secondary">
+                                     <Plus className="mr-2 h-4 w-4" />
+                                 </Button>
+                             </div>
+                             <div className="flex flex-wrap gap-2">
+                                 <div className="bg-muted text-muted-foreground px-3 py-1 rounded-full text-sm">Afvalbakken</div>
+                             </div>
+                         </div>
+                     </div>
+                 </div>
+ 
+                 <div className="space-y-4">
+                     <Card className="h-64">
+                     <CardContent className="p-0 h-full">
+                         <MapboxView 
+                         key={selectedObject?.id}
+                         longitude={selectedObject?.longitude}
+                         latitude={selectedObject?.latitude}
+                         />
+                     </CardContent>
+                     </Card>
+                     <Card className="h-64">
+                     <CardContent className="p-4 h-full flex flex-col items-center justify-center text-muted-foreground">
+                         <ImageIcon className="h-12 w-12 text-gray-400" />
+                         <p className="mt-2">Neem een foto</p>
+                     </CardContent>
+                     </Card>
+                     <Card>
+                     <CardContent className="p-4">
+                         <h3 className="text-sm font-medium mb-2">Vulgraad</h3>
+                         <Progress value={selectedObject?.vulgraad || 0} />
+                         <p className="text-center text-sm font-semibold mt-2">{selectedObject?.vulgraad || 0}%</p>
+                     </CardContent>
+                     </Card>
+                 </div>
+               </CardContent>
+             </Card>
+             ) : (
+                 <div className="flex items-center justify-center h-full text-muted-foreground">
+                     {isLoading ? 'Objecten laden...' : 'Selecteer een object om de details te zien.'}
+                 </div>
+             )}
+         </main>
+       </div>
+      ) : (
+        <div className="flex-1 min-h-0">
+          <MapboxView objects={filteredObjects} />
+        </div>
+      )}
     </div>
   );
 }
