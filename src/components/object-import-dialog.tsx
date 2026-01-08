@@ -47,14 +47,12 @@ const objectFields = [
   'vulgraad',
 ];
 
-// Simple but more robust CSV parser
 const parseCSV = (text: string): string[][] => {
     const rows: string[][] = [];
     let currentRow: string[] = [];
     let currentField = '';
     let inQuotes = false;
 
-    // Normalize line endings to LF
     const normalizedText = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
     for (let i = 0; i < normalizedText.length; i++) {
@@ -62,10 +60,9 @@ const parseCSV = (text: string): string[][] => {
 
         if (inQuotes) {
             if (char === '"') {
-                // Check for escaped quote
                 if (i + 1 < normalizedText.length && normalizedText[i + 1] === '"') {
                     currentField += '"';
-                    i++; // Skip next quote
+                    i++; 
                 } else {
                     inQuotes = false;
                 }
@@ -88,13 +85,11 @@ const parseCSV = (text: string): string[][] => {
             }
         }
     }
-    // Add the last field and row if they exist
     if (currentField.length > 0 || currentRow.length > 0) {
         currentRow.push(currentField);
         rows.push(currentRow);
     }
     
-    // Filter out empty rows that might result from trailing newlines
     return rows.filter(row => row.length > 0 && row.some(field => field.trim().length > 0));
 };
 
@@ -116,7 +111,6 @@ export function ObjectImportDialog({
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
-    // Reset state when dialog is closed
     if (!open) {
       setTimeout(() => {
         setStep(1);
@@ -129,7 +123,7 @@ export function ObjectImportDialog({
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
-      }, 300); // Delay to allow for animation
+      }, 300);
     }
   }, [open]);
 
@@ -148,7 +142,6 @@ export function ObjectImportDialog({
       
       if (parsedData.length < 2) {
         console.error("CSV must have at least a header row and one data row.");
-        // Optionally show an error to the user
         return;
       };
 
@@ -158,7 +151,6 @@ export function ObjectImportDialog({
       setHeaders(fileHeaders);
       setData(fileData);
 
-      // Auto-map based on header name similarity (case-insensitive, ignores spaces)
       const newMapping: Record<string, string> = {};
       const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/gi, '');
       
@@ -168,14 +160,13 @@ export function ObjectImportDialog({
       };
 
       objectFields.forEach(field => {
-        const normalizedField = normalize(field);
-        const aliases = specialMappings[field] ? specialMappings[field].map(normalize) : [normalizedField];
+        const aliases = specialMappings[field] ? specialMappings[field].map(normalize) : [normalize(field)];
 
         for (const alias of aliases) {
             const foundHeader = fileHeaders.find(header => normalize(header) === alias);
             if (foundHeader) {
                 newMapping[field] = foundHeader;
-                break; // Stop after first match
+                break;
             }
         }
       });
@@ -183,7 +174,7 @@ export function ObjectImportDialog({
       setMapping(newMapping);
       setStep(2);
     };
-    reader.readAsText(selectedFile, 'ISO-8859-1'); // Or 'UTF-8', depending on file encoding
+    reader.readAsText(selectedFile, 'ISO-8859-1');
   };
 
   const handleImport = async () => {
@@ -195,13 +186,11 @@ export function ObjectImportDialog({
     setIsImporting(true);
     setImportProgress(0);
 
-    // Map the selected CSV header name back to its original index
     const headerIndexMap: { [key: string]: number } = {};
     headers.forEach((header, index) => {
       headerIndexMap[header] = index;
     });
 
-    // Create a map from the database field to the CSV column index
     const fieldIndexMap: { [key: string]: number | undefined } = {};
     for (const field of objectFields) {
         const csvHeader = mapping[field];
@@ -210,7 +199,8 @@ export function ObjectImportDialog({
         }
     }
 
-    if (fieldIndexMap['id'] === undefined) {
+    const idColumnIndex = fieldIndexMap['id'];
+    if (idColumnIndex === undefined) {
         console.error("ID column mapping is essential for import.");
         setIsImporting(false);
         return;
@@ -225,10 +215,8 @@ export function ObjectImportDialog({
         const chunk = data.slice(i, i + batchSize);
 
         chunk.forEach(row => {
-          const idColumnIndex = fieldIndexMap['id'];
-          if (idColumnIndex === undefined) return;
           const objectId = row[idColumnIndex]?.trim();
-          if (!objectId) return; // Skip rows without an ID
+          if (!objectId) return;
 
           const objectData: { [key: string]: any } = {};
 
@@ -241,7 +229,7 @@ export function ObjectImportDialog({
             if (value !== undefined && value !== '') {
                 if (field === 'latitude' || field === 'longitude' || field === 'vulgraad') {
                     const numValue = parseFloat(value.replace(',', '.'));
-                    objectData[field] = isNaN(numValue) ? 0 : numValue;
+                    objectData[field] = isNaN(numValue) ? null : numValue;
                 } else if (field === 'isActief') {
                     objectData[field] = ['true', '1', 'ja', 'yes'].includes(value.toLowerCase());
                 } else {
@@ -250,7 +238,7 @@ export function ObjectImportDialog({
             }
           }
 
-          if (Object.keys(objectData).length > 0) {
+          if (Object.keys(objectData).length > 0 && objectData.id) {
               const docRef = doc(objectsColRef, objectId);
               batch.set(docRef, objectData, { merge: true });
           }
@@ -264,7 +252,7 @@ export function ObjectImportDialog({
       onSuccess();
     } catch (error) {
       console.error("Error importing objects: ", error);
-      setStep(2); // Go back to mapping step on error
+      setStep(2);
     } finally {
       setIsImporting(false);
     }
@@ -321,7 +309,7 @@ export function ObjectImportDialog({
                       <SelectValue placeholder="Selecteer een kolom" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="--ignore--">Negeer</SelectItem>
+                      <SelectItem value="">-- Negeer --</SelectItem>
                       {headers.map((header) => (
                         <SelectItem key={header} value={header}>
                           {header}
