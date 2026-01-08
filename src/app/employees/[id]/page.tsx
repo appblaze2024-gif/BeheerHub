@@ -17,7 +17,19 @@ import {
   Clock,
 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
+import {
+  startOfWeek,
+  endOfWeek,
+  eachDayOfInterval,
+  format,
+  getISOWeek,
+  add,
+  sub,
+  isToday,
+  isSameDay,
+} from 'date-fns';
+import { nl } from 'date-fns/locale';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -32,6 +44,7 @@ import {
 } from '@/firebase';
 import type { Medewerker } from '@/lib/types';
 import { MedewerkerDialog } from '@/components/medewerker-dialog';
+import { cn } from '@/lib/utils';
 
 function DetailField({
   label,
@@ -108,8 +121,17 @@ function DetailField({
 }
 
 function AfwezigheidTab() {
-  const weekDays = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'];
-  const dayNumbers = [5, 6, 7, 8, 9, 10, 11];
+  const [currentDate, setCurrentDate] = React.useState(new Date());
+  const [selectedDate, setSelectedDate] = React.useState<Date>(new Date());
+
+  const start = startOfWeek(currentDate, { weekStartsOn: 1 });
+  const end = endOfWeek(currentDate, { weekStartsOn: 1 });
+  const weekDays = eachDayOfInterval({ start, end });
+  const weekNumber = getISOWeek(currentDate);
+
+  const prevWeek = () => setCurrentDate(sub(currentDate, { weeks: 1 }));
+  const nextWeek = () => setCurrentDate(add(currentDate, { weeks: 1 }));
+  const goToToday = () => setCurrentDate(new Date());
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -118,26 +140,39 @@ function AfwezigheidTab() {
           <CardContent className="p-4">
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="icon" className="h-8 w-8">
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={prevWeek}>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" className="h-8">Vandaag</Button>
-                <Button variant="outline" size="icon" className="h-8 w-8">
+                <Button variant="outline" className="h-8" onClick={goToToday}>Vandaag</Button>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={nextWeek}>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
               <div className="text-sm font-semibold flex items-center gap-2">
-                <span>5 Jan. - 11 Jan. 2026</span>
-                <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded-md">Week 2</span>
+                <span className='capitalize'>{format(start, 'd MMM')} - {format(end, 'd MMM yyyy', { locale: nl })}</span>
+                <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded-md">Week {weekNumber}</span>
               </div>
             </div>
             <div className="grid grid-cols-7 gap-2">
               {weekDays.map((day) => (
-                <div key={day} className="text-center text-xs font-semibold text-muted-foreground">{day}</div>
+                <div key={day.toISOString()} className="text-center text-xs font-semibold text-muted-foreground">
+                  {format(day, 'E', { locale: nl })}
+                </div>
               ))}
-              {dayNumbers.map((day) => (
-                <div key={day} className={`p-2 border rounded-md h-16 ${day === 8 ? 'bg-primary/10 border-primary' : ''}`}>
-                  <span className="text-sm">{day}</span>
+              {weekDays.map((day) => (
+                <div 
+                  key={day.toISOString()} 
+                  onClick={() => setSelectedDate(day)}
+                  className={cn(
+                    'p-2 border rounded-md h-16 cursor-pointer', 
+                    isSameDay(day, selectedDate) && 'bg-primary/20 border-primary',
+                    isToday(day) && 'bg-blue-100 dark:bg-blue-900/30'
+                  )}
+                >
+                  <span className={cn(
+                    "text-sm",
+                     isToday(day) && 'font-bold text-primary'
+                    )}>{format(day, 'd')}</span>
                 </div>
               ))}
             </div>
@@ -217,6 +252,7 @@ export default function EmployeeDetailPage() {
   const params = useParams();
   const firestore = useFirestore();
   const id = params.id as string;
+  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
 
   const employeeRef = useMemoFirebase(() => {
     if (!firestore || !id) return null;
@@ -229,6 +265,10 @@ export default function EmployeeDetailPage() {
     const firstInitial = firstName?.[0] || '';
     const lastInitial = lastName?.[0] || '';
     return `${firstInitial}${lastInitial}`.toUpperCase();
+  };
+  
+  const handleEdit = () => {
+    setIsDialogOpen(true);
   };
 
   if (isLoading) {
@@ -266,9 +306,15 @@ export default function EmployeeDetailPage() {
               {getInitials(medewerker.voornaam, medewerker.achternaam)}
             </AvatarFallback>
           </Avatar>
-          <h1 className="text-2xl font-bold">{`${medewerker.voornaam || ''} ${
-            medewerker.tussenvoegsel || ''
-          } ${medewerker.achternaam || ''}`.trim()}</h1>
+          <div className='flex-1 flex justify-between items-center'>
+            <h1 className="text-2xl font-bold">{`${medewerker.voornaam || ''} ${
+              medewerker.tussenvoegsel || ''
+            } ${medewerker.achternaam || ''}`.trim()}</h1>
+            <Button onClick={handleEdit}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Bewerken
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -357,6 +403,11 @@ export default function EmployeeDetailPage() {
           </div>
         </TabsContent>
       </Tabs>
+       <MedewerkerDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        medewerker={medewerker}
+      />
     </div>
   );
 }
