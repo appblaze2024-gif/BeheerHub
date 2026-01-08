@@ -194,26 +194,26 @@ export function ObjectImportDialog({
     setIsImporting(true);
     setImportProgress(0);
 
-    // Create a map from CSV header name to its column index
     const headerIndexMap: { [key: string]: number } = {};
     headers.forEach((header, index) => {
       headerIndexMap[header] = index;
     });
 
-    // Create a map from the database field to the column index in the CSV
-    const fieldIndexMap: { [key: string]: number } = {};
-    for (const field in mapping) {
-      const csvHeader = mapping[field];
-      if (csvHeader && headerIndexMap.hasOwnProperty(csvHeader)) {
-        fieldIndexMap[field] = headerIndexMap[csvHeader];
-      }
+    const fieldIndexMap: { [key: string]: number | undefined } = {};
+    for (const field of objectFields) {
+        const csvHeader = mapping[field];
+        if (csvHeader) {
+            fieldIndexMap[field] = headerIndexMap[csvHeader];
+        }
     }
 
-    if (!fieldIndexMap.hasOwnProperty('id')) {
+    if (fieldIndexMap['id'] === undefined) {
         console.error("ID column mapping is essential for import.");
         setIsImporting(false);
         return;
     }
+    
+    const idColumnIndex = fieldIndexMap['id'];
 
     const objectsColRef = collection(firestore, 'objects');
     const batchSize = 500;
@@ -224,20 +224,17 @@ export function ObjectImportDialog({
         const chunk = data.slice(i, i + batchSize);
 
         chunk.forEach(row => {
-          const idIndex = fieldIndexMap['id'];
-          const objectId = row[idIndex];
+          if (idColumnIndex === undefined) return;
+          const objectId = row[idColumnIndex];
+          if (!objectId) return;
 
-          if (!objectId) {
-            console.warn("Skipping row with empty ID:", row);
-            return;
-          }
-
-          const objectData: Record<string, any> = {};
+          const objectData: { [key: string]: any } = {};
 
           for(const field in fieldIndexMap) {
             const index = fieldIndexMap[field];
-            const value = row[index];
+            if (index === undefined) continue;
 
+            const value = row[index];
             if (value !== undefined && value !== '') {
                 if (field === 'latitude' || field === 'longitude' || field === 'vulgraad') {
                     const numValue = parseFloat(value.replace(',', '.'));
@@ -250,18 +247,21 @@ export function ObjectImportDialog({
             }
           }
 
-          const docRef = doc(objectsColRef, objectId);
-          batch.set(docRef, objectData, { merge: true });
+          if (Object.keys(objectData).length > 0) {
+              const docRef = doc(objectsColRef, objectId);
+              batch.set(docRef, objectData, { merge: true });
+          }
         });
 
         await batch.commit();
         setImportProgress(((i + chunk.length) / data.length) * 100);
       }
 
+      setStep(3);
       onSuccess();
-      setStep(3); // Go to success step
     } catch (error) {
       console.error("Error importing objects: ", error);
+      setStep(2); // Go back to mapping step on error
     } finally {
       setIsImporting(false);
     }
@@ -367,8 +367,13 @@ export function ObjectImportDialog({
               </Button>
             </>
           )}
-          {(step === 3 || isImporting) && (
-               <Button onClick={handleClose} disabled={isImporting}>
+          {step === 3 && (
+               <Button onClick={handleClose}>
+                Sluiten
+            </Button>
+          )}
+          {isImporting && (
+             <Button onClick={handleClose} disabled>
                 Sluiten
             </Button>
           )}
