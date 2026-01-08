@@ -257,6 +257,10 @@
           "type": "string",
           "description": "First name of the employee."
         },
+        "tussenvoegsel": {
+          "type": "string",
+          "description": "Middle name prefix of the employee."
+        },
         "achternaam": {
           "type": "string",
           "description": "Last name of the employee."
@@ -266,13 +270,13 @@
           "format": "email",
           "description": "Email address of the employee."
         },
-        "telefoon": {
+        "telefoonnummer": {
           "type": "string",
           "description": "Phone number of the employee."
         },
-        "mobiel": {
+        "taal": {
           "type": "string",
-          "description": "Mobile phone number of the employee."
+          "description": "Preferred language of the employee."
         },
         "functie": {
           "type": "string",
@@ -289,7 +293,7 @@
           "description": "URL of the employee's avatar image."
         }
       },
-      "required": ["voornaam", "achternaam", "email"]
+      "required": ["voornaam", "achternaam"]
     }
   },
   "auth": {

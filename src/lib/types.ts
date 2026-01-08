@@ -1,11 +1,12 @@
 export type Medewerker = {
   id: string;
   voornaam: string;
+  tussenvoegsel?: string;
   achternaam: string;
-  email: string;
+  email?: string;
+  telefoonnummer?: string;
+  taal?: string;
   functie?: string;
-  telefoon?: string;
-  mobiel?: string;
   status: 'Actief' | 'Inactief' | 'Niet uitgenodigd';
   avatarUrl?: string;
 };
