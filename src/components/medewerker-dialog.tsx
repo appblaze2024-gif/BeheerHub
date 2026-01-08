@@ -39,7 +39,6 @@ import { Separator } from './ui/separator';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
 import { cn } from '@/lib/utils';
-import { Switch } from './ui/switch';
 import { Textarea } from './ui/textarea';
 
 const medewerkerFormSchema = z.object({
@@ -58,15 +57,14 @@ const medewerkerFormSchema = z.object({
   indiensttreding: z.date().optional().nullable(),
   uitdiensttreding: z.date().optional().nullable(),
   contractType: z.string().optional(),
-  urenPerWeek: z.coerce.number().optional(),
-  afwezig: z.object({
-    maandag: z.boolean().default(false),
-    dinsdag: z.boolean().default(false),
-    woensdag: z.boolean().default(false),
-    donderdag: z.boolean().default(false),
-    vrijdag: z.boolean().default(false),
-    zaterdag: z.boolean().default(false),
-    zondag: z.boolean().default(false),
+  urenPerDag: z.object({
+    maandag: z.coerce.number().optional(),
+    dinsdag: z.coerce.number().optional(),
+    woensdag: z.coerce.number().optional(),
+    donderdag: z.coerce.number().optional(),
+    vrijdag: z.coerce.number().optional(),
+    zaterdag: z.coerce.number().optional(),
+    zondag: z.coerce.number().optional(),
   }).optional(),
   notities: z.string().optional(),
 });
@@ -79,12 +77,13 @@ interface MedewerkerDialogProps {
   medewerker?: Medewerker | null;
 }
 
-const navItems = ["Basis", "Details", "Vrije velden", "Contract", "Afwezigheid"];
+const navItems = ["Basis", "Details", "Vrije velden", "Contract"];
 
 const functieOptions = ["Voorman", "Grondwerker", "Machinist", "Stratenmaker", "Chauffeur", "Kantoor"];
 const statusOptions = ["Actief", "Inactief", "Niet uitgenodigd"];
 const soortMedewerkerOptions = ["Eigen medewerker", "ZZP'er", "Inhuur"];
 const contractTypeOptions = ["Vast", "Tijdelijk", "Oproep", "Nul-uren"];
+const weekDagen = ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag'] as const;
 
 
 export function MedewerkerDialog({
@@ -96,6 +95,10 @@ export function MedewerkerDialog({
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [addAnother, setAddAnother] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState("Basis");
+  
+  const defaultUren = {
+      maandag: 8, dinsdag: 8, woensdag: 8, donderdag: 8, vrijdag: 8, zaterdag: 0, zondag: 0
+  };
 
   const form = useForm<MedewerkerFormValues>({
     resolver: zodResolver(medewerkerFormSchema),
@@ -113,17 +116,8 @@ export function MedewerkerDialog({
       kostprijs: 0,
       verkoopprijs: 0,
       contractType: '',
-      urenPerWeek: 0,
+      urenPerDag: defaultUren,
       notities: '',
-      afwezig: {
-        maandag: false,
-        dinsdag: false,
-        woensdag: false,
-        donderdag: false,
-        vrijdag: false,
-        zaterdag: false,
-        zondag: false,
-      }
     }
   });
 
@@ -132,7 +126,6 @@ export function MedewerkerDialog({
     if (date.toDate) return date.toDate(); // Firestore Timestamp
     if (typeof date === 'string' || typeof date === 'number') {
       const parsedDate = new Date(date);
-      // Check if the parsed date is valid
       if (!isNaN(parsedDate.getTime())) {
         return parsedDate;
       }
@@ -147,34 +140,37 @@ export function MedewerkerDialog({
     if (open) {
       setActiveTab("Basis");
       setAddAnother(false);
-      form.reset(
-        medewerker
-          ? {
-              ...medewerker,
-              indiensttreding: dateToJSDate(medewerker.indiensttreding),
-              uitdiensttreding: dateToJSDate(medewerker.uitdiensttreding),
-            }
-          : {
-              voornaam: '',
-              tussenvoegsel: '',
-              achternaam: '',
-              email: '',
-              telefoonnummer: '',
-              mobiel: '',
-              taal: 'Nederlands',
-              functie: '',
-              status: 'Niet uitgenodigd',
-              soortMedewerker: '',
-              kostprijs: 0,
-              verkoopprijs: 0,
-              contractType: '',
-              urenPerWeek: 0,
-              notities: '',
-              indiensttreding: undefined,
-              uitdiensttreding: undefined,
-              afwezig: { maandag: false, dinsdag: false, woensdag: false, donderdag: false, vrijdag: false, zaterdag: false, zondag: false, }
-            }
-      );
+      const defaultValues = {
+          voornaam: '',
+          tussenvoegsel: '',
+          achternaam: '',
+          email: '',
+          telefoonnummer: '',
+          mobiel: '',
+          taal: 'Nederlands',
+          functie: '',
+          status: 'Niet uitgenodigd',
+          soortMedewerker: '',
+          kostprijs: 0,
+          verkoopprijs: 0,
+          contractType: '',
+          urenPerDag: defaultUren,
+          notities: '',
+          indiensttreding: undefined,
+          uitdiensttreding: undefined,
+      };
+
+      if (medewerker) {
+          form.reset({
+            ...defaultValues,
+            ...medewerker,
+            indiensttreding: dateToJSDate(medewerker.indiensttreding),
+            uitdiensttreding: dateToJSDate(medewerker.uitdiensttreding),
+            urenPerDag: medewerker.urenPerDag ? { ...defaultUren, ...medewerker.urenPerDag } : defaultUren
+          });
+      } else {
+          form.reset(defaultValues);
+      }
     }
   }, [open, medewerker, form]);
 
@@ -212,11 +208,10 @@ export function MedewerkerDialog({
             kostprijs: 0,
             verkoopprijs: 0,
             contractType: '',
-            urenPerWeek: 0,
+            urenPerDag: defaultUren,
             notities: '',
             indiensttreding: undefined,
             uitdiensttreding: undefined,
-            afwezig: { maandag: false, dinsdag: false, woensdag: false, donderdag: false, vrijdag: false, zaterdag: false, zondag: false, }
         });
         setActiveTab("Basis");
         setIsSubmitting(false);
@@ -511,38 +506,43 @@ export function MedewerkerDialog({
                   )}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                 <FormField
-                    control={form.control}
-                    name="contractType"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Soort contract</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                    <SelectTrigger><SelectValue placeholder="Selecteer een type" /></SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    {contractTypeOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="urenPerWeek"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Uren per week</FormLabel>
+              <FormField
+                control={form.control}
+                name="contractType"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Soort contract</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
-                                <Input type='number' placeholder='40' {...field} />
+                                <SelectTrigger><SelectValue placeholder="Selecteer een type" /></SelectTrigger>
                             </FormControl>
-                            <FormMessage />
+                            <SelectContent>
+                                {contractTypeOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                )}
+              />
+              <div>
+                <FormLabel>Uren per dag</FormLabel>
+                <div className="grid grid-cols-7 gap-2 mt-2">
+                  {weekDagen.map((day, index) => (
+                    <FormField
+                      key={day}
+                      control={form.control}
+                      name={`urenPerDag.${day}`}
+                      render={({ field }) => (
+                        <FormItem className='text-center'>
+                          <FormLabel className='text-xs capitalize'>{day.substring(0, 2)}</FormLabel>
+                          <FormControl>
+                            <Input type="number" className="text-center" {...field} />
+                          </FormControl>
                         </FormItem>
-                    )}
-                  />
+                      )}
+                    />
+                  ))}
+                </div>
               </div>
                <FormField
                   control={form.control}
@@ -557,33 +557,6 @@ export function MedewerkerDialog({
                       </FormItem>
                   )}
               />
-          </div>
-        )
-      case 'Afwezigheid':
-        const days = ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag', 'zondag'] as const;
-        return (
-          <div className='space-y-4'>
-            <p className='text-sm text-muted-foreground'>Selecteer vaste dagen waarop de medewerker niet beschikbaar is.</p>
-            {days.map(day => (
-              <FormField
-                key={day}
-                control={form.control}
-                name={`afwezig.${day}`}
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                    <div className="space-y-0.5">
-                      <FormLabel className='capitalize'>{day}</FormLabel>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            ))}
           </div>
         )
       default:

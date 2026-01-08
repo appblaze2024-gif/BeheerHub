@@ -16,15 +16,14 @@ export type Medewerker = {
   indiensttreding?: any; // Can be string, Date, or Firestore Timestamp
   uitdiensttreding?: any; // Can be string, Date, or Firestore Timestamp
   contractType?: string;
-  urenPerWeek?: number;
-  afwezig?: {
-    maandag?: boolean;
-    dinsdag?: boolean;
-    woensdag?: boolean;
-    donderdag?: boolean;
-    vrijdag?: boolean;
-    zaterdag?: boolean;
-    zondag?: boolean;
-  },
+  urenPerDag?: {
+    maandag?: number;
+    dinsdag?: number;
+    woensdag?: number;
+    donderdag?: number;
+    vrijdag?: number;
+    zaterdag?: number;
+    zondag?: number;
+  };
   notities?: string;
 };
