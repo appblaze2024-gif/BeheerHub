@@ -140,115 +140,117 @@ function AfwezigheidTab() {
   const goToToday = () => setCurrentDate(new Date());
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-2 flex flex-col gap-6">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={prevWeek}>
-                  <ChevronLeft className="h-4 w-4" />
+    <div className="p-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 flex flex-col gap-6">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={prevWeek}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" className="h-8" onClick={goToToday}>Vandaag</Button>
+                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={nextWeek}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="text-sm font-semibold flex items-center gap-2">
+                  <span className='capitalize'>{format(start, 'd MMM')} - {format(end, 'd MMM yyyy', { locale: nl })}</span>
+                  <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded-md">Week {weekNumber}</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-7 gap-2">
+                {weekDays.map((day) => (
+                  <div key={day.toISOString()} className="text-center text-xs font-semibold text-muted-foreground">
+                    {format(day, 'E', { locale: nl })}
+                  </div>
+                ))}
+                {weekDays.map((day) => (
+                  <div 
+                    key={day.toISOString()} 
+                    onClick={() => setSelectedDate(day)}
+                    className={cn(
+                      'p-2 border rounded-md h-16 cursor-pointer', 
+                      isSameDay(day, selectedDate) && 'bg-primary/20 border-primary',
+                      isToday(day) && 'bg-blue-100 dark:bg-blue-900/30'
+                    )}
+                  >
+                    <span className={cn(
+                      "text-sm",
+                       isToday(day) && 'font-bold text-primary',
+                       isSameDay(day, selectedDate) && 'text-black dark:text-white font-bold'
+                      )}>{format(day, 'd')}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-end gap-4 mt-4 text-xs">
+                <div className="flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3 text-green-500" />
+                  <span>Goedgekeurd</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Clock className="h-3 w-3 text-yellow-500" />
+                  <span>Onbeslist</span>
+                </div>
+                <Button variant="link" size="sm" className="text-xs">
+                  <CalendarDays className="h-3 w-3 mr-1" />
+                  Toevoegen aan kalender
                 </Button>
-                <Button variant="outline" className="h-8" onClick={goToToday}>Vandaag</Button>
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={nextWeek}>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
               </div>
-              <div className="text-sm font-semibold flex items-center gap-2">
-                <span className='capitalize'>{format(start, 'd MMM')} - {format(end, 'd MMM yyyy', { locale: nl })}</span>
-                <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded-md">Week {weekNumber}</span>
-              </div>
-            </div>
-            <div className="grid grid-cols-7 gap-2">
-              {weekDays.map((day) => (
-                <div key={day.toISOString()} className="text-center text-xs font-semibold text-muted-foreground">
-                  {format(day, 'E', { locale: nl })}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Afwezigheid</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="aanvragen">
+                <div className="flex justify-between items-start">
+                  <TabsList>
+                    <TabsTrigger value="aanvragen">Aanvragen</TabsTrigger>
+                    <TabsTrigger value="nagekeken">Nagekeken</TabsTrigger>
+                    <TabsTrigger value="verleden">Verleden</TabsTrigger>
+                  </TabsList>
+                  <Button><Plus className="h-4 w-4 mr-2" />Afwezigheid toevoegen</Button>
                 </div>
-              ))}
-              {weekDays.map((day) => (
-                <div 
-                  key={day.toISOString()} 
-                  onClick={() => setSelectedDate(day)}
-                  className={cn(
-                    'p-2 border rounded-md h-16 cursor-pointer', 
-                    isSameDay(day, selectedDate) && 'bg-primary/20 border-primary',
-                    isToday(day) && 'bg-blue-100 dark:bg-blue-900/30'
-                  )}
-                >
-                  <span className={cn(
-                    "text-sm",
-                     isToday(day) && 'font-bold text-primary',
-                     isSameDay(day, selectedDate) && 'text-black dark:text-white font-bold'
-                    )}>{format(day, 'd')}</span>
-                </div>
-              ))}
-            </div>
-            <div className="flex items-center justify-end gap-4 mt-4 text-xs">
-              <div className="flex items-center gap-1">
-                <CheckCircle className="h-3 w-3 text-green-500" />
-                <span>Goedgekeurd</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Clock className="h-3 w-3 text-yellow-500" />
-                <span>Onbeslist</span>
-              </div>
-              <Button variant="link" size="sm" className="text-xs">
-                <CalendarDays className="h-3 w-3 mr-1" />
-                Toevoegen aan kalender
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Afwezigheid</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="aanvragen">
-              <div className="flex justify-between items-start">
-                <TabsList>
-                  <TabsTrigger value="aanvragen">Aanvragen</TabsTrigger>
-                  <TabsTrigger value="nagekeken">Nagekeken</TabsTrigger>
-                  <TabsTrigger value="verleden">Verleden</TabsTrigger>
-                </TabsList>
-                <Button><Plus className="h-4 w-4 mr-2" />Afwezigheid toevoegen</Button>
-              </div>
-              <TabsContent value="aanvragen" className="mt-6">
-                <div className="text-center text-muted-foreground py-12">
-                  <CalendarDays className="h-12 w-12 mx-auto mb-2" />
-                  <p>Geen verzoeken</p>
-                  <Button variant="link" size="sm">Nagekeken afwezigheden bekijken</Button>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-      </div>
+                <TabsContent value="aanvragen" className="mt-6">
+                  <div className="text-center text-muted-foreground py-12">
+                    <CalendarDays className="h-12 w-12 mx-auto mb-2" />
+                    <p>Geen verzoeken</p>
+                    <Button variant="link" size="sm">Nagekeken afwezigheden bekijken</Button>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        </div>
 
-      <div className="lg:col-span-1">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Saldo's</CardTitle>
-            <p className="text-xs text-muted-foreground">1 januari - 31 december</p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="border rounded-lg p-3">
-              <p className="text-sm font-medium">Verlof</p>
-              <p className="text-xl font-bold text-primary">0u 0m</p>
-              <p className="text-xs text-muted-foreground">Resterend</p>
-            </div>
-             <div className="border rounded-lg p-3">
-              <p className="text-sm font-medium">ADV</p>
-              <p className="text-xl font-bold text-primary">0u 0m</p>
-              <p className="text-xs text-muted-foreground">Resterend</p>
-            </div>
-             <div className="border rounded-lg p-3">
-              <p className="text-sm font-medium">TVT</p>
-              <p className="text-xl font-bold text-primary">0u 0m</p>
-              <p className="text-xs text-muted-foreground">Resterend</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="lg:col-span-1">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Saldo's</CardTitle>
+              <p className="text-xs text-muted-foreground">1 januari - 31 december</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="border rounded-lg p-3">
+                <p className="text-sm font-medium">Verlof</p>
+                <p className="text-xl font-bold text-primary">0u 0m</p>
+                <p className="text-xs text-muted-foreground">Resterend</p>
+              </div>
+               <div className="border rounded-lg p-3">
+                <p className="text-sm font-medium">ADV</p>
+                <p className="text-xl font-bold text-primary">0u 0m</p>
+                <p className="text-xs text-muted-foreground">Resterend</p>
+              </div>
+               <div className="border rounded-lg p-3">
+                <p className="text-sm font-medium">TVT</p>
+                <p className="text-xl font-bold text-primary">0u 0m</p>
+                <p className="text-xs text-muted-foreground">Resterend</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
@@ -274,7 +276,7 @@ function RoosterTab() {
   const daysOfWeek = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'];
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="p-6 h-full flex flex-col">
       <div className="flex items-center justify-between mb-4">
         <div className='flex items-center gap-4'>
             <h2 className="text-xl font-bold capitalize">
@@ -308,26 +310,21 @@ function RoosterTab() {
         </div>
       </div>
       <div className="flex-1 grid grid-rows-[auto_1fr] border rounded-lg overflow-hidden">
-        <div className="grid grid-cols-[repeat(7,1fr)_120px] text-xs font-semibold text-center border-b">
+        <div className="grid grid-cols-7 text-xs font-semibold text-center border-b">
            {daysOfWeek.map((day) => (
              <div key={day} className="p-2 border-r last:border-r-0">{day}</div>
            ))}
-           <div className='p-2 bg-muted/50'>Beschikbaarheid</div>
         </div>
         <div className="grid grid-cols-1 grid-rows-5 flex-1 bg-gray-200">
            {weeks.map((weekStart, weekIndex) => {
               const daysInWeek = eachDayOfInterval({start: weekStart, end: endOfWeek(weekStart, {weekStartsOn: 1})})
               return (
-                <div key={weekIndex} className="grid grid-cols-[repeat(7,1fr)_120px] border-t first:border-t-0 bg-white">
+                <div key={weekIndex} className="grid grid-cols-7 border-t first:border-t-0 bg-white">
                   {daysInWeek.map((day, dayIndex) => (
                     <div key={day.toISOString()} className={cn("p-2 border-r", !isSameMonth(day, currentDate) && 'bg-muted/30')}>
                         <span className={cn('text-xs font-semibold', !isSameMonth(day, currentDate) && 'text-muted-foreground/50', isToday(day) && 'flex items-center justify-center h-5 w-5 rounded-full bg-blue-600 text-white')}>{format(day, 'd')}</span>
                     </div>
                   ))}
-                  <div className='p-2 flex items-center justify-center'>
-                     {/* Dummy data, replace with real logic */}
-                     {format(weekStart, 'w') % 2 === 0 && <CheckCircle className='h-5 w-5 text-green-500'/>}
-                  </div>
                 </div>
               )
            })}
@@ -485,14 +482,10 @@ export default function EmployeeDetailPage() {
             </div>
           </TabsContent>
           <TabsContent value="afwezigheid" className="flex-1 overflow-y-auto">
-            <div className="p-6">
-                <AfwezigheidTab />
-            </div>
+            <AfwezigheidTab />
           </TabsContent>
           <TabsContent value="rooster" className="flex-1 overflow-y-auto">
-            <div className="p-6 h-full flex flex-col">
-              <RoosterTab />
-            </div>
+            <RoosterTab />
           </TabsContent>
           <TabsContent value="contracten" className="flex-1 overflow-y-auto">
             <div className="p-6 flex h-full items-center justify-center text-muted-foreground">
