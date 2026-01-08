@@ -54,12 +54,15 @@ const parseCSV = (text: string): string[][] => {
     let currentField = '';
     let inQuotes = false;
 
-    for (let i = 0; i < text.length; i++) {
-        const char = text[i];
+    // Normalize line endings to LF
+    const normalizedText = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+    for (let i = 0; i < normalizedText.length; i++) {
+        const char = normalizedText[i];
 
         if (inQuotes) {
             if (char === '"') {
-                if (i + 1 < text.length && text[i + 1] === '"') {
+                if (i + 1 < normalizedText.length && normalizedText[i + 1] === '"') {
                     // Escaped quote
                     currentField += '"';
                     i++;
@@ -75,17 +78,11 @@ const parseCSV = (text: string): string[][] => {
             } else if (char === ',') {
                 currentRow.push(currentField.trim());
                 currentField = '';
-            } else if (char === '\n' || char === '\r') {
-                if (currentField.length > 0 || currentRow.length > 0) {
-                    currentRow.push(currentField.trim());
-                    rows.push(currentRow);
-                }
+            } else if (char === '\n') {
+                currentRow.push(currentField.trim());
+                rows.push(currentRow);
                 currentRow = [];
                 currentField = '';
-                // Handle CRLF
-                if (char === '\r' && i + 1 < text.length && text[i + 1] === '\n') {
-                    i++;
-                }
             } else {
                 currentField += char;
             }
@@ -97,7 +94,7 @@ const parseCSV = (text: string): string[][] => {
         rows.push(currentRow);
     }
     
-    return rows;
+    return rows.filter(row => row.length > 0 && row.some(field => field.length > 0));
 };
 
 
@@ -146,7 +143,11 @@ export function ObjectImportDialog({
       const text = e.target?.result as string;
       const parsedData = parseCSV(text);
       
-      if (parsedData.length === 0) return;
+      if (parsedData.length < 2) {
+        console.error("CSV must have at least a header row and one data row.");
+        // Optionally show an error to the user
+        return;
+      };
 
       const fileHeaders = parsedData[0];
       const fileData = parsedData.slice(1);
@@ -154,10 +155,13 @@ export function ObjectImportDialog({
       setHeaders(fileHeaders);
       setData(fileData);
 
-      // Auto-map based on header name similarity
+      // Auto-map based on header name similarity (case-insensitive)
       const newMapping: Record<string, string> = {};
+      const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/gi, '');
+      
       objectFields.forEach(field => {
-        const foundHeader = fileHeaders.find(header => header.toLowerCase().replace(/\s/g, '') === field.toLowerCase());
+        const normalizedField = normalize(field);
+        const foundHeader = fileHeaders.find(header => normalize(header) === normalizedField);
         if (foundHeader) {
           newMapping[field] = foundHeader;
         }
@@ -165,47 +169,35 @@ export function ObjectImportDialog({
       setMapping(newMapping);
       setStep(2);
     };
-    reader.readAsText(selectedFile);
+    reader.readAsText(selectedFile, 'ISO-8859-1'); // Or 'UTF-8', depending on file encoding
   };
 
   const handleImport = async () => {
-    if (!firestore || data.length === 0) return;
-
-    const idCsvHeader = mapping['id'];
-    if (!idCsvHeader) {
-      console.error("Het veld 'id' moet worden gekoppeld aan een CSV-kolom.");
-      // You might want to show an error to the user here.
+    if (!firestore || data.length === 0 || !mapping['id']) {
+      console.error("Firestore not available, no data, or ID column not mapped.");
       return;
     }
 
     setIsImporting(true);
     setImportProgress(0);
 
-    // Create a map from header name to its index
-    const headerIndexMap: Record<string, number> = {};
-    headers.forEach((header, index) => {
-      headerIndexMap[header] = index;
-    });
-
-    // Create a map from Firestore field to the CSV column index
-    const fieldMapping: Record<string, number> = {};
+    const headerIndexMap = new Map(headers.map((h, i) => [h, i]));
+    const fieldToIndexMap = new Map<string, number>();
     for (const field in mapping) {
-      const csvHeader = mapping[field];
-      if (csvHeader && headerIndexMap[csvHeader] !== undefined) {
-        fieldMapping[field] = headerIndexMap[csvHeader];
-      }
+        const csvHeader = mapping[field];
+        if (csvHeader && headerIndexMap.has(csvHeader)) {
+            fieldToIndexMap.set(field, headerIndexMap.get(csvHeader)!);
+        }
     }
-    
-    const idIndex = fieldMapping['id'];
-    if (idIndex === undefined) {
-        console.error("ID column mapping is missing.");
+
+    if (!fieldToIndexMap.has('id')) {
+        console.error("ID column mapping is essential for import.");
         setIsImporting(false);
         return;
     }
 
-
     const objectsColRef = collection(firestore, 'objects');
-    const batchSize = 500; // Firestore batch limit is 500 writes
+    const batchSize = 500;
 
     try {
       for (let i = 0; i < data.length; i += batchSize) {
@@ -213,28 +205,28 @@ export function ObjectImportDialog({
         const chunk = data.slice(i, i + batchSize);
 
         chunk.forEach(row => {
-          if (row.length !== headers.length) {
+          if (row.length < headers.length) {
             console.warn("Skipping malformed row:", row);
-            return; // Skip rows that don't have the correct number of columns
+            return;
           }
           
-          const objectId = row[idIndex];
+          const objectId = row[fieldToIndexMap.get('id')!];
           if (!objectId) {
             console.warn("Skipping row with empty ID:", row);
-            return; // Skip rows without an ID
+            return;
           }
 
           const objectData: Record<string, any> = {};
 
-          for(const field in fieldMapping) {
-            const index = fieldMapping[field];
+          for(const [field, index] of fieldToIndexMap.entries()) {
             const value = row[index];
 
-            if (value !== undefined) {
+            if (value !== undefined && value !== '') {
                 if (field === 'latitude' || field === 'longitude' || field === 'vulgraad') {
-                    objectData[field] = parseFloat(value.replace(',', '.')) || 0;
+                    const numValue = parseFloat(value.replace(',', '.'));
+                    objectData[field] = isNaN(numValue) ? 0 : numValue;
                 } else if (field === 'isActief') {
-                    objectData[field] = value.toLowerCase() === 'true' || value === '1';
+                    objectData[field] = ['true', '1', 'ja', 'yes'].includes(value.toLowerCase());
                 } else {
                     objectData[field] = value;
                 }
@@ -300,7 +292,7 @@ export function ObjectImportDialog({
                     {field.replace(/([A-Z])/g, ' $1').trim()}
                   </Label>
                   <Select
-                    value={mapping[field]}
+                    value={mapping[field] || ''}
                     onValueChange={(value) =>
                       setMapping((prev) => ({ ...prev, [field]: value }))
                     }
