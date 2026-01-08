@@ -276,16 +276,6 @@ export default function ObjectsPage() {
         </main>
       </div>
 
-       <div className="fixed bottom-4 left-4">
-         <Alert variant="destructive" className="flex items-center pr-8 shadow-lg">
-            <div className="flex-1">
-                <AlertTitle>4 Issues</AlertTitle>
-            </div>
-            <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6">
-                <ChevronRight className="h-4 w-4" />
-            </Button>
-        </Alert>
-      </div>
     </div>
   );
 }
