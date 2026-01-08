@@ -198,32 +198,28 @@ export default function ObjectsPage() {
                     </Button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Accordion type="single" collapsible className="w-full bg-card rounded-lg border">
-              <AccordionItem value="logboek">
-                <AccordionTrigger className="px-4">Logboek</AccordionTrigger>
-                <AccordionContent className="px-4">
-                  Hier komt de inhoud van het logboek.
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="planning">
-                <AccordionTrigger className="px-4">Planning</AccordionTrigger>
-                <AccordionContent className="px-4">
-                  Hier komt de planning.
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="bewerk-locatie">
-                <AccordionTrigger className="px-4">Bewerk locatie</AccordionTrigger>
-                <AccordionContent className="px-4">
-                  Hier komen de opties om de locatie te bewerken.
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-            
-            <Card>
-                <CardContent className="p-4 space-y-4">
+                 <Accordion type="single" collapsible className="w-full mt-4">
+                    <AccordionItem value="logboek">
+                        <AccordionTrigger className="px-0">Logboek</AccordionTrigger>
+                        <AccordionContent>
+                        Hier komt de inhoud van het logboek.
+                        </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="planning">
+                        <AccordionTrigger className="px-0">Planning</AccordionTrigger>
+                        <AccordionContent>
+                        Hier komt de planning.
+                        </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="bewerk-locatie" className='border-b-0'>
+                        <AccordionTrigger className="px-0">Bewerk locatie</AccordionTrigger>
+                        <AccordionContent>
+                        Hier komen de opties om de locatie te bewerken.
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
+                <Separator className='my-4'/>
+                 <div className="space-y-4">
                     <div>
                         <label htmlFor="warning" className="text-sm font-medium">
                             Waarschuwing
@@ -249,7 +245,8 @@ export default function ObjectsPage() {
                             <div className="bg-muted text-muted-foreground px-3 py-1 rounded-full text-sm">Afvalbakken</div>
                         </div>
                     </div>
-                </CardContent>
+                </div>
+              </CardContent>
             </Card>
 
           </div>
