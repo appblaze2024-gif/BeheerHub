@@ -284,18 +284,18 @@ export default function WeeklyReportsPage() {
         <Table className="min-w-full border-collapse">
           <TableHeader className="bg-gray-100/50 dark:bg-gray-800/20 sticky top-0 z-10">
             <TableRow>
-              <TableHead className="w-[100px] p-1 border-b border-r">Postnummer</TableHead>
-              <TableHead className="w-[250px] p-1 border-b border-r">Omschrijving</TableHead>
-              <TableHead className="p-1 border-b border-r">Eenheid</TableHead>
-              <TableHead className="p-1 border-b border-r">Calculatie uren</TableHead>
-              <TableHead className="p-1 border-b border-r">Prijs per 1h</TableHead>
-              <TableHead className="p-1 border-b border-r">Tot vorige periode</TableHead>
-              <TableHead className="p-1 border-b border-r bg-yellow-100/50 dark:bg-yellow-900/20">In week</TableHead>
-              <TableHead className="p-1 border-b border-r">t/m periode</TableHead>
-              <TableHead className="p-1 border-b border-r">Restant</TableHead>
-              <TableHead className="p-1 border-b border-r">% Gereed</TableHead>
-              <TableHead className="p-1 border-b border-r bg-yellow-100/50 dark:bg-yellow-900/20 text-right">Totaal in periode</TableHead>
-              <TableHead className="p-1 border-b text-right">totaal t/m week</TableHead>
+              <TableHead className="w-[100px] p-1 border-t border-b border-r">Postnummer</TableHead>
+              <TableHead className="w-[250px] p-1 border-t border-b border-r">Omschrijving</TableHead>
+              <TableHead className="p-1 border-t border-b border-r">Eenheid</TableHead>
+              <TableHead className="p-1 border-t border-b border-r">Calculatie uren</TableHead>
+              <TableHead className="p-1 border-t border-b border-r">Prijs per 1h</TableHead>
+              <TableHead className="p-1 border-t border-b border-r">Tot vorige periode</TableHead>
+              <TableHead className="p-1 border-t border-b border-r bg-yellow-100/50 dark:bg-yellow-900/20">In week</TableHead>
+              <TableHead className="p-1 border-t border-b border-r">t/m periode</TableHead>
+              <TableHead className="p-1 border-t border-b border-r">Restant</TableHead>
+              <TableHead className="p-1 border-t border-b border-r">% Gereed</TableHead>
+              <TableHead className="p-1 border-t border-b border-r bg-yellow-100/50 dark:bg-yellow-900/20 text-right">Totaal in periode</TableHead>
+              <TableHead className="p-1 border-t border-b text-right">totaal t/m week</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
