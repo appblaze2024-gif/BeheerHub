@@ -64,6 +64,7 @@ type DialogState = {
   open: boolean;
   medewerker?: Medewerker;
   datum?: Date;
+  dienst?: Dienst;
 }
 
 export default function WorkPlanningPage() {
@@ -108,8 +109,12 @@ export default function WorkPlanningPage() {
   const prevWeek = () => setCurrentDate(sub(currentDate, { weeks: 1 }));
   const nextWeek = () => setCurrentDate(add(currentDate, { weeks: 1 }));
   
-  const openDialog = (medewerker: Medewerker, datum: Date) => {
-    setDialogState({ open: true, medewerker, datum });
+  const openNewDienstDialog = (medewerker: Medewerker, datum: Date) => {
+    setDialogState({ open: true, medewerker, datum, dienst: undefined });
+  }
+  
+  const openEditDienstDialog = (dienst: Dienst, medewerker: Medewerker) => {
+    setDialogState({ open: true, medewerker, datum: new Date(dienst.datum), dienst });
   }
 
   React.useEffect(() => {
@@ -215,14 +220,24 @@ export default function WorkPlanningPage() {
                         key={day.toISOString()}
                         className="group relative p-2 border-b border-r min-h-[80px] flex flex-col gap-1"
                     >
-                        {dienstenForDay?.map(dienst => (
-                            <div key={dienst.id} className="bg-secondary text-secondary-foreground rounded-md p-2 text-xs">
-                                <p className="font-semibold truncate">{dienst.starttijd} - {dienst.eindtijd}</p>
-                                <p className="truncate">{dienst.werksoort}</p>
-                            </div>
-                        ))}
-                        <Button variant="ghost" size="icon" className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => openDialog(medewerker, day)}>
-                          <Plus className="h-5 w-5" />
+                        <div className="flex-1 space-y-1">
+                          {dienstenForDay?.map(dienst => (
+                              <div key={dienst.id} 
+                                   onClick={() => openEditDienstDialog(dienst, medewerker)}
+                                   className="bg-secondary text-secondary-foreground rounded-md p-2 text-xs cursor-pointer hover:bg-secondary/80"
+                              >
+                                  <p className="font-semibold truncate">{dienst.starttijd} - {dienst.eindtijd}</p>
+                                  <p className="truncate">{dienst.werksoort}</p>
+                              </div>
+                          ))}
+                        </div>
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 self-center" 
+                            onClick={() => openNewDienstDialog(medewerker, day)}
+                        >
+                          <Plus className="h-4 w-4 text-muted-foreground" />
                         </Button>
                     </div>
                 )})}
@@ -231,13 +246,14 @@ export default function WorkPlanningPage() {
           )}
         </div>
       </div>
-      {dialogState.open && selectedProject && (
+      {dialogState.open && selectedProject && dialogState.medewerker && dialogState.datum && (
         <DienstToevoegenDialog 
             open={dialogState.open}
             onOpenChange={(open) => setDialogState({ ...dialogState, open })}
-            medewerker={dialogState.medewerker!}
-            datum={dialogState.datum!}
+            medewerker={dialogState.medewerker}
+            datum={dialogState.datum}
             project={selectedProject}
+            dienst={dialogState.dienst}
         />
       )}
     </div>

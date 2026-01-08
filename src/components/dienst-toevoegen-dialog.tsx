@@ -10,8 +10,9 @@ import {
   useCollection,
   useMemoFirebase,
   addDocumentNonBlocking,
+  updateDocumentNonBlocking,
 } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, doc } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 
@@ -40,7 +41,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import type { Medewerker } from '@/lib/types';
+import type { Medewerker, Dienst } from '@/lib/types';
 
 const dienstFormSchema = z.object({
   werksoort: z.string().min(1, 'Werksoort is verplicht.'),
@@ -65,6 +66,7 @@ interface DienstToevoegenDialogProps {
     id: string;
     werksoorten?: { id: string; werksoort: string }[];
   };
+  dienst?: Dienst;
 }
 
 export function DienstToevoegenDialog({
@@ -73,6 +75,7 @@ export function DienstToevoegenDialog({
   medewerker,
   datum,
   project,
+  dienst,
 }: DienstToevoegenDialogProps) {
   const firestore = useFirestore();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -87,27 +90,39 @@ export function DienstToevoegenDialog({
 
   const form = useForm<DienstFormValues>({
     resolver: zodResolver(dienstFormSchema),
-    defaultValues: {
-      starttijd: '08:00',
-      eindtijd: '17:00',
-      onbetaaldePauze: 0,
-      verbergEindtijd: false,
-      herhaalDienst: false,
-      goedkeuringVereist: false,
-      informeerMedewerkers: false,
-    },
   });
+
+  React.useEffect(() => {
+    if (open) {
+      if (dienst) {
+        form.reset({
+          ...dienst,
+          onbetaaldePauze: dienst.onbetaaldePauze || 0,
+          verbergEindtijd: dienst.verbergEindtijd || false,
+          herhaalDienst: dienst.herhaalDienst || false,
+          goedkeuringVereist: dienst.goedkeuringVereist || false,
+          informeerMedewerkers: dienst.informeerMedewerkers || false,
+          voertuigId: dienst.voertuigId || undefined,
+        });
+      } else {
+        form.reset({
+          werksoort: '',
+          starttijd: '08:00',
+          eindtijd: '17:00',
+          onbetaaldePauze: 0,
+          verbergEindtijd: false,
+          herhaalDienst: false,
+          goedkeuringVereist: false,
+          informeerMedewerkers: false,
+          voertuigId: undefined,
+        });
+      }
+    }
+  }, [open, dienst, form]);
 
   const onSubmit = async (data: DienstFormValues) => {
     if (!firestore) return;
     setIsSubmitting(true);
-
-    const dienstenColRef = collection(
-      firestore,
-      'projects',
-      project.id,
-      'diensten'
-    );
 
     const dienstData = {
       ...data,
@@ -118,7 +133,18 @@ export function DienstToevoegenDialog({
     };
 
     try {
-      await addDocumentNonBlocking(dienstenColRef, dienstData);
+      if (dienst) {
+        const dienstRef = doc(firestore, 'projects', project.id, 'diensten', dienst.id);
+        await updateDocumentNonBlocking(dienstRef, dienstData);
+      } else {
+        const dienstenColRef = collection(
+          firestore,
+          'projects',
+          project.id,
+          'diensten'
+        );
+        await addDocumentNonBlocking(dienstenColRef, dienstData);
+      }
       onOpenChange(false);
     } catch (error) {
       console.error('Fout bij opslaan dienst:', error);
@@ -126,12 +152,6 @@ export function DienstToevoegenDialog({
       setIsSubmitting(false);
     }
   };
-
-  React.useEffect(() => {
-    if (!open) {
-      form.reset();
-    }
-  }, [open, form]);
 
   const medewerkerNaam = `${medewerker.voornaam || ''} ${
     medewerker.tussenvoegsel || ''
@@ -142,7 +162,7 @@ export function DienstToevoegenDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle>Dienst Toevoegen: {formattedDate}</DialogTitle>
+          <DialogTitle>{dienst ? 'Dienst Bewerken' : 'Dienst Toevoegen'}: {formattedDate}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -327,10 +347,10 @@ export function DienstToevoegenDialog({
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Toevoegen...
+                    {dienst ? 'Opslaan...' : 'Toevoegen...'}
                   </>
                 ) : (
-                  'Toevoegen'
+                  dienst ? 'Opslaan' : 'Toevoegen'
                 )}
               </Button>
             </DialogFooter>
