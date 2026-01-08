@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import type { Medewerker } from '@/lib/types';
+import { MedewerkerDialog } from '@/components/medewerker-dialog';
 
 function DetailField({
   label,
@@ -47,6 +48,7 @@ export default function EmployeeDetailPage() {
   const params = useParams();
   const firestore = useFirestore();
   const id = params.id as string;
+  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
 
   const employeeRef = useMemoFirebase(() => {
     if (!firestore || !id) return null;
@@ -61,9 +63,8 @@ export default function EmployeeDetailPage() {
     return `${firstInitial}${lastInitial}`.toUpperCase();
   };
 
-  const handleEdit = (fieldName: string) => {
-    // TODO: Implement edit functionality, e.g., open a dialog
-    console.log(`Editing ${fieldName}`);
+  const handleEdit = () => {
+    setIsDialogOpen(true);
   };
 
   if (isLoading) {
@@ -121,27 +122,27 @@ export default function EmployeeDetailPage() {
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-x-12 md:grid-cols-3">
               <div>
-                <DetailField label="Voornaam" value={medewerker.voornaam} onEdit={() => handleEdit('voornaam')} />
-                <DetailField label="Tussenvoegsel" value={medewerker.tussenvoegsel} onEdit={() => handleEdit('tussenvoegsel')} />
-                <DetailField label="Achternaam" value={medewerker.achternaam} onEdit={() => handleEdit('achternaam')} />
-                <DetailField label="Geboortedatum" value={medewerker.geboortedatum} onEdit={() => handleEdit('geboortedatum')} />
-                <DetailField label="Geboorteplaats" value={medewerker.geboorteplaats} onEdit={() => handleEdit('geboorteplaats')} />
+                <DetailField label="Voornaam" value={medewerker.voornaam} onEdit={handleEdit} />
+                <DetailField label="Tussenvoegsel" value={medewerker.tussenvoegsel} onEdit={handleEdit} />
+                <DetailField label="Achternaam" value={medewerker.achternaam} onEdit={handleEdit} />
+                <DetailField label="Geboortedatum" value={medewerker.geboortedatum} onEdit={handleEdit} />
+                <DetailField label="Geboorteplaats" value={medewerker.geboorteplaats} onEdit={handleEdit} />
               </div>
               <div>
-                <DetailField label="Telefoonnr." value={medewerker.telefoonnummer} onEdit={() => handleEdit('telefoonnummer')} />
-                <DetailField label="Mobiel nr." value={medewerker.mobiel} onEdit={() => handleEdit('mobiel')} />
-                <DetailField label="Nood nr." value={medewerker.noodnummer} onEdit={() => handleEdit('noodnummer')} />
-                <DetailField label="Adres" value={medewerker.adres} onEdit={() => handleEdit('adres')} />
-                <DetailField label="Postcode" value={medewerker.postcode} onEdit={() => handleEdit('postcode')} />
-                <DetailField label="Plaats" value={medewerker.plaats} onEdit={() => handleEdit('plaats')} />
+                <DetailField label="Telefoonnr." value={medewerker.telefoonnummer} onEdit={handleEdit} />
+                <DetailField label="Mobiel nr." value={medewerker.mobiel} onEdit={handleEdit} />
+                <DetailField label="Nood nr." value={medewerker.noodnummer} onEdit={handleEdit} />
+                <DetailField label="Adres" value={medewerker.adres} onEdit={handleEdit} />
+                <DetailField label="Postcode" value={medewerker.postcode} onEdit={handleEdit} />
+                <DetailField label="Plaats" value={medewerker.plaats} onEdit={handleEdit} />
               </div>
               <div>
-                <DetailField label="Nationaliteit" value={medewerker.nationaliteit} onEdit={() => handleEdit('nationaliteit')} />
-                <DetailField label="BSN" value={medewerker.bsn} onEdit={() => handleEdit('bsn')} />
-                <DetailField label="ID/Paspoort nr." value={medewerker.paspoortnummer} onEdit={() => handleEdit('paspoortnummer')} />
-                <DetailField label="Bankrekening" value={medewerker.bankrekening} onEdit={() => handleEdit('bankrekening')} />
-                <DetailField label="Datum in dienst" value={medewerker.indiensttreding} onEdit={() => handleEdit('indiensttreding')} />
-                <DetailField label="Personeels nr." value={medewerker.personeelsnummer} onEdit={() => handleEdit('personeelsnummer')} />
+                <DetailField label="Nationaliteit" value={medewerker.nationaliteit} onEdit={handleEdit} />
+                <DetailField label="BSN" value={medewerker.bsn} onEdit={handleEdit} />
+                <DetailField label="ID/Paspoort nr." value={medewerker.paspoortnummer} onEdit={handleEdit} />
+                <DetailField label="Bankrekening" value={medewerker.bankrekening} onEdit={handleEdit} />
+                <DetailField label="Datum in dienst" value={medewerker.indiensttreding} onEdit={handleEdit} />
+                <DetailField label="Personeels nr." value={medewerker.personeelsnummer} onEdit={handleEdit} />
               </div>
             </CardContent>
           </Card>
@@ -179,6 +180,11 @@ export default function EmployeeDetailPage() {
           </div>
         </TabsContent>
       </Tabs>
+      <MedewerkerDialog 
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        medewerker={medewerker}
+      />
     </div>
   );
 }
