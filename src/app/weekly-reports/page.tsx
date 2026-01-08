@@ -89,12 +89,11 @@ export default function WeeklyReportsPage() {
     return projects?.find((p) => p.id === selectedProjectId);
   }, [projects, selectedProjectId]);
 
-  const start = startOfWeek(currentDate, { weekStartsOn: 1 });
-  const end = endOfWeek(currentDate, { weekStartsOn: 1 });
-  
   const dienstenQuery = React.useMemo(() => {
     if (!firestore || !selectedProjectId) return null;
-
+    
+    const start = startOfWeek(currentDate, { weekStartsOn: 1 });
+    const end = endOfWeek(currentDate, { weekStartsOn: 1 });
     const startDateString = format(start, 'yyyy-MM-dd');
     const endDateString = format(end, 'yyyy-MM-dd');
 
@@ -338,10 +337,10 @@ export default function WeeklyReportsPage() {
                 </TableRow>
             )}
           </TableBody>
-          <TableFooter className="sticky bottom-0 bg-gray-100/50 dark:bg-gray-800/20">
+          <TableFooter className="sticky bottom-0 bg-gray-50 dark:bg-gray-900/50">
             <TableRow className="h-auto">
               <TableCell colSpan={10} className="p-1 border-r" />
-              <TableCell className="p-1 border-r bg-yellow-100/50 dark:bg-yellow-900/20 text-right font-bold">Subtotaal</TableCell>
+              <TableCell className="p-1 border-r text-right font-bold">Subtotaal</TableCell>
               <TableCell className="p-1 text-right font-bold">{formatCurrency(subtotal)}</TableCell>
             </TableRow>
           </TableFooter>
