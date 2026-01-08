@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { ChevronDown, ChevronLeft, ChevronRight, Clock, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, Plus } from 'lucide-react';
 import {
   startOfWeek,
   endOfWeek,
@@ -31,15 +31,21 @@ import {
 } from '@/firebase';
 import type { Medewerker } from '@/lib/types';
 
-
 const getInitials = (firstName?: string, lastName?: string) => {
     const firstInitial = firstName?.[0] || '';
     const lastInitial = lastName?.[0] || '';
     return `${firstInitial}${lastInitial}`.toUpperCase();
 };
 
+type Project = {
+  id: string;
+  projectnaam: string;
+  projectnummer: string;
+};
+
 export default function WorkPlanningPage() {
   const [currentDate, setCurrentDate] = React.useState(new Date());
+  const [selectedProjectId, setSelectedProjectId] = React.useState<string | undefined>();
   const firestore = useFirestore();
 
   const medewerkersCollection = useMemoFirebase(() => {
@@ -47,8 +53,16 @@ export default function WorkPlanningPage() {
     return collection(firestore, 'medewerkers');
   }, [firestore]);
 
-  const { data: medewerkers, isLoading } =
+  const { data: medewerkers, isLoading: isLoadingMedewerkers } =
     useCollection<Medewerker>(medewerkersCollection);
+
+  const projectsCollection = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'projects');
+  }, [firestore]);
+
+  const { data: projects, isLoading: isLoadingProjects } =
+    useCollection<Project>(projectsCollection);
 
   const start = startOfWeek(currentDate, { weekStartsOn: 1 });
   const end = endOfWeek(currentDate, { weekStartsOn: 1 });
@@ -57,6 +71,12 @@ export default function WorkPlanningPage() {
   const prevWeek = () => setCurrentDate(sub(currentDate, { weeks: 1 }));
   const nextWeek = () => setCurrentDate(add(currentDate, { weeks: 1 }));
 
+  React.useEffect(() => {
+    if (!selectedProjectId && projects && projects.length > 0) {
+      setSelectedProjectId(projects[0].id);
+    }
+  }, [projects, selectedProjectId]);
+
   return (
     <div className="flex flex-col flex-1 h-full min-h-0">
       <PageHeader title="Bezetting">
@@ -64,14 +84,20 @@ export default function WorkPlanningPage() {
           <span className="text-sm font-medium text-muted-foreground">
             Project:
           </span>
-          <Select defaultValue="aalsmeer">
+          <Select 
+            value={selectedProjectId}
+            onValueChange={setSelectedProjectId}
+            disabled={isLoadingProjects}
+          >
             <SelectTrigger className="w-[280px]">
-              <SelectValue />
+              <SelectValue placeholder="Selecteer een project" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="aalsmeer">
-                Gemeente Aalsmeer [DVO Aalsmeer]
-              </SelectItem>
+              {projects?.map((project) => (
+                <SelectItem key={project.id} value={project.id}>
+                  {project.projectnaam} [{project.projectnummer}]
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Button variant="outline">Voertuigen</Button>
@@ -109,7 +135,7 @@ export default function WorkPlanningPage() {
           ))}
 
           {/* Data Rows */}
-          {isLoading ? (
+          {isLoadingMedewerkers ? (
             <div className="col-span-8 p-4 text-center text-muted-foreground">
               Medewerkers laden...
             </div>
