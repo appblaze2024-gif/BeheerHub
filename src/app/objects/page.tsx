@@ -13,6 +13,7 @@ import {
   MoreVertical,
   ChevronRight,
   Image as ImageIcon,
+  Upload,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,9 +37,16 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { MapboxView } from '@/components/mapbox-view';
+import { ObjectImportDialog } from '@/components/object-import-dialog';
 
 export default function ObjectsPage() {
   const [isActief, setIsActief] = React.useState(true);
+  const [isImporting, setIsImporting] = React.useState(false);
+
+  const handleImportSuccess = () => {
+    setIsImporting(false);
+    // Data will refresh automatically due to useCollection hook
+  };
 
   return (
     <div className="flex flex-col flex-1 h-full min-h-0 bg-muted/30">
@@ -66,14 +74,16 @@ export default function ObjectsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Zoek een object" className="pl-9" />
           </div>
-          <Select>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Bulkacties" />
-            </SelectTrigger>
-            <SelectContent>
-              {/* Bulk actions options here */}
-            </SelectContent>
-          </Select>
+           <ObjectImportDialog
+            open={isImporting}
+            onOpenChange={setIsImporting}
+            onSuccess={handleImportSuccess}
+          >
+            <Button variant="outline">
+              <Upload className="mr-2 h-4 w-4" />
+              Import
+            </Button>
+          </ObjectImportDialog>
         </div>
       </header>
 

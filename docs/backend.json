@@ -78,6 +78,25 @@
         "projectnaam"
       ]
     },
+     "Object": {
+      "title": "Object",
+      "type": "object",
+      "description": "Represents a physical object in the world.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the object." },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "locatieType": { "type": "string" },
+        "locatieSubType": { "type": "string" },
+        "kwaliteit": { "type": "string" },
+        "isActief": { "type": "boolean" },
+        "straatnaam": { "type": "string" },
+        "huisnummer": { "type": "string" },
+        "waarschuwing": { "type": "string" },
+        "vulgraad": { "type": "number" }
+      },
+      "required": ["id", "latitude", "longitude"]
+    },
     "Bestand": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Bestand",
@@ -459,6 +478,17 @@
             "params": [
                 { "name": "medewerkerId", "description": "The ID of the employee." }
             ]
+        }
+      },
+      {
+        "path": "/objects/{objectId}",
+        "definition": {
+          "entityName": "Object",
+          "schema": { "$ref": "#/backend/entities/Object" },
+          "description": "Stores all physical objects for the application.",
+          "params": [
+            { "name": "objectId", "description": "The ID of the object." }
+          ]
         }
       },
       {

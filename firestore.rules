@@ -100,6 +100,13 @@ service cloud.firestore {
       allow update: if false;
       allow delete: if false;
     }
+
+    /**
+     * @description Manages the root objects collection. Any authenticated user can manage objects.
+     */
+    match /objects/{objectId} {
+        allow read, write: if isSignedIn();
+    }
     
     /**
      * @description Secures a user's private revenue entries. Only the authenticated owner
