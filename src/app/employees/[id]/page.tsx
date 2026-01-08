@@ -171,7 +171,8 @@ function AfwezigheidTab() {
                 >
                   <span className={cn(
                     "text-sm",
-                     isToday(day) && 'font-bold text-primary'
+                     isToday(day) && 'font-bold text-primary',
+                     isSameDay(day, selectedDate) && 'text-black dark:text-white font-bold'
                     )}>{format(day, 'd')}</span>
                 </div>
               ))}
