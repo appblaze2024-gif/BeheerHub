@@ -4,9 +4,9 @@ import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Loader2 } from 'lucide-react';
-import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useCollection } from '@/firebase';
-import { collection, doc, getDocs } from 'firebase/firestore';
+import { Loader2, Trash2 } from 'lucide-react';
+import { useFirestore, updateDocumentNonBlocking, useUser, useCollection } from '@/firebase';
+import { collection, doc, addDoc, deleteDoc } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import * as turf from '@turf/turf';
@@ -19,6 +19,17 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -114,6 +125,7 @@ export function MeldingDialog({
   const firestore = useFirestore();
   const { user } = useUser();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
   const [suggestions, setSuggestions] = React.useState<Suggestion[]>([]);
   const [isSearching, setIsSearching] = React.useState(false);
   const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -313,13 +325,26 @@ export function MeldingDialog({
             await updateDocumentNonBlocking(meldingRef, meldingData);
         } else {
             const meldingenColRef = collection(firestore, 'meldingen');
-            await addDocumentNonBlocking(meldingenColRef, meldingData);
+            await addDoc(meldingenColRef, meldingData);
         }
       onOpenChange(false);
     } catch (error) {
       console.error('Fout bij opslaan melding:', error);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+  
+  const handleDelete = async () => {
+    if (!firestore || !melding?.id) return;
+    setIsDeleting(true);
+    try {
+      await deleteDoc(doc(firestore, 'meldingen', melding.id));
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Fout bij het verwijderen van de melding:", error);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -441,13 +466,39 @@ export function MeldingDialog({
                 )} />
             </div>
 
-            <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-                Annuleren
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Opslaan...</> : 'Melding Opslaan'}
-              </Button>
+            <DialogFooter className="flex justify-between w-full">
+              <div>
+                {melding && (
+                   <AlertDialog>
+                   <AlertDialogTrigger asChild>
+                     <Button type="button" variant="destructive" disabled={isDeleting || isSubmitting}>
+                       {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                       Verwijderen
+                     </Button>
+                   </AlertDialogTrigger>
+                   <AlertDialogContent>
+                     <AlertDialogHeader>
+                       <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
+                       <AlertDialogDescription>
+                         Deze actie kan niet ongedaan worden gemaakt. Dit zal de melding permanent verwijderen.
+                       </AlertDialogDescription>
+                     </AlertDialogHeader>
+                     <AlertDialogFooter>
+                       <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                       <AlertDialogAction onClick={handleDelete}>Doorgaan</AlertDialogAction>
+                     </AlertDialogFooter>
+                   </AlertDialogContent>
+                 </AlertDialog>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+                  Annuleren
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Opslaan...</> : 'Melding Opslaan'}
+                </Button>
+              </div>
             </DialogFooter>
           </form>
         </Form>
