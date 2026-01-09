@@ -78,6 +78,16 @@
         "projectnaam"
       ]
     },
+    "Boekingregel": {
+        "title": "Boekingregel",
+        "type": "object",
+        "description": "Represents an internal booking rule for work planning.",
+        "properties": {
+            "id": { "type": "string" },
+            "naam": { "type": "string" }
+        },
+        "required": ["naam"]
+    },
      "Object": {
       "title": "Object",
       "type": "object",
@@ -360,6 +370,7 @@
         "medewerkerId": { "type": "string" },
         "projectId": { "type": "string" },
         "werksoort": { "type": "string" },
+        "boekingregelId": { "type": "string" },
         "starttijd": { "type": "string", "format": "time" },
         "eindtijd": { "type": "string", "format": "time" },
         "datum": { "type": "string", "format": "date" },
@@ -370,7 +381,7 @@
         "informeerMedewerkers": { "type": "boolean" },
         "voertuigId": { "type": ["string", "null"] }
       },
-      "required": ["medewerkerId", "projectId", "werksoort", "starttijd", "eindtijd", "datum"]
+      "required": ["medewerkerId", "projectId", "boekingregelId", "starttijd", "eindtijd", "datum"]
     }
   },
   "auth": {
@@ -406,6 +417,18 @@
           "params": [
             { "name": "projectId", "description": "The ID of the project." },
             { "name": "dienstId", "description": "The ID of the shift." }
+          ]
+        }
+      },
+      {
+        "path": "/projects/{projectId}/boekingregels/{boekingregelId}",
+        "definition": {
+          "entityName": "Boekingregel",
+          "schema": { "$ref": "#/backend/entities/Boekingregel" },
+          "description": "Stores all booking rules for a specific project.",
+          "params": [
+            { "name": "projectId", "description": "The ID of the project." },
+            { "name": "boekingregelId", "description": "The ID of the booking rule." }
           ]
         }
       },

@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { FilePenLine, Plus, Trash2, Upload, Download, CalendarIcon } from 'lucide-react';
+import { FilePenLine, Plus, Trash2, Upload, Download } from 'lucide-react';
 import {
   useFirestore,
   useCollection,
@@ -45,6 +45,11 @@ type Werksoort = {
   uurprijs: string;
 };
 
+type Boekingregel = {
+    id: string;
+    naam: string;
+};
+
 type Project = {
   id?: string;
   projectnummer: string;
@@ -59,6 +64,7 @@ type Project = {
   datum: string;
   omschrijving: string;
   werksoorten: Werksoort[];
+  boekingregels?: Boekingregel[];
 };
 
 export type Afspraak = {
@@ -101,9 +107,10 @@ const EMPTY_PROJECT: Project = {
   datum: '',
   omschrijving: '',
   werksoorten: [],
+  boekingregels: [],
 };
 
-function BoekingregelsTab({
+function WerksoortenTab({
   werksoorten,
   setWerksoorten,
 }: {
@@ -196,6 +203,84 @@ function BoekingregelsTab({
         Regel toevoegen
       </Button>
     </div>
+  );
+}
+
+function BoekingregelsTab({ projectId }: { projectId: string | undefined }) {
+  const firestore = useFirestore();
+  const [newRegelNaam, setNewRegelNaam] = React.useState('');
+
+  const boekingregelsCollection = React.useMemo(() => {
+    if (!firestore || !projectId) return null;
+    return collection(firestore, 'projects', projectId, 'boekingregels');
+  }, [firestore, projectId]);
+
+  const { data: boekingregels, isLoading } = useCollection<Boekingregel>(boekingregelsCollection);
+
+  const handleAddRegel = async () => {
+    if (!firestore || !projectId || !newRegelNaam.trim()) return;
+    const regelData = { naam: newRegelNaam.trim() };
+    await addDocumentNonBlocking(boekingregelsCollection!, regelData);
+    setNewRegelNaam('');
+  };
+
+  const handleUpdateRegel = (id: string, newName: string) => {
+    if (!firestore || !projectId) return;
+    const regelRef = doc(firestore, 'projects', projectId, 'boekingregels', id);
+    updateDocumentNonBlocking(regelRef, { naam: newName });
+  };
+  
+  const handleDeleteRegel = (id: string) => {
+    if (!firestore || !projectId) return;
+    const regelRef = doc(firestore, 'projects', projectId, 'boekingregels', id);
+    deleteDocumentNonBlocking(regelRef);
+  };
+  
+  if (!projectId) {
+    return (
+      <div className="flex items-center justify-center h-full text-muted-foreground">
+        Selecteer eerst een project om boekingregels te beheren.
+      </div>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">Interne Boekingregels</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex gap-2">
+            <Input 
+                placeholder="Nieuwe boekingregel naam"
+                value={newRegelNaam}
+                onChange={(e) => setNewRegelNaam(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddRegel()}
+            />
+            <Button onClick={handleAddRegel}>Toevoegen</Button>
+        </div>
+        <div className="border rounded-md">
+            {isLoading ? (
+                <div className='p-4 text-center text-muted-foreground'>Boekingregels laden...</div>
+            ) : boekingregels && boekingregels.length > 0 ? (
+                boekingregels.map(regel => (
+                    <div key={regel.id} className="flex items-center gap-2 p-2 border-b last:border-b-0">
+                       <Input 
+                            defaultValue={regel.naam} 
+                            onBlur={(e) => handleUpdateRegel(regel.id, e.target.value)}
+                            className="flex-1"
+                       />
+                       <Button variant='ghost' size='icon' onClick={() => handleDeleteRegel(regel.id)}>
+                            <Trash2 className='h-4 w-4 text-destructive' />
+                       </Button>
+                    </div>
+                ))
+            ) : (
+                <div className='p-4 text-center text-muted-foreground'>Nog geen boekingregels voor dit project.</div>
+            )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -576,6 +661,7 @@ export default function ProjectsPage() {
         <div className="px-6 pt-6">
           <TabsList>
             <TabsTrigger value="project">Project</TabsTrigger>
+            <TabsTrigger value="werksoorten">Werksoorten</TabsTrigger>
             <TabsTrigger value="boekingregels">Boekingregels</TabsTrigger>
             <TabsTrigger value="afspraken">Afspraken</TabsTrigger>
             <TabsTrigger value="organisatie">Organisatie</TabsTrigger>
@@ -644,7 +730,7 @@ export default function ProjectsPage() {
                         <Label htmlFor="einddatum" className="text-xs font-semibold">Einddatum</Label>
                         <Input id="einddatum" type="date" value={currentProject.einddatum} onChange={(e) => handleInputChange('einddatum', e.target.value)} disabled={isEndDateHeden} />
                         <div className="flex items-center space-x-2">
-                            <Checkbox id="heden" checked={isEndDateHeden} onCheckedChange={handleHedenCheckboxChange} />
+                            <Checkbox id="heden" checked={isEndDateHeden} onCheckedChange={(checked) => handleHedenCheckboxChange(!!checked)} />
                             <label htmlFor="heden" className="text-sm font-medium leading-none">Heden</label>
                         </div>
                     </div>
@@ -697,10 +783,16 @@ export default function ProjectsPage() {
           </div>
         </TabsContent>
         <TabsContent
+          value="werksoorten"
+          className="flex-1 overflow-y-auto pt-6 pb-2 px-6"
+        >
+          <WerksoortenTab werksoorten={currentProject.werksoorten} setWerksoorten={(newWerksoorten) => setCurrentProject(prev => ({...prev, werksoorten: typeof newWerksoorten === 'function' ? newWerksoorten(prev.werksoorten) : newWerksoorten}))}/>
+        </TabsContent>
+        <TabsContent
           value="boekingregels"
           className="flex-1 overflow-y-auto pt-6 pb-2 px-6"
         >
-          <BoekingregelsTab werksoorten={currentProject.werksoorten} setWerksoorten={(newWerksoorten) => setCurrentProject(prev => ({...prev, werksoorten: typeof newWerksoorten === 'function' ? newWerksoorten(prev.werksoorten) : newWerksoorten}))}/>
+          <BoekingregelsTab projectId={selectedProjectId} />
         </TabsContent>
         <TabsContent
           value="afspraken"

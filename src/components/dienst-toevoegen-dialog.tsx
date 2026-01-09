@@ -43,7 +43,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import type { Medewerker, Dienst } from '@/lib/types';
 
 const dienstFormSchema = z.object({
-  werksoort: z.string().min(1, 'Dienst is verplicht.'),
+  boekingregelId: z.string().min(1, 'Boekingregel is verplicht.'),
   starttijd: z.string().min(1, 'Starttijd is verplicht.'),
   eindtijd: z.string().min(1, 'Eindtijd is verplicht.'),
   onbetaaldePauze: z.coerce.number().min(0).default(0),
@@ -56,6 +56,11 @@ const dienstFormSchema = z.object({
 
 type DienstFormValues = z.infer<typeof dienstFormSchema>;
 
+type Boekingregel = {
+    id: string;
+    naam: string;
+};
+
 interface DienstToevoegenDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -63,7 +68,6 @@ interface DienstToevoegenDialogProps {
   datum: Date;
   project: {
     id: string;
-    werksoorten?: { id: string; werksoort: string }[];
   };
   dienst?: Dienst;
 }
@@ -86,6 +90,13 @@ export function DienstToevoegenDialog({
 
   const { data: voertuigen, isLoading: isLoadingVoertuigen } =
     useCollection(voertuigenCollection);
+    
+  const boekingregelsCollection = React.useMemo(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'projects', project.id, 'boekingregels');
+  }, [firestore, project.id]);
+
+  const { data: boekingregels, isLoading: isLoadingBoekingregels } = useCollection<Boekingregel>(boekingregelsCollection);
 
   const form = useForm<DienstFormValues>({
     resolver: zodResolver(dienstFormSchema),
@@ -105,7 +116,7 @@ export function DienstToevoegenDialog({
         });
       } else {
         form.reset({
-          werksoort: '',
+          boekingregelId: '',
           starttijd: '08:00',
           eindtijd: '17:00',
           onbetaaldePauze: 0,
@@ -122,6 +133,8 @@ export function DienstToevoegenDialog({
   const onSubmit = async (data: DienstFormValues) => {
     if (!firestore) return;
     setIsSubmitting(true);
+    
+    const selectedBoekingregel = boekingregels?.find(b => b.id === data.boekingregelId);
 
     const dienstData = {
       ...data,
@@ -129,6 +142,7 @@ export function DienstToevoegenDialog({
       projectId: project.id,
       datum: format(datum, 'yyyy-MM-dd'),
       voertuigId: data.voertuigId || null,
+      werksoort: selectedBoekingregel?.naam || 'Onbekend', // For compatibility, can be removed later
     };
 
     try {
@@ -172,20 +186,20 @@ export function DienstToevoegenDialog({
               </FormItem>
               <FormField
                 control={form.control}
-                name="werksoort"
+                name="boekingregelId"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Dienst</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingBoekingregels}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecteer een boekingregel" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {project.werksoorten?.map((ws) => (
-                          <SelectItem key={ws.id} value={ws.werksoort}>
-                            {ws.werksoort}
+                        {boekingregels?.map((regel) => (
+                          <SelectItem key={regel.id} value={regel.id}>
+                            {regel.naam}
                           </SelectItem>
                         ))}
                       </SelectContent>

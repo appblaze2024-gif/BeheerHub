@@ -44,7 +44,8 @@ export type Dienst = {
     id: string;
     medewerkerId: string;
     projectId: string;
-    werksoort: string;
+    werksoort: string; // Legacy field
+    boekingregelId: string;
     starttijd: string;
     eindtijd: string;
     datum: string; 

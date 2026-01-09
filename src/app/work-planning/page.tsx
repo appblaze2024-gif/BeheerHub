@@ -57,7 +57,6 @@ type Project = {
   id: string;
   projectnaam: string;
   projectnummer: string;
-  werksoorten?: {id: string, werksoort: string}[];
 };
 
 type DialogState = {
