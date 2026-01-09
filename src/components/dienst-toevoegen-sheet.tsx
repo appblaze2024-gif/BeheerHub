@@ -153,7 +153,7 @@ export function DienstToevoegenSheet({
       medewerkerId: medewerker?.id || dienst?.medewerkerId,
       projectId: project.id,
       datum: format(datum || new Date(dienst!.datum), 'yyyy-MM-dd'),
-      voertuigId: data.voertuigId === 'geen' ? null : data.voertuigId,
+      voertuigId: !data.voertuigId || data.voertuigId === 'geen' ? null : data.voertuigId,
       werksoort: selectedBoekingregel?.naam || 'Onbekend',
     };
 
