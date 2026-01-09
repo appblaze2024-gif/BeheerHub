@@ -44,6 +44,7 @@ const meldingFormSchema = z.object({
   melder: z.string().min(1, 'Melder is verplicht'),
   aangenomen_door: z.string().min(1, 'Veld is verplicht'),
   extern_meldingsnummer: z.string().optional(),
+  intakenummer: z.string().optional(),
   
   // Inhoud
   hoofdcategorie: z.string().min(1, 'Hoofdcategorie is verplicht'),
@@ -134,7 +135,7 @@ export function MeldingDialog({
     return null;
   };
 
-  const generateExternNummer = () => {
+  const generateIntakeNummer = () => {
     const date = new Date();
     const year = date.getFullYear();
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -157,7 +158,8 @@ export function MeldingDialog({
             tijdstip: format(new Date(), 'HH:mm:ss'),
             melder: userName,
             aangenomen_door: userName,
-            extern_meldingsnummer: generateExternNummer(),
+            intakenummer: generateIntakeNummer(),
+            extern_meldingsnummer: '',
             hoofdcategorie: '',
             subcategorie: '',
             adres: '',
@@ -252,7 +254,6 @@ export function MeldingDialog({
       latitude: coordinates.lat,
       longitude: coordinates.lng,
       datum: melding ? melding.datum : format(new Date(), 'yyyy-MM-dd'),
-      intakenummer: melding ? melding.intakenummer : `M${Date.now()}`,
     };
     // Verwijder het volledige 'adres' veld, aangezien het nu is opgesplitst
     delete (meldingData as any).adres;
@@ -283,8 +284,11 @@ export function MeldingDialog({
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-4">
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <FormField control={form.control} name="tijdstip" render={({ field }) => (
-                        <FormItem><FormLabel>Tijdstip</FormLabel><FormControl><Input {...field} disabled /></FormControl></FormItem>
+                    <FormField control={form.control} name="intakenummer" render={({ field }) => (
+                        <FormItem><FormLabel>Intakenummer</FormLabel><FormControl><Input {...field} disabled /></FormControl></FormItem>
+                    )} />
+                     <FormField control={form.control} name="extern_meldingsnummer" render={({ field }) => (
+                        <FormItem><FormLabel>Extern meldingsnummer</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
                     )} />
                     <FormField control={form.control} name="melder" render={({ field }) => (
                         <FormItem><FormLabel>Melder</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
@@ -292,8 +296,8 @@ export function MeldingDialog({
                     <FormField control={form.control} name="aangenomen_door" render={({ field }) => (
                         <FormItem><FormLabel>Aangenomen door</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
-                    <FormField control={form.control} name="extern_meldingsnummer" render={({ field }) => (
-                        <FormItem><FormLabel>Extern meldingsnummer</FormLabel><FormControl><Input {...field} disabled /></FormControl></FormItem>
+                    <FormField control={form.control} name="tijdstip" render={({ field }) => (
+                        <FormItem><FormLabel>Tijdstip</FormLabel><FormControl><Input {...field} disabled /></FormControl></FormItem>
                     )} />
                 </div>
             </div>

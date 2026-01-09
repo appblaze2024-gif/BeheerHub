@@ -92,13 +92,13 @@ export default function IssuesPage() {
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
-      <header className="absolute top-0 left-0 z-10 p-4 flex flex-col gap-2 items-start w-full pointer-events-none">
+      <header className="absolute top-0 left-0 z-10 p-4 flex flex-col gap-2 items-start w-full">
         <div className="flex items-start justify-between w-full">
-            <div className="flex flex-col gap-2 items-start">
-                <div className="bg-card p-2 rounded-lg shadow-md pointer-events-auto">
+            <div className="flex flex-col gap-2 items-start pointer-events-auto">
+                <div className="bg-card p-2 rounded-lg shadow-md">
                     <h1 className="text-xl font-bold">Meldingen Portaal</h1>
                 </div>
-                <Button className='pointer-events-auto' onClick={handleNewMelding}>
+                <Button onClick={handleNewMelding}>
                     <Plus className="mr-2 h-4 w-4" />
                     Nieuwe Melding
                 </Button>
