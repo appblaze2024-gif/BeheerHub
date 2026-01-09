@@ -587,6 +587,13 @@ function WijkenTab({
 }) {
   const [mapWijk, setMapWijk] = React.useState<Wijk | null>(null);
 
+  const sortedWijken = React.useMemo(() => {
+    if (!wijken) return [];
+    return [...wijken].sort((a, b) =>
+      a.naam.localeCompare(b.naam, undefined, { numeric: true, sensitivity: 'base' })
+    );
+  }, [wijken]);
+
   const setWijken = (updater: Wijk[] | ((prev: Wijk[]) => Wijk[])) => {
     setCurrentProject(prevProject => ({
       ...prevProject,
@@ -630,7 +637,7 @@ function WijkenTab({
         <Label>Gebied</Label>
         <span />
       </div>
-      {wijken.map((wijk) => (
+      {sortedWijken.map((wijk) => (
         <div
           key={wijk.id}
           className="grid grid-cols-[1fr_1fr_auto_auto] items-center gap-x-4"
