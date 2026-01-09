@@ -143,31 +143,24 @@ export default function ObjectsPage() {
   }, [selectedWijken]);
 
   const objectsOnMap = React.useMemo(() => {
-    if (viewMode === 'list') return [];
-    if (!objects) return [];
-    if (selectedWijkIds.length === 0) return [];
+    if (viewMode === 'list' || !objects || wijkPolygons.length === 0) {
+      return [];
+    }
 
     return objects.filter(obj => {
-      if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
+      if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') {
+        return false;
+      }
       const point = turf.point([obj.longitude, obj.latitude]);
       
-      for (const wijk of selectedWijken) {
-          try {
-              const featureCollection = JSON.parse(wijk.subGebieden);
-              if (featureCollection && featureCollection.features) {
-                for (const feature of featureCollection.features) {
-                    if (turf.booleanPointInPolygon(point, feature)) {
-                        return true;
-                    }
-                }
-              }
-          } catch(e) {
-              // ignore invalid polygons
+      for (const polygon of wijkPolygons) {
+          if (turf.booleanPointInPolygon(point, polygon)) {
+              return true;
           }
       }
       return false;
     });
-  }, [objects, selectedWijken, viewMode, selectedWijkIds.length]);
+  }, [objects, wijkPolygons, viewMode]);
 
   return (
     <div className="flex flex-col flex-1 h-full min-h-0 bg-muted/30">
@@ -492,5 +485,3 @@ export default function ObjectsPage() {
     </div>
   );
 }
-
-    
