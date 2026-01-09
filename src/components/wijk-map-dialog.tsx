@@ -66,12 +66,14 @@ const polygonLabelLayer: SymbolLayer = {
     'text-variable-anchor': ['top', 'bottom', 'left', 'right'],
     'text-radial-offset': 0.5,
     'text-justify': 'auto',
-    'text-size': 12,
+    'text-size': 14,
+    'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
   },
   paint: {
-    'text-color': '#ffffff',
-    'text-halo-color': '#000000',
-    'text-halo-width': 1,
+    'text-color': '#FFFFFF',
+    'text-halo-color': 'hsl(0, 0%, 0%)',
+    'text-halo-width': 2,
+    'text-halo-blur': 1,
   }
 };
 
