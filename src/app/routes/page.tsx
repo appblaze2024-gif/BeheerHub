@@ -73,7 +73,7 @@ export default function RoutesPage() {
                 'line-width': 3,
                 'line-opacity': 0.8,
               }}
-              filter={roadFilter || undefined} // Apply the dynamic filter, ensuring it's not null
+              filter={roadFilter} // Apply the dynamic filter
             />
           ))}
         </Source>
