@@ -82,6 +82,13 @@ const statusOptions = [
     "Niet in beheer"
 ];
 
+interface Suggestion {
+  place_id: number;
+  display_name: string;
+  lon: string;
+  lat: string;
+}
+
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -99,12 +106,16 @@ export function MeldingDialog({
   const firestore = useFirestore();
   const { user } = useUser();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [suggestions, setSuggestions] = React.useState<Suggestion[]>([]);
+  const [isSearching, setIsSearching] = React.useState(false);
+  const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const form = useForm<MeldingFormValues>({
     resolver: zodResolver(meldingFormSchema),
   });
   
   const hoofdcategorie = form.watch('hoofdcategorie');
+  const adresQuery = form.watch('adres');
 
   const fetchCoordinates = async (address: string): Promise<{ lat: number; lng: number } | null> => {
     if (!address) return null;
@@ -153,15 +164,57 @@ export function MeldingDialog({
     } else {
         form.reset();
         setIsSubmitting(false);
+        setSuggestions([]);
+        setIsSearching(false);
     }
   }, [open, melding, form, user]);
 
   
    React.useEffect(() => {
-    if (form.formState.isDirty) {
+    if (form.formState.isDirty && form.getValues('hoofdcategorie') !== (melding?.hoofdcategorie || '')) {
         form.setValue('subcategorie', '');
     }
-  }, [hoofdcategorie, form]);
+  }, [hoofdcategorie, form, melding]);
+
+  React.useEffect(() => {
+    if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+    }
+
+    if (!adresQuery || !form.formState.dirtyFields.adres) {
+      setSuggestions([]);
+      return;
+    }
+
+    setIsSearching(true);
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+            adresQuery
+          )}&format=json&countrycodes=nl&limit=5`
+        );
+        const data: Suggestion[] = await response.json();
+        setSuggestions(data);
+      } catch (error) {
+        console.error("Fout bij zoeken:", error);
+        setSuggestions([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300); // 300ms debounce
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [adresQuery, form.formState.dirtyFields.adres]);
+
+  const handleSuggestionClick = (suggestion: Suggestion) => {
+    form.setValue('adres', suggestion.display_name, { shouldValidate: true, shouldDirty: true });
+    setSuggestions([]);
+  };
 
   const onSubmit = async (data: MeldingFormValues) => {
     if (!firestore) return;
@@ -262,7 +315,29 @@ export function MeldingDialog({
               </div>
                <div className="grid grid-cols-1 gap-4">
                   <FormField control={form.control} name="adres" render={({ field }) => (
-                    <FormItem><FormLabel>Adres</FormLabel><FormControl><Input {...field} placeholder="Straatnaam, postcode, plaats" /></FormControl><FormMessage /></FormItem>
+                    <FormItem>
+                        <FormLabel>Adres</FormLabel>
+                        <div className="relative w-full">
+                            <FormControl>
+                                <Input {...field} placeholder="Straatnaam, postcode, plaats" autoComplete="off" />
+                            </FormControl>
+                            {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
+                        </div>
+                         {suggestions.length > 0 && (
+                            <div className="relative z-10 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                {suggestions.map((suggestion) => (
+                                <div
+                                    key={suggestion.place_id}
+                                    onClick={() => handleSuggestionClick(suggestion)}
+                                    className="px-4 py-2 text-sm cursor-pointer hover:bg-muted"
+                                >
+                                    {suggestion.display_name}
+                                </div>
+                                ))}
+                            </div>
+                        )}
+                        <FormMessage />
+                    </FormItem>
                   )} />
               </div>
               <FormField control={form.control} name="extra_informatie" render={({ field }) => (
