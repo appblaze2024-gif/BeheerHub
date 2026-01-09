@@ -4,7 +4,7 @@ import * as React from 'react';
 import Map, { Marker, Popup, Source, Layer, FillLayer, LineLayer } from 'react-map-gl';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection } from 'firebase/firestore';
-import { Plus, Search, MapPin } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MeldingDialog } from '@/components/melding-dialog';
@@ -101,13 +101,16 @@ export default function IssuesPage() {
       if (!selectedProject || !selectedWijkId || selectedWijkId === 'all') return null;
       return selectedProject.wijken?.find(w => w.id === selectedWijkId) ?? null;
   }, [selectedProject, selectedWijkId]);
-
-  const wijkPolygon = React.useMemo(() => {
+  
+  const wijkGeoJSON = React.useMemo(() => {
     if (!selectedWijk) return null;
     try {
         const features = JSON.parse(selectedWijk.subGebieden);
         if (Array.isArray(features) && features.length > 0) {
-            return features[0]; // Assuming one polygon per wijk for now
+            return {
+                type: 'FeatureCollection',
+                features: features,
+            };
         }
     } catch(e) {
         console.error("Invalid GeoJSON for wijk", selectedWijk.naam);
@@ -115,10 +118,43 @@ export default function IssuesPage() {
     return null;
   }, [selectedWijk]);
 
+
   const filteredMeldingen = React.useMemo(() => {
     if (!meldingen) return [];
-    if (!selectedWijkId || selectedWijkId === 'all' || !wijkPolygon) {
-        return meldingen;
+    if (!selectedWijkId || selectedWijkId === 'all' || !wijkGeoJSON) {
+        // If "All wijken" is selected, or no wijk is selected, show all meldingen for the project
+        if (selectedProjectId && projects) {
+          const project = projects.find(p => p.id === selectedProjectId);
+          if (!project || !project.wijken) return meldingen; // Or should it be []? Depends on desired behavior
+
+          const projectWijkIds = project.wijken.map(w => w.id);
+          // This part is tricky. A melding doesn't inherently belong to a project.
+          // We infer it by checking if it falls into any wijk of the project.
+          // So filtering is always spatial. For "all wijken", we check against all polygons of the project.
+           const allWijkPolygons = (project.wijken || []).flatMap(w => {
+             try {
+                const features = JSON.parse(w.subGebieden);
+                return Array.isArray(features) ? features : [];
+             } catch {
+                return [];
+             }
+           });
+           
+           if(allWijkPolygons.length === 0) return [];
+
+           return meldingen.filter(melding => {
+              if (typeof melding.latitude !== 'number' || typeof melding.longitude !== 'number') return false;
+              const point = turf.point([melding.longitude, melding.latitude]);
+              for (const polygon of allWijkPolygons) {
+                 if(turf.booleanPointInPolygon(point, polygon)) {
+                    return true;
+                 }
+              }
+              return false;
+           });
+
+        }
+        return meldingen; // Fallback to all meldingen if no project selected
     }
 
     return meldingen.filter(melding => {
@@ -127,28 +163,34 @@ export default function IssuesPage() {
         }
         try {
             const point = turf.point([melding.longitude, melding.latitude]);
-            return turf.booleanPointInPolygon(point, wijkPolygon);
+            // Check against all features in the selected wijk's geojson
+            for (const feature of wijkGeoJSON.features) {
+                if (turf.booleanPointInPolygon(point, feature)) {
+                    return true;
+                }
+            }
+            return false;
         } catch(e) {
             console.error("Error during point in polygon check", e);
             return false;
         }
     });
-}, [meldingen, wijkPolygon, selectedWijkId]);
+  }, [meldingen, selectedWijkId, wijkGeoJSON, selectedProjectId, projects]);
 
 
   const mapRef = React.useRef<any>(null);
 
   React.useEffect(() => {
     const map = mapRef.current?.getMap();
-    if (!map || !wijkPolygon) return;
+    if (!map || !wijkGeoJSON) return;
 
     try {
-        const bbox = turf.bbox(wijkPolygon);
+        const bbox = turf.bbox(wijkGeoJSON);
         map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
     } catch (e) {
         console.error("Error fitting bounds:", e);
     }
-  }, [wijkPolygon]);
+  }, [wijkGeoJSON]);
 
   const initialViewState = {
     longitude: 5.2913,
@@ -175,7 +217,6 @@ export default function IssuesPage() {
 
   const handlePopupClose = () => {
       setSelectedMelding(null);
-      setIsDialogOpen(false);
   }
 
   React.useEffect(() => {
@@ -265,14 +306,14 @@ export default function IssuesPage() {
                 </Marker>
             ))}
 
-            {wijkPolygon && (
-                 <Source id="wijk-polygon" type="geojson" data={wijkPolygon}>
+            {wijkGeoJSON && (
+                 <Source id="wijk-polygon" type="geojson" data={wijkGeoJSON}>
                     <Layer {...polygonFillLayer} />
                     <Layer {...polygonOutlineLayer} />
                 </Source>
             )}
 
-            {selectedMelding && isDialogOpen && (
+            {selectedMelding && (
                 <Popup
                     longitude={selectedMelding.longitude}
                     latitude={selectedMelding.latitude}
