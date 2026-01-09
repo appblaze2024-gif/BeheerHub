@@ -306,7 +306,7 @@ export default function IssuesPage() {
                         </Select>
                     </div>
                 </div>
-                <Button onClick={handleNewMelding}>
+                <Button onClick={handleNewMelding} disabled={!selectedProjectId}>
                     <Plus className="mr-2 h-4 w-4" />
                     Nieuwe Melding
                 </Button>
