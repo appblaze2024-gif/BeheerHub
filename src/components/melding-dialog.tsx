@@ -134,6 +134,15 @@ export function MeldingDialog({
     return null;
   };
 
+  const generateExternNummer = () => {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const randomPart = Math.floor(1000 + Math.random() * 9000).toString();
+    return `${year}${month}${day}${randomPart}`;
+  };
+
   React.useEffect(() => {
     if (open) {
       const userName = user?.displayName || user?.email || '';
@@ -148,7 +157,7 @@ export function MeldingDialog({
             tijdstip: format(new Date(), 'HH:mm:ss'),
             melder: userName,
             aangenomen_door: userName,
-            extern_meldingsnummer: '',
+            extern_meldingsnummer: generateExternNummer(),
             hoofdcategorie: '',
             subcategorie: '',
             adres: '',
@@ -284,7 +293,7 @@ export function MeldingDialog({
                         <FormItem><FormLabel>Aangenomen door</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={form.control} name="extern_meldingsnummer" render={({ field }) => (
-                        <FormItem><FormLabel>Extern meldingsnummer</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                        <FormItem><FormLabel>Extern meldingsnummer</FormLabel><FormControl><Input {...field} disabled /></FormControl></FormItem>
                     )} />
                 </div>
             </div>
