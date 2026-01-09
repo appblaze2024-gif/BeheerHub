@@ -4,9 +4,11 @@ import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Loader2, Trash2 } from 'lucide-react';
-import { useFirestore, updateDocumentNonBlocking, useUser, useCollection } from '@/firebase';
-import { collection, doc, addDoc, deleteDoc } from 'firebase/firestore';
+import { Loader2, Trash2, File as FileIcon, Upload } from 'lucide-react';
+import { useFirestore, updateDocumentNonBlocking, useUser, useCollection, useFirebaseApp } from '@/firebase';
+import { collection, doc, addDoc, deleteDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
+
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import * as turf from '@turf/turf';
@@ -49,7 +51,19 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Separator } from './ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from './ui/progress';
 import type { Wijk } from '@/app/projects/page';
+
+
+type UploadedFile = {
+  name: string;
+  url: string;
+  size: number;
+  type: string;
+  uploadedAt: string;
+  storagePath: string;
+};
 
 type Project = {
     id: string;
@@ -123,12 +137,17 @@ export function MeldingDialog({
   melding,
 }: MeldingDialogProps) {
   const firestore = useFirestore();
+  const app = useFirebaseApp();
   const { user } = useUser();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [suggestions, setSuggestions] = React.useState<Suggestion[]>([]);
   const [isSearching, setIsSearching] = React.useState(false);
   const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
+  const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
+  const meldingIdRef = React.useRef(melding?.id);
 
   const projectsCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -203,6 +222,10 @@ export function MeldingDialog({
 
   React.useEffect(() => {
     if (open) {
+      meldingIdRef.current = melding?.id || doc(collection(firestore, 'temp')).id;
+      const initialFiles = melding?.files || [];
+      setUploadedFiles(initialFiles);
+
       const userName = user?.displayName || user?.email || '';
       if (melding) {
           form.reset({
@@ -235,8 +258,10 @@ export function MeldingDialog({
         setIsSubmitting(false);
         setSuggestions([]);
         setIsSearching(false);
+        setUploadedFiles([]);
+        setUploadProgress({});
     }
-  }, [open, melding, form, user]);
+  }, [open, melding, form, user, firestore]);
 
   
    React.useEffect(() => {
@@ -294,6 +319,105 @@ export function MeldingDialog({
     setSuggestions([]);
   };
 
+  // --- File Upload Logic ---
+  const uploadFile = (file: File, meldingId: string): Promise<UploadedFile> => {
+    return new Promise((resolve, reject) => {
+        if (!app) {
+            reject(new Error("Firebase app not available"));
+            return;
+        }
+        const storage = getStorage(app);
+        const uniqueFileName = `${new Date().getTime()}-${file.name}`;
+        const storagePath = `meldingen/${meldingId}/${uniqueFileName}`;
+        const storageRef = ref(storage, storagePath);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+
+        uploadTask.on(
+            'state_changed',
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                setUploadProgress(prev => ({...prev, [uniqueFileName]: progress}));
+            },
+            (error) => {
+                console.error('Upload mislukt:', error);
+                setUploadProgress(prev => {
+                    const newProgress = {...prev};
+                    delete newProgress[uniqueFileName];
+                    return newProgress;
+                });
+                reject(error);
+            },
+            () => {
+                getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+                    const newFile: UploadedFile = {
+                        name: file.name,
+                        url: downloadURL,
+                        size: file.size,
+                        type: file.type,
+                        uploadedAt: new Date().toISOString(),
+                        storagePath: storagePath,
+                    };
+                    resolve(newFile);
+                    setUploadProgress(prev => {
+                      const newProgress = {...prev};
+                      delete newProgress[uniqueFileName];
+                      return newProgress;
+                  });
+                });
+            }
+        );
+    });
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const meldingId = meldingIdRef.current;
+    if (!meldingId) return;
+    
+    for (const file of Array.from(files)) {
+      try {
+        const uploadedFile = await uploadFile(file, meldingId);
+        setUploadedFiles(prev => [...prev, uploadedFile]);
+      } catch (error) {
+        console.error(`Kon ${file.name} niet uploaden.`);
+      }
+    }
+  };
+
+  const handleFileDelete = async (fileToDelete: UploadedFile) => {
+    if (!app) return;
+    const storage = getStorage(app);
+
+    const fileRef = ref(storage, fileToDelete.storagePath);
+    try {
+      await deleteObject(fileRef);
+      setUploadedFiles((prev) =>
+        prev.filter((f) => f.storagePath !== fileToDelete.storagePath)
+      );
+    } catch (error: any) {
+      console.error('Kon bestand niet verwijderen:', error);
+      if (error.code === 'storage/object-not-found') {
+        setUploadedFiles((prev) =>
+          prev.filter((f) => f.storagePath !== fileToDelete.storagePath)
+        );
+      }
+    }
+  };
+
+  const formatBytes = (bytes: number, decimals = 2) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  }
+   const isUploading = Object.keys(uploadProgress).length > 0;
+  // -------------------------
+
+
   const onSubmit = async (data: MeldingFormValues) => {
     if (!firestore) return;
     setIsSubmitting(true);
@@ -322,16 +446,23 @@ export function MeldingDialog({
       longitude: coordinates.lng,
       wijk: wijk || 'Onbekend',
       datum: melding ? melding.datum : format(new Date(), 'yyyy-MM-dd'),
+      files: uploadedFiles,
+      updatedAt: serverTimestamp(),
     };
     delete (meldingData as any).adres;
 
+    const meldingId = melding?.id || meldingIdRef.current;
+    
     try {
         if (melding) {
-            const meldingRef = doc(firestore, 'meldingen', melding.id);
-            await updateDocumentNonBlocking(meldingRef, meldingData);
+            const meldingRef = doc(firestore, 'meldingen', meldingId);
+            await updateDoc(meldingRef, meldingData);
         } else {
             const meldingenColRef = collection(firestore, 'meldingen');
-            await addDoc(meldingenColRef, meldingData);
+            await setDoc(doc(meldingenColRef, meldingId), {
+                ...meldingData, 
+                createdAt: serverTimestamp()
+            });
         }
       onOpenChange(false);
     } catch (error) {
@@ -345,6 +476,17 @@ export function MeldingDialog({
     if (!firestore || !melding?.id) return;
     setIsDeleting(true);
     try {
+      if (melding.files && melding.files.length > 0) {
+        const storage = getStorage(app);
+        for (const file of melding.files) {
+          if (file.storagePath) {
+            const fileRef = ref(storage, file.storagePath);
+            await deleteObject(fileRef).catch((error) => {
+              console.error(`Kon bestand ${file.storagePath} niet verwijderen:`, error);
+            });
+          }
+        }
+      }
       await deleteDoc(doc(firestore, 'meldingen', melding.id));
       onOpenChange(false);
     } catch (error) {
@@ -361,112 +503,119 @@ export function MeldingDialog({
           <DialogTitle>{melding ? 'Melding Bewerken' : 'Formulier melding / Klacht'}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <FormField control={form.control} name="intakenummer" render={({ field }) => (
-                        <FormItem><FormLabel>Intakenummer</FormLabel><FormControl><Input {...field} disabled /></FormControl></FormItem>
-                    )} />
-                     <FormField control={form.control} name="extern_meldingsnummer" render={({ field }) => (
-                        <FormItem><FormLabel>Extern meldingsnummer</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
-                    )} />
-                    <FormField control={form.control} name="tijdstip" render={({ field }) => (
-                        <FormItem><FormLabel>Tijdstip</FormLabel><FormControl><Input {...field} disabled /></FormControl></FormItem>
-                    )} />
-                    <FormField control={form.control} name="melder" render={({ field }) => (
-                        <FormItem><FormLabel>Melder</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="aangenomen_door" render={({ field }) => (
-                        <FormItem><FormLabel>Aangenomen door</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <Tabs defaultValue="melding" className="w-full">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="melding">Melding</TabsTrigger>
+                <TabsTrigger value="afhandeling">Afhandeling</TabsTrigger>
+                <TabsTrigger value="bestanden">Bestanden</TabsTrigger>
+                <TabsTrigger value="logboek">Logboek</TabsTrigger>
+              </TabsList>
+              
+              {/* Melding Tab */}
+              <TabsContent value="melding" className="space-y-6 pt-4">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <FormField control={form.control} name="intakenummer" render={({ field }) => (
+                          <FormItem><FormLabel>Intakenummer</FormLabel><FormControl><Input {...field} disabled /></FormControl></FormItem>
+                      )} />
+                       <FormField control={form.control} name="extern_meldingsnummer" render={({ field }) => (
+                          <FormItem><FormLabel>Extern meldingsnummer</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                      )} />
+                      <FormField control={form.control} name="tijdstip" render={({ field }) => (
+                          <FormItem><FormLabel>Tijdstip</FormLabel><FormControl><Input {...field} disabled /></FormControl></FormItem>
+                      )} />
+                      <FormField control={form.control} name="melder" render={({ field }) => (
+                          <FormItem><FormLabel>Melder</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="aangenomen_door" render={({ field }) => (
+                          <FormItem><FormLabel>Aangenomen door</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                  </div>
                 </div>
-            </div>
-            
-            <Separator />
-
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Inhoud</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Hoofdcategorie</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecteer een hoofdcategorie" /></SelectTrigger></FormControl>
-                      <SelectContent>{hoofdcategorieOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="subcategorie" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Subcategorie</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} disabled={!hoofdcategorie}><FormControl><SelectTrigger><SelectValue placeholder="Selecteer een subcategorie" /></SelectTrigger></FormControl>
-                      <SelectContent>{(subcategorieOptions[hoofdcategorie] || []).map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              </div>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField control={form.control} name="adres" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Adres</FormLabel>
-                        <div className="relative w-full">
-                            <FormControl>
-                                <Input {...field} placeholder="Straatnaam, postcode, plaats" autoComplete="off" />
-                            </FormControl>
-                            {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
-                        </div>
-                         {suggestions.length > 0 && (
-                            <div className="relative z-10 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
-                                {suggestions.map((suggestion) => (
-                                <div
-                                    key={suggestion.place_id}
-                                    onClick={() => handleSuggestionClick(suggestion)}
-                                    className="px-4 py-2 text-sm cursor-pointer hover:bg-muted"
-                                >
-                                    {suggestion.display_name}
-                                </div>
-                                ))}
-                            </div>
-                        )}
-                        <FormMessage />
-                    </FormItem>
-                  )} />
-                    <FormField
-                      control={form.control}
-                      name="wijk"
-                      render={({ field }) => (
+                <Separator />
+                 <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Inhoud</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Wijk</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecteer een wijk" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {allWijken.map((wijk) => (
-                                <SelectItem key={wijk.id} value={wijk.naam}>
-                                  {wijk.naam}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
+                          <FormLabel>Hoofdcategorie</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecteer een hoofdcategorie" /></SelectTrigger></FormControl>
+                            <SelectContent>{hoofdcategorieOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                           </Select>
                           <FormMessage />
                         </FormItem>
-                      )}
-                    />
-              </div>
-              <FormField control={form.control} name="extra_informatie" render={({ field }) => (
-                  <FormItem><FormLabel>Extra informatie melding</FormLabel><FormControl><Textarea rows={4} {...field} /></FormControl><FormMessage /></FormItem>
-              )} />
-            </div>
+                      )} />
+                      <FormField control={form.control} name="subcategorie" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Subcategorie</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value} disabled={!hoofdcategorie}><FormControl><SelectTrigger><SelectValue placeholder="Selecteer een subcategorie" /></SelectTrigger></FormControl>
+                            <SelectContent>{(subcategorieOptions[hoofdcategorie] || []).map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                    </div>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField control={form.control} name="adres" render={({ field }) => (
+                          <FormItem>
+                              <FormLabel>Adres</FormLabel>
+                              <div className="relative w-full">
+                                  <FormControl>
+                                      <Input {...field} placeholder="Straatnaam, postcode, plaats" autoComplete="off" />
+                                  </FormControl>
+                                  {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
+                              </div>
+                               {suggestions.length > 0 && (
+                                  <div className="relative z-10 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                      {suggestions.map((suggestion) => (
+                                      <div
+                                          key={suggestion.place_id}
+                                          onClick={() => handleSuggestionClick(suggestion)}
+                                          className="px-4 py-2 text-sm cursor-pointer hover:bg-muted"
+                                      >
+                                          {suggestion.display_name}
+                                      </div>
+                                      ))}
+                                  </div>
+                              )}
+                              <FormMessage />
+                          </FormItem>
+                        )} />
+                          <FormField
+                            control={form.control}
+                            name="wijk"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Wijk</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Selecteer een wijk" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {allWijken.map((wijk) => (
+                                      <SelectItem key={wijk.id} value={wijk.naam}>
+                                        {wijk.naam}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                    </div>
+                    <FormField control={form.control} name="extra_informatie" render={({ field }) => (
+                        <FormItem><FormLabel>Extra informatie melding</FormLabel><FormControl><Textarea rows={4} {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                  </div>
+              </TabsContent>
 
-            <Separator />
-            
-            <div className="space-y-4">
-                <h3 className="text-lg font-medium">Afhandeling</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Afhandeling Tab */}
+              <TabsContent value="afhandeling" className="space-y-6 pt-4">
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                      <FormField control={form.control} name="status" render={({ field }) => (
                         <FormItem><FormLabel>Status</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
@@ -486,9 +635,90 @@ export function MeldingDialog({
                  <FormField control={form.control} name="afhandeling_bijzonderheden" render={({ field }) => (
                     <FormItem><FormLabel>Bijzonderheden</FormLabel><FormControl><Textarea {...field} /></FormControl></FormItem>
                 )} />
-            </div>
+              </TabsContent>
 
-            <DialogFooter className="flex justify-between w-full">
+              {/* Bestanden Tab */}
+              <TabsContent value="bestanden" className="space-y-4 pt-4">
+                <div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isUploading || isSubmitting}
+                    onClick={() => document.getElementById('melding-file-input')?.click()}
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    Bestand kiezen
+                  </Button>
+                  <input
+                    type="file"
+                    id="melding-file-input"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    multiple
+                    accept="image/png, image/jpeg, application/pdf"
+                  />
+                </div>
+                
+                 {Object.entries(uploadProgress).map(([name, progress]) => (
+                  <div key={name} className="space-y-1 mt-2">
+                    <p className="text-sm font-medium">{name}</p>
+                    <Progress value={progress} className="w-full" />
+                  </div>
+                ))}
+
+                <div className="border rounded-md">
+                    <div className="text-sm">
+                        <div className="grid grid-cols-5 gap-4 px-4 py-2 font-medium bg-muted rounded-t-md">
+                        <span className="col-span-2">Bestandsnaam</span>
+                        <span>Grootte</span>
+                        <span>Datum</span>
+                        <span className="text-right">Acties</span>
+                        </div>
+                    </div>
+                    {uploadedFiles.length > 0 ? (
+                        <div className="max-h-48 overflow-y-auto">
+                        {uploadedFiles.map((file, idx) => (
+                            <div
+                            key={idx}
+                            className="grid grid-cols-5 gap-4 items-center px-4 py-2 border-b last:border-b-0"
+                            >
+                            <a href={file.url} target="_blank" rel="noopener noreferrer" className="col-span-2 truncate flex items-center gap-2 hover:underline">
+                                <FileIcon className="h-4 w-4 shrink-0" /> {file.name}
+                            </a>
+                            <span>{formatBytes(file.size)}</span>
+                            <span>{format(new Date(file.uploadedAt), 'dd-MM-yy')}</span>
+                            <div className="flex justify-end">
+                                <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => handleFileDelete(file)}
+                                disabled={isSubmitting || isUploading}
+                                >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                            </div>
+                            </div>
+                        ))}
+                        </div>
+                    ) : (
+                        <div className="flex items-center justify-center text-muted-foreground h-24">
+                        Nog geen bestanden geüpload.
+                        </div>
+                    )}
+                </div>
+              </TabsContent>
+
+              {/* Logboek Tab */}
+              <TabsContent value="logboek" className="pt-4">
+                 <div className="flex items-center justify-center text-muted-foreground h-48">
+                    Logboek functionaliteit komt binnenkort.
+                </div>
+              </TabsContent>
+            </Tabs>
+            
+            <DialogFooter className="flex justify-between w-full pt-4">
               <div>
                 {melding && (
                    <AlertDialog>
@@ -502,7 +732,7 @@ export function MeldingDialog({
                      <AlertDialogHeader>
                        <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
                        <AlertDialogDescription>
-                         Deze actie kan niet ongedaan worden gemaakt. Dit zal de melding permanent verwijderen.
+                         Deze actie kan niet ongedaan worden gemaakt. Dit zal de melding en alle bijbehorende bestanden permanent verwijderen.
                        </AlertDialogDescription>
                      </AlertDialogHeader>
                      <AlertDialogFooter>
@@ -517,7 +747,7 @@ export function MeldingDialog({
                 <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
                   Annuleren
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
+                <Button type="submit" disabled={isSubmitting || isUploading}>
                   {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Opslaan...</> : 'Melding Opslaan'}
                 </Button>
               </div>
