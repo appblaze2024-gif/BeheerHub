@@ -1,13 +1,17 @@
 'use client';
 
 import * as React from 'react';
-import Map, { Marker, Popup } from 'react-map-gl';
+import Map, { Marker, Popup, Source, Layer, FillLayer, LineLayer } from 'react-map-gl';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { Plus, Search, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MeldingDialog } from '@/components/melding-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import * as turf from '@turf/turf';
+import type { Wijk } from '@/app/projects/page';
+import { Label } from '@/components/ui/label';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -33,6 +37,12 @@ type Melding = {
   plaats?: string;
 };
 
+type Project = {
+  id: string;
+  projectnaam: string;
+  wijken?: Wijk[];
+};
+
 const statusConfig = {
   Nieuw: { color: '#facc15' }, // yellow-400
   'Intern doorgezet': { color: '#a855f7' }, // purple-500
@@ -44,17 +54,93 @@ const statusConfig = {
   'Niet in beheer': { color: '#737373' }, // neutral-500
 };
 
+const polygonFillLayer: FillLayer = {
+    id: 'wijk-polygon-fill',
+    type: 'fill',
+    paint: {
+        'fill-color': '#007cbf',
+        'fill-opacity': 0.2,
+    },
+};
+
+const polygonOutlineLayer: LineLayer = {
+    id: 'wijk-polygon-outline',
+    type: 'line',
+    paint: {
+        'line-color': '#007cbf',
+        'line-width': 2,
+    },
+};
+
+
 export default function IssuesPage() {
   const firestore = useFirestore();
   const [selectedMelding, setSelectedMelding] = React.useState<Melding | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-  
+  const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
+  const [selectedWijkId, setSelectedWijkId] = React.useState<string | null>(null);
+
   const meldingenCollection = React.useMemo(() => {
     if (!firestore) return null;
     return collection(firestore, 'meldingen');
   }, [firestore]);
 
-  const { data: meldingen, isLoading } = useCollection<Melding>(meldingenCollection);
+  const projectsCollection = React.useMemo(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'projects');
+  }, [firestore]);
+
+  const { data: meldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenCollection);
+  const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsCollection);
+
+  const selectedProject = React.useMemo(() => {
+    return projects?.find(p => p.id === selectedProjectId) ?? null;
+  }, [projects, selectedProjectId]);
+
+  const selectedWijk = React.useMemo(() => {
+      if (!selectedProject || !selectedWijkId) return null;
+      return selectedProject.wijken?.find(w => w.id === selectedWijkId) ?? null;
+  }, [selectedProject, selectedWijkId]);
+
+  const wijkPolygon = React.useMemo(() => {
+    if (!selectedWijk) return null;
+    try {
+        const features = JSON.parse(selectedWijk.subGebieden);
+        if (Array.isArray(features) && features.length > 0) {
+            return features[0]; // Assuming one polygon per wijk for now
+        }
+    } catch(e) {
+        console.error("Invalid GeoJSON for wijk", selectedWijk.naam);
+    }
+    return null;
+  }, [selectedWijk]);
+
+  const filteredMeldingen = React.useMemo(() => {
+    if (!meldingen) return [];
+    if (!wijkPolygon) return meldingen; // Show all if no wijk is selected/has polygon
+
+    return meldingen.filter(melding => {
+        if (typeof melding.latitude !== 'number' || typeof melding.longitude !== 'number') {
+            return false;
+        }
+        const point = turf.point([melding.longitude, melding.latitude]);
+        return turf.booleanPointInPolygon(point, wijkPolygon);
+    });
+  }, [meldingen, wijkPolygon]);
+
+  const mapRef = React.useRef<any>(null);
+
+  React.useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || !wijkPolygon) return;
+
+    try {
+        const bbox = turf.bbox(wijkPolygon);
+        map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
+    } catch (e) {
+        console.error("Error fitting bounds:", e);
+    }
+  }, [wijkPolygon]);
 
   const initialViewState = {
     longitude: 5.2913,
@@ -98,7 +184,43 @@ export default function IssuesPage() {
                 <div className="bg-card p-2 rounded-lg shadow-md">
                     <h1 className="text-xl font-bold">Meldingen Portaal</h1>
                 </div>
-                <Button onClick={handleNewMelding}>
+                <div className='flex gap-4'>
+                    <div>
+                        <Label htmlFor='project-select' className='text-sm font-medium sr-only'>Project</Label>
+                         <Select
+                          value={selectedProjectId || ''}
+                          onValueChange={(value) => {
+                            setSelectedProjectId(value);
+                            setSelectedWijkId(null);
+                          }}
+                          disabled={isLoadingProjects}
+                        >
+                          <SelectTrigger id="project-select" className="w-[200px] bg-card">
+                            <SelectValue placeholder="Selecteer een project" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {projects?.map(p => <SelectItem key={p.id} value={p.id}>{p.projectnaam}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                    </div>
+                    <div>
+                        <Label htmlFor='wijk-select' className='text-sm font-medium sr-only'>Wijk</Label>
+                        <Select
+                            value={selectedWijkId || ''}
+                            onValueChange={setSelectedWijkId}
+                            disabled={!selectedProject}
+                        >
+                             <SelectTrigger id="wijk-select" className="w-[200px] bg-card">
+                                <SelectValue placeholder="Selecteer een wijk" />
+                             </SelectTrigger>
+                             <SelectContent>
+                                <SelectItem value="all">Alle wijken</SelectItem>
+                                {selectedProject?.wijken?.map(w => <SelectItem key={w.id} value={w.id}>{w.naam}</SelectItem>)}
+                             </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                 <Button onClick={handleNewMelding}>
                     <Plus className="mr-2 h-4 w-4" />
                     Nieuwe Melding
                 </Button>
@@ -106,20 +228,21 @@ export default function IssuesPage() {
             <div className="w-full max-w-sm pointer-events-auto">
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Zoek op meldingen of adres" className="pl-9" />
+                    <Input placeholder="Zoek op meldingen of adres" className="pl-9 bg-card" />
                 </div>
             </div>
         </div>
       </header>
 
         <Map
+            ref={mapRef}
             initialViewState={initialViewState}
             style={{ width: '100%', height: '100%' }}
             mapStyle="mapbox://styles/mapbox/streets-v11"
             mapboxAccessToken={MAPBOX_TOKEN}
             cursor="default"
         >
-            {meldingen?.map(melding => (
+            {filteredMeldingen?.map(melding => (
                 <Marker
                     key={melding.id}
                     longitude={melding.longitude}
@@ -133,6 +256,13 @@ export default function IssuesPage() {
                     />
                 </Marker>
             ))}
+
+            {wijkPolygon && (
+                 <Source id="wijk-polygon" type="geojson" data={wijkPolygon}>
+                    <Layer {...polygonFillLayer} />
+                    <Layer {...polygonOutlineLayer} />
+                </Source>
+            )}
 
             {selectedMelding && isDialogOpen && (
                 <Popup
