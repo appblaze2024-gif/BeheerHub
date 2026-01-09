@@ -49,22 +49,23 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave }: WijkMapDialo
     zoom: 7,
   };
 
-  const cleanup = () => {
+ const cleanup = React.useCallback(() => {
     if (drawRef.current && mapRef.current?.getMap()?.isStyleLoaded()) {
       try {
-        mapRef.current.getMap().removeControl(drawRef.current);
+         if (mapRef.current.getMap().getControl('mapbox-gl-draw')) {
+            mapRef.current.getMap().removeControl(drawRef.current);
+         }
       } catch (e) {
-        console.error("Could not remove draw control", e);
+        console.warn("Could not remove draw control during cleanup", e);
       }
     }
     drawRef.current = null;
     setIsDrawReady(false);
-  };
+  }, []);
+
 
   const onMapLoad = React.useCallback(() => {
-    cleanup(); // Ensure any old instance is cleaned up first.
-
-    if (mapRef.current) {
+    if (mapRef.current && !drawRef.current) {
       const map = mapRef.current.getMap();
       const draw = new MapboxDraw({
         displayControlsDefault: false,
@@ -72,7 +73,59 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave }: WijkMapDialo
           polygon: true,
           trash: true,
         },
+        styles: [
+            // STYLE FOR ACTIVE POLYGONS (being drawn)
+            {
+              'id': 'gl-draw-polygon-fill-active',
+              'type': 'fill',
+              'filter': ['all', ['==', 'active', 'true'], ['==', '$type', 'Polygon']],
+              'paint': {
+                'fill-color': '#000000',
+                'fill-outline-color': '#000000',
+                'fill-opacity': 0.3
+              }
+            },
+            {
+              'id': 'gl-draw-polygon-stroke-active',
+              'type': 'line',
+              'filter': ['all', ['==', 'active', 'true'], ['==', '$type', 'Polygon']],
+              'layout': {
+                'line-cap': 'round',
+                'line-join': 'round'
+              },
+              'paint': {
+                'line-color': '#000000',
+                'line-dasharray': [0.2, 2],
+                'line-width': 2
+              }
+            },
+            // STYLE FOR INACTIVE POLYGONS
+            {
+              'id': 'gl-draw-polygon-fill-inactive',
+              'type': 'fill',
+              'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon']],
+              'paint': {
+                'fill-color': '#000000',
+                'fill-outline-color': '#000000',
+                'fill-opacity': 0.3
+              }
+            },
+            {
+              'id': 'gl-draw-polygon-stroke-inactive',
+              'type': 'line',
+              'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon']],
+              'layout': {
+                'line-cap': 'round',
+                'line-join': 'round'
+              },
+              'paint': {
+                'line-color': '#000000',
+                'line-width': 2
+              }
+            }
+        ]
       });
+
       map.addControl(draw);
       drawRef.current = draw;
       setIsDrawReady(true);
@@ -162,13 +215,14 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave }: WijkMapDialo
     };
   }, []);
 
+   React.useEffect(() => {
+    if (!open) {
+      cleanup();
+    }
+  }, [open, cleanup]);
+
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => {
-      if (!isOpen) {
-        cleanup();
-      }
-      onOpenChange(isOpen);
-    }}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[80vw] h-[80vh] flex flex-col p-0 gap-0">
         <DialogHeader className="p-6 pb-2">
           <DialogTitle>Teken gebied voor wijk: {wijk?.naam}</DialogTitle>
