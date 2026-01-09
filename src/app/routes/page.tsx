@@ -90,7 +90,18 @@ export default function RoutesPage() {
             }
             return false;
         });
-        setRouteFeatures(roadsInPolygon);
+
+        if (roadsInPolygon.length > 0) {
+          // Merge all LineString features into a single MultiLineString
+          const mergedRoute = roadsInPolygon.reduce((acc, feature) => {
+            if (!acc) return feature;
+            // @ts-ignore
+            return turf.union(acc, feature);
+          }, null);
+          setRouteFeatures(mergedRoute ? [mergedRoute] : []);
+        } else {
+          setRouteFeatures([]);
+        }
       }
 
     } catch (err) {
