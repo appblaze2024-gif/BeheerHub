@@ -145,7 +145,8 @@ export default function ObjectsPage() {
   const objectsOnMap = React.useMemo(() => {
     if (!objects) return [];
     if (wijkPolygons.length === 0) {
-      return objects; // Show all objects if no wijken are selected
+      // If no districts are selected, show all objects.
+      return objects;
     }
 
     return objects.filter(obj => {
@@ -162,6 +163,7 @@ export default function ObjectsPage() {
       return false;
     });
   }, [objects, wijkPolygons]);
+
 
   return (
     <div className="flex flex-col flex-1 h-full min-h-0 bg-muted/30">
