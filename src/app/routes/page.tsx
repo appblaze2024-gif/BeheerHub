@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import Map, { Layer, Source } from 'react-map-gl';
+import Map from 'react-map-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { Filter, Trash2 } from 'lucide-react';
 import { RoadTypeFilterDialog } from '@/components/road-type-filter-dialog';
 import type { Feature, FeatureCollection, Polygon, LineString, MultiLineString } from 'geojson';
 import * as turf from '@turf/turf';
-
+import { Layer, Source } from 'react-map-gl';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -48,13 +48,11 @@ export default function RoutesPage() {
           if (road.geometry.type === 'LineString' || road.geometry.type === 'MultiLineString') {
             const intersection = turf.intersect(polygon, road.geometry as LineString | MultiLineString);
             if (intersection) {
-              // Add original properties to the new intersection feature
               intersection.properties = { ...road.properties };
               roadsInPolygon.push(intersection as Feature<LineString | MultiLineString>);
             }
           }
         } catch(err) {
-            // turf.intersect can throw errors on invalid topologies
             console.warn("Error during intersection check, skipping feature:", err);
         }
       });
@@ -103,14 +101,11 @@ export default function RoutesPage() {
 
   const roadFilter = React.useMemo(() => {
     if (selectedRoadTypes.length === 0) {
-      // Filter that shows nothing
       return ['==', ['get', 'class'], 'none'];
     }
     if (selectedRoadTypes.length === roadTypesInPolygon.length) {
-      // No filter needed, show all
       return null;
     }
-    // Filter to show only selected types
     return ['in', ['get', 'class'], ['literal', selectedRoadTypes]];
   }, [selectedRoadTypes, roadTypesInPolygon]);
   
