@@ -118,8 +118,8 @@ export default function WorkPlanningPage() {
   const { data: projects, isLoading: isLoadingProjects } =
     useCollection<Project>(projectsCollection);
 
-  const start = startOfWeek(currentDate, { weekStartsOn: 1 });
-  const end = endOfWeek(currentDate, { weekStartsOn: 1 });
+  const start = React.useMemo(() => startOfWeek(currentDate, { weekStartsOn: 1 }), [currentDate]);
+  const end = React.useMemo(() => endOfWeek(currentDate, { weekStartsOn: 1 }), [currentDate]);
   
   const fetchDiensten = React.useCallback(async () => {
     if (!firestore || !selectedProjectId) {
@@ -177,8 +177,8 @@ export default function WorkPlanningPage() {
   };
 
   const handleSheetSuccess = () => {
-    fetchDiensten(); // Refetch data after a successful operation
-    setIsSheetOpen(false); // Close the sheet
+    setIsSheetOpen(false);
+    fetchDiensten();
   };
 
 
