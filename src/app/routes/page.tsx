@@ -90,19 +90,26 @@ export default function RoutesPage() {
     ];
 
     const roads = map.queryRenderedFeatures(boundingBox, {
-      layers: ['road']
+      layers: ['road-street']
     });
 
     const roadsInPolygon = roads.filter((road: any) => {
-      if (road.geometry.type === 'LineString') {
-        // Check if any point of the road is inside the polygon
-        for (const coord of road.geometry.coordinates) {
-          if (turf.booleanPointInPolygon(coord, polygon as any)) {
-            return true;
+        if (road.geometry.type === 'LineString') {
+          for (const coord of road.geometry.coordinates) {
+            if (turf.booleanPointInPolygon(coord, polygon as any)) {
+              return true;
+            }
           }
+        } else if (road.geometry.type === 'Polygon') {
+            if (road.geometry.coordinates[0]) {
+                 for (const coord of road.geometry.coordinates[0]) {
+                    if (turf.booleanPointInPolygon(coord, polygon as any)) {
+                        return true;
+                    }
+                }
+            }
         }
-      }
-      return false;
+        return false;
     });
 
     setRouteFeatures(roadsInPolygon);
