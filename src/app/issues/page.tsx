@@ -40,6 +40,8 @@ type Melding = {
     | 'Afgerond'
     | 'Niet in beheer';
   datum: string; // Creation date yyyy-MM-dd
+  tijdstip: string;
+  melder: string;
   afhandeling_datum?: string; // Completion date yyyy-MM-dd
   straatnaam?: string;
   huisnummer?: string;
@@ -97,11 +99,14 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
 
   return (
     <div className="overflow-y-auto">
-      <div className="grid grid-cols-[1fr_2fr_2fr_1.5fr_120px_50px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
+      <div className="grid grid-cols-[1fr_1fr_2fr_2fr_1fr_1fr_1fr_120px_50px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
         <span>Intakenummer</span>
         <span>Subcategorie</span>
+        <span>Omschrijving</span>
         <span>Adres</span>
         <span>Wijk</span>
+        <span>Tijd</span>
+        <span>Melder</span>
         <span>Status</span>
         <span />
       </div>
@@ -109,12 +114,15 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
         <div
           key={melding.id}
           onClick={() => onMeldingClick(melding)}
-          className="grid grid-cols-[1fr_2fr_2fr_1.5fr_120px_50px] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
+          className="grid grid-cols-[1fr_1fr_2fr_2fr_1fr_1fr_1fr_120px_50px] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
         >
           <span className="font-medium truncate">{melding.intakenummer}</span>
           <span className="truncate">{melding.subcategorie}</span>
+          <span className="truncate">{melding.extra_informatie}</span>
           <span className="truncate">{`${melding.straatnaam || ''}, ${melding.plaats || ''}`}</span>
           <span className="truncate">{melding.wijk || '-'}</span>
+          <span className="truncate">{melding.tijdstip || '-'}</span>
+          <span className="truncate">{melding.melder || '-'}</span>
           <Badge
             style={{
               backgroundColor: statusConfig[melding.status]?.color || '#ccc',
@@ -151,7 +159,7 @@ export default function IssuesPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
   const [selectedWijkId, setSelectedWijkId] = React.useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = React.useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = React.useState(new Date());
   const [viewMode, setViewMode] = React.useState<'map' | 'list'>('map');
   const [searchQuery, setSearchQuery] = React.useState('');
 
@@ -272,10 +280,8 @@ export default function IssuesPage() {
     if (!wijk) return [];
     
     return timeFilteredMeldingen.filter(melding => {
-        // Show if manually assigned to the selected wijk
-        if (melding.wijk === wijk.naam) return true;
-
-        // Also show if it falls within the wijk's polygons (if no manual wijk or for broader checks)
+        if (melding.wijk && melding.wijk === wijk.naam) return true;
+        
         try {
             const wijkFeatures = JSON.parse(wijk.subGebieden);
             if (Array.isArray(wijkFeatures) && wijkFeatures.length > 0) {
