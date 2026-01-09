@@ -180,8 +180,12 @@ export function DienstToevoegenDialog({
 
   const handleDelete = async () => {
     if (!firestore || !dienst) return;
-    await deleteDocumentNonBlocking(doc(firestore, 'projects', project.id, 'diensten', dienst.id));
-    onOpenChange(false);
+    try {
+      await deleteDocumentNonBlocking(doc(firestore, 'projects', project.id, 'diensten', dienst.id));
+      onOpenChange(false);
+    } catch (error) {
+        console.error("Fout bij verwijderen dienst:", error);
+    }
   }
 
   const medewerkerNaam = `${medewerker.voornaam || ''} ${
