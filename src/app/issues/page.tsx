@@ -97,7 +97,7 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
 
   return (
     <div className="overflow-y-auto">
-      <div className="grid grid-cols-[1fr_2fr_2fr_150px_50px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
+      <div className="grid grid-cols-[1fr_2fr_2fr_120px_50px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
         <span>Intakenummer</span>
         <span>Subcategorie</span>
         <span>Adres</span>
@@ -108,7 +108,7 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
         <div
           key={melding.id}
           onClick={() => onMeldingClick(melding)}
-          className="grid grid-cols-[1fr_2fr_2fr_150px_50px] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
+          className="grid grid-cols-[1fr_2fr_2fr_120px_50px] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
         >
           <span className="font-medium truncate">{melding.intakenummer}</span>
           <span className="truncate">{melding.subcategorie}</span>
@@ -219,13 +219,16 @@ export default function IssuesPage() {
     const dayStart = startOfDay(selectedDate);
     
     const timeFilteredMeldingen = searchedMeldingen.filter(melding => {
-      const creationDate = startOfDay(new Date(melding.datum));
-      if (melding.status === 'Afgerond') {
-        if (!melding.afhandeling_datum) return false;
-        const completionDate = startOfDay(new Date(melding.afhandeling_datum));
-        return isSameDay(completionDate, dayStart);
-      }
-      return creationDate <= dayStart;
+        const creationDate = startOfDay(new Date(melding.datum));
+        // If the melding is "Afgerond"
+        if (melding.status === 'Afgerond') {
+            if (!melding.afhandeling_datum) return false;
+            const completionDate = startOfDay(new Date(melding.afhandeling_datum));
+            // Show it only on the day it was completed
+            return isSameDay(completionDate, dayStart);
+        }
+        // If the melding is still open, show it if it was created on or before the selected date
+        return creationDate <= dayStart;
     });
 
     if (!selectedProjectId) {
@@ -238,8 +241,12 @@ export default function IssuesPage() {
     if (!selectedWijkId || selectedWijkId === 'all') {
       const allProjectWijkNames = project.wijken.map(w => w.naam);
       return timeFilteredMeldingen.filter(m => {
-        if (allProjectWijkNames.includes(m.wijk || '')) return true;
+        // If a wijk is manually assigned, check against all wijk names in the project
+        if (m.wijk && allProjectWijkNames.includes(m.wijk)) {
+            return true;
+        }
 
+        // If no wijk is assigned, check by coordinates
         if (typeof m.latitude !== 'number' || typeof m.longitude !== 'number') return false;
         const point = turf.point([m.longitude, m.latitude]);
         
@@ -263,8 +270,10 @@ export default function IssuesPage() {
     if (!wijk) return [];
     
     return timeFilteredMeldingen.filter(melding => {
+        // Show if manually assigned to the selected wijk
         if (melding.wijk === wijk.naam) return true;
 
+        // Also show if it falls within the wijk's polygons (if no manual wijk or for broader checks)
         try {
             const wijkFeatures = JSON.parse(wijk.subGebieden);
             if (Array.isArray(wijkFeatures) && wijkFeatures.length > 0) {
