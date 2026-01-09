@@ -31,6 +31,7 @@ import {
 import type { Medewerker, Dienst } from '@/lib/types';
 import { DienstToevoegenDialog } from '@/components/dienst-toevoegen-dialog';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 const getInitials = (firstName?: string, lastName?: string) => {
     const firstInitial = firstName?.[0] || '';
@@ -227,7 +228,9 @@ export default function WorkPlanningPage() {
                         <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="h-7 w-7 self-center" 
+                            className={cn(
+                                "h-7 w-7 self-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            )}
                             onClick={() => openNewDienstDialog(medewerker, day)}
                         >
                           <Plus className="h-4 w-4 text-muted-foreground" />
