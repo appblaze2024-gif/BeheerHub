@@ -147,9 +147,6 @@ export default function IssuesPage() {
 
             {showLegend && <Legend onClose={() => setShowLegend(false)} />}
         </Map>
-         {!showLegend && 
-            <Button className="absolute top-4 right-4 z-10" onClick={() => setShowLegend(true)}>Legenda</Button>
-        }
     </div>
   );
 }
