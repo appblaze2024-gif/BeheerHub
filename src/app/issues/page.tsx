@@ -97,7 +97,7 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
 
   return (
     <div className="overflow-y-auto">
-      <div className="grid grid-cols-[1fr_2fr_2fr_1fr_50px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
+      <div className="grid grid-cols-[1fr_2fr_2fr_150px_50px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
         <span>Intakenummer</span>
         <span>Subcategorie</span>
         <span>Adres</span>
@@ -108,7 +108,7 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
         <div
           key={melding.id}
           onClick={() => onMeldingClick(melding)}
-          className="grid grid-cols-[1fr_2fr_2fr_1fr_50px] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
+          className="grid grid-cols-[1fr_2fr_2fr_150px_50px] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
         >
           <span className="font-medium truncate">{melding.intakenummer}</span>
           <span className="truncate">{melding.subcategorie}</span>
@@ -206,7 +206,6 @@ export default function IssuesPage() {
   const filteredMeldingen = React.useMemo(() => {
     if (!meldingen) return [];
     
-    // Filter by search query first
     const searchedMeldingen = searchQuery
       ? meldingen.filter(
           (m) =>
@@ -217,24 +216,20 @@ export default function IssuesPage() {
         )
       : meldingen;
 
-
-    let timeFilteredMeldingen: Melding[] = [];
     const dayStart = startOfDay(selectedDate);
     
-    timeFilteredMeldingen = searchedMeldingen.filter(melding => {
+    const timeFilteredMeldingen = searchedMeldingen.filter(melding => {
       const creationDate = startOfDay(new Date(melding.datum));
       if (melding.status === 'Afgerond') {
         if (!melding.afhandeling_datum) return false;
         const completionDate = startOfDay(new Date(melding.afhandeling_datum));
         return isSameDay(completionDate, dayStart);
-      } else {
-        // Show if selected date is on or after creation date
-        return creationDate <= dayStart;
       }
+      return creationDate <= dayStart;
     });
 
     if (!selectedProjectId) {
-      return []; // No project selected, show no meldingen
+      return [];
     }
     
     const project = projects?.find(p => p.id === selectedProjectId);
@@ -243,8 +238,6 @@ export default function IssuesPage() {
     if (!selectedWijkId || selectedWijkId === 'all') {
       const allProjectWijkNames = project.wijken.map(w => w.naam);
       return timeFilteredMeldingen.filter(m => {
-        // For 'all wijken', check if the melding's wijk is in the project's wijken list
-        // OR check if its coordinates fall into any of the project's wijk polygons
         if (allProjectWijkNames.includes(m.wijk || '')) return true;
 
         if (typeof m.latitude !== 'number' || typeof m.longitude !== 'number') return false;
@@ -270,17 +263,15 @@ export default function IssuesPage() {
     if (!wijk) return [];
     
     return timeFilteredMeldingen.filter(melding => {
-        // Condition 1: Direct match on wijk name (for manual assignment)
         if (melding.wijk === wijk.naam) return true;
 
-        // Condition 2: Point is inside polygon (for automatic assignment)
         try {
             const wijkFeatures = JSON.parse(wijk.subGebieden);
             if (Array.isArray(wijkFeatures) && wijkFeatures.length > 0) {
               if (typeof melding.latitude !== 'number' || typeof melding.longitude !== 'number') return false;
               const point = turf.point([melding.longitude, melding.latitude]);
               for (const polygon of wijkFeatures) {
-                if (turf.booleanPointInPolygon(point, polygon.geometry)) return true;
+                if (turf.booleanPointInPolygon(point, polygon)) return true;
               }
             }
         } catch {
