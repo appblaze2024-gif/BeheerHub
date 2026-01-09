@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import Map from 'react-map-gl';
-import { PageHeader } from "@/components/page-header";
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -15,7 +14,6 @@ export default function RoutesPage() {
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <PageHeader title="Routes" />
       <div className="flex-1 relative">
         <Map
           initialViewState={initialViewState}
