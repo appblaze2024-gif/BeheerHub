@@ -8,6 +8,9 @@ import { Loader2, Trash2 } from 'lucide-react';
 import {
   useFirestore,
   useCollection,
+  addDocumentNonBlocking,
+  updateDocumentNonBlocking,
+  deleteDocumentNonBlocking,
 } from '@/firebase';
 import { collection, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { format } from 'date-fns';
@@ -205,6 +208,15 @@ export function DienstToevoegenSheet({
   
   const effectiveMedewerkerName = medewerker ? medewerkerNaam : dienst?.medewerkerId;
 
+  const sortedVoertuigen = React.useMemo(() => {
+    if (!voertuigen) return [];
+    return [...voertuigen].sort((a, b) => {
+        const numA = parseInt(a.voertuignummer || '0', 10);
+        const numB = parseInt(b.voertuignummer || '0', 10);
+        return numA - numB;
+    });
+  }, [voertuigen]);
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-md">
@@ -368,7 +380,7 @@ export function DienstToevoegenSheet({
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="geen">Geen</SelectItem>
-                        {voertuigen?.map((v) => (
+                        {sortedVoertuigen.map((v) => (
                           <SelectItem key={v.id} value={v.id}>
                             {v.voertuignummer ? `${v.voertuignummer} - ` : ''}{v.merk} {v.model} [{v.id}]
                           </SelectItem>
