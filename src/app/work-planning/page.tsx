@@ -59,17 +59,15 @@ type Project = {
   projectnummer: string;
 };
 
-type DialogState = {
-  open: boolean;
-  medewerker?: Medewerker;
-  datum?: Date;
-  dienst?: Dienst;
-}
-
 export default function WorkPlanningPage() {
   const [currentDate, setCurrentDate] = React.useState(new Date());
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | undefined>();
-  const [dialogState, setDialogState] = React.useState<DialogState>({ open: false });
+  
+  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [selectedMedewerker, setSelectedMedewerker] = React.useState<Medewerker | undefined>();
+  const [selectedDay, setSelectedDay] = React.useState<Date | undefined>();
+  const [selectedDienst, setSelectedDienst] = React.useState<Dienst | undefined>();
+
   const firestore = useFirestore();
 
   const medewerkersCollection = React.useMemo(() => {
@@ -111,6 +109,20 @@ export default function WorkPlanningPage() {
   const selectedProject = React.useMemo(() => {
     return projects?.find(p => p.id === selectedProjectId);
   }, [projects, selectedProjectId]);
+  
+  const openNewDienstDialog = (medewerker: Medewerker, datum: Date) => {
+    setSelectedMedewerker(medewerker);
+    setSelectedDay(datum);
+    setSelectedDienst(undefined);
+    setIsDialogOpen(true);
+  };
+  
+  const openEditDienstDialog = (dienst: Dienst, medewerker: Medewerker) => {
+    setSelectedMedewerker(medewerker);
+    setSelectedDay(new Date(dienst.datum));
+    setSelectedDienst(dienst);
+    setIsDialogOpen(true);
+  };
 
   return (
     <div className="flex flex-col flex-1 h-full min-h-0">
@@ -208,7 +220,7 @@ export default function WorkPlanningPage() {
                         <div className="flex-1 space-y-1">
                           {dienstenForDay?.map(dienst => (
                               <div key={dienst.id} 
-                                   onClick={() => setDialogState({ open: true, medewerker, datum: new Date(dienst.datum), dienst })}
+                                   onClick={() => openEditDienstDialog(dienst, medewerker)}
                                    className="bg-blue-100 text-blue-900 rounded-md p-2 text-xs cursor-pointer hover:bg-blue-200 dark:bg-blue-900/50 dark:text-white dark:hover:bg-blue-900/70"
                               >
                                   <p className="font-semibold truncate">{dienst.werksoort}</p>
@@ -222,7 +234,7 @@ export default function WorkPlanningPage() {
                             className={cn(
                                 "h-7 w-7 self-center opacity-0 group-hover:opacity-100 transition-opacity"
                             )}
-                            onClick={() => setDialogState({ open: true, medewerker, datum: day, dienst: undefined })}
+                            onClick={() => openNewDienstDialog(medewerker, day)}
                         >
                           <Plus className="h-4 w-4 text-muted-foreground" />
                         </Button>
@@ -233,14 +245,15 @@ export default function WorkPlanningPage() {
           )}
         </div>
       </div>
-      {dialogState.open && selectedProject && dialogState.medewerker && dialogState.datum && (
+      {isDialogOpen && selectedProject && selectedMedewerker && selectedDay && (
         <DienstToevoegenDialog 
-            open={dialogState.open}
-            onOpenChange={(open) => setDialogState({ ...dialogState, open })}
-            medewerker={dialogState.medewerker}
-            datum={dialogState.datum}
+            open={isDialogOpen}
+            onOpenChange={setIsDialogOpen}
+            medewerker={selectedMedewerker}
+            datum={selectedDay}
             project={selectedProject}
-            dienst={dialogState.dienst}
+            dienst={selectedDienst}
+            onSuccess={() => setIsDialogOpen(false)}
         />
       )}
     </div>

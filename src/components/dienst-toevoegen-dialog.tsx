@@ -22,7 +22,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogClose,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -77,6 +76,7 @@ type Boekingregel = {
 interface DienstToevoegenDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
   medewerker: Medewerker;
   datum: Date;
   project: {
@@ -88,6 +88,7 @@ interface DienstToevoegenDialogProps {
 export function DienstToevoegenDialog({
   open,
   onOpenChange,
+  onSuccess,
   medewerker,
   datum,
   project,
@@ -95,7 +96,6 @@ export function DienstToevoegenDialog({
 }: DienstToevoegenDialogProps) {
   const firestore = useFirestore();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const closeBtnRef = React.useRef<HTMLButtonElement>(null);
 
   const voertuigenCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -173,7 +173,7 @@ export function DienstToevoegenDialog({
         );
         await addDocumentNonBlocking(dienstenColRef, dienstData);
       }
-      closeBtnRef.current?.click();
+      onSuccess();
     } catch (error) {
       console.error('Fout bij opslaan dienst:', error);
     } finally {
@@ -185,7 +185,7 @@ export function DienstToevoegenDialog({
     if (!firestore || !dienst) return;
     try {
       await deleteDocumentNonBlocking(doc(firestore, 'projects', project.id, 'diensten', dienst.id));
-      closeBtnRef.current?.click();
+      onSuccess();
     } catch (error) {
         console.error("Fout bij verwijderen dienst:", error);
     }
@@ -398,16 +398,14 @@ export function DienstToevoegenDialog({
                 )}
               </div>
               <div className="flex gap-2">
-                <DialogClose asChild>
                   <Button
-                    ref={closeBtnRef}
                     type="button"
                     variant="ghost"
+                    onClick={() => onOpenChange(false)}
                     disabled={isSubmitting}
                   >
                     Annuleren
                   </Button>
-                </DialogClose>
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? (
                     <>
