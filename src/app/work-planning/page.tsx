@@ -83,10 +83,17 @@ const DienstItem = ({ dienst, onEdit }: { dienst: Dienst, onEdit: (dienst: Diens
         }
     };
     
+    const isZiek = dienst.werksoort === 'Ziek';
+
     return (
         <div 
             onClick={handleEdit}
-            className="bg-blue-100 text-blue-900 rounded-md p-2 text-xs cursor-pointer hover:bg-blue-200 dark:bg-blue-900/50 dark:text-white dark:hover:bg-blue-900/70"
+            className={cn(
+                "rounded-md p-2 text-xs cursor-pointer",
+                isZiek 
+                    ? "bg-red-200 text-red-900 hover:bg-red-300 dark:bg-red-900/50 dark:text-white dark:hover:bg-red-900/70"
+                    : "bg-blue-100 text-blue-900 hover:bg-blue-200 dark:bg-blue-900/50 dark:text-white dark:hover:bg-blue-900/70"
+            )}
         >
             <p className="font-semibold truncate">{dienst.werksoort}</p>
             <p className="truncate">{dienst.starttijd} - {dienst.eindtijd}</p>
