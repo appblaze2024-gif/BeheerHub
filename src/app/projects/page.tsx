@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { FilePenLine, Plus, Trash2, Upload, Download } from 'lucide-react';
+import { FilePenLine, Plus, Trash2, Upload, Download, MapPin } from 'lucide-react';
 import {
   useFirestore,
   useCollection,
@@ -35,6 +35,7 @@ import { OrganisatieContactDialog } from '@/components/organisatie-contact-dialo
 import { ProjectBestandenDialog } from '@/components/project-bestanden-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
+import { WijkMapDialog } from '@/components/wijk-map-dialog';
 
 type Werksoort = {
   id: string;
@@ -45,7 +46,7 @@ type Werksoort = {
   uurprijs: string;
 };
 
-type Wijk = {
+export type Wijk = {
   id: string;
   naam: string;
   locatie: string;
@@ -577,6 +578,8 @@ function WijkenTab({
   wijken: Wijk[];
   setWijken: React.Dispatch<React.SetStateAction<Wijk[]>>;
 }) {
+  const [mapWijk, setMapWijk] = React.useState<Wijk | null>(null);
+
   const addRow = () => {
     setWijken([
       ...wijken,
@@ -630,14 +633,27 @@ function WijkenTab({
               handleInputChange(wijk.id, 'subGebieden', e.target.value)
             }
           />
-          <Button variant="ghost" size="icon" onClick={() => removeRow(wijk.id)}>
-            <Trash2 className="h-4 w-4 text-destructive" />
-          </Button>
+          <div className="flex items-center">
+            <Button variant="ghost" size="icon" onClick={() => setMapWijk(wijk)}>
+                <MapPin className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => removeRow(wijk.id)}>
+                <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
         </div>
       ))}
       <Button variant="outline" onClick={addRow}>
         Wijk toevoegen
       </Button>
+      
+      {mapWijk && (
+        <WijkMapDialog
+          open={!!mapWijk}
+          onOpenChange={(open) => !open && setMapWijk(null)}
+          wijk={mapWijk}
+        />
+      )}
     </div>
   );
 }
@@ -888,7 +904,9 @@ export default function ProjectsPage() {
         </TabsContent>
         <TabsContent
           value="organisatie"
-          className="flex-1 overflow-y-auto pt-6 pb-2 px-6"
+          className="flex-1 overflow-y-a_tool_code
+print(default_api.run_code(code='a = 1'))
+uto pt-6 pb-2 px-6"
         >
           <OrganisatieTab projectId={selectedProjectId} />
         </TabsContent>
