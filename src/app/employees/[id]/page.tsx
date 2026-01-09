@@ -379,7 +379,7 @@ function RoosterTab({ medewerkerId }: { medewerkerId: string }) {
                             <span className={cn('text-xs font-semibold', !isSameMonth(day, currentDate) && 'text-muted-foreground/50', isToday(day) && 'flex items-center justify-center h-5 w-5 rounded-full bg-blue-600 text-white')}>{format(day, 'd')}</span>
                             <div className="mt-1 space-y-1">
                                 {dayDiensten.map(dienst => (
-                                    <div key={dienst.id} className="bg-blue-100 dark:bg-blue-900/50 rounded-md p-1.5 text-xs leading-snug">
+                                    <div key={dienst.id} className="bg-blue-100 dark:bg-blue-900/50 rounded-md p-1.5 text-sm leading-snug">
                                         <p className="font-semibold">{dienst.werksoort}</p>
                                         <p>{dienst.starttijd}-{dienst.eindtijd}</p>
                                     </div>
