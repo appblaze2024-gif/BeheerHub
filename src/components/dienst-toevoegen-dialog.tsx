@@ -43,7 +43,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import type { Medewerker, Dienst } from '@/lib/types';
 
 const dienstFormSchema = z.object({
-  werksoort: z.string().min(1, 'Werksoort is verplicht.'),
+  werksoort: z.string().min(1, 'Dienst is verplicht.'),
   starttijd: z.string().min(1, 'Starttijd is verplicht.'),
   eindtijd: z.string().min(1, 'Eindtijd is verplicht.'),
   onbetaaldePauze: z.coerce.number().min(0).default(0),
@@ -179,7 +179,7 @@ export function DienstToevoegenDialog({
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Selecteer een werksoort" />
+                          <SelectValue placeholder="Selecteer een boekingregel" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
