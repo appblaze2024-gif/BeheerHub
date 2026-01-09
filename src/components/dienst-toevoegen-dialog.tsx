@@ -17,12 +17,12 @@ import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+} from '@/components/ui/sheet';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -73,25 +73,25 @@ type Boekingregel = {
     naam: string;
 };
 
-interface DienstToevoegenDialogProps {
+interface DienstToevoegenSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  medewerker: Medewerker;
-  datum: Date;
-  project: {
+  medewerker?: Medewerker;
+  datum?: Date;
+  project?: {
     id: string;
   };
   dienst?: Dienst;
 }
 
-export function DienstToevoegenDialog({
+export function DienstToevoegenSheet({
   open,
   onOpenChange,
   medewerker,
   datum,
   project,
   dienst,
-}: DienstToevoegenDialogProps) {
+}: DienstToevoegenSheetProps) {
   const firestore = useFirestore();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
@@ -104,9 +104,9 @@ export function DienstToevoegenDialog({
     useCollection<Voertuig>(voertuigenCollection);
     
   const boekingregelsCollection = React.useMemo(() => {
-    if (!firestore) return null;
+    if (!firestore || !project?.id) return null;
     return collection(firestore, 'projects', project.id, 'boekingregels');
-  }, [firestore, project.id]);
+  }, [firestore, project?.id]);
 
   const { data: boekingregels, isLoading: isLoadingBoekingregels } = useCollection<Boekingregel>(boekingregelsCollection);
 
@@ -144,17 +144,17 @@ export function DienstToevoegenDialog({
   }, [open, dienst, form]);
 
   const onSubmit = async (data: DienstFormValues) => {
-    if (!firestore) return;
+    if (!firestore || !project?.id || (!datum && !dienst)) return;
     setIsSubmitting(true);
     
     const selectedBoekingregel = boekingregels?.find(b => b.id === data.boekingregelId);
 
     const dienstData = {
       ...data,
-      medewerkerId: medewerker.id,
+      medewerkerId: medewerker?.id || dienst?.medewerkerId,
       projectId: project.id,
-      datum: format(datum, 'yyyy-MM-dd'),
-      voertuigId: data.voertuigId || null,
+      datum: format(datum || new Date(dienst!.datum), 'yyyy-MM-dd'),
+      voertuigId: data.voertuigId === 'geen' ? null : data.voertuigId,
       werksoort: selectedBoekingregel?.naam || 'Onbekend',
     };
 
@@ -180,7 +180,7 @@ export function DienstToevoegenDialog({
   };
 
   const handleDelete = async () => {
-    if (!firestore || !dienst) return;
+    if (!firestore || !dienst || !project?.id) return;
     try {
       await deleteDocumentNonBlocking(doc(firestore, 'projects', project.id, 'diensten', dienst.id));
       onOpenChange(false);
@@ -189,23 +189,32 @@ export function DienstToevoegenDialog({
     }
   }
 
-  const medewerkerNaam = `${medewerker.voornaam || ''} ${
+  const medewerkerNaam = medewerker ? `${medewerker.voornaam || ''} ${
     medewerker.tussenvoegsel || ''
-  } ${medewerker.achternaam || ''}`.trim();
-  const formattedDate = format(datum, 'eeee d MMMM yyyy', { locale: nl });
+  } ${medewerker.achternaam || ''}`.trim() : 'Laden...';
+  
+  const displayDate = datum || (dienst ? new Date(dienst.datum) : new Date());
+
+  const formattedDate = format(displayDate, 'eeee d MMMM yyyy', { locale: nl });
+
+  if (!medewerker && !dienst) {
+    return null;
+  }
+  
+  const effectiveMedewerkerName = medewerker ? medewerkerNaam : dienst?.medewerkerId;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{dienst ? 'Dienst Bewerken' : 'Dienst Toevoegen'}: {formattedDate}</DialogTitle>
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="sm:max-w-md">
+        <SheetHeader>
+          <SheetTitle>{dienst ? 'Dienst Bewerken' : 'Dienst Toevoegen'}: {formattedDate}</SheetTitle>
+        </SheetHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <FormItem>
                 <FormLabel>Medewerker</FormLabel>
-                <Input value={medewerkerNaam} disabled />
+                <Input value={effectiveMedewerkerName} disabled />
               </FormItem>
               <FormField
                 control={form.control}
@@ -349,7 +358,7 @@ export function DienstToevoegenDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Voertuigen</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || 'geen'}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Geen" />
@@ -369,8 +378,9 @@ export function DienstToevoegenDialog({
                 )}
               />
 
-
-            <DialogFooter className="pt-4 sm:justify-between">
+          </form>
+        </Form>
+        <SheetFooter className="pt-4 sm:justify-between absolute bottom-0 right-0 left-0 p-6 bg-background border-t">
               <div>
                 {dienst && (
                   <AlertDialog>
@@ -404,7 +414,7 @@ export function DienstToevoegenDialog({
                   >
                     Annuleren
                   </Button>
-                <Button type="submit" disabled={isSubmitting}>
+                <Button type="submit" form="dienst-toevoegen-form" disabled={isSubmitting} onClick={form.handleSubmit(onSubmit)}>
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -415,10 +425,8 @@ export function DienstToevoegenDialog({
                   )}
                 </Button>
               </div>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+            </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }

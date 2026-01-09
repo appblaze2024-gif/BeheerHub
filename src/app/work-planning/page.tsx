@@ -12,7 +12,7 @@ import {
   isSameDay,
 } from 'date-fns';
 import { nl } from 'date-fns/locale';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, doc } from 'firebase/firestore';
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
@@ -27,9 +27,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   useCollection,
   useFirestore,
+  useDoc
 } from '@/firebase';
 import type { Medewerker, Dienst } from '@/lib/types';
-import { DienstToevoegenDialog } from '@/components/dienst-toevoegen-dialog';
+import { DienstToevoegenSheet } from '@/components/dienst-toevoegen-dialog';
 import { cn } from '@/lib/utils';
 
 const getInitials = (firstName?: string, lastName?: string) => {
@@ -58,11 +59,38 @@ type Project = {
   projectnummer: string;
 };
 
+const DienstItem = ({ dienst, onEdit }: { dienst: Dienst, onEdit: (dienst: Dienst) => void}) => {
+    const firestore = useFirestore();
+    const medewerkerRef = React.useMemo(() => {
+        if (!firestore) return null;
+        return doc(firestore, 'medewerkers', dienst.medewerkerId);
+    }, [firestore, dienst.medewerkerId]);
+    
+    const { data: medewerker } = useDoc<Medewerker>(medewerkerRef);
+    
+    const handleEdit = () => {
+        if (medewerker) {
+            onEdit(dienst);
+        }
+    };
+    
+    return (
+        <div 
+            onClick={handleEdit}
+            className="bg-blue-100 text-blue-900 rounded-md p-2 text-xs cursor-pointer hover:bg-blue-200 dark:bg-blue-900/50 dark:text-white dark:hover:bg-blue-900/70"
+        >
+            <p className="font-semibold truncate">{dienst.werksoort}</p>
+            <p className="truncate">{dienst.starttijd} - {dienst.eindtijd}</p>
+        </div>
+    );
+};
+
+
 export default function WorkPlanningPage() {
   const [currentDate, setCurrentDate] = React.useState(new Date());
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | undefined>();
   
-  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [isSheetOpen, setIsSheetOpen] = React.useState(false);
   const [selectedMedewerker, setSelectedMedewerker] = React.useState<Medewerker | undefined>();
   const [selectedDay, setSelectedDay] = React.useState<Date | undefined>();
   const [selectedDienst, setSelectedDienst] = React.useState<Dienst | undefined>();
@@ -109,18 +137,19 @@ export default function WorkPlanningPage() {
     return projects?.find(p => p.id === selectedProjectId);
   }, [projects, selectedProjectId]);
   
-  const openNewDienstDialog = (medewerker: Medewerker, datum: Date) => {
+  const openNewDienstSheet = (medewerker: Medewerker, datum: Date) => {
     setSelectedMedewerker(medewerker);
     setSelectedDay(datum);
     setSelectedDienst(undefined);
-    setIsDialogOpen(true);
+    setIsSheetOpen(true);
   };
   
-  const openEditDienstDialog = (dienst: Dienst, medewerker: Medewerker) => {
+  const openEditDienstSheet = (dienst: Dienst) => {
+    const medewerker = medewerkers?.find(m => m.id === dienst.medewerkerId);
     setSelectedMedewerker(medewerker);
     setSelectedDay(new Date(dienst.datum));
     setSelectedDienst(dienst);
-    setIsDialogOpen(true);
+    setIsSheetOpen(true);
   };
 
   return (
@@ -218,22 +247,18 @@ export default function WorkPlanningPage() {
                     >
                         <div className="flex-1 space-y-1">
                           {dienstenForDay?.map(dienst => (
-                              <div key={dienst.id} 
-                                   onClick={() => openEditDienstDialog(dienst, medewerker)}
-                                   className="bg-blue-100 text-blue-900 rounded-md p-2 text-xs cursor-pointer hover:bg-blue-200 dark:bg-blue-900/50 dark:text-white dark:hover:bg-blue-900/70"
-                              >
-                                  <p className="font-semibold truncate">{dienst.werksoort}</p>
-                                  <p className="truncate">{dienst.starttijd} - {dienst.eindtijd}</p>
-                              </div>
+                              <DienstItem key={dienst.id} dienst={dienst} onEdit={openEditDienstSheet} />
                           ))}
                         </div>
                         <Button 
                             variant="ghost" 
                             size="icon" 
                             className={cn(
-                                "h-7 w-7 self-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                "h-7 w-7 self-center opacity-0 group-hover:opacity-100 transition-opacity",
+                                !selectedProjectId && 'hidden'
                             )}
-                            onClick={() => openNewDienstDialog(medewerker, day)}
+                            onClick={() => selectedProjectId && openNewDienstSheet(medewerker, day)}
+                            disabled={!selectedProjectId}
                         >
                           <Plus className="h-4 w-4 text-muted-foreground" />
                         </Button>
@@ -244,16 +269,14 @@ export default function WorkPlanningPage() {
           )}
         </div>
       </div>
-      {isDialogOpen && selectedProject && selectedMedewerker && selectedDay && (
-        <DienstToevoegenDialog 
-            open={isDialogOpen}
-            onOpenChange={setIsDialogOpen}
+      <DienstToevoegenSheet
+            open={isSheetOpen}
+            onOpenChange={setIsSheetOpen}
             medewerker={selectedMedewerker}
             datum={selectedDay}
             project={selectedProject}
             dienst={selectedDienst}
         />
-      )}
     </div>
   );
 }
