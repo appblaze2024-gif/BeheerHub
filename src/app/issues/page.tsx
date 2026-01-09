@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import * as turf from '@turf/turf';
 import type { Wijk } from '@/app/projects/page';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -175,22 +176,22 @@ export default function IssuesPage() {
     });
   }, [meldingen, selectedProjectId, selectedWijkId, wijkGeoJSON, projects]);
 
-  const meldingenCountPerWijk = React.useMemo(() => {
+  const openMeldingenCountPerWijk = React.useMemo(() => {
     if (!meldingen || !selectedProject?.wijken) return {};
     
     const counts: { [wijkId: string]: number } = {};
-
+  
     for (const wijk of selectedProject.wijken) {
-      let objectCount = 0;
+      let openCount = 0;
       try {
         const features = JSON.parse(wijk.subGebieden);
         if (Array.isArray(features) && features.length > 0) {
           for (const melding of meldingen) {
-            if (typeof melding.latitude === 'number' && typeof melding.longitude === 'number') {
+            if (melding.status !== 'Afgerond' && typeof melding.latitude === 'number' && typeof melding.longitude === 'number') {
               const point = turf.point([melding.longitude, melding.latitude]);
               for (const polygon of features) {
                 if (turf.booleanPointInPolygon(point, polygon)) {
-                  objectCount++;
+                  openCount++;
                   break; // Count melding only once per wijk
                 }
               }
@@ -200,7 +201,7 @@ export default function IssuesPage() {
       } catch (e) {
         // Ignore parsing errors for this calculation
       }
-      counts[wijk.id] = objectCount;
+      counts[wijk.id] = openCount;
     }
     return counts;
   }, [meldingen, selectedProject?.wijken]);
@@ -299,8 +300,8 @@ export default function IssuesPage() {
                                   <SelectItem key={w.id} value={w.id}>
                                     <div className='flex justify-between items-center w-full'>
                                       <span>{w.naam}</span>
-                                      {(meldingenCountPerWijk[w.id] || 0) > 0 && (
-                                        <div className="w-2.5 h-2.5 bg-red-500 rounded-full ml-2"></div>
+                                       {(openMeldingenCountPerWijk[w.id] || 0) > 0 && (
+                                        <Badge variant="destructive" className="ml-2 px-2 py-0.5 h-5">{openMeldingenCountPerWijk[w.id]}</Badge>
                                       )}
                                     </div>
                                   </SelectItem>
@@ -386,3 +387,5 @@ export default function IssuesPage() {
     </div>
   );
 }
+
+    
