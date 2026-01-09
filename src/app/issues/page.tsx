@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import * as turf from '@turf/turf';
 import type { Wijk } from '@/app/projects/page';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -97,12 +98,19 @@ export default function IssuesPage() {
     return projects?.find(p => p.id === selectedProjectId) ?? null;
   }, [projects, selectedProjectId]);
 
+  const sortedWijken = React.useMemo(() => {
+    if (!selectedProject?.wijken) return [];
+    return [...selectedProject.wijken].sort((a, b) => 
+      a.naam.localeCompare(b.naam, undefined, { numeric: true, sensitivity: 'base' })
+    );
+  }, [selectedProject?.wijken]);
+
   const selectedWijk = React.useMemo(() => {
       if (!selectedProject || !selectedWijkId || selectedWijkId === 'all') return null;
       return selectedProject.wijken?.find(w => w.id === selectedWijkId) ?? null;
   }, [selectedProject, selectedWijkId]);
   
-  const wijkGeoJSON = React.useMemo(() => {
+ const wijkGeoJSON = React.useMemo(() => {
     if (!selectedWijk) return null;
     try {
         const features = JSON.parse(selectedWijk.subGebieden);
@@ -113,7 +121,7 @@ export default function IssuesPage() {
             };
         }
     } catch(e) {
-        console.error("Invalid GeoJSON for wijk", selectedWijk.naam);
+        console.error("Invalid GeoJSON for wijk", selectedWijk.naam, e);
     }
     return null;
   }, [selectedWijk]);
@@ -121,49 +129,40 @@ export default function IssuesPage() {
 
   const filteredMeldingen = React.useMemo(() => {
     if (!meldingen) return [];
-    if (!selectedWijkId || selectedWijkId === 'all' || !wijkGeoJSON) {
-        // If "All wijken" is selected, or no wijk is selected, show all meldingen for the project
-        if (selectedProjectId && projects) {
-          const project = projects.find(p => p.id === selectedProjectId);
-          if (!project || !project.wijken) return meldingen; // Or should it be []? Depends on desired behavior
+    if (!selectedProjectId) return []; // Geen project geselecteerd, toon geen meldingen
 
-          const projectWijkIds = project.wijken.map(w => w.id);
-          // This part is tricky. A melding doesn't inherently belong to a project.
-          // We infer it by checking if it falls into any wijk of the project.
-          // So filtering is always spatial. For "all wijken", we check against all polygons of the project.
-           const allWijkPolygons = (project.wijken || []).flatMap(w => {
-             try {
-                const features = JSON.parse(w.subGebieden);
-                return Array.isArray(features) ? features : [];
-             } catch {
-                return [];
-             }
-           });
-           
-           if(allWijkPolygons.length === 0) return [];
+    const project = projects?.find(p => p.id === selectedProjectId);
+    if (!project?.wijken) return []; // Geen wijken in project, toon geen meldingen
 
-           return meldingen.filter(melding => {
-              if (typeof melding.latitude !== 'number' || typeof melding.longitude !== 'number') return false;
-              const point = turf.point([melding.longitude, melding.latitude]);
-              for (const polygon of allWijkPolygons) {
-                 if(turf.booleanPointInPolygon(point, polygon)) {
-                    return true;
-                 }
-              }
-              return false;
-           });
+    if (!selectedWijkId || selectedWijkId === 'all') {
+      // "Alle wijken" is geselecteerd. Filter op alle wijken van het project.
+      const allWijkPolygons = project.wijken.flatMap(w => {
+         try {
+            const features = JSON.parse(w.subGebieden);
+            return Array.isArray(features) ? features : [];
+         } catch { return []; }
+      });
+      
+       if(allWijkPolygons.length === 0) return [];
 
-        }
-        return meldingen; // Fallback to all meldingen if no project selected
+       return meldingen.filter(melding => {
+          if (typeof melding.latitude !== 'number' || typeof melding.longitude !== 'number') return false;
+          const point = turf.point([melding.longitude, melding.latitude]);
+          for (const polygon of allWijkPolygons) {
+             if(turf.booleanPointInPolygon(point, polygon)) return true;
+          }
+          return false;
+       });
     }
+    
+    if (!wijkGeoJSON) return []; // Geen geldige polygoon voor geselecteerde wijk
 
+    // Filter op specifieke wijk
     return meldingen.filter(melding => {
-        if (typeof melding.latitude !== 'number' || typeof melding.longitude !== 'number') {
-            return false;
-        }
+        if (typeof melding.latitude !== 'number' || typeof melding.longitude !== 'number') return false;
+        
         try {
             const point = turf.point([melding.longitude, melding.latitude]);
-            // Check against all features in the selected wijk's geojson
             for (const feature of wijkGeoJSON.features) {
                 if (turf.booleanPointInPolygon(point, feature)) {
                     return true;
@@ -175,8 +174,37 @@ export default function IssuesPage() {
             return false;
         }
     });
-  }, [meldingen, selectedWijkId, wijkGeoJSON, selectedProjectId, projects]);
+  }, [meldingen, selectedProjectId, selectedWijkId, wijkGeoJSON, projects]);
 
+  const meldingenCountPerWijk = React.useMemo(() => {
+    if (!meldingen || !selectedProject?.wijken) return {};
+    
+    const counts: { [wijkId: string]: number } = {};
+
+    for (const wijk of selectedProject.wijken) {
+      let objectCount = 0;
+      try {
+        const features = JSON.parse(wijk.subGebieden);
+        if (Array.isArray(features) && features.length > 0) {
+          for (const melding of meldingen) {
+            if (typeof melding.latitude === 'number' && typeof melding.longitude === 'number') {
+              const point = turf.point([melding.longitude, melding.latitude]);
+              for (const polygon of features) {
+                if (turf.booleanPointInPolygon(point, polygon)) {
+                  objectCount++;
+                  break; // Count melding only once per wijk
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        // Ignore parsing errors for this calculation
+      }
+      counts[wijk.id] = objectCount;
+    }
+    return counts;
+  }, [meldingen, selectedProject?.wijken]);
 
   const mapRef = React.useRef<any>(null);
 
@@ -264,7 +292,16 @@ export default function IssuesPage() {
                              </SelectTrigger>
                              <SelectContent>
                                 <SelectItem value="all">Alle wijken</SelectItem>
-                                {selectedProject?.wijken?.map(w => <SelectItem key={w.id} value={w.id}>{w.naam}</SelectItem>)}
+                                {sortedWijken.map(w => (
+                                  <SelectItem key={w.id} value={w.id}>
+                                    <div className='flex justify-between items-center w-full'>
+                                      <span>{w.naam}</span>
+                                      <Badge variant="secondary" className="ml-2">
+                                        {meldingenCountPerWijk[w.id] || 0}
+                                      </Badge>
+                                    </div>
+                                  </SelectItem>
+                                ))}
                              </SelectContent>
                         </Select>
                     </div>
