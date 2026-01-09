@@ -55,7 +55,7 @@ export function MapboxView({ longitude, latitude, objects, wijkPolygons = [] }: 
   const initialViewState = {
     longitude: longitude || 5.2913,
     latitude: latitude || 52.1326,
-    zoom: longitude && latitude ? 15 : 7,
+    zoom: longitude && latitude ? 11 : 7,
   };
   
   React.useEffect(() => {
@@ -83,7 +83,7 @@ export function MapboxView({ longitude, latitude, objects, wijkPolygons = [] }: 
 
   React.useEffect(() => {
     if (longitude && latitude && !objects) {
-      mapRef.current?.flyTo({ center: [longitude, latitude], zoom: 15});
+      mapRef.current?.flyTo({ center: [longitude, latitude], zoom: 11});
     }
   }, [longitude, latitude, objects]);
 
