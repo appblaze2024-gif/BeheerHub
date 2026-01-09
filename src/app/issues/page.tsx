@@ -64,29 +64,50 @@ export default function IssuesPage() {
   
   const handleDialogClose = (open: boolean) => {
     setIsDialogOpen(open);
+     if (!open) {
+      setSelectedMelding(null);
+    }
   }
 
   const handleNewMelding = () => {
     setSelectedMelding(null);
     setIsDialogOpen(true);
   }
+  
+  const handleMarkerClick = (e: mapboxgl.MapboxEvent<MouseEvent>, melding: Melding) => {
+    e.originalEvent.stopPropagation();
+    setSelectedMelding(melding);
+  }
+
+  const handlePopupClose = () => {
+      setSelectedMelding(null);
+      setIsDialogOpen(false);
+  }
+
+  React.useEffect(() => {
+    if (selectedMelding && !isDialogOpen) {
+      setIsDialogOpen(true);
+    }
+  }, [selectedMelding, isDialogOpen]);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
-      <header className="absolute top-0 left-0 z-10 p-4 w-full flex items-start justify-between pointer-events-none">
-        <div className="flex flex-col gap-2 items-start">
-            <div className="bg-card p-2 rounded-lg shadow-md pointer-events-auto">
-                <h1 className="text-xl font-bold">Meldingen Portaal</h1>
+      <header className="absolute top-0 left-0 z-10 p-4 flex flex-col gap-2 items-start w-full pointer-events-none">
+        <div className="flex items-start justify-between w-full">
+            <div className="flex flex-col gap-2 items-start">
+                <div className="bg-card p-2 rounded-lg shadow-md pointer-events-auto">
+                    <h1 className="text-xl font-bold">Meldingen Portaal</h1>
+                </div>
+                <Button className='pointer-events-auto' onClick={handleNewMelding}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Nieuwe Melding
+                </Button>
             </div>
-            <Button className='pointer-events-auto' onClick={handleNewMelding}>
-                <Plus className="mr-2 h-4 w-4" />
-                Nieuwe Melding
-            </Button>
-        </div>
-        <div className="w-full max-w-sm pointer-events-auto">
-            <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Zoek op meldingen of adres" className="pl-9" />
+            <div className="w-full max-w-sm pointer-events-auto">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input placeholder="Zoek op meldingen of adres" className="pl-9" />
+                </div>
             </div>
         </div>
       </header>
@@ -103,10 +124,7 @@ export default function IssuesPage() {
                     key={melding.id}
                     longitude={melding.longitude}
                     latitude={melding.latitude}
-                    onClick={(e) => {
-                        e.originalEvent.stopPropagation();
-                        setSelectedMelding(melding);
-                    }}
+                    onClick={(e) => handleMarkerClick(e, melding)}
                 >
                     <div
                         aria-label="Map marker"
@@ -116,11 +134,11 @@ export default function IssuesPage() {
                 </Marker>
             ))}
 
-            {selectedMelding && (
+            {selectedMelding && isDialogOpen && (
                 <Popup
                     longitude={selectedMelding.longitude}
                     latitude={selectedMelding.latitude}
-                    onClose={() => setSelectedMelding(null)}
+                    onClose={handlePopupClose}
                     closeOnClick={false}
                     anchor="bottom"
                 >
@@ -138,6 +156,9 @@ export default function IssuesPage() {
                             <span className="font-semibold">Aangemaakt:</span>
                             <span>{selectedMelding.datum}</span>
                         </div>
+                         <Button size="sm" className="w-full mt-2" onClick={() => setIsDialogOpen(true)}>
+                          Details bekijken
+                        </Button>
                     </div>
                 </Popup>
             )}

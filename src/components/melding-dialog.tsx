@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Loader2 } from 'lucide-react';
-import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useUser } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -97,26 +97,11 @@ export function MeldingDialog({
   melding,
 }: MeldingDialogProps) {
   const firestore = useFirestore();
+  const { user } = useUser();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const form = useForm<MeldingFormValues>({
     resolver: zodResolver(meldingFormSchema),
-    defaultValues: {
-      tijdstip: format(new Date(), 'HH:mm:ss'),
-      melder: 'Medewerker Gemeenten',
-      aangenomen_door: '',
-      extern_meldingsnummer: '',
-      hoofdcategorie: '',
-      subcategorie: '',
-      adres: '',
-      postcode: '',
-      plaats: '',
-      extra_informatie: '',
-      status: 'Nieuw',
-      afhandeling_datum: '',
-      afgehandeld_door: '',
-      afhandeling_bijzonderheden: '',
-    },
   });
   
   const hoofdcategorie = form.watch('hoofdcategorie');
@@ -140,16 +125,18 @@ export function MeldingDialog({
 
   React.useEffect(() => {
     if (open) {
+      const userName = user?.displayName || user?.email || '';
       if (melding) {
           form.reset({
               ...melding,
-              adres: `${melding.straatnaam || ''}${melding.huisnummer ? ' ' + melding.huisnummer : ''}, ${melding.postcode || ''}, ${melding.plaats || ''}`.trim()
+              adres: `${melding.straatnaam || ''}${melding.huisnummer ? ' ' + melding.huisnummer : ''}, ${melding.postcode || ''}, ${melding.plaats || ''}`.trim(),
+              aangenomen_door: melding.aangenomen_door || userName,
           });
       } else {
         form.reset({
             tijdstip: format(new Date(), 'HH:mm:ss'),
-            melder: 'Medewerker Gemeenten',
-            aangenomen_door: '',
+            melder: userName,
+            aangenomen_door: userName,
             extern_meldingsnummer: '',
             hoofdcategorie: '',
             subcategorie: '',
@@ -167,7 +154,7 @@ export function MeldingDialog({
         form.reset();
         setIsSubmitting(false);
     }
-  }, [open, melding, form]);
+  }, [open, melding, form, user]);
 
   
    React.useEffect(() => {
@@ -187,14 +174,26 @@ export function MeldingDialog({
         setIsSubmitting(false);
         return;
     }
+    
+    // Naar adres parsen voor afzonderlijke velden
+    const addressParts = data.adres.split(',').map(s => s.trim());
+    const straatnaam = addressParts[0] || '';
+    const postcode = addressParts.length > 1 ? addressParts[1] : '';
+    const plaats = addressParts.length > 2 ? addressParts[2] : '';
+
 
     const meldingData = {
       ...data,
+      straatnaam,
+      postcode,
+      plaats,
       latitude: coordinates.lat,
       longitude: coordinates.lng,
       datum: melding ? melding.datum : format(new Date(), 'yyyy-MM-dd'),
       intakenummer: melding ? melding.intakenummer : `M${Date.now()}`,
     };
+    // Verwijder het volledige 'adres' veld, aangezien het nu is opgesplitst
+    delete (meldingData as any).adres;
 
     try {
         if (melding) {
