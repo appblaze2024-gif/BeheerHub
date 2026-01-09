@@ -142,46 +142,10 @@ export default function IssuesPage() {
   const filteredMeldingen = React.useMemo(() => {
     if (!meldingen) return [];
 
-    let wijkFiltered: Melding[] = [];
-    
-    if (selectedProjectId) {
-      const project = projects?.find(p => p.id === selectedProjectId);
-      if (project?.wijken) {
-        if (!selectedWijkId || selectedWijkId === 'all') {
-          // Show all meldingen that are in any wijk of the project
-          const allProjectWijkNames = project.wijken.map(w => w.naam);
-          wijkFiltered = meldingen.filter(m => allProjectWijkNames.includes(m.wijk || ''));
-        } else {
-          // Show meldingen for a specific wijk
-          const wijk = project.wijken.find(w => w.id === selectedWijkId);
-          if (wijk) {
-             wijkFiltered = meldingen.filter(melding => {
-              if (melding.wijk === wijk.naam) return true;
-
-              try {
-                const wijkFeatures = JSON.parse(wijk.subGebieden);
-                 if (Array.isArray(wijkFeatures) && wijkFeatures.length > 0) {
-                   if (typeof melding.latitude !== 'number' || typeof melding.longitude !== 'number') return false;
-                    const point = turf.point([melding.longitude, melding.latitude]);
-                    for (const polygon of wijkFeatures) {
-                      if (turf.booleanPointInPolygon(point, polygon.geometry)) return true;
-                    }
-                 }
-              } catch {
-                return false;
-              }
-              return false;
-            });
-          }
-        }
-      }
-    } else {
-        return []; // No project selected, show no meldingen
-    }
-    
+    let timeFilteredMeldingen: Melding[] = [];
     const dayStart = startOfDay(selectedDate);
     
-    return wijkFiltered.filter(melding => {
+    timeFilteredMeldingen = meldingen.filter(melding => {
         const creationDate = startOfDay(new Date(melding.datum));
         if (melding.status === 'Afgerond') {
             if (!melding.afhandeling_datum) return false;
@@ -190,6 +154,41 @@ export default function IssuesPage() {
         } else {
             return creationDate <= dayStart;
         }
+    });
+
+    if (!selectedProjectId) {
+      return []; // No project selected, show no meldingen
+    }
+    
+    const project = projects?.find(p => p.id === selectedProjectId);
+    if (!project?.wijken) return [];
+
+    if (!selectedWijkId || selectedWijkId === 'all') {
+      const allProjectWijkNames = project.wijken.map(w => w.naam);
+      return timeFilteredMeldingen.filter(m => allProjectWijkNames.includes(m.wijk || ''));
+    }
+
+    const wijk = project.wijken.find(w => w.id === selectedWijkId);
+    if (!wijk) return [];
+    
+    return timeFilteredMeldingen.filter(melding => {
+        // Condition 1: Direct match on wijk name (for manual assignment)
+        if (melding.wijk === wijk.naam) return true;
+
+        // Condition 2: Point is inside polygon (for automatic assignment)
+        try {
+            const wijkFeatures = JSON.parse(wijk.subGebieden);
+            if (Array.isArray(wijkFeatures) && wijkFeatures.length > 0) {
+              if (typeof melding.latitude !== 'number' || typeof melding.longitude !== 'number') return false;
+              const point = turf.point([melding.longitude, melding.latitude]);
+              for (const polygon of wijkFeatures) {
+                if (turf.booleanPointInPolygon(point, polygon.geometry)) return true;
+              }
+            }
+        } catch {
+            return false;
+        }
+        return false;
     });
 
   }, [meldingen, selectedProjectId, selectedWijkId, projects, selectedDate]);
