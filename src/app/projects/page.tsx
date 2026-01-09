@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { FilePenLine, Plus, Trash2, Upload, Download } from 'lucide-react';
+import { FilePenLine, Plus, Trash2, Upload, Download, CalendarIcon } from 'lucide-react';
 import {
   useFirestore,
   useCollection,
@@ -33,6 +33,11 @@ import { getStorage, ref, deleteObject } from 'firebase/storage';
 import { AfspraakDialog } from '@/components/afspraak-dialog';
 import { OrganisatieContactDialog } from '@/components/organisatie-contact-dialog';
 import { ProjectBestandenDialog } from '@/components/project-bestanden-dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { nl } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 type Werksoort = {
   id: string;
@@ -474,6 +479,51 @@ function BestandenTab({ projectId }: { projectId: string | undefined }) {
   );
 }
 
+function DatePicker({ value, onChange, label }: { value: string, onChange: (value: string) => void, label: string }) {
+    const [date, setDate] = React.useState<Date | undefined>(value ? new Date(value) : undefined);
+
+    const handleSelect = (selectedDate: Date | undefined) => {
+        setDate(selectedDate);
+        if (selectedDate) {
+            onChange(format(selectedDate, 'yyyy-MM-dd'));
+        }
+    }
+
+    React.useEffect(() => {
+        setDate(value ? new Date(value) : undefined);
+    }, [value]);
+
+    return (
+        <div>
+            <Label htmlFor={label} className="text-xs font-semibold">{label}</Label>
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button
+                        variant={"outline"}
+                        id={label}
+                        className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !date && "text-muted-foreground"
+                        )}
+                    >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {date ? format(date, "dd-MM-yyyy") : <span>Kies een datum</span>}
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                    <Calendar
+                        mode="single"
+                        selected={date}
+                        onSelect={handleSelect}
+                        initialFocus
+                        locale={nl}
+                        footer={<Button className="w-full" variant="ghost" size="sm" onClick={() => handleSelect(new Date())}>Vandaag</Button>}
+                    />
+                </PopoverContent>
+            </Popover>
+        </div>
+    );
+}
 
 export default function ProjectsPage() {
   const firestore = useFirestore();
@@ -619,14 +669,16 @@ export default function ProjectsPage() {
                         <Label htmlFor="opdrachtgever" className="text-xs font-semibold">Opdrachtgever</Label>
                         <Input id="opdrachtgever" value={currentProject.opdrachtgever} onChange={(e) => handleInputChange('opdrachtgever', e.target.value)} />
                     </div>
-                     <div>
-                        <Label htmlFor="startdatum" className="text-xs font-semibold">Startdatum</Label>
-                        <Input id="startdatum" type="date" value={currentProject.startdatum} onChange={(e) => handleInputChange('startdatum', e.target.value)} />
-                    </div>
-                     <div>
-                        <Label htmlFor="einddatum" className="text-xs font-semibold">Einddatum</Label>
-                        <Input id="einddatum" type="date" value={currentProject.einddatum} onChange={(e) => handleInputChange('einddatum', e.target.value)} />
-                    </div>
+                     <DatePicker 
+                        label="Startdatum"
+                        value={currentProject.startdatum} 
+                        onChange={(value) => handleInputChange('startdatum', value)} 
+                    />
+                     <DatePicker 
+                        label="Einddatum"
+                        value={currentProject.einddatum} 
+                        onChange={(value) => handleInputChange('einddatum', value)} 
+                    />
                 </div>
               </CardContent>
             </Card>
