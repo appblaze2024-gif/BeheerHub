@@ -476,6 +476,21 @@ function BestandenTab({ projectId }: { projectId: string | undefined }) {
   );
 }
 
+function BoekingregelsTab() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Boekingregels</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center justify-center h-48 text-muted-foreground">
+          Boekingregels functionaliteit komt hier.
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function ProjectsPage() {
   const firestore = useFirestore();
   const [selectedProjectId, setSelectedProjectId] = React.useState<
@@ -580,6 +595,7 @@ export default function ProjectsPage() {
             <TabsTrigger value="afspraken">Afspraken</TabsTrigger>
             <TabsTrigger value="organisatie">Organisatie</TabsTrigger>
             <TabsTrigger value="bestanden">Bestanden</TabsTrigger>
+            <TabsTrigger value="boekingregels">Boekingregels</TabsTrigger>
           </TabsList>
         </div>
 
@@ -719,6 +735,12 @@ export default function ProjectsPage() {
           className="flex-1 overflow-y-auto pt-6 pb-2 px-6"
         >
           <BestandenTab projectId={selectedProjectId} />
+        </TabsContent>
+        <TabsContent
+          value="boekingregels"
+          className="flex-1 overflow-y-auto pt-6 pb-2 px-6"
+        >
+          <BoekingregelsTab />
         </TabsContent>
       </Tabs>
     </div>
