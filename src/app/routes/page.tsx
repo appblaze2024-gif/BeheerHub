@@ -61,21 +61,26 @@ export default function RoutesPage() {
           url="mapbox://mapbox.mapbox-streets-v8"
         >
           {/* We render a Layer for each of the road types we want to control */}
-          {roadLayerIds.map((layerId) => (
+          {roadLayerIds.map((layerId) => {
+             const layerProps: any = {};
+             if (roadFilter) {
+               layerProps.filter = roadFilter;
+             }
+            return (
             <Layer
               key={layerId}
               id={layerId}
               type="line"
               source="mapbox-streets"
-              source-layer={layerId} // This is important, it links the layer to the source's data layer
+              source-layer="road"
               paint={{
                 'line-color': '#3887be',
                 'line-width': 3,
                 'line-opacity': 0.8,
               }}
-              filter={roadFilter} // Apply the dynamic filter
+              {...layerProps}
             />
-          ))}
+          )})}
         </Source>
       </Map>
     </div>
