@@ -6,7 +6,7 @@ import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import { Button } from '@/components/ui/button';
 import { Filter, Trash2 } from 'lucide-react';
-import { RoadTypeFilterDialog, allRoadTypes } from '@/components/road-type-filter-dialog';
+import { RoadTypeFilterDialog } from '@/components/road-type-filter-dialog';
 import type { Feature, FeatureCollection, Polygon, LineString, MultiLineString } from 'geojson';
 import * as turf from '@turf/turf';
 
@@ -40,19 +40,25 @@ export default function RoutesPage() {
           sourceLayer: 'road',
       });
 
-      const roadsInPolygon = allSourceRoads.filter(road => {
-        if (!road.geometry) return false;
+      const roadsInPolygon: Feature<LineString | MultiLineString>[] = [];
+      allSourceRoads.forEach(road => {
+        if (!road.geometry) return;
 
         try {
           if (road.geometry.type === 'LineString' || road.geometry.type === 'MultiLineString') {
-            return turf.booleanIntersects(road.geometry, polygon.geometry);
+            const intersection = turf.intersect(polygon, road.geometry as LineString | MultiLineString);
+            if (intersection) {
+              // Add original properties to the new intersection feature
+              intersection.properties = { ...road.properties };
+              roadsInPolygon.push(intersection as Feature<LineString | MultiLineString>);
+            }
           }
         } catch(err) {
-            console.error("Error checking intersection:", err, road.geometry);
-            return false;
+            // turf.intersect can throw errors on invalid topologies
+            console.warn("Error during intersection check, skipping feature:", err);
         }
-        return false;
-      }) as Feature<LineString | MultiLineString>[];
+      });
+
 
       const uniqueRoadTypes = Array.from(new Set(roadsInPolygon.map(road => road.properties?.class).filter(Boolean) as string[]));
       
@@ -97,11 +103,14 @@ export default function RoutesPage() {
 
   const roadFilter = React.useMemo(() => {
     if (selectedRoadTypes.length === 0) {
+      // Filter that shows nothing
       return ['==', ['get', 'class'], 'none'];
     }
     if (selectedRoadTypes.length === roadTypesInPolygon.length) {
+      // No filter needed, show all
       return null;
     }
+    // Filter to show only selected types
     return ['in', ['get', 'class'], ['literal', selectedRoadTypes]];
   }, [selectedRoadTypes, roadTypesInPolygon]);
   
