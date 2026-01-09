@@ -113,6 +113,15 @@ export function DienstToevoegenSheet({
     resolver: zodResolver(dienstFormSchema),
   });
 
+  const sortedVoertuigen = React.useMemo(() => {
+    if (!voertuigen) return [];
+    return [...voertuigen].sort((a, b) => {
+        const numA = parseInt(a.voertuignummer || '0', 10);
+        const numB = parseInt(b.voertuignummer || '0', 10);
+        return numA - numB;
+    });
+  }, [voertuigen]);
+
   React.useEffect(() => {
     if (open) {
       if (dienst) {
@@ -190,7 +199,7 @@ export function DienstToevoegenSheet({
       setIsSubmitting(false);
     }
   }
-
+  
   // Guard clause to prevent rendering and hook calls if essential props are missing.
   if (!medewerker && !dienst) {
     return null;
@@ -205,15 +214,6 @@ export function DienstToevoegenSheet({
   const formattedDate = format(displayDate, 'eeee d MMMM yyyy', { locale: nl });
 
   const effectiveMedewerkerName = medewerker ? medewerkerNaam : dienst?.medewerkerId;
-
-  const sortedVoertuigen = React.useMemo(() => {
-    if (!voertuigen) return [];
-    return [...voertuigen].sort((a, b) => {
-        const numA = parseInt(a.voertuignummer || '0', 10);
-        const numB = parseInt(b.voertuignummer || '0', 10);
-        return numA - numB;
-    });
-  }, [voertuigen]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
