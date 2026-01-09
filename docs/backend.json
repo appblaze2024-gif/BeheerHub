@@ -420,6 +420,7 @@
         "straatnaam": { "type": "string" },
         "postcode": { "type": "string" },
         "plaats": { "type": "string" },
+        "wijk": { "type": "string" },
         "extra_informatie": { "type": "string" },
         "status": {
           "type": "string",

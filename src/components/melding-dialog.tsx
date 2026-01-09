@@ -5,10 +5,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Loader2 } from 'lucide-react';
-import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useUser } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useUser, useCollection } from '@/firebase';
+import { collection, doc, getDocs } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
+import * as turf from '@turf/turf';
 
 import {
   Dialog,
@@ -37,6 +38,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Separator } from './ui/separator';
+import type { Wijk } from '@/app/projects/page';
+
+type Project = {
+    id: string;
+    projectnaam: string;
+    wijken?: Wijk[];
+};
+
 
 const meldingFormSchema = z.object({
   // Melding
@@ -52,6 +61,7 @@ const meldingFormSchema = z.object({
   adres: z.string().min(1, 'Adres is verplicht'),
   postcode: z.string().optional(),
   plaats: z.string().optional(),
+  wijk: z.string().optional(),
   extra_informatie: z.string().min(1, 'Extra informatie is verplicht'),
 
   // Afhandeling
@@ -90,9 +100,6 @@ interface Suggestion {
   lat: string;
 }
 
-
-const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
-
 interface MeldingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -111,6 +118,13 @@ export function MeldingDialog({
   const [isSearching, setIsSearching] = React.useState(false);
   const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
+  const projectsCollection = React.useMemo(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'projects');
+  }, [firestore]);
+
+  const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsCollection);
+
   const form = useForm<MeldingFormValues>({
     resolver: zodResolver(meldingFormSchema),
   });
@@ -118,23 +132,48 @@ export function MeldingDialog({
   const hoofdcategorie = form.watch('hoofdcategorie');
   const adresQuery = form.watch('adres');
 
-  const fetchCoordinates = async (address: string): Promise<{ lat: number; lng: number } | null> => {
+  const fetchCoordinates = React.useCallback(async (address: string): Promise<{ lat: number; lng: number } | null> => {
     if (!address) return null;
     try {
       const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=${MAPBOX_TOKEN}&country=NL&limit=1`
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1&countrycodes=nl`
       );
       const data = await response.json();
-      if (data.features && data.features.length > 0) {
-        const [lng, lat] = data.features[0].center;
-        return { lat, lng };
+      if (data && data.length > 0) {
+        return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
       }
     } catch (error) {
       console.error('Error fetching coordinates:', error);
     }
     return null;
-  };
+  }, []);
 
+  const findWijkForPoint = React.useCallback((lat: number, lng: number): string | null => {
+    if (!projects) return null;
+
+    const point = turf.point([lng, lat]);
+
+    for (const project of projects) {
+      if (project.wijken) {
+        for (const wijk of project.wijken) {
+          try {
+            const features = JSON.parse(wijk.subGebieden);
+            if (Array.isArray(features)) {
+              for (const feature of features) {
+                if (turf.booleanPointInPolygon(point, feature)) {
+                  return wijk.naam;
+                }
+              }
+            }
+          } catch (e) {
+            // ignore invalid geojson
+          }
+        }
+      }
+    }
+    return null;
+  }, [projects]);
+  
   const generateIntakeNummer = () => {
     const date = new Date();
     const year = date.getFullYear();
@@ -165,6 +204,7 @@ export function MeldingDialog({
             adres: '',
             postcode: '',
             plaats: '',
+            wijk: '',
             extra_informatie: '',
             status: 'Nieuw',
             afhandeling_datum: '',
@@ -222,8 +262,17 @@ export function MeldingDialog({
     };
   }, [adresQuery, form.formState.dirtyFields.adres]);
 
-  const handleSuggestionClick = (suggestion: Suggestion) => {
+  const handleSuggestionClick = async (suggestion: Suggestion) => {
     form.setValue('adres', suggestion.display_name, { shouldValidate: true, shouldDirty: true });
+    const lat = parseFloat(suggestion.lat);
+    const lon = parseFloat(suggestion.lon);
+
+    if (!isNaN(lat) && !isNaN(lon)) {
+        const foundWijk = findWijkForPoint(lat, lon);
+        form.setValue('wijk', foundWijk || 'Niet gevonden');
+    } else {
+        form.setValue('wijk', 'Kon wijk niet bepalen');
+    }
     setSuggestions([]);
   };
 
@@ -239,12 +288,12 @@ export function MeldingDialog({
         return;
     }
     
-    // Naar adres parsen voor afzonderlijke velden
     const addressParts = data.adres.split(',').map(s => s.trim());
     const straatnaam = addressParts[0] || '';
     const postcode = addressParts.length > 1 ? addressParts[1] : '';
     const plaats = addressParts.length > 2 ? addressParts[2] : '';
 
+    const wijk = findWijkForPoint(coordinates.lat, coordinates.lng);
 
     const meldingData = {
       ...data,
@@ -253,9 +302,9 @@ export function MeldingDialog({
       plaats,
       latitude: coordinates.lat,
       longitude: coordinates.lng,
+      wijk: wijk || 'Onbekend',
       datum: melding ? melding.datum : format(new Date(), 'yyyy-MM-dd'),
     };
-    // Verwijder het volledige 'adres' veld, aangezien het nu is opgesplitst
     delete (meldingData as any).adres;
 
     try {
@@ -326,7 +375,7 @@ export function MeldingDialog({
                   </FormItem>
                 )} />
               </div>
-               <div className="grid grid-cols-1 gap-4">
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField control={form.control} name="adres" render={({ field }) => (
                     <FormItem>
                         <FormLabel>Adres</FormLabel>
@@ -352,6 +401,14 @@ export function MeldingDialog({
                         <FormMessage />
                     </FormItem>
                   )} />
+                   <FormField control={form.control} name="wijk" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Wijk</FormLabel>
+                            <FormControl>
+                                <Input {...field} disabled placeholder="Wordt automatisch bepaald..." />
+                            </FormControl>
+                        </FormItem>
+                    )} />
               </div>
               <FormField control={form.control} name="extra_informatie" render={({ field }) => (
                   <FormItem><FormLabel>Extra informatie melding</FormLabel><FormControl><Textarea rows={4} {...field} /></FormControl><FormMessage /></FormItem>
