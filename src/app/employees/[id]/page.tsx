@@ -271,26 +271,27 @@ function RoosterTab({ medewerkerId }: { medewerkerId: string }) {
       const firstDayOfMonth = startOfMonth(currentDate);
       const lastDayOfMonth = endOfMonth(currentDate);
       
-      setDiensten({}); // Reset on new fetch
+      setDiensten({});
 
       const projectsCol = collection(firestore, 'projects');
       const projectsSnapshot = await getDocs(projectsCol);
-
-      const startDateStr = format(firstDayOfMonth, 'yyyy-MM-dd');
-      const endDateStr = format(lastDayOfMonth, 'yyyy-MM-dd');
 
       const allDiensten: Dienst[] = [];
 
       for (const projectDoc of projectsSnapshot.docs) {
         const dienstenCol = collection(firestore, 'projects', projectDoc.id, 'diensten');
-        const q = query(dienstenCol, 
-          where('medewerkerId', '==', medewerkerId),
-          where('datum', '>=', startDateStr),
-          where('datum', '<=', endDateStr)
-        );
+        // Simplified query to avoid composite index
+        const q = query(dienstenCol, where('medewerkerId', '==', medewerkerId));
         const dienstenSnapshot = await getDocs(q);
+        
         dienstenSnapshot.forEach(dienstDoc => {
-          allDiensten.push({ id: dienstDoc.id, ...dienstDoc.data() } as Dienst);
+          const dienstData = { id: dienstDoc.id, ...dienstDoc.data() } as Dienst;
+          const dienstDatum = new Date(dienstData.datum);
+          
+          // Client-side filtering for the current month
+          if (dienstDatum >= firstDayOfMonth && dienstDatum <= lastDayOfMonth) {
+            allDiensten.push(dienstData);
+          }
         });
       }
 
