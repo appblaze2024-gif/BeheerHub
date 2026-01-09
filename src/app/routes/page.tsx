@@ -98,12 +98,9 @@ export default function RoutesPage() {
          // Filter the results to include only roads that are actually within the drawn polygon
         const roadsInPolygon = data.features.filter((road: any) => {
             if (road.geometry.type === 'LineString' && road.geometry.coordinates.length > 0) {
-                // Check if any point of the linestring is inside the polygon
-                for(const coord of road.geometry.coordinates) {
-                    if (turf.booleanPointInPolygon(turf.point(coord), polygon)) {
-                        return true;
-                    }
-                }
+                // This is a simplification. For full accuracy, you'd check every segment.
+                // For performance, we check if the first coordinate is in the polygon.
+                return turf.booleanPointInPolygon(road.geometry.coordinates[0], polygon);
             }
             return false;
         });
