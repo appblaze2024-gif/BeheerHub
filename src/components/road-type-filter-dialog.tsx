@@ -13,12 +13,29 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 
-export const allRoadTypes = [
-    'motorway', 'motorway_link', 'trunk', 'trunk_link', 'primary', 'primary_link',
-    'secondary', 'secondary_link', 'tertiary', 'tertiary_link', 'street',
-    'street_limited', 'pedestrian', 'path', 'track', 'service', 'ferry',
-];
-
+export const allRoadTypes: Record<string, string> = {
+  motorway: 'Snelweg',
+  motorway_link: 'Verbindingsweg snelweg',
+  trunk: 'Hoofdweg',
+  trunk_link: 'Verbindingsweg hoofdweg',
+  primary: 'Provinciale weg',
+  primary_link: 'Verbindingsweg provinciale weg',
+  secondary: 'Secundaire weg',
+  secondary_link: 'Verbindingsweg secundaire weg',
+  tertiary: 'Tertiaire weg',
+  tertiary_link: 'Verbindingsweg tertiaire weg',
+  street: 'Straat',
+  street_limited: 'Straat (beperkt verkeer)',
+  pedestrian: 'Voetgangersgebied',
+  path: 'Pad',
+  track: 'Veldweg/Bospad',
+  service: 'Dienstweg',
+  ferry: 'Veerboot',
+  living_street: 'Woonerf',
+  residential: 'Woonstraat',
+  road: 'Ongeclassificeerde weg',
+  unclassified: 'Ongeclassificeerde weg',
+};
 
 interface RoadTypeFilterDialogProps {
   open: boolean;
@@ -50,6 +67,14 @@ export function RoadTypeFilterDialog({
   const handleDeselectAll = () => {
     onSelectedTypesChange([]);
   };
+  
+  const sortedAvailableTypes = React.useMemo(() => {
+    return [...availableTypes].sort((a, b) => {
+      const nameA = allRoadTypes[a] || a;
+      const nameB = allRoadTypes[b] || b;
+      return nameA.localeCompare(nameB);
+    });
+  }, [availableTypes]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -60,9 +85,9 @@ export function RoadTypeFilterDialog({
             Selecteer de wegtypes die u binnen de polygoon wilt zien.
           </DialogDescription>
         </DialogHeader>
-        {availableTypes.length > 0 ? (
-          <div className="max-h-[60vh] overflow-y-auto grid grid-cols-2 gap-4 p-1">
-            {availableTypes.map((type) => (
+        {sortedAvailableTypes.length > 0 ? (
+          <div className="max-h-[60vh] overflow-y-auto grid grid-cols-2 gap-x-6 gap-y-3 p-1">
+            {sortedAvailableTypes.map((type) => (
               <div key={type} className="flex items-center space-x-2">
                 <Checkbox
                   id={`type-${type}`}
@@ -70,7 +95,7 @@ export function RoadTypeFilterDialog({
                   onCheckedChange={(checked) => handleCheckedChange(type, !!checked)}
                 />
                 <Label htmlFor={`type-${type}`} className="font-normal capitalize">
-                  {type.replace(/_/g, ' ')}
+                  {allRoadTypes[type] || type.replace(/_/g, ' ')}
                 </Label>
               </div>
             ))}
