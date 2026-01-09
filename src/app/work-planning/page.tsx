@@ -417,7 +417,7 @@ export default function WorkPlanningPage() {
               key={day.toISOString()}
               className={cn(
                 "sticky top-0 z-10 p-2 text-center bg-background border-b border-r day-column",
-                isToday(day) && "bg-muted"
+                isToday(day) && "bg-muted/50"
               )}
             >
               <p className="font-semibold capitalize text-sm">
@@ -481,7 +481,7 @@ export default function WorkPlanningPage() {
                         onDragLeave={() => setDragOverCell(null)}
                         className={cn(
                             "group relative p-2 border-b border-r min-h-[80px] flex flex-col gap-1 transition-colors day-column",
-                             isToday(day) && "bg-muted",
+                             isToday(day) && "bg-muted/50",
                             isDragOver && "bg-blue-100 dark:bg-blue-900/30"
                         )}
                     >
