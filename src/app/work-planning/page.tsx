@@ -298,9 +298,10 @@ export default function WorkPlanningPage() {
   };
   
  const handlePrint = (mode: 'week' | 'day', dayToPrint?: Date) => {
+    // Add a specific class to the body for print styling
     const printDayClass = dayToPrint ? `print-day-${format(dayToPrint, 'yyyy-MM-dd')}` : '';
-
-    // Clean up any existing print classes
+    
+    // Clean up any other print classes before adding the new one
     document.body.className = document.body.className.replace(/print-(day|week)-view/g, '').replace(/print-day-\d{4}-\d{2}-\d{2}/g, '').trim();
 
     if (mode === 'day' && printDayClass) {
@@ -309,15 +310,19 @@ export default function WorkPlanningPage() {
         document.body.classList.add('print-week-view');
     }
     
+    // Trigger the browser's print dialog
     window.print();
   };
 
+  // Add a cleanup effect for the print classes
   React.useEffect(() => {
     const afterPrint = () => {
+      // Remove any print-specific classes after printing is done or cancelled
        document.body.className = document.body.className.replace(/print-(day|week)-view/g, '').replace(/print-day-\d{4}-\d{2}-\d{2}/g, '').trim();
     };
 
     window.addEventListener('afterprint', afterPrint);
+
     return () => {
         window.removeEventListener('afterprint', afterPrint);
     };

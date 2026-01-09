@@ -9,10 +9,9 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { format } from 'date-fns';
+import { format, isToday } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { isToday } from 'date-fns';
 
 interface PrintDayDialogProps {
   open: boolean;
