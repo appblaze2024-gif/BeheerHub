@@ -12,7 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import * as turf from '@turf/turf';
 import type { Wijk } from '@/app/projects/page';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -261,6 +260,10 @@ export default function IssuesPage() {
                 <div className="bg-card p-2 rounded-lg shadow-md">
                     <h1 className="text-xl font-bold">Meldingen Portaal</h1>
                 </div>
+                 <Button onClick={handleNewMelding}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Nieuwe Melding
+                </Button>
                 <div className='flex gap-4'>
                     <div>
                         <Label htmlFor='project-select' className='text-sm font-medium sr-only'>Project</Label>
@@ -296,9 +299,9 @@ export default function IssuesPage() {
                                   <SelectItem key={w.id} value={w.id}>
                                     <div className='flex justify-between items-center w-full'>
                                       <span>{w.naam}</span>
-                                      <Badge variant="secondary" className="ml-2">
-                                        {meldingenCountPerWijk[w.id] || 0}
-                                      </Badge>
+                                      {(meldingenCountPerWijk[w.id] || 0) > 0 && (
+                                        <div className="w-2.5 h-2.5 bg-red-500 rounded-full ml-2"></div>
+                                      )}
                                     </div>
                                   </SelectItem>
                                 ))}
@@ -306,10 +309,6 @@ export default function IssuesPage() {
                         </Select>
                     </div>
                 </div>
-                 <Button onClick={handleNewMelding}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Nieuwe Melding
-                </Button>
             </div>
             <div className="w-full max-w-sm pointer-events-auto">
                 <div className="relative flex-1">
