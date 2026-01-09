@@ -219,8 +219,8 @@ export default function WorkPlanningPage() {
                                    onClick={() => openEditDienstDialog(dienst, medewerker)}
                                    className="bg-blue-100 text-blue-900 rounded-md p-2 text-xs cursor-pointer hover:bg-blue-200 dark:bg-blue-900/50 dark:text-white dark:hover:bg-blue-900/70"
                               >
-                                  <p className="font-semibold truncate">{dienst.starttijd} - {dienst.eindtijd}</p>
-                                  <p className="truncate">{dienst.werksoort}</p>
+                                  <p className="font-semibold truncate">{dienst.werksoort}</p>
+                                  <p className="truncate">{dienst.starttijd} - {dienst.eindtijd}</p>
                               </div>
                           ))}
                         </div>
