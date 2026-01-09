@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { ChevronLeft, ChevronRight, Clock, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, Plus, Printer } from 'lucide-react';
 import {
   startOfWeek,
   endOfWeek,
@@ -11,6 +11,7 @@ import {
   sub,
   isSameDay,
   parse,
+  isToday,
 } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { collection, query, where, doc, getDocs, updateDoc, addDoc } from 'firebase/firestore';
@@ -287,9 +288,15 @@ export default function WorkPlanningPage() {
 
     return totalMinutes / 60;
   };
+  
+  const handlePrint = (mode: 'week' | 'day') => {
+    document.body.classList.add(mode === 'week' ? 'print-week-view' : 'print-day-view');
+    window.print();
+    document.body.classList.remove('print-week-view', 'print-day-view');
+  };
 
   return (
-    <div className="flex flex-col flex-1 h-full min-h-0">
+    <div className="flex flex-col flex-1 h-full min-h-0" id="planning-container">
       <PageHeader title="Bezetting">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
@@ -312,6 +319,8 @@ export default function WorkPlanningPage() {
             </SelectContent>
           </Select>
           <Button variant="outline">Voertuigen</Button>
+          <Button variant="outline" onClick={() => handlePrint('day')}><Printer className="mr-2 h-4 w-4" /> Print Dag</Button>
+          <Button variant="outline" onClick={() => handlePrint('week')}><Printer className="mr-2 h-4 w-4" /> Print Week</Button>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={prevWeek}>
@@ -334,7 +343,12 @@ export default function WorkPlanningPage() {
           {weekDays.map((day) => (
             <div
               key={day.toISOString()}
-              className="sticky top-0 z-10 p-2 text-center bg-background border-b border-r"
+              className={cn(
+                "sticky top-0 z-10 p-2 text-center bg-background border-b border-r",
+                "day-column",
+                `day-column-${format(day, 'yyyy-MM-dd')}`,
+                isToday(day) && "is-today"
+              )}
             >
               <p className="font-semibold capitalize text-sm">
                 {format(day, 'eee', { locale: nl })}
@@ -365,7 +379,7 @@ export default function WorkPlanningPage() {
           ) : (
             medewerkers?.map((medewerker) => (
               <React.Fragment key={medewerker.id}>
-                <div className="flex flex-col justify-center p-3 border-b border-r">
+                <div className="flex flex-col justify-center p-3 border-b border-r medewerker-header">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
                        <AvatarImage
@@ -397,6 +411,9 @@ export default function WorkPlanningPage() {
                         onDragLeave={() => setDragOverCell(null)}
                         className={cn(
                             "group relative p-2 border-b border-r min-h-[80px] flex flex-col gap-1 transition-colors",
+                            "day-column",
+                            `day-column-${format(day, 'yyyy-MM-dd')}`,
+                             isToday(day) && "is-today",
                             isDragOver && "bg-blue-50 ring-2 ring-blue-500"
                         )}
                     >
@@ -413,7 +430,7 @@ export default function WorkPlanningPage() {
                             variant="ghost" 
                             size="icon" 
                             className={cn(
-                                "h-7 w-7 self-center opacity-0 group-hover:opacity-100 transition-opacity",
+                                "h-7 w-7 self-center opacity-0 group-hover:opacity-100 transition-opacity add-button",
                                 !selectedProjectId && 'hidden'
                             )}
                             onClick={() => selectedProjectId && handleOpenSheetForNew(medewerker, day)}

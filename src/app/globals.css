@@ -86,3 +86,59 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+
+@media print {
+  /* Hide all elements by default */
+  body > * {
+    display: none;
+  }
+  
+  /* Show only the planning container and its children */
+  #planning-container, #planning-container * {
+    display: block !important;
+    visibility: visible !important;
+  }
+  
+  /* Reset layout for the root and body */
+  html, body, #__next__, #planning-container {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: white !important;
+    color: black !important;
+  }
+  
+  /* Hide non-printing elements inside the planning container */
+  #planning-container header, #planning-container .add-button {
+    display: none !important;
+  }
+  
+  /* Ensure the grid takes up full width */
+  #planning-container .min-w-\[1200px\] {
+    min-width: 100% !important;
+    border: 1px solid #ccc;
+  }
+  
+  .day-column, .medewerker-header {
+    border-color: #ccc !important;
+  }
+
+  /* Specific styles for Day Print */
+  body.print-day-view .day-column {
+    display: none !important;
+  }
+  
+  body.print-day-view .day-column.is-today {
+    display: block !important;
+  }
+  
+  body.print-day-view .grid-cols-\[250px_repeat\(7\,1fr\)\] {
+    grid-template-columns: 250px 1fr !important;
+  }
+
+  /* Reset print styles after printing */
+  @page {
+    margin: 0.5in;
+  }
+}
