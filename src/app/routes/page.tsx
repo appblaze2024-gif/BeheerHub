@@ -36,21 +36,20 @@ export default function RoutesPage() {
       const map = mapRef.current?.getMap();
       if (!map) return;
       
-      const polygonBoundingBox = turf.bbox(polygon);
-      const sw = map.project([polygonBoundingBox[0], polygonBoundingBox[1]]);
-      const ne = map.project([polygonBoundingBox[2], polygonBoundingBox[3]]);
-      
-      const allFeatures = map.queryRenderedFeatures([sw, ne]);
-      
-      const roads = allFeatures.filter(f => f.properties && f.properties.class && f.geometry.type === 'LineString');
-
+      const roads = map.querySourceFeatures('composite', {
+          sourceLayer: 'road',
+          filter: ['==', '$type', 'LineString']
+      });
 
       const roadsInPolygon = roads.filter(road => {
         if (road.geometry.type === 'LineString') {
-          // Check if any point of the line is inside the polygon
-          return road.geometry.coordinates.some(point => {
-            return turf.booleanPointInPolygon(point, polygon);
-          });
+          // Use turf.booleanIntersects to check if the road line intersects the polygon
+          try {
+            return turf.booleanIntersects(road.geometry, polygon.geometry);
+          } catch(err) {
+            // turf may throw errors on invalid geometries
+            return false;
+          }
         }
         return false;
       }) as Feature<LineString>[];
@@ -106,7 +105,7 @@ export default function RoutesPage() {
     }
     return ['in', ['get', 'class'], ['literal', selectedRoadTypes]];
   }, [selectedRoadTypes, roadTypesInPolygon]);
-
+  
   const layerProps: any = {};
   if (roadFilter) {
     layerProps.filter = roadFilter;
