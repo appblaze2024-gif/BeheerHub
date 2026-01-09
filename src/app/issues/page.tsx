@@ -4,7 +4,7 @@ import * as React from 'react';
 import Map, { Marker, Popup, Source, Layer, FillLayer, LineLayer } from 'react-map-gl';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection } from 'firebase/firestore';
-import { Plus, Search } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MeldingDialog } from '@/components/melding-dialog';
@@ -13,6 +13,11 @@ import * as turf from '@turf/turf';
 import type { Wijk } from '@/app/projects/page';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { addDays, format, isSameDay, startOfDay } from 'date-fns';
+import { nl } from 'date-fns/locale';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -32,7 +37,8 @@ type Melding = {
     | 'Dubbel gemeld'
     | 'Afgerond'
     | 'Niet in beheer';
-  datum: string;
+  datum: string; // Creation date yyyy-MM-dd
+  afhandeling_datum?: string; // Completion date yyyy-MM-dd
   straatnaam?: string;
   postcode?: string;
   plaats?: string;
@@ -80,6 +86,7 @@ export default function IssuesPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
   const [selectedWijkId, setSelectedWijkId] = React.useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = React.useState<Date>(new Date());
 
   const meldingenCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -129,52 +136,75 @@ export default function IssuesPage() {
 
   const filteredMeldingen = React.useMemo(() => {
     if (!meldingen) return [];
-    if (!selectedProjectId) return []; // Geen project geselecteerd, toon geen meldingen
 
-    const project = projects?.find(p => p.id === selectedProjectId);
-    if (!project?.wijken) return []; // Geen wijken in project, toon geen meldingen
-
-    if (!selectedWijkId || selectedWijkId === 'all') {
-      // "Alle wijken" is geselecteerd. Filter op alle wijken van het project.
-      const allWijkPolygons = project.wijken.flatMap(w => {
-         try {
+    // 1. Filter by project and wijk
+    let wijkFiltered = [];
+    if (!selectedProjectId) {
+      wijkFiltered = []; // No project selected, show no issues
+    } else {
+      const project = projects?.find(p => p.id === selectedProjectId);
+      if (!project?.wijken) {
+        wijkFiltered = []; // No districts in project
+      } else if (!selectedWijkId || selectedWijkId === 'all') {
+        // "All districts" selected, filter by all districts in the project
+        const allWijkPolygons = project.wijken.flatMap(w => {
+          try {
             const features = JSON.parse(w.subGebieden);
             return Array.isArray(features) ? features : [];
-         } catch { return []; }
-      });
-      
-       if(allWijkPolygons.length === 0) return [];
-
-       return meldingen.filter(melding => {
-          if (typeof melding.latitude !== 'number' || typeof melding.longitude !== 'number') return false;
-          const point = turf.point([melding.longitude, melding.latitude]);
-          for (const polygon of allWijkPolygons) {
-             if(turf.booleanPointInPolygon(point, polygon)) return true;
-          }
-          return false;
-       });
-    }
-    
-    if (!wijkGeoJSON) return []; // Geen geldige polygoon voor geselecteerde wijk
-
-    // Filter op specifieke wijk
-    return meldingen.filter(melding => {
-        if (typeof melding.latitude !== 'number' || typeof melding.longitude !== 'number') return false;
+          } catch { return []; }
+        });
         
-        try {
+        if(allWijkPolygons.length === 0) {
+          wijkFiltered = [];
+        } else {
+          wijkFiltered = meldingen.filter(melding => {
+            if (typeof melding.latitude !== 'number' || typeof melding.longitude !== 'number') return false;
             const point = turf.point([melding.longitude, melding.latitude]);
-            for (const feature of wijkGeoJSON.features) {
-                if (turf.booleanPointInPolygon(point, feature)) {
-                    return true;
-                }
+            for (const polygon of allWijkPolygons) {
+              if (turf.booleanPointInPolygon(point, polygon)) return true;
             }
             return false;
-        } catch(e) {
+          });
+        }
+      } else if (wijkGeoJSON) {
+        // Specific district selected
+        wijkFiltered = meldingen.filter(melding => {
+          if (typeof melding.latitude !== 'number' || typeof melding.longitude !== 'number') return false;
+          try {
+            const point = turf.point([melding.longitude, melding.latitude]);
+            for (const feature of wijkGeoJSON.features) {
+              if (turf.booleanPointInPolygon(point, feature)) return true;
+            }
+            return false;
+          } catch(e) {
             console.error("Error during point in polygon check", e);
             return false;
-        }
+          }
+        });
+      }
+    }
+
+    // 2. Filter by date
+    const dayStart = startOfDay(selectedDate);
+
+    return wijkFiltered.filter(melding => {
+      const creationDate = new Date(melding.datum);
+      
+      // Is open and created on or before the selected date
+      if (melding.status !== 'Afgerond') {
+        return creationDate <= dayStart;
+      }
+      
+      // Is closed and was closed on the selected date
+      if (melding.status === 'Afgerond' && melding.afhandeling_datum) {
+        const completionDate = new Date(melding.afhandeling_datum);
+        return isSameDay(completionDate, dayStart);
+      }
+      
+      return false;
     });
-  }, [meldingen, selectedProjectId, selectedWijkId, wijkGeoJSON, projects]);
+
+  }, [meldingen, selectedProjectId, selectedWijkId, wijkGeoJSON, projects, selectedDate]);
 
   const openMeldingenCountPerWijk = React.useMemo(() => {
     if (!meldingen || !selectedProject?.wijken) return {};
@@ -304,6 +334,30 @@ export default function IssuesPage() {
                                 ))}
                              </SelectContent>
                         </Select>
+                    </div>
+                    <div>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                            <Button
+                                variant={"outline"}
+                                className={cn(
+                                "w-[200px] justify-start text-left font-normal bg-card",
+                                !selectedDate && "text-muted-foreground"
+                                )}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {selectedDate ? format(selectedDate, "PPP", { locale: nl }) : <span>Kies een datum</span>}
+                            </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                            <Calendar
+                                mode="single"
+                                selected={selectedDate}
+                                onSelect={(date) => date && setSelectedDate(date)}
+                                initialFocus
+                            />
+                            </PopoverContent>
+                        </Popover>
                     </div>
                 </div>
                 <Button onClick={handleNewMelding} disabled={!selectedProjectId}>
