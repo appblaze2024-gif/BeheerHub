@@ -100,12 +100,41 @@ const meldingFormSchema = z.object({
 
 type MeldingFormValues = z.infer<typeof meldingFormSchema>;
 
-const hoofdcategorieOptions = ["Gladheid", "Afval", "Groen", "Weg en verkeer", "Overig"];
+const hoofdcategorieOptions = ["Groenbeheer", "Afval", "Wegen & Verkeer", "Straatmeubilair", "Water", "Overig"];
 const subcategorieOptions: Record<string, string[]> = {
-    "Gladheid": ["Glad in de route", "Glad buiten de route", "Opvriezen wegdek"],
-    "Afval": ["Zwerfafval", "Dumping", "Volle prullenbak"],
-    "Groen": ["Onkruid", "Boomonderhoud", "Maaien"],
-    "Weg en verkeer": ["Schade wegdek", "Verkeersbord", "Verlichting"],
+    "Groenbeheer": [
+        "Onkruid op verharding",
+        "Maaien bermen/gazons",
+        "Snoeien van bomen/struiken",
+        "Ziekte of plaag in beplanting",
+        "Boomwortelopdruk",
+        "Wateroverlast groenvoorziening"
+    ],
+    "Afval": [
+        "Zwerfafval",
+        "Illegale dumping",
+        "Volle of kapotte afvalbak",
+        "Verstopte rioolkolk",
+        "Hondenpoepoverlast"
+    ],
+    "Wegen & Verkeer": [
+        "Gat in de weg of losse tegel",
+        "Verzakking straatwerk",
+        "Kapotte of onduidelijke verkeersborden",
+        "Defecte straatverlichting",
+        "Gladheid (sneeuw/ijs)",
+        "Parkeeroverlast"
+    ],
+    "Straatmeubilair": [
+        "Kapotte bank, speeltoestel of paaltje",
+        "Vandalisme",
+        "Graffiti"
+    ],
+    "Water": [
+        "Water op straat",
+        "Verstopte duiker",
+        "Probleem met beschoeiing of oever"
+    ],
     "Overig": ["Overige melding"]
 };
 const statusOptions = [
@@ -574,7 +603,7 @@ export function MeldingDialog({
                 <Separator />
                  <div className="space-y-4">
                     <h3 className="text-lg font-medium">Inhoud</h3>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (
                         <FormItem>
                           <FormLabel>Hoofdcategorie</FormLabel>
