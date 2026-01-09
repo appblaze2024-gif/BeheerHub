@@ -8,9 +8,6 @@ import { Loader2, Trash2 } from 'lucide-react';
 import {
   useFirestore,
   useCollection,
-  addDocumentNonBlocking,
-  updateDocumentNonBlocking,
-  deleteDocumentNonBlocking,
 } from '@/firebase';
 import { collection, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { format } from 'date-fns';
@@ -194,6 +191,11 @@ export function DienstToevoegenSheet({
     }
   }
 
+  // Guard clause to prevent rendering and hook calls if essential props are missing.
+  if (!medewerker && !dienst) {
+    return null;
+  }
+  
   const medewerkerNaam = medewerker ? `${medewerker.voornaam || ''} ${
     medewerker.tussenvoegsel || ''
   } ${medewerker.achternaam || ''}`.trim() : 'Laden...';
@@ -202,10 +204,6 @@ export function DienstToevoegenSheet({
 
   const formattedDate = format(displayDate, 'eeee d MMMM yyyy', { locale: nl });
 
-  if (!medewerker && !dienst) {
-    return null;
-  }
-  
   const effectiveMedewerkerName = medewerker ? medewerkerNaam : dienst?.medewerkerId;
 
   const sortedVoertuigen = React.useMemo(() => {
