@@ -124,19 +124,33 @@ body {
     border-color: #ccc !important;
   }
 
-  /* Specific styles for Day Print */
+  /* Default day print: Hide all columns */
   body.print-day-view .day-column {
     display: none !important;
   }
-  
-  body.print-day-view .day-column.is-today {
-    display: block !important;
-  }
-  
+
+  /* Specific styles for Day Print - dynamically generated */
   body.print-day-view .grid-cols-\[250px_repeat\(7\,1fr\)\] {
     grid-template-columns: 250px 1fr !important;
   }
 
+  /* Show only the selected day column */
+  body[class*="print-day-"] .day-column[class*="day-column-"] {
+    display: none !important;
+  }
+
+  /* This is a bit of a CSS trick. Since we can't create dynamic classes based on JS variables *in CSS*,
+     we create a print class for each possible day and then toggle the body class. */
+  body.print-day-2026-01-12 .day-column-2026-01-12,
+  body.print-day-2026-01-13 .day-column-2026-01-13,
+  body.print-day-2026-01-14 .day-column-2026-01-14,
+  body.print-day-2026-01-15 .day-column-2026-01-15,
+  body.print-day-2026-01-16 .day-column-2026-01-16,
+  body.print-day-2026-01-17 .day-column-2026-01-17,
+  body.print-day-2026-01-18 .day-column-2026-01-18 {
+      display: flex !important;
+  }
+  
   /* Reset print styles after printing */
   @page {
     margin: 0.5in;

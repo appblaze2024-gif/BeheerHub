@@ -124,6 +124,7 @@ const DienstItem = ({ dienst, onEdit }: { dienst: Dienst, onEdit: (dienst: Diens
 
 export default function WorkPlanningPage() {
   const [currentDate, setCurrentDate] = React.useState(new Date());
+  const [selectedPrintDay, setSelectedPrintDay] = React.useState<Date>(new Date());
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | undefined>();
   
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
@@ -289,11 +290,23 @@ export default function WorkPlanningPage() {
     return totalMinutes / 60;
   };
   
-  const handlePrint = (mode: 'week' | 'day') => {
-    document.body.classList.add(mode === 'week' ? 'print-week-view' : 'print-day-view');
+ const handlePrint = (mode: 'week' | 'day') => {
+    const printDayClass = `print-day-${format(selectedPrintDay, 'yyyy-MM-dd')}`;
+    if (mode === 'day') {
+      document.body.classList.add('print-day-view', printDayClass);
+    } else {
+      document.body.classList.add('print-week-view');
+    }
+    
     window.print();
-    document.body.classList.remove('print-week-view', 'print-day-view');
+    
+    if (mode === 'day') {
+      document.body.classList.remove('print-day-view', printDayClass);
+    } else {
+      document.body.classList.remove('print-week-view');
+    }
   };
+
 
   return (
     <div className="flex flex-col flex-1 h-full min-h-0" id="planning-container">
@@ -343,11 +356,12 @@ export default function WorkPlanningPage() {
           {weekDays.map((day) => (
             <div
               key={day.toISOString()}
+              onClick={() => setSelectedPrintDay(day)}
               className={cn(
-                "sticky top-0 z-10 p-2 text-center bg-background border-b border-r",
-                "day-column",
+                "sticky top-0 z-10 p-2 text-center bg-background border-b border-r cursor-pointer day-column",
                 `day-column-${format(day, 'yyyy-MM-dd')}`,
-                isToday(day) && "is-today"
+                isToday(day) && "bg-blue-50",
+                isSameDay(day, selectedPrintDay) && "ring-2 ring-inset ring-blue-500"
               )}
             >
               <p className="font-semibold capitalize text-sm">
@@ -410,11 +424,11 @@ export default function WorkPlanningPage() {
                         onDragOver={(e) => handleDragOver(e, medewerker.id, day)}
                         onDragLeave={() => setDragOverCell(null)}
                         className={cn(
-                            "group relative p-2 border-b border-r min-h-[80px] flex flex-col gap-1 transition-colors",
-                            "day-column",
+                            "group relative p-2 border-b border-r min-h-[80px] flex flex-col gap-1 transition-colors day-column",
                             `day-column-${format(day, 'yyyy-MM-dd')}`,
-                             isToday(day) && "is-today",
-                            isDragOver && "bg-blue-50 ring-2 ring-blue-500"
+                             isToday(day) && "bg-blue-50",
+                             isSameDay(day, selectedPrintDay) && "ring-2 ring-inset ring-blue-500",
+                            isDragOver && "bg-blue-100"
                         )}
                     >
                         <div className="flex-1 space-y-1">
