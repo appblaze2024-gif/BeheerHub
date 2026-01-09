@@ -4,7 +4,7 @@ import * as React from 'react';
 import Map, { Marker, Popup, Source, Layer, FillLayer, LineLayer } from 'react-map-gl';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection } from 'firebase/firestore';
-import { Calendar as CalendarIcon, Plus, Search, List, Map as MapIcon, MoreHorizontal } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Search, List, Map as MapIcon, MoreHorizontal, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MeldingDialog } from '@/components/melding-dialog';
@@ -222,14 +222,15 @@ export default function IssuesPage() {
     const dayStart = startOfDay(selectedDate);
     
     timeFilteredMeldingen = searchedMeldingen.filter(melding => {
-        const creationDate = startOfDay(new Date(melding.datum));
-        if (melding.status === 'Afgerond') {
-            if (!melding.afhandeling_datum) return false;
-            const completionDate = startOfDay(new Date(melding.afhandeling_datum));
-            return isSameDay(completionDate, dayStart);
-        } else {
-            return creationDate <= dayStart;
-        }
+      const creationDate = startOfDay(new Date(melding.datum));
+      if (melding.status === 'Afgerond') {
+        if (!melding.afhandeling_datum) return false;
+        const completionDate = startOfDay(new Date(melding.afhandeling_datum));
+        return isSameDay(completionDate, dayStart);
+      } else {
+        // Show if selected date is on or after creation date
+        return creationDate <= dayStart;
+      }
     });
 
     if (!selectedProjectId) {
@@ -241,7 +242,28 @@ export default function IssuesPage() {
 
     if (!selectedWijkId || selectedWijkId === 'all') {
       const allProjectWijkNames = project.wijken.map(w => w.naam);
-      return timeFilteredMeldingen.filter(m => allProjectWijkNames.includes(m.wijk || ''));
+      return timeFilteredMeldingen.filter(m => {
+        // For 'all wijken', check if the melding's wijk is in the project's wijken list
+        // OR check if its coordinates fall into any of the project's wijk polygons
+        if (allProjectWijkNames.includes(m.wijk || '')) return true;
+
+        if (typeof m.latitude !== 'number' || typeof m.longitude !== 'number') return false;
+        const point = turf.point([m.longitude, m.latitude]);
+        
+        for (const wijk of project.wijken || []) {
+            try {
+                const wijkFeatures = JSON.parse(wijk.subGebieden);
+                 if (Array.isArray(wijkFeatures)) {
+                    for (const polygon of wijkFeatures) {
+                        if (turf.booleanPointInPolygon(point, polygon.geometry)) return true;
+                    }
+                 }
+            } catch {
+                continue;
+            }
+        }
+        return false;
+      });
     }
 
     const wijk = project.wijken.find(w => w.id === selectedWijkId);
