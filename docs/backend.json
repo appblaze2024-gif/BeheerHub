@@ -407,11 +407,20 @@
       "description": "Represents an issue or report (melding).",
       "properties": {
         "id": { "type": "string" },
-        "meldingnummer": { "type": "string" },
+        "intakenummer": { "type": "string" },
+        "datum": { "type": "string", "format": "date" },
+        "tijdstip": { "type": "string", "format": "time" },
+        "melder": { "type": "string" },
+        "aangenomen_door": { "type": "string" },
+        "extern_meldingsnummer": { "type": "string" },
         "latitude": { "type": "number" },
         "longitude": { "type": "number" },
+        "hoofdcategorie": { "type": "string" },
         "subcategorie": { "type": "string" },
-        "omschrijving": { "type": "string" },
+        "straatnaam": { "type": "string" },
+        "postcode": { "type": "string" },
+        "plaats": { "type": "string" },
+        "extra_informatie": { "type": "string" },
         "status": {
           "type": "string",
           "enum": [
@@ -425,10 +434,11 @@
             "Niet in beheer"
           ]
         },
-        "aangemaakt": { "type": "string", "format": "date" },
-        "toelichting": { "type": "string" }
+        "afhandeling_datum": { "type": "string", "format": "date" },
+        "afgehandeld_door": { "type": "string" },
+        "afhandeling_bijzonderheden": { "type": "string" }
       },
-      "required": ["id", "meldingnummer", "latitude", "longitude", "status", "aangemaakt"]
+      "required": ["id", "intakenummer", "datum", "tijdstip", "latitude", "longitude", "status", "hoofdcategorie", "subcategorie"]
     }
   },
   "auth": {

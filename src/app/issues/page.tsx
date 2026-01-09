@@ -13,11 +13,11 @@ const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGt
 
 type Melding = {
   id: string;
-  meldingnummer: string;
+  intakenummer: string;
   latitude: number;
   longitude: number;
   subcategorie: string;
-  omschrijving: string;
+  extra_informatie: string;
   status:
     | 'Nieuw'
     | 'Intern doorgezet'
@@ -27,8 +27,10 @@ type Melding = {
     | 'Dubbel gemeld'
     | 'Afgerond'
     | 'Niet in beheer';
-  aangemaakt: string;
-  toelichting: string;
+  datum: string;
+  straatnaam?: string;
+  postcode?: string;
+  plaats?: string;
 };
 
 const statusConfig = {
@@ -79,7 +81,7 @@ export default function IssuesPage() {
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
       <header className="absolute top-0 left-0 z-10 p-4 w-full flex flex-row items-start justify-between pointer-events-none">
-        <div className="flex flex-col gap-4 items-start">
+        <div className="flex flex-col gap-2 items-start">
             <div className="bg-card p-2 rounded-lg shadow-md pointer-events-auto">
                 <h1 className="text-xl font-bold">Meldingen Portaal</h1>
             </div>
@@ -132,18 +134,18 @@ export default function IssuesPage() {
                     anchor="bottom"
                 >
                     <div className="p-1 max-w-xs">
-                        <h3 className="font-bold text-base mb-2">Meldingnummer: {selectedMelding.meldingnummer}</h3>
+                        <h3 className="font-bold text-base mb-2">Melding: {selectedMelding.intakenummer}</h3>
                         <div className="grid grid-cols-[100px_1fr] gap-x-2 gap-y-1 text-sm">
+                            <span className="font-semibold">Locatie:</span>
+                            <span>{selectedMelding.straatnaam}, {selectedMelding.plaats}</span>
                             <span className="font-semibold">Subcategorie:</span>
                             <span>{selectedMelding.subcategorie}</span>
                             <span className="font-semibold">Omschrijving:</span>
-                            <span>{selectedMelding.omschrijving}</span>
+                            <span>{selectedMelding.extra_informatie}</span>
                             <span className="font-semibold">Status:</span>
                             <span>{selectedMelding.status}</span>
                             <span className="font-semibold">Aangemaakt:</span>
-                            <span>{selectedMelding.aangemaakt}</span>
-                             <span className="font-semibold">Toelichting:</span>
-                            <span>{selectedMelding.toelichting}</span>
+                            <span>{selectedMelding.datum}</span>
                         </div>
                     </div>
                 </Popup>
