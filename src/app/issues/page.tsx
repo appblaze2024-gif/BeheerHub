@@ -261,10 +261,6 @@ export default function IssuesPage() {
                 <div className="bg-card p-2 rounded-lg shadow-md">
                     <h1 className="text-xl font-bold">Meldingen Portaal</h1>
                 </div>
-                 <Button onClick={handleNewMelding}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Nieuwe Melding
-                </Button>
                 <div className='flex gap-4'>
                     <div>
                         <Label htmlFor='project-select' className='text-sm font-medium sr-only'>Project</Label>
@@ -310,6 +306,10 @@ export default function IssuesPage() {
                         </Select>
                     </div>
                 </div>
+                <Button onClick={handleNewMelding}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Nieuwe Melding
+                </Button>
             </div>
             <div className="w-full max-w-sm pointer-events-auto">
                 <div className="relative flex-1">
@@ -387,5 +387,3 @@ export default function IssuesPage() {
     </div>
   );
 }
-
-    
