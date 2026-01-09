@@ -587,7 +587,7 @@ function WijkenTab({
         id: new Date().toISOString(),
         naam: '',
         locatie: '',
-        subGebieden: '',
+        subGebieden: '[]',
       },
     ]);
   };
@@ -605,13 +605,17 @@ function WijkenTab({
       wijken.map((w) => (w.id === id ? { ...w, [field]: value } : w))
     );
   };
+  
+  const handleSaveCoordinates = (wijkId: string, coordinates: string) => {
+    handleInputChange(wijkId, 'subGebieden', coordinates);
+  }
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-[1fr_1fr_2fr_auto] gap-x-4 px-1 text-sm font-semibold">
         <Label>Wijk</Label>
         <Label>Locatie</Label>
-        <Label>Sub-gebieden</Label>
+        <Label>Gebied</Label>
         <span />
       </div>
       {wijken.map((wijk) => (
@@ -627,16 +631,11 @@ function WijkenTab({
             value={wijk.locatie}
             onChange={(e) => handleInputChange(wijk.id, 'locatie', e.target.value)}
           />
-          <Input
-            value={wijk.subGebieden}
-            onChange={(e) =>
-              handleInputChange(wijk.id, 'subGebieden', e.target.value)
-            }
-          />
+          <Button variant="outline" onClick={() => setMapWijk(wijk)}>
+            <MapPin className="mr-2 h-4 w-4" />
+            Gebied tekenen/bewerken
+          </Button>
           <div className="flex items-center">
-            <Button variant="ghost" size="icon" onClick={() => setMapWijk(wijk)}>
-                <MapPin className="h-4 w-4" />
-            </Button>
             <Button variant="ghost" size="icon" onClick={() => removeRow(wijk.id)}>
                 <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
@@ -652,6 +651,7 @@ function WijkenTab({
           open={!!mapWijk}
           onOpenChange={(open) => !open && setMapWijk(null)}
           wijk={mapWijk}
+          onSave={handleSaveCoordinates}
         />
       )}
     </div>
@@ -904,9 +904,7 @@ export default function ProjectsPage() {
         </TabsContent>
         <TabsContent
           value="organisatie"
-          className="flex-1 overflow-y-a_tool_code
-print(default_api.run_code(code='a = 1'))
-uto pt-6 pb-2 px-6"
+          className="flex-1 overflow-y-auto pt-6 pb-2 px-6"
         >
           <OrganisatieTab projectId={selectedProjectId} />
         </TabsContent>
