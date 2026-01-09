@@ -131,7 +131,10 @@ export default function ObjectsPage() {
     return selectedWijken.flatMap(wijk => {
       try {
         const featureCollection = JSON.parse(wijk.subGebieden);
-        return featureCollection.features.map((feature: any) => ({...feature, properties: { ...feature.properties, wijkNaam: wijk.naam }}));
+        if (featureCollection && featureCollection.features) {
+            return featureCollection.features.map((feature: any) => ({...feature, properties: { ...feature.properties, wijkNaam: wijk.naam }}));
+        }
+        return [];
       } catch (e) {
         console.error(`Invalid GeoJSON for wijk ${wijk.naam}:`, e);
         return [];
@@ -151,10 +154,12 @@ export default function ObjectsPage() {
       for (const wijk of selectedWijken) {
           try {
               const featureCollection = JSON.parse(wijk.subGebieden);
-              for (const feature of featureCollection.features) {
-                  if (turf.booleanPointInPolygon(point, feature)) {
-                      return true;
-                  }
+              if (featureCollection && featureCollection.features) {
+                for (const feature of featureCollection.features) {
+                    if (turf.booleanPointInPolygon(point, feature)) {
+                        return true;
+                    }
+                }
               }
           } catch(e) {
               // ignore invalid polygons
@@ -487,3 +492,5 @@ export default function ObjectsPage() {
     </div>
   );
 }
+
+    
