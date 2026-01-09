@@ -67,57 +67,48 @@ export default function RoutesPage() {
     }
   };
   
-  const updateRoute = async () => {
-    if (!drawRef.current) return;
+  const updateRoute = () => {
+    if (!drawRef.current || !mapRef.current) return;
+    const map = mapRef.current.getMap();
 
-    const { features } = drawRef.current.getAll();
-    if (features.length === 0) {
+    const data = drawRef.current.getAll();
+    
+    if (data.features.length === 0) {
       setRouteFeatures([]);
       setRoadDetails([]);
       setIsListOpen(false);
       return;
     }
     
-    const polygon = features[0];
-
-    // Use Turf.js to get the bounding box of the polygon
+    const polygon = data.features[0];
     const bbox = turf.bbox(polygon);
+    const boundingBox: [number, number, number, number] = [
+        map.project([bbox[0], bbox[1]]).x,
+        map.project([bbox[0], bbox[1]]).y,
+        map.project([bbox[2], bbox[3]]).x,
+        map.project([bbox[2], bbox[3]]).y,
+    ];
 
-    // Format bbox for Mapbox Tilequery API
-    const coordinates = `${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}`;
+    const roads = map.queryRenderedFeatures(boundingBox, {
+      layers: ['road']
+    });
 
-    try {
-      // Query the mapbox.mapbox-streets-v8 tileset for features within the bbox.
-      const response = await fetch(
-        `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${coordinates}.json?radius=0&limit=50&layers=road&access_token=${MAPBOX_TOKEN}`
-      );
-      
-      const data = await response.json();
-
-      if (data && data.features) {
-         // Filter the results to include only roads that are actually within the drawn polygon
-        const roadsInPolygon = data.features.filter((road: any) => {
-            if (road.geometry.type === 'LineString' && road.geometry.coordinates.length > 0) {
-                // This is a simplification. For full accuracy, you'd check every segment.
-                // For performance, we check if the first coordinate is in the polygon.
-                return turf.booleanPointInPolygon(road.geometry.coordinates[0], polygon);
-            }
-            return false;
-        });
-
-        setRouteFeatures(roadsInPolygon);
-        setRoadDetails(roadsInPolygon.map(road => road.properties));
-        setIsListOpen(true);
+    const roadsInPolygon = roads.filter((road: any) => {
+      if (road.geometry.type === 'LineString') {
+        // Check if any point of the road is inside the polygon
+        for (const coord of road.geometry.coordinates) {
+          if (turf.booleanPointInPolygon(coord, polygon as any)) {
+            return true;
+          }
+        }
       }
+      return false;
+    });
 
-    } catch (err) {
-      console.error('Error fetching route data:', err);
-      setRouteFeatures([]);
-      setRoadDetails([]);
-      setIsListOpen(false);
-    }
+    setRouteFeatures(roadsInPolygon);
+    setRoadDetails(roadsInPolygon.map(road => road.properties));
+    setIsListOpen(true);
   };
-
 
   return (
     <div className="flex flex-col flex-1 min-h-0 relative">
