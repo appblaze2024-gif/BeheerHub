@@ -22,6 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogClose,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -94,6 +95,7 @@ export function DienstToevoegenDialog({
 }: DienstToevoegenDialogProps) {
   const firestore = useFirestore();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const closeBtnRef = React.useRef<HTMLButtonElement>(null);
 
   const voertuigenCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -119,6 +121,7 @@ export function DienstToevoegenDialog({
       if (dienst) {
         form.reset({
           ...dienst,
+          boekingregelId: dienst.boekingregelId,
           onbetaaldePauze: dienst.onbetaaldePauze || 0,
           verbergEindtijd: dienst.verbergEindtijd || false,
           herhaalDienst: dienst.herhaalDienst || false,
@@ -170,7 +173,7 @@ export function DienstToevoegenDialog({
         );
         await addDocumentNonBlocking(dienstenColRef, dienstData);
       }
-      onOpenChange(false);
+      closeBtnRef.current?.click();
     } catch (error) {
       console.error('Fout bij opslaan dienst:', error);
     } finally {
@@ -182,7 +185,7 @@ export function DienstToevoegenDialog({
     if (!firestore || !dienst) return;
     try {
       await deleteDocumentNonBlocking(doc(firestore, 'projects', project.id, 'diensten', dienst.id));
-      onOpenChange(false);
+      closeBtnRef.current?.click();
     } catch (error) {
         console.error("Fout bij verwijderen dienst:", error);
     }
@@ -395,14 +398,16 @@ export function DienstToevoegenDialog({
                 )}
               </div>
               <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => onOpenChange(false)}
-                  disabled={isSubmitting}
-                >
-                  Annuleren
-                </Button>
+                <DialogClose asChild>
+                  <Button
+                    ref={closeBtnRef}
+                    type="button"
+                    variant="ghost"
+                    disabled={isSubmitting}
+                  >
+                    Annuleren
+                  </Button>
+                </DialogClose>
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? (
                     <>
