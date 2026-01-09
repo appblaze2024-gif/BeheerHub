@@ -17,7 +17,7 @@ interface PrintDayDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   weekDays: Date[];
-  onPrint: (mode: 'day', day: Date) => void;
+  onPrint: (day: Date) => void;
 }
 
 export function PrintDayDialog({
@@ -28,7 +28,7 @@ export function PrintDayDialog({
 }: PrintDayDialogProps) {
 
   const handleDaySelect = (day: Date) => {
-    onPrint('day', day);
+    onPrint(day);
     onOpenChange(false);
   };
 
@@ -36,9 +36,9 @@ export function PrintDayDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Print Dagplanning</DialogTitle>
+          <DialogTitle>Dagplanning Downloaden (PDF)</DialogTitle>
           <DialogDescription>
-            Selecteer de dag die u wilt afdrukken.
+            Selecteer de dag waarvan u een PDF wilt downloaden.
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-1 gap-2 py-4">

@@ -15,6 +15,8 @@ import {
 } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { collection, query, where, doc, getDocs, updateDoc, addDoc } from 'firebase/firestore';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
@@ -297,28 +299,64 @@ export default function WorkPlanningPage() {
     return totalMinutes / 60;
   };
   
- const handlePrint = (mode: 'week' | 'day', dayToPrint?: Date) => {
-    // Add a specific class to the body for print styling
-    const printDayClass = dayToPrint ? `print-day-${format(dayToPrint, 'yyyy-MM-dd')}` : '';
-    
-    // Clean up any other print classes before adding the new one
-    document.body.className = document.body.className.replace(/print-(day|week)-view/g, '').replace(/print-day-\d{4}-\d{2}-\d{2}/g, '').trim();
-
-    if (mode === 'day' && printDayClass) {
-        document.body.classList.add('print-day-view', printDayClass);
-    } else {
-        document.body.classList.add('print-week-view');
-    }
-    
-    // Trigger the browser's print dialog
+ const handlePrintWeek = () => {
+    document.body.classList.add('print-week-view');
+    document.body.classList.remove('print-day-view');
     window.print();
+ };
+
+  const generateDayPdf = (dayToPrint: Date) => {
+    if (!selectedProject || !medewerkers || !diensten) return;
+
+    const doc = new jsPDF();
+    const title = `Dagplanning: ${selectedProject.projectnaam}`;
+    const dateStr = format(dayToPrint, 'eeee d MMMM yyyy', { locale: nl });
+
+    doc.setFontSize(18);
+    doc.text(title, 14, 22);
+    doc.setFontSize(11);
+    doc.text(dateStr, 14, 30);
+
+    const body = medewerkers.map(medewerker => {
+      const medewerkerDiensten = diensten.filter(d =>
+        d.medewerkerId === medewerker.id && isSameDay(new Date(d.datum), dayToPrint)
+      );
+
+      const dienstenText = medewerkerDiensten.map(d =>
+        `${d.werksoort}\n${d.starttijd} - ${d.eindtijd}`
+      ).join('\n\n');
+
+      return [
+        `${medewerker.voornaam || ''} ${medewerker.achternaam || ''}`.trim(),
+        dienstenText
+      ];
+    });
+
+    (doc as any).autoTable({
+      startY: 40,
+      head: [['Medewerker', 'Dienst']],
+      body: body,
+      theme: 'grid',
+      styles: {
+        valign: 'middle'
+      },
+      headStyles: {
+        fillColor: [22, 160, 133], // A teal color
+        textColor: 255
+      },
+      columnStyles: {
+        0: { cellWidth: 50 },
+        1: { cellWidth: 'auto' },
+      }
+    });
+
+    doc.save(`dagplanning_${format(dayToPrint, 'yyyy-MM-dd')}.pdf`);
   };
 
   // Add a cleanup effect for the print classes
   React.useEffect(() => {
     const afterPrint = () => {
-      // Remove any print-specific classes after printing is done or cancelled
-       document.body.className = document.body.className.replace(/print-(day|week)-view/g, '').replace(/print-day-\d{4}-\d{2}-\d{2}/g, '').trim();
+       document.body.className = document.body.className.replace(/print-(day|week)-view/g, '').trim();
     };
 
     window.addEventListener('afterprint', afterPrint);
@@ -354,7 +392,7 @@ export default function WorkPlanningPage() {
           </Select>
           <Button variant="outline">Voertuigen</Button>
           <Button variant="outline" onClick={() => setIsPrintDayDialogOpen(true)}><Printer className="mr-2 h-4 w-4" /> Print Dag</Button>
-          <Button variant="outline" onClick={() => handlePrint('week')}><Printer className="mr-2 h-4 w-4" /> Print Week</Button>
+          <Button variant="outline" onClick={handlePrintWeek}><Printer className="mr-2 h-4 w-4" /> Print Week</Button>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={prevWeek}>
@@ -379,7 +417,6 @@ export default function WorkPlanningPage() {
               key={day.toISOString()}
               className={cn(
                 "sticky top-0 z-10 p-2 text-center bg-background border-b border-r day-column",
-                `day-column-${format(day, 'yyyy-MM-dd')}`,
                 isToday(day) && "bg-blue-50 dark:bg-blue-900/20"
               )}
             >
@@ -444,7 +481,6 @@ export default function WorkPlanningPage() {
                         onDragLeave={() => setDragOverCell(null)}
                         className={cn(
                             "group relative p-2 border-b border-r min-h-[80px] flex flex-col gap-1 transition-colors day-column",
-                            `day-column-${format(day, 'yyyy-MM-dd')}`,
                              isToday(day) && "bg-blue-50 dark:bg-blue-900/20",
                             isDragOver && "bg-blue-100 dark:bg-blue-900/30"
                         )}
@@ -490,7 +526,7 @@ export default function WorkPlanningPage() {
             open={isPrintDayDialogOpen}
             onOpenChange={setIsPrintDayDialogOpen}
             weekDays={weekDays}
-            onPrint={handlePrint}
+            onPrint={generateDayPdf}
         />
     </div>
   );
