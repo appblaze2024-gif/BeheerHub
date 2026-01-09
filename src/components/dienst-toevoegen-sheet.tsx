@@ -93,26 +93,26 @@ export function DienstToevoegenSheet({
 }: DienstToevoegenSheetProps) {
   const firestore = useFirestore();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  
+  const form = useForm<DienstFormValues>({
+    resolver: zodResolver(dienstFormSchema),
+  });
 
   const voertuigenCollection = React.useMemo(() => {
     if (!firestore) return null;
     return collection(firestore, 'voertuigen');
   }, [firestore]);
-
-  const { data: voertuigen, isLoading: isLoadingVoertuigen } =
-    useCollection<Voertuig>(voertuigenCollection);
-    
+  
   const boekingregelsCollection = React.useMemo(() => {
     if (!firestore || !project?.id) return null;
     return collection(firestore, 'projects', project.id, 'boekingregels');
   }, [firestore, project?.id]);
 
+  const { data: voertuigen, isLoading: isLoadingVoertuigen } =
+    useCollection<Voertuig>(voertuigenCollection);
+
   const { data: boekingregels, isLoading: isLoadingBoekingregels } = useCollection<Boekingregel>(boekingregelsCollection);
-
-  const form = useForm<DienstFormValues>({
-    resolver: zodResolver(dienstFormSchema),
-  });
-
+  
   const sortedVoertuigen = React.useMemo(() => {
     if (!voertuigen) return [];
     return [...voertuigen].sort((a, b) => {
@@ -121,6 +121,13 @@ export function DienstToevoegenSheet({
         return numA - numB;
     });
   }, [voertuigen]);
+  
+  const sortedBoekingregels = React.useMemo(() => {
+    if (!boekingregels) return [];
+    return [...boekingregels].sort((a, b) => 
+      a.naam.localeCompare(b.naam, undefined, { numeric: true, sensitivity: 'base' })
+    );
+  }, [boekingregels]);
 
   React.useEffect(() => {
     if (open) {
@@ -200,7 +207,6 @@ export function DienstToevoegenSheet({
     }
   }
   
-  // Guard clause to prevent rendering and hook calls if essential props are missing.
   if (!medewerker && !dienst) {
     return null;
   }
@@ -241,7 +247,7 @@ export function DienstToevoegenSheet({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {boekingregels?.map((regel) => (
+                        {sortedBoekingregels.map((regel) => (
                           <SelectItem key={regel.id} value={regel.id}>
                             {regel.naam}
                           </SelectItem>
