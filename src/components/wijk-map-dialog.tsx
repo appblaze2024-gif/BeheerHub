@@ -60,7 +60,6 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave }: WijkMapDialo
               features: features
             });
 
-            // Fly to the first feature
             if (features[0].geometry.type === 'Polygon') {
                 const firstCoord = features[0].geometry.coordinates[0][0];
                 map.flyTo({ center: firstCoord, zoom: 12 });
@@ -86,61 +85,26 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave }: WijkMapDialo
     setIsSearching(true);
     try {
         const response = await fetch(
-            `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
-              searchQuery
-            )}.json?access_token=${MAPBOX_TOKEN}&types=place,postcode,district,locality,neighborhood,address`
+            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&format=json&polygon_geojson=1&limit=1`
         );
         const data = await response.json();
 
-        if (data.features && data.features.length > 0) {
-            const feature = data.features[0];
-             // We need to get the polygon, geocoding often returns points.
-             // For simplicity, we'll draw a bounding box if no polygon is available.
-             // A proper boundary API would be needed for precise shapes like in the user's image.
+        if (data && data.length > 0 && data[0].geojson) {
+            const feature = data[0];
+            const geometry = feature.geojson;
             
-            let geometry;
-            if (feature.bbox) {
-                const [minX, minY, maxX, maxY] = feature.bbox;
-                geometry = {
-                    type: 'Polygon',
-                    coordinates: [
-                        [
-                            [minX, minY],
-                            [maxX, minY],
-                            [maxX, maxY],
-                            [minX, maxY],
-                            [minX, minY]
-                        ]
-                    ]
-                };
-            } else if (feature.geometry.type === 'Polygon') {
-                geometry = feature.geometry;
-            } else if (feature.geometry.type === 'Point') {
-                // Create a small box around the point as a fallback
-                const [lon, lat] = feature.geometry.coordinates;
-                const d = 0.01; // approx 1km
-                geometry = {
-                    type: 'Polygon',
-                    coordinates: [
-                        [
-                            [lon - d, lat - d],
-                            [lon + d, lat - d],
-                            [lon + d, lat + d],
-                            [lon - d, lat + d],
-                            [lon - d, lat - d]
-                        ]
-                    ]
-                };
-            }
-
-            if (geometry) {
-                drawRef.current.add({
+            if (geometry.type === 'Polygon' || geometry.type === 'MultiPolygon') {
+                 drawRef.current.add({
                     type: 'Feature',
-                    properties: { name: feature.place_name },
+                    properties: { name: feature.display_name },
                     geometry: geometry
                 });
-                mapRef.current?.getMap().flyTo({ center: feature.center, zoom: 12 });
+                const [lon, lat] = [parseFloat(feature.lon), parseFloat(feature.lat)];
+                mapRef.current?.getMap().flyTo({ center: [lon, lat], zoom: 12 });
+            } else {
+                 alert('Geen gedetailleerde grenzen gevonden voor deze locatie. Probeer een andere zoekterm.');
             }
+
         } else {
             alert('Geen resultaten gevonden.');
         }
@@ -177,7 +141,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave }: WijkMapDialo
             <div className="flex w-full max-w-sm items-center space-x-2">
             <Input
                 type="text"
-                placeholder="Zoek een plaatsnaam..."
+                placeholder="Zoek een plaatsnaam, wijk of buurt..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
