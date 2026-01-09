@@ -88,9 +88,10 @@ export default function RoutesPage() {
       if (data && data.features) {
          // Filter the results to include only roads that are actually within the drawn polygon
         const roadsInPolygon = data.features.filter((road: any) => {
-            if (road.geometry.type === 'LineString') {
-                 // For lines, check if any part of the line is inside the polygon
-                return !turf.booleanDisjoint(road.geometry, polygon.geometry);
+            if (road.geometry.type === 'LineString' && road.geometry.coordinates.length > 0) {
+                // Check if the midpoint of the road is inside the polygon
+                const midpoint = turf.midpoint(turf.point(road.geometry.coordinates[0]), turf.point(road.geometry.coordinates[road.geometry.coordinates.length - 1]));
+                return turf.booleanPointInPolygon(midpoint, polygon);
             }
             return false;
         });
