@@ -400,6 +400,35 @@
         "voertuigId": { "type": ["string", "null"] }
       },
       "required": ["medewerkerId", "projectId", "boekingregelId", "starttijd", "eindtijd", "datum"]
+    },
+    "Melding": {
+      "title": "Melding",
+      "type": "object",
+      "description": "Represents an issue or report (melding).",
+      "properties": {
+        "id": { "type": "string" },
+        "meldingnummer": { "type": "string" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "subcategorie": { "type": "string" },
+        "omschrijving": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Nieuw",
+            "Intern doorgezet",
+            "In behandeling",
+            "Gepland op korte termijn",
+            "Gepland op langere termijn",
+            "Dubbel gemeld",
+            "Afgerond",
+            "Niet in beheer"
+          ]
+        },
+        "aangemaakt": { "type": "string", "format": "date" },
+        "toelichting": { "type": "string" }
+      },
+      "required": ["id", "meldingnummer", "latitude", "longitude", "status", "aangemaakt"]
     }
   },
   "auth": {
@@ -529,6 +558,17 @@
           "description": "Stores all physical objects for the application.",
           "params": [
             { "name": "objectId", "description": "The ID of the object." }
+          ]
+        }
+      },
+      {
+        "path": "/meldingen/{meldingId}",
+        "definition": {
+          "entityName": "Melding",
+          "schema": { "$ref": "#/backend/entities/Melding" },
+          "description": "Stores all issues/reports for the application.",
+          "params": [
+            { "name": "meldingId", "description": "The ID of the issue." }
           ]
         }
       },
