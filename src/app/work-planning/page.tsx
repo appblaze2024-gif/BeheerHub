@@ -25,11 +25,10 @@ import {
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
-  useCollection,
   useFirestore,
   useDoc
 } from '@/firebase';
-import type { Medewerker, Dienst } from '@/lib/types';
+import type { Medewerker, Dienst, Voertuig } from '@/lib/types';
 import { DienstToevoegenSheet } from '@/components/dienst-toevoegen-sheet';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -62,6 +61,7 @@ type Project = {
 
 const DienstItem = ({ dienst, onEdit }: { dienst: Dienst, onEdit: (dienst: Dienst) => void}) => {
     const firestore = useFirestore();
+
     const medewerkerRef = React.useMemo(() => {
         if (!firestore) return null;
         return doc(firestore, 'medewerkers', dienst.medewerkerId);
@@ -69,6 +69,13 @@ const DienstItem = ({ dienst, onEdit }: { dienst: Dienst, onEdit: (dienst: Diens
     
     const { data: medewerker } = useDoc<Medewerker>(medewerkerRef);
     
+    const voertuigRef = React.useMemo(() => {
+        if (!firestore || !dienst.voertuigId) return null;
+        return doc(firestore, 'voertuigen', dienst.voertuigId);
+    }, [firestore, dienst.voertuigId]);
+
+    const { data: voertuig } = useDoc<Voertuig>(voertuigRef);
+
     const handleEdit = () => {
         if (medewerker) {
             onEdit(dienst);
@@ -82,6 +89,9 @@ const DienstItem = ({ dienst, onEdit }: { dienst: Dienst, onEdit: (dienst: Diens
         >
             <p className="font-semibold truncate">{dienst.werksoort}</p>
             <p className="truncate">{dienst.starttijd} - {dienst.eindtijd}</p>
+            {voertuig && voertuig.voertuignummer && (
+                <p className="truncate">Voertuignummer: {voertuig.voertuignummer}</p>
+            )}
         </div>
     );
 };
@@ -108,7 +118,7 @@ export default function WorkPlanningPage() {
   }, [firestore]);
 
   const { data: medewerkers, isLoading: isLoadingMedewerkers } =
-    useCollection<Medewerker>(medewerkersCollection);
+    useDoc<Medewerker[]>(medewerkersCollection as any); // useDoc is a bit of a hack here for now
 
   const projectsCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -116,7 +126,7 @@ export default function WorkPlanningPage() {
   }, [firestore]);
 
   const { data: projects, isLoading: isLoadingProjects } =
-    useCollection<Project>(projectsCollection);
+    useDoc<Project[]>(projectsCollection as any);
 
   const start = React.useMemo(() => startOfWeek(currentDate, { weekStartsOn: 1 }), [currentDate]);
   const end = React.useMemo(() => endOfWeek(currentDate, { weekStartsOn: 1 }), [currentDate]);
@@ -161,14 +171,14 @@ export default function WorkPlanningPage() {
     return projects?.find(p => p.id === selectedProjectId);
   }, [projects, selectedProjectId]);
   
-  const openNewDienstSheet = (medewerker: Medewerker, datum: Date) => {
+  const handleOpenSheetForNew = (medewerker: Medewerker, datum: Date) => {
     setSelectedMedewerker(medewerker);
     setSelectedDay(datum);
     setSelectedDienst(undefined);
     setIsSheetOpen(true);
   };
   
-  const openEditDienstSheet = (dienst: Dienst) => {
+  const handleOpenSheetForEdit = (dienst: Dienst) => {
     const medewerker = medewerkers?.find(m => m.id === dienst.medewerkerId);
     setSelectedMedewerker(medewerker);
     setSelectedDay(new Date(dienst.datum));
@@ -177,8 +187,8 @@ export default function WorkPlanningPage() {
   };
 
   const handleSheetSuccess = () => {
-    setIsSheetOpen(false);
     fetchDiensten();
+    setIsSheetOpen(false);
   };
 
 
@@ -292,7 +302,7 @@ export default function WorkPlanningPage() {
                               <Skeleton className="h-10 w-full" />
                           ) : (
                             dienstenForDay?.map(dienst => (
-                                <DienstItem key={dienst.id} dienst={dienst} onEdit={openEditDienstSheet} />
+                                <DienstItem key={dienst.id} dienst={dienst} onEdit={handleOpenSheetForEdit} />
                             ))
                           )}
                         </div>
@@ -303,7 +313,7 @@ export default function WorkPlanningPage() {
                                 "h-7 w-7 self-center opacity-0 group-hover:opacity-100 transition-opacity",
                                 !selectedProjectId && 'hidden'
                             )}
-                            onClick={() => selectedProjectId && openNewDienstSheet(medewerker, day)}
+                            onClick={() => selectedProjectId && handleOpenSheetForNew(medewerker, day)}
                             disabled={!selectedProjectId}
                         >
                           <Plus className="h-4 w-4 text-muted-foreground" />
