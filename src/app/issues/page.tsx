@@ -97,10 +97,11 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
 
   return (
     <div className="overflow-y-auto">
-      <div className="grid grid-cols-[1fr_2fr_2fr_120px_50px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
+      <div className="grid grid-cols-[1fr_2fr_2fr_1.5fr_120px_50px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
         <span>Intakenummer</span>
         <span>Subcategorie</span>
         <span>Adres</span>
+        <span>Wijk</span>
         <span>Status</span>
         <span />
       </div>
@@ -108,11 +109,12 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
         <div
           key={melding.id}
           onClick={() => onMeldingClick(melding)}
-          className="grid grid-cols-[1fr_2fr_2fr_120px_50px] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
+          className="grid grid-cols-[1fr_2fr_2fr_1.5fr_120px_50px] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
         >
           <span className="font-medium truncate">{melding.intakenummer}</span>
           <span className="truncate">{melding.subcategorie}</span>
           <span className="truncate">{`${melding.straatnaam || ''}, ${melding.plaats || ''}`}</span>
+          <span className="truncate">{melding.wijk || '-'}</span>
           <Badge
             style={{
               backgroundColor: statusConfig[melding.status]?.color || '#ccc',
