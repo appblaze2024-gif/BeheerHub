@@ -137,6 +137,12 @@ export function MeldingDialog({
 
   const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsCollection);
 
+  const allWijken = React.useMemo(() => {
+    if (!projects) return [];
+    return projects.flatMap(p => p.wijken || []).sort((a, b) => a.naam.localeCompare(b.naam));
+  }, [projects]);
+
+
   const form = useForm<MeldingFormValues>({
     resolver: zodResolver(meldingFormSchema),
   });
@@ -281,9 +287,9 @@ export function MeldingDialog({
 
     if (!isNaN(lat) && !isNaN(lon)) {
         const foundWijk = findWijkForPoint(lat, lon);
-        form.setValue('wijk', foundWijk || 'Niet gevonden');
+        form.setValue('wijk', foundWijk || '');
     } else {
-        form.setValue('wijk', 'Kon wijk niet bepalen');
+        form.setValue('wijk', '');
     }
     setSuggestions([]);
   };
@@ -305,7 +311,7 @@ export function MeldingDialog({
     const postcode = addressParts.length > 1 ? addressParts[1] : '';
     const plaats = addressParts.length > 2 ? addressParts[2] : '';
 
-    const wijk = findWijkForPoint(coordinates.lat, coordinates.lng);
+    const wijk = data.wijk || findWijkForPoint(coordinates.lat, coordinates.lng);
 
     const meldingData = {
       ...data,
@@ -426,14 +432,30 @@ export function MeldingDialog({
                         <FormMessage />
                     </FormItem>
                   )} />
-                   <FormField control={form.control} name="wijk" render={({ field }) => (
+                    <FormField
+                      control={form.control}
+                      name="wijk"
+                      render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Wijk</FormLabel>
+                          <FormLabel>Wijk</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
-                                <Input {...field} disabled placeholder="Wordt automatisch bepaald..." />
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecteer een wijk" />
+                              </SelectTrigger>
                             </FormControl>
+                            <SelectContent>
+                              {allWijken.map((wijk) => (
+                                <SelectItem key={wijk.id} value={wijk.naam}>
+                                  {wijk.naam}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
                         </FormItem>
-                    )} />
+                      )}
+                    />
               </div>
               <FormField control={form.control} name="extra_informatie" render={({ field }) => (
                   <FormItem><FormLabel>Extra informatie melding</FormLabel><FormControl><Textarea rows={4} {...field} /></FormControl><FormMessage /></FormItem>
