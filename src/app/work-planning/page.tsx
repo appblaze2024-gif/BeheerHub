@@ -12,7 +12,7 @@ import {
   isSameDay,
 } from 'date-fns';
 import { nl } from 'date-fns/locale';
-import { collection, query, where, doc } from 'firebase/firestore';
+import { collection, query, where, doc, getDocs } from 'firebase/firestore';
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
@@ -30,8 +30,9 @@ import {
   useDoc
 } from '@/firebase';
 import type { Medewerker, Dienst } from '@/lib/types';
-import { DienstToevoegenSheet } from '@/components/dienst-toevoegen-dialog';
+import { DienstToevoegenSheet } from '@/components/dienst-toevoegen-sheet';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const getInitials = (firstName?: string, lastName?: string) => {
     const firstInitial = firstName?.[0] || '';
@@ -94,6 +95,10 @@ export default function WorkPlanningPage() {
   const [selectedMedewerker, setSelectedMedewerker] = React.useState<Medewerker | undefined>();
   const [selectedDay, setSelectedDay] = React.useState<Date | undefined>();
   const [selectedDienst, setSelectedDienst] = React.useState<Dienst | undefined>();
+  
+  const [diensten, setDiensten] = React.useState<Dienst[] | null>(null);
+  const [isLoadingDiensten, setIsLoadingDiensten] = React.useState(false);
+
 
   const firestore = useFirestore();
 
@@ -116,18 +121,37 @@ export default function WorkPlanningPage() {
   const start = startOfWeek(currentDate, { weekStartsOn: 1 });
   const end = endOfWeek(currentDate, { weekStartsOn: 1 });
   
-  const dienstenQuery = React.useMemo(() => {
-    if (!firestore || !selectedProjectId) return null;
-    return query(
-        collection(firestore, 'projects', selectedProjectId, 'diensten'),
-        where('datum', '>=', format(start, 'yyyy-MM-dd')),
-        where('datum', '<=', format(end, 'yyyy-MM-dd'))
+  const fetchDiensten = React.useCallback(async () => {
+    if (!firestore || !selectedProjectId) {
+      setDiensten([]);
+      return;
+    }
+    setIsLoadingDiensten(true);
+    const startDateString = format(start, 'yyyy-MM-dd');
+    const endDateString = format(end, 'yyyy-MM-dd');
+
+    const dienstenQuery = query(
+      collection(firestore, 'projects', selectedProjectId, 'diensten'),
+      where('datum', '>=', startDateString),
+      where('datum', '<=', endDateString)
     );
+
+    try {
+      const querySnapshot = await getDocs(dienstenQuery);
+      const dienstenData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Dienst));
+      setDiensten(dienstenData);
+    } catch (error) {
+      console.error("Error fetching diensten: ", error);
+      setDiensten([]);
+    } finally {
+      setIsLoadingDiensten(false);
+    }
   }, [firestore, selectedProjectId, start, end]);
 
-  const { data: diensten, isLoading: isLoadingDiensten } = useCollection<Dienst>(dienstenQuery);
+  React.useEffect(() => {
+    fetchDiensten();
+  }, [fetchDiensten]);
   
-
   const weekDays = eachDayOfInterval({ start, end });
 
   const prevWeek = () => setCurrentDate(sub(currentDate, { weeks: 1 }));
@@ -151,6 +175,12 @@ export default function WorkPlanningPage() {
     setSelectedDienst(dienst);
     setIsSheetOpen(true);
   };
+
+  const handleSheetSuccess = () => {
+    fetchDiensten(); // Refetch data after a successful operation
+    setIsSheetOpen(false); // Close the sheet
+  };
+
 
   return (
     <div className="flex flex-col flex-1 h-full min-h-0">
@@ -211,8 +241,20 @@ export default function WorkPlanningPage() {
 
           {/* Data Rows */}
           {isLoadingMedewerkers ? (
-            <div className="col-span-8 p-4 text-center text-muted-foreground">
-              Medewerkers laden...
+            <div className="col-span-8 p-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className='grid grid-cols-[250px_repeat(7,1fr)]'>
+                    <div className='p-3 border-b border-r'>
+                        <div className="flex items-center gap-3">
+                           <Skeleton className="h-8 w-8 rounded-full" />
+                           <Skeleton className="h-4 w-24" />
+                        </div>
+                    </div>
+                    {Array.from({ length: 7 }).map((_, j) => (
+                         <div key={j} className="p-2 border-b border-r min-h-[80px]" />
+                    ))}
+                </div>
+              ))}
             </div>
           ) : (
             medewerkers?.map((medewerker) => (
@@ -246,9 +288,13 @@ export default function WorkPlanningPage() {
                         className="group relative p-2 border-b border-r min-h-[80px] flex flex-col gap-1"
                     >
                         <div className="flex-1 space-y-1">
-                          {dienstenForDay?.map(dienst => (
-                              <DienstItem key={dienst.id} dienst={dienst} onEdit={openEditDienstSheet} />
-                          ))}
+                          {isLoadingDiensten ? (
+                              <Skeleton className="h-10 w-full" />
+                          ) : (
+                            dienstenForDay?.map(dienst => (
+                                <DienstItem key={dienst.id} dienst={dienst} onEdit={openEditDienstSheet} />
+                            ))
+                          )}
                         </div>
                         <Button 
                             variant="ghost" 
@@ -276,6 +322,7 @@ export default function WorkPlanningPage() {
             datum={selectedDay}
             project={selectedProject}
             dienst={selectedDienst}
+            onSuccess={handleSheetSuccess}
         />
     </div>
   );

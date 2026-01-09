@@ -79,6 +79,7 @@ interface DienstToevoegenSheetProps {
     id: string;
   };
   dienst?: Dienst;
+  onSuccess: () => void;
 }
 
 export function DienstToevoegenSheet({
@@ -88,6 +89,7 @@ export function DienstToevoegenSheet({
   datum,
   project,
   dienst,
+  onSuccess,
 }: DienstToevoegenSheetProps) {
   const firestore = useFirestore();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -168,7 +170,7 @@ export function DienstToevoegenSheet({
         );
         await addDoc(dienstenColRef, dienstData);
       }
-      onOpenChange(false);
+      onSuccess();
     } catch (error) {
       console.error('Fout bij opslaan dienst:', error);
     } finally {
@@ -178,11 +180,14 @@ export function DienstToevoegenSheet({
 
   const handleDelete = async () => {
     if (!firestore || !dienst || !project?.id) return;
+    setIsSubmitting(true);
     try {
       await deleteDoc(doc(firestore, 'projects', project.id, 'diensten', dienst.id));
-      onOpenChange(false);
+      onSuccess();
     } catch (error) {
         console.error("Fout bij verwijderen dienst:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
