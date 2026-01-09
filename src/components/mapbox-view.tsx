@@ -53,42 +53,38 @@ export function MapboxView({ longitude, latitude, objects, wijkPolygons = [] }: 
 
   const mapRef = React.useRef<any>(null);
 
-  const initialLongitude = objects && objects.length > 0 ? objects[0].longitude : (longitude || 5.2913);
-  const initialLatitude = objects && objects.length > 0 ? objects[0].latitude : (latitude || 52.1326);
-  const initialZoom = objects && objects.length > 0 ? 10 : (longitude && latitude ? 15 : 7);
-
-  const [viewport, setViewport] = React.useState({
-    longitude: initialLongitude,
-    latitude: initialLatitude,
-    zoom: initialZoom,
-  });
+  const initialViewState = {
+    longitude: longitude || 5.2913,
+    latitude: latitude || 52.1326,
+    zoom: longitude && latitude ? 15 : 7,
+  };
   
   React.useEffect(() => {
-    if (mapRef.current && wijkPolygons.length > 0) {
-      const allCoordinates = wijkPolygons.flatMap(f => turf.coordAll(f));
-      if (allCoordinates.length > 0) {
-          const bbox = turf.bbox({ type: 'FeatureCollection', features: wijkPolygons });
-          mapRef.current.fitBounds(bbox, { padding: 40, duration: 1000 });
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+    
+    if (wijkPolygons.length > 0) {
+      try {
+        const featureCollection = { type: 'FeatureCollection', features: wijkPolygons };
+        const bbox = turf.bbox(featureCollection);
+        map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
+      } catch (e) {
+        console.error("Error fitting bounds:", e);
       }
     } else if (!longitude && !latitude) {
         // Reset to default view if no polygons and no specific coords
-         mapRef.current?.flyTo({
-            center: [initialLongitude, initialLatitude],
-            zoom: initialZoom,
+         map.flyTo({
+            center: [5.2913, 52.1326],
+            zoom: 7,
             duration: 1000
         });
     }
-  }, [wijkPolygons, longitude, latitude, initialLatitude, initialLongitude, initialZoom]);
+  }, [wijkPolygons, longitude, latitude]);
 
 
   React.useEffect(() => {
     if (longitude && latitude && !objects) {
-      setViewport(prev => ({
-        ...prev,
-        longitude,
-        latitude,
-        zoom: 15,
-      }));
+      mapRef.current?.flyTo({ center: [longitude, latitude], zoom: 15});
     }
   }, [longitude, latitude, objects]);
 
@@ -121,8 +117,7 @@ export function MapboxView({ longitude, latitude, objects, wijkPolygons = [] }: 
   return (
     <Map
       ref={mapRef}
-      {...viewport}
-      onMove={evt => setViewport(evt.viewState)}
+      initialViewState={initialViewState}
       style={{ width: '100%', height: '100%' }}
       mapStyle="mapbox://styles/mapbox/streets-v11"
       mapboxAccessToken={MAPBOX_TOKEN}
