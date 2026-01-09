@@ -39,7 +39,7 @@ export default function RoutesPage() {
       const ne = map.project([polygonBoundingBox[2], polygonBoundingBox[3]]);
       
       const roads = map.queryRenderedFeatures([sw, ne], {
-        layers: allRoadTypes.map(type => `road-${type}`)
+        layers: ['road']
       });
 
       const roadsInPolygon = roads.filter(road => {
@@ -84,7 +84,9 @@ export default function RoutesPage() {
   };
 
   const clearRoute = () => {
-    drawRef.current?.deleteAll();
+    if (drawRef.current) {
+      drawRef.current.deleteAll();
+    }
     setDrawnPolygon(null);
     setRouteLayerData(null);
     setRoadTypesInPolygon([]);
