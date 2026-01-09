@@ -292,6 +292,13 @@ export default function WorkPlanningPage() {
   
  const handlePrint = (mode: 'week' | 'day') => {
     const printDayClass = `print-day-${format(selectedPrintDay, 'yyyy-MM-dd')}`;
+    document.body.classList.remove('print-day-view', 'print-week-view');
+    document.querySelectorAll('[class*="print-day-"]').forEach(el => {
+      const cls = Array.from(el.classList).find(c => c.startsWith('print-day-'));
+      if (cls) el.classList.remove(cls);
+    });
+
+
     if (mode === 'day') {
       document.body.classList.add('print-day-view', printDayClass);
     } else {
@@ -299,13 +306,22 @@ export default function WorkPlanningPage() {
     }
     
     window.print();
-    
-    if (mode === 'day') {
-      document.body.classList.remove('print-day-view', printDayClass);
-    } else {
-      document.body.classList.remove('print-week-view');
-    }
   };
+
+  React.useEffect(() => {
+    const afterPrint = () => {
+        document.body.classList.remove('print-day-view', 'print-week-view');
+        const printDayClass = Array.from(document.body.classList).find(c => c.startsWith('print-day-'));
+        if (printDayClass) {
+            document.body.classList.remove(printDayClass);
+        }
+    };
+
+    window.addEventListener('afterprint', afterPrint);
+    return () => {
+        window.removeEventListener('afterprint', afterPrint);
+    };
+  }, []);
 
 
   return (
@@ -360,7 +376,7 @@ export default function WorkPlanningPage() {
               className={cn(
                 "sticky top-0 z-10 p-2 text-center bg-background border-b border-r cursor-pointer day-column",
                 `day-column-${format(day, 'yyyy-MM-dd')}`,
-                isToday(day) && "bg-blue-50",
+                isToday(day) && "bg-blue-50 dark:bg-blue-900/20",
                 isSameDay(day, selectedPrintDay) && "ring-2 ring-inset ring-blue-500"
               )}
             >
@@ -426,9 +442,9 @@ export default function WorkPlanningPage() {
                         className={cn(
                             "group relative p-2 border-b border-r min-h-[80px] flex flex-col gap-1 transition-colors day-column",
                             `day-column-${format(day, 'yyyy-MM-dd')}`,
-                             isToday(day) && "bg-blue-50",
+                             isToday(day) && "bg-blue-50 dark:bg-blue-900/20",
                              isSameDay(day, selectedPrintDay) && "ring-2 ring-inset ring-blue-500",
-                            isDragOver && "bg-blue-100"
+                            isDragOver && "bg-blue-100 dark:bg-blue-900/30"
                         )}
                     >
                         <div className="flex-1 space-y-1">

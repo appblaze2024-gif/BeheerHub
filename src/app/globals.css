@@ -91,7 +91,7 @@ body {
 @media print {
   /* Hide all elements by default */
   body > * {
-    display: none;
+    display: none !important;
   }
   
   /* Show only the planning container and its children */
@@ -124,31 +124,28 @@ body {
     border-color: #ccc !important;
   }
 
-  /* Default day print: Hide all columns */
+  /* Default state: hide all columns for day view */
   body.print-day-view .day-column {
     display: none !important;
   }
 
-  /* Specific styles for Day Print - dynamically generated */
+  /* Adjust grid for day view */
   body.print-day-view .grid-cols-\[250px_repeat\(7\,1fr\)\] {
     grid-template-columns: 250px 1fr !important;
   }
-
-  /* Show only the selected day column */
-  body[class*="print-day-"] .day-column[class*="day-column-"] {
+  
+  /* Dynamically show only the selected day column.
+     The class name is set on the body tag via JavaScript. */
+  body.print-day-view [class*="day-column-"] {
     display: none !important;
   }
+  
+  body.print-day-view .day-column.ring-2 {
+    display: flex !important;
+  }
 
-  /* This is a bit of a CSS trick. Since we can't create dynamic classes based on JS variables *in CSS*,
-     we create a print class for each possible day and then toggle the body class. */
-  body.print-day-2026-01-12 .day-column-2026-01-12,
-  body.print-day-2026-01-13 .day-column-2026-01-13,
-  body.print-day-2026-01-14 .day-column-2026-01-14,
-  body.print-day-2026-01-15 .day-column-2026-01-15,
-  body.print-day-2026-01-16 .day-column-2026-01-16,
-  body.print-day-2026-01-17 .day-column-2026-01-17,
-  body.print-day-2026-01-18 .day-column-2026-01-18 {
-      display: flex !important;
+  body.print-week-view .day-column {
+    display: flex !important;
   }
   
   /* Reset print styles after printing */
