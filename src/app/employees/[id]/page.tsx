@@ -264,12 +264,12 @@ function RoosterTab({ medewerkerId }: { medewerkerId: string }) {
   const [currentDate, setCurrentDate] = React.useState(new Date());
   const [diensten, setDiensten] = React.useState<Record<string, Dienst[]>>({});
 
-  const firstDayOfMonth = startOfMonth(currentDate);
-  const lastDayOfMonth = endOfMonth(currentDate);
-
   React.useEffect(() => {
     const fetchDiensten = async () => {
       if (!firestore) return;
+      
+      const firstDayOfMonth = startOfMonth(currentDate);
+      const lastDayOfMonth = endOfMonth(currentDate);
       
       setDiensten({}); // Reset on new fetch
 
@@ -307,8 +307,10 @@ function RoosterTab({ medewerkerId }: { medewerkerId: string }) {
     };
 
     fetchDiensten();
-  }, [firestore, currentDate, medewerkerId, firstDayOfMonth, lastDayOfMonth]);
+  }, [firestore, currentDate, medewerkerId]);
 
+  const firstDayOfMonth = startOfMonth(currentDate);
+  const lastDayOfMonth = endOfMonth(currentDate);
   const prevMonth = () => setCurrentDate(sub(currentDate, { months: 1 }));
   const nextMonth = () => setCurrentDate(add(currentDate, { months: 1 }));
 
