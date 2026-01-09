@@ -62,6 +62,13 @@ service cloud.firestore {
        }
 
        /**
+        * @description Secures project-specific booking rules. Any authenticated user can manage them.
+        */
+       match /boekingregels/{boekingregelId} {
+         allow read, write: if isSignedIn();
+       }
+
+       /**
         * @description Secures project-specific files. Any authenticated user can manage them.
         */
        match /bestanden/{bestandId} {
