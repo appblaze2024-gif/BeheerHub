@@ -167,6 +167,36 @@ export default function ObjectsPage() {
     });
   }, [objects, wijkPolygons]);
 
+  const objectCountsPerWijk = React.useMemo(() => {
+    if (!objects || !selectedProject?.wijken) return {};
+
+    const counts: { [wijkId: string]: number } = {};
+
+    for (const wijk of selectedProject.wijken) {
+      let objectCount = 0;
+      try {
+        const features = JSON.parse(wijk.subGebieden);
+        if (Array.isArray(features)) {
+          for (const obj of objects) {
+            if (typeof obj.latitude === 'number' && typeof obj.longitude === 'number') {
+              const point = turf.point([obj.longitude, obj.latitude]);
+              for (const polygon of features) {
+                if (turf.booleanPointInPolygon(point, polygon)) {
+                  objectCount++;
+                  break; // Count object only once per wijk
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        // Ignore parsing errors for this calculation
+      }
+      counts[wijk.id] = objectCount;
+    }
+    return counts;
+  }, [objects, selectedProject?.wijken]);
+
 
   return (
     <div className="flex flex-col flex-1 h-full min-h-0 bg-muted/30">
@@ -474,7 +504,10 @@ export default function ObjectsPage() {
                                     checked={selectedWijkIds.includes(wijk.id)}
                                     onCheckedChange={(checked) => handleWijkSelectionChange(wijk.id, !!checked)}
                                 />
-                                <Label htmlFor={`wijk-${wijk.id}`} className="font-normal">{wijk.naam}</Label>
+                                <Label htmlFor={`wijk-${wijk.id}`} className="font-normal flex justify-between w-full">
+                                  <span>{wijk.naam}</span>
+                                  <span className="text-muted-foreground">({objectCountsPerWijk[wijk.id] || 0})</span>
+                                </Label>
                             </div>
                         ))
                     ) : (
