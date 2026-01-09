@@ -5,6 +5,7 @@ import Map, { Layer, Source } from 'react-map-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shapes } from 'lucide-react';
 import * as turf from '@turf/turf';
 
@@ -15,6 +16,7 @@ export default function RoutesPage() {
   const drawRef = React.useRef<MapboxDraw | null>(null);
   const [isDrawing, setIsDrawing] = React.useState(false);
   const [routeFeatures, setRouteFeatures] = React.useState<any[]>([]);
+  const [roadDetails, setRoadDetails] = React.useState<any[]>([]);
 
   const initialViewState = {
     longitude: 5.2913,
@@ -50,6 +52,7 @@ export default function RoutesPage() {
       map.removeControl(drawRef.current);
       setIsDrawing(false);
       setRouteFeatures([]);
+      setRoadDetails([]);
     } else {
       map.addControl(drawRef.current);
       setIsDrawing(true);
@@ -62,6 +65,7 @@ export default function RoutesPage() {
     const { features } = drawRef.current.getAll();
     if (features.length === 0) {
       setRouteFeatures([]);
+      setRoadDetails([]);
       return;
     }
     
@@ -91,22 +95,14 @@ export default function RoutesPage() {
             return false;
         });
 
-        if (roadsInPolygon.length > 0) {
-          // Merge all LineString features into a single MultiLineString
-          const mergedRoute = roadsInPolygon.reduce((acc, feature) => {
-            if (!acc) return feature;
-            // @ts-ignore
-            return turf.union(acc, feature);
-          }, null);
-          setRouteFeatures(mergedRoute ? [mergedRoute] : []);
-        } else {
-          setRouteFeatures([]);
-        }
+        setRouteFeatures(roadsInPolygon);
+        setRoadDetails(roadsInPolygon.map(road => road.properties));
       }
 
     } catch (err) {
       console.error('Error fetching route data:', err);
       setRouteFeatures([]);
+      setRoadDetails([]);
     }
   };
 
@@ -119,6 +115,28 @@ export default function RoutesPage() {
             {isDrawing ? 'Annuleer Route' : 'Route Maken'}
           </Button>
         </div>
+        
+        {roadDetails.length > 0 && (
+            <Card className="absolute top-4 right-4 z-10 w-80 max-h-[calc(100vh-4rem)] flex flex-col">
+              <CardHeader>
+                <CardTitle>Wegtypes in polygoon</CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 overflow-y-auto">
+                <ul className="space-y-2 text-sm">
+                  {roadDetails.map((details, index) => (
+                    <li key={index} className="border-b pb-2">
+                        {Object.entries(details).map(([key, value]) => (
+                            <div key={key} className="flex justify-between">
+                                <span className="font-semibold capitalize">{key}:</span>
+                                <span>{String(value)}</span>
+                            </div>
+                        ))}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+        )}
 
         <Map
           ref={mapRef}
