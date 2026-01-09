@@ -666,6 +666,7 @@ export default function ProjectsPage() {
             <TabsTrigger value="afspraken">Afspraken</TabsTrigger>
             <TabsTrigger value="organisatie">Organisatie</TabsTrigger>
             <TabsTrigger value="bestanden">Bestanden</TabsTrigger>
+            <TabsTrigger value="wijken">Wijken</TabsTrigger>
           </TabsList>
         </div>
 
@@ -811,6 +812,12 @@ export default function ProjectsPage() {
           className="flex-1 overflow-y-auto pt-6 pb-2 px-6"
         >
           <BestandenTab projectId={selectedProjectId} />
+        </TabsContent>
+        <TabsContent
+          value="wijken"
+          className="flex-1 overflow-y-auto pt-6 pb-2 px-6"
+        >
+          <div>Wijken functionaliteit komt hier.</div>
         </TabsContent>
       </Tabs>
     </div>
