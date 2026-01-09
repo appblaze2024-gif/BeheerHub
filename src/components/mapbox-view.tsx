@@ -27,8 +27,8 @@ const polygonFillLayer: FillLayer = {
     id: 'wijk-polygon-fill',
     type: 'fill',
     paint: {
-        'fill-color': '#088',
-        'fill-opacity': 0.4,
+        'fill-color': '#000000',
+        'fill-opacity': 0.3,
     },
 };
 
@@ -36,7 +36,7 @@ const polygonOutlineLayer: LineLayer = {
     id: 'wijk-polygon-outline',
     type: 'line',
     paint: {
-        'line-color': '#088',
+        'line-color': '#000000',
         'line-width': 2,
     },
 };
@@ -101,13 +101,13 @@ export function MapboxView({ longitude, latitude, objects, wijkPolygons = [] }: 
             setSelectedPin(obj);
           }}
         >
-          <MapPin className="h-6 w-6 text-blue-500 fill-current cursor-pointer" />
+          <MapPin className="h-6 w-6 text-black fill-current cursor-pointer" />
         </Marker>
       ));
     } else if (longitude && latitude) {
       return (
         <Marker longitude={longitude} latitude={latitude} anchor="bottom">
-          <MapPin className="h-6 w-6 text-blue-500 fill-current" />
+          <MapPin className="h-6 w-6 text-black fill-current" />
         </Marker>
       );
     }
