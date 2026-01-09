@@ -212,7 +212,7 @@ export default function EmployeesPage() {
                       <span className="truncate">{medewerker.mobiel || '-'}</span>
                       <Badge
                         variant={medewerker.status === 'Actief' ? 'outline' : 'secondary'}
-                        className={medewerker.status === 'Actief' ? 'text-green-600 border-green-600 px-1' : 'px-2'}
+                        className={medewerker.status === 'Actief' ? 'text-green-600 border-green-600 w-14 justify-center' : 'px-2'}
                       >
                         {medewerker.status}
                       </Badge>
