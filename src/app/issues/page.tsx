@@ -98,7 +98,7 @@ export default function IssuesPage() {
   }, [projects, selectedProjectId]);
 
   const selectedWijk = React.useMemo(() => {
-      if (!selectedProject || !selectedWijkId) return null;
+      if (!selectedProject || !selectedWijkId || selectedWijkId === 'all') return null;
       return selectedProject.wijken?.find(w => w.id === selectedWijkId) ?? null;
   }, [selectedProject, selectedWijkId]);
 
@@ -117,16 +117,24 @@ export default function IssuesPage() {
 
   const filteredMeldingen = React.useMemo(() => {
     if (!meldingen) return [];
-    if (!wijkPolygon) return meldingen; // Show all if no wijk is selected/has polygon
+    if (!selectedWijkId || selectedWijkId === 'all' || !wijkPolygon) {
+        return meldingen;
+    }
 
     return meldingen.filter(melding => {
         if (typeof melding.latitude !== 'number' || typeof melding.longitude !== 'number') {
             return false;
         }
-        const point = turf.point([melding.longitude, melding.latitude]);
-        return turf.booleanPointInPolygon(point, wijkPolygon);
+        try {
+            const point = turf.point([melding.longitude, melding.latitude]);
+            return turf.booleanPointInPolygon(point, wijkPolygon);
+        } catch(e) {
+            console.error("Error during point in polygon check", e);
+            return false;
+        }
     });
-  }, [meldingen, wijkPolygon]);
+}, [meldingen, wijkPolygon, selectedWijkId]);
+
 
   const mapRef = React.useRef<any>(null);
 
@@ -191,7 +199,7 @@ export default function IssuesPage() {
                           value={selectedProjectId || ''}
                           onValueChange={(value) => {
                             setSelectedProjectId(value);
-                            setSelectedWijkId(null);
+                            setSelectedWijkId('all');
                           }}
                           disabled={isLoadingProjects}
                         >
@@ -206,7 +214,7 @@ export default function IssuesPage() {
                     <div>
                         <Label htmlFor='wijk-select' className='text-sm font-medium sr-only'>Wijk</Label>
                         <Select
-                            value={selectedWijkId || ''}
+                            value={selectedWijkId || 'all'}
                             onValueChange={setSelectedWijkId}
                             disabled={!selectedProject}
                         >
