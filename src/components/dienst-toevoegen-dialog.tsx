@@ -117,8 +117,8 @@ export function DienstToevoegenDialog({
       } else {
         form.reset({
           boekingregelId: '',
-          starttijd: '08:00',
-          eindtijd: '17:00',
+          starttijd: '07:00',
+          eindtijd: '15:30',
           onbetaaldePauze: 0,
           verbergEindtijd: false,
           herhaalDienst: false,
