@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Loader2, Trash2, File as FileIcon, Upload } from 'lucide-react';
-import { useFirestore, updateDocumentNonBlocking, useUser, useCollection, useFirebaseApp } from '@/firebase';
+import { useFirestore, useUser, useCollection, useFirebaseApp } from '@/firebase';
 import { collection, doc, addDoc, deleteDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 
@@ -54,6 +54,7 @@ import { Separator } from './ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from './ui/progress';
 import type { Wijk } from '@/app/projects/page';
+import { Checkbox } from './ui/checkbox';
 
 
 type UploadedFile = {
@@ -148,6 +149,17 @@ export function MeldingDialog({
   const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
   const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
   const meldingIdRef = React.useRef(melding?.id);
+  
+  const [autoGenerateIntake, setAutoGenerateIntake] = React.useState(true);
+  const [manualIntakeSuffix, setManualIntakeSuffix] = React.useState('');
+  const intakePrefix = React.useMemo(() => {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}${month}${day}`;
+  }, []);
+
 
   const projectsCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -211,17 +223,16 @@ export function MeldingDialog({
     return null;
   }, [projects]);
   
-  const generateIntakeNummer = () => {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
+  const generateIntakeNummer = React.useCallback(() => {
     const randomPart = Math.floor(1000 + Math.random() * 9000).toString();
-    return `${year}${month}${day}${randomPart}`;
-  };
+    return `${intakePrefix}${randomPart}`;
+  }, [intakePrefix]);
 
   React.useEffect(() => {
     if (open) {
+      setAutoGenerateIntake(true);
+      setManualIntakeSuffix('');
+
       meldingIdRef.current = melding?.id || doc(collection(firestore, 'temp')).id;
       const initialFiles = melding?.files || [];
       setUploadedFiles(initialFiles);
@@ -233,6 +244,14 @@ export function MeldingDialog({
               adres: `${melding.straatnaam || ''}${melding.huisnummer ? ' ' + melding.huisnummer : ''}, ${melding.postcode || ''}, ${melding.plaats || ''}`.trim(),
               aangenomen_door: melding.aangenomen_door || userName,
           });
+          const intakeNummer = melding.intakenummer || '';
+          if (intakeNummer.startsWith(intakePrefix)) {
+            setManualIntakeSuffix(intakeNummer.substring(intakePrefix.length));
+          } else {
+            setManualIntakeSuffix(intakeNummer);
+          }
+          setAutoGenerateIntake(false);
+
       } else {
         form.reset({
             tijdstip: format(new Date(), 'HH:mm:ss'),
@@ -261,7 +280,7 @@ export function MeldingDialog({
         setUploadedFiles([]);
         setUploadProgress({});
     }
-  }, [open, melding, form, user, firestore]);
+  }, [open, melding, form, user, firestore, intakePrefix, generateIntakeNummer]);
 
   
    React.useEffect(() => {
@@ -436,9 +455,13 @@ export function MeldingDialog({
     const plaats = addressParts.length > 2 ? addressParts[2] : '';
 
     const wijk = data.wijk || findWijkForPoint(coordinates.lat, coordinates.lng);
+    
+    const finalIntakeNumber = autoGenerateIntake ? generateIntakeNummer() : `${intakePrefix}${manualIntakeSuffix}`;
+
 
     const meldingData = {
       ...data,
+      intakenummer: finalIntakeNumber,
       straatnaam,
       postcode,
       plaats,
@@ -515,10 +538,25 @@ export function MeldingDialog({
               {/* Melding Tab */}
               <TabsContent value="melding" className="space-y-6 pt-4">
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <FormField control={form.control} name="intakenummer" render={({ field }) => (
-                          <FormItem><FormLabel>Intakenummer</FormLabel><FormControl><Input {...field} disabled /></FormControl></FormItem>
-                      )} />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                      <FormItem>
+                        <FormLabel>Intakenummer</FormLabel>
+                        <div className="flex items-center gap-2">
+                          <Input value={intakePrefix} disabled className="w-28" />
+                          <Input
+                            value={autoGenerateIntake ? '' : manualIntakeSuffix}
+                            onChange={(e) => setManualIntakeSuffix(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
+                            placeholder="...."
+                            maxLength={4}
+                            disabled={autoGenerateIntake}
+                            className="flex-1"
+                          />
+                        </div>
+                         <div className="flex items-center space-x-2 pt-2">
+                            <Checkbox id="auto-generate" checked={autoGenerateIntake} onCheckedChange={(checked) => setAutoGenerateIntake(!!checked)} />
+                            <label htmlFor="auto-generate" className="text-sm font-medium">Genereer laatste 4 cijfers</label>
+                        </div>
+                      </FormItem>
                        <FormField control={form.control} name="extern_meldingsnummer" render={({ field }) => (
                           <FormItem><FormLabel>Extern meldingsnummer</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
                       )} />
