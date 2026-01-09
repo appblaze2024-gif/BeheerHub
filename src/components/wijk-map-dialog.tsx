@@ -15,7 +15,7 @@ import {
 import { Button } from './ui/button';
 import { Wijk } from '@/app/projects/page';
 import { Input } from './ui/input';
-import { Search, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -26,20 +26,45 @@ interface WijkMapDialogProps {
   onSave: (wijkId: string, coordinates: string) => void;
 }
 
+interface Suggestion {
+  place_id: number;
+  display_name: string;
+  geojson: any;
+  lon: string;
+  lat: string;
+}
+
 export function WijkMapDialog({ open, onOpenChange, wijk, onSave }: WijkMapDialogProps) {
   const drawRef = React.useRef<MapboxDraw | null>(null);
   const mapRef = React.useRef<any>(null);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isSearching, setIsSearching] = React.useState(false);
+  const [suggestions, setSuggestions] = React.useState<Suggestion[]>([]);
+  const [isDrawReady, setIsDrawReady] = React.useState(false);
+  const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
-  const [initialViewState, setInitialViewState] = React.useState({
+  const initialViewState = {
     longitude: 5.2913,
     latitude: 52.1326,
     zoom: 7,
-  });
+  };
+
+  const cleanup = () => {
+    if (drawRef.current && mapRef.current?.getMap()?.isStyleLoaded()) {
+      try {
+        mapRef.current.getMap().removeControl(drawRef.current);
+      } catch (e) {
+        console.error("Could not remove draw control", e);
+      }
+    }
+    drawRef.current = null;
+    setIsDrawReady(false);
+  };
 
   const onMapLoad = React.useCallback(() => {
-    if (mapRef.current && !drawRef.current) {
+    cleanup(); // Ensure any old instance is cleaned up first.
+
+    if (mapRef.current) {
       const map = mapRef.current.getMap();
       const draw = new MapboxDraw({
         displayControlsDefault: false,
@@ -47,60 +72,11 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave }: WijkMapDialo
           polygon: true,
           trash: true,
         },
-        styles: [
-          // ACTIVE (being drawn)
-          {
-            id: 'gl-draw-polygon-fill-active',
-            type: 'fill',
-            filter: ['all', ['==', 'active', 'true'], ['==', '$type', 'Polygon']],
-            paint: {
-              'fill-color': '#000000',
-              'fill-opacity': 0.1,
-            },
-          },
-          {
-            id: 'gl-draw-polygon-stroke-active',
-            type: 'line',
-            filter: ['all', ['==', 'active', 'true'], ['==', '$type', 'Polygon']],
-            layout: {
-              'line-cap': 'round',
-              'line-join': 'round',
-            },
-            paint: {
-              'line-color': '#000000',
-              'line-dasharray': [0.2, 2],
-              'line-width': 2,
-            },
-          },
-          // INACTIVE (already drawn)
-          {
-            id: 'gl-draw-polygon-fill-inactive',
-            type: 'fill',
-            filter: ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon']],
-            paint: {
-              'fill-color': '#000000',
-              'fill-outline-color': '#000000',
-              'fill-opacity': 0.1,
-            },
-          },
-          {
-            id: 'gl-draw-polygon-stroke-inactive',
-            type: 'line',
-            filter: ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon']],
-            layout: {
-              'line-cap': 'round',
-              'line-join': 'round',
-            },
-            paint: {
-              'line-color': '#000000',
-              'line-width': 2,
-            },
-          },
-        ],
       });
       map.addControl(draw);
       drawRef.current = draw;
-
+      setIsDrawReady(true);
+      
       if (wijk?.subGebieden) {
         try {
           const features = JSON.parse(wijk.subGebieden);
@@ -130,79 +106,104 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave }: WijkMapDialo
     }
   };
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim() || !drawRef.current) return;
+  const handleSearchQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    if (!query.trim()) {
+      setSuggestions([]);
+      return;
+    }
+
     setIsSearching(true);
-    try {
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
         const response = await fetch(
-            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&format=json&polygon_geojson=1&limit=1`
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+            query
+          )}&format=json&polygon_geojson=1&countrycodes=nl&limit=5`
         );
-        const data = await response.json();
-
-        if (data && data.length > 0 && data[0].geojson) {
-            const feature = data[0];
-            const geometry = feature.geojson;
-            
-            if (geometry.type === 'Polygon' || geometry.type === 'MultiPolygon') {
-                 drawRef.current.add({
-                    type: 'Feature',
-                    properties: { name: feature.display_name },
-                    geometry: geometry
-                });
-                const [lon, lat] = [parseFloat(feature.lon), parseFloat(feature.lat)];
-                mapRef.current?.getMap().flyTo({ center: [lon, lat], zoom: 12 });
-            } else {
-                 alert('Geen gedetailleerde grenzen gevonden voor deze locatie. Probeer een andere zoekterm.');
-            }
-
-        } else {
-            alert('Geen resultaten gevonden.');
-        }
-
-    } catch (error) {
+        const data: Suggestion[] = await response.json();
+        setSuggestions(data.filter(s => s.geojson && (s.geojson.type === 'Polygon' || s.geojson.type === 'MultiPolygon')));
+      } catch (error) {
         console.error("Fout bij zoeken:", error);
-    } finally {
+        setSuggestions([]);
+      } finally {
         setIsSearching(false);
+      }
+    }, 500); // 500ms debounce
+  };
+
+  const handleSuggestionClick = (suggestion: Suggestion) => {
+    setSearchQuery(suggestion.display_name);
+    setSuggestions([]);
+
+    if (drawRef.current && (suggestion.geojson.type === 'Polygon' || suggestion.geojson.type === 'MultiPolygon')) {
+        const feature = {
+            type: 'Feature',
+            properties: { name: suggestion.display_name },
+            geometry: suggestion.geojson,
+        };
+        drawRef.current.add(feature as any);
+        const [lon, lat] = [parseFloat(suggestion.lon), parseFloat(suggestion.lat)];
+        mapRef.current?.getMap().flyTo({ center: [lon, lat], zoom: 13 });
     }
   };
   
   React.useEffect(() => {
     return () => {
-      if (drawRef.current && mapRef.current && mapRef.current.getMap()?.isStyleLoaded()) {
-        try {
-          mapRef.current.getMap().removeControl(drawRef.current);
-        } catch (e) {
-          console.error("Could not remove draw control", e);
-        }
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
       }
-      drawRef.current = null;
     };
   }, []);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      if (!isOpen) {
+        cleanup();
+      }
+      onOpenChange(isOpen);
+    }}>
       <DialogContent className="sm:max-w-[80vw] h-[80vh] flex flex-col p-0 gap-0">
         <DialogHeader className="p-6 pb-2">
           <DialogTitle>Teken gebied voor wijk: {wijk?.naam}</DialogTitle>
           <DialogDescription>
-            Zoek een gebied op naam en voeg het toe aan de kaart, of teken handmatig een polygoon.
+            Zoek een gebied op naam en klik op een suggestie om de grenzen automatisch te tekenen.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="px-6 pb-4">
-            <div className="flex w-full max-w-sm items-center space-x-2">
-            <Input
-                type="text"
-                placeholder="Zoek een plaatsnaam, wijk of buurt..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                disabled={isSearching}
-            />
-            <Button type="button" onClick={handleSearch} disabled={isSearching}>
-                {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-            </Button>
+        <div className="px-6 pb-4 relative">
+            <div className="flex w-full max-w-md items-center space-x-2">
+                <div className='relative w-full'>
+                    <Input
+                        type="text"
+                        placeholder="Zoek een plaatsnaam, wijk of buurt..."
+                        value={searchQuery}
+                        onChange={handleSearchQueryChange}
+                        disabled={!isDrawReady}
+                    />
+                    {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
+                    {suggestions.length > 0 && (
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                            {suggestions.map((suggestion) => (
+                            <div
+                                key={suggestion.place_id}
+                                onClick={() => handleSuggestionClick(suggestion)}
+                                className="px-4 py-2 text-sm cursor-pointer hover:bg-gray-100"
+                            >
+                                {suggestion.display_name}
+                            </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
+            {!isDrawReady && <p className='text-xs text-muted-foreground mt-1'>Kaart laden...</p>}
         </div>
 
         <div className="flex-1 min-h-0">
@@ -212,9 +213,10 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave }: WijkMapDialo
             mapStyle="mapbox://styles/mapbox/streets-v11"
             mapboxAccessToken={MAPBOX_TOKEN}
             onLoad={onMapLoad}
+            preserveDrawingBuffer
           />
         </div>
-        <DialogFooter className="p-6 pt-2">
+        <DialogFooter className="p-6 pt-4 border-t">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Annuleren</Button>
             <Button onClick={handleSave}>Gebieden opslaan</Button>
         </DialogFooter>
