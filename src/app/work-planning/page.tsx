@@ -108,14 +108,6 @@ export default function WorkPlanningPage() {
   const prevWeek = () => setCurrentDate(sub(currentDate, { weeks: 1 }));
   const nextWeek = () => setCurrentDate(add(currentDate, { weeks: 1 }));
   
-  const openNewDienstDialog = (medewerker: Medewerker, datum: Date) => {
-    setDialogState({ open: true, medewerker, datum, dienst: undefined });
-  }
-  
-  const openEditDienstDialog = (dienst: Dienst, medewerker: Medewerker) => {
-    setDialogState({ open: true, medewerker, datum: new Date(dienst.datum), dienst });
-  }
-  
   const selectedProject = React.useMemo(() => {
     return projects?.find(p => p.id === selectedProjectId);
   }, [projects, selectedProjectId]);
@@ -216,7 +208,7 @@ export default function WorkPlanningPage() {
                         <div className="flex-1 space-y-1">
                           {dienstenForDay?.map(dienst => (
                               <div key={dienst.id} 
-                                   onClick={() => openEditDienstDialog(dienst, medewerker)}
+                                   onClick={() => setDialogState({ open: true, medewerker, datum: new Date(dienst.datum), dienst })}
                                    className="bg-blue-100 text-blue-900 rounded-md p-2 text-xs cursor-pointer hover:bg-blue-200 dark:bg-blue-900/50 dark:text-white dark:hover:bg-blue-900/70"
                               >
                                   <p className="font-semibold truncate">{dienst.werksoort}</p>
@@ -230,7 +222,7 @@ export default function WorkPlanningPage() {
                             className={cn(
                                 "h-7 w-7 self-center opacity-0 group-hover:opacity-100 transition-opacity"
                             )}
-                            onClick={() => openNewDienstDialog(medewerker, day)}
+                            onClick={() => setDialogState({ open: true, medewerker, datum: day, dienst: undefined })}
                         >
                           <Plus className="h-4 w-4 text-muted-foreground" />
                         </Button>
