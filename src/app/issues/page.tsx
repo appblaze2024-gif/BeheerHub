@@ -42,32 +42,9 @@ const statusConfig = {
   'Niet in beheer': { color: '#737373', icon: 'M' }, // neutral-500
 };
 
-const Legend = ({ onClose }: { onClose: () => void }) => (
-  <Card className="absolute top-4 right-4 z-10 w-64 shadow-lg">
-    <CardHeader className="flex flex-row items-center justify-between p-4">
-      <CardTitle className="text-base">Legenda</CardTitle>
-      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}>
-        <X className="h-4 w-4" />
-      </Button>
-    </CardHeader>
-    <CardContent className="p-4 pt-0 text-sm space-y-2">
-      {Object.entries(statusConfig).map(([status, { color }]) => (
-        <div key={status} className="flex items-center">
-          <div
-            className="w-4 h-4 rounded-full mr-2"
-            style={{ backgroundColor: color }}
-          />
-          <span>{status}</span>
-        </div>
-      ))}
-    </CardContent>
-  </Card>
-);
-
 export default function IssuesPage() {
   const firestore = useFirestore();
   const [selectedMelding, setSelectedMelding] = React.useState<Melding | null>(null);
-  const [showLegend, setShowLegend] = React.useState(true);
   
   const meldingenCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -144,8 +121,6 @@ export default function IssuesPage() {
                     </div>
                 </Popup>
             )}
-
-            {showLegend && <Legend onClose={() => setShowLegend(false)} />}
         </Map>
     </div>
   );
