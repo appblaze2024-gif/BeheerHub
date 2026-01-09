@@ -47,6 +47,56 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave }: WijkMapDialo
           polygon: true,
           trash: true,
         },
+        styles: [
+          // ACTIVE (being drawn)
+          {
+            id: 'gl-draw-polygon-fill-active',
+            type: 'fill',
+            filter: ['all', ['==', 'active', 'true'], ['==', '$type', 'Polygon']],
+            paint: {
+              'fill-color': '#000000',
+              'fill-opacity': 0.1,
+            },
+          },
+          {
+            id: 'gl-draw-polygon-stroke-active',
+            type: 'line',
+            filter: ['all', ['==', 'active', 'true'], ['==', '$type', 'Polygon']],
+            layout: {
+              'line-cap': 'round',
+              'line-join': 'round',
+            },
+            paint: {
+              'line-color': '#000000',
+              'line-dasharray': [0.2, 2],
+              'line-width': 2,
+            },
+          },
+          // INACTIVE (already drawn)
+          {
+            id: 'gl-draw-polygon-fill-inactive',
+            type: 'fill',
+            filter: ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon']],
+            paint: {
+              'fill-color': '#000000',
+              'fill-outline-color': '#000000',
+              'fill-opacity': 0.1,
+            },
+          },
+          {
+            id: 'gl-draw-polygon-stroke-inactive',
+            type: 'line',
+            filter: ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon']],
+            layout: {
+              'line-cap': 'round',
+              'line-join': 'round',
+            },
+            paint: {
+              'line-color': '#000000',
+              'line-width': 2,
+            },
+          },
+        ],
       });
       map.addControl(draw);
       drawRef.current = draw;
