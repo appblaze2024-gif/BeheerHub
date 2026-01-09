@@ -7,7 +7,9 @@ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import { Button } from '@/components/ui/button';
 import { Filter, Trash2 } from 'lucide-react';
 import { RoadTypeFilterDialog, allRoadTypes } from '@/components/road-type-filter-dialog';
-import type { Feature, FeatureCollection, Polygon } from 'geojson';
+import type { Feature, FeatureCollection, Polygon, LineString } from 'geojson';
+import * as turf from '@turf/turf';
+
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -18,7 +20,7 @@ export default function RoutesPage() {
   const [isFilterDialogOpen, setIsFilterDialogOpen] = React.useState(false);
   const [roadTypesInPolygon, setRoadTypesInPolygon] = React.useState<string[]>([]);
   const [selectedRoadTypes, setSelectedRoadTypes] = React.useState<string[]>([]);
-  const [routeLayerData, setRouteLayerData] = React.useState<FeatureCollection | null>(null);
+  const [routeLayerData, setRouteLayerData] = React.useState<FeatureCollection<LineString> | null>(null);
   const [drawnPolygon, setDrawnPolygon] = React.useState<Feature<Polygon> | null>(null);
 
   const initialViewState = {
@@ -38,9 +40,10 @@ export default function RoutesPage() {
       const sw = map.project([polygonBoundingBox[0], polygonBoundingBox[1]]);
       const ne = map.project([polygonBoundingBox[2], polygonBoundingBox[3]]);
       
-      const roads = map.queryRenderedFeatures([sw, ne], {
-        layers: ['road']
-      });
+      const allFeatures = map.queryRenderedFeatures([sw, ne]);
+      
+      const roads = allFeatures.filter(f => f.properties && f.properties.class && f.geometry.type === 'LineString');
+
 
       const roadsInPolygon = roads.filter(road => {
         if (road.geometry.type === 'LineString') {
@@ -50,7 +53,7 @@ export default function RoutesPage() {
           });
         }
         return false;
-      });
+      }) as Feature<LineString>[];
 
       const uniqueRoadTypes = Array.from(new Set(roadsInPolygon.map(road => road.properties?.class).filter(Boolean) as string[]));
       
@@ -94,14 +97,20 @@ export default function RoutesPage() {
   };
 
   const roadFilter = React.useMemo(() => {
-    if (selectedRoadTypes.length === roadTypesInPolygon.length) {
-      return null;
-    }
     if (selectedRoadTypes.length === 0) {
       return ['==', ['get', 'class'], 'none'];
     }
+    // If all available types are selected, no filter is needed.
+    if (selectedRoadTypes.length === roadTypesInPolygon.length) {
+      return null;
+    }
     return ['in', ['get', 'class'], ['literal', selectedRoadTypes]];
   }, [selectedRoadTypes, roadTypesInPolygon]);
+
+  const layerProps: any = {};
+  if (roadFilter) {
+    layerProps.filter = roadFilter;
+  }
 
   return (
     <div className="flex flex-col flex-1 min-h-0 relative">
@@ -147,7 +156,7 @@ export default function RoutesPage() {
                 'line-width': 4,
                 'line-opacity': 0.8,
               }}
-              {...(roadFilter && { filter: roadFilter })}
+              {...layerProps}
             />
           </Source>
         )}
@@ -155,55 +164,3 @@ export default function RoutesPage() {
     </div>
   );
 }
-
-// Minimal Turf.js functions needed
-const turf = {
-  bbox: (geojson: any) => {
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    turf.coordEach(geojson, (coord: any) => {
-      if (minX > coord[0]) minX = coord[0];
-      if (minY > coord[1]) minY = coord[1];
-      if (maxX < coord[0]) maxX = coord[0];
-      if (maxY < coord[1]) maxY = coord[1];
-    });
-    return [minX, minY, maxX, maxY];
-  },
-  coordEach: (geojson: any, callback: any) => {
-    if (geojson.type === 'FeatureCollection') {
-      for (const feature of geojson.features) {
-        turf.coordEach(feature, callback);
-      }
-    } else if (geojson.type === 'Feature') {
-      turf.coordEach(geojson.geometry, callback);
-    } else if (geojson.geometry) {
-       turf.coordEach(geojson.geometry, callback);
-    } else if (geojson.type === 'Polygon' || geojson.type === 'MultiLineString') {
-      for (const ring of geojson.coordinates) {
-        for (const coord of ring) {
-          callback(coord);
-        }
-      }
-    } else if (geojson.type === 'LineString') {
-        for (const coord of geojson.coordinates) {
-          callback(coord);
-        }
-    }
-  },
-  booleanPointInPolygon: (point: number[], polygon: Feature<Polygon>): boolean => {
-    const pt = turf.point(point);
-    return turf.inside(pt, polygon.geometry);
-  },
-  point: (coordinates: number[]) => ({ type: 'Feature', geometry: { type: 'Point', coordinates }, properties: {} }),
-  inside: (point: Feature<{ type: 'Point', coordinates: number[] }>, polygon: Polygon): boolean => {
-    const coords = polygon.coordinates;
-    let isInside = false;
-    for (let i = 0, j = coords[0].length - 1; i < coords[0].length; j = i++) {
-        const xi = coords[0][i][0], yi = coords[0][i][1];
-        const xj = coords[0][j][0], yj = coords[0][j][1];
-        const intersect = ((yi > point.geometry.coordinates[1]) !== (yj > point.geometry.coordinates[1]))
-            && (point.geometry.coordinates[0] < (xj - xi) * (point.geometry.coordinates[1] - yi) / (yj - yi) + xi);
-        if (intersect) isInside = !isInside;
-    }
-    return isInside;
-  }
-};
