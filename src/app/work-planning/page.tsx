@@ -35,6 +35,8 @@ import type { Medewerker, Dienst, Voertuig } from '@/lib/types';
 import { DienstToevoegenSheet } from '@/components/dienst-toevoegen-sheet';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PrintDayDialog } from '@/components/print-day-dialog';
+
 
 const getInitials = (firstName?: string, lastName?: string) => {
     const firstInitial = firstName?.[0] || '';
@@ -124,7 +126,7 @@ const DienstItem = ({ dienst, onEdit }: { dienst: Dienst, onEdit: (dienst: Diens
 
 export default function WorkPlanningPage() {
   const [currentDate, setCurrentDate] = React.useState(new Date());
-  const [selectedPrintDay, setSelectedPrintDay] = React.useState<Date>(new Date());
+  const [isPrintDayDialogOpen, setIsPrintDayDialogOpen] = React.useState(false);
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | undefined>();
   
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
@@ -237,6 +239,11 @@ export default function WorkPlanningPage() {
     }
   
     try {
+      if (!droppedDienst.projectId) {
+        console.error("Dropped dienst is missing projectId");
+        return;
+      }
+
       const dienstenColRef = collection(firestore, 'projects', droppedDienst.projectId, 'diensten');
   
       if (isCopy) {
@@ -290,19 +297,16 @@ export default function WorkPlanningPage() {
     return totalMinutes / 60;
   };
   
- const handlePrint = (mode: 'week' | 'day') => {
-    const printDayClass = `print-day-${format(selectedPrintDay, 'yyyy-MM-dd')}`;
-    document.body.classList.remove('print-day-view', 'print-week-view');
-    document.querySelectorAll('[class*="print-day-"]').forEach(el => {
-      const cls = Array.from(el.classList).find(c => c.startsWith('print-day-'));
-      if (cls) el.classList.remove(cls);
-    });
+ const handlePrint = (mode: 'week' | 'day', dayToPrint?: Date) => {
+    const printDayClass = dayToPrint ? `print-day-${format(dayToPrint, 'yyyy-MM-dd')}` : '';
 
+    // Clean up any existing print classes
+    document.body.className = document.body.className.replace(/print-(day|week)-view/g, '').replace(/print-day-\d{4}-\d{2}-\d{2}/g, '').trim();
 
-    if (mode === 'day') {
-      document.body.classList.add('print-day-view', printDayClass);
+    if (mode === 'day' && printDayClass) {
+        document.body.classList.add('print-day-view', printDayClass);
     } else {
-      document.body.classList.add('print-week-view');
+        document.body.classList.add('print-week-view');
     }
     
     window.print();
@@ -310,11 +314,7 @@ export default function WorkPlanningPage() {
 
   React.useEffect(() => {
     const afterPrint = () => {
-        document.body.classList.remove('print-day-view', 'print-week-view');
-        const printDayClass = Array.from(document.body.classList).find(c => c.startsWith('print-day-'));
-        if (printDayClass) {
-            document.body.classList.remove(printDayClass);
-        }
+       document.body.className = document.body.className.replace(/print-(day|week)-view/g, '').replace(/print-day-\d{4}-\d{2}-\d{2}/g, '').trim();
     };
 
     window.addEventListener('afterprint', afterPrint);
@@ -348,7 +348,7 @@ export default function WorkPlanningPage() {
             </SelectContent>
           </Select>
           <Button variant="outline">Voertuigen</Button>
-          <Button variant="outline" onClick={() => handlePrint('day')}><Printer className="mr-2 h-4 w-4" /> Print Dag</Button>
+          <Button variant="outline" onClick={() => setIsPrintDayDialogOpen(true)}><Printer className="mr-2 h-4 w-4" /> Print Dag</Button>
           <Button variant="outline" onClick={() => handlePrint('week')}><Printer className="mr-2 h-4 w-4" /> Print Week</Button>
         </div>
         <div className="flex items-center gap-2">
@@ -372,12 +372,10 @@ export default function WorkPlanningPage() {
           {weekDays.map((day) => (
             <div
               key={day.toISOString()}
-              onClick={() => setSelectedPrintDay(day)}
               className={cn(
-                "sticky top-0 z-10 p-2 text-center bg-background border-b border-r cursor-pointer day-column",
+                "sticky top-0 z-10 p-2 text-center bg-background border-b border-r day-column",
                 `day-column-${format(day, 'yyyy-MM-dd')}`,
-                isToday(day) && "bg-blue-50 dark:bg-blue-900/20",
-                isSameDay(day, selectedPrintDay) && "ring-2 ring-inset ring-blue-500"
+                isToday(day) && "bg-blue-50 dark:bg-blue-900/20"
               )}
             >
               <p className="font-semibold capitalize text-sm">
@@ -443,7 +441,6 @@ export default function WorkPlanningPage() {
                             "group relative p-2 border-b border-r min-h-[80px] flex flex-col gap-1 transition-colors day-column",
                             `day-column-${format(day, 'yyyy-MM-dd')}`,
                              isToday(day) && "bg-blue-50 dark:bg-blue-900/20",
-                             isSameDay(day, selectedPrintDay) && "ring-2 ring-inset ring-blue-500",
                             isDragOver && "bg-blue-100 dark:bg-blue-900/30"
                         )}
                     >
@@ -483,6 +480,12 @@ export default function WorkPlanningPage() {
             project={selectedProject}
             dienst={selectedDienst}
             onSuccess={handleSheetSuccess}
+        />
+        <PrintDayDialog 
+            open={isPrintDayDialogOpen}
+            onOpenChange={setIsPrintDayDialogOpen}
+            weekDays={weekDays}
+            onPrint={handlePrint}
         />
     </div>
   );
