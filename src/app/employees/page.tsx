@@ -158,12 +158,12 @@ export default function EmployeesPage() {
           </DropdownMenu>
         </div>
       </PageHeader>
-      <div className="flex-1 overflow-auto px-6 pb-6">
-        <Card className="h-full">
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
+      <div className="flex-1 px-6 pb-6 min-h-0">
+        <Card className="h-full flex flex-col">
+          <CardContent className="p-0 flex-1 overflow-hidden">
+            <div className="h-full overflow-y-auto">
               <div className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
-                <div className="grid grid-cols-[40px_3fr_3fr_2fr_2fr_2fr_50px] px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <div className="grid grid-cols-[40px_3fr_3fr_2fr_2fr_2fr_50px] px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider sticky top-0 bg-card z-10">
                   <Checkbox 
                     onCheckedChange={handleSelectAll}
                     checked={isAllSelected}
