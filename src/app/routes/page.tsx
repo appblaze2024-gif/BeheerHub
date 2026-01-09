@@ -145,7 +145,7 @@ export default function RoutesPage() {
                 'line-width': 4,
                 'line-opacity': 0.8,
               }}
-              filter={roadFilter ?? undefined}
+              {...(roadFilter && { filter: roadFilter })}
             />
           </Source>
         )}
@@ -192,7 +192,7 @@ const turf = {
     return turf.inside(pt, polygon.geometry);
   },
   point: (coordinates: number[]) => ({ type: 'Feature', geometry: { type: 'Point', coordinates }, properties: {} }),
-  inside: (point: Feature, polygon: Polygon): boolean => {
+  inside: (point: Feature<{ type: 'Point', coordinates: number[] }>, polygon: Polygon): boolean => {
     const coords = polygon.coordinates;
     let isInside = false;
     for (let i = 0, j = coords[0].length - 1; i < coords[0].length; j = i++) {
