@@ -20,14 +20,14 @@ export default function RoutesPage() {
 
   const roadFilter = React.useMemo(() => {
     if (selectedRoadTypes.length === allRoadTypes.length) {
-      // If all are selected, no filter is needed which is more performant
-      return undefined;
+      // If all are selected, no filter is needed. Return null.
+      return null;
     }
     if (selectedRoadTypes.length === 0) {
-      // If none are selected, create a filter that never matches
+      // If none are selected, create a filter that never matches.
       return ['==', ['get', 'class'], 'none'];
     }
-    // 'in' operator checks if the value of 'class' property is in the selectedRoadTypes array
+    // 'in' operator checks if the value of 'class' property is in the selectedRoadTypes array.
     return ['in', ['get', 'class'], ['literal', selectedRoadTypes]];
   }, [selectedRoadTypes]);
 
@@ -73,7 +73,7 @@ export default function RoutesPage() {
                 'line-width': 3,
                 'line-opacity': 0.8,
               }}
-              filter={roadFilter} // Apply the dynamic filter
+              filter={roadFilter || undefined} // Apply the dynamic filter, ensuring it's not null
             />
           ))}
         </Source>
