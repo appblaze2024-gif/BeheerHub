@@ -205,7 +205,7 @@ export default function VehiclesPage() {
                     onClick={() => setSelectedVehicle(vehicle)}
                     className={`flex items-start justify-between p-3 rounded-md text-left cursor-pointer ${
                       selectedVehicle?.id === vehicle.id
-                        ? 'bg-sidebar-accent'
+                        ? 'bg-secondary'
                         : 'hover:bg-gray-100 dark:hover:bg-gray-800'
                     }`}
                   >
