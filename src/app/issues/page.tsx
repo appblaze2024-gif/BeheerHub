@@ -99,13 +99,13 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
 
   return (
     <div className="overflow-y-auto">
-      <div className="grid grid-cols-[1fr_1fr_2fr_2fr_1fr_1fr_1fr_120px_50px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
+      <div className="grid grid-cols-[1fr_1fr_1fr_1fr_2fr_2fr_1fr_120px_50px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
+        <span>Tijd</span>
         <span>Intakenummer</span>
+        <span>Wijk</span>
         <span>Subcategorie</span>
         <span>Omschrijving</span>
         <span>Adres</span>
-        <span>Wijk</span>
-        <span>Tijd</span>
         <span>Melder</span>
         <span>Status</span>
         <span />
@@ -114,14 +114,14 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
         <div
           key={melding.id}
           onClick={() => onMeldingClick(melding)}
-          className="grid grid-cols-[1fr_1fr_2fr_2fr_1fr_1fr_1fr_120px_50px] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
+          className="grid grid-cols-[1fr_1fr_1fr_1fr_2fr_2fr_1fr_120px_50px] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
         >
+          <span className="truncate">{melding.tijdstip || '-'}</span>
           <span className="font-medium truncate">{melding.intakenummer}</span>
+          <span className="truncate">{melding.wijk || '-'}</span>
           <span className="truncate">{melding.subcategorie}</span>
           <span className="truncate">{melding.extra_informatie}</span>
           <span className="truncate">{`${melding.straatnaam || ''}, ${melding.plaats || ''}`}</span>
-          <span className="truncate">{melding.wijk || '-'}</span>
-          <span className="truncate">{melding.tijdstip || '-'}</span>
           <span className="truncate">{melding.melder || '-'}</span>
           <Badge
             style={{
@@ -130,6 +130,7 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
               borderColor: statusConfig[melding.status]?.borderColor || '#ccc'
             }}
             variant={melding.status === 'Afgerond' ? 'default' : 'destructive'}
+            className="justify-center"
           >
             {melding.status}
           </Badge>
@@ -216,30 +217,30 @@ export default function IssuesPage() {
   const filteredMeldingen = React.useMemo(() => {
     if (!meldingen) return [];
     
+    let timeFilteredMeldingen = meldingen;
+
+    if (selectedDate) {
+      const dayStart = startOfDay(selectedDate);
+      timeFilteredMeldingen = meldingen.filter(melding => {
+          const creationDate = startOfDay(new Date(melding.datum));
+          if (melding.status === 'Afgerond') {
+              if (!melding.afhandeling_datum) return false;
+              const completionDate = startOfDay(new Date(melding.afhandeling_datum));
+              return isSameDay(completionDate, dayStart);
+          }
+          return creationDate <= dayStart;
+      });
+    }
+
     const searchedMeldingen = searchQuery
-      ? meldingen.filter(
+      ? timeFilteredMeldingen.filter(
           (m) =>
             m.intakenummer?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             m.straatnaam?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             m.plaats?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             m.subcategorie?.toLowerCase().includes(searchQuery.toLowerCase())
         )
-      : meldingen;
-
-    const dayStart = startOfDay(selectedDate);
-    
-    const timeFilteredMeldingen = searchedMeldingen.filter(melding => {
-        const creationDate = startOfDay(new Date(melding.datum));
-        // If the melding is "Afgerond"
-        if (melding.status === 'Afgerond') {
-            if (!melding.afhandeling_datum) return false;
-            const completionDate = startOfDay(new Date(melding.afhandeling_datum));
-            // Show it only on the day it was completed
-            return isSameDay(completionDate, dayStart);
-        }
-        // If the melding is still open, show it if it was created on or before the selected date
-        return creationDate <= dayStart;
-    });
+      : timeFilteredMeldingen;
 
     if (!selectedProjectId) {
       return [];
@@ -250,13 +251,11 @@ export default function IssuesPage() {
 
     if (!selectedWijkId || selectedWijkId === 'all') {
       const allProjectWijkNames = project.wijken.map(w => w.naam);
-      return timeFilteredMeldingen.filter(m => {
-        // If a wijk is manually assigned, check against all wijk names in the project
+      return searchedMeldingen.filter(m => {
         if (m.wijk && allProjectWijkNames.includes(m.wijk)) {
             return true;
         }
 
-        // If no wijk is assigned, check by coordinates
         if (typeof m.latitude !== 'number' || typeof m.longitude !== 'number') return false;
         const point = turf.point([m.longitude, m.latitude]);
         
@@ -279,9 +278,13 @@ export default function IssuesPage() {
     const wijk = project.wijken.find(w => w.id === selectedWijkId);
     if (!wijk) return [];
     
-    return timeFilteredMeldingen.filter(melding => {
-        if (melding.wijk && melding.wijk === wijk.naam) return true;
-        
+    return searchedMeldingen.filter(melding => {
+        // Condition 1: The melding's assigned wijk name matches the selected wijk name.
+        if (melding.wijk && melding.wijk === wijk.naam) {
+          return true;
+        }
+    
+        // Condition 2: The melding's coordinates fall within the selected wijk's polygons.
         try {
             const wijkFeatures = JSON.parse(wijk.subGebieden);
             if (Array.isArray(wijkFeatures) && wijkFeatures.length > 0) {
@@ -418,8 +421,8 @@ export default function IssuesPage() {
                     <div>
                          <Input
                             type="date"
-                            value={format(selectedDate, 'yyyy-MM-dd')}
-                            onChange={(e) => setSelectedDate(new Date(e.target.value))}
+                            value={selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''}
+                            onChange={(e) => setSelectedDate(e.target.value ? new Date(e.target.value) : new Date())}
                             className="w-[150px] bg-card"
                          />
                     </div>
