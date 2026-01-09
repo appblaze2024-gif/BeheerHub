@@ -78,21 +78,23 @@ export default function IssuesPage() {
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
-        <header className="absolute top-0 left-0 z-10 p-4 w-full flex items-center justify-between pointer-events-none">
+      <header className="absolute top-0 left-0 z-10 p-4 w-full flex flex-row items-start justify-between pointer-events-none">
+        <div className="flex flex-col gap-4 items-start">
             <div className="bg-card p-2 rounded-lg shadow-md pointer-events-auto">
                 <h1 className="text-xl font-bold">Meldingen Portaal</h1>
             </div>
-             <div className="w-full max-w-sm pointer-events-auto flex items-center gap-2">
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Zoek op meldingen of adres" className="pl-9" />
-                </div>
-                <Button onClick={() => alert("Klik op de kaart om een locatie voor de nieuwe melding te kiezen.")}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Nieuwe Melding
-                </Button>
+            <Button className='pointer-events-auto' onClick={() => alert("Klik op de kaart om een locatie voor de nieuwe melding te kiezen.")}>
+                <Plus className="mr-2 h-4 w-4" />
+                Nieuwe Melding
+            </Button>
+        </div>
+        <div className="w-full max-w-sm pointer-events-auto">
+            <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Zoek op meldingen of adres" className="pl-9" />
             </div>
-        </header>
+        </div>
+      </header>
 
         <Map
             initialViewState={initialViewState}
