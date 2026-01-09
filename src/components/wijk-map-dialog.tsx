@@ -168,10 +168,12 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave }: WijkMapDialo
   
   React.useEffect(() => {
     return () => {
-      if (drawRef.current && mapRef.current && mapRef.current.getMap()) {
+      if (drawRef.current && mapRef.current && mapRef.current.getMap()?.isStyleLoaded()) {
         try {
           mapRef.current.getMap().removeControl(drawRef.current);
-        } catch (e) {}
+        } catch (e) {
+          console.error("Could not remove draw control", e);
+        }
       }
       drawRef.current = null;
     };
