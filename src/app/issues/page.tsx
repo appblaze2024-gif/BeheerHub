@@ -47,7 +47,6 @@ const statusConfig = {
 export default function IssuesPage() {
   const firestore = useFirestore();
   const [selectedMelding, setSelectedMelding] = React.useState<Melding | null>(null);
-  const [newMeldingCoords, setNewMeldingCoords] = React.useState<{lat: number, lng: number} | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   
   const meldingenCollection = React.useMemo(() => {
@@ -62,30 +61,24 @@ export default function IssuesPage() {
     latitude: 52.1326,
     zoom: 7,
   };
-
-  const handleMapClick = (e: mapboxgl.MapLayerMouseEvent) => {
-    // Only open new dialog if not clicking on an existing marker
-    if (e.originalEvent.target.ariaLabel !== 'Map marker') {
-        setNewMeldingCoords({ lat: e.lngLat.lat, lng: e.lngLat.lng });
-        setIsDialogOpen(true);
-    }
-  };
   
   const handleDialogClose = (open: boolean) => {
     setIsDialogOpen(open);
-    if (!open) {
-        setNewMeldingCoords(null);
-    }
+  }
+
+  const handleNewMelding = () => {
+    setSelectedMelding(null);
+    setIsDialogOpen(true);
   }
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
-      <header className="absolute top-0 left-0 z-10 p-4 w-full flex flex-row items-start justify-between pointer-events-none">
+      <header className="absolute top-0 left-0 z-10 p-4 w-full flex items-start justify-between pointer-events-none">
         <div className="flex flex-col gap-2 items-start">
             <div className="bg-card p-2 rounded-lg shadow-md pointer-events-auto">
                 <h1 className="text-xl font-bold">Meldingen Portaal</h1>
             </div>
-            <Button className='pointer-events-auto' onClick={() => alert("Klik op de kaart om een locatie voor de nieuwe melding te kiezen.")}>
+            <Button className='pointer-events-auto' onClick={handleNewMelding}>
                 <Plus className="mr-2 h-4 w-4" />
                 Nieuwe Melding
             </Button>
@@ -103,8 +96,7 @@ export default function IssuesPage() {
             style={{ width: '100%', height: '100%' }}
             mapStyle="mapbox://styles/mapbox/streets-v11"
             mapboxAccessToken={MAPBOX_TOKEN}
-            onClick={handleMapClick}
-            cursor="crosshair"
+            cursor="default"
         >
             {meldingen?.map(melding => (
                 <Marker
@@ -114,7 +106,6 @@ export default function IssuesPage() {
                     onClick={(e) => {
                         e.originalEvent.stopPropagation();
                         setSelectedMelding(melding);
-                        setNewMeldingCoords(null);
                     }}
                 >
                     <div
@@ -150,17 +141,11 @@ export default function IssuesPage() {
                     </div>
                 </Popup>
             )}
-
-            {newMeldingCoords && (
-                <Marker longitude={newMeldingCoords.lng} latitude={newMeldingCoords.lat}>
-                    <MapPin className="h-8 w-8 text-red-500" />
-                </Marker>
-            )}
         </Map>
          <MeldingDialog 
             open={isDialogOpen}
             onOpenChange={handleDialogClose}
-            coordinates={newMeldingCoords}
+            melding={selectedMelding}
         />
     </div>
   );

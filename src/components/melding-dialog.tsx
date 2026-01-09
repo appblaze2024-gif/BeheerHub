@@ -5,8 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Loader2 } from 'lucide-react';
-import { useFirestore, addDocumentNonBlocking } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 
@@ -48,12 +48,13 @@ const meldingFormSchema = z.object({
   // Inhoud
   hoofdcategorie: z.string().min(1, 'Hoofdcategorie is verplicht'),
   subcategorie: z.string().min(1, 'Subcategorie is verplicht'),
-  straatnaam: z.string().optional(),
+  adres: z.string().min(1, 'Adres is verplicht'),
   postcode: z.string().optional(),
   plaats: z.string().optional(),
   extra_informatie: z.string().min(1, 'Extra informatie is verplicht'),
 
   // Afhandeling
+  status: z.string().min(1, 'Status is verplicht'),
   afhandeling_datum: z.string().optional(),
   afgehandeld_door: z.string().optional(),
   afhandeling_bijzonderheden: z.string().optional(),
@@ -70,19 +71,30 @@ const subcategorieOptions: Record<string, string[]> = {
     "Weg en verkeer": ["Schade wegdek", "Verkeersbord", "Verlichting"],
     "Overig": ["Overige melding"]
 };
+const statusOptions = [
+    "Nieuw",
+    "Intern doorgezet",
+    "In behandeling",
+    "Gepland op korte termijn",
+    "Gepland op langere termijn",
+    "Dubbel gemeld",
+    "Afgerond",
+    "Niet in beheer"
+];
+
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
 interface MeldingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  coordinates: { lat: number; lng: number } | null;
+  melding?: any | null;
 }
 
 export function MeldingDialog({
   open,
   onOpenChange,
-  coordinates,
+  melding,
 }: MeldingDialogProps) {
   const firestore = useFirestore();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -96,10 +108,11 @@ export function MeldingDialog({
       extern_meldingsnummer: '',
       hoofdcategorie: '',
       subcategorie: '',
-      straatnaam: '',
+      adres: '',
       postcode: '',
       plaats: '',
       extra_informatie: '',
+      status: 'Nieuw',
       afhandeling_datum: '',
       afgehandeld_door: '',
       afhandeling_bijzonderheden: '',
@@ -108,64 +121,89 @@ export function MeldingDialog({
   
   const hoofdcategorie = form.watch('hoofdcategorie');
 
-  React.useEffect(() => {
-    const fetchAddress = async () => {
-      if (coordinates) {
-        try {
-          const response = await fetch(
-            `https://api.mapbox.com/geocoding/v5/mapbox.places/${coordinates.lng},${coordinates.lat}.json?access_token=${MAPBOX_TOKEN}`
-          );
-          const data = await response.json();
-          if (data.features && data.features.length > 0) {
-            const feature = data.features[0];
-            const context = feature.context;
-            
-            form.setValue('straatnaam', feature.text || '');
-
-            const postcode = context.find((c: any) => c.id.startsWith('postcode'))?.text;
-            const plaats = context.find((c: any) => c.id.startsWith('place'))?.text;
-
-            form.setValue('postcode', postcode || '');
-            form.setValue('plaats', plaats || '');
-          }
-        } catch (error) {
-          console.error('Error fetching address:', error);
-        }
+  const fetchCoordinates = async (address: string): Promise<{ lat: number; lng: number } | null> => {
+    if (!address) return null;
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=${MAPBOX_TOKEN}&country=NL&limit=1`
+      );
+      const data = await response.json();
+      if (data.features && data.features.length > 0) {
+        const [lng, lat] = data.features[0].center;
+        return { lat, lng };
       }
-    };
-    if (open) {
-        fetchAddress();
-        form.setValue('tijdstip', format(new Date(), 'HH:mm:ss'));
+    } catch (error) {
+      console.error('Error fetching coordinates:', error);
     }
-  }, [open, coordinates, form]);
+    return null;
+  };
+
+  React.useEffect(() => {
+    if (open) {
+      if (melding) {
+          form.reset({
+              ...melding,
+              adres: `${melding.straatnaam || ''}${melding.huisnummer ? ' ' + melding.huisnummer : ''}, ${melding.postcode || ''}, ${melding.plaats || ''}`.trim()
+          });
+      } else {
+        form.reset({
+            tijdstip: format(new Date(), 'HH:mm:ss'),
+            melder: 'Medewerker Gemeenten',
+            aangenomen_door: '',
+            extern_meldingsnummer: '',
+            hoofdcategorie: '',
+            subcategorie: '',
+            adres: '',
+            postcode: '',
+            plaats: '',
+            extra_informatie: '',
+            status: 'Nieuw',
+            afhandeling_datum: '',
+            afgehandeld_door: '',
+            afhandeling_bijzonderheden: '',
+        });
+      }
+    } else {
+        form.reset();
+        setIsSubmitting(false);
+    }
+  }, [open, melding, form]);
+
   
    React.useEffect(() => {
-    form.setValue('subcategorie', '');
+    if (form.formState.isDirty) {
+        form.setValue('subcategorie', '');
+    }
   }, [hoofdcategorie, form]);
 
-  React.useEffect(() => {
-    if (!open) {
-      form.reset();
-      setIsSubmitting(false);
-    }
-  }, [open, form]);
-
   const onSubmit = async (data: MeldingFormValues) => {
-    if (!firestore || !coordinates) return;
+    if (!firestore) return;
     setIsSubmitting(true);
+
+    const coordinates = await fetchCoordinates(data.adres);
+
+    if (!coordinates) {
+        form.setError('adres', { type: 'manual', message: 'Kon adres niet vinden. Controleer de invoer.'});
+        setIsSubmitting(false);
+        return;
+    }
 
     const meldingData = {
       ...data,
       latitude: coordinates.lat,
       longitude: coordinates.lng,
-      status: 'Nieuw',
-      datum: format(new Date(), 'yyyy-MM-dd'),
-      intakenummer: `M${Date.now()}`,
+      datum: melding ? melding.datum : format(new Date(), 'yyyy-MM-dd'),
+      intakenummer: melding ? melding.intakenummer : `M${Date.now()}`,
     };
 
     try {
-      const meldingenColRef = collection(firestore, 'meldingen');
-      await addDocumentNonBlocking(meldingenColRef, meldingData);
+        if (melding) {
+            const meldingRef = doc(firestore, 'meldingen', melding.id);
+            await updateDocumentNonBlocking(meldingRef, meldingData);
+        } else {
+            const meldingenColRef = collection(firestore, 'meldingen');
+            await addDocumentNonBlocking(meldingenColRef, meldingData);
+        }
       onOpenChange(false);
     } catch (error) {
       console.error('Fout bij opslaan melding:', error);
@@ -178,7 +216,7 @@ export function MeldingDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Formulier melding / Klacht</DialogTitle>
+          <DialogTitle>{melding ? 'Melding Bewerken' : 'Formulier melding / Klacht'}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -223,15 +261,9 @@ export function MeldingDialog({
                   </FormItem>
                 )} />
               </div>
-               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  <FormField control={form.control} name="straatnaam" render={({ field }) => (
-                    <FormItem><FormLabel>Adres</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
-                  )} />
-                  <FormField control={form.control} name="postcode" render={({ field }) => (
-                    <FormItem><FormLabel>Postcode</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
-                  )} />
-                  <FormField control={form.control} name="plaats" render={({ field }) => (
-                    <FormItem><FormLabel>Plaats</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+               <div className="grid grid-cols-1 gap-4">
+                  <FormField control={form.control} name="adres" render={({ field }) => (
+                    <FormItem><FormLabel>Adres</FormLabel><FormControl><Input {...field} placeholder="Straatnaam, postcode, plaats" /></FormControl><FormMessage /></FormItem>
                   )} />
               </div>
               <FormField control={form.control} name="extra_informatie" render={({ field }) => (
@@ -244,6 +276,15 @@ export function MeldingDialog({
             <div className="space-y-4">
                 <h3 className="text-lg font-medium">Afhandeling</h3>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                     <FormField control={form.control} name="status" render={({ field }) => (
+                        <FormItem><FormLabel>Status</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                <SelectContent>{statusOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                     )} />
                     <FormField control={form.control} name="afhandeling_datum" render={({ field }) => (
                        <FormItem><FormLabel>Datum</FormLabel><FormControl><Input type="date" {...field} /></FormControl></FormItem>
                     )} />
