@@ -71,12 +71,30 @@
               }
             }
           }
+        },
+        "wijken": {
+          "type": "array",
+          "items": {
+            "$ref": "#/backend/entities/Wijk"
+          }
         }
       },
       "required": [
         "projectnummer",
         "projectnaam"
       ]
+    },
+    "Wijk": {
+        "title": "Wijk",
+        "type": "object",
+        "description": "Represents a district within a project.",
+        "properties": {
+            "id": { "type": "string" },
+            "naam": { "type": "string" },
+            "locatie": { "type": "string" },
+            "subGebieden": { "type": "string" }
+        },
+        "required": ["naam"]
     },
     "Boekingregel": {
         "title": "Boekingregel",

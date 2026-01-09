@@ -45,6 +45,13 @@ type Werksoort = {
   uurprijs: string;
 };
 
+type Wijk = {
+  id: string;
+  naam: string;
+  locatie: string;
+  subGebieden: string;
+};
+
 type Boekingregel = {
     id: string;
     naam: string;
@@ -65,6 +72,7 @@ type Project = {
   omschrijving: string;
   werksoorten: Werksoort[];
   boekingregels?: Boekingregel[];
+  wijken?: Wijk[];
 };
 
 export type Afspraak = {
@@ -108,6 +116,7 @@ const EMPTY_PROJECT: Project = {
   omschrijving: '',
   werksoorten: [],
   boekingregels: [],
+  wijken: [],
 };
 
 function WerksoortenTab({
@@ -561,6 +570,78 @@ function BestandenTab({ projectId }: { projectId: string | undefined }) {
   );
 }
 
+function WijkenTab({
+  wijken,
+  setWijken,
+}: {
+  wijken: Wijk[];
+  setWijken: React.Dispatch<React.SetStateAction<Wijk[]>>;
+}) {
+  const addRow = () => {
+    setWijken([
+      ...wijken,
+      {
+        id: new Date().toISOString(),
+        naam: '',
+        locatie: '',
+        subGebieden: '',
+      },
+    ]);
+  };
+
+  const removeRow = (id: string) => {
+    setWijken(wijken.filter((w) => w.id !== id));
+  };
+
+  const handleInputChange = (
+    id: string,
+    field: keyof Wijk,
+    value: string
+  ) => {
+    setWijken(
+      wijken.map((w) => (w.id === id ? { ...w, [field]: value } : w))
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-[1fr_1fr_2fr_auto] gap-x-4 px-1 text-sm font-semibold">
+        <Label>Wijk</Label>
+        <Label>Locatie</Label>
+        <Label>Sub-gebieden</Label>
+        <span />
+      </div>
+      {wijken.map((wijk) => (
+        <div
+          key={wijk.id}
+          className="grid grid-cols-[1fr_1fr_2fr_auto] items-center gap-x-4"
+        >
+          <Input
+            value={wijk.naam}
+            onChange={(e) => handleInputChange(wijk.id, 'naam', e.target.value)}
+          />
+          <Input
+            value={wijk.locatie}
+            onChange={(e) => handleInputChange(wijk.id, 'locatie', e.target.value)}
+          />
+          <Input
+            value={wijk.subGebieden}
+            onChange={(e) =>
+              handleInputChange(wijk.id, 'subGebieden', e.target.value)
+            }
+          />
+          <Button variant="ghost" size="icon" onClick={() => removeRow(wijk.id)}>
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        </div>
+      ))}
+      <Button variant="outline" onClick={addRow}>
+        Wijk toevoegen
+      </Button>
+    </div>
+  );
+}
+
 export default function ProjectsPage() {
   const firestore = useFirestore();
   const [selectedProjectId, setSelectedProjectId] = React.useState<
@@ -582,7 +663,11 @@ export default function ProjectsPage() {
     if (selectedProjectId) {
       const project = projects?.find((p) => p.id === selectedProjectId);
       if (project) {
-        setCurrentProject(project);
+        setCurrentProject({
+            ...EMPTY_PROJECT,
+            ...project,
+            wijken: project.wijken || [], // Ensure wijken is an array
+        });
         if (project.einddatum === format(new Date(), 'yyyy-MM-dd')) {
             setIsEndDateHeden(true);
         } else {
@@ -817,7 +902,15 @@ export default function ProjectsPage() {
           value="wijken"
           className="flex-1 overflow-y-auto pt-6 pb-2 px-6"
         >
-          <div>Wijken functionaliteit komt hier.</div>
+          <WijkenTab
+            wijken={currentProject.wijken || []}
+            setWijken={(newWijken) =>
+              setCurrentProject((prev) => ({
+                ...prev,
+                wijken: typeof newWijken === 'function' ? newWijken(prev.wijken || []) : newWijken,
+              }))
+            }
+          />
         </TabsContent>
       </Tabs>
     </div>
