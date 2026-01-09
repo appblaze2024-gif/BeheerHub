@@ -56,3 +56,11 @@ export type Dienst = {
     informeerMedewerkers: boolean;
     voertuigId: string | null;
 }
+
+export type Voertuig = {
+  id: string; // kenteken
+  merk?: string;
+  model?: string;
+  voertuignummer?: string;
+  [key: string]: any;
+}

@@ -52,7 +52,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import type { Medewerker, Dienst } from '@/lib/types';
+import type { Medewerker, Dienst, Voertuig } from '@/lib/types';
 
 const dienstFormSchema = z.object({
   boekingregelId: z.string().min(1, 'Boekingregel is verplicht.'),
@@ -101,7 +101,7 @@ export function DienstToevoegenDialog({
   }, [firestore]);
 
   const { data: voertuigen, isLoading: isLoadingVoertuigen } =
-    useCollection(voertuigenCollection);
+    useCollection<Voertuig>(voertuigenCollection);
     
   const boekingregelsCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -180,8 +180,7 @@ export function DienstToevoegenDialog({
 
   const handleDelete = async () => {
     if (!firestore || !dienst) return;
-    const dienstRef = doc(firestore, 'projects', project.id, 'diensten', dienst.id);
-    await deleteDocumentNonBlocking(dienstRef);
+    await deleteDocumentNonBlocking(doc(firestore, 'projects', project.id, 'diensten', dienst.id));
     onOpenChange(false);
   }
 
@@ -355,7 +354,7 @@ export function DienstToevoegenDialog({
                         <SelectItem value="geen">Geen</SelectItem>
                         {voertuigen?.map((v) => (
                           <SelectItem key={v.id} value={v.id}>
-                            {v.merk} {v.model} [{v.id}]
+                            {v.voertuignummer ? `${v.voertuignummer} - ` : ''}{v.merk} {v.model} [{v.id}]
                           </SelectItem>
                         ))}
                       </SelectContent>
