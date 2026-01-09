@@ -76,7 +76,6 @@ type Boekingregel = {
 interface DienstToevoegenDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
   medewerker: Medewerker;
   datum: Date;
   project: {
@@ -88,7 +87,6 @@ interface DienstToevoegenDialogProps {
 export function DienstToevoegenDialog({
   open,
   onOpenChange,
-  onSuccess,
   medewerker,
   datum,
   project,
@@ -157,7 +155,7 @@ export function DienstToevoegenDialog({
       projectId: project.id,
       datum: format(datum, 'yyyy-MM-dd'),
       voertuigId: data.voertuigId || null,
-      werksoort: selectedBoekingregel?.naam || 'Onbekend', // For compatibility, can be removed later
+      werksoort: selectedBoekingregel?.naam || 'Onbekend',
     };
 
     try {
@@ -173,7 +171,7 @@ export function DienstToevoegenDialog({
         );
         await addDocumentNonBlocking(dienstenColRef, dienstData);
       }
-      onSuccess();
+      onOpenChange(false);
     } catch (error) {
       console.error('Fout bij opslaan dienst:', error);
     } finally {
@@ -185,7 +183,7 @@ export function DienstToevoegenDialog({
     if (!firestore || !dienst) return;
     try {
       await deleteDocumentNonBlocking(doc(firestore, 'projects', project.id, 'diensten', dienst.id));
-      onSuccess();
+      onOpenChange(false);
     } catch (error) {
         console.error("Fout bij verwijderen dienst:", error);
     }

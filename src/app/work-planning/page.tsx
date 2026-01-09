@@ -30,7 +30,6 @@ import {
 } from '@/firebase';
 import type { Medewerker, Dienst } from '@/lib/types';
 import { DienstToevoegenDialog } from '@/components/dienst-toevoegen-dialog';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 const getInitials = (firstName?: string, lastName?: string) => {
@@ -253,7 +252,6 @@ export default function WorkPlanningPage() {
             datum={selectedDay}
             project={selectedProject}
             dienst={selectedDienst}
-            onSuccess={() => setIsDialogOpen(false)}
         />
       )}
     </div>
