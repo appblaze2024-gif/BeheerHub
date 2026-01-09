@@ -538,7 +538,7 @@ export function MeldingDialog({
               {/* Melding Tab */}
               <TabsContent value="melding" className="space-y-6 pt-4">
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                   <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-6">
                       <FormItem>
                         <FormLabel>Intakenummer</FormLabel>
                         <div className="flex items-center gap-2">
