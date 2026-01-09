@@ -65,8 +65,8 @@ const polygonFillLayer: FillLayer = {
     id: 'wijk-polygon-fill',
     type: 'fill',
     paint: {
-        'fill-color': '#007cbf',
-        'fill-opacity': 0.2,
+        'fill-color': '#000000',
+        'fill-opacity': 0.3,
     },
 };
 
@@ -74,7 +74,7 @@ const polygonOutlineLayer: LineLayer = {
     id: 'wijk-polygon-outline',
     type: 'line',
     paint: {
-        'line-color': '#007cbf',
+        'line-color': '#000000',
         'line-width': 2,
     },
 };
@@ -124,7 +124,11 @@ export default function IssuesPage() {
         if (Array.isArray(features) && features.length > 0) {
             return {
                 type: 'FeatureCollection',
-                features: features,
+                features: features.map(feature => ({
+                    type: 'Feature',
+                    properties: {},
+                    geometry: feature.geometry,
+                })),
             };
         }
     } catch(e) {
@@ -138,7 +142,7 @@ export default function IssuesPage() {
     if (!meldingen) return [];
 
     // 1. Filter by project and wijk
-    let wijkFiltered = [];
+    let wijkFiltered: Melding[] = [];
     if (!selectedProjectId) {
       wijkFiltered = []; // No project selected, show no issues
     } else {
@@ -155,13 +159,16 @@ export default function IssuesPage() {
         });
         
         if(allWijkPolygons.length === 0) {
+          // If no polygons are defined for any district in the project, maybe show all issues for the project?
+          // For now, we assume if districts are used, they have polygons. If not, this part needs a product decision.
+          // Let's assume we show no issues if no polygons are defined.
           wijkFiltered = [];
         } else {
           wijkFiltered = meldingen.filter(melding => {
             if (typeof melding.latitude !== 'number' || typeof melding.longitude !== 'number') return false;
             const point = turf.point([melding.longitude, melding.latitude]);
-            for (const polygon of allWijkPolygons) {
-              if (turf.booleanPointInPolygon(point, polygon)) return true;
+            for (const polygonFeature of allWijkPolygons) {
+              if (turf.booleanPointInPolygon(point, polygonFeature)) return true;
             }
             return false;
           });
@@ -172,6 +179,7 @@ export default function IssuesPage() {
           if (typeof melding.latitude !== 'number' || typeof melding.longitude !== 'number') return false;
           try {
             const point = turf.point([melding.longitude, melding.latitude]);
+            // Check against all features in the selected wijk's FeatureCollection
             for (const feature of wijkGeoJSON.features) {
               if (turf.booleanPointInPolygon(point, feature)) return true;
             }
@@ -441,3 +449,5 @@ export default function IssuesPage() {
     </div>
   );
 }
+
+    
