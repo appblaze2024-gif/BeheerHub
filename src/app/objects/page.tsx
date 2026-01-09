@@ -127,17 +127,21 @@ export default function ObjectsPage() {
   }, [selectedProject, selectedWijkIds]);
 
 
-  const wijkPolygons = React.useMemo(() => {
+ const wijkPolygons = React.useMemo(() => {
     return selectedWijken.flatMap(wijk => {
       try {
         const featureCollection = JSON.parse(wijk.subGebieden);
-        if (featureCollection && featureCollection.features) {
-            return featureCollection.features.map((feature: any) => ({...feature, properties: { ...feature.properties, wijkNaam: wijk.naam }}));
+        // Ensure featureCollection and its features array exist
+        if (featureCollection && Array.isArray(featureCollection.features)) {
+          return featureCollection.features.map((feature: any) => ({
+            ...feature,
+            properties: { ...feature.properties, wijkNaam: wijk.naam },
+          }));
         }
-        return [];
+        return []; // Return empty array if features are not valid
       } catch (e) {
         console.error(`Invalid GeoJSON for wijk ${wijk.naam}:`, e);
-        return [];
+        return []; // Return empty array on parsing error
       }
     });
   }, [selectedWijken]);
@@ -488,3 +492,5 @@ export default function ObjectsPage() {
     </div>
   );
 }
+
+    
