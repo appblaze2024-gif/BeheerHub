@@ -26,7 +26,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   useFirestore,
-  useDoc
+  useDoc,
+  useCollection
 } from '@/firebase';
 import type { Medewerker, Dienst, Voertuig } from '@/lib/types';
 import { DienstToevoegenSheet } from '@/components/dienst-toevoegen-sheet';
@@ -118,7 +119,7 @@ export default function WorkPlanningPage() {
   }, [firestore]);
 
   const { data: medewerkers, isLoading: isLoadingMedewerkers } =
-    useDoc<Medewerker[]>(medewerkersCollection as any); // useDoc is a bit of a hack here for now
+    useCollection<Medewerker>(medewerkersCollection);
 
   const projectsCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -126,7 +127,7 @@ export default function WorkPlanningPage() {
   }, [firestore]);
 
   const { data: projects, isLoading: isLoadingProjects } =
-    useDoc<Project[]>(projectsCollection as any);
+    useCollection<Project>(projectsCollection);
 
   const start = React.useMemo(() => startOfWeek(currentDate, { weekStartsOn: 1 }), [currentDate]);
   const end = React.useMemo(() => endOfWeek(currentDate, { weekStartsOn: 1 }), [currentDate]);

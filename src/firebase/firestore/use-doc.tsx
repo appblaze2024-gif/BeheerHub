@@ -62,7 +62,7 @@ export function useDoc<T = any>(
     const unsubscribe = onSnapshot(
       docRef,
       (snapshot: DocumentSnapshot<DocumentData>) => {
-        if (snapshot.exists()) {
+        if (snapshot.exists) {
           setData({ ...(snapshot.data() as T), id: snapshot.id });
         } else {
           // Document does not exist, so data is null.
