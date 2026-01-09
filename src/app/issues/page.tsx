@@ -13,11 +13,8 @@ import * as turf from '@turf/turf';
 import type { Wijk } from '@/app/projects/page';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { addDays, format, isSameDay, startOfDay } from 'date-fns';
-import { nl } from 'date-fns/locale';
+import { format, isSameDay, startOfDay } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
@@ -99,7 +96,7 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
 
   return (
     <div className="overflow-y-auto">
-      <div className="grid grid-cols-[1fr_1fr_1fr_1fr_2fr_2fr_1fr_120px_50px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
+      <div className="grid grid-cols-[1fr_1fr_1fr_1fr_2fr_2fr_1fr_120px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
         <span>Tijd</span>
         <span>Intakenummer</span>
         <span>Wijk</span>
@@ -108,13 +105,12 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
         <span>Adres</span>
         <span>Melder</span>
         <span>Status</span>
-        <span />
       </div>
       {meldingen.map((melding) => (
         <div
           key={melding.id}
           onClick={() => onMeldingClick(melding)}
-          className="grid grid-cols-[1fr_1fr_1fr_1fr_2fr_2fr_1fr_120px_50px] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
+          className="grid grid-cols-[1fr_1fr_1fr_1fr_2fr_2fr_1fr_120px] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
         >
           <span className="truncate">{melding.tijdstip || '-'}</span>
           <span className="font-medium truncate">{melding.intakenummer}</span>
@@ -134,19 +130,6 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
           >
             {melding.status}
           </Badge>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onMeldingClick(melding)}>
-                Details bekijken
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       ))}
     </div>
@@ -279,12 +262,10 @@ export default function IssuesPage() {
     if (!wijk) return [];
     
     return searchedMeldingen.filter(melding => {
-        // Condition 1: The melding's assigned wijk name matches the selected wijk name.
-        if (melding.wijk && melding.wijk === wijk.naam) {
+        if (melding.wijk === wijk.naam) {
           return true;
         }
     
-        // Condition 2: The melding's coordinates fall within the selected wijk's polygons.
         try {
             const wijkFeatures = JSON.parse(wijk.subGebieden);
             if (Array.isArray(wijkFeatures) && wijkFeatures.length > 0) {
