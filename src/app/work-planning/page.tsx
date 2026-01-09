@@ -217,7 +217,7 @@ export default function WorkPlanningPage() {
                           {dienstenForDay?.map(dienst => (
                               <div key={dienst.id} 
                                    onClick={() => openEditDienstDialog(dienst, medewerker)}
-                                   className="bg-secondary text-secondary-foreground rounded-md p-2 text-xs cursor-pointer hover:bg-secondary/80"
+                                   className="bg-blue-100 text-blue-900 rounded-md p-2 text-xs cursor-pointer hover:bg-blue-200 dark:bg-blue-900/50 dark:text-white dark:hover:bg-blue-900/70"
                               >
                                   <p className="font-semibold truncate">{dienst.starttijd} - {dienst.eindtijd}</p>
                                   <p className="truncate">{dienst.werksoort}</p>
