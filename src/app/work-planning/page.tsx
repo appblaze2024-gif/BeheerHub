@@ -390,7 +390,6 @@ export default function WorkPlanningPage() {
               ))}
             </SelectContent>
           </Select>
-          <Button variant="outline">Voertuigen</Button>
           <Button variant="outline" onClick={() => setIsPrintDayDialogOpen(true)}><Printer className="mr-2 h-4 w-4" /> Print Dag</Button>
           <Button variant="outline" onClick={handlePrintWeek}><Printer className="mr-2 h-4 w-4" /> Print Week</Button>
         </div>
