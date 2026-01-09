@@ -736,13 +736,14 @@ export default function ProjectsPage() {
 
   const handleSave = async () => {
     if (!firestore) return;
-    const projectsColRef = collection(firestore, 'projects');
-    const projectToSave = {...currentProject};
+    // Create a deep copy to avoid unintended direct state mutation.
+    const projectToSave = JSON.parse(JSON.stringify(currentProject));
 
-    if (currentProject.id) {
-      const projectRef = doc(firestore, 'projects', currentProject.id);
+    if (projectToSave.id) {
+      const projectRef = doc(firestore, 'projects', projectToSave.id);
       updateDocumentNonBlocking(projectRef, projectToSave);
     } else {
+      const projectsColRef = collection(firestore, 'projects');
       const newDocRef = await addDocumentNonBlocking(projectsColRef, projectToSave);
       setSelectedProjectId(newDocRef.id);
     }
