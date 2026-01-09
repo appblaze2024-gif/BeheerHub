@@ -1,8 +1,11 @@
 'use client';
 
 import * as React from 'react';
-import Map, { Marker, Popup } from 'react-map-gl';
+import Map, { Marker, Popup, Source, Layer } from 'react-map-gl';
 import { MapPin } from 'lucide-react';
+import type { FillLayer, LineLayer } from 'react-map-gl';
+import * as turf from '@turf/turf';
+
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -17,10 +20,38 @@ interface MapboxViewProps {
   longitude?: number;
   latitude?: number;
   objects?: MapObject[];
+  wijkPolygons?: turf.Feature<turf.Polygon | turf.MultiPolygon>[];
 }
 
-export function MapboxView({ longitude, latitude, objects }: MapboxViewProps) {
+const polygonFillLayer: FillLayer = {
+    id: 'wijk-polygon-fill',
+    type: 'fill',
+    paint: {
+        'fill-color': '#088',
+        'fill-opacity': 0.4,
+    },
+};
+
+const polygonOutlineLayer: LineLayer = {
+    id: 'wijk-polygon-outline',
+    type: 'line',
+    paint: {
+        'line-color': '#088',
+        'line-width': 2,
+    },
+};
+
+export function MapboxView({ longitude, latitude, objects, wijkPolygons = [] }: MapboxViewProps) {
   const [selectedPin, setSelectedPin] = React.useState<MapObject | null>(null);
+  
+  const geojson: turf.FeatureCollection<turf.Geometry> = React.useMemo(() => {
+    return {
+      type: 'FeatureCollection',
+      features: wijkPolygons,
+    };
+  }, [wijkPolygons]);
+
+  const mapRef = React.useRef<any>(null);
 
   const initialLongitude = objects && objects.length > 0 ? objects[0].longitude : (longitude || 5.2913);
   const initialLatitude = objects && objects.length > 0 ? objects[0].latitude : (latitude || 52.1326);
@@ -31,6 +62,24 @@ export function MapboxView({ longitude, latitude, objects }: MapboxViewProps) {
     latitude: initialLatitude,
     zoom: initialZoom,
   });
+  
+  React.useEffect(() => {
+    if (mapRef.current && wijkPolygons.length > 0) {
+      const allCoordinates = wijkPolygons.flatMap(f => turf.coordAll(f));
+      if (allCoordinates.length > 0) {
+          const bbox = turf.bbox({ type: 'FeatureCollection', features: wijkPolygons });
+          mapRef.current.fitBounds(bbox, { padding: 40, duration: 1000 });
+      }
+    } else if (!longitude && !latitude) {
+        // Reset to default view if no polygons and no specific coords
+         mapRef.current?.flyTo({
+            center: [initialLongitude, initialLatitude],
+            zoom: initialZoom,
+            duration: 1000
+        });
+    }
+  }, [wijkPolygons, longitude, latitude, initialLatitude, initialLongitude, initialZoom]);
+
 
   React.useEffect(() => {
     if (longitude && latitude && !objects) {
@@ -40,8 +89,6 @@ export function MapboxView({ longitude, latitude, objects }: MapboxViewProps) {
         latitude,
         zoom: 15,
       }));
-    } else if (objects && objects.length > 0) {
-        // Optional: fit map to bounds of all objects
     }
   }, [longitude, latitude, objects]);
 
@@ -73,12 +120,20 @@ export function MapboxView({ longitude, latitude, objects }: MapboxViewProps) {
 
   return (
     <Map
+      ref={mapRef}
       {...viewport}
       onMove={evt => setViewport(evt.viewState)}
       style={{ width: '100%', height: '100%' }}
       mapStyle="mapbox://styles/mapbox/streets-v11"
       mapboxAccessToken={MAPBOX_TOKEN}
     >
+      {wijkPolygons.length > 0 && (
+          <Source id="wijk-polygons" type="geojson" data={geojson}>
+              <Layer {...polygonFillLayer} />
+              <Layer {...polygonOutlineLayer} />
+          </Source>
+      )}
+
       {markers}
 
       {selectedPin && (

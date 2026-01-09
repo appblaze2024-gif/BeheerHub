@@ -42,8 +42,18 @@ import { MapboxView } from '@/components/mapbox-view';
 import { ObjectImportDialog } from '@/components/object-import-dialog';
 import { useCollection, useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
+import { Wijk } from '@/app/projects/page';
+import * as turf from '@turf/turf';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
+
+type Project = {
+  id: string;
+  projectnaam: string;
+  wijken?: Wijk[];
+};
 
 export default function ObjectsPage() {
   const firestore = useFirestore();
@@ -52,14 +62,28 @@ export default function ObjectsPage() {
   const [selectedObject, setSelectedObject] = React.useState<any | null>(null);
   const [viewMode, setViewMode] = React.useState<'list' | 'map'>('list');
 
+  // State for map view filtering
+  const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
+  const [selectedWijkIds, setSelectedWijkIds] = React.useState<string[]>([]);
+
   const objectsCollection = React.useMemo(() => {
     if (!firestore) return null;
     return collection(firestore, 'objects');
   }, [firestore]);
+  
+  const projectsCollection = React.useMemo(() => {
+      if (!firestore) return null;
+      return collection(firestore, 'projects');
+  }, [firestore]);
 
-  const { data: objects, isLoading } = useCollection<any>(objectsCollection);
+  const { data: objects, isLoading: isLoadingObjects } = useCollection<any>(objectsCollection);
+  const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsCollection);
 
-  const filteredObjects = React.useMemo(() => {
+  const selectedProject = React.useMemo(() => {
+    return projects?.find(p => p.id === selectedProjectId) ?? null;
+  }, [projects, selectedProjectId]);
+
+  const filteredObjectsList = React.useMemo(() => {
     if (!objects) return [];
     if (!searchTerm) return objects;
     return objects.filter(
@@ -70,14 +94,14 @@ export default function ObjectsPage() {
   }, [objects, searchTerm]);
 
   React.useEffect(() => {
-    if (!selectedObject && filteredObjects && filteredObjects.length > 0) {
-      setSelectedObject(filteredObjects[0]);
-    } else if (selectedObject && filteredObjects) {
-        if (!filteredObjects.find((v) => v.id === selectedObject.id)) {
-            setSelectedObject(filteredObjects.length > 0 ? filteredObjects[0] : null);
+    if (!selectedObject && filteredObjectsList && filteredObjectsList.length > 0) {
+      setSelectedObject(filteredObjectsList[0]);
+    } else if (selectedObject && filteredObjectsList) {
+        if (!filteredObjectsList.find((v) => v.id === selectedObject.id)) {
+            setSelectedObject(filteredObjectsList.length > 0 ? filteredObjectsList[0] : null);
         }
     }
-  }, [filteredObjects, selectedObject]);
+  }, [filteredObjectsList, selectedObject]);
   
   const handleImportSuccess = () => {
     setIsImporting(false);
@@ -90,6 +114,55 @@ export default function ObjectsPage() {
     updateDocumentNonBlocking(objectRef, { [field]: value });
     setSelectedObject((prev: any) => ({ ...prev, [field]: value }));
   };
+
+  const handleWijkSelectionChange = (wijkId: string, checked: boolean) => {
+    setSelectedWijkIds(prev => 
+      checked ? [...prev, wijkId] : prev.filter(id => id !== wijkId)
+    );
+  };
+  
+  const selectedWijken = React.useMemo(() => {
+      if (!selectedProject || !selectedProject.wijken) return [];
+      return selectedProject.wijken.filter(w => selectedWijkIds.includes(w.id));
+  }, [selectedProject, selectedWijkIds]);
+
+
+  const wijkPolygons = React.useMemo(() => {
+    return selectedWijken.flatMap(wijk => {
+      try {
+        const featureCollection = JSON.parse(wijk.subGebieden);
+        return featureCollection.features.map((feature: any) => ({...feature, properties: { ...feature.properties, wijkNaam: wijk.naam }}));
+      } catch (e) {
+        console.error(`Invalid GeoJSON for wijk ${wijk.naam}:`, e);
+        return [];
+      }
+    });
+  }, [selectedWijken]);
+
+  const objectsOnMap = React.useMemo(() => {
+    if (viewMode === 'list') return [];
+    if (!objects) return [];
+    if (selectedWijkIds.length === 0) return [];
+
+    return objects.filter(obj => {
+      if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
+      const point = turf.point([obj.longitude, obj.latitude]);
+      
+      for (const wijk of selectedWijken) {
+          try {
+              const featureCollection = JSON.parse(wijk.subGebieden);
+              for (const feature of featureCollection.features) {
+                  if (turf.booleanPointInPolygon(point, feature)) {
+                      return true;
+                  }
+              }
+          } catch(e) {
+              // ignore invalid polygons
+          }
+      }
+      return false;
+    });
+  }, [objects, selectedWijken, viewMode, selectedWijkIds.length]);
 
   return (
     <div className="flex flex-col flex-1 h-full min-h-0 bg-muted/30">
@@ -141,12 +214,12 @@ export default function ObjectsPage() {
            <Separator />
            <div className="flex-1 overflow-y-auto">
               <div className="flex flex-col space-y-1 p-2">
-               {isLoading ? (
+               {isLoadingObjects ? (
                   <div className="text-center text-muted-foreground p-4">
                    Laden...
                  </div>
-               ) : filteredObjects && filteredObjects.length > 0 ? (
-                 filteredObjects.map((obj) => (
+               ) : filteredObjectsList && filteredObjectsList.length > 0 ? (
+                 filteredObjectsList.map((obj) => (
                    <div
                      key={obj.id}
                      onClick={() => setSelectedObject(obj)}
@@ -358,14 +431,57 @@ export default function ObjectsPage() {
              </Card>
              ) : (
                  <div className="flex items-center justify-center h-full text-muted-foreground">
-                     {isLoading ? 'Objecten laden...' : 'Selecteer een object om de details te zien.'}
+                     {isLoadingObjects ? 'Objecten laden...' : 'Selecteer een object om de details te zien.'}
                  </div>
              )}
          </main>
        </div>
       ) : (
-        <div className="flex-1 min-h-0">
-          <MapboxView objects={filteredObjects} />
+        <div className="flex flex-1 min-h-0 relative">
+          <aside className="absolute top-0 left-0 z-10 m-4 w-80 bg-card border rounded-lg shadow-lg">
+            <div className="p-4 space-y-4">
+              <div>
+                <Label htmlFor="project-select">Project</Label>
+                <Select
+                  value={selectedProjectId || ''}
+                  onValueChange={(value) => {
+                    setSelectedProjectId(value);
+                    setSelectedWijkIds([]);
+                  }}
+                  disabled={isLoadingProjects}
+                >
+                  <SelectTrigger id="project-select">
+                    <SelectValue placeholder="Selecteer een project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects?.map(p => <SelectItem key={p.id} value={p.id}>{p.projectnaam}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              {selectedProject && (
+                <div>
+                  <Label>Wijken</Label>
+                  <div className="mt-2 space-y-2 border rounded-md p-2 max-h-64 overflow-y-auto">
+                    {(selectedProject.wijken && selectedProject.wijken.length > 0) ? (
+                        selectedProject.wijken.map(wijk => (
+                            <div key={wijk.id} className="flex items-center space-x-2">
+                                <Checkbox
+                                    id={`wijk-${wijk.id}`}
+                                    checked={selectedWijkIds.includes(wijk.id)}
+                                    onCheckedChange={(checked) => handleWijkSelectionChange(wijk.id, !!checked)}
+                                />
+                                <Label htmlFor={`wijk-${wijk.id}`} className="font-normal">{wijk.naam}</Label>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="text-sm text-muted-foreground">Geen wijken voor dit project.</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </aside>
+          <MapboxView objects={objectsOnMap} wijkPolygons={wijkPolygons} />
         </div>
       )}
     </div>
