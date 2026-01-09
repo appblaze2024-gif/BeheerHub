@@ -697,8 +697,25 @@ export default function ProjectsPage() {
   
   const allWijken = React.useMemo(() => {
     if (!projects) return [];
-    return projects.flatMap(p => p.wijken || []);
+    return projects.flatMap(p => 
+      (p.wijken || []).map(w => ({ ...w, projectName: p.projectnaam }))
+    );
   }, [projects]);
+  
+  const allWijkenFeatures = React.useMemo(() => {
+    return allWijken.flatMap(wijk => {
+      try {
+        const features = JSON.parse(wijk.subGebieden);
+        return features.map((feature: any) => ({
+          ...feature,
+          properties: { ...feature.properties, wijkNaam: wijk.naam },
+        }));
+      } catch {
+        return [];
+      }
+    });
+  }, [allWijken]);
+
 
   React.useEffect(() => {
     if (selectedProjectId) {
@@ -959,13 +976,7 @@ export default function ProjectsPage() {
         <WijkMapDialog
           open={isGlobalWijkMapOpen}
           onOpenChange={setIsGlobalWijkMapOpen}
-          wijk={{ id: 'global', naam: 'Alle Wijken', locatie: '', subGebieden: JSON.stringify(allWijken.flatMap(w => {
-            try {
-              return JSON.parse(w.subGebieden)
-            } catch {
-              return []
-            }
-          }))}}
+          wijk={{ id: 'global', naam: 'Alle Wijken', locatie: '', subGebieden: JSON.stringify(allWijkenFeatures)}}
           onSave={() => {}}
           readOnly={true}
         />

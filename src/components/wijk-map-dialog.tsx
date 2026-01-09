@@ -17,6 +17,9 @@ import { Wijk } from '@/app/projects/page';
 import { Input } from './ui/input';
 import { Loader2 } from 'lucide-react';
 import * as turf from '@turf/turf';
+import type { FillLayer, LineLayer, SymbolLayer } from 'react-map-gl';
+import { Layer, Source } from 'react-map-gl';
+
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -36,6 +39,42 @@ interface Suggestion {
   lat: string;
 }
 
+const polygonFillLayer: FillLayer = {
+    id: 'wijk-polygon-fill',
+    type: 'fill',
+    paint: {
+        'fill-color': '#000000',
+        'fill-opacity': 0.3
+    },
+};
+
+const polygonOutlineLayer: LineLayer = {
+    id: 'wijk-polygon-outline',
+    type: 'line',
+    paint: {
+        'line-color': '#000000',
+        'line-width': 2
+    },
+};
+
+const polygonLabelLayer: SymbolLayer = {
+  id: 'wijk-polygon-labels',
+  type: 'symbol',
+  source: 'wijk-polygons',
+  layout: {
+    'text-field': ['get', 'wijkNaam'],
+    'text-variable-anchor': ['top', 'bottom', 'left', 'right'],
+    'text-radial-offset': 0.5,
+    'text-justify': 'auto',
+    'text-size': 12,
+  },
+  paint: {
+    'text-color': '#ffffff',
+    'text-halo-color': '#000000',
+    'text-halo-width': 1,
+  }
+};
+
 export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = false }: WijkMapDialogProps) {
   const drawRef = React.useRef<MapboxDraw | null>(null);
   const mapRef = React.useRef<any>(null);
@@ -46,6 +85,19 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   
   const initialFeaturesRef = React.useRef<any[]>([]);
+
+  const geojson = React.useMemo(() => {
+    if (!wijk?.subGebieden) return null;
+    try {
+      const features = JSON.parse(wijk.subGebieden);
+      return {
+        type: 'FeatureCollection',
+        features: Array.isArray(features) ? features : [],
+      };
+    } catch {
+      return null;
+    }
+  }, [wijk?.subGebieden]);
 
   const cleanup = React.useCallback(() => {
     if (drawRef.current && mapRef.current?.getMap()?.isStyleLoaded()) {
@@ -131,29 +183,17 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
       drawRef.current = draw;
       setIsDrawReady(true);
       
-      if (wijk?.subGebieden) {
-        try {
-          const features = JSON.parse(wijk.subGebieden);
-          initialFeaturesRef.current = features; // Store initial features
-          if (Array.isArray(features) && features.length > 0) {
-             const featureCollection = {
-              type: 'FeatureCollection',
-              features: features
-            };
-             draw.add(featureCollection as any);
+      if (geojson && geojson.features.length > 0) {
+        initialFeaturesRef.current = geojson.features; // Store initial features
+        draw.add(geojson as any);
 
-            const bbox = turf.bbox(featureCollection);
-            if (bbox[0] !== Infinity) {
-              map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
-            }
-
-          }
-        } catch (e) {
-          console.error("Failed to parse or add existing polygons:", e);
+        const bbox = turf.bbox(geojson);
+        if (bbox[0] !== Infinity) {
+          map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
         }
       }
     }
-  }, [wijk, readOnly]);
+  }, [geojson, readOnly]);
 
   const handleSave = () => {
     if (drawRef.current && wijk) {
@@ -282,7 +322,15 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
             mapboxAccessToken={MAPBOX_TOKEN}
             onLoad={onMapLoad}
             preserveDrawingBuffer
-          />
+          >
+            {readOnly && geojson && (
+              <Source id="wijk-polygons" type="geojson" data={geojson}>
+                <Layer {...polygonFillLayer} />
+                <Layer {...polygonOutlineLayer} />
+                <Layer {...polygonLabelLayer} />
+              </Source>
+            )}
+          </Map>
         </div>
         <DialogFooter className="p-6 pt-4 border-t">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
