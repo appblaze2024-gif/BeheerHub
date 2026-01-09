@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { FilePenLine, Plus, Trash2, Upload, Download, MapPin } from 'lucide-react';
+import { FilePenLine, Plus, Trash2, Upload, Download, MapPin, Map as MapIcon } from 'lucide-react';
 import {
   useFirestore,
   useCollection,
@@ -684,6 +684,7 @@ export default function ProjectsPage() {
   >();
   const [currentProject, setCurrentProject] = React.useState<Project>(EMPTY_PROJECT);
   const [isEndDateHeden, setIsEndDateHeden] = React.useState(false);
+  const [isGlobalWijkMapOpen, setIsGlobalWijkMapOpen] = React.useState(false);
 
   const projectsCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -693,6 +694,11 @@ export default function ProjectsPage() {
   const { data: projects, isLoading } = useCollection<Project>(
     projectsCollection
   );
+  
+  const allWijken = React.useMemo(() => {
+    if (!projects) return [];
+    return projects.flatMap(p => p.wijken || []);
+  }, [projects]);
 
   React.useEffect(() => {
     if (selectedProjectId) {
@@ -815,6 +821,10 @@ export default function ProjectsPage() {
               ))}
             </SelectContent>
           </Select>
+          <Button variant="outline" onClick={() => setIsGlobalWijkMapOpen(true)}>
+            <MapIcon className="mr-2 h-4 w-4" />
+            Alle Wijken op Kaart
+          </Button>
         </div>
 
         <TabsContent
@@ -944,6 +954,22 @@ export default function ProjectsPage() {
           />
         </TabsContent>
       </Tabs>
+      
+      {isGlobalWijkMapOpen && (
+        <WijkMapDialog
+          open={isGlobalWijkMapOpen}
+          onOpenChange={setIsGlobalWijkMapOpen}
+          wijk={{ id: 'global', naam: 'Alle Wijken', locatie: '', subGebieden: JSON.stringify(allWijken.flatMap(w => {
+            try {
+              return JSON.parse(w.subGebieden)
+            } catch {
+              return []
+            }
+          }))}}
+          onSave={() => {}}
+          readOnly={true}
+        />
+      )}
     </div>
   );
 }

@@ -16,6 +16,7 @@ import { Button } from './ui/button';
 import { Wijk } from '@/app/projects/page';
 import { Input } from './ui/input';
 import { Loader2 } from 'lucide-react';
+import * as turf from '@turf/turf';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -24,6 +25,7 @@ interface WijkMapDialogProps {
   onOpenChange: (open: boolean) => void;
   wijk: Wijk | null;
   onSave: (wijkId: string, coordinates: string) => void;
+  readOnly?: boolean;
 }
 
 interface Suggestion {
@@ -34,7 +36,7 @@ interface Suggestion {
   lat: string;
 }
 
-export function WijkMapDialog({ open, onOpenChange, wijk, onSave }: WijkMapDialogProps) {
+export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = false }: WijkMapDialogProps) {
   const drawRef = React.useRef<MapboxDraw | null>(null);
   const mapRef = React.useRef<any>(null);
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -68,7 +70,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave }: WijkMapDialo
       const map = mapRef.current.getMap();
       const draw = new MapboxDraw({
         displayControlsDefault: false,
-        controls: {
+        controls: readOnly ? {} : {
           polygon: true,
           trash: true,
         },
@@ -134,22 +136,24 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave }: WijkMapDialo
           const features = JSON.parse(wijk.subGebieden);
           initialFeaturesRef.current = features; // Store initial features
           if (Array.isArray(features) && features.length > 0) {
-             draw.add({
+             const featureCollection = {
               type: 'FeatureCollection',
               features: features
-            });
+            };
+             draw.add(featureCollection as any);
 
-            if (features[0].geometry.type === 'Polygon') {
-                const firstCoord = features[0].geometry.coordinates[0][0];
-                map.flyTo({ center: firstCoord, zoom: 12 });
+            const bbox = turf.bbox(featureCollection);
+            if (bbox[0] !== Infinity) {
+              map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
             }
+
           }
         } catch (e) {
           console.error("Failed to parse or add existing polygons:", e);
         }
       }
     }
-  }, [wijk]);
+  }, [wijk, readOnly]);
 
   const handleSave = () => {
     if (drawRef.current && wijk) {
@@ -231,40 +235,44 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave }: WijkMapDialo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[80vw] h-[80vh] flex flex-col p-0 gap-0">
         <DialogHeader className="p-6 pb-2">
-          <DialogTitle>Teken gebied voor wijk: {wijk?.naam}</DialogTitle>
-          <DialogDescription>
-            Zoek een gebied op naam en klik op een suggestie om de grenzen automatisch te tekenen.
-          </DialogDescription>
+          <DialogTitle>{readOnly ? wijk?.naam : `Teken gebied voor wijk: ${wijk?.naam}`}</DialogTitle>
+          {!readOnly && (
+            <DialogDescription>
+              Zoek een gebied op naam en klik op een suggestie om de grenzen automatisch te tekenen.
+            </DialogDescription>
+          )}
         </DialogHeader>
 
-        <div className="px-6 pb-4 relative">
-            <div className="flex w-full max-w-md items-center space-x-2">
-                <div className='relative w-full'>
-                    <Input
-                        type="text"
-                        placeholder="Zoek een plaatsnaam, wijk of buurt..."
-                        value={searchQuery}
-                        onChange={handleSearchQueryChange}
-                        disabled={!isDrawReady}
-                    />
-                    {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
-                    {suggestions.length > 0 && (
-                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                            {suggestions.map((suggestion) => (
-                            <div
-                                key={suggestion.place_id}
-                                onClick={() => handleSuggestionClick(suggestion)}
-                                className="px-4 py-2 text-sm cursor-pointer hover:bg-gray-100"
-                            >
-                                {suggestion.display_name}
-                            </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </div>
-            {!isDrawReady && <p className='text-xs text-muted-foreground mt-1'>Kaart laden...</p>}
-        </div>
+        {!readOnly && (
+          <div className="px-6 pb-4 relative">
+              <div className="flex w-full max-w-md items-center space-x-2">
+                  <div className='relative w-full'>
+                      <Input
+                          type="text"
+                          placeholder="Zoek een plaatsnaam, wijk of buurt..."
+                          value={searchQuery}
+                          onChange={handleSearchQueryChange}
+                          disabled={!isDrawReady}
+                      />
+                      {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
+                      {suggestions.length > 0 && (
+                          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                              {suggestions.map((suggestion) => (
+                              <div
+                                  key={suggestion.place_id}
+                                  onClick={() => handleSuggestionClick(suggestion)}
+                                  className="px-4 py-2 text-sm cursor-pointer hover:bg-gray-100"
+                              >
+                                  {suggestion.display_name}
+                              </div>
+                              ))}
+                          </div>
+                      )}
+                  </div>
+              </div>
+              {!isDrawReady && <p className='text-xs text-muted-foreground mt-1'>Kaart laden...</p>}
+          </div>
+        )}
 
         <div className="flex-1 min-h-0">
           <Map
@@ -277,8 +285,12 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave }: WijkMapDialo
           />
         </div>
         <DialogFooter className="p-6 pt-4 border-t">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Annuleren</Button>
-            <Button onClick={handleSave}>Gebieden opslaan</Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+                {readOnly ? 'Sluiten' : 'Annuleren'}
+            </Button>
+            {!readOnly && (
+              <Button onClick={handleSave}>Gebieden opslaan</Button>
+            )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
