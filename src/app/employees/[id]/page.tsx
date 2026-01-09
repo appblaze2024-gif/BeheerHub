@@ -21,7 +21,7 @@ import {
   GanttChart,
 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
-import { doc } from 'firebase/firestore';
+import { collection, doc, getDocs, query, where } from 'firebase/firestore';
 import {
   startOfWeek,
   endOfWeek,
@@ -49,7 +49,7 @@ import {
   useFirestore,
   updateDocumentNonBlocking,
 } from '@/firebase';
-import type { Medewerker } from '@/lib/types';
+import type { Medewerker, Dienst } from '@/lib/types';
 import { MedewerkerDialog } from '@/components/medewerker-dialog';
 import { cn } from '@/lib/utils';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent } from '@/components/ui/dropdown-menu';
@@ -259,11 +259,55 @@ function AfwezigheidTab() {
   );
 }
 
-function RoosterTab() {
+function RoosterTab({ medewerkerId }: { medewerkerId: string }) {
+  const firestore = useFirestore();
   const [currentDate, setCurrentDate] = React.useState(new Date());
+  const [diensten, setDiensten] = React.useState<Record<string, Dienst[]>>({});
 
   const firstDayOfMonth = startOfMonth(currentDate);
   const lastDayOfMonth = endOfMonth(currentDate);
+
+  React.useEffect(() => {
+    const fetchDiensten = async () => {
+      if (!firestore) return;
+      
+      setDiensten({}); // Reset on new fetch
+
+      const projectsCol = collection(firestore, 'projects');
+      const projectsSnapshot = await getDocs(projectsCol);
+
+      const startDateStr = format(firstDayOfMonth, 'yyyy-MM-dd');
+      const endDateStr = format(lastDayOfMonth, 'yyyy-MM-dd');
+
+      const allDiensten: Dienst[] = [];
+
+      for (const projectDoc of projectsSnapshot.docs) {
+        const dienstenCol = collection(firestore, 'projects', projectDoc.id, 'diensten');
+        const q = query(dienstenCol, 
+          where('medewerkerId', '==', medewerkerId),
+          where('datum', '>=', startDateStr),
+          where('datum', '<=', endDateStr)
+        );
+        const dienstenSnapshot = await getDocs(q);
+        dienstenSnapshot.forEach(dienstDoc => {
+          allDiensten.push({ id: dienstDoc.id, ...dienstDoc.data() } as Dienst);
+        });
+      }
+
+      const groupedDiensten = allDiensten.reduce((acc, dienst) => {
+        const dateKey = dienst.datum;
+        if (!acc[dateKey]) {
+          acc[dateKey] = [];
+        }
+        acc[dateKey].push(dienst);
+        return acc;
+      }, {} as Record<string, Dienst[]>);
+
+      setDiensten(groupedDiensten);
+    };
+
+    fetchDiensten();
+  }, [firestore, currentDate, medewerkerId, firstDayOfMonth, lastDayOfMonth]);
 
   const prevMonth = () => setCurrentDate(sub(currentDate, { months: 1 }));
   const nextMonth = () => setCurrentDate(add(currentDate, { months: 1 }));
@@ -323,11 +367,24 @@ function RoosterTab() {
               const daysInWeek = eachDayOfInterval({start: weekStart, end: endOfWeek(weekStart, {weekStartsOn: 1})})
               return (
                 <div key={weekIndex} className="grid grid-cols-7 border-t first:border-t-0 bg-white">
-                  {daysInWeek.map((day, dayIndex) => (
-                    <div key={day.toISOString()} className={cn("p-2 border-r", !isSameMonth(day, currentDate) && 'bg-muted/30')}>
-                        <span className={cn('text-xs font-semibold', !isSameMonth(day, currentDate) && 'text-muted-foreground/50', isToday(day) && 'flex items-center justify-center h-5 w-5 rounded-full bg-blue-600 text-white')}>{format(day, 'd')}</span>
-                    </div>
-                  ))}
+                  {daysInWeek.map((day, dayIndex) => {
+                    const dateKey = format(day, 'yyyy-MM-dd');
+                    const dayDiensten = diensten[dateKey] || [];
+                    
+                    return (
+                        <div key={day.toISOString()} className={cn("p-1 border-r min-h-[100px]", !isSameMonth(day, currentDate) && 'bg-muted/30')}>
+                            <span className={cn('text-xs font-semibold', !isSameMonth(day, currentDate) && 'text-muted-foreground/50', isToday(day) && 'flex items-center justify-center h-5 w-5 rounded-full bg-blue-600 text-white')}>{format(day, 'd')}</span>
+                            <div className="mt-1 space-y-1">
+                                {dayDiensten.map(dienst => (
+                                    <div key={dienst.id} className="bg-blue-100 dark:bg-blue-900/50 rounded-md p-1 text-[10px] leading-tight">
+                                        <p className="font-semibold truncate">{dienst.werksoort}</p>
+                                        <p className="truncate">{dienst.starttijd}-{dienst.eindtijd}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )
+                  })}
                 </div>
               )
            })}
@@ -558,7 +615,7 @@ export default function EmployeeDetailPage() {
             <AfwezigheidTab />
           </TabsContent>
           <TabsContent value="rooster" className="flex-1 overflow-y-auto">
-            <RoosterTab />
+            <RoosterTab medewerkerId={id} />
           </TabsContent>
           <TabsContent value="contracten" className="flex-1 overflow-y-auto">
              <ContractenTab />
