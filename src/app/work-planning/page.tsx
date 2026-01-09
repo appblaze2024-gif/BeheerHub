@@ -10,6 +10,7 @@ import {
   add,
   sub,
   isSameDay,
+  parse,
 } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { collection, query, where, doc, getDocs, updateDoc, addDoc } from 'firebase/firestore';
@@ -264,6 +265,28 @@ export default function WorkPlanningPage() {
     setDragOverCell({ medewerkerId, day: format(day, 'yyyy-MM-dd') });
   }
 
+  const calculateWeekHours = (medewerkerId: string) => {
+    if (!diensten) return 0;
+    
+    const medewerkerDiensten = diensten.filter(d => d.medewerkerId === medewerkerId);
+    let totalMinutes = 0;
+
+    medewerkerDiensten.forEach(d => {
+      if (!d.starttijd || !d.eindtijd) return;
+      try {
+        const startTijd = parse(d.starttijd, 'HH:mm', new Date());
+        const eindTijd = parse(d.eindtijd, 'HH:mm', new Date());
+        let duration = (eindTijd.getTime() - startTijd.getTime()) / (1000 * 60);
+        if (duration < 0) duration += 24 * 60; // Overnight
+        duration -= d.onbetaaldePauze || 0;
+        totalMinutes += duration;
+      } catch (e) {
+        console.error("Error parsing time for week hour calculation", e);
+      }
+    });
+
+    return totalMinutes / 60;
+  };
 
   return (
     <div className="flex flex-col flex-1 h-full min-h-0">
@@ -356,7 +379,7 @@ export default function WorkPlanningPage() {
                   <div className="mt-1 pl-11 space-y-0.5">
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Clock className="h-3 w-3" />
-                      <span>0u 0m / {formatHours(getWeekContractHours(medewerker))}</span>
+                      <span>{formatHours(calculateWeekHours(medewerker.id))} / {formatHours(getWeekContractHours(medewerker))}</span>
                     </div>
                   </div>
                 </div>
