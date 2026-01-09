@@ -45,12 +45,12 @@ type Project = {
 };
 
 const statusConfig = {
-  Nieuw: { color: '#facc15' }, // yellow-400
-  'Intern doorgezet': { color: '#a855f7' }, // purple-500
-  'In behandeling': { color: '#a855f7' }, // purple-500
-  'Gepland op korte termijn': { color: '#f97316' }, // orange-500
-  'Gepland op langere termijn': { color: '#f97316' }, // orange-500
-  'Dubbel gemeld': { color: '#f97316' }, // orange-500
+  Nieuw: { color: '#ef4444' }, // red-500
+  'Intern doorgezet': { color: '#ef4444' }, // red-500
+  'In behandeling': { color: '#ef4444' }, // red-500
+  'Gepland op korte termijn': { color: '#ef4444' }, // red-500
+  'Gepland op langere termijn': { color: '#ef4444' }, // red-500
+  'Dubbel gemeld': { color: '#ef4444' }, // red-500
   Afgerond: { color: '#22c55e' }, // green-500
   'Niet in beheer': { color: '#737373' }, // neutral-500
 };
