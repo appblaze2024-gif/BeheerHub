@@ -4,12 +4,13 @@ import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Trash2 } from 'lucide-react';
 import {
   useFirestore,
   useCollection,
   addDocumentNonBlocking,
   updateDocumentNonBlocking,
+  deleteDocumentNonBlocking,
 } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { format } from 'date-fns';
@@ -22,6 +23,17 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -165,6 +177,13 @@ export function DienstToevoegenDialog({
       setIsSubmitting(false);
     }
   };
+
+  const handleDelete = async () => {
+    if (!firestore || !dienst) return;
+    const dienstRef = doc(firestore, 'projects', project.id, 'diensten', dienst.id);
+    await deleteDocumentNonBlocking(dienstRef);
+    onOpenChange(false);
+  }
 
   const medewerkerNaam = `${medewerker.voornaam || ''} ${
     medewerker.tussenvoegsel || ''
@@ -347,25 +366,51 @@ export function DienstToevoegenDialog({
               />
 
 
-            <DialogFooter className="pt-4">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => onOpenChange(false)}
-                disabled={isSubmitting}
-              >
-                Annuleren
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {dienst ? 'Opslaan...' : 'Toevoegen...'}
-                  </>
-                ) : (
-                  dienst ? 'Opslaan' : 'Toevoegen'
+            <DialogFooter className="pt-4 sm:justify-between">
+              <div>
+                {dienst && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button type="button" variant="destructive" disabled={isSubmitting}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Verwijderen
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Deze actie kan niet ongedaan worden gemaakt. Dit zal de dienst permanent verwijderen.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete}>Doorgaan</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 )}
-              </Button>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => onOpenChange(false)}
+                  disabled={isSubmitting}
+                >
+                  Annuleren
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {dienst ? 'Opslaan...' : 'Toevoegen...'}
+                    </>
+                  ) : (
+                    dienst ? 'Opslaan' : 'Toevoegen'
+                  )}
+                </Button>
+              </div>
             </DialogFooter>
           </form>
         </Form>
