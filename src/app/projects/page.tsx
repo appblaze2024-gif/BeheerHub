@@ -227,6 +227,13 @@ function BoekingregelsTab({ projectId }: { projectId: string | undefined }) {
 
   const { data: boekingregels, isLoading } = useCollection<Boekingregel>(boekingregelsCollection);
 
+  const sortedBoekingregels = React.useMemo(() => {
+    if (!boekingregels) return [];
+    return [...boekingregels].sort((a, b) => 
+      a.naam.localeCompare(b.naam, undefined, { numeric: true, sensitivity: 'base' })
+    );
+  }, [boekingregels]);
+
   const handleAddRegel = async () => {
     if (!firestore || !projectId || !newRegelNaam.trim()) return;
     const regelData = { naam: newRegelNaam.trim() };
@@ -272,8 +279,8 @@ function BoekingregelsTab({ projectId }: { projectId: string | undefined }) {
         <div className="border rounded-md">
             {isLoading ? (
                 <div className='p-4 text-center text-muted-foreground'>Boekingregels laden...</div>
-            ) : boekingregels && boekingregels.length > 0 ? (
-                boekingregels.map(regel => (
+            ) : sortedBoekingregels && sortedBoekingregels.length > 0 ? (
+                sortedBoekingregels.map(regel => (
                     <div key={regel.id} className="flex items-center gap-2 p-2 border-b last:border-b-0">
                        <Input 
                             defaultValue={regel.naam} 
