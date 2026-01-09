@@ -42,6 +42,7 @@ type Melding = {
   straatnaam?: string;
   postcode?: string;
   plaats?: string;
+  wijk?: string;
 };
 
 type Project = {
@@ -142,57 +143,51 @@ export default function IssuesPage() {
     if (!meldingen) return [];
 
     let wijkFiltered: Melding[] = [];
-    if (!selectedProjectId) {
-      wijkFiltered = [];
-    } else {
-        const project = projects?.find(p => p.id === selectedProjectId);
-        if (!project?.wijken) {
-          wijkFiltered = [];
+    
+    if (selectedProjectId) {
+      const project = projects?.find(p => p.id === selectedProjectId);
+      if (project?.wijken) {
+        if (!selectedWijkId || selectedWijkId === 'all') {
+          // Show all meldingen that are in any wijk of the project
+          const allProjectWijkNames = project.wijken.map(w => w.naam);
+          wijkFiltered = meldingen.filter(m => allProjectWijkNames.includes(m.wijk || ''));
         } else {
-          let allPolygons: any[] = [];
-          if (!selectedWijkId || selectedWijkId === 'all') {
-            allPolygons = project.wijken.flatMap(w => {
+          // Show meldingen for a specific wijk
+          const wijk = project.wijken.find(w => w.id === selectedWijkId);
+          if (wijk) {
+             wijkFiltered = meldingen.filter(melding => {
+              if (melding.wijk === wijk.naam) return true;
+
               try {
-                const parsedFeatures = JSON.parse(w.subGebieden);
-                return Array.isArray(parsedFeatures) ? parsedFeatures.map(f => f.geometry) : [];
-              } catch { return []; }
-            });
-          } else {
-            const wijk = project.wijken.find(w => w.id === selectedWijkId);
-            if (wijk) {
-              try {
-                const parsedFeatures = JSON.parse(wijk.subGebieden);
-                if (Array.isArray(parsedFeatures)) {
-                   allPolygons = parsedFeatures.map(f => f.geometry);
-                }
-              } catch { /* ignore */ }
-            }
-          }
-          
-          if (allPolygons.length === 0) {
-            wijkFiltered = [];
-          } else {
-            wijkFiltered = meldingen.filter(melding => {
-              if (typeof melding.latitude !== 'number' || typeof melding.longitude !== 'number') return false;
-              const point = turf.point([melding.longitude, melding.latitude]);
-              for (const polygon of allPolygons) {
-                if (turf.booleanPointInPolygon(point, polygon)) return true;
+                const wijkFeatures = JSON.parse(wijk.subGebieden);
+                 if (Array.isArray(wijkFeatures) && wijkFeatures.length > 0) {
+                   if (typeof melding.latitude !== 'number' || typeof melding.longitude !== 'number') return false;
+                    const point = turf.point([melding.longitude, melding.latitude]);
+                    for (const polygon of wijkFeatures) {
+                      if (turf.booleanPointInPolygon(point, polygon.geometry)) return true;
+                    }
+                 }
+              } catch {
+                return false;
               }
               return false;
             });
           }
         }
+      }
+    } else {
+        return []; // No project selected, show no meldingen
     }
     
     const dayStart = startOfDay(selectedDate);
     
     return wijkFiltered.filter(melding => {
+        const creationDate = startOfDay(new Date(melding.datum));
         if (melding.status === 'Afgerond') {
             if (!melding.afhandeling_datum) return false;
             const completionDate = startOfDay(new Date(melding.afhandeling_datum));
             return isSameDay(completionDate, dayStart);
         } else {
-            const creationDate = startOfDay(new Date(melding.datum));
             return creationDate <= dayStart;
         }
     });
@@ -205,27 +200,7 @@ export default function IssuesPage() {
     const counts: { [wijkId: string]: number } = {};
   
     for (const wijk of selectedProject.wijken) {
-      let openCount = 0;
-      try {
-        const features = JSON.parse(wijk.subGebieden);
-        if (Array.isArray(features) && features.length > 0) {
-          const wijkPolygons = features.map(f => f.geometry);
-          for (const melding of meldingen) {
-            if (melding.status !== 'Afgerond' && typeof melding.latitude === 'number' && typeof melding.longitude === 'number') {
-              const point = turf.point([melding.longitude, melding.latitude]);
-              for (const polygon of wijkPolygons) {
-                 if (turf.booleanPointInPolygon(point, polygon)) {
-                    openCount++;
-                    break;
-                 }
-              }
-            }
-          }
-        }
-      } catch (e) {
-        // Ignore parsing errors for this calculation
-      }
-      counts[wijk.id] = openCount;
+      counts[wijk.id] = meldingen.filter(m => m.wijk === wijk.naam && m.status !== 'Afgerond').length;
     }
     return counts;
   }, [meldingen, selectedProject?.wijken]);
