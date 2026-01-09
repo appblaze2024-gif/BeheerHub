@@ -612,7 +612,7 @@ function WijkenTab({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-[1fr_1fr_2fr_auto] gap-x-4 px-1 text-sm font-semibold">
+      <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-x-4 px-1 text-sm font-semibold">
         <Label>Wijk</Label>
         <Label>Locatie</Label>
         <Label>Gebied</Label>
@@ -621,7 +621,7 @@ function WijkenTab({
       {wijken.map((wijk) => (
         <div
           key={wijk.id}
-          className="grid grid-cols-[1fr_1fr_2fr_auto] items-center gap-x-4"
+          className="grid grid-cols-[1fr_1fr_auto_auto] items-center gap-x-4"
         >
           <Input
             value={wijk.naam}
