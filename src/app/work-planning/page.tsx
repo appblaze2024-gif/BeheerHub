@@ -12,7 +12,7 @@ import {
   isSameDay,
 } from 'date-fns';
 import { nl } from 'date-fns/locale';
-import { collection, query, where, doc, getDocs, updateDoc } from 'firebase/firestore';
+import { collection, query, where, doc, getDocs, updateDoc, addDoc } from 'firebase/firestore';
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
@@ -218,27 +218,42 @@ export default function WorkPlanningPage() {
   const handleDrop = async (e: React.DragEvent<HTMLDivElement>, newMedewerkerId: string, newDatum: Date) => {
     e.preventDefault();
     setDragOverCell(null);
-
+  
     if (!firestore) return;
     
     const dienstJson = e.dataTransfer.getData('application/json');
     if (!dienstJson) return;
-
+  
     const droppedDienst: Dienst = JSON.parse(dienstJson);
     const newDatumString = format(newDatum, 'yyyy-MM-dd');
-
-    // Only update if there's a change
-    if(droppedDienst.medewerkerId === newMedewerkerId && droppedDienst.datum === newDatumString) {
+    const isCopy = e.ctrlKey;
+  
+    // For a move, only update if there's a change
+    if (!isCopy && droppedDienst.medewerkerId === newMedewerkerId && droppedDienst.datum === newDatumString) {
       return;
     }
-
+  
     try {
-      const dienstRef = doc(firestore, 'projects', droppedDienst.projectId, 'diensten', droppedDienst.id);
-      await updateDoc(dienstRef, {
-        medewerkerId: newMedewerkerId,
-        datum: newDatumString,
-      });
-      fetchDiensten(); // Refetch data
+      const dienstenColRef = collection(firestore, 'projects', droppedDienst.projectId, 'diensten');
+  
+      if (isCopy) {
+        // Copy action: create a new document
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { id, ...newDienstData } = droppedDienst;
+        await addDoc(dienstenColRef, {
+          ...newDienstData,
+          medewerkerId: newMedewerkerId,
+          datum: newDatumString,
+        });
+      } else {
+        // Move action: update the existing document
+        const dienstRef = doc(dienstenColRef, droppedDienst.id);
+        await updateDoc(dienstRef, {
+          medewerkerId: newMedewerkerId,
+          datum: newDatumString,
+        });
+      }
+      fetchDiensten(); // Refetch data to show the result
     } catch(error) {
       console.error("Error updating dienst:", error);
     }
