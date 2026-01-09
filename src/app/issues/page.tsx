@@ -196,20 +196,15 @@ export default function IssuesPage() {
     const dayStart = startOfDay(selectedDate);
 
     return wijkFiltered.filter(melding => {
-      const creationDate = new Date(melding.datum);
-      
-      // Is open and created on or before the selected date
-      if (melding.status !== 'Afgerond') {
-        return creationDate <= dayStart;
-      }
-      
-      // Is closed and was closed on the selected date
-      if (melding.status === 'Afgerond' && melding.afhandeling_datum) {
-        const completionDate = new Date(melding.afhandeling_datum);
-        return isSameDay(completionDate, dayStart);
-      }
-      
-      return false;
+        const creationDate = startOfDay(new Date(melding.datum));
+
+        if (melding.status === 'Afgerond') {
+            if (!melding.afhandeling_datum) return false;
+            const completionDate = startOfDay(new Date(melding.afhandeling_datum));
+            return isSameDay(completionDate, dayStart);
+        } else {
+            return creationDate <= dayStart;
+        }
     });
 
   }, [meldingen, selectedProjectId, selectedWijkId, wijkGeoJSON, projects, selectedDate]);
