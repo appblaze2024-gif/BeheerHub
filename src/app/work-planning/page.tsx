@@ -12,7 +12,7 @@ import {
   isSameDay,
 } from 'date-fns';
 import { nl } from 'date-fns/locale';
-import { collection, query, where, doc, getDocs } from 'firebase/firestore';
+import { collection, query, where, doc, getDocs, updateDoc } from 'firebase/firestore';
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
@@ -82,6 +82,15 @@ const DienstItem = ({ dienst, onEdit }: { dienst: Dienst, onEdit: (dienst: Diens
             onEdit(dienst);
         }
     };
+
+    const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
+      e.dataTransfer.setData('application/json', JSON.stringify(dienst));
+      e.currentTarget.style.opacity = '0.5';
+    }
+
+    const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
+      e.currentTarget.style.opacity = '1';
+    }
     
     const isZiek = dienst.werksoort === 'Ziek';
     const isVerlof = dienst.werksoort === 'Verlof' || dienst.werksoort === 'ATV';
@@ -89,6 +98,9 @@ const DienstItem = ({ dienst, onEdit }: { dienst: Dienst, onEdit: (dienst: Diens
     return (
         <div 
             onClick={handleEdit}
+            draggable
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
             className={cn(
                 "rounded-md p-2 text-xs cursor-pointer",
                  isZiek 
@@ -119,6 +131,7 @@ export default function WorkPlanningPage() {
   
   const [diensten, setDiensten] = React.useState<Dienst[] | null>(null);
   const [isLoadingDiensten, setIsLoadingDiensten] = React.useState(false);
+  const [dragOverCell, setDragOverCell] = React.useState<{medewerkerId: string, day: string} | null>(null);
 
 
   const firestore = useFirestore();
@@ -201,6 +214,40 @@ export default function WorkPlanningPage() {
     fetchDiensten();
     setIsSheetOpen(false);
   };
+
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>, newMedewerkerId: string, newDatum: Date) => {
+    e.preventDefault();
+    setDragOverCell(null);
+
+    if (!firestore) return;
+    
+    const dienstJson = e.dataTransfer.getData('application/json');
+    if (!dienstJson) return;
+
+    const droppedDienst: Dienst = JSON.parse(dienstJson);
+    const newDatumString = format(newDatum, 'yyyy-MM-dd');
+
+    // Only update if there's a change
+    if(droppedDienst.medewerkerId === newMedewerkerId && droppedDienst.datum === newDatumString) {
+      return;
+    }
+
+    try {
+      const dienstRef = doc(firestore, 'projects', droppedDienst.projectId, 'diensten', droppedDienst.id);
+      await updateDoc(dienstRef, {
+        medewerkerId: newMedewerkerId,
+        datum: newDatumString,
+      });
+      fetchDiensten(); // Refetch data
+    } catch(error) {
+      console.error("Error updating dienst:", error);
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, medewerkerId: string, day: Date) => {
+    e.preventDefault();
+    setDragOverCell({ medewerkerId, day: format(day, 'yyyy-MM-dd') });
+  }
 
 
   return (
@@ -303,10 +350,17 @@ export default function WorkPlanningPage() {
                       d.medewerkerId === medewerker.id && 
                       isSameDay(new Date(d.datum), day)
                   );
+                  const isDragOver = dragOverCell?.medewerkerId === medewerker.id && dragOverCell?.day === format(day, 'yyyy-MM-dd');
                   return (
                     <div
                         key={day.toISOString()}
-                        className="group relative p-2 border-b border-r min-h-[80px] flex flex-col gap-1"
+                        onDrop={(e) => handleDrop(e, medewerker.id, day)}
+                        onDragOver={(e) => handleDragOver(e, medewerker.id, day)}
+                        onDragLeave={() => setDragOverCell(null)}
+                        className={cn(
+                            "group relative p-2 border-b border-r min-h-[80px] flex flex-col gap-1 transition-colors",
+                            isDragOver && "bg-blue-50 ring-2 ring-blue-500"
+                        )}
                     >
                         <div className="flex-1 space-y-1">
                           {isLoadingDiensten ? (
