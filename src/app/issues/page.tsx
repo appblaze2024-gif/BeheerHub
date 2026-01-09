@@ -117,7 +117,7 @@ export default function IssuesPage() {
       return selectedProject.wijken?.find(w => w.id === selectedWijkId) ?? null;
   }, [selectedProject, selectedWijkId]);
   
- const wijkGeoJSON = React.useMemo(() => {
+  const wijkGeoJSON = React.useMemo(() => {
     if (!selectedWijk) return null;
     try {
         const features = JSON.parse(selectedWijk.subGebieden);
@@ -141,70 +141,63 @@ export default function IssuesPage() {
   const filteredMeldingen = React.useMemo(() => {
     if (!meldingen) return [];
 
-    // 1. Filter by project and wijk
     let wijkFiltered: Melding[] = [];
     if (!selectedProjectId) {
-      wijkFiltered = []; // No project selected, show no issues
+      wijkFiltered = [];
     } else {
-      const project = projects?.find(p => p.id === selectedProjectId);
-      if (!project?.wijken) {
-        wijkFiltered = []; // No districts in project
-      } else if (!selectedWijkId || selectedWijkId === 'all') {
-        // "All districts" selected, filter by all districts in the project
-        const allWijkPolygons = project.wijken.flatMap(w => {
-          try {
-            const parsedFeatures = JSON.parse(w.subGebieden);
-            return Array.isArray(parsedFeatures) ? parsedFeatures.map(f => f.geometry) : [];
-          } catch { return []; }
-        });
-        
-        if(allWijkPolygons.length === 0) {
+        const project = projects?.find(p => p.id === selectedProjectId);
+        if (!project?.wijken) {
           wijkFiltered = [];
         } else {
-          wijkFiltered = meldingen.filter(melding => {
-            if (typeof melding.latitude !== 'number' || typeof melding.longitude !== 'number') return false;
-            const point = turf.point([melding.longitude, melding.latitude]);
-            for (const polygon of allWijkPolygons) {
-              if (turf.booleanPointInPolygon(point, polygon)) return true;
+          let allPolygons: any[] = [];
+          if (!selectedWijkId || selectedWijkId === 'all') {
+            allPolygons = project.wijken.flatMap(w => {
+              try {
+                const parsedFeatures = JSON.parse(w.subGebieden);
+                return Array.isArray(parsedFeatures) ? parsedFeatures.map(f => f.geometry) : [];
+              } catch { return []; }
+            });
+          } else {
+            const wijk = project.wijken.find(w => w.id === selectedWijkId);
+            if (wijk) {
+              try {
+                const parsedFeatures = JSON.parse(wijk.subGebieden);
+                if (Array.isArray(parsedFeatures)) {
+                   allPolygons = parsedFeatures.map(f => f.geometry);
+                }
+              } catch { /* ignore */ }
             }
-            return false;
-          });
-        }
-      } else if (wijkGeoJSON) {
-        // Specific district selected
-        wijkFiltered = meldingen.filter(melding => {
-          if (typeof melding.latitude !== 'number' || typeof melding.longitude !== 'number') return false;
-          try {
-            const point = turf.point([melding.longitude, melding.latitude]);
-            // Check against all features in the selected wijk's FeatureCollection
-            for (const feature of wijkGeoJSON.features) {
-              if (turf.booleanPointInPolygon(point, feature.geometry)) return true;
-            }
-            return false;
-          } catch(e) {
-            console.error("Error during point in polygon check", e);
-            return false;
           }
-        });
-      }
+          
+          if (allPolygons.length === 0) {
+            wijkFiltered = [];
+          } else {
+            wijkFiltered = meldingen.filter(melding => {
+              if (typeof melding.latitude !== 'number' || typeof melding.longitude !== 'number') return false;
+              const point = turf.point([melding.longitude, melding.latitude]);
+              for (const polygon of allPolygons) {
+                if (turf.booleanPointInPolygon(point, polygon)) return true;
+              }
+              return false;
+            });
+          }
+        }
     }
-
-    // 2. Filter by date
+    
     const dayStart = startOfDay(selectedDate);
-
+    
     return wijkFiltered.filter(melding => {
-        const creationDate = startOfDay(new Date(melding.datum));
-
         if (melding.status === 'Afgerond') {
             if (!melding.afhandeling_datum) return false;
             const completionDate = startOfDay(new Date(melding.afhandeling_datum));
             return isSameDay(completionDate, dayStart);
         } else {
+            const creationDate = startOfDay(new Date(melding.datum));
             return creationDate <= dayStart;
         }
     });
 
-  }, [meldingen, selectedProjectId, selectedWijkId, wijkGeoJSON, projects, selectedDate]);
+  }, [meldingen, selectedProjectId, selectedWijkId, projects, selectedDate]);
 
   const openMeldingenCountPerWijk = React.useMemo(() => {
     if (!meldingen || !selectedProject?.wijken) return {};
@@ -216,14 +209,15 @@ export default function IssuesPage() {
       try {
         const features = JSON.parse(wijk.subGebieden);
         if (Array.isArray(features) && features.length > 0) {
+          const wijkPolygons = features.map(f => f.geometry);
           for (const melding of meldingen) {
             if (melding.status !== 'Afgerond' && typeof melding.latitude === 'number' && typeof melding.longitude === 'number') {
               const point = turf.point([melding.longitude, melding.latitude]);
-              for (const polygon of features) {
-                if (turf.booleanPointInPolygon(point, polygon.geometry)) {
-                  openCount++;
-                  break; // Count melding only once per wijk
-                }
+              for (const polygon of wijkPolygons) {
+                 if (turf.booleanPointInPolygon(point, polygon)) {
+                    openCount++;
+                    break;
+                 }
               }
             }
           }
@@ -291,7 +285,7 @@ export default function IssuesPage() {
                 <div className="bg-card p-2 rounded-lg shadow-md">
                     <h1 className="text-xl font-bold">Meldingen Portaal</h1>
                 </div>
-                <div className='flex gap-4'>
+                 <div className='flex gap-4'>
                     <div>
                         <Label htmlFor='project-select' className='text-sm font-medium sr-only'>Project</Label>
                          <Select
@@ -326,7 +320,7 @@ export default function IssuesPage() {
                                   <SelectItem key={w.id} value={w.id}>
                                     <div className='flex justify-between items-center w-full'>
                                       <span>{w.naam}</span>
-                                       {(openMeldingenCountPerWijk[w.id] || 0) > 0 && (
+                                      {(openMeldingenCountPerWijk[w.id] || 0) > 0 && (
                                         <Badge variant="destructive" className="ml-2 px-2 py-0.5 h-5">{openMeldingenCountPerWijk[w.id]}</Badge>
                                       )}
                                     </div>
@@ -340,7 +334,7 @@ export default function IssuesPage() {
                             type="date"
                             value={format(selectedDate, 'yyyy-MM-dd')}
                             onChange={(e) => setSelectedDate(new Date(e.target.value))}
-                            className="w-[180px] bg-card"
+                            className="w-[150px] bg-card"
                          />
                     </div>
                 </div>
