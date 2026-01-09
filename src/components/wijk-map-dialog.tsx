@@ -42,14 +42,10 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave }: WijkMapDialo
   const [suggestions, setSuggestions] = React.useState<Suggestion[]>([]);
   const [isDrawReady, setIsDrawReady] = React.useState(false);
   const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  
+  const initialFeaturesRef = React.useRef<any[]>([]);
 
-  const initialViewState = {
-    longitude: 5.2913,
-    latitude: 52.1326,
-    zoom: 7,
-  };
-
- const cleanup = React.useCallback(() => {
+  const cleanup = React.useCallback(() => {
     if (drawRef.current && mapRef.current?.getMap()?.isStyleLoaded()) {
       try {
          if (mapRef.current.getMap().getControl('mapbox-gl-draw')) {
@@ -61,6 +57,9 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave }: WijkMapDialo
     }
     drawRef.current = null;
     setIsDrawReady(false);
+    setSearchQuery('');
+    setSuggestions([]);
+    initialFeaturesRef.current = [];
   }, []);
 
 
@@ -133,6 +132,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave }: WijkMapDialo
       if (wijk?.subGebieden) {
         try {
           const features = JSON.parse(wijk.subGebieden);
+          initialFeaturesRef.current = features; // Store initial features
           if (Array.isArray(features) && features.length > 0) {
              draw.add({
               type: 'FeatureCollection',
@@ -201,7 +201,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave }: WijkMapDialo
             properties: { name: suggestion.display_name },
             geometry: suggestion.geojson,
         };
-        drawRef.current.add(feature as any);
+        const newIds = drawRef.current.add(feature as any);
         const [lon, lat] = [parseFloat(suggestion.lon), parseFloat(suggestion.lat)];
         mapRef.current?.getMap().flyTo({ center: [lon, lat], zoom: 13 });
     }
@@ -220,6 +220,12 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave }: WijkMapDialo
       cleanup();
     }
   }, [open, cleanup]);
+
+  const initialViewState = {
+    longitude: 5.2913,
+    latitude: 52.1326,
+    zoom: 7,
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
