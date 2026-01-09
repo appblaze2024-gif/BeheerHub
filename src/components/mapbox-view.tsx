@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import Map, { Marker, Popup, Source, Layer } from 'react-map-gl';
-import { MapPin } from 'lucide-react';
 import type { FillLayer, LineLayer } from 'react-map-gl';
 import * as turf from '@turf/turf';
 
@@ -95,19 +94,19 @@ export function MapboxView({ longitude, latitude, objects, wijkPolygons = [] }: 
           key={obj.id}
           longitude={obj.longitude}
           latitude={obj.latitude}
-          anchor="bottom"
+          anchor="center"
           onClick={e => {
             e.originalEvent.stopPropagation();
             setSelectedPin(obj);
           }}
         >
-          <MapPin className="h-6 w-6 text-black fill-current cursor-pointer" />
+          <div className="h-3 w-3 bg-blue-500 rounded-full border-2 border-white cursor-pointer" />
         </Marker>
       ));
     } else if (longitude && latitude) {
       return (
-        <Marker longitude={longitude} latitude={latitude} anchor="bottom">
-          <MapPin className="h-6 w-6 text-black fill-current" />
+        <Marker longitude={longitude} latitude={latitude} anchor="center">
+          <div className="h-3 w-3 bg-blue-500 rounded-full border-2 border-white" />
         </Marker>
       );
     }
