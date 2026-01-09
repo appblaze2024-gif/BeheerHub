@@ -153,8 +153,8 @@ export default function IssuesPage() {
         // "All districts" selected, filter by all districts in the project
         const allWijkPolygons = project.wijken.flatMap(w => {
           try {
-            const features = JSON.parse(w.subGebieden);
-            return Array.isArray(features) ? features : [];
+            const parsedFeatures = JSON.parse(w.subGebieden);
+            return Array.isArray(parsedFeatures) ? parsedFeatures.map(f => f.geometry) : [];
           } catch { return []; }
         });
         
@@ -164,8 +164,8 @@ export default function IssuesPage() {
           wijkFiltered = meldingen.filter(melding => {
             if (typeof melding.latitude !== 'number' || typeof melding.longitude !== 'number') return false;
             const point = turf.point([melding.longitude, melding.latitude]);
-            for (const polygonFeature of allWijkPolygons) {
-              if (turf.booleanPointInPolygon(point, polygonFeature)) return true;
+            for (const polygon of allWijkPolygons) {
+              if (turf.booleanPointInPolygon(point, polygon)) return true;
             }
             return false;
           });
@@ -178,7 +178,7 @@ export default function IssuesPage() {
             const point = turf.point([melding.longitude, melding.latitude]);
             // Check against all features in the selected wijk's FeatureCollection
             for (const feature of wijkGeoJSON.features) {
-              if (turf.booleanPointInPolygon(point, feature)) return true;
+              if (turf.booleanPointInPolygon(point, feature.geometry)) return true;
             }
             return false;
           } catch(e) {
@@ -220,7 +220,7 @@ export default function IssuesPage() {
             if (melding.status !== 'Afgerond' && typeof melding.latitude === 'number' && typeof melding.longitude === 'number') {
               const point = turf.point([melding.longitude, melding.latitude]);
               for (const polygon of features) {
-                if (turf.booleanPointInPolygon(point, polygon)) {
+                if (turf.booleanPointInPolygon(point, polygon.geometry)) {
                   openCount++;
                   break; // Count melding only once per wijk
                 }
@@ -340,7 +340,7 @@ export default function IssuesPage() {
                             type="date"
                             value={format(selectedDate, 'yyyy-MM-dd')}
                             onChange={(e) => setSelectedDate(new Date(e.target.value))}
-                            className="w-[200px] bg-card"
+                            className="w-[180px] bg-card"
                          />
                     </div>
                 </div>
