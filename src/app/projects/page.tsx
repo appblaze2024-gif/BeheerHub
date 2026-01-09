@@ -573,16 +573,23 @@ function BestandenTab({ projectId }: { projectId: string | undefined }) {
 
 function WijkenTab({
   wijken,
-  setWijken,
+  setCurrentProject,
 }: {
   wijken: Wijk[];
-  setWijken: React.Dispatch<React.SetStateAction<Wijk[]>>;
+  setCurrentProject: React.Dispatch<React.SetStateAction<Project>>;
 }) {
   const [mapWijk, setMapWijk] = React.useState<Wijk | null>(null);
 
+  const setWijken = (updater: Wijk[] | ((prev: Wijk[]) => Wijk[])) => {
+    setCurrentProject(prevProject => ({
+      ...prevProject,
+      wijken: typeof updater === 'function' ? updater(prevProject.wijken || []) : updater,
+    }));
+  };
+
   const addRow = () => {
-    setWijken([
-      ...wijken,
+    setWijken(prev => [
+      ...(prev || []),
       {
         id: new Date().toISOString(),
         naam: '',
@@ -593,7 +600,7 @@ function WijkenTab({
   };
 
   const removeRow = (id: string) => {
-    setWijken(wijken.filter((w) => w.id !== id));
+    setWijken(prev => (prev || []).filter((w) => w.id !== id));
   };
 
   const handleInputChange = (
@@ -601,9 +608,7 @@ function WijkenTab({
     field: keyof Wijk,
     value: string
   ) => {
-    setWijken(
-      wijken.map((w) => (w.id === id ? { ...w, [field]: value } : w))
-    );
+    setWijken(prev => (prev || []).map((w) => (w.id === id ? { ...w, [field]: value } : w)));
   };
   
   const handleSaveCoordinates = (wijkId: string, coordinates: string) => {
@@ -921,12 +926,7 @@ export default function ProjectsPage() {
         >
           <WijkenTab
             wijken={currentProject.wijken || []}
-            setWijken={(newWijken) =>
-              setCurrentProject((prev) => ({
-                ...prev,
-                wijken: typeof newWijken === 'function' ? newWijken(prev.wijken || []) : newWijken,
-              }))
-            }
+            setCurrentProject={setCurrentProject}
           />
         </TabsContent>
       </Tabs>
