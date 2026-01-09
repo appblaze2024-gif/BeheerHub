@@ -4,7 +4,7 @@ import * as React from 'react';
 import Map, { Marker, Popup, Source, Layer, FillLayer, LineLayer } from 'react-map-gl';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection } from 'firebase/firestore';
-import { Calendar as CalendarIcon, Plus, Search } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Search, List, Map as MapIcon, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MeldingDialog } from '@/components/melding-dialog';
@@ -18,6 +18,8 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { addDays, format, isSameDay, startOfDay } from 'date-fns';
 import { nl } from 'date-fns/locale';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -40,6 +42,7 @@ type Melding = {
   datum: string; // Creation date yyyy-MM-dd
   afhandeling_datum?: string; // Completion date yyyy-MM-dd
   straatnaam?: string;
+  huisnummer?: string;
   postcode?: string;
   plaats?: string;
   wijk?: string;
@@ -51,16 +54,17 @@ type Project = {
   wijken?: Wijk[];
 };
 
-const statusConfig = {
-  Nieuw: { color: '#ef4444' }, // red-500
-  'Intern doorgezet': { color: '#ef4444' }, // red-500
-  'In behandeling': { color: '#ef4444' }, // red-500
-  'Gepland op korte termijn': { color: '#ef4444' }, // red-500
-  'Gepland op langere termijn': { color: '#ef4444' }, // red-500
-  'Dubbel gemeld': { color: '#ef4444' }, // red-500
-  Afgerond: { color: '#22c55e' }, // green-500
-  'Niet in beheer': { color: '#737373' }, // neutral-500
+const statusConfig: Record<string, { color: string; textColor: string; borderColor: string }> = {
+  Nieuw: { color: '#ef4444', textColor: 'white', borderColor: '#ef4444' }, // red-500
+  'Intern doorgezet': { color: '#ef4444', textColor: 'white', borderColor: '#ef4444' },
+  'In behandeling': { color: '#ef4444', textColor: 'white', borderColor: '#ef4444' },
+  'Gepland op korte termijn': { color: '#ef4444', textColor: 'white', borderColor: '#ef4444' },
+  'Gepland op langere termijn': { color: '#ef4444', textColor: 'white', borderColor: '#ef4444' },
+  'Dubbel gemeld': { color: '#ef4444', textColor: 'white', borderColor: '#ef4444' },
+  Afgerond: { color: '#22c55e', textColor: 'white', borderColor: '#22c55e' }, // green-500
+  'Niet in beheer': { color: '#737373', textColor: 'white', borderColor: '#737373' }, // neutral-500
 };
+
 
 const polygonFillLayer: FillLayer = {
     id: 'wijk-polygon-fill',
@@ -80,6 +84,64 @@ const polygonOutlineLayer: LineLayer = {
     },
 };
 
+function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], onMeldingClick: (melding: Melding) => void }) {
+  if (meldingen.length === 0) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center text-muted-foreground p-8">
+        <Bell className="h-12 w-12 mb-4" />
+        <p className="text-lg">Geen meldingen gevonden</p>
+        <p className="text-sm">Pas de filters aan of maak een nieuwe melding.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-y-auto">
+      <div className="grid grid-cols-[1fr_2fr_2fr_1fr_50px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
+        <span>Intakenummer</span>
+        <span>Subcategorie</span>
+        <span>Adres</span>
+        <span>Status</span>
+        <span />
+      </div>
+      {meldingen.map((melding) => (
+        <div
+          key={melding.id}
+          onClick={() => onMeldingClick(melding)}
+          className="grid grid-cols-[1fr_2fr_2fr_1fr_50px] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
+        >
+          <span className="font-medium truncate">{melding.intakenummer}</span>
+          <span className="truncate">{melding.subcategorie}</span>
+          <span className="truncate">{`${melding.straatnaam || ''}, ${melding.plaats || ''}`}</span>
+          <Badge
+            style={{
+              backgroundColor: statusConfig[melding.status]?.color || '#ccc',
+              color: statusConfig[melding.status]?.textColor || 'black',
+              borderColor: statusConfig[melding.status]?.borderColor || '#ccc'
+            }}
+            variant={melding.status === 'Afgerond' ? 'default' : 'destructive'}
+          >
+            {melding.status}
+          </Badge>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onMeldingClick(melding)}>
+                Details bekijken
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 
 export default function IssuesPage() {
   const firestore = useFirestore();
@@ -88,6 +150,8 @@ export default function IssuesPage() {
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
   const [selectedWijkId, setSelectedWijkId] = React.useState<string | null>(null);
   const [selectedDate, setSelectedDate] = React.useState<Date>(new Date());
+  const [viewMode, setViewMode] = React.useState<'map' | 'list'>('map');
+  const [searchQuery, setSearchQuery] = React.useState('');
 
   const meldingenCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -141,11 +205,23 @@ export default function IssuesPage() {
 
   const filteredMeldingen = React.useMemo(() => {
     if (!meldingen) return [];
+    
+    // Filter by search query first
+    const searchedMeldingen = searchQuery
+      ? meldingen.filter(
+          (m) =>
+            m.intakenummer?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            m.straatnaam?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            m.plaats?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            m.subcategorie?.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      : meldingen;
+
 
     let timeFilteredMeldingen: Melding[] = [];
     const dayStart = startOfDay(selectedDate);
     
-    timeFilteredMeldingen = meldingen.filter(melding => {
+    timeFilteredMeldingen = searchedMeldingen.filter(melding => {
         const creationDate = startOfDay(new Date(melding.datum));
         if (melding.status === 'Afgerond') {
             if (!melding.afhandeling_datum) return false;
@@ -191,7 +267,7 @@ export default function IssuesPage() {
         return false;
     });
 
-  }, [meldingen, selectedProjectId, selectedWijkId, projects, selectedDate]);
+  }, [meldingen, selectedProjectId, selectedWijkId, projects, selectedDate, searchQuery]);
 
   const openMeldingenCountPerWijk = React.useMemo(() => {
     if (!meldingen || !selectedProject?.wijken) return {};
@@ -244,6 +320,12 @@ export default function IssuesPage() {
   const handlePopupClose = () => {
       setSelectedMelding(null);
   }
+
+  const handleMeldingClickFromList = (melding: Melding) => {
+    setSelectedMelding(melding);
+    setIsDialogOpen(true);
+  };
+
 
   React.useEffect(() => {
     if (selectedMelding && !isDialogOpen) {
@@ -312,20 +394,32 @@ export default function IssuesPage() {
                          />
                     </div>
                 </div>
-                <Button onClick={handleNewMelding} disabled={!selectedProjectId}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Nieuwe Melding
-                </Button>
+                <div className='flex gap-2 items-center'>
+                    <Button onClick={handleNewMelding} disabled={!selectedProjectId}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Nieuwe Melding
+                    </Button>
+                    <Button variant="outline" onClick={() => setViewMode(viewMode === 'map' ? 'list' : 'map')} className="bg-card">
+                      {viewMode === 'map' ? <List className="mr-2 h-4 w-4" /> : <MapIcon className="mr-2 h-4 w-4" />}
+                      {viewMode === 'map' ? 'Lijst' : 'Kaart'}
+                    </Button>
+                </div>
             </div>
             <div className="w-full max-w-sm pointer-events-auto">
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Zoek op meldingen of adres" className="pl-9 bg-card" />
+                    <Input 
+                      placeholder="Zoek op meldingen of adres" 
+                      className="pl-9 bg-card"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
                 </div>
             </div>
         </div>
       </header>
 
+      {viewMode === 'map' ? (
         <Map
             ref={mapRef}
             initialViewState={initialViewState}
@@ -385,6 +479,18 @@ export default function IssuesPage() {
                 </Popup>
             )}
         </Map>
+      ) : (
+        <div className="pt-48 px-4 pb-4 h-full">
+            <Card className='h-full flex flex-col'>
+                <CardHeader>
+                    <CardTitle>Overzicht Meldingen ({filteredMeldingen.length})</CardTitle>
+                </CardHeader>
+                <CardContent className='p-0 flex-1 min-h-0'>
+                    <MeldingenList meldingen={filteredMeldingen} onMeldingClick={handleMeldingClickFromList} />
+                </CardContent>
+            </Card>
+        </div>
+      )}
          <MeldingDialog 
             open={isDialogOpen}
             onOpenChange={handleDialogClose}
