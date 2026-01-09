@@ -5,7 +5,13 @@ import Map, { Layer, Source } from 'react-map-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { Shapes } from 'lucide-react';
 import * as turf from '@turf/turf';
 
@@ -17,6 +23,7 @@ export default function RoutesPage() {
   const [isDrawing, setIsDrawing] = React.useState(false);
   const [routeFeatures, setRouteFeatures] = React.useState<any[]>([]);
   const [roadDetails, setRoadDetails] = React.useState<any[]>([]);
+  const [isListOpen, setIsListOpen] = React.useState(false);
 
   const initialViewState = {
     longitude: 5.2913,
@@ -53,6 +60,7 @@ export default function RoutesPage() {
       setIsDrawing(false);
       setRouteFeatures([]);
       setRoadDetails([]);
+      drawRef.current.deleteAll(); // Clear drawn polygons
     } else {
       map.addControl(drawRef.current);
       setIsDrawing(true);
@@ -66,6 +74,7 @@ export default function RoutesPage() {
     if (features.length === 0) {
       setRouteFeatures([]);
       setRoadDetails([]);
+      setIsListOpen(false);
       return;
     }
     
@@ -89,21 +98,26 @@ export default function RoutesPage() {
          // Filter the results to include only roads that are actually within the drawn polygon
         const roadsInPolygon = data.features.filter((road: any) => {
             if (road.geometry.type === 'LineString' && road.geometry.coordinates.length > 0) {
-                // Check if the midpoint of the road is inside the polygon
-                const midpoint = turf.midpoint(turf.point(road.geometry.coordinates[0]), turf.point(road.geometry.coordinates[road.geometry.coordinates.length - 1]));
-                return turf.booleanPointInPolygon(midpoint, polygon);
+                // Check if any point of the linestring is inside the polygon
+                for(const coord of road.geometry.coordinates) {
+                    if (turf.booleanPointInPolygon(turf.point(coord), polygon)) {
+                        return true;
+                    }
+                }
             }
             return false;
         });
 
         setRouteFeatures(roadsInPolygon);
         setRoadDetails(roadsInPolygon.map(road => road.properties));
+        setIsListOpen(true);
       }
 
     } catch (err) {
       console.error('Error fetching route data:', err);
       setRouteFeatures([]);
       setRoadDetails([]);
+      setIsListOpen(false);
     }
   };
 
@@ -117,27 +131,32 @@ export default function RoutesPage() {
           </Button>
         </div>
         
-        {roadDetails.length > 0 && (
-            <Card className="absolute top-4 right-4 z-10 w-80 max-h-[calc(100vh-4rem)] flex flex-col">
-              <CardHeader>
-                <CardTitle>Wegtypes in polygoon</CardTitle>
-              </CardHeader>
-              <CardContent className="flex-1 overflow-y-auto">
-                <ul className="space-y-2 text-sm">
-                  {roadDetails.map((details, index) => (
-                    <li key={index} className="border-b pb-2">
-                        {Object.entries(details).map(([key, value]) => (
-                            <div key={key} className="flex justify-between">
-                                <span className="font-semibold capitalize">{key}:</span>
-                                <span>{String(value)}</span>
-                            </div>
-                        ))}
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-        )}
+        <Dialog open={isListOpen} onOpenChange={setIsListOpen}>
+          <DialogContent className="max-w-xl max-h-[80vh] flex flex-col">
+            <DialogHeader>
+              <DialogTitle>Wegtypes in polygoon</DialogTitle>
+              <DialogDescription>
+                Dit zijn de eigenschappen van de wegen die binnen het getekende gebied vallen.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex-1 overflow-y-auto pr-4">
+              <ul className="space-y-4 text-sm">
+                {roadDetails.map((details, index) => (
+                  <li key={index} className="border rounded-md p-3">
+                      <h4 className="font-semibold mb-2">Wegsegment {index + 1}</h4>
+                      {Object.entries(details).map(([key, value]) => (
+                          <div key={key} className="flex justify-between text-xs border-t py-1">
+                              <span className="font-medium capitalize text-muted-foreground">{key.replace(/_/g, ' ')}:</span>
+                              <span className="text-right">{String(value)}</span>
+                          </div>
+                      ))}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </DialogContent>
+        </Dialog>
+
 
         <Map
           ref={mapRef}
