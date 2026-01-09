@@ -159,9 +159,6 @@ export default function IssuesPage() {
         });
         
         if(allWijkPolygons.length === 0) {
-          // If no polygons are defined for any district in the project, maybe show all issues for the project?
-          // For now, we assume if districts are used, they have polygons. If not, this part needs a product decision.
-          // Let's assume we show no issues if no polygons are defined.
           wijkFiltered = [];
         } else {
           wijkFiltered = meldingen.filter(melding => {
@@ -339,28 +336,12 @@ export default function IssuesPage() {
                         </Select>
                     </div>
                     <div>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                            <Button
-                                variant={"outline"}
-                                className={cn(
-                                "w-[200px] justify-start text-left font-normal bg-card",
-                                !selectedDate && "text-muted-foreground"
-                                )}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {selectedDate ? format(selectedDate, "PPP", { locale: nl }) : <span>Kies een datum</span>}
-                            </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                            <Calendar
-                                mode="single"
-                                selected={selectedDate}
-                                onSelect={(date) => date && setSelectedDate(date)}
-                                initialFocus
-                            />
-                            </PopoverContent>
-                        </Popover>
+                         <Input
+                            type="date"
+                            value={format(selectedDate, 'yyyy-MM-dd')}
+                            onChange={(e) => setSelectedDate(new Date(e.target.value))}
+                            className="w-[200px] bg-card"
+                         />
                     </div>
                 </div>
                 <Button onClick={handleNewMelding} disabled={!selectedProjectId}>
@@ -444,5 +425,3 @@ export default function IssuesPage() {
     </div>
   );
 }
-
-    
