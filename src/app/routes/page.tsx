@@ -7,10 +7,13 @@ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { allRoadTypes, roadColorMapping } from '@/components/road-type-filter-dialog';
-import { Download, Edit, Trash2 } from 'lucide-react';
-import { RoadTypeFilterDialog } from '@/components/road-type-filter-dialog';
+import { Download, Edit, Trash2, Layers, X } from 'lucide-react';
 import * as turf from '@turf/turf';
 import type { Feature, FeatureCollection, Polygon } from 'geojson';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -18,12 +21,12 @@ export default function RoutesPage() {
   const mapRef = React.useRef<any>(null);
   const drawRef = React.useRef<MapboxDraw | null>(null);
 
-  const [isDrawActive, setIsDrawActive] = React.useState(false);
   const [polygon, setPolygon] = React.useState<Feature<Polygon> | null>(null);
-  const [roadsInPolygon, setRoadsInPolygon] = React.useState<FeatureCollection | null>(null);
-  const [availableRoadTypes, setAvailableRoadTypes] = React.useState<string[]>([]);
-  const [filteredRoute, setFilteredRoute] = React.useState<FeatureCollection | null>(null);
-  const [isFilterDialogOpen, setIsFilterDialogOpen] = React.useState(false);
+  const [selectedTypes, setSelectedTypes] = React.useState<string[]>(Object.keys(allRoadTypes));
+  const [filteredRoads, setFilteredRoads] = React.useState<FeatureCollection | null>(null);
+  const [showFilter, setShowFilter] = React.useState(true);
+  const [isDrawMode, setIsDrawMode] = React.useState(false);
+
 
   const initialViewState = {
     longitude: 5.2913,
@@ -31,131 +34,222 @@ export default function RoutesPage() {
     zoom: 7,
   };
 
-  // Function to enter drawing mode
-  const startDrawing = () => {
-    if (drawRef.current) {
-      clearDrawing();
-      drawRef.current.changeMode('draw_polygon');
-      setIsDrawActive(true);
+  const updateFilteredRoads = React.useCallback(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || !polygon) {
+      setFilteredRoads(null);
+      return;
     }
-  };
-  
-  // Function to clear everything
-  const clearDrawing = () => {
-    if (drawRef.current) {
-      drawRef.current.deleteAll();
-    }
-    setPolygon(null);
-    setRoadsInPolygon(null);
-    setAvailableRoadTypes([]);
-    setFilteredRoute(null);
-    setIsDrawActive(false);
-  };
 
+    const roadLayers = Object.keys(allRoadTypes);
+    const features = map.queryRenderedFeatures({ layers: roadLayers });
+    
+    const roadsInside = features.filter(f => {
+      if (f.geometry.type === 'LineString' || f.geometry.type === 'MultiLineString') {
+        return turf.booleanIntersects(f, polygon);
+      }
+      return false;
+    });
+
+    const clippedRoads = turf.featureCollection(
+      roadsInside.map(road => turf.intersect(road, polygon)!).filter(Boolean)
+    );
+
+    const roadsToShow = clippedRoads.features.filter(f => selectedTypes.includes(f.properties?.class));
+    
+    setFilteredRoads({
+      type: 'FeatureCollection',
+      features: roadsToShow,
+    });
+
+  }, [polygon, selectedTypes]);
 
   const onMapLoad = React.useCallback(() => {
     if (mapRef.current && !drawRef.current) {
       const map = mapRef.current.getMap();
       const draw = new MapboxDraw({
         displayControlsDefault: false,
-        controls: {}, // Controls are handled by custom buttons
+        controls: {},
       });
       map.addControl(draw);
       drawRef.current = draw;
 
-      map.on('draw.create', (e: { features: Feature[] }) => {
-        const drawnPolygon = e.features[0] as Feature<Polygon>;
-        setPolygon(drawnPolygon);
-        
-        const allFeatures = map.querySourceFeatures('composite', { sourceLayer: 'road' });
-        const roadsInside = turf.featureCollection(allFeatures.filter(f => {
-            if (f.geometry.type === 'LineString' || f.geometry.type === 'MultiLineString') {
-                 // Use turf.booleanIntersects for better performance on large polygons
-                return turf.booleanIntersects(f, drawnPolygon);
-            }
-            return false;
-        }));
+      const onCreateOrUpdate = (e: { features: Feature[] }) => {
+        if (e.features.length > 0) {
+          const drawnPolygon = e.features[0] as Feature<Polygon>;
+          setPolygon(drawnPolygon);
+          setIsDrawMode(false);
+          draw.changeMode('simple_select');
+        }
+      };
 
-        const clippedRoads = turf.featureCollection(
-            roadsInside.features.map(road => turf.intersect(road, drawnPolygon)!).filter(Boolean)
-        );
+      map.on('draw.create', onCreateOrUpdate);
+      map.on('draw.update', onCreateOrUpdate);
+      map.on('draw.delete', () => {
+        setPolygon(null);
+        setFilteredRoads(null);
+      });
 
-        setRoadsInPolygon(clippedRoads);
-
-        const types = new Set(clippedRoads.features.map(f => f.properties?.class));
-        setAvailableRoadTypes(Array.from(types) as string[]);
-        setIsFilterDialogOpen(true);
-        setIsDrawActive(false);
+      map.on('styledata', () => {
+        if (polygon) {
+          updateFilteredRoads();
+        }
       });
     }
-  }, []);
+  }, [updateFilteredRoads, polygon]);
 
-  const handleCreateRoute = (selectedTypes: string[]) => {
-    if (!roadsInPolygon) return;
-    
-    const routeFeatures = roadsInPolygon.features.filter(f => selectedTypes.includes(f.properties?.class));
-    
-    const combinedLines = routeFeatures.map(f => f.geometry.coordinates);
+  React.useEffect(() => {
+    updateFilteredRoads();
+  }, [selectedTypes, polygon, updateFilteredRoads]);
 
-    setFilteredRoute({
-      type: 'FeatureCollection',
-      features: routeFeatures,
-    });
-    setIsFilterDialogOpen(false);
+  const startDrawing = () => {
+    if (drawRef.current) {
+      drawRef.current.deleteAll();
+      setPolygon(null);
+      setFilteredRoads(null);
+      drawRef.current.changeMode('draw_polygon');
+      setIsDrawMode(true);
+    }
   };
 
+  const clearDrawing = () => {
+     if (drawRef.current) {
+      drawRef.current.deleteAll();
+    }
+    setPolygon(null);
+    setFilteredRoads(null);
+    setIsDrawMode(false);
+  }
+
+  const handleCheckedChange = (type: string, checked: boolean) => {
+    const newSelectedTypes = checked
+      ? [...selectedTypes, type]
+      : selectedTypes.filter((t) => t !== type);
+    setSelectedTypes(newSelectedTypes);
+  };
+  
+  const handleSelectAll = () => setSelectedTypes(Object.keys(allRoadTypes));
+  const handleDeselectAll = () => setSelectedTypes([]);
+
+  const handleSelectSweepRoutes = () => {
+     const sweepTypes = [
+      'primary', 'secondary', 'tertiary',
+      'primary_link', 'secondary_link', 'tertiary_link',
+      'street', 'street_limited', 'service', 'residential', 'living_street', 'road',
+      'unclassified', 'roundabout'
+    ];
+    setSelectedTypes(sweepTypes);
+  };
 
   return (
     <div className="flex flex-col flex-1 min-h-0 relative">
-      <div className="absolute top-4 left-4 z-10">
-        <Card className="w-80 shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-lg">Routeplanner</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2">
-            <Button onClick={startDrawing} disabled={isDrawActive}>
-              <Edit className="mr-2 h-4 w-4" /> Polygoon tekenen
-            </Button>
-            <Button onClick={clearDrawing} variant="destructive" disabled={!polygon}>
-                <Trash2 className="mr-2 h-4 w-4" /> Huidige selectie wissen
-            </Button>
-             <Button variant="secondary" disabled={!filteredRoute}>
-                <Download className="mr-2 h-4 w-4" /> Route exporteren
-            </Button>
-            {isDrawActive && <p className="text-sm text-muted-foreground text-center pt-2">Teken een gebied op de kaart.</p>}
-          </CardContent>
-        </Card>
+      <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
+         <Button onClick={() => setShowFilter(!showFilter)} className="w-fit">
+          <Layers className="mr-2 h-4 w-4" /> Wegtypes
+        </Button>
+
+        {showFilter && (
+            <Card className="w-80 shadow-lg">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-lg">Filter Wegtypes</CardTitle>
+                <Button variant="ghost" size="icon" onClick={() => setShowFilter(false)}><X className="h-4 w-4"/></Button>
+              </CardHeader>
+              <CardContent>
+                <div className='flex items-center gap-2 mb-2'>
+                  <Button size="sm" variant="outline" onClick={handleSelectAll}>Alles</Button>
+                  <Button size="sm" variant="outline" onClick={handleDeselectAll}>Niets</Button>
+                  <Button size="sm" variant="outline" onClick={handleSelectSweepRoutes}>Veegroutes</Button>
+                </div>
+                <Separator className='mb-4' />
+                 <ScrollArea className="h-64 pr-4">
+                  <div className="grid grid-cols-1 gap-y-2">
+                    {Object.entries(allRoadTypes).sort(([, a], [, b]) => a.localeCompare(b)).map(([type, name]) => (
+                      <div key={type} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`type-${type}`}
+                          checked={selectedTypes.includes(type)}
+                          onCheckedChange={(checked) => handleCheckedChange(type, !!checked)}
+                        />
+                        <Label htmlFor={`type-${type}`} className="font-normal capitalize flex items-center gap-2">
+                            <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: roadColorMapping[type]}} />
+                            {name}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+        )}
       </div>
+
+       <div className="absolute top-4 right-4 z-10 flex gap-2">
+          <Button onClick={startDrawing} disabled={isDrawMode}>
+              <Edit className="mr-2 h-4 w-4" /> Gebied tekenen
+          </Button>
+           <Button onClick={clearDrawing} variant="destructive" disabled={!polygon && !isDrawMode}>
+              <Trash2 className="mr-2 h-4 w-4" /> Huidige selectie wissen
+          </Button>
+      </div>
+
 
       <Map
         ref={mapRef}
         initialViewState={initialViewState}
         style={{ width: '100%', height: '100%' }}
-        mapStyle="mapbox://styles/mapbox/light-v11"
+        mapStyle="mapbox://styles/mapbox/streets-v11"
         mapboxAccessToken={MAPBOX_TOKEN}
         onLoad={onMapLoad}
       >
-        {filteredRoute && (
-          <Source id="filtered-route" type="geojson" data={filteredRoute}>
+        <Source id="place-labels" type="vector" url="mapbox://mapbox.places">
+           <Layer
+            id="gemeente-labels"
+            type="symbol"
+            source-layer="place_label"
+            filter={['==', 'type', 'city']}
+            layout={{
+              'text-field': ['get', 'name_nl'],
+              'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
+              'text-size': 12,
+            }}
+            paint={{
+              'text-color': '#333',
+              'text-halo-color': '#FFF',
+              'text-halo-width': 1,
+            }}
+          />
+        </Source>
+        {Object.entries(roadColorMapping).map(([type, color]) => (
+          <Layer
+            key={type}
+            id={type}
+            type="line"
+            source="composite"
+            source-layer="road"
+            filter={['==', 'class', type]}
+            layout={{ 'line-join': 'round', 'line-cap': 'round' }}
+            paint={{
+              'line-color': color,
+              'line-width': 4,
+              'line-opacity': selectedTypes.includes(type) ? 0.8 : 0.1,
+            }}
+          />
+        ))}
+
+        {filteredRoads && (
+          <Source id="filtered-roads" type="geojson" data={filteredRoads}>
             <Layer
-              id="filtered-route-layer"
+              id="highlight-layer"
               type="line"
               paint={{
-                'line-color': '#FF0000', // Bright red for visibility
-                'line-width': 4,
-                'line-opacity': 0.8
+                'line-color': '#ff00ff', // Magenta highlight
+                'line-width': 5,
+                'line-opacity': 0.9,
               }}
             />
           </Source>
         )}
       </Map>
-
-      <RoadTypeFilterDialog
-        open={isFilterDialogOpen}
-        onOpenChange={setIsFilterDialogOpen}
-        availableTypes={availableRoadTypes}
-        onConfirm={handleCreateRoute}
-       />
     </div>
   );
 }

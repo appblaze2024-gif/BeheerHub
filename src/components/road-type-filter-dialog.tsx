@@ -103,6 +103,18 @@ export function RoadTypeFilterDialog({
   const handleDeselectAll = () => {
     setSelectedTypes([]);
   };
+
+  const handleSelectSweepRoutes = () => {
+    const sweepTypes = [
+      'primary', 'secondary', 'tertiary',
+      'primary_link', 'secondary_link', 'tertiary_link',
+      'street', 'street_limited', 'service', 'residential', 'living_street', 'road',
+      'unclassified', 'roundabout'
+    ];
+    // Filter sweepTypes to only include types that are actually available in the current polygon
+    const availableSweepTypes = sweepTypes.filter(type => availableTypes.includes(type));
+    setSelectedTypes(availableSweepTypes);
+  };
   
   const handleConfirm = () => {
     onConfirm(selectedTypes);
@@ -122,7 +134,7 @@ export function RoadTypeFilterDialog({
         <DialogHeader>
           <DialogTitle>Filter Wegtypes</DialogTitle>
           <DialogDescription>
-            Selecteer de wegtypes om een route van te maken.
+            Selecteer de wegtypes die u wilt opnemen in de route.
           </DialogDescription>
         </DialogHeader>
         {sortedAvailableTypes.length > 0 ? (
@@ -150,17 +162,20 @@ export function RoadTypeFilterDialog({
           </div>
         )}
         <DialogFooter className="sm:justify-between w-full">
-            <div className='flex gap-2'>
+            <div className='flex gap-2 flex-wrap'>
                 <Button variant="outline" onClick={handleSelectAll} disabled={availableTypes.length === 0}>
                     Alles
                 </Button>
                 <Button variant="outline" onClick={handleDeselectAll} disabled={availableTypes.length === 0}>
                     Niets
                 </Button>
+                 <Button variant="outline" onClick={handleSelectSweepRoutes} disabled={availableTypes.length === 0}>
+                    Veegroutes
+                </Button>
             </div>
             <div className='flex gap-2'>
                <Button variant="ghost" onClick={() => onOpenChange(false)}>Annuleren</Button>
-               <Button onClick={handleConfirm}>Route Maken</Button>
+               <Button onClick={handleConfirm}>Route Genereren</Button>
             </div>
         </DialogFooter>
       </DialogContent>
