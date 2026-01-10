@@ -26,7 +26,7 @@ export default function RoutesPage() {
     // Find the road feature under the click
     const features = map.queryRenderedFeatures(e.point);
     const roadFeature = features.find(
-      (f) => f.sourceLayer === 'road' && f.geometry.type === 'LineString'
+      (f: any) => f.sourceLayer === 'road' && f.geometry.type === 'LineString'
     ) as Feature<LineString> | undefined;
 
     if (roadFeature) {
@@ -41,6 +41,7 @@ export default function RoutesPage() {
           roadId: roadFeature.id, // Link waypoint to road segment
         },
       };
+      // Correctly append the new waypoint to the existing array
       setWaypoints(prevWaypoints => [...prevWaypoints, newWaypoint]);
 
       // Add the road segment to be highlighted, avoid duplicates
@@ -58,19 +59,23 @@ export default function RoutesPage() {
   const undoLastSelection = () => {
     if (waypoints.length === 0) return;
 
-    // Remove the last waypoint
+    // Get the last waypoint and its associated roadId
     const lastWaypoint = waypoints[waypoints.length - 1];
-    setWaypoints(prevWaypoints => prevWaypoints.slice(0, -1));
+    const roadIdToRemove = lastWaypoint.properties?.roadId;
 
-    // Check if any other waypoints are linked to the same road segment
-    const isRoadStillNeeded = waypoints.slice(0, -1).some(
-      (wp) => wp.properties?.roadId === lastWaypoint.properties?.roadId
+    // Remove the last waypoint
+    const newWaypoints = waypoints.slice(0, -1);
+    setWaypoints(newWaypoints);
+
+    // Check if any *remaining* waypoints are still linked to the same road segment
+    const isRoadStillNeeded = newWaypoints.some(
+      (wp) => wp.properties?.roadId === roadIdToRemove
     );
 
     // If no other waypoints are on this road segment, remove it from the highlighted roads
-    if (!isRoadStillNeeded) {
+    if (!isRoadStillNeeded && roadIdToRemove) {
       setSelectedRoads(prevRoads => prevRoads.filter(
-        r => r.id !== lastWaypoint.properties?.roadId
+        (r : any) => r.id !== roadIdToRemove
       ));
     }
   };
@@ -122,6 +127,7 @@ export default function RoutesPage() {
         mapboxAccessToken={MAPBOX_TOKEN}
         onClick={handleMapClick}
         cursor='pointer'
+        interactiveLayerIds={['road-path', 'road-street', 'road-primary', 'road-motorway', 'road-trunk', 'road-secondary', 'road-tertiary']}
       >
         <Source id="selected-route-data" type="geojson" data={selectedRouteGeoJSON}>
             <Layer
