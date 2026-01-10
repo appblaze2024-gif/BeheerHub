@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { ScrollArea } from './ui/scroll-area';
 
 // Uitgebreide lijst met Engelse Mapbox-classificaties en hun Nederlandse vertalingen.
 export const allRoadTypes: Record<string, string> = {
@@ -70,33 +71,43 @@ interface RoadTypeFilterDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   availableTypes: string[];
-  selectedTypes: string[];
-  onSelectedTypesChange: (types: string[]) => void;
+  onConfirm: (selectedTypes: string[]) => void;
 }
 
 export function RoadTypeFilterDialog({
   open,
   onOpenChange,
   availableTypes,
-  selectedTypes,
-  onSelectedTypesChange,
+  onConfirm,
 }: RoadTypeFilterDialogProps) {
   
+  const [selectedTypes, setSelectedTypes] = React.useState<string[]>([]);
+  
+  React.useEffect(() => {
+    if(open) {
+      setSelectedTypes(availableTypes);
+    }
+  }, [open, availableTypes])
+
   const handleCheckedChange = (type: string, checked: boolean) => {
     const newSelectedTypes = checked
       ? [...selectedTypes, type]
       : selectedTypes.filter((t) => t !== type);
-    onSelectedTypesChange(newSelectedTypes);
+    setSelectedTypes(newSelectedTypes);
   };
 
   const handleSelectAll = () => {
-    onSelectedTypesChange(availableTypes);
+    setSelectedTypes(availableTypes);
   };
 
   const handleDeselectAll = () => {
-    onSelectedTypesChange([]);
+    setSelectedTypes([]);
   };
   
+  const handleConfirm = () => {
+    onConfirm(selectedTypes);
+  }
+
   const sortedAvailableTypes = React.useMemo(() => {
     return [...availableTypes].sort((a, b) => {
       const nameA = allRoadTypes[a] || a;
@@ -111,41 +122,46 @@ export function RoadTypeFilterDialog({
         <DialogHeader>
           <DialogTitle>Filter Wegtypes</DialogTitle>
           <DialogDescription>
-            Selecteer de wegtypes die u binnen de polygoon wilt zien.
+            Selecteer de wegtypes om een route van te maken.
           </DialogDescription>
         </DialogHeader>
         {sortedAvailableTypes.length > 0 ? (
-          <div className="max-h-[60vh] overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 p-1">
-            {sortedAvailableTypes.map((type) => (
-              <div key={type} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`type-${type}`}
-                  checked={selectedTypes.includes(type)}
-                  onCheckedChange={(checked) => handleCheckedChange(type, !!checked)}
-                   style={{ color: roadColorMapping[type] }}
-                />
-                <Label htmlFor={`type-${type}`} className="font-normal capitalize flex items-center gap-2">
-                    <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: roadColorMapping[type]}} />
-                    {allRoadTypes[type] || type.replace(/_/g, ' ')}
-                </Label>
-              </div>
-            ))}
-          </div>
+          <ScrollArea className="max-h-[60vh] h-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 p-1">
+              {sortedAvailableTypes.map((type) => (
+                <div key={type} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`type-${type}`}
+                    checked={selectedTypes.includes(type)}
+                    onCheckedChange={(checked) => handleCheckedChange(type, !!checked)}
+                    style={{ color: roadColorMapping[type] }}
+                  />
+                  <Label htmlFor={`type-${type}`} className="font-normal capitalize flex items-center gap-2">
+                      <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: roadColorMapping[type]}} />
+                      {allRoadTypes[type] || type.replace(/_/g, ' ')}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
         ) : (
           <div className="text-center text-muted-foreground p-8">
             Geen wegen gevonden in het geselecteerde gebied.
           </div>
         )}
-        <DialogFooter className="justify-between w-full">
+        <DialogFooter className="sm:justify-between w-full">
             <div className='flex gap-2'>
                 <Button variant="outline" onClick={handleSelectAll} disabled={availableTypes.length === 0}>
-                    Alles Selecteren
+                    Alles
                 </Button>
                 <Button variant="outline" onClick={handleDeselectAll} disabled={availableTypes.length === 0}>
-                    Alles Deselecteren
+                    Niets
                 </Button>
             </div>
-            <Button onClick={() => onOpenChange(false)}>Sluiten</Button>
+            <div className='flex gap-2'>
+               <Button variant="ghost" onClick={() => onOpenChange(false)}>Annuleren</Button>
+               <Button onClick={handleConfirm}>Route Maken</Button>
+            </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

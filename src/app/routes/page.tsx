@@ -2,166 +2,160 @@
 
 import * as React from 'react';
 import Map, { Layer, Source } from 'react-map-gl';
+import MapboxDraw from '@mapbox/mapbox-gl-draw';
+import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
 import { allRoadTypes, roadColorMapping } from '@/components/road-type-filter-dialog';
-import { List } from 'lucide-react';
+import { Download, Edit, Trash2 } from 'lucide-react';
+import { RoadTypeFilterDialog } from '@/components/road-type-filter-dialog';
+import * as turf from '@turf/turf';
+import type { Feature, FeatureCollection, Polygon } from 'geojson';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
-const veegRoutes = [
-    'primary',
-    'primary_link',
-    'secondary',
-    'secondary_link',
-    'tertiary',
-    'tertiary_link',
-    'street',
-    'street_limited',
-    'pedestrian',
-    'service',
-    'living_street',
-    'residential',
-    'road',
-    'unclassified',
-    'roundabout',
-];
-
-
 export default function RoutesPage() {
   const mapRef = React.useRef<any>(null);
-  const [selectedRoadTypes, setSelectedRoadTypes] = React.useState<string[]>(Object.keys(roadColorMapping));
-  const [isFilterPanelOpen, setIsFilterPanelOpen] = React.useState(true);
-  
+  const drawRef = React.useRef<MapboxDraw | null>(null);
+
+  const [isDrawActive, setIsDrawActive] = React.useState(false);
+  const [polygon, setPolygon] = React.useState<Feature<Polygon> | null>(null);
+  const [roadsInPolygon, setRoadsInPolygon] = React.useState<FeatureCollection | null>(null);
+  const [availableRoadTypes, setAvailableRoadTypes] = React.useState<string[]>([]);
+  const [filteredRoute, setFilteredRoute] = React.useState<FeatureCollection | null>(null);
+  const [isFilterDialogOpen, setIsFilterDialogOpen] = React.useState(false);
+
   const initialViewState = {
     longitude: 5.2913,
     latitude: 52.1326,
     zoom: 7,
   };
 
-  const handleCheckedChange = (type: string, checked: boolean) => {
-    const newSelectedTypes = checked
-      ? [...selectedRoadTypes, type]
-      : selectedRoadTypes.filter((t) => t !== type);
-    setSelectedRoadTypes(newSelectedTypes);
+  // Function to enter drawing mode
+  const startDrawing = () => {
+    if (drawRef.current) {
+      clearDrawing();
+      drawRef.current.changeMode('draw_polygon');
+      setIsDrawActive(true);
+    }
+  };
+  
+  // Function to clear everything
+  const clearDrawing = () => {
+    if (drawRef.current) {
+      drawRef.current.deleteAll();
+    }
+    setPolygon(null);
+    setRoadsInPolygon(null);
+    setAvailableRoadTypes([]);
+    setFilteredRoute(null);
+    setIsDrawActive(false);
   };
 
-  const handleSelectAll = () => {
-    setSelectedRoadTypes(Object.keys(roadColorMapping));
-  };
 
-  const handleDeselectAll = () => {
-    setSelectedRoadTypes([]);
-  };
+  const onMapLoad = React.useCallback(() => {
+    if (mapRef.current && !drawRef.current) {
+      const map = mapRef.current.getMap();
+      const draw = new MapboxDraw({
+        displayControlsDefault: false,
+        controls: {}, // Controls are handled by custom buttons
+      });
+      map.addControl(draw);
+      drawRef.current = draw;
 
-  const handleSelectVeegRoutes = () => {
-    setSelectedRoadTypes(veegRoutes);
-  };
+      map.on('draw.create', (e: { features: Feature[] }) => {
+        const drawnPolygon = e.features[0] as Feature<Polygon>;
+        setPolygon(drawnPolygon);
+        
+        const allFeatures = map.querySourceFeatures('composite', { sourceLayer: 'road' });
+        const roadsInside = turf.featureCollection(allFeatures.filter(f => {
+            if (f.geometry.type === 'LineString' || f.geometry.type === 'MultiLineString') {
+                 // Use turf.booleanIntersects for better performance on large polygons
+                return turf.booleanIntersects(f, drawnPolygon);
+            }
+            return false;
+        }));
 
-  const sortedRoadTypes = React.useMemo(() => {
-    return Object.keys(roadColorMapping).sort((a, b) => {
-      const nameA = allRoadTypes[a] || a;
-      const nameB = allRoadTypes[b] || b;
-      return nameA.localeCompare(nameB);
-    });
+        const clippedRoads = turf.featureCollection(
+            roadsInside.features.map(road => turf.intersect(road, drawnPolygon)!).filter(Boolean)
+        );
+
+        setRoadsInPolygon(clippedRoads);
+
+        const types = new Set(clippedRoads.features.map(f => f.properties?.class));
+        setAvailableRoadTypes(Array.from(types) as string[]);
+        setIsFilterDialogOpen(true);
+        setIsDrawActive(false);
+      });
+    }
   }, []);
+
+  const handleCreateRoute = (selectedTypes: string[]) => {
+    if (!roadsInPolygon) return;
+    
+    const routeFeatures = roadsInPolygon.features.filter(f => selectedTypes.includes(f.properties?.class));
+    
+    const combinedLines = routeFeatures.map(f => f.geometry.coordinates);
+
+    setFilteredRoute({
+      type: 'FeatureCollection',
+      features: routeFeatures,
+    });
+    setIsFilterDialogOpen(false);
+  };
+
 
   return (
     <div className="flex flex-col flex-1 min-h-0 relative">
-        <div className="absolute top-4 left-4 z-10">
-          {!isFilterPanelOpen && (
-             <Button size="icon" onClick={() => setIsFilterPanelOpen(true)}>
-                <List className="h-5 w-5" />
-             </Button>
-          )}
-          <Card className={isFilterPanelOpen ? 'w-80 shadow-lg' : 'hidden'}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-lg">Wegtypes</CardTitle>
-                 <Button variant="ghost" size="sm" onClick={() => setIsFilterPanelOpen(false)}>
-                    Sluiten
-                </Button>
-            </CardHeader>
-            <CardContent>
-                <div className="flex gap-2 mb-4">
-                    <Button variant="outline" size="sm" className="flex-1" onClick={handleSelectAll}>Alles</Button>
-                    <Button variant="outline" size="sm" className="flex-1" onClick={handleDeselectAll}>Niets</Button>
-                </div>
-                 <div className="flex gap-2 mb-4">
-                    <Button variant="outline" size="sm" className="flex-1" onClick={handleSelectVeegRoutes}>Veegroutes</Button>
-                </div>
-                 <ScrollArea className="h-96">
-                    <div className="space-y-3 pr-4">
-                        {sortedRoadTypes.map((type) => (
-                        <div key={type} className="flex items-center space-x-2">
-                            <Checkbox
-                                id={`type-${type}`}
-                                checked={selectedRoadTypes.includes(type)}
-                                onCheckedChange={(checked) => handleCheckedChange(type, !!checked)}
-                                style={{ color: roadColorMapping[type] }}
-                            />
-                            <Label htmlFor={`type-${type}`} className="font-normal capitalize flex items-center gap-2">
-                               <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: roadColorMapping[type]}} />
-                               {allRoadTypes[type] || type.replace(/_/g, ' ')}
-                            </Label>
-                        </div>
-                        ))}
-                    </div>
-                </ScrollArea>
-            </CardContent>
-          </Card>
-        </div>
-        
-        <Map
-            ref={mapRef}
-            initialViewState={initialViewState}
-            style={{ width: '100%', height: '100%' }}
-            mapStyle="mapbox://styles/mapbox/light-v11"
-            mapboxAccessToken={MAPBOX_TOKEN}
-        >
-        {Object.entries(roadColorMapping).map(([roadClass, color]) => (
+      <div className="absolute top-4 left-4 z-10">
+        <Card className="w-80 shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-lg">Routeplanner</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            <Button onClick={startDrawing} disabled={isDrawActive}>
+              <Edit className="mr-2 h-4 w-4" /> Polygoon tekenen
+            </Button>
+            <Button onClick={clearDrawing} variant="destructive" disabled={!polygon}>
+                <Trash2 className="mr-2 h-4 w-4" /> Huidige selectie wissen
+            </Button>
+             <Button variant="secondary" disabled={!filteredRoute}>
+                <Download className="mr-2 h-4 w-4" /> Route exporteren
+            </Button>
+            {isDrawActive && <p className="text-sm text-muted-foreground text-center pt-2">Teken een gebied op de kaart.</p>}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Map
+        ref={mapRef}
+        initialViewState={initialViewState}
+        style={{ width: '100%', height: '100%' }}
+        mapStyle="mapbox://styles/mapbox/light-v11"
+        mapboxAccessToken={MAPBOX_TOKEN}
+        onLoad={onMapLoad}
+      >
+        {filteredRoute && (
+          <Source id="filtered-route" type="geojson" data={filteredRoute}>
             <Layer
-                key={roadClass}
-                id={`road-layer-${roadClass}`}
-                type="line"
-                source="composite"
-                source-layer="road"
-                filter={['==', 'class', roadClass]}
-                layout={{
-                    'line-join': 'round',
-                    'line-cap': 'round',
-                    'visibility': selectedRoadTypes.includes(roadClass) ? 'visible' : 'none',
-                }}
-                paint={{
-                    'line-color': color,
-                    'line-width': 3,
-                    'line-opacity': 0.8,
-                }}
+              id="filtered-route-layer"
+              type="line"
+              paint={{
+                'line-color': '#FF0000', // Bright red for visibility
+                'line-width': 4,
+                'line-opacity': 0.8
+              }}
             />
-        ))}
-         <Layer
-            id="municipality-labels"
-            type="symbol"
-            source="composite"
-            source-layer="place_label"
-            minzoom={8}
-            filter={['any', ['==', ['get', 'type'], 'town'], ['==', ['get', 'type'], 'city']]}
-            layout={{
-                'text-field': ['get', 'name_nl'],
-                'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
-                'text-size': 14,
-                'text-transform': 'uppercase',
-                'text-letter-spacing': 0.1,
-            }}
-            paint={{
-                'text-color': '#333',
-                'text-halo-color': 'rgba(255, 255, 255, 0.8)',
-                'text-halo-width': 1,
-            }}
-          />
-        </Map>
+          </Source>
+        )}
+      </Map>
+
+      <RoadTypeFilterDialog
+        open={isFilterDialogOpen}
+        onOpenChange={setIsFilterDialogOpen}
+        availableTypes={availableRoadTypes}
+        onConfirm={handleCreateRoute}
+       />
     </div>
   );
 }
