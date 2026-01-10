@@ -9,6 +9,7 @@ import { Filter, Trash2 } from 'lucide-react';
 import { RoadTypeFilterDialog } from '@/components/road-type-filter-dialog';
 import type { Feature, FeatureCollection, Polygon, LineString } from 'geojson';
 import { Layer, Source } from 'react-map-gl';
+import * as turf from '@turf/turf';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -28,57 +29,65 @@ export default function RoutesPage() {
     zoom: 7,
   };
   
-  const processRoadsInPolygon = React.useCallback(() => {
+  const processRoadsInPolygon = React.useCallback((polygonFeature: Feature<Polygon> | null) => {
     const map = mapRef.current?.getMap();
-    if (!map || !map.isStyleLoaded() || !drawnPolygon) return;
-    
-    const polygonPoints = drawnPolygon.geometry.coordinates[0];
-    if (!polygonPoints || polygonPoints.length === 0) return;
+    if (!map || !map.isStyleLoaded() || !polygonFeature) {
+      setRouteLayerData(null);
+      setRoadTypesInPolygon([]);
+      setSelectedRoadTypes([]);
+      return;
+    };
 
-    const bbox: [[number, number], [number, number]] = [
-      [
-        Math.min(...polygonPoints.map(p => p[0])),
-        Math.min(...polygonPoints.map(p => p[1]))
-      ],
-      [
-        Math.max(...polygonPoints.map(p => p[0])),
-        Math.max(...polygonPoints.map(p => p[1]))
-      ]
-    ];
-    
-    const southWest = map.project(bbox[0]);
-    const northEast = map.project(bbox[1]);
-    const queryBbox: [[number, number], [number, number]] = [[southWest.x, southWest.y], [northEast.x, northEast.y]];
+    try {
+      const sourceFeatures = map.querySourceFeatures('composite', {
+        sourceLayer: 'road',
+      });
+      
+      const roadsInPolygon: Feature<LineString>[] = [];
 
-
-    const renderedFeatures = map.queryRenderedFeatures(queryBbox, {
-      layers: map.getStyle().layers.filter(l => l.type === 'line' && l['source-layer'] === 'road').map(l => l.id)
-    });
-
-    const roadsInPolygon: Feature<LineString>[] = [];
-    renderedFeatures.forEach(road => {
-        if (road.geometry.type === 'LineString') {
-            roadsInPolygon.push(road as Feature<LineString>);
+      sourceFeatures.forEach(feature => {
+        if (feature.geometry.type === 'LineString' || feature.geometry.type === 'MultiLineString') {
+          try {
+            const intersection = turf.intersect(polygonFeature, feature as Feature<any>);
+            if (intersection) {
+              if (intersection.geometry.type === 'LineString') {
+                roadsInPolygon.push(intersection as Feature<LineString>);
+              } else if (intersection.geometry.type === 'MultiLineString') {
+                // Handle MultiLineString by creating a feature for each line
+                intersection.geometry.coordinates.forEach(coords => {
+                  roadsInPolygon.push(turf.lineString(coords, intersection.properties));
+                });
+              }
+            }
+          } catch(e) {
+            // Ignore intersection errors for individual invalid geometries
+            // console.warn('Could not process a road segment due to invalid geometry:', e);
+          }
         }
-    });
+      });
+      
+      const uniqueRoadTypes = Array.from(new Set(roadsInPolygon.map(road => road.properties?.class).filter(Boolean) as string[]));
 
-    const uniqueRoadTypes = Array.from(new Set(roadsInPolygon.map(road => road.properties?.class).filter(Boolean) as string[]));
+      setRoadTypesInPolygon(uniqueRoadTypes);
+      setSelectedRoadTypes(uniqueRoadTypes);
+      setRouteLayerData({ type: 'FeatureCollection', features: roadsInPolygon });
+      
+      if (uniqueRoadTypes.length > 0) {
+          setIsFilterDialogOpen(true);
+      }
 
-    setRoadTypesInPolygon(uniqueRoadTypes);
-    setSelectedRoadTypes(uniqueRoadTypes);
-    setRouteLayerData({ type: 'FeatureCollection', features: roadsInPolygon });
-    
-    if (uniqueRoadTypes.length > 0) {
-        setIsFilterDialogOpen(true);
+    } catch (err) {
+      console.error('Error querying or processing road features:', err);
     }
-  }, [drawnPolygon]);
+
+  }, []);
 
   const onMapLoad = () => {
     const map = mapRef.current?.getMap();
     if (!map || drawRef.current) return;
       
     const draw = new MapboxDraw({
-        displayControlsDefault: true,
+        displayControlsDefault: false,
         controls: {
           polygon: true,
           trash: true
@@ -91,19 +100,13 @@ export default function RoutesPage() {
     const handleDraw = (e: { features: Feature[] }) => {
         const polygon = e.features[0] as Feature<Polygon>;
         setDrawnPolygon(polygon);
+        processRoadsInPolygon(polygon);
     };
 
     map.on('draw.create', handleDraw);
     map.on('draw.update', handleDraw);
     map.on('draw.delete', clearRoute);
   };
-
-  React.useEffect(() => {
-    if (drawnPolygon) {
-      processRoadsInPolygon();
-    }
-  }, [drawnPolygon, processRoadsInPolygon]);
-
 
   const clearRoute = () => {
     if (drawRef.current) {
