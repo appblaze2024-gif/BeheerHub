@@ -47,25 +47,39 @@ export default function RoutesPage() {
         layers: map.getStyle().layers.filter(l => l.type === 'line' && l['source-layer'] === 'road').map(l => l.id)
       });
       
-      const roadsInPolygon = renderedFeatures.filter(feature => {
-        if (feature.geometry.type !== 'LineString' && feature.geometry.type !== 'MultiLineString') {
-          return false;
-        }
-        // Ensure the feature intersects with the precise polygon, not just the bounding box
-        return turf.booleanIntersects(polygonFeature, feature as Feature<LineString | Polygon>);
-      });
-      
-      const featuresForLayer = roadsInPolygon as Feature<LineString, GeoJsonProperties>[];
+      const roadsInPolygon: Feature<LineString>[] = [];
+      const uniqueRoadTypes = new Set<string>();
 
-      const uniqueRoadTypes = Array.from(new Set(
-        featuresForLayer.map(road => road.properties?.class).filter(Boolean) as string[]
-      ));
+      for (const feature of renderedFeatures) {
+        if (feature.geometry.type !== 'LineString' && feature.geometry.type !== 'MultiLineString') {
+          continue;
+        }
+
+        try {
+          const intersection = turf.intersect(polygonFeature, feature as Feature<LineString | Polygon>);
+          if (intersection) {
+            // turf.intersect returns a feature, ensure it's the right type
+            const intersectionFeature = intersection as Feature<LineString>;
+            intersectionFeature.properties = feature.properties; // Keep original properties
+            
+            roadsInPolygon.push(intersectionFeature);
+            if (feature.properties?.class) {
+              uniqueRoadTypes.add(feature.properties.class);
+            }
+          }
+        } catch (err) {
+          // It's possible for turf.intersect to fail with malformed geometries.
+          // We'll just skip those features.
+          console.warn('Skipping a road feature due to an intersection error:', err);
+        }
+      }
       
-      setRoadTypesInPolygon(uniqueRoadTypes);
-      setSelectedRoadTypes(uniqueRoadTypes);
-      setRouteLayerData({ type: 'FeatureCollection', features: featuresForLayer });
+      const roadTypes = Array.from(uniqueRoadTypes);
+      setRoadTypesInPolygon(roadTypes);
+      setSelectedRoadTypes(roadTypes);
+      setRouteLayerData({ type: 'FeatureCollection', features: roadsInPolygon });
       
-      if (uniqueRoadTypes.length > 0) {
+      if (roadTypes.length > 0) {
         setIsFilterDialogOpen(true);
       }
 
