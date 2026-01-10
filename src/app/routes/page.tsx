@@ -39,28 +39,28 @@ export default function RoutesPage() {
     }
 
     try {
-      const bbox = turf.bbox(polygonFeature);
-      const southWest = map.project([bbox[0], bbox[1]]);
-      const northEast = map.project([bbox[2], bbox[3]]);
-      
-      const renderedFeatures = map.queryRenderedFeatures([southWest, northEast], {
-        layers: map.getStyle().layers.filter(l => l.type === 'line' && l['source-layer'] === 'road').map(l => l.id)
+      const allRoads = map.querySourceFeatures('composite', {
+        sourceLayer: 'road',
       });
       
       const roadsInPolygon: Feature<LineString>[] = [];
       const uniqueRoadTypes = new Set<string>();
 
-      for (const feature of renderedFeatures) {
+      for (const feature of allRoads) {
         if (feature.geometry.type !== 'LineString' && feature.geometry.type !== 'MultiLineString') {
+          continue;
+        }
+
+        // Use a simple bounding box check first for performance
+        if (!turf.booleanIntersects(feature as Feature, polygonFeature)) {
           continue;
         }
 
         try {
           const intersection = turf.intersect(polygonFeature, feature as Feature<LineString | Polygon>);
           if (intersection) {
-            // turf.intersect returns a feature, ensure it's the right type
             const intersectionFeature = intersection as Feature<LineString>;
-            intersectionFeature.properties = feature.properties; // Keep original properties
+            intersectionFeature.properties = feature.properties;
             
             roadsInPolygon.push(intersectionFeature);
             if (feature.properties?.class) {
@@ -68,8 +68,6 @@ export default function RoutesPage() {
             }
           }
         } catch (err) {
-          // It's possible for turf.intersect to fail with malformed geometries.
-          // We'll just skip those features.
           console.warn('Skipping a road feature due to an intersection error:', err);
         }
       }
@@ -88,7 +86,6 @@ export default function RoutesPage() {
     }
   }, []);
 
-
   const onMapLoad = () => {
     const map = mapRef.current?.getMap();
     if (!map || drawRef.current) return;
@@ -105,9 +102,11 @@ export default function RoutesPage() {
     map.addControl(draw, 'top-left');
 
     const handleDraw = (e: { features: Feature[] }) => {
-        const polygon = e.features[0] as Feature<Polygon>;
-        setDrawnPolygon(polygon);
-        processRoadsInPolygon(polygon);
+        if (e.features.length > 0) {
+          const polygon = e.features[0] as Feature<Polygon>;
+          setDrawnPolygon(polygon);
+          processRoadsInPolygon(polygon);
+        }
     };
 
     map.on('draw.create', handleDraw);
@@ -127,14 +126,11 @@ export default function RoutesPage() {
 
   const roadFilter = React.useMemo(() => {
     if (selectedRoadTypes.length === 0) {
-      // Filter that matches nothing
       return ['==', ['get', 'class'], 'this-will-never-be-true'];
     }
     if (selectedRoadTypes.length === roadTypesInPolygon.length) {
-       // No filter needed, show all
       return null;
     }
-    // Filter to show only selected types
     return ['in', ['get', 'class'], ['literal', selectedRoadTypes]];
   }, [selectedRoadTypes, roadTypesInPolygon]);
   
