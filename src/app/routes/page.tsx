@@ -23,14 +23,13 @@ export default function RoutesPage() {
     const map = mapRef.current?.getMap();
     if (!map) return;
 
-    // Find the road feature under the click
     const features = map.queryRenderedFeatures(e.point);
     const roadFeature = features.find(
       (f: any) => f.sourceLayer === 'road' && f.geometry.type === 'LineString'
     ) as Feature<LineString> | undefined;
 
     if (roadFeature) {
-      // Add a waypoint (dot) at the clicked location
+      // 1. Add a new waypoint at the click location
       const newWaypoint: Feature<Point> = {
         type: 'Feature',
         geometry: {
@@ -38,14 +37,20 @@ export default function RoutesPage() {
           coordinates: [e.lngLat.lng, e.lngLat.lat],
         },
         properties: {
-          roadId: roadFeature.id, // Link waypoint to road segment
+          // Use a unique identifier for the road segment. Mapbox feature.id is not always stable.
+          // A combination of properties can work, or we can generate one.
+          // For simplicity, we'll use a stringified version of its geometry as a key.
+          roadId: JSON.stringify(roadFeature.geometry.coordinates),
         },
       };
-      // Correctly append the new waypoint to the existing array
       setWaypoints(prevWaypoints => [...prevWaypoints, newWaypoint]);
 
-      // Add the road segment to be highlighted, avoid duplicates
-      if (!selectedRoads.some(r => r.id === roadFeature.id)) {
+      // 2. Add the road segment to be highlighted, avoiding duplicates
+      const isRoadAlreadySelected = selectedRoads.some(
+        r => JSON.stringify(r.geometry.coordinates) === JSON.stringify(roadFeature.geometry.coordinates)
+      );
+
+      if (!isRoadAlreadySelected) {
         setSelectedRoads(prevRoads => [...prevRoads, roadFeature]);
       }
     }
@@ -59,7 +64,7 @@ export default function RoutesPage() {
   const undoLastSelection = () => {
     if (waypoints.length === 0) return;
 
-    // Get the last waypoint and its associated roadId
+    // Get the last waypoint to be removed
     const lastWaypoint = waypoints[waypoints.length - 1];
     const roadIdToRemove = lastWaypoint.properties?.roadId;
 
@@ -67,15 +72,15 @@ export default function RoutesPage() {
     const newWaypoints = waypoints.slice(0, -1);
     setWaypoints(newWaypoints);
 
-    // Check if any *remaining* waypoints are still linked to the same road segment
+    // Check if any *remaining* waypoints are still on the same road segment
     const isRoadStillNeeded = newWaypoints.some(
       (wp) => wp.properties?.roadId === roadIdToRemove
     );
 
-    // If no other waypoints are on this road segment, remove it from the highlighted roads
+    // If no other waypoints reference this road, remove it from the highlighted roads
     if (!isRoadStillNeeded && roadIdToRemove) {
       setSelectedRoads(prevRoads => prevRoads.filter(
-        (r : any) => r.id !== roadIdToRemove
+        (r) => JSON.stringify(r.geometry.coordinates) !== roadIdToRemove
       ));
     }
   };
