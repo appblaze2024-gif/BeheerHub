@@ -29,21 +29,10 @@ export default function RoutesPage() {
     zoom: 7,
   };
 
-  const updateRoute = (e?: { features: Feature[] }) => {
-    const polygon = e?.features[0] as Feature<Polygon> || drawnPolygon;
-    if (!polygon) return;
-    
-    if (e && e.features.length > 0) {
-      setDrawnPolygon(polygon);
-    }
-  
+  const processRoadsInPolygon = React.useCallback(() => {
     const map = mapRef.current?.getMap();
-    if (!map || !map.isStyleLoaded()) {
-      // If the style is not loaded, wait for it and try again.
-      map.once('styledata', () => updateRoute());
-      return;
-    }
-
+    if (!map || !map.isStyleLoaded() || !drawnPolygon) return;
+    
     const allSourceRoads = map.querySourceFeatures('composite', {
         sourceLayer: 'road',
     });
@@ -55,7 +44,7 @@ export default function RoutesPage() {
   
       try {
         if (road.geometry.type === 'LineString' || road.geometry.type === 'MultiLineString') {
-          const intersection = turf.intersect(polygon, road.geometry as LineString | MultiLineString);
+          const intersection = turf.intersect(drawnPolygon, road.geometry as LineString | MultiLineString);
           if (intersection) {
             intersection.properties = { ...road.properties };
             roadsInPolygon.push(intersection as Feature<LineString | MultiLineString>);
@@ -72,31 +61,58 @@ export default function RoutesPage() {
     setRoadTypesInPolygon(uniqueRoadTypes);
     setSelectedRoadTypes(uniqueRoadTypes);
     setRouteLayerData({ type: 'FeatureCollection', features: roadsInPolygon });
-
-    if (e) { // Only open dialog on direct user action
-      setIsFilterDialogOpen(true);
+    
+    if (uniqueRoadTypes.length > 0 && !isFilterDialogOpen) {
+        setIsFilterDialogOpen(true);
     }
-  };
+  }, [drawnPolygon, isFilterDialogOpen]);
+  
+  React.useEffect(() => {
+    if (drawnPolygon) {
+      processRoadsInPolygon();
+    }
+  }, [drawnPolygon, processRoadsInPolygon]);
   
   const onMapLoad = () => {
     const map = mapRef.current?.getMap();
-    if (map && !drawRef.current) {
-      const draw = new MapboxDraw({
+    if (!map || drawRef.current) return;
+      
+    const draw = new MapboxDraw({
         displayControlsDefault: true,
         controls: {
-          polygon: true,
-          trash: true
+        polygon: true,
+        trash: true
         },
         defaultMode: 'draw_polygon'
-      });
-      drawRef.current = draw;
-      map.addControl(draw, 'top-left');
+    });
+    drawRef.current = draw;
+    map.addControl(draw, 'top-left');
 
-      map.on('draw.create', updateRoute);
-      map.on('draw.update', updateRoute);
-      map.on('draw.delete', () => {
+    map.on('draw.create', (e: { features: Feature[] }) => {
+        const polygon = e.features[0] as Feature<Polygon>;
+        setDrawnPolygon(polygon);
+    });
+    
+    map.on('draw.update', (e: { features: Feature[] }) => {
+        const polygon = e.features[0] as Feature<Polygon>;
+        setDrawnPolygon(polygon);
+    });
+
+    map.on('draw.delete', () => {
         clearRoute();
-      });
+    });
+    
+    // Ensure processing happens after style is loaded
+    if (map.isStyleLoaded()) {
+        if (drawnPolygon) {
+            processRoadsInPolygon();
+        }
+    } else {
+        map.once('styledata', () => {
+            if (drawnPolygon) {
+                processRoadsInPolygon();
+            }
+        });
     }
   };
 
