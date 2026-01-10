@@ -52,7 +52,7 @@ export default function RoutesPage() {
         setFilteredRoads(null);
         return;
     }
-    const polygon = polygonFeature.geometry; // Corrected line
+    const polygon = polygonFeature.geometry;
   
     const roadLayers = Object.keys(allRoadTypes);
     const features = map.queryRenderedFeatures({ layers: roadLayers });
@@ -68,7 +68,7 @@ export default function RoutesPage() {
     });
     
     const clippedRoads = turf.featureCollection(
-        roadsInside.map(road => turf.intersect(road as any, polygon)!).filter(Boolean) as any
+        roadsInside.map(road => turf.intersect(road.geometry, polygon)!).filter(Boolean) as any
     );
   
     const roadsToShow = clippedRoads.features.filter((f) =>
@@ -100,7 +100,6 @@ export default function RoutesPage() {
       map.on('draw.update', updateFeatures);
       map.on('draw.delete', updateFeatures);
 
-      // This is a safety net. If map style changes, re-run filtering
       map.on('styledata', () => {
         if (drawnFeatures.length > 0) {
           updateFilteredRoads();
@@ -110,7 +109,9 @@ export default function RoutesPage() {
   }, [updateFilteredRoads, drawnFeatures]);
   
   React.useEffect(() => {
+    if(mapRef.current?.getMap()?.isStyleLoaded()) {
       updateFilteredRoads();
+    }
   }, [selectedTypes, drawnFeatures, updateFilteredRoads]);
 
 
