@@ -141,6 +141,26 @@ export default function RoutesPage() {
                 }}
             />
         ))}
+         <Layer
+            id="municipality-labels"
+            type="symbol"
+            source="composite"
+            source-layer="place_label"
+            minzoom={8}
+            filter={['any', ['==', ['get', 'type'], 'town'], ['==', ['get', 'type'], 'city']]}
+            layout={{
+                'text-field': ['get', 'name_nl'],
+                'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
+                'text-size': 14,
+                'text-transform': 'uppercase',
+                'text-letter-spacing': 0.1,
+            }}
+            paint={{
+                'text-color': '#333',
+                'text-halo-color': 'rgba(255, 255, 255, 0.8)',
+                'text-halo-width': 1,
+            }}
+          />
         </Map>
     </div>
   );
