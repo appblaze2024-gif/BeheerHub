@@ -29,40 +29,51 @@ export default function RoutesPage() {
     zoom: 7,
   };
 
-  const updateRoute = (e: { features: Feature[] }) => {
-    if (e.features.length > 0) {
-      const polygon = e.features[0] as Feature<Polygon>;
+  const updateRoute = (e?: { features: Feature[] }) => {
+    const polygon = e?.features[0] as Feature<Polygon> || drawnPolygon;
+    if (!polygon) return;
+    
+    if (e && e.features.length > 0) {
       setDrawnPolygon(polygon);
-      const map = mapRef.current?.getMap();
-      if (!map) return;
-      
-      const allSourceRoads = map.querySourceFeatures('composite', {
-          sourceLayer: 'road',
-      });
+    }
+  
+    const map = mapRef.current?.getMap();
+    if (!map || !map.isStyleLoaded()) {
+      // If the style is not loaded, wait for it and try again.
+      map.once('styledata', () => updateRoute());
+      return;
+    }
 
-      const roadsInPolygon: Feature<LineString | MultiLineString>[] = [];
-      allSourceRoads.forEach(road => {
-        if (!road.geometry) return;
+    const allSourceRoads = map.querySourceFeatures('composite', {
+        sourceLayer: 'road',
+    });
 
-        try {
-          if (road.geometry.type === 'LineString' || road.geometry.type === 'MultiLineString') {
-            const intersection = turf.intersect(polygon, road.geometry as LineString | MultiLineString);
-            if (intersection) {
-              intersection.properties = { ...road.properties };
-              roadsInPolygon.push(intersection as Feature<LineString | MultiLineString>);
-            }
+    const roadsInPolygon: Feature<LineString | MultiLineString>[] = [];
+    
+    allSourceRoads.forEach(road => {
+      if (!road.geometry) return;
+  
+      try {
+        if (road.geometry.type === 'LineString' || road.geometry.type === 'MultiLineString') {
+          const intersection = turf.intersect(polygon, road.geometry as LineString | MultiLineString);
+          if (intersection) {
+            intersection.properties = { ...road.properties };
+            roadsInPolygon.push(intersection as Feature<LineString | MultiLineString>);
           }
-        } catch(err) {
-            console.warn("Error during intersection check, skipping feature:", err);
         }
-      });
+      } catch(err) {
+          // This can happen with invalid geometries, so we skip the feature.
+          console.warn("Error during intersection check, skipping feature:", err);
+      }
+    });
 
+    const uniqueRoadTypes = Array.from(new Set(roadsInPolygon.map(road => road.properties?.class).filter(Boolean) as string[]));
+    
+    setRoadTypesInPolygon(uniqueRoadTypes);
+    setSelectedRoadTypes(uniqueRoadTypes);
+    setRouteLayerData({ type: 'FeatureCollection', features: roadsInPolygon });
 
-      const uniqueRoadTypes = Array.from(new Set(roadsInPolygon.map(road => road.properties?.class).filter(Boolean) as string[]));
-      
-      setRoadTypesInPolygon(uniqueRoadTypes);
-      setSelectedRoadTypes(uniqueRoadTypes);
-      setRouteLayerData({ type: 'FeatureCollection', features: roadsInPolygon });
+    if (e) { // Only open dialog on direct user action
       setIsFilterDialogOpen(true);
     }
   };
