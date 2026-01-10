@@ -7,11 +7,35 @@ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import { Button } from '@/components/ui/button';
 import { Filter, Trash2 } from 'lucide-react';
 import { RoadTypeFilterDialog } from '@/components/road-type-filter-dialog';
-import type { Feature, FeatureCollection, Polygon, LineString, GeoJsonProperties } from 'geojson';
+import type { Feature, FeatureCollection, Polygon, LineString } from 'geojson';
 import { Layer, Source } from 'react-map-gl';
 import * as turf from '@turf/turf';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
+
+/**
+ * Waits for a specific source layer to be available on the map.
+ * @param map The Mapbox GL JS map instance.
+ * @param sourceLayer The ID of the source layer to wait for (e.g., 'road').
+ * @param timeout The maximum time to wait in milliseconds.
+ * @returns A promise that resolves when the layer is ready, or rejects on timeout.
+ */
+function waitForSourceLayer(map: mapboxgl.Map, sourceLayer: string, timeout = 5000): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const startTime = Date.now();
+    const check = () => {
+      if (map.isSourceLoaded('composite') && map.getStyle().layers.some(l => l['source-layer'] === sourceLayer)) {
+        resolve();
+      } else if (Date.now() - startTime > timeout) {
+        reject(new Error(`Timed out waiting for source layer "${sourceLayer}"`));
+      } else {
+        setTimeout(check, 100);
+      }
+    };
+    check();
+  });
+}
+
 
 export default function RoutesPage() {
   const mapRef = React.useRef<any>(null);
@@ -29,33 +53,36 @@ export default function RoutesPage() {
     zoom: 7,
   };
 
-  const processRoadsInPolygon = React.useCallback((polygonFeature: Feature<Polygon> | null) => {
+  const processRoadsInPolygon = React.useCallback(async (polygonFeature: Feature<Polygon> | null) => {
     const map = mapRef.current?.getMap();
-    if (!map || !map.isStyleLoaded() || !polygonFeature) {
+    if (!map || !polygonFeature) {
       setRouteLayerData(null);
       setRoadTypesInPolygon([]);
       setSelectedRoadTypes([]);
       return;
     }
-
+  
     try {
+      // Wait until the 'road' layer is actually available in the composite source.
+      await waitForSourceLayer(map, 'road');
+      
       const allRoads = map.querySourceFeatures('composite', {
         sourceLayer: 'road',
       });
       
       const roadsInPolygon: Feature<LineString>[] = [];
       const uniqueRoadTypes = new Set<string>();
-
+  
       for (const feature of allRoads) {
         if (feature.geometry.type !== 'LineString' && feature.geometry.type !== 'MultiLineString') {
           continue;
         }
-
+  
         // Use a simple bounding box check first for performance
         if (!turf.booleanIntersects(feature as Feature, polygonFeature)) {
           continue;
         }
-
+  
         try {
           const intersection = turf.intersect(polygonFeature, feature as Feature<LineString | Polygon>);
           if (intersection) {
@@ -68,7 +95,7 @@ export default function RoutesPage() {
             }
           }
         } catch (err) {
-          console.warn('Skipping a road feature due to an intersection error:', err);
+           console.warn('Skipping a road feature due to an intersection error:', err);
         }
       }
       
@@ -80,7 +107,7 @@ export default function RoutesPage() {
       if (roadTypes.length > 0) {
         setIsFilterDialogOpen(true);
       }
-
+  
     } catch (err) {
       console.error('Error querying or processing road features:', err);
     }
