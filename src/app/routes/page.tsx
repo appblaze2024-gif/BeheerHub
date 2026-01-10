@@ -39,38 +39,36 @@ export default function RoutesPage() {
     };
 
     try {
-      const sourceFeatures = map.querySourceFeatures('composite', {
-        sourceLayer: 'road',
-      });
+      const polygonBbox = turf.bbox(polygonFeature);
+      const bbox: [[number, number], [number, number]] = [
+          map.project([polygonBbox[0], polygonBbox[1]]),
+          map.project([polygonBbox[2], polygonBbox[3]])
+      ];
       
-      const roadsInPolygon: Feature<LineString>[] = [];
+      const renderedFeatures = map.queryRenderedFeatures(bbox, {
+        layers: map.getStyle().layers.filter(l => l.type === 'line' && l['source-layer'] === 'road').map(l => l.id)
+      });
 
-      sourceFeatures.forEach(feature => {
-        if (feature.geometry.type === 'LineString' || feature.geometry.type === 'MultiLineString') {
-          try {
-            const intersection = turf.intersect(polygonFeature, feature as Feature<any>);
-            if (intersection) {
-              if (intersection.geometry.type === 'LineString') {
-                roadsInPolygon.push(intersection as Feature<LineString>);
-              } else if (intersection.geometry.type === 'MultiLineString') {
-                // Handle MultiLineString by creating a feature for each line
-                intersection.geometry.coordinates.forEach(coords => {
-                  roadsInPolygon.push(turf.lineString(coords, intersection.properties));
-                });
-              }
-            }
-          } catch(e) {
-            // Ignore intersection errors for individual invalid geometries
-            // console.warn('Could not process a road segment due to invalid geometry:', e);
-          }
+      const roadsInPolygon = renderedFeatures.filter(feature => 
+        feature.geometry.type === 'LineString' && turf.booleanIntersects(polygonFeature, feature)
+      ) as Feature<LineString>[];
+
+      const clippedRoads = roadsInPolygon.map(road => {
+        try {
+          // turf.intersect can sometimes fail on complex geometries
+          return turf.intersect(polygonFeature, road);
+        } catch (e) {
+          return null;
         }
-      });
-      
-      const uniqueRoadTypes = Array.from(new Set(roadsInPolygon.map(road => road.properties?.class).filter(Boolean) as string[]));
+      }).filter((road): road is Feature<LineString> => 
+        road !== null && road.geometry.type === 'LineString' && road.geometry.coordinates.length > 0
+      );
+
+      const uniqueRoadTypes = Array.from(new Set(clippedRoads.map(road => road.properties?.class).filter(Boolean) as string[]));
 
       setRoadTypesInPolygon(uniqueRoadTypes);
       setSelectedRoadTypes(uniqueRoadTypes);
-      setRouteLayerData({ type: 'FeatureCollection', features: roadsInPolygon });
+      setRouteLayerData({ type: 'FeatureCollection', features: clippedRoads });
       
       if (uniqueRoadTypes.length > 0) {
           setIsFilterDialogOpen(true);
