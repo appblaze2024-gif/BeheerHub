@@ -52,7 +52,7 @@ export default function RoutesPage() {
         setFilteredRoads(null);
         return;
     }
-    const polygon = polygonFeature as Feature<Polygon | MultiPolygon>;
+    const polygon = polygonFeature.geometry; // Corrected line
   
     const roadLayers = Object.keys(allRoadTypes);
     const features = map.queryRenderedFeatures({ layers: roadLayers });
