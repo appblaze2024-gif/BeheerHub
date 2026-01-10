@@ -7,7 +7,7 @@ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import { Button } from '@/components/ui/button';
 import { Filter, Trash2 } from 'lucide-react';
 import { RoadTypeFilterDialog } from '@/components/road-type-filter-dialog';
-import type { Feature, FeatureCollection, Polygon, LineString } from 'geojson';
+import type { Feature, FeatureCollection, Polygon, LineString, GeoJsonProperties } from 'geojson';
 import { Layer, Source } from 'react-map-gl';
 import * as turf from '@turf/turf';
 
@@ -28,7 +28,7 @@ export default function RoutesPage() {
     latitude: 52.1326,
     zoom: 7,
   };
-  
+
   const processRoadsInPolygon = React.useCallback((polygonFeature: Feature<Polygon> | null) => {
     const map = mapRef.current?.getMap();
     if (!map || !map.isStyleLoaded() || !polygonFeature) {
@@ -39,31 +39,31 @@ export default function RoutesPage() {
     }
 
     try {
-      const allSourceFeatures = map.querySourceFeatures('composite', {
-        sourceLayer: 'road',
+      const bbox = turf.bbox(polygonFeature);
+      const southWest = map.project([bbox[0], bbox[1]]);
+      const northEast = map.project([bbox[2], bbox[3]]);
+      
+      const renderedFeatures = map.queryRenderedFeatures([southWest, northEast], {
+        layers: map.getStyle().layers.filter(l => l.type === 'line' && l['source-layer'] === 'road').map(l => l.id)
       });
-
-      const roadsInPolygon = allSourceFeatures.filter(feature => 
-        (feature.geometry.type === 'LineString' || feature.geometry.type === 'MultiLineString') && 
-        turf.booleanIntersects(polygonFeature, feature)
-      );
-
-      const clippedRoads = roadsInPolygon.map(road => {
-        try {
-          return turf.intersect(polygonFeature, road);
-        } catch (e) {
-          console.warn('Could not intersect feature:', road, e);
-          return null; // Skip features that cause intersection errors
+      
+      const roadsInPolygon = renderedFeatures.filter(feature => {
+        if (feature.geometry.type !== 'LineString' && feature.geometry.type !== 'MultiLineString') {
+          return false;
         }
-      }).filter((road): road is Feature<LineString> => 
-        road !== null && road.geometry.type === 'LineString' && road.geometry.coordinates.length > 0
-      );
+        // Ensure the feature intersects with the precise polygon, not just the bounding box
+        return turf.booleanIntersects(polygonFeature, feature as Feature<LineString | Polygon>);
+      });
+      
+      const featuresForLayer = roadsInPolygon as Feature<LineString, GeoJsonProperties>[];
 
-      const uniqueRoadTypes = Array.from(new Set(clippedRoads.map(road => road.properties?.class).filter(Boolean) as string[]));
+      const uniqueRoadTypes = Array.from(new Set(
+        featuresForLayer.map(road => road.properties?.class).filter(Boolean) as string[]
+      ));
       
       setRoadTypesInPolygon(uniqueRoadTypes);
       setSelectedRoadTypes(uniqueRoadTypes);
-      setRouteLayerData({ type: 'FeatureCollection', features: clippedRoads });
+      setRouteLayerData({ type: 'FeatureCollection', features: featuresForLayer });
       
       if (uniqueRoadTypes.length > 0) {
         setIsFilterDialogOpen(true);
@@ -113,11 +113,14 @@ export default function RoutesPage() {
 
   const roadFilter = React.useMemo(() => {
     if (selectedRoadTypes.length === 0) {
-      return ['==', ['get', 'class'], 'none'];
+      // Filter that matches nothing
+      return ['==', ['get', 'class'], 'this-will-never-be-true'];
     }
     if (selectedRoadTypes.length === roadTypesInPolygon.length) {
+       // No filter needed, show all
       return null;
     }
+    // Filter to show only selected types
     return ['in', ['get', 'class'], ['literal', selectedRoadTypes]];
   }, [selectedRoadTypes, roadTypesInPolygon]);
   
