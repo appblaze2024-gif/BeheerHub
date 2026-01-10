@@ -81,7 +81,7 @@ export default function RoutesPage() {
     const features = waypoints.map((point, index) => {
         let type = 'intermediate';
         if (index === 0) type = 'start';
-        if (index === waypoints.length - 1) type = 'end';
+        if (index === waypoints.length - 1 && waypoints.length > 1) type = 'end';
 
         return {
             type: 'Feature' as const,
