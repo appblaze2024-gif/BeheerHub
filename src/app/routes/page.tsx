@@ -3,21 +3,15 @@
 import * as React from 'react';
 import Map, { Layer, Source } from 'react-map-gl';
 import { Button } from '@/components/ui/button';
-import { Trash2, Loader2, Play } from 'lucide-react';
+import { Trash2, Loader2, Play, Undo2 } from 'lucide-react';
 import type { FeatureCollection, Point, LineString } from 'geojson';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
-const emptyGeoJSON: FeatureCollection<Point> = {
-  type: 'FeatureCollection',
-  features: [],
-};
-
 export default function RoutesPage() {
   const mapRef = React.useRef<any>(null);
   const [isLoading, setIsLoading] = React.useState(false);
-  const [startPoint, setStartPoint] = React.useState<[number, number] | null>(null);
-  const [endPoint, setEndPoint] = React.useState<[number, number] | null>(null);
+  const [waypoints, setWaypoints] = React.useState<[number, number][]>([]);
   const [route, setRoute] = React.useState<FeatureCollection<LineString> | null>(null);
 
   const initialViewState = {
@@ -30,23 +24,19 @@ export default function RoutesPage() {
     if (isLoading) return;
 
     const coords: [number, number] = [e.lngLat.lng, e.lngLat.lat];
-
-    if (!startPoint) {
-      setStartPoint(coords);
-      setEndPoint(null);
-      setRoute(null);
-    } else if (!endPoint) {
-      setEndPoint(coords);
-    }
+    setWaypoints(prevWaypoints => [...prevWaypoints, coords]);
   };
 
   const fetchRoute = React.useCallback(async () => {
-    if (!startPoint || !endPoint) return;
+    if (waypoints.length < 2) {
+      setRoute(null);
+      return;
+    };
 
     setIsLoading(true);
-    setRoute(null);
 
-    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${startPoint[0]},${startPoint[1]};${endPoint[0]},${endPoint[1]}?geometries=geojson&access_token=${MAPBOX_TOKEN}`;
+    const coordinatesString = waypoints.map(p => p.join(',')).join(';');
+    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coordinatesString}?geometries=geojson&access_token=${MAPBOX_TOKEN}`;
 
     try {
       const response = await fetch(url);
@@ -63,58 +53,56 @@ export default function RoutesPage() {
         });
       } else {
         console.error('Geen route gevonden:', data.message);
-        clearRoute();
+        setRoute(null);
       }
     } catch (error) {
       console.error('Fout bij het ophalen van de route:', error);
-      clearRoute();
+      setRoute(null);
     } finally {
       setIsLoading(false);
     }
-  }, [startPoint, endPoint]);
+  }, [waypoints]);
 
   React.useEffect(() => {
-    if (startPoint && endPoint) {
-      fetchRoute();
-    }
-  }, [startPoint, endPoint, fetchRoute]);
+    fetchRoute();
+  }, [waypoints, fetchRoute]);
 
   const clearRoute = () => {
-    setStartPoint(null);
-    setEndPoint(null);
+    setWaypoints([]);
     setRoute(null);
     setIsLoading(false);
   };
+
+  const undoLastPoint = () => {
+    setWaypoints(prevWaypoints => prevWaypoints.slice(0, -1));
+  }
   
   const pointsGeoJSON: FeatureCollection<Point> = React.useMemo(() => {
-    const features = [];
-    if (startPoint) {
-      features.push({
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: startPoint },
-        properties: { type: 'start' },
-      });
-    }
-    if (endPoint) {
-      features.push({
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: endPoint },
-        properties: { type: 'end' },
-      });
-    }
+    const features = waypoints.map((point, index) => {
+        let type = 'intermediate';
+        if (index === 0) type = 'start';
+        if (index === waypoints.length - 1) type = 'end';
+
+        return {
+            type: 'Feature' as const,
+            geometry: { type: 'Point' as const, coordinates: point },
+            properties: { type },
+        }
+    });
+
     return {
       type: 'FeatureCollection',
       features,
     };
-  }, [startPoint, endPoint]);
+  }, [waypoints]);
 
   return (
     <div className="flex flex-col flex-1 min-h-0 relative">
       <div className="absolute top-4 left-4 z-10 flex flex-col gap-2 bg-card p-4 rounded-lg shadow-lg">
         <h2 className="text-lg font-semibold">Route Definiëren</h2>
-        {!startPoint && <p className="text-sm text-muted-foreground">Klik op de kaart om een startpunt te kiezen.</p>}
-        {startPoint && !endPoint && <p className="text-sm text-muted-foreground">Klik op de kaart om een eindpunt te kiezen.</p>}
-        {route && <p className="text-sm text-green-600 font-medium">Route succesvol berekend!</p>}
+        {waypoints.length === 0 && <p className="text-sm text-muted-foreground">Klik op de kaart om een startpunt te kiezen.</p>}
+        {waypoints.length === 1 && <p className="text-sm text-muted-foreground">Klik om meer punten toe te voegen.</p>}
+        {route && <p className="text-sm text-green-600 font-medium">Route met {waypoints.length} punten berekend!</p>}
       </div>
 
       <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
@@ -124,11 +112,16 @@ export default function RoutesPage() {
             Route berekenen...
           </Button>
         )}
-        {(startPoint || endPoint || route) && !isLoading && (
-          <Button onClick={clearRoute} variant="destructive" size="lg">
-            <Trash2 className="mr-2 h-5 w-5" />
-            Wis Route
-          </Button>
+        {waypoints.length > 0 && !isLoading && (
+            <div className="flex gap-2">
+                <Button onClick={undoLastPoint} variant="secondary" size="lg" aria-label="Stap terug">
+                    <Undo2 className="h-5 w-5" />
+                </Button>
+                <Button onClick={clearRoute} variant="destructive" size="lg">
+                    <Trash2 className="mr-2 h-5 w-5" />
+                    Wis Route
+                </Button>
+            </div>
         )}
         {route && !isLoading && (
             <Button onClick={() => alert('Route verwerken...')} variant="default" size="lg">
@@ -145,7 +138,7 @@ export default function RoutesPage() {
         mapStyle="mapbox://styles/mapbox/streets-v11"
         mapboxAccessToken={MAPBOX_TOKEN}
         onClick={handleMapClick}
-        cursor={isLoading ? 'wait' : startPoint && !endPoint ? 'crosshair' : 'grab'}
+        cursor={isLoading ? 'wait' : 'crosshair'}
       >
         <Source id="points-data" type="geojson" data={pointsGeoJSON}>
             <Layer
@@ -155,7 +148,7 @@ export default function RoutesPage() {
                 filter={['==', ['get', 'type'], 'start']}
                 paint={{
                     'circle-radius': 8,
-                    'circle-color': '#22c55e',
+                    'circle-color': '#22c55e', // green
                     'circle-stroke-width': 2,
                     'circle-stroke-color': '#ffffff'
                 }}
@@ -167,7 +160,19 @@ export default function RoutesPage() {
                 filter={['==', ['get', 'type'], 'end']}
                 paint={{
                     'circle-radius': 8,
-                    'circle-color': '#ef4444',
+                    'circle-color': '#ef4444', // red
+                    'circle-stroke-width': 2,
+                    'circle-stroke-color': '#ffffff'
+                }}
+            />
+            <Layer
+                id="intermediate-points"
+                type="circle"
+                source="points-data"
+                filter={['==', ['get', 'type'], 'intermediate']}
+                paint={{
+                    'circle-radius': 6,
+                    'circle-color': '#3b82f6', // blue
                     'circle-stroke-width': 2,
                     'circle-stroke-color': '#ffffff'
                 }}
