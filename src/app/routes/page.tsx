@@ -12,7 +12,7 @@ import {
 } from '@/components/road-type-filter-dialog';
 import { Download, Edit, Trash2, Layers, X } from 'lucide-react';
 import * as turf from '@turf/turf';
-import type { Feature, FeatureCollection, Polygon } from 'geojson';
+import type { Feature, FeatureCollection, Polygon, MultiPolygon } from 'geojson';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -46,18 +46,22 @@ export default function RoutesPage() {
       setFilteredRoads(null);
       return;
     }
-
+  
+    const polygonFeature = drawnFeatures[0];
+    if (!polygonFeature || !polygonFeature.geometry || (polygonFeature.geometry.type !== 'Polygon' && polygonFeature.geometry.type !== 'MultiPolygon')) {
+        setFilteredRoads(null);
+        return;
+    }
+    const polygon = polygonFeature as Feature<Polygon | MultiPolygon>;
+  
     const roadLayers = Object.keys(allRoadTypes);
     const features = map.queryRenderedFeatures({ layers: roadLayers });
-
-    const polygon = drawnFeatures[0];
-
+  
     const roadsInside = features.filter((f) => {
       if (
         f.geometry.type === 'LineString' ||
         f.geometry.type === 'MultiLineString'
       ) {
-        // Use turf.booleanIntersects for robust checking
         return turf.booleanIntersects(f, polygon);
       }
       return false;
@@ -66,12 +70,11 @@ export default function RoutesPage() {
     const clippedRoads = turf.featureCollection(
         roadsInside.map(road => turf.intersect(road as any, polygon)!).filter(Boolean) as any
     );
-
-
+  
     const roadsToShow = clippedRoads.features.filter((f) =>
       selectedTypes.includes(f.properties?.class)
     );
-
+  
     setFilteredRoads({
       type: 'FeatureCollection',
       features: roadsToShow,
@@ -97,6 +100,7 @@ export default function RoutesPage() {
       map.on('draw.update', updateFeatures);
       map.on('draw.delete', updateFeatures);
 
+      // This is a safety net. If map style changes, re-run filtering
       map.on('styledata', () => {
         if (drawnFeatures.length > 0) {
           updateFilteredRoads();
@@ -104,9 +108,9 @@ export default function RoutesPage() {
       });
     }
   }, [updateFilteredRoads, drawnFeatures]);
-
+  
   React.useEffect(() => {
-    updateFilteredRoads();
+      updateFilteredRoads();
   }, [selectedTypes, drawnFeatures, updateFilteredRoads]);
 
 
@@ -146,7 +150,7 @@ export default function RoutesPage() {
       'tertiary',
       'primary_link',
       'secondary_link',
-      'tertiary_link',
+ 'tertiary_link',
       'street',
       'street_limited',
       'service',
