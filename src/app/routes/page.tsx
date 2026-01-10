@@ -22,13 +22,16 @@ export default function RoutesPage() {
     const map = mapRef.current?.getMap();
     if (!map) return;
 
-    const features = map.queryRenderedFeatures(e.point, {
-      layers: ['road-primary', 'road-street', 'road-motorway', 'road-trunk', 'road-secondary', 'road-tertiary', 'road-motorway-link', 'road-trunk-link', 'road-primary-link', 'road-secondary-link', 'road-tertiary-link', 'road-path', 'road-service', 'road-living-street', 'road-residential'] 
-    });
+    // Query all rendered features at the clicked point without specifying layers
+    const features = map.queryRenderedFeatures(e.point);
 
-    if (features.length > 0) {
-      const roadFeature = features[0] as Feature<LineString>;
-      
+    // Filter for features that are from the 'road' source layer
+    const roadFeature = features.find(
+      (f) => f.sourceLayer === 'road' && f.geometry.type === 'LineString'
+    ) as Feature<LineString> | undefined;
+
+
+    if (roadFeature) {
       // Prevent adding the exact same road segment twice
       if (!selectedRoads.some(r => r.id === roadFeature.id)) {
         setSelectedRoads(prevRoads => [...prevRoads, roadFeature]);
