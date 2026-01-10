@@ -32,23 +32,31 @@ export default function RoutesPage() {
     const map = mapRef.current?.getMap();
     if (!map || !map.isStyleLoaded() || !drawnPolygon) return;
     
-    // Get the bounding box of the polygon to query rendered features
     const polygonPoints = drawnPolygon.geometry.coordinates[0];
-    const bbox: [number, number, number, number] = [
+    if (!polygonPoints || polygonPoints.length === 0) return;
+
+    const bbox: [[number, number], [number, number]] = [
+      [
         Math.min(...polygonPoints.map(p => p[0])),
-        Math.min(...polygonPoints.map(p => p[1])),
+        Math.min(...polygonPoints.map(p => p[1]))
+      ],
+      [
         Math.max(...polygonPoints.map(p => p[0])),
         Math.max(...polygonPoints.map(p => p[1]))
+      ]
     ];
+    
+    const southWest = map.project(bbox[0]);
+    const northEast = map.project(bbox[1]);
+    const queryBbox: [[number, number], [number, number]] = [[southWest.x, southWest.y], [northEast.x, northEast.y]];
 
-    const renderedFeatures = map.queryRenderedFeatures(map.project(bbox), {
+
+    const renderedFeatures = map.queryRenderedFeatures(queryBbox, {
       layers: map.getStyle().layers.filter(l => l.type === 'line' && l['source-layer'] === 'road').map(l => l.id)
     });
 
     const roadsInPolygon: Feature<LineString>[] = [];
     renderedFeatures.forEach(road => {
-        // We can't use turf here because it was removed.
-        // We'll rely on the queryRenderedFeatures which is good enough for this purpose.
         if (road.geometry.type === 'LineString') {
             roadsInPolygon.push(road as Feature<LineString>);
         }
