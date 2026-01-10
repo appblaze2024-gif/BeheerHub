@@ -36,49 +36,44 @@ export default function RoutesPage() {
       setRoadTypesInPolygon([]);
       setSelectedRoadTypes([]);
       return;
-    };
+    }
 
     try {
-      const polygonBbox = turf.bbox(polygonFeature);
-      const bbox: [[number, number], [number, number]] = [
-          map.project([polygonBbox[0], polygonBbox[1]]),
-          map.project([polygonBbox[2], polygonBbox[3]])
-      ];
-      
-      const renderedFeatures = map.queryRenderedFeatures(bbox, {
-        layers: map.getStyle().layers.filter(l => l.type === 'line' && l['source-layer'] === 'road').map(l => l.id)
+      const allSourceFeatures = map.querySourceFeatures('composite', {
+        sourceLayer: 'road',
       });
 
-      const roadsInPolygon = renderedFeatures.filter(feature => 
-        feature.geometry.type === 'LineString' && turf.booleanIntersects(polygonFeature, feature)
-      ) as Feature<LineString>[];
+      const roadsInPolygon = allSourceFeatures.filter(feature => 
+        (feature.geometry.type === 'LineString' || feature.geometry.type === 'MultiLineString') && 
+        turf.booleanIntersects(polygonFeature, feature)
+      );
 
       const clippedRoads = roadsInPolygon.map(road => {
         try {
-          // turf.intersect can sometimes fail on complex geometries
           return turf.intersect(polygonFeature, road);
         } catch (e) {
-          return null;
+          console.warn('Could not intersect feature:', road, e);
+          return null; // Skip features that cause intersection errors
         }
       }).filter((road): road is Feature<LineString> => 
         road !== null && road.geometry.type === 'LineString' && road.geometry.coordinates.length > 0
       );
 
       const uniqueRoadTypes = Array.from(new Set(clippedRoads.map(road => road.properties?.class).filter(Boolean) as string[]));
-
+      
       setRoadTypesInPolygon(uniqueRoadTypes);
       setSelectedRoadTypes(uniqueRoadTypes);
       setRouteLayerData({ type: 'FeatureCollection', features: clippedRoads });
       
       if (uniqueRoadTypes.length > 0) {
-          setIsFilterDialogOpen(true);
+        setIsFilterDialogOpen(true);
       }
 
     } catch (err) {
       console.error('Error querying or processing road features:', err);
     }
-
   }, []);
+
 
   const onMapLoad = () => {
     const map = mapRef.current?.getMap();
