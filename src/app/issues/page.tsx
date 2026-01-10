@@ -422,6 +422,7 @@ export default function IssuesPage() {
                                 selected={selectedDate}
                                 onSelect={setSelectedDate}
                                 initialFocus
+                                locale={nl}
                                 />
                             </PopoverContent>
                         </Popover>
