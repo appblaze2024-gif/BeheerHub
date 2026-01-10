@@ -12,6 +12,25 @@ import { List } from 'lucide-react';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
+const veegRoutes = [
+    'primary',
+    'primary_link',
+    'secondary',
+    'secondary_link',
+    'tertiary',
+    'tertiary_link',
+    'street',
+    'street_limited',
+    'pedestrian',
+    'service',
+    'living_street',
+    'residential',
+    'road',
+    'unclassified',
+    'roundabout',
+];
+
+
 export default function RoutesPage() {
   const mapRef = React.useRef<any>(null);
   const [selectedRoadTypes, setSelectedRoadTypes] = React.useState<string[]>(Object.keys(roadColorMapping));
@@ -36,6 +55,10 @@ export default function RoutesPage() {
 
   const handleDeselectAll = () => {
     setSelectedRoadTypes([]);
+  };
+
+  const handleSelectVeegRoutes = () => {
+    setSelectedRoadTypes(veegRoutes);
   };
 
   const sortedRoadTypes = React.useMemo(() => {
@@ -65,6 +88,9 @@ export default function RoutesPage() {
                 <div className="flex gap-2 mb-4">
                     <Button variant="outline" size="sm" className="flex-1" onClick={handleSelectAll}>Alles</Button>
                     <Button variant="outline" size="sm" className="flex-1" onClick={handleDeselectAll}>Niets</Button>
+                </div>
+                 <div className="flex gap-2 mb-4">
+                    <Button variant="outline" size="sm" className="flex-1" onClick={handleSelectVeegRoutes}>Veegroutes</Button>
                 </div>
                  <ScrollArea className="h-96">
                     <div className="space-y-3 pr-4">
