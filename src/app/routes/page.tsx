@@ -2,16 +2,26 @@
 
 import * as React from 'react';
 import Map, { Layer, Source } from 'react-map-gl';
+import MapboxDraw from '@mapbox/mapbox-gl-draw';
+import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import { Button } from '@/components/ui/button';
-import { Trash2, Undo2 } from 'lucide-react';
-import type { FeatureCollection, LineString, Feature, Point } from 'geojson';
+import { Filter, Loader2, Trash2 } from 'lucide-react';
+import * as turf from '@turf/turf';
+import { RoadTypeFilterDialog, allRoadTypes } from '@/components/road-type-filter-dialog';
+import type { Feature, FeatureCollection, LineString } from 'geojson';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
 export default function RoutesPage() {
   const mapRef = React.useRef<any>(null);
-  const [selectedRoads, setSelectedRoads] = React.useState<Feature<LineString>[]>([]);
-  const [waypoints, setWaypoints] = React.useState<Feature<Point>[]>([]);
+  const drawRef = React.useRef<MapboxDraw | null>(null);
+  
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [polygon, setPolygon] = React.useState<Feature | null>(null);
+  const [allRoadsInPolygon, setAllRoadsInPolygon] = React.useState<Feature<LineString>[]>([]);
+  const [availableRoadTypes, setAvailableRoadTypes] = React.useState<string[]>([]);
+  const [selectedRoadTypes, setSelectedRoadTypes] = React.useState<string[]>([]);
+  const [isFilterDialogOpen, setIsFilterDialogOpen] = React.useState(false);
 
   const initialViewState = {
     longitude: 5.2913,
@@ -19,108 +29,156 @@ export default function RoutesPage() {
     zoom: 7,
   };
 
-  const handleMapClick = (e: mapboxgl.MapLayerMouseEvent) => {
+  const processRoadsInPolygon = React.useCallback((polygonFeature: Feature) => {
     const map = mapRef.current?.getMap();
-    if (!map) return;
+    if (!map || !polygonFeature) return;
 
-    const features = map.queryRenderedFeatures(e.point);
-    const roadFeature = features.find(
-      (f: any) => f.sourceLayer === 'road' && f.geometry.type === 'LineString'
-    ) as Feature<LineString> | undefined;
+    setIsLoading(true);
 
-    if (roadFeature) {
-      // 1. Add a new waypoint at the click location
-      const newWaypoint: Feature<Point> = {
-        type: 'Feature',
-        geometry: {
-          type: 'Point',
-          coordinates: [e.lngLat.lng, e.lngLat.lat],
-        },
-        properties: {
-          // Use a unique identifier for the road segment. Mapbox feature.id is not always stable.
-          // A combination of properties can work, or we can generate one.
-          // For simplicity, we'll use a stringified version of its geometry as a key.
-          roadId: JSON.stringify(roadFeature.geometry.coordinates),
-        },
-      };
-      setWaypoints(prevWaypoints => [...prevWaypoints, newWaypoint]);
+    // Fit map to the polygon bounds
+    const bbox = turf.bbox(polygonFeature);
+    map.fitBounds(bbox as [number, number, number, number], {
+      padding: 40,
+      duration: 1000,
+    });
 
-      // 2. Add the road segment to be highlighted, avoiding duplicates
-      const isRoadAlreadySelected = selectedRoads.some(
-        r => JSON.stringify(r.geometry.coordinates) === JSON.stringify(roadFeature.geometry.coordinates)
-      );
+    // Wait for the map to be fully loaded and idle after moving
+    const onIdle = () => {
+      const allFeatures = map.querySourceFeatures('composite', {
+        sourceLayer: 'road',
+      });
+      
+      const intersectingRoads: Feature<LineString>[] = [];
+      const roadTypes = new Set<string>();
+      
+      for (const roadFeature of allFeatures) {
+        if (roadFeature.geometry.type !== 'LineString' && roadFeature.geometry.type !== 'MultiLineString') continue;
 
-      if (!isRoadAlreadySelected) {
-        setSelectedRoads(prevRoads => [...prevRoads, roadFeature]);
+        try {
+          // Check if any part of the road intersects with the polygon
+          if (turf.booleanIntersects(roadFeature, polygonFeature)) {
+            const clippedRoads = turf.intersect(polygonFeature, roadFeature);
+            if (clippedRoads) {
+              
+              if (clippedRoads.geometry.type === 'LineString') {
+                 intersectingRoads.push(clippedRoads as Feature<LineString>);
+              } else if (clippedRoads.geometry.type === 'MultiLineString') {
+                  clippedRoads.geometry.coordinates.forEach(coords => {
+                      intersectingRoads.push(turf.lineString(coords, clippedRoads.properties));
+                  });
+              }
+              
+              if (roadFeature.properties?.class) {
+                roadTypes.add(roadFeature.properties.class);
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Error processing road feature:', e);
+        }
       }
+      
+      setAllRoadsInPolygon(intersectingRoads);
+      const typesArray = Array.from(roadTypes);
+      setAvailableRoadTypes(typesArray);
+      setSelectedRoadTypes(typesArray); // Select all by default
+      setIsLoading(false);
+      
+      if (typesArray.length > 0) {
+        setIsFilterDialogOpen(true);
+      }
+      
+      // Clean up listener
+      map.off('idle', onIdle);
+    };
+
+    map.on('idle', onIdle);
+
+  }, []);
+  
+  const onMapLoad = () => {
+    const map = mapRef.current?.getMap();
+    if (!map || drawRef.current) return;
+
+    const draw = new MapboxDraw({
+      displayControlsDefault: false,
+      controls: {
+        polygon: true,
+        trash: true,
+      },
+    });
+
+    drawRef.current = draw;
+    map.addControl(draw, 'top-left');
+
+    const handleDrawUpdate = (e: { features: any[] }) => {
+      if (e.features.length > 0) {
+        const newPolygon = e.features[0];
+        setPolygon(newPolygon);
+        processRoadsInPolygon(newPolygon);
+      }
+    };
+    
+    const handleDrawCreate = (e: { features: any[] }) => {
+        if (e.features.length > 0) {
+          const newPolygon = e.features[0];
+          setPolygon(newPolygon);
+          // Delete other polygons if they exist
+          const all = draw.getAll();
+          const otherFeatures = all.features.filter(f => f.id !== newPolygon.id);
+          if (otherFeatures.length > 0) {
+              draw.delete(otherFeatures.map(f => f.id));
+          }
+          processRoadsInPolygon(newPolygon);
+        }
     }
+
+    const handleDrawDelete = () => {
+      setPolygon(null);
+      setAllRoadsInPolygon([]);
+      setAvailableRoadTypes([]);
+      setSelectedRoadTypes([]);
+    };
+    
+    map.on('draw.create', handleDrawCreate);
+    map.on('draw.update', handleDrawUpdate);
+    map.on('draw.delete', handleDrawDelete);
   };
   
-  const clearRoute = () => {
-    setSelectedRoads([]);
-    setWaypoints([]);
-  };
-
-  const undoLastSelection = () => {
-    if (waypoints.length === 0) return;
-
-    // Get the last waypoint to be removed
-    const lastWaypoint = waypoints[waypoints.length - 1];
-    const roadIdToRemove = lastWaypoint.properties?.roadId;
-
-    // Remove the last waypoint
-    const newWaypoints = waypoints.slice(0, -1);
-    setWaypoints(newWaypoints);
-
-    // Check if any *remaining* waypoints are still on the same road segment
-    const isRoadStillNeeded = newWaypoints.some(
-      (wp) => wp.properties?.roadId === roadIdToRemove
+  const filteredRoadsGeoJSON: FeatureCollection<LineString> = React.useMemo(() => {
+    const features = allRoadsInPolygon.filter(road => 
+        road.properties && selectedRoadTypes.includes(road.properties.class)
     );
-
-    // If no other waypoints reference this road, remove it from the highlighted roads
-    if (!isRoadStillNeeded && roadIdToRemove) {
-      setSelectedRoads(prevRoads => prevRoads.filter(
-        (r) => JSON.stringify(r.geometry.coordinates) !== roadIdToRemove
-      ));
-    }
-  };
-  
-  const selectedRouteGeoJSON: FeatureCollection<LineString> = React.useMemo(() => {
     return {
       type: 'FeatureCollection',
-      features: selectedRoads,
+      features: features,
     };
-  }, [selectedRoads]);
+  }, [allRoadsInPolygon, selectedRoadTypes]);
 
-  const waypointsGeoJSON: FeatureCollection<Point> = React.useMemo(() => {
-    return {
-        type: 'FeatureCollection',
-        features: waypoints,
-    };
-  }, [waypoints]);
+  const clearSelection = () => {
+    if (drawRef.current) {
+        drawRef.current.deleteAll();
+        setPolygon(null);
+        setAllRoadsInPolygon([]);
+        setAvailableRoadTypes([]);
+        setSelectedRoadTypes([]);
+    }
+  }
+
 
   return (
     <div className="flex flex-col flex-1 min-h-0 relative">
-      <div className="absolute top-4 left-4 z-10 flex flex-col gap-2 bg-card p-4 rounded-lg shadow-lg">
-        <h2 className="text-lg font-semibold">Route Definiëren</h2>
-        {waypoints.length === 0 ? (
-           <p className="text-sm text-muted-foreground">Klik op een weg om deze te selecteren.</p>
-        ) : (
-           <p className="text-sm text-green-600 font-medium">{waypoints.length} punt(en) geselecteerd.</p>
-        )}
-      </div>
-
       <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
-        {waypoints.length > 0 && (
-            <div className="flex gap-2">
-                <Button onClick={undoLastSelection} variant="secondary" size="lg" aria-label="Stap terug">
-                    <Undo2 className="h-5 w-5" />
-                </Button>
-                <Button onClick={clearRoute} variant="destructive" size="lg">
-                    <Trash2 className="mr-2 h-5 w-5" />
-                    Wis Route
-                </Button>
-            </div>
+        {polygon && (
+          <div className="flex gap-2">
+            <Button onClick={() => setIsFilterDialogOpen(true)} variant="secondary" size="lg" disabled={isLoading}>
+               {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Filter className="mr-2 h-5 w-5" />}
+              Filter Wegtypes
+            </Button>
+            <Button onClick={clearSelection} variant="destructive" size="lg" aria-label="Verwijder selectie">
+                <Trash2 className="h-5 w-5" />
+            </Button>
+          </div>
         )}
       </div>
 
@@ -130,40 +188,33 @@ export default function RoutesPage() {
         style={{ width: '100%', height: '100%' }}
         mapStyle="mapbox://styles/mapbox/streets-v11"
         mapboxAccessToken={MAPBOX_TOKEN}
-        onClick={handleMapClick}
-        cursor='pointer'
-        interactiveLayerIds={['road-path', 'road-street', 'road-primary', 'road-motorway', 'road-trunk', 'road-secondary', 'road-tertiary']}
+        onLoad={onMapLoad}
       >
-        <Source id="selected-route-data" type="geojson" data={selectedRouteGeoJSON}>
+        <Source id="selected-roads-data" type="geojson" data={filteredRoadsGeoJSON}>
             <Layer
-              id="selected-route-line"
+              id="selected-roads-line"
               type="line"
-              source="selected-route-data"
+              source="selected-roads-data"
               layout={{
                 'line-join': 'round',
                 'line-cap': 'round'
               }}
               paint={{
-                'line-color': '#3b82f6',
-                'line-width': 5,
+                'line-color': '#3b82f6', // blue-500
+                'line-width': 4,
                 'line-opacity': 0.8,
               }}
             />
         </Source>
-        <Source id="waypoints-data" type="geojson" data={waypointsGeoJSON}>
-            <Layer
-                id="waypoints-points"
-                type="circle"
-                source="waypoints-data"
-                paint={{
-                    'circle-radius': 6,
-                    'circle-color': '#ffffff',
-                    'circle-stroke-color': '#000000',
-                    'circle-stroke-width': 2,
-                }}
-            />
-        </Source>
       </Map>
+
+      <RoadTypeFilterDialog
+        open={isFilterDialogOpen}
+        onOpenChange={setIsFilterDialogOpen}
+        availableTypes={availableRoadTypes}
+        selectedTypes={selectedRoadTypes}
+        onSelectedTypesChange={setSelectedRoadTypes}
+       />
     </div>
   );
 }
