@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 
+// Deze lijst is mogelijk niet uitputtend en kan worden uitgebreid
 export const allRoadTypes: Record<string, string> = {
   motorway: 'Snelweg',
   motorway_link: 'Verbindingsweg snelweg',
@@ -35,6 +36,8 @@ export const allRoadTypes: Record<string, string> = {
   residential: 'Woonstraat',
   road: 'Ongeclassificeerde weg',
   unclassified: 'Ongeclassificeerde weg',
+  roundabout: 'Rotonde',
+  // Voeg hier eventueel meer types toe die je tegenkomt
 };
 
 interface RoadTypeFilterDialogProps {
