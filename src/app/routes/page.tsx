@@ -99,7 +99,9 @@ export default function RoutesPage() {
   }, [updateFilteredRoads, polygon]);
 
   React.useEffect(() => {
-    updateFilteredRoads();
+    if (polygon) {
+        updateFilteredRoads();
+    }
   }, [selectedTypes, polygon, updateFilteredRoads]);
 
   const startDrawing = () => {
@@ -201,24 +203,23 @@ export default function RoutesPage() {
         mapboxAccessToken={MAPBOX_TOKEN}
         onLoad={onMapLoad}
       >
-        <Source id="place-labels" type="vector" url="mapbox://mapbox.places">
-           <Layer
-            id="gemeente-labels"
-            type="symbol"
-            source-layer="place_label"
-            filter={['==', 'type', 'city']}
-            layout={{
-              'text-field': ['get', 'name_nl'],
-              'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
-              'text-size': 12,
-            }}
-            paint={{
-              'text-color': '#333',
-              'text-halo-color': '#FFF',
-              'text-halo-width': 1,
-            }}
-          />
-        </Source>
+        <Layer
+          id="gemeente-labels"
+          type="symbol"
+          source="composite"
+          source-layer="place_label"
+          filter={['==', 'type', 'city']}
+          layout={{
+            'text-field': ['get', 'name_nl'],
+            'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
+            'text-size': 12,
+          }}
+          paint={{
+            'text-color': '#333',
+            'text-halo-color': '#FFF',
+            'text-halo-width': 1,
+          }}
+        />
         {Object.entries(roadColorMapping).map(([type, color]) => (
           <Layer
             key={type}
