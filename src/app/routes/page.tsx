@@ -16,7 +16,6 @@ const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGt
 export default function RoutesPage() {
   const mapRef = React.useRef<any>(null);
   const drawRef = React.useRef<MapboxDraw | null>(null);
-  const processingRef = React.useRef(false);
 
   const [isLoading, setIsLoading] = React.useState(false);
   const [isFilterDialogOpen, setIsFilterDialogOpen] = React.useState(false);
@@ -24,6 +23,7 @@ export default function RoutesPage() {
   const [selectedRoadTypes, setSelectedRoadTypes] = React.useState<string[]>([]);
   const [routeLayerData, setRouteLayerData] = React.useState<FeatureCollection<LineString> | null>(null);
   const [drawnPolygon, setDrawnPolygon] = React.useState<Feature<Polygon> | null>(null);
+  const shouldProcessRef = React.useRef(false); // Ref to control processing logic
 
   const initialViewState = {
     longitude: 5.2913,
@@ -32,62 +32,60 @@ export default function RoutesPage() {
   };
   
   const processRoadsInPolygon = React.useCallback(() => {
-    const map = mapRef.current?.getMap();
-    if (!map || !drawnPolygon || !map.isSourceLoaded('composite') || processingRef.current) {
-      return;
-    }
-    
-    processingRef.current = true;
-    setIsLoading(true);
-
-    // Stop listening to render events once we start processing
-    map.off('render', processRoadsInPolygon);
-    
-    try {
-      const allRoads = map.querySourceFeatures('composite', {
-        sourceLayer: 'road',
-      });
+      const map = mapRef.current?.getMap();
+      if (!map || !drawnPolygon || !shouldProcessRef.current) {
+        return;
+      }
       
-      const roadsInPolygon: Feature<LineString>[] = [];
-      const uniqueRoadTypes = new Set<string>();
-      
-      const intersectingFeatures = allRoads.filter(feature => 
-        (feature.geometry.type === 'LineString' || feature.geometry.type === 'MultiLineString') &&
-        turf.booleanIntersects(feature as Feature, drawnPolygon)
-      );
+      shouldProcessRef.current = false; // Consume the flag
+      setIsLoading(true);
 
-      for (const feature of intersectingFeatures) {
-        try {
-          const intersection = turf.intersect(drawnPolygon, feature as Feature<LineString | Polygon>);
-          if (intersection) {
-            const intersectionFeature = intersection as Feature<LineString>;
-            intersectionFeature.properties = feature.properties;
-            
-            roadsInPolygon.push(intersectionFeature);
-            if (feature.properties?.class) {
-              uniqueRoadTypes.add(feature.properties.class);
+      try {
+        const allRoads = map.querySourceFeatures('composite', {
+          sourceLayer: 'road',
+        });
+        
+        const roadsInPolygon: Feature<LineString>[] = [];
+        const uniqueRoadTypes = new Set<string>();
+
+        const intersectingFeatures = allRoads.filter(feature => 
+            (feature.geometry.type === 'LineString' || feature.geometry.type === 'MultiLineString') &&
+            turf.booleanIntersects(feature as Feature, drawnPolygon)
+        );
+
+        for (const feature of intersectingFeatures) {
+          try {
+            const intersection = turf.intersect(drawnPolygon, feature as Feature<LineString | Polygon>);
+            if (intersection) {
+              const intersectionFeature = intersection as Feature<LineString>;
+              intersectionFeature.properties = feature.properties;
+              
+              roadsInPolygon.push(intersectionFeature);
+              if (feature.properties?.class) {
+                uniqueRoadTypes.add(feature.properties.class);
+              }
             }
+          } catch (err) {
+            // This can happen with invalid geometries from the source.
+            // It's safer to skip these features than to crash the app.
+            console.warn('Skipping a road feature due to an intersection error:', err);
           }
-        } catch (err) {
-           console.warn('Skipping a road feature due to an intersection error:', err);
         }
+        
+        const roadTypes = Array.from(uniqueRoadTypes);
+        setRoadTypesInPolygon(roadTypes);
+        setSelectedRoadTypes(roadTypes);
+        setRouteLayerData({ type: 'FeatureCollection', features: roadsInPolygon });
+        
+        if (roadTypes.length > 0) {
+          setIsFilterDialogOpen(true);
+        }
+      } catch (err) {
+        console.error('Error querying or processing road features:', err);
+      } finally {
+        setIsLoading(false);
       }
-      
-      const roadTypes = Array.from(uniqueRoadTypes);
-      setRoadTypesInPolygon(roadTypes);
-      setSelectedRoadTypes(roadTypes);
-      setRouteLayerData({ type: 'FeatureCollection', features: roadsInPolygon });
-      
-      if (roadTypes.length > 0) {
-        setIsFilterDialogOpen(true);
-      }
-    } catch (err) {
-      console.error('Error querying or processing road features:', err);
-    } finally {
-      setIsLoading(false);
-      processingRef.current = false;
-    }
-  }, [drawnPolygon]);
+    }, [drawnPolygon]);
 
   const handleDraw = (e: { features: Feature[] }) => {
     const map = mapRef.current?.getMap();
@@ -100,20 +98,15 @@ export default function RoutesPage() {
       setRoadTypesInPolygon([]);
       setSelectedRoadTypes([]);
       
-      // Zoom to the drawn polygon
       const bbox = turf.bbox(polygon) as [number, number, number, number];
       map.fitBounds(bbox, { padding: 40, duration: 1000 });
-      
-      // After zooming, listen for render events to check when the source is loaded
-      map.on('render', processRoadsInPolygon);
+
+      // Set a flag to indicate that we should process roads on the next idle event.
+      shouldProcessRef.current = true;
     }
   };
   
   const clearRoute = () => {
-    const map = mapRef.current?.getMap();
-    if (map) {
-      map.off('render', processRoadsInPolygon);
-    }
     if (drawRef.current) {
       drawRef.current.deleteAll();
     }
@@ -122,7 +115,7 @@ export default function RoutesPage() {
     setRoadTypesInPolygon([]);
     setSelectedRoadTypes([]);
     setIsLoading(false);
-    processingRef.current = false;
+    shouldProcessRef.current = false;
   };
 
   const onMapLoad = () => {
@@ -143,6 +136,9 @@ export default function RoutesPage() {
     map.on('draw.create', handleDraw);
     map.on('draw.update', handleDraw);
     map.on('draw.delete', clearRoute);
+
+    // This is the key: process roads only when the map is idle (finished moving/zooming/loading).
+    map.on('idle', processRoadsInPolygon);
   };
   
   const roadFilter = React.useMemo(() => {
