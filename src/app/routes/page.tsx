@@ -18,7 +18,7 @@ import { Separator } from '@/components/ui/separator';
 import { GemeenteSelectDialog } from '@/components/gemeente-select-dialog';
 import * as turf from '@turf/turf';
 import { useFirestore, useUser, useCollection } from '@/firebase';
-import { collection, query, orderBy, getDocs, deleteDoc, doc, addDoc, limit } from 'firebase/firestore';
+import { collection, query, orderBy, deleteDoc, doc, addDoc, getDocs } from 'firebase/firestore';
 
 const MAPBOX_TOKEN =
   'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -41,7 +41,7 @@ export default function RoutesPage() {
 
   const routesQuery = React.useMemo(() => {
     if (!routesCollectionRef) return null;
-    return query(routesCollectionRef, orderBy('createdAt', 'desc'), limit(1));
+    return query(routesCollectionRef, orderBy('createdAt', 'desc'));
   }, [routesCollectionRef]);
   
   const { data: routes, isLoading: isLoadingRoutes } = useCollection(routesQuery);
@@ -56,7 +56,7 @@ export default function RoutesPage() {
       setActiveRoute(null);
       setMaskPolygon(null); // Clear mask if there are no routes
     }
-  }, [routes, activeRoute]);
+  }, [routes, activeRoute?.id]);
 
 
   React.useEffect(() => {
@@ -305,7 +305,7 @@ export default function RoutesPage() {
                 type="line"
                 source="composite"
                 source-layer="road"
-                filter={['all', ['==', 'class', type], ['within', maskPolygon.geometry]]}
+                filter={['all', ['==', 'class', type]]}
                 layout={{
                   'line-join': 'round',
                   'line-cap': 'round',
@@ -329,3 +329,4 @@ export default function RoutesPage() {
     </div>
   );
 }
+
