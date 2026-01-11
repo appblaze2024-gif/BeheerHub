@@ -42,28 +42,28 @@ export const allRoadTypes: Record<string, string> = {
 
 // Kleurcodering voor elk wegtype.
 export const roadColorMapping: Record<string, string> = {
-  motorway: '#ff0000',          // Rood
-  motorway_link: '#ff6666',      // Lichtrood
-  trunk: '#ff9933',             // Oranje
-  trunk_link: '#ffcc99',         // Lichtoranje
-  primary: '#ffff00',            // Geel
-  primary_link: '#ffff99',       // Lichtgeel
-  secondary: '#33cc33',          // Groen
-  secondary_link: '#99e699',     // Lichtgroen
-  tertiary: '#3399ff',            // Blauw
-  tertiary_link: '#99ccff',      // Lichtblauw
-  street: '#c0c0c0',             // Grijs
-  street_limited: '#d9d9d9',     // Lichter grijs
-  residential: '#f2f2f2',        // Zeer lichtgrijs (bijna wit)
-  living_street: '#e6e6e6',      // Iets donkerder dan residential
-  pedestrian: '#cc66ff',         // Paars
-  path: '#996633',             // Bruin
-  track: '#b3866f',             // Lichtbruin
-  service: '#808080',            // Donkergrijs
-  ferry: '#00ffff',             // Cyaan
-  road: '#a0a0a0',               // Medium grijs
-  unclassified: '#a0a0a0',        // Zelfde als road
-  roundabout: '#c0c0c0',         // Zelfde als street
+  motorway: '#e67e22',        // Oranje
+  motorway_link: '#f39c12',   // Lichtoranje
+  trunk: '#f1c40f',           // Geel
+  trunk_link: '#f7dc6f',      // Lichtgeel
+  primary: '#ffffff',         // Wit
+  primary_link: '#f2f2f2',    // Zeer lichtgrijs
+  secondary: '#dcdcdc',       // Grijstint 1
+  secondary_link: '#d3d3d3',  // Grijstint 2
+  tertiary: '#c0c0c0',         // Grijstint 3
+  tertiary_link: '#b0b0b0',   // Grijstint 4
+  street: '#a9a9a9',           // Donkergrijs
+  street_limited: '#a9a9a9',   // Donkergrijs
+  residential: '#b0b0b0',      // Grijstint 4 (zelfde als tertiaire link)
+  living_street: '#d3d3d3',    // Grijstint 2 (zelfde als secundaire link)
+  pedestrian: '#a29bfe',       // Zacht paars
+  path: '#8b4513',           // Zadelbruin
+  track: '#cd853f',           // Peru (lichter bruin)
+  service: '#708090',          // Leisteengrijs
+  ferry: '#3498db',           // Blauw
+  road: '#b0b0b0',             // Grijstint 4
+  unclassified: '#b0b0b0',      // Grijstint 4
+  roundabout: '#dcdcdc',       // Grijstint 1
 };
 
 
