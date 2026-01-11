@@ -57,7 +57,7 @@ export function GemeenteSelectDialog({
           )}&format=json&polygon_geojson=1&countrycodes=nl&limit=10`
         );
         const data: Suggestion[] = await response.json();
-        // Filter for administrative boundaries which are likely municipalities
+        // Toon alle resultaten die een polygoon hebben, om te voorkomen dat gemeentes worden overgeslagen.
         const filteredData = data.filter(
           s => s.geojson && (s.geojson.type === 'Polygon' || s.geojson.type === 'MultiPolygon')
         );
