@@ -40,15 +40,15 @@ export const allRoadTypes: Record<string, string> = {
   roundabout: 'Rotonde',
 };
 
-// Kleurcodering voor elk wegtype, vereenvoudigd naar 4 themakleuren.
+// Kleurcodering voor elk wegtype, gebaseerd op een professioneel schema zoals Jewel Software.
 export const roadColorMapping: Record<string, string> = {
-    // Groep 1: Hoofdwegen (Oranje/Geel-achtig)
+    // Groep 1: Hoofdwegen (Oranje)
     motorway: 'hsl(var(--chart-5))',
     motorway_link: 'hsl(var(--chart-5))',
     trunk: 'hsl(var(--chart-5))',
     trunk_link: 'hsl(var(--chart-5))',
 
-    // Groep 2: Secundaire & Primaire wegen (Geel/Licht-geel-achtig)
+    // Groep 2: Primaire/Secundaire wegen (Geel)
     primary: 'hsl(var(--chart-4))',
     primary_link: 'hsl(var(--chart-4))',
     secondary: 'hsl(var(--chart-4))',
@@ -78,24 +78,20 @@ interface RoadTypeFilterDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   availableTypes: string[];
-  onConfirm: (selectedTypes: string[]) => void;
+  selectedTypes: string[];
+  setSelectedTypes: (types: string[]) => void;
+  onConfirm: () => void;
 }
 
 export function RoadTypeFilterDialog({
   open,
   onOpenChange,
   availableTypes,
+  selectedTypes,
+  setSelectedTypes,
   onConfirm,
 }: RoadTypeFilterDialogProps) {
   
-  const [selectedTypes, setSelectedTypes] = React.useState<string[]>([]);
-  
-  React.useEffect(() => {
-    if(open) {
-      setSelectedTypes(availableTypes);
-    }
-  }, [open, availableTypes])
-
   const handleCheckedChange = (type: string, checked: boolean) => {
     const newSelectedTypes = checked
       ? [...selectedTypes, type]
@@ -124,7 +120,7 @@ export function RoadTypeFilterDialog({
   };
   
   const handleConfirm = () => {
-    onConfirm(selectedTypes);
+    onConfirm();
   }
 
   const sortedAvailableTypes = React.useMemo(() => {
@@ -182,7 +178,7 @@ export function RoadTypeFilterDialog({
             </div>
             <div className='flex gap-2'>
                <Button variant="ghost" onClick={() => onOpenChange(false)}>Annuleren</Button>
-               <Button onClick={handleConfirm}>Route Genereren</Button>
+               <Button onClick={handleConfirm}>Route Opslaan</Button>
             </div>
         </DialogFooter>
       </DialogContent>
