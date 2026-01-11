@@ -11,7 +11,7 @@ import {
   roadColorMapping,
 } from '@/components/road-type-filter-dialog';
 import { Edit, Trash2, Layers, X, Search } from 'lucide-react';
-import type { Feature, FeatureCollection, Polygon, MultiPolygon } from 'geojson';
+import type { Feature, FeatureCollection, Polygon, MultiPolygon, LineString, MultiLineString } from 'geojson';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -34,8 +34,7 @@ export default function RoutesPage() {
   const [isDrawMode, setIsDrawMode] = React.useState(false);
   const [isGemeenteDialogOpen, setIsGemeenteDialogOpen] = React.useState(false);
   const [maskPolygon, setMaskPolygon] = React.useState<Feature | null>(null);
-
-  const [highlightedRoads, setHighlightedRoads] = React.useState<FeatureCollection | null>(null);
+  const [highlightedRoads, setHighlightedRoads] = React.useState<FeatureCollection<LineString | MultiLineString> | null>(null);
 
   const initialViewState = {
     longitude: 5.2913,
@@ -114,11 +113,21 @@ export default function RoutesPage() {
         const roadsInside = map.querySourceFeatures('composite', {
           sourceLayer: 'road'
         });
-        const roadsInPolygon = roadsInside.filter(road => {
-            const roadPoints = turf.coordAll(road.geometry);
-            // Check if at least one point of the road is inside the polygon
-            return roadPoints.some(point => turf.booleanPointInPolygon(point, gemeenteFeature as Feature<Polygon | MultiPolygon>));
-        });
+
+        const roadsInPolygon: Feature<LineString | MultiLineString>[] = roadsInside.filter(road => {
+            // Ensure road.geometry is valid before processing
+            if (!road.geometry || !road.geometry.coordinates || road.geometry.coordinates.length === 0) {
+              return false;
+            }
+            // Use booleanIntersects for robust checking of lines vs. polygons
+            try {
+              return turf.booleanIntersects(road.geometry, gemeenteFeature.geometry);
+            } catch (e) {
+              console.warn("Turf intersection check failed", e);
+              return false;
+            }
+        }) as Feature<LineString | MultiLineString>[];
+
         setHighlightedRoads(turf.featureCollection(roadsInPolygon));
         map.off('moveend', afterMove);
       };
@@ -300,25 +309,24 @@ export default function RoutesPage() {
             />
           </Source>
         )}
-
+        
         {highlightedRoads && maskPolygon && (
            <Source id="highlighted-roads" type="geojson" data={highlightedRoads}>
-              <Layer
-                id="highlight-layer"
-                type="line"
-                filter={['in', ['get', 'class'], ['literal', selectedTypes]]}
-                layout={{'line-join': 'round', 'line-cap': 'round'}}
-                paint={{
-                  'line-color': [
-                    'match',
-                    ['get', 'class'],
-                    ...Object.entries(roadColorMapping).flat(),
-                    '#000'
-                  ],
-                  'line-width': 4,
-                  'line-opacity': 0.8
-                }}
-              />
+              {Object.entries(roadColorMapping).map(([type, color]) => (
+                 <Layer
+                  key={`highlight-${type}`}
+                  id={`highlight-${type}`}
+                  type="line"
+                  source="highlighted-roads"
+                  filter={['all', ['==', ['get', 'class'], type], ['in', type, ['literal', selectedTypes]]]}
+                  layout={{'line-join': 'round', 'line-cap': 'round'}}
+                  paint={{
+                    'line-color': color,
+                    'line-width': 4,
+                    'line-opacity': 0.8
+                  }}
+                />
+              ))}
            </Source>
         )}
       </Map>
