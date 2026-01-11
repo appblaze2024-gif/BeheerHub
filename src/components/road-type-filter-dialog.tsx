@@ -127,6 +127,30 @@ export function RoadTypeFilterDialog({
     );
     setSelectedTypes(availableSweepTypes);
   };
+  
+  const handleSelectBrushRoutes = () => {
+    const brushTypes = [
+      'primary',
+      'secondary',
+      'tertiary',
+      'primary_link',
+      'secondary_link',
+      'tertiary_link',
+      'street',
+      'street_limited',
+      'service',
+      'residential',
+      'living_street',
+      'road',
+      'unclassified',
+      'pedestrian', // Voetgangersgebieden zijn vaak verhard
+      'roundabout',
+    ];
+    const availableBrushTypes = brushTypes.filter((type) =>
+      availableTypes.includes(type)
+    );
+    setSelectedTypes(availableBrushTypes);
+  };
 
   const handleConfirm = () => {
     onConfirm();
@@ -206,6 +230,14 @@ export function RoadTypeFilterDialog({
               disabled={availableTypes.length === 0}
             >
               Veegwagen
+            </Button>
+             <Button
+              size="sm"
+              variant="outline"
+              onClick={handleSelectBrushRoutes}
+              disabled={availableTypes.length === 0}
+            >
+              Borstelen
             </Button>
           </div>
           <div className="flex gap-2">
