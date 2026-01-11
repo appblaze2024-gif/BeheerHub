@@ -100,22 +100,6 @@ export default function RoutesPage() {
     };
     fetchAndSetPolygon();
   }, [activeRoute]);
-
-  const clearSelection = async () => {
-    if (routesCollectionRef) {
-      const querySnapshot = await getDocs(routesCollectionRef);
-      const deletePromises = querySnapshot.docs.map(docSnapshot => 
-        deleteDoc(doc(routesCollectionRef, docSnapshot.id))
-      );
-      await Promise.all(deletePromises);
-    }
-    setSelectedTypes([]);
-    mapRef.current?.getMap().flyTo({
-        center: [5.2913, 52.1326],
-        zoom: 7,
-        duration: 1000
-    });
-  };
   
   const handleGemeenteSelect = async (gemeenteFeature: Feature<Polygon | MultiPolygon>) => {
     const gemeenteName = gemeenteFeature.properties?.name || 'Onbekend';
@@ -244,11 +228,11 @@ export default function RoutesPage() {
         )}
       </div>
 
-      <div className="absolute top-4 right-4 z-10 flex w-48 flex-col gap-2">
-         <Button onClick={() => setIsGemeenteDialogOpen(true)} className="w-full">
+      <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
+        <Button onClick={() => setIsGemeenteDialogOpen(true)} className="w-48 justify-start">
           <Search className="mr-2 h-4 w-4" /> Kies Gemeente
         </Button>
-        <Button onClick={() => setShowFilter(!showFilter)} className="w-full">
+        <Button onClick={() => setShowFilter(!showFilter)} className="w-48 justify-start">
           <Layers className="mr-2 h-4 w-4" /> Wegtypes
         </Button>
       </div>
@@ -288,7 +272,7 @@ export default function RoutesPage() {
               <Layer
                 id="mask-layer"
                 type="fill"
-                paint={{ 'fill-color': '#000000', 'fill-opacity': 0.8 }}
+                paint={{ 'fill-color': '#000000', 'fill-opacity': 1 }}
               />
             </Source>
             {Object.entries(roadColorMapping).map(([type, color]) => (
