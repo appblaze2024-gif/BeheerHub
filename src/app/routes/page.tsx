@@ -35,6 +35,7 @@ export default function RoutesPage() {
   const [showFilter, setShowFilter] = React.useState(true);
   const [isDrawMode, setIsDrawMode] = React.useState(false);
   const [isGemeenteDialogOpen, setIsGemeenteDialogOpen] = React.useState(false);
+  const [maskPolygon, setMaskPolygon] = React.useState<Feature | null>(null);
 
   const initialViewState = {
     longitude: 5.2913,
@@ -64,7 +65,7 @@ export default function RoutesPage() {
         f.geometry.type === 'LineString' ||
         f.geometry.type === 'MultiLineString'
       ) {
-        return turf.booleanIntersects(f, polygon);
+        return turf.booleanIntersects(f.geometry, polygon);
       }
       return false;
     });
@@ -122,6 +123,7 @@ export default function RoutesPage() {
       drawRef.current.deleteAll();
       setDrawnFeatures([]);
       setFilteredRoads(null);
+      setMaskPolygon(null);
       drawRef.current.changeMode('draw_polygon');
       setIsDrawMode(true);
     }
@@ -133,15 +135,28 @@ export default function RoutesPage() {
     }
     setDrawnFeatures([]);
     setFilteredRoads(null);
+    setMaskPolygon(null);
     setIsDrawMode(false);
+    mapRef.current?.getMap().flyTo({
+        center: [5.2913, 52.1326],
+        zoom: 7,
+        duration: 1000
+    });
   };
   
   const handleGemeenteSelect = (gemeenteFeature: Feature) => {
     if (drawRef.current && mapRef.current) {
       drawRef.current.deleteAll();
-      const featureIds = drawRef.current.add(gemeenteFeature);
+      drawRef.current.add(gemeenteFeature);
       setDrawnFeatures(drawRef.current.getAll().features as Feature[]);
 
+      const world = turf.polygon([[
+        [-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90]
+      ]]);
+      
+      const mask = turf.difference(world, gemeenteFeature as Feature<Polygon | MultiPolygon>);
+      setMaskPolygon(mask);
+      
       const bbox = turf.bbox(gemeenteFeature);
       if (bbox[0] !== Infinity) {
         mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
@@ -317,6 +332,18 @@ export default function RoutesPage() {
                 'line-color': '#ff00ff', // Magenta highlight
                 'line-width': 5,
                 'line-opacity': 0.9,
+              }}
+            />
+          </Source>
+        )}
+        
+        {maskPolygon && (
+          <Source id="mask" type="geojson" data={maskPolygon}>
+            <Layer
+              id="mask-layer"
+              type="fill"
+              paint={{
+                'fill-color': 'rgba(242, 243, 240, 0.8)', // Semi-transparent white
               }}
             />
           </Source>
