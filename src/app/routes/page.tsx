@@ -149,6 +149,7 @@ export default function RoutesPage() {
       drawRef.current.deleteAll();
       drawRef.current.add(gemeenteFeature);
       setDrawnFeatures(drawRef.current.getAll().features as Feature[]);
+      setSelectedTypes(Object.keys(allRoadTypes));
 
       const world = turf.polygon([[
         [-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90]
@@ -343,7 +344,7 @@ export default function RoutesPage() {
               id="mask-layer"
               type="fill"
               paint={{
-                'fill-color': 'rgba(0, 0, 0, 1)',
+                'fill-color': 'rgba(0, 0, 0, 0.5)',
               }}
             />
           </Source>
