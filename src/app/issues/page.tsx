@@ -202,21 +202,21 @@ export default function IssuesPage() {
 
   const filteredMeldingen = React.useMemo(() => {
     if (!meldingen) return [];
-    
+
     let timeFilteredMeldingen = meldingen;
 
     if (selectedDate) {
-        const dayStart = startOfDay(selectedDate);
-        timeFilteredMeldingen = meldingen.filter(melding => {
-            const creationDate = startOfDay(new Date(melding.datum));
-            if (melding.status === 'Afgerond') {
-                if (!melding.afhandeling_datum) return false;
-                const completionDate = startOfDay(new Date(melding.afhandeling_datum));
-                return isSameDay(completionDate, dayStart);
-            }
-            // Show all open issues created on or before the selected date.
-            return creationDate <= dayStart;
-        });
+      const dayStart = startOfDay(selectedDate);
+      timeFilteredMeldingen = meldingen.filter(melding => {
+        const creationDate = startOfDay(new Date(melding.datum));
+        const isCompletedToday =
+          melding.status === 'Afgerond' &&
+          melding.afhandeling_datum &&
+          isSameDay(startOfDay(new Date(melding.afhandeling_datum)), dayStart);
+        const isOpenAndRelevant =
+          melding.status !== 'Afgerond' && creationDate <= dayStart;
+        return isCompletedToday || isOpenAndRelevant;
+      });
     }
 
     const searchedMeldingen = searchQuery
