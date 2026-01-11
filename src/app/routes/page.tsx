@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -18,7 +17,7 @@ import { Separator } from '@/components/ui/separator';
 import { GemeenteSelectDialog } from '@/components/gemeente-select-dialog';
 import * as turf from '@turf/turf';
 import { useFirestore, useUser, useCollection } from '@/firebase';
-import { collection, query, orderBy, deleteDoc, doc, addDoc, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, deleteDoc, doc, addDoc, getDocs, limit } from 'firebase/firestore';
 
 const MAPBOX_TOKEN =
   'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -41,7 +40,7 @@ export default function RoutesPage() {
 
   const routesQuery = React.useMemo(() => {
     if (!routesCollectionRef) return null;
-    return query(routesCollectionRef, orderBy('createdAt', 'desc'));
+    return query(routesCollectionRef, orderBy('createdAt', 'desc'), limit(1));
   }, [routesCollectionRef]);
   
   const { data: routes, isLoading: isLoadingRoutes } = useCollection(routesQuery);
@@ -269,24 +268,24 @@ export default function RoutesPage() {
         interactiveLayerIds={Object.keys(roadColorMapping)}
       >
         {Object.entries(roadColorMapping).map(([type, color]) => (
-            <Layer
-                key={type}
-                id={type}
-                type="line"
-                source="composite"
-                source-layer="road"
-                filter={['==', 'class', type]}
-                layout={{
-                  'line-join': 'round',
-                  'line-cap': 'round',
-                   'visibility': maskPolygon ? 'none' : (selectedTypes.includes(type) ? 'visible' : 'none'),
-                }}
-                paint={{
-                  'line-color': color,
-                  'line-width': 4,
-                  'line-opacity': 0.8,
-                }}
-            />
+          <Layer
+            key={type}
+            id={type}
+            type="line"
+            source="composite"
+            source-layer="road"
+            filter={['==', 'class', type]}
+            layout={{
+              'line-join': 'round',
+              'line-cap': 'round',
+              'visibility': maskPolygon ? 'none' : (selectedTypes.includes(type) ? 'visible' : 'none'),
+            }}
+            paint={{
+              'line-color': color,
+              'line-width': 4,
+              'line-opacity': 0.8,
+            }}
+          />
         ))}
 
         {maskPolygon && (
@@ -295,7 +294,7 @@ export default function RoutesPage() {
               <Layer
                 id="mask-layer"
                 type="fill"
-                paint={{ 'fill-color': '#3b82f6', 'fill-opacity': 0.2 }}
+                paint={{ 'fill-color': '#000000', 'fill-opacity': 0.8 }}
               />
             </Source>
             {Object.entries(roadColorMapping).map(([type, color]) => (
@@ -305,7 +304,11 @@ export default function RoutesPage() {
                 type="line"
                 source="composite"
                 source-layer="road"
-                filter={['all', ['==', 'class', type]]}
+                filter={[
+                  'all',
+                  ['==', 'class', type],
+                  maskPolygon ? ['within', maskPolygon.geometry] : ['boolean', false]
+                ]}
                 layout={{
                   'line-join': 'round',
                   'line-cap': 'round',
@@ -329,4 +332,3 @@ export default function RoutesPage() {
     </div>
   );
 }
-
