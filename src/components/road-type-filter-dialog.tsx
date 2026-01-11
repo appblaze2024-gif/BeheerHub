@@ -145,6 +145,7 @@ export function RoadTypeFilterDialog({
       'unclassified',
       'pedestrian', // Voetgangersgebieden zijn vaak verhard
       'roundabout',
+      'path', // Fietspaden en voetpaden
     ];
     const availableBrushTypes = brushTypes.filter((type) =>
       availableTypes.includes(type)
