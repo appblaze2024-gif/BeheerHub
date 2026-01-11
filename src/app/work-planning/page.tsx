@@ -34,7 +34,7 @@ import {
   useCollection,
   deleteDocumentNonBlocking,
 } from '@/firebase';
-import type { Medewerker, Dienst, Voertuig } from '@/lib/types';
+import type { Medewerker, Dienst } from '@/lib/types';
 import { DienstToevoegenSheet } from '@/components/dienst-toevoegen-sheet';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -48,7 +48,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
 
@@ -79,31 +78,14 @@ type Project = {
 };
 
 const DienstItem = ({ dienst, onEdit, onDelete }: { dienst: Dienst, onEdit: (dienst: Dienst) => void, onDelete: (dienst: Dienst) => void}) => {
-    const firestore = useFirestore();
     const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
-
-    const medewerkerRef = React.useMemo(() => {
-        if (!firestore) return null;
-        return doc(firestore, 'medewerkers', dienst.medewerkerId);
-    }, [firestore, dienst.medewerkerId]);
-    
-    const { data: medewerker } = useDoc<Medewerker>(medewerkerRef);
-    
-    const voertuigRef = React.useMemo(() => {
-        if (!firestore || !dienst.voertuigId) return null;
-        return doc(firestore, 'voertuigen', dienst.voertuigId);
-    }, [firestore, dienst.voertuigId]);
-
-    const { data: voertuig } = useDoc<Voertuig>(voertuigRef);
 
     const handleEdit = (e: React.MouseEvent) => {
         // Prevent triggering edit when clicking delete button
         if ((e.target as HTMLElement).closest('.delete-button')) {
             return;
         }
-        if (medewerker) {
-            onEdit(dienst);
-        }
+        onEdit(dienst);
     };
 
     const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
@@ -145,8 +127,8 @@ const DienstItem = ({ dienst, onEdit, onDelete }: { dienst: Dienst, onEdit: (die
             >
                 <p className="font-semibold truncate">{dienst.werksoort}</p>
                 <p className="truncate">{dienst.starttijd} - {dienst.eindtijd}</p>
-                {voertuig && voertuig.voertuignummer && (
-                    <p className="truncate">Voertuignummer: {voertuig.voertuignummer}</p>
+                {dienst.voertuignummer && (
+                    <p className="truncate">Voertuignummer: {dienst.voertuignummer}</p>
                 )}
                 <Button 
                     variant="ghost" 
@@ -235,7 +217,20 @@ export default function WorkPlanningPage() {
     try {
       const querySnapshot = await getDocs(dienstenQuery);
       const dienstenData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Dienst));
-      setDiensten(dienstenData);
+      
+      const voertuigenQuery = query(collection(firestore, 'voertuigen'));
+      const voertuigenSnapshot = await getDocs(voertuigenQuery);
+      const voertuigenMap = new Map(voertuigenSnapshot.docs.map(doc => [doc.id, doc.data()]));
+
+      const dienstenWithVoertuig = dienstenData.map(dienst => {
+        if(dienst.voertuigId) {
+            const voertuig = voertuigenMap.get(dienst.voertuigId);
+            return {...dienst, voertuignummer: voertuig?.voertuignummer}
+        }
+        return dienst;
+      });
+
+      setDiensten(dienstenWithVoertuig);
     } catch (error) {
       console.error("Error fetching diensten: ", error);
       setDiensten([]);
@@ -315,7 +310,7 @@ export default function WorkPlanningPage() {
       if (isCopy) {
         // Copy action: create a new document
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { id, ...newDienstData } = droppedDienst;
+        const { id, voertuignummer, ...newDienstData } = droppedDienst;
         await addDoc(dienstenColRef, {
           ...newDienstData,
           medewerkerId: newMedewerkerId,

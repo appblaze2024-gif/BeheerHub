@@ -230,7 +230,7 @@ export function DienstToevoegenSheet({
           <SheetTitle>{dienst ? 'Dienst Bewerken' : 'Dienst Toevoegen'}: {formattedDate}</SheetTitle>
         </SheetHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+          <form id="dienst-toevoegen-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <FormItem>
                 <FormLabel>Medewerker</FormLabel>
@@ -434,7 +434,7 @@ export function DienstToevoegenSheet({
                   >
                     Annuleren
                   </Button>
-                <Button type="submit" form="dienst-toevoegen-form" disabled={isSubmitting} onClick={form.handleSubmit(onSubmit)}>
+                <Button type="submit" form="dienst-toevoegen-form" disabled={isSubmitting}>
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

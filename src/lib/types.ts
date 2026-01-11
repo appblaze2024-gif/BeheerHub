@@ -44,7 +44,7 @@ export type Dienst = {
     id: string;
     medewerkerId: string;
     projectId: string;
-    werksoort: string; // Legacy field
+    werksoort: string; 
     boekingregelId: string;
     starttijd: string;
     eindtijd: string;
@@ -55,6 +55,7 @@ export type Dienst = {
     goedkeuringVereist: boolean;
     informeerMedewerkers: boolean;
     voertuigId: string | null;
+    voertuignummer?: string | null;
 }
 
 export type Voertuig = {
