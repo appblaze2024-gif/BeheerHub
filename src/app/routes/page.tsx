@@ -31,13 +31,10 @@ export default function RoutesPage() {
   const { user } = useUser();
 
   const [drawnFeatures, setDrawnFeatures] = React.useState<Feature[]>([]);
-  const [selectedTypes, setSelectedTypes] = React.useState<string[]>(
-    Object.keys(allRoadTypes)
-  );
+  const [selectedTypes, setSelectedTypes] = React.useState<string[]>([]);
   const [showFilter, setShowFilter] = React.useState(true);
   const [isDrawMode, setIsDrawMode] = React.useState(false);
   const [isGemeenteDialogOpen, setIsGemeenteDialogOpen] = React.useState(false);
-  const [maskPolygon, setMaskPolygon] = React.useState<Feature | null>(null);
   const [highlightedRoads, setHighlightedRoads] = React.useState<FeatureCollection<LineString | MultiLineString> | null>(null);
   const [polygonFeature, setPolygonFeature] = React.useState<Feature<Polygon | MultiPolygon> | null>(null);
 
@@ -68,25 +65,14 @@ export default function RoutesPage() {
     }
   }, []);
 
-  const startDrawing = () => {
-    if (drawRef.current) {
-      drawRef.current.deleteAll();
-      setDrawnFeatures([]);
-      setMaskPolygon(null);
-      setHighlightedRoads(null);
-      drawRef.current.changeMode('draw_polygon');
-      setIsDrawMode(true);
-    }
-  };
-
   const clearDrawing = () => {
     if (drawRef.current) {
       drawRef.current.deleteAll();
     }
     setDrawnFeatures([]);
-    setMaskPolygon(null);
     setHighlightedRoads(null);
-    setSelectedTypes(Object.keys(allRoadTypes)); // Reset filter to show all
+    setPolygonFeature(null);
+    setSelectedTypes([]); 
     setIsDrawMode(false);
     mapRef.current?.getMap().flyTo({
         center: [5.2913, 52.1326],
@@ -99,16 +85,9 @@ export default function RoutesPage() {
     if (drawRef.current && mapRef.current) {
       drawRef.current.deleteAll();
       setDrawnFeatures([gemeenteFeature]);
-      setSelectedTypes([]); // Filters are now off by default
+      setSelectedTypes([]);
       setPolygonFeature(gemeenteFeature);
 
-      const world = turf.polygon([[
-        [-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90]
-      ]]);
-      
-      const mask = turf.difference(world, gemeenteFeature);
-      setMaskPolygon(mask);
-      
       const bbox = turf.bbox(gemeenteFeature);
       if (bbox[0] !== Infinity) {
         mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
@@ -116,7 +95,7 @@ export default function RoutesPage() {
 
       if (user && firestore) {
         const routesColRef = collection(firestore, 'users', user.uid, 'routes');
-        await addDoc(routesColRef, { gemeente: gemeenteFeature.properties?.name || 'Onbekend' });
+        await addDoc(routesColRef, { gemeente: gemeenteFeature.properties?.name || 'Onbekend', createdAt: new Date() });
       }
 
       const map = mapRef.current.getMap();
@@ -129,14 +108,13 @@ export default function RoutesPage() {
               return false;
             }
             try {
-              // Check if any part of the linestring intersects the polygon
-              return !turf.booleanDisjoint(road.geometry, gemeenteFeature.geometry);
+               return !turf.booleanDisjoint(road.geometry, gemeenteFeature.geometry);
             } catch (e) {
               console.warn("Turf intersection check failed", e);
               return false;
             }
         }) as Feature<LineString | MultiLineString>[];
-
+        
         setHighlightedRoads(turf.featureCollection(roadsInside));
         map.off('moveend', afterMove);
       };
@@ -249,14 +227,7 @@ export default function RoutesPage() {
         <Button onClick={() => setIsGemeenteDialogOpen(true)}>
           <Search className="mr-2 h-4 w-4" /> Kies Gemeente
         </Button>
-        <Button onClick={startDrawing} disabled={isDrawMode}>
-          <Edit className="mr-2 h-4 w-4" /> Gebied tekenen
-        </Button>
-        <Button
-          onClick={clearDrawing}
-          variant="destructive"
-          disabled={drawnFeatures.length === 0 && !isDrawMode && !maskPolygon}
-        >
+        <Button onClick={clearDrawing} variant="destructive">
           <Trash2 className="mr-2 h-4 w-4" /> Huidige selectie wissen
         </Button>
       </div>
@@ -286,10 +257,12 @@ export default function RoutesPage() {
             'text-halo-width': 1,
           }}
         />
+
+        {/* Global Road Layers */}
         {Object.entries(roadColorMapping).map(([type, color]) => (
           <Layer
-            key={type}
-            id={type}
+            key={`global-${type}`}
+            id={`global-${type}`}
             type="line"
             source="composite"
             source-layer="road"
@@ -297,7 +270,7 @@ export default function RoutesPage() {
             layout={{ 
               'line-join': 'round', 
               'line-cap': 'round',
-              'visibility': maskPolygon ? 'none' : 'visible'
+              'visibility': polygonFeature ? 'none' : 'visible'
             }}
             paint={{
               'line-color': color,
@@ -306,20 +279,22 @@ export default function RoutesPage() {
             }}
           />
         ))}
-        
-        {maskPolygon && (
-          <Source id="mask" type="geojson" data={maskPolygon}>
-            <Layer
-              id="mask-layer"
-              type="fill"
-              paint={{
-                'fill-color': 'rgba(0, 0, 0, 0.5)',
-              }}
-            />
+
+        {polygonFeature && (
+          <Source id="gemeente-boundary" type="geojson" data={polygonFeature}>
+              <Layer
+                  id="gemeente-boundary-line"
+                  type="line"
+                  paint={{
+                      'line-color': '#000000',
+                      'line-width': 2.5,
+                      'line-opacity': 0.8
+                  }}
+              />
           </Source>
         )}
         
-        {highlightedRoads && maskPolygon && (
+        {highlightedRoads && polygonFeature && (
            <Source id="highlighted-roads" type="geojson" data={highlightedRoads}>
               {Object.entries(roadColorMapping).map(([type, color]) => (
                  <Layer
@@ -328,7 +303,7 @@ export default function RoutesPage() {
                   type="line"
                   source="highlighted-roads"
                   filter={['all', ['==', ['get', 'class'], type], ['in', type, ['literal', selectedTypes]]]}
-                  layout={{'line-join': 'round', 'line-cap': 'round'}}
+                  layout={{'line-join': 'round', 'line-cap': 'round', 'visibility': 'visible' }}
                   paint={{
                     'line-color': color,
                     'line-width': 4,
