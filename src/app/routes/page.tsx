@@ -278,7 +278,7 @@ export default function RoutesPage() {
             layout={{
               'line-join': 'round',
               'line-cap': 'round',
-              'visibility': maskPolygon ? 'none' : (selectedTypes.includes(type) ? 'visible' : 'none'),
+              visibility: maskPolygon ? 'none' : (selectedTypes.includes(type) ? 'visible' : 'none'),
             }}
             paint={{
               'line-color': color,
@@ -298,28 +298,28 @@ export default function RoutesPage() {
               />
             </Source>
             {Object.entries(roadColorMapping).map(([type, color]) => (
-              <Layer
-                key={`highlight-${type}`}
-                id={`highlight-${type}`}
-                type="line"
-                source="composite"
-                source-layer="road"
-                filter={[
-                  'all',
-                  ['==', 'class', type],
-                  maskPolygon ? ['within', maskPolygon.geometry] : ['boolean', false]
-                ]}
-                layout={{
-                  'line-join': 'round',
-                  'line-cap': 'round',
-                  visibility: selectedTypes.includes(type) ? 'visible' : 'none',
-                }}
-                paint={{
-                  'line-color': color,
-                  'line-width': 5, // Slightly thicker for highlight
-                  'line-opacity': 1,
-                }}
-              />
+                <Layer
+                    key={`highlight-${type}`}
+                    id={`highlight-${type}`}
+                    type="line"
+                    source="composite"
+                    source-layer="road"
+                    filter={[
+                        'all',
+                        ['==', 'class', type],
+                        ['!', ['any', ['within', maskPolygon]]]
+                    ]}
+                    layout={{
+                    'line-join': 'round',
+                    'line-cap': 'round',
+                    visibility: selectedTypes.includes(type) ? 'visible' : 'none',
+                    }}
+                    paint={{
+                    'line-color': color,
+                    'line-width': 5,
+                    'line-opacity': 1,
+                    }}
+                />
             ))}
           </>
         )}
