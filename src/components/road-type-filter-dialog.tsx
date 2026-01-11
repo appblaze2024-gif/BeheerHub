@@ -46,13 +46,13 @@ export const roadColorMapping: Record<string, string> = {
   motorway_link: 'hsl(27, 87%, 67%)',
   trunk: 'hsl(27, 87%, 67%)',
   trunk_link: 'hsl(27, 87%, 67%)',
-  
+
   // Provinciale/Secundaire wegen: Geel
   primary: 'hsl(43, 74%, 66%)',
   primary_link: 'hsl(43, 74%, 66%)',
   secondary: 'hsl(43, 74%, 66%)',
   secondary_link: 'hsl(43, 74%, 66%)',
-  
+
   // Lokale wegen (Woonstraten etc.): Blauw
   tertiary: 'hsl(199, 79%, 55%)',
   tertiary_link: 'hsl(199, 79%, 55%)',
@@ -72,8 +72,6 @@ export const roadColorMapping: Record<string, string> = {
   ferry: 'hsl(174, 63%, 39%)',
 };
 
-
-
 interface RoadTypeFilterDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -91,7 +89,6 @@ export function RoadTypeFilterDialog({
   setSelectedTypes,
   onConfirm,
 }: RoadTypeFilterDialogProps) {
-  
   const handleCheckedChange = (type: string, checked: boolean) => {
     const newSelectedTypes = checked
       ? [...selectedTypes, type]
@@ -109,19 +106,31 @@ export function RoadTypeFilterDialog({
 
   const handleSelectSweepRoutes = () => {
     const sweepTypes = [
-      'primary', 'secondary', 'tertiary',
-      'primary_link', 'secondary_link', 'tertiary_link',
-      'street', 'street_limited', 'service', 'residential', 'living_street', 'road',
-      'unclassified', 'roundabout'
+      'primary',
+      'secondary',
+      'tertiary',
+      'primary_link',
+      'secondary_link',
+      'tertiary_link',
+      'street',
+      'street_limited',
+      'service',
+      'residential',
+      'living_street',
+      'road',
+      'unclassified',
+      'roundabout',
     ];
     // Filter sweepTypes to only include types that are actually available in the current polygon
-    const availableSweepTypes = sweepTypes.filter(type => availableTypes.includes(type));
+    const availableSweepTypes = sweepTypes.filter((type) =>
+      availableTypes.includes(type)
+    );
     setSelectedTypes(availableSweepTypes);
   };
-  
+
   const handleConfirm = () => {
     onConfirm();
-  }
+  };
 
   const sortedAvailableTypes = React.useMemo(() => {
     return [...availableTypes].sort((a, b) => {
@@ -148,12 +157,20 @@ export function RoadTypeFilterDialog({
                   <Checkbox
                     id={`type-${type}`}
                     checked={selectedTypes.includes(type)}
-                    onCheckedChange={(checked) => handleCheckedChange(type, !!checked)}
+                    onCheckedChange={(checked) =>
+                      handleCheckedChange(type, !!checked)
+                    }
                     style={{ color: roadColorMapping[type] }}
                   />
-                  <Label htmlFor={`type-${type}`} className="font-normal capitalize flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: roadColorMapping[type]}} />
-                      {allRoadTypes[type] || type.replace(/_/g, ' ')}
+                  <Label
+                    htmlFor={`type-${type}`}
+                    className="font-normal capitalize flex items-center gap-2"
+                  >
+                    <div
+                      className="h-3 w-3 rounded-sm"
+                      style={{ backgroundColor: roadColorMapping[type] }}
+                    />
+                    {allRoadTypes[type] || type.replace(/_/g, ' ')}
                   </Label>
                 </div>
               ))}
@@ -165,21 +182,38 @@ export function RoadTypeFilterDialog({
           </div>
         )}
         <DialogFooter className="sm:justify-between w-full">
-            <div className='flex gap-2 flex-wrap'>
-                <Button size="sm" variant="outline" onClick={handleSelectAll} disabled={availableTypes.length === 0}>
-                    Alles
-                </Button>
-                <Button size="sm" variant="outline" onClick={handleDeselectAll} disabled={availableTypes.length === 0}>
-                    Niets
-                </Button>
-                 <Button size="sm" variant="outline" onClick={handleSelectSweepRoutes} disabled={availableTypes.length === 0}>
-                    Veegwagen
-                </Button>
-            </div>
-            <div className='flex gap-2'>
-               <Button variant="ghost" onClick={() => onOpenChange(false)}>Annuleren</Button>
-               <Button onClick={handleConfirm}>Route Opslaan</Button>
-            </div>
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleSelectAll}
+              disabled={availableTypes.length === 0}
+            >
+              Alles
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleDeselectAll}
+              disabled={availableTypes.length === 0}
+            >
+              Niets
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleSelectSweepRoutes}
+              disabled={availableTypes.length === 0}
+            >
+              Veegwagen
+            </Button>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={() => onOpenChange(false)}>
+              Annuleren
+            </Button>
+            <Button onClick={handleConfirm}>Route Opslaan</Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
