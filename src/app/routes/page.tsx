@@ -35,6 +35,8 @@ export default function RoutesPage() {
   const [isGemeenteDialogOpen, setIsGemeenteDialogOpen] = React.useState(false);
   const [maskPolygon, setMaskPolygon] = React.useState<Feature | null>(null);
 
+  const [highlightedRoads, setHighlightedRoads] = React.useState<FeatureCollection | null>(null);
+
   const initialViewState = {
     longitude: 5.2913,
     latitude: 52.1326,
@@ -67,6 +69,7 @@ export default function RoutesPage() {
       drawRef.current.deleteAll();
       setDrawnFeatures([]);
       setMaskPolygon(null);
+      setHighlightedRoads(null);
       drawRef.current.changeMode('draw_polygon');
       setIsDrawMode(true);
     }
@@ -78,6 +81,7 @@ export default function RoutesPage() {
     }
     setDrawnFeatures([]);
     setMaskPolygon(null);
+    setHighlightedRoads(null);
     setIsDrawMode(false);
     mapRef.current?.getMap().flyTo({
         center: [5.2913, 52.1326],
@@ -106,6 +110,48 @@ export default function RoutesPage() {
     }
     setIsGemeenteDialogOpen(false);
   };
+  
+  const updateHighlightedRoads = React.useCallback(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || !maskPolygon || drawnFeatures.length === 0) {
+      setHighlightedRoads(null);
+      return;
+    }
+
+    const polygonFeature = drawnFeatures[0];
+    if (!polygonFeature || !['Polygon', 'MultiPolygon'].includes(polygonFeature.geometry.type)) {
+      setHighlightedRoads(null);
+      return;
+    }
+
+    const roadsInside = map.querySourceFeatures('composite', {
+      sourceLayer: 'road',
+      filter: ['within', polygonFeature.geometry],
+    });
+
+    const clippedRoads = turf.featureCollection(
+      roadsInside.map(road => turf.intersect(road.geometry, polygonFeature.geometry)!).filter(Boolean) as any
+    );
+  
+    setHighlightedRoads(clippedRoads);
+
+  }, [drawnFeatures, maskPolygon]);
+
+  React.useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (map) {
+      const handleData = (e: any) => {
+        if (e.sourceId === 'composite' && e.isSourceLoaded) {
+          updateHighlightedRoads();
+        }
+      }
+      map.on('sourcedata', handleData);
+
+      return () => {
+        map.off('sourcedata', handleData);
+      }
+    }
+  }, [updateHighlightedRoads]);
 
   const handleCheckedChange = (type: string, checked: boolean) => {
     const newSelectedTypes = checked
@@ -217,7 +263,7 @@ export default function RoutesPage() {
         <Button
           onClick={clearDrawing}
           variant="destructive"
-          disabled={drawnFeatures.length === 0 && !isDrawMode}
+          disabled={drawnFeatures.length === 0 && !isDrawMode && !maskPolygon}
         >
           <Trash2 className="mr-2 h-4 w-4" /> Huidige selectie wissen
         </Button>
@@ -255,11 +301,7 @@ export default function RoutesPage() {
             type="line"
             source="composite"
             source-layer="road"
-            filter={
-                maskPolygon 
-                ? ['all', ['==', 'class', type], ['within', maskPolygon]]
-                : ['==', 'class', type]
-            }
+            filter={['==', 'class', type]}
             layout={{ 
               'line-join': 'round', 
               'line-cap': 'round',
@@ -268,7 +310,7 @@ export default function RoutesPage() {
             paint={{
               'line-color': color,
               'line-width': 4,
-              'line-opacity': 0.8,
+              'line-opacity': maskPolygon ? 0 : 0.8,
             }}
           />
         ))}
@@ -283,6 +325,27 @@ export default function RoutesPage() {
               }}
             />
           </Source>
+        )}
+
+        {highlightedRoads && maskPolygon && (
+           <Source id="highlighted-roads" type="geojson" data={highlightedRoads}>
+              <Layer
+                id="highlight-layer"
+                type="line"
+                filter={['in', ['get', 'class'], ['literal', selectedTypes]]}
+                layout={{'line-join': 'round', 'line-cap': 'round'}}
+                paint={{
+                  'line-color': [
+                    'match',
+                    ['get', 'class'],
+                    ...Object.entries(roadColorMapping).flat(),
+                    '#000'
+                  ],
+                  'line-width': 4,
+                  'line-opacity': 0.8
+                }}
+              />
+           </Source>
         )}
       </Map>
       <GemeenteSelectDialog 
