@@ -165,7 +165,7 @@ export function RoadTypeFilterDialog({
             Selecteer de wegtypes die u wilt opnemen in de route.
           </DialogDescription>
         </DialogHeader>
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex flex-wrap items-center gap-2 mb-2">
             <Button
               size="sm"
               variant="outline"
