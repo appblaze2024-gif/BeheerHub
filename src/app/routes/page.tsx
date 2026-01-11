@@ -318,7 +318,7 @@ export default function RoutesPage() {
             paint={{
               'line-color': color,
               'line-width': 4,
-              'line-opacity': selectedTypes.includes(type) ? 0.8 : 0.1,
+              'line-opacity': maskPolygon ? 0 : selectedTypes.includes(type) ? 0.8 : 0.1,
             }}
           />
         ))}
@@ -343,7 +343,7 @@ export default function RoutesPage() {
               id="mask-layer"
               type="fill"
               paint={{
-                'fill-color': 'rgba(242, 243, 240, 0.8)', // Semi-transparent white
+                'fill-color': 'rgba(0, 0, 0, 1)',
               }}
             />
           </Source>
