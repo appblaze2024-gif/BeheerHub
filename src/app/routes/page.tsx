@@ -30,8 +30,6 @@ export default function RoutesPage() {
   const [selectedTypes, setSelectedTypes] = React.useState<string[]>(
     Object.keys(allRoadTypes)
   );
-  const [filteredRoads, setFilteredRoads] =
-    React.useState<FeatureCollection | null>(null);
   const [showFilter, setShowFilter] = React.useState(true);
   const [isDrawMode, setIsDrawMode] = React.useState(false);
   const [isGemeenteDialogOpen, setIsGemeenteDialogOpen] = React.useState(false);
@@ -42,45 +40,7 @@ export default function RoutesPage() {
     latitude: 52.1326,
     zoom: 7,
   };
-
-  const updateFilteredRoads = React.useCallback(() => {
-    const map = mapRef.current?.getMap();
-    if (!map || drawnFeatures.length === 0) {
-      setFilteredRoads(null);
-      return;
-    }
   
-    const polygonFeature = drawnFeatures[0];
-    if (!polygonFeature || !polygonFeature.geometry || (polygonFeature.geometry.type !== 'Polygon' && polygonFeature.geometry.type !== 'MultiPolygon')) {
-        setFilteredRoads(null);
-        return;
-    }
-    const polygon = polygonFeature.geometry;
-  
-    const roadLayers = Object.keys(allRoadTypes);
-    const features = map.queryRenderedFeatures({ layers: roadLayers });
-  
-    const roadsInside = features.filter((f) => {
-      if (
-        f.geometry.type === 'LineString' ||
-        f.geometry.type === 'MultiLineString'
-      ) {
-        // Use turf.booleanIntersects for better performance with complex polygons
-        return turf.booleanIntersects(f.geometry, polygon);
-      }
-      return false;
-    });
-    
-    const clippedRoads = turf.featureCollection(
-        roadsInside.map(road => turf.intersect(road.geometry, polygon)!).filter(Boolean) as any
-    );
-  
-    setFilteredRoads({
-      type: 'FeatureCollection',
-      features: clippedRoads.features,
-    });
-  }, [drawnFeatures]);
-
   const onMapLoad = React.useCallback(() => {
     if (mapRef.current && !drawRef.current) {
       const map = mapRef.current.getMap();
@@ -99,28 +59,13 @@ export default function RoutesPage() {
       map.on('draw.create', updateFeatures);
       map.on('draw.update', updateFeatures);
       map.on('draw.delete', updateFeatures);
-
-      // It's better to update when the map is idle to ensure all tiles are loaded.
-      map.on('idle', () => {
-        if (drawnFeatures.length > 0) {
-          updateFilteredRoads();
-        }
-      });
     }
-  }, [updateFilteredRoads, drawnFeatures]);
-  
-  React.useEffect(() => {
-    if(mapRef.current?.getMap()?.isStyleLoaded()) {
-      updateFilteredRoads();
-    }
-  }, [drawnFeatures, updateFilteredRoads]);
-
+  }, []);
 
   const startDrawing = () => {
     if (drawRef.current) {
       drawRef.current.deleteAll();
       setDrawnFeatures([]);
-      setFilteredRoads(null);
       setMaskPolygon(null);
       drawRef.current.changeMode('draw_polygon');
       setIsDrawMode(true);
@@ -132,7 +77,6 @@ export default function RoutesPage() {
       drawRef.current.deleteAll();
     }
     setDrawnFeatures([]);
-    setFilteredRoads(null);
     setMaskPolygon(null);
     setIsDrawMode(false);
     mapRef.current?.getMap().flyTo({
@@ -145,8 +89,7 @@ export default function RoutesPage() {
   const handleGemeenteSelect = (gemeenteFeature: Feature) => {
     if (drawRef.current && mapRef.current) {
       drawRef.current.deleteAll();
-      drawRef.current.add(gemeenteFeature);
-      setDrawnFeatures(drawRef.current.getAll().features as Feature[]);
+      setDrawnFeatures([gemeenteFeature]);
       setSelectedTypes(Object.keys(allRoadTypes));
 
       const world = turf.polygon([[
@@ -181,7 +124,7 @@ export default function RoutesPage() {
       'tertiary',
       'primary_link',
       'secondary_link',
- 'tertiary_link',
+      'tertiary_link',
       'street',
       'street_limited',
       'service',
@@ -193,14 +136,6 @@ export default function RoutesPage() {
     ];
     setSelectedTypes(sweepTypes);
   };
-
-  const roadsToDisplay = React.useMemo(() => {
-    if (!filteredRoads) return null;
-    return {
-      ...filteredRoads,
-      features: filteredRoads.features.filter(f => selectedTypes.includes(f.properties?.class))
-    };
-  }, [filteredRoads, selectedTypes]);
 
   return (
     <div className="flex flex-col flex-1 min-h-0 relative">
@@ -320,8 +255,16 @@ export default function RoutesPage() {
             type="line"
             source="composite"
             source-layer="road"
-            filter={['==', 'class', type]}
-            layout={{ 'line-join': 'round', 'line-cap': 'round', 'visibility': maskPolygon ? 'none' : 'visible' }}
+            filter={
+                maskPolygon 
+                ? ['all', ['==', 'class', type], ['within', maskPolygon]]
+                : ['==', 'class', type]
+            }
+            layout={{ 
+              'line-join': 'round', 
+              'line-cap': 'round',
+              'visibility': selectedTypes.includes(type) ? 'visible' : 'none'
+            }}
             paint={{
               'line-color': color,
               'line-width': 4,
@@ -329,26 +272,6 @@ export default function RoutesPage() {
             }}
           />
         ))}
-
-        {roadsToDisplay && (
-          <Source id="filtered-roads" type="geojson" data={roadsToDisplay}>
-            <Layer
-              id="highlight-layer"
-              type="line"
-              paint={{
-                'line-color': [
-                  'match',
-                  ['get', 'class'],
-                  ...Object.entries(roadColorMapping).flat(),
-                  '#000000' // fallback color
-                ],
-                'line-width': 5,
-                'line-opacity': 0.9,
-              }}
-              layout={{ 'line-join': 'round', 'line-cap': 'round' }}
-            />
-          </Source>
-        )}
         
         {maskPolygon && (
           <Source id="mask" type="geojson" data={maskPolygon}>
