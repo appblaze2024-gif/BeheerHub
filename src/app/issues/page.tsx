@@ -29,6 +29,7 @@ type Melding = {
   latitude: number;
   longitude: number;
   subcategorie: string;
+  hoofdcategorie: string;
   extra_informatie: string;
   status:
     | 'Nieuw'
@@ -42,6 +43,8 @@ type Melding = {
   datum: string; // Creation date yyyy-MM-dd
   tijdstip: string;
   melder: string;
+  aangenomen_door?: string;
+  afgehandeld_door?: string;
   afhandeling_datum?: string; // Completion date yyyy-MM-dd
   straatnaam?: string;
   huisnummer?: string;
@@ -221,11 +224,23 @@ export default function IssuesPage() {
 
     const searchedMeldingen = searchQuery
       ? timeFilteredMeldingen.filter(
-          (m) =>
-            m.intakenummer?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            m.straatnaam?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            m.plaats?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            m.subcategorie?.toLowerCase().includes(searchQuery.toLowerCase())
+          (m) => {
+            const query = searchQuery.toLowerCase();
+            return (
+                m.intakenummer?.toLowerCase().includes(query) ||
+                m.straatnaam?.toLowerCase().includes(query) ||
+                m.plaats?.toLowerCase().includes(query) ||
+                m.postcode?.toLowerCase().includes(query) ||
+                m.subcategorie?.toLowerCase().includes(query) ||
+                m.hoofdcategorie?.toLowerCase().includes(query) ||
+                m.melder?.toLowerCase().includes(query) ||
+                m.extra_informatie?.toLowerCase().includes(query) ||
+                m.wijk?.toLowerCase().includes(query) ||
+                m.status?.toLowerCase().includes(query) ||
+                m.aangenomen_door?.toLowerCase().includes(query) ||
+                m.afgehandeld_door?.toLowerCase().includes(query)
+            );
+          }
         )
       : timeFilteredMeldingen;
 
