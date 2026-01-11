@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -49,6 +50,7 @@ export default function RoutesPage() {
     if (routes && routes.length > 0) {
       if(routes[0].id !== activeRoute?.id) {
          setActiveRoute(routes[0]);
+         setSelectedTypes([]); // Reset filter when route changes
       }
     } else if (routes && routes.length === 0) {
       setActiveRoute(null);
@@ -277,7 +279,7 @@ export default function RoutesPage() {
                 layout={{
                   'line-join': 'round',
                   'line-cap': 'round',
-                  'visibility': maskPolygon ? 'none' : (selectedTypes.includes(type) ? 'visible' : 'none'),
+                   'visibility': maskPolygon ? 'none' : (selectedTypes.includes(type) ? 'visible' : 'none'),
                 }}
                 paint={{
                   'line-color': color,
@@ -293,7 +295,7 @@ export default function RoutesPage() {
               <Layer
                 id="mask-layer"
                 type="fill"
-                paint={{ 'fill-color': 'hsl(var(--primary))', 'fill-opacity': 0.2 }}
+                paint={{ 'fill-color': '#3b82f6', 'fill-opacity': 0.2 }}
               />
             </Source>
             {Object.entries(roadColorMapping).map(([type, color]) => (
