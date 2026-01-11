@@ -268,8 +268,8 @@ export default function RoutesPage() {
       >
         {Object.entries(roadColorMapping).map(([type, color]) => (
             <Layer
-                key={`base-${type}`}
-                id={`base-${type}`}
+                key={type}
+                id={type}
                 type="line"
                 source="composite"
                 source-layer="road"
@@ -277,7 +277,7 @@ export default function RoutesPage() {
                 layout={{
                   'line-join': 'round',
                   'line-cap': 'round',
-                  visibility: maskPolygon ? 'none' : (selectedTypes.includes(type) ? 'visible' : 'none'),
+                  'visibility': maskPolygon ? 'none' : (selectedTypes.includes(type) ? 'visible' : 'none'),
                 }}
                 paint={{
                   'line-color': color,
@@ -293,7 +293,7 @@ export default function RoutesPage() {
               <Layer
                 id="mask-layer"
                 type="fill"
-                paint={{ 'fill-color': 'rgba(0, 0, 0, 0.5)' }}
+                paint={{ 'fill-color': 'hsl(var(--primary))', 'fill-opacity': 0.2 }}
               />
             </Source>
             {Object.entries(roadColorMapping).map(([type, color]) => (
@@ -303,7 +303,7 @@ export default function RoutesPage() {
                 type="line"
                 source="composite"
                 source-layer="road"
-                filter={['==', 'class', type]}
+                filter={['all', ['==', 'class', type], ['within', maskPolygon.geometry]]}
                 layout={{
                   'line-join': 'round',
                   'line-cap': 'round',
@@ -311,7 +311,7 @@ export default function RoutesPage() {
                 }}
                 paint={{
                   'line-color': color,
-                  'line-width': 4,
+                  'line-width': 5, // Slightly thicker for highlight
                   'line-opacity': 1,
                 }}
               />
