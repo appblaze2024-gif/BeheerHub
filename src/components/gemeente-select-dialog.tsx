@@ -11,6 +11,7 @@ import {
 import { Input } from './ui/input';
 import { Loader2, Search } from 'lucide-react';
 import type { Feature } from 'geojson';
+import { gemeenten } from '@/lib/gemeenten';
 
 interface GemeenteSelectDialogProps {
   open: boolean;
@@ -31,71 +32,50 @@ export function GemeenteSelectDialog({
   onGemeenteSelect,
 }: GemeenteSelectDialogProps) {
   const [searchQuery, setSearchQuery] = React.useState('');
-  const [isSearching, setIsSearching] = React.useState(false);
-  const [suggestions, setSuggestions] = React.useState<Suggestion[]>([]);
-  const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
-
-  const handleSearchQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
+  const [isLoading, setIsLoading] = React.useState(false);
+  
+  const filteredGemeenten = React.useMemo(() => {
+    if (!searchQuery) {
+      return gemeenten;
     }
+    return gemeenten.filter(g => g.toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [searchQuery]);
 
-    if (!query.trim()) {
-      setSuggestions([]);
-      return;
-    }
 
-    setIsSearching(true);
-    searchTimeoutRef.current = setTimeout(async () => {
-      try {
+  const handleSuggestionClick = async (gemeenteNaam: string) => {
+    setIsLoading(true);
+    try {
         const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-            query
-          )}&format=json&polygon_geojson=1&countrycodes=nl&limit=10`
+            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+                gemeenteNaam
+            )}&format=json&polygon_geojson=1&countrycodes=nl&limit=1`
         );
         const data: Suggestion[] = await response.json();
-        // Toon alle resultaten die een polygoon hebben, om te voorkomen dat gemeentes worden overgeslagen.
-        const filteredData = data.filter(
-          s => s.geojson && (s.geojson.type === 'Polygon' || s.geojson.type === 'MultiPolygon')
-        );
-        setSuggestions(filteredData);
-      } catch (error) {
-        console.error('Fout bij zoeken gemeente:', error);
-        setSuggestions([]);
-      } finally {
-        setIsSearching(false);
-      }
-    }, 500); // 500ms debounce
-  };
+        
+        if (data.length > 0 && (data[0].geojson.type === 'Polygon' || data[0].geojson.type === 'MultiPolygon')) {
+            const suggestion = data[0];
+            const feature: Feature = {
+                type: 'Feature',
+                properties: { name: suggestion.display_name },
+                geometry: suggestion.geojson,
+            };
+            onGemeenteSelect(feature);
+            onOpenChange(false);
+        } else {
+            console.error("Geen polygoon gevonden voor:", gemeenteNaam);
+        }
 
-  const handleSuggestionClick = (suggestion: Suggestion) => {
-    const feature: Feature = {
-      type: 'Feature',
-      properties: { name: suggestion.display_name },
-      geometry: suggestion.geojson,
-    };
-    onGemeenteSelect(feature);
-    onOpenChange(false);
+    } catch (error) {
+        console.error('Fout bij ophalen gemeente grenzen:', error);
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   React.useEffect(() => {
-    // Cleanup on unmount
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-    };
-  }, []);
-  
-  React.useEffect(() => {
-    // Reset state on open/close
     if (!open) {
         setSearchQuery('');
-        setSuggestions([]);
-        setIsSearching(false);
+        setIsLoading(false);
     }
   }, [open]);
 
@@ -114,24 +94,22 @@ export function GemeenteSelectDialog({
             placeholder="Zoek gemeente..."
             className="pl-9"
             value={searchQuery}
-            onChange={handleSearchQueryChange}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
-          {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
+          {isLoading && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
         </div>
 
-        {suggestions.length > 0 && (
-          <div className="mt-2 border rounded-md max-h-60 overflow-y-auto">
-            {suggestions.map((suggestion) => (
+        <div className="mt-2 border rounded-md max-h-60 overflow-y-auto">
+            {filteredGemeenten.map((gemeente) => (
               <div
-                key={suggestion.place_id}
-                onClick={() => handleSuggestionClick(suggestion)}
+                key={gemeente}
+                onClick={() => handleSuggestionClick(gemeente)}
                 className="px-4 py-3 text-sm cursor-pointer hover:bg-muted border-b last:border-b-0"
               >
-                {suggestion.display_name}
+                {gemeente}
               </div>
             ))}
-          </div>
-        )}
+        </div>
       </DialogContent>
     </Dialog>
   );
