@@ -212,10 +212,11 @@ export function MeldingDialog({
   const status = form.watch('status');
 
   React.useEffect(() => {
-    if (status === 'Afgerond' && form.formState.isDirty) {
-        if (user?.displayName) {
-            form.setValue('afgehandeld_door', user.displayName);
-        }
+    if (status === 'Afgerond') {
+      const userName = user?.displayName || user?.email || '';
+      if (userName && !form.getValues('afgehandeld_door')) {
+        form.setValue('afgehandeld_door', userName);
+      }
     }
   }, [status, form, user]);
 
@@ -278,11 +279,18 @@ export function MeldingDialog({
 
       const userName = user?.displayName || user?.email || '';
       if (melding) {
-          form.reset({
-              ...melding,
-              adres: `${melding.straatnaam || ''}${melding.huisnummer ? ' ' + melding.huisnummer : ''}, ${melding.postcode || ''}, ${melding.plaats || ''}`.trim(),
-              aangenomen_door: melding.aangenomen_door || userName,
-          });
+          const formValues: Partial<MeldingFormValues> = {
+            ...melding,
+            adres: `${melding.straatnaam || ''}${melding.huisnummer ? ' ' + melding.huisnummer : ''}, ${melding.postcode || ''}, ${melding.plaats || ''}`.trim(),
+            aangenomen_door: melding.aangenomen_door || userName,
+          };
+          
+          if(melding.status === 'Afgerond' && !melding.afgehandeld_door) {
+              formValues.afgehandeld_door = userName;
+          }
+
+          form.reset(formValues);
+
           const intakeNummer = melding.intakenummer || '';
           if (intakeNummer.startsWith(intakePrefix)) {
             setManualIntakeSuffix(intakeNummer.substring(intakePrefix.length));
