@@ -42,28 +42,28 @@ export const allRoadTypes: Record<string, string> = {
 
 // Kleurcodering voor elk wegtype.
 export const roadColorMapping: Record<string, string> = {
-  motorway: '#e67e22',        // Oranje
-  motorway_link: '#f39c12',   // Lichtoranje
-  trunk: '#f1c40f',           // Geel
-  trunk_link: '#f7dc6f',      // Lichtgeel
-  primary: '#ffffff',         // Wit
-  primary_link: '#f2f2f2',    // Zeer lichtgrijs
-  secondary: '#dcdcdc',       // Grijstint 1
-  secondary_link: '#d3d3d3',  // Grijstint 2
-  tertiary: '#c0c0c0',         // Grijstint 3
-  tertiary_link: '#b0b0b0',   // Grijstint 4
-  street: '#a9a9a9',           // Donkergrijs
-  street_limited: '#a9a9a9',   // Donkergrijs
-  residential: '#b0b0b0',      // Grijstint 4 (zelfde als tertiaire link)
-  living_street: '#d3d3d3',    // Grijstint 2 (zelfde als secundaire link)
-  pedestrian: '#a29bfe',       // Zacht paars
-  path: '#8b4513',           // Zadelbruin
-  track: '#cd853f',           // Peru (lichter bruin)
-  service: '#708090',          // Leisteengrijs
-  ferry: '#3498db',           // Blauw
-  road: '#b0b0b0',             // Grijstint 4
-  unclassified: '#b0b0b0',      // Grijstint 4
-  roundabout: '#dcdcdc',       // Grijstint 1
+    motorway: '#3b82f6',
+    motorway_link: '#3b82f6',
+    trunk: '#3b82f6',
+    trunk_link: '#3b82f6',
+    primary: '#3b82f6',
+    primary_link: '#3b82f6',
+    secondary: '#3b82f6',
+    secondary_link: '#3b82f6',
+    tertiary: '#3b82f6',
+    tertiary_link: '#3b82f6',
+    street: '#3b82f6',
+    street_limited: '#3b82f6',
+    residential: '#3b82f6',
+    living_street: '#3b82f6',
+    pedestrian: '#3b82f6',
+    path: '#3b82f6',
+    track: '#3b82f6',
+    service: '#3b82f6',
+    ferry: '#3b82f6',
+    road: '#3b82f6',
+    unclassified: '#3b82f6',
+    roundabout: '#3b82f6',
 };
 
 
