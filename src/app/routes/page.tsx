@@ -46,8 +46,10 @@ export default function RoutesPage() {
   const { data: routes, isLoading: isLoadingRoutes } = useCollection(routesQuery);
 
   React.useEffect(() => {
-    if (routes && routes.length > 0 && routes[0].id !== activeRoute?.id) {
-      setActiveRoute(routes[0]);
+    if (routes && routes.length > 0) {
+      if(routes[0].id !== activeRoute?.id) {
+         setActiveRoute(routes[0]);
+      }
     } else if (routes && routes.length === 0) {
       setActiveRoute(null);
     }
@@ -265,8 +267,8 @@ export default function RoutesPage() {
       >
         {Object.entries(roadColorMapping).map(([type, color]) => (
             <Layer
-                key={type}
-                id={type}
+                key={`base-${type}`}
+                id={`base-${type}`}
                 type="line"
                 source="composite"
                 source-layer="road"
@@ -274,14 +276,35 @@ export default function RoutesPage() {
                 layout={{
                   'line-join': 'round',
                   'line-cap': 'round',
-                   'visibility': maskPolygon && !selectedTypes.includes(type) ? 'none' : 'visible'
+                  'visibility': maskPolygon ? 'none' : 'visible'
                 }}
                 paint={{
                   'line-color': color,
                   'line-width': 4,
-                  'line-opacity': maskPolygon ? 1 : 0.8,
+                  'line-opacity': 0.8,
                 }}
             />
+        ))}
+
+        {Object.entries(roadColorMapping).map(([type, color]) => (
+          <Layer
+            key={`highlight-${type}`}
+            id={`highlight-${type}`}
+            type="line"
+            source="composite"
+            source-layer="road"
+            filter={['==', 'class', type]}
+            layout={{
+              'line-join': 'round',
+              'line-cap': 'round',
+              'visibility': maskPolygon && selectedTypes.includes(type) ? 'visible' : 'none'
+            }}
+            paint={{
+              'line-color': color,
+              'line-width': 5, // Slightly thicker for highlight
+              'line-opacity': 1,
+            }}
+          />
         ))}
 
         {maskPolygon && (
