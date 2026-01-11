@@ -10,13 +10,14 @@ import {
   allRoadTypes,
   roadColorMapping,
 } from '@/components/road-type-filter-dialog';
-import { Download, Edit, Trash2, Layers, X } from 'lucide-react';
+import { Download, Edit, Trash2, Layers, X, MapSearch } from 'lucide-react';
 import * as turf from '@turf/turf';
 import type { Feature, FeatureCollection, Polygon, MultiPolygon } from 'geojson';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { GemeenteSelectDialog } from '@/components/gemeente-select-dialog';
 
 const MAPBOX_TOKEN =
   'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -33,6 +34,7 @@ export default function RoutesPage() {
     React.useState<FeatureCollection | null>(null);
   const [showFilter, setShowFilter] = React.useState(true);
   const [isDrawMode, setIsDrawMode] = React.useState(false);
+  const [isGemeenteDialogOpen, setIsGemeenteDialogOpen] = React.useState(false);
 
   const initialViewState = {
     longitude: 5.2913,
@@ -132,6 +134,20 @@ export default function RoutesPage() {
     setDrawnFeatures([]);
     setFilteredRoads(null);
     setIsDrawMode(false);
+  };
+  
+  const handleGemeenteSelect = (gemeenteFeature: Feature) => {
+    if (drawRef.current && mapRef.current) {
+      drawRef.current.deleteAll();
+      const featureIds = drawRef.current.add(gemeenteFeature);
+      setDrawnFeatures(drawRef.current.getAll().features as Feature[]);
+
+      const bbox = turf.bbox(gemeenteFeature);
+      if (bbox[0] !== Infinity) {
+        mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
+      }
+    }
+    setIsGemeenteDialogOpen(false);
   };
 
   const handleCheckedChange = (type: string, checked: boolean) => {
@@ -235,6 +251,9 @@ export default function RoutesPage() {
       </div>
 
       <div className="absolute top-4 right-4 z-10 flex gap-2">
+        <Button onClick={() => setIsGemeenteDialogOpen(true)}>
+          <MapSearch className="mr-2 h-4 w-4" /> Kies Gemeente
+        </Button>
         <Button onClick={startDrawing} disabled={isDrawMode}>
           <Edit className="mr-2 h-4 w-4" /> Gebied tekenen
         </Button>
@@ -303,6 +322,11 @@ export default function RoutesPage() {
           </Source>
         )}
       </Map>
+      <GemeenteSelectDialog 
+        open={isGemeenteDialogOpen}
+        onOpenChange={setIsGemeenteDialogOpen}
+        onGemeenteSelect={handleGemeenteSelect}
+      />
     </div>
   );
 }
