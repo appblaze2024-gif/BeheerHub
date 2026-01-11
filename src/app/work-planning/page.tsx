@@ -505,7 +505,7 @@ export default function WorkPlanningPage() {
               ))}
             </div>
           ) : (
-            medewerkers?.map((medewerker) => (
+            medewerkers?.filter(m => m.status === 'Actief').map((medewerker) => (
               <React.Fragment key={medewerker.id}>
                 <div className="flex flex-col justify-center p-3 border-b border-r medewerker-header">
                   <div className="flex items-center gap-3">
