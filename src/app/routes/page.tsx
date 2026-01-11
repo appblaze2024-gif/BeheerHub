@@ -244,18 +244,13 @@ export default function RoutesPage() {
         )}
       </div>
 
-      <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
-         <Button onClick={() => setShowFilter(!showFilter)} className="w-fit">
-          <Layers className="mr-2 h-4 w-4" /> Wegtypes
-        </Button>
-        <Button onClick={() => setIsGemeenteDialogOpen(true)}>
+      <div className="absolute top-4 right-4 z-10 flex w-48 flex-col gap-2">
+         <Button onClick={() => setIsGemeenteDialogOpen(true)} className="w-full">
           <Search className="mr-2 h-4 w-4" /> Kies Gemeente
         </Button>
-        {activeRoute && (
-          <Button onClick={clearSelection} variant="destructive">
-            <Trash2 className="mr-2 h-4 w-4" /> Huidige selectie wissen
-          </Button>
-        )}
+        <Button onClick={() => setShowFilter(!showFilter)} className="w-full">
+          <Layers className="mr-2 h-4 w-4" /> Wegtypes
+        </Button>
       </div>
 
       <Map
