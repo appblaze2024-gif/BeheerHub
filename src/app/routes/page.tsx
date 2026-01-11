@@ -307,7 +307,7 @@ export default function RoutesPage() {
                     filter={[
                         'all',
                         ['==', 'class', type],
-                        ['!', ['any', ['within', maskPolygon]]]
+                        ['within', maskPolygon.geometry]
                     ]}
                     layout={{
                     'line-join': 'round',
