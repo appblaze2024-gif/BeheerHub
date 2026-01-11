@@ -174,7 +174,7 @@ export function RoadTypeFilterDialog({
                     Niets
                 </Button>
                  <Button variant="outline" onClick={handleSelectSweepRoutes} disabled={availableTypes.length === 0}>
-                    Veegroutes
+                    Veegwagen
                 </Button>
             </div>
             <div className='flex gap-2'>
