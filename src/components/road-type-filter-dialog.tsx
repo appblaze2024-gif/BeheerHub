@@ -44,34 +44,34 @@ export const allRoadTypes: Record<string, string> = {
 // Directe HSL-waardes om compatibiliteitsproblemen met Mapbox te voorkomen.
 export const roadColorMapping: Record<string, string> = {
     // Groep 1: Hoofdwegen (Oranje)
-    motorway: 'hsl(27 87% 67%)',
-    motorway_link: 'hsl(27 87% 67%)',
-    trunk: 'hsl(27 87% 67%)',
-    trunk_link: 'hsl(27 87% 67%)',
+    motorway: 'hsl(27, 87%, 67%)',
+    motorway_link: 'hsl(27, 87%, 67%)',
+    trunk: 'hsl(27, 87%, 67%)',
+    trunk_link: 'hsl(27, 87%, 67%)',
 
     // Groep 2: Primaire/Secundaire wegen (Geel)
-    primary: 'hsl(43 74% 66%)',
-    primary_link: 'hsl(43 74% 66%)',
-    secondary: 'hsl(43 74% 66%)',
-    secondary_link: 'hsl(43 74% 66%)',
+    primary: 'hsl(43, 74%, 66%)',
+    primary_link: 'hsl(43, 74%, 66%)',
+    secondary: 'hsl(43, 74%, 66%)',
+    secondary_link: 'hsl(43, 74%, 66%)',
     
     // Groep 3: Lokale wegen (Blauw)
-    tertiary: 'hsl(199 79% 55%)',
-    tertiary_link: 'hsl(199 79% 55%)',
-    street: 'hsl(199 79% 55%)',
-    street_limited: 'hsl(199 79% 55%)',
-    residential: 'hsl(199 79% 55%)',
-    living_street: 'hsl(199 79% 55%)',
-    road: 'hsl(199 79% 55%)',
-    unclassified: 'hsl(199 79% 55%)',
-    roundabout: 'hsl(199 79% 55%)',
+    tertiary: 'hsl(199, 79%, 55%)',
+    tertiary_link: 'hsl(199, 79%, 55%)',
+    street: 'hsl(199, 79%, 55%)',
+    street_limited: 'hsl(199, 79%, 55%)',
+    residential: 'hsl(199, 79%, 55%)',
+    living_street: 'hsl(199, 79%, 55%)',
+    road: 'hsl(199, 79%, 55%)',
+    unclassified: 'hsl(199, 79%, 55%)',
+    roundabout: 'hsl(199, 79%, 55%)',
 
     // Groep 4: Speciale wegen (Groen)
-    service: 'hsl(174 63% 39%)',
-    pedestrian: 'hsl(174 63% 39%)',
-    path: 'hsl(174 63% 39%)',
-    track: 'hsl(174 63% 39%)',
-    ferry: 'hsl(174 63% 39%)',
+    service: 'hsl(174, 63%, 39%)',
+    pedestrian: 'hsl(174, 63%, 39%)',
+    path: 'hsl(174, 63%, 39%)',
+    track: 'hsl(174, 63%, 39%)',
+    ferry: 'hsl(174, 63%, 39%)',
 };
 
 
