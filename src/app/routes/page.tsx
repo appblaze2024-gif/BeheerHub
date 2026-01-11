@@ -81,6 +81,7 @@ export default function RoutesPage() {
     setDrawnFeatures([]);
     setMaskPolygon(null);
     setHighlightedRoads(null);
+    setSelectedTypes(Object.keys(allRoadTypes)); // Reset filter to show all
     setIsDrawMode(false);
     mapRef.current?.getMap().flyTo({
         center: [5.2913, 52.1326],
@@ -93,7 +94,7 @@ export default function RoutesPage() {
     if (drawRef.current && mapRef.current) {
       drawRef.current.deleteAll();
       setDrawnFeatures([gemeenteFeature]);
-      setSelectedTypes(Object.keys(allRoadTypes));
+      setSelectedTypes([]); // Filters are now off by default
 
       const world = turf.polygon([[
         [-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90]
@@ -107,28 +108,24 @@ export default function RoutesPage() {
         mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
       }
 
-      // Query roads after the polygon is set and map has moved
       const map = mapRef.current.getMap();
       const afterMove = () => {
         const roadsInside = map.querySourceFeatures('composite', {
-          sourceLayer: 'road'
-        });
-
-        const roadsInPolygon: Feature<LineString | MultiLineString>[] = roadsInside.filter(road => {
-            // Ensure road.geometry is valid before processing
+          sourceLayer: 'road',
+          filter: ['in', 'class', ...Object.keys(allRoadTypes)],
+        }).filter(road => {
             if (!road.geometry || !road.geometry.coordinates || road.geometry.coordinates.length === 0) {
               return false;
             }
-            // Use booleanIntersects for robust checking of lines vs. polygons
             try {
-              return turf.booleanIntersects(road.geometry, gemeenteFeature.geometry);
+              return turf.booleanIntersects(road, gemeenteFeature);
             } catch (e) {
               console.warn("Turf intersection check failed", e);
               return false;
             }
         }) as Feature<LineString | MultiLineString>[];
 
-        setHighlightedRoads(turf.featureCollection(roadsInPolygon));
+        setHighlightedRoads(turf.featureCollection(roadsInside));
         map.off('moveend', afterMove);
       };
       map.on('moveend', afterMove);
