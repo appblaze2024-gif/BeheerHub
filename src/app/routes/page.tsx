@@ -18,6 +18,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { GemeenteSelectDialog } from '@/components/gemeente-select-dialog';
 import * as turf from '@turf/turf';
+import { useFirestore, useUser } from '@/firebase';
+import { collection, addDoc } from 'firebase/firestore';
 
 const MAPBOX_TOKEN =
   'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -25,6 +27,8 @@ const MAPBOX_TOKEN =
 export default function RoutesPage() {
   const mapRef = React.useRef<any>(null);
   const drawRef = React.useRef<MapboxDraw | null>(null);
+  const firestore = useFirestore();
+  const { user } = useUser();
 
   const [drawnFeatures, setDrawnFeatures] = React.useState<Feature[]>([]);
   const [selectedTypes, setSelectedTypes] = React.useState<string[]>(
@@ -35,6 +39,7 @@ export default function RoutesPage() {
   const [isGemeenteDialogOpen, setIsGemeenteDialogOpen] = React.useState(false);
   const [maskPolygon, setMaskPolygon] = React.useState<Feature | null>(null);
   const [highlightedRoads, setHighlightedRoads] = React.useState<FeatureCollection<LineString | MultiLineString> | null>(null);
+  const [polygonFeature, setPolygonFeature] = React.useState<Feature<Polygon | MultiPolygon> | null>(null);
 
   const initialViewState = {
     longitude: 5.2913,
@@ -90,22 +95,28 @@ export default function RoutesPage() {
     });
   };
   
-  const handleGemeenteSelect = (gemeenteFeature: Feature) => {
+  const handleGemeenteSelect = async (gemeenteFeature: Feature<Polygon | MultiPolygon>) => {
     if (drawRef.current && mapRef.current) {
       drawRef.current.deleteAll();
       setDrawnFeatures([gemeenteFeature]);
       setSelectedTypes([]); // Filters are now off by default
+      setPolygonFeature(gemeenteFeature);
 
       const world = turf.polygon([[
         [-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90]
       ]]);
       
-      const mask = turf.difference(world, gemeenteFeature as Feature<Polygon | MultiPolygon>);
+      const mask = turf.difference(world, gemeenteFeature);
       setMaskPolygon(mask);
       
       const bbox = turf.bbox(gemeenteFeature);
       if (bbox[0] !== Infinity) {
         mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
+      }
+
+      if (user && firestore) {
+        const routesColRef = collection(firestore, 'users', user.uid, 'routes');
+        await addDoc(routesColRef, { gemeente: gemeenteFeature.properties?.name || 'Onbekend' });
       }
 
       const map = mapRef.current.getMap();
@@ -118,7 +129,8 @@ export default function RoutesPage() {
               return false;
             }
             try {
-              return turf.booleanIntersects(road, gemeenteFeature);
+              // Check if any part of the linestring intersects the polygon
+              return !turf.booleanDisjoint(road.geometry, gemeenteFeature.geometry);
             } catch (e) {
               console.warn("Turf intersection check failed", e);
               return false;
@@ -285,12 +297,12 @@ export default function RoutesPage() {
             layout={{ 
               'line-join': 'round', 
               'line-cap': 'round',
-              'visibility': maskPolygon ? 'none' : (selectedTypes.includes(type) ? 'visible' : 'none')
+              'visibility': maskPolygon ? 'none' : 'visible'
             }}
             paint={{
               'line-color': color,
               'line-width': 4,
-              'line-opacity': 0.8,
+              'line-opacity': selectedTypes.includes(type) ? 0.8 : 0,
             }}
           />
         ))}
