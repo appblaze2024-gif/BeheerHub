@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { ChevronLeft, ChevronRight, Clock, Plus, Printer } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, Plus, Printer, Trash2 } from 'lucide-react';
 import {
   startOfWeek,
   endOfWeek,
@@ -31,13 +31,25 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   useFirestore,
   useDoc,
-  useCollection
+  useCollection,
+  deleteDocumentNonBlocking,
 } from '@/firebase';
 import type { Medewerker, Dienst, Voertuig } from '@/lib/types';
 import { DienstToevoegenSheet } from '@/components/dienst-toevoegen-sheet';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PrintDayDialog } from '@/components/print-day-dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 
 const getInitials = (firstName?: string, lastName?: string) => {
@@ -66,8 +78,9 @@ type Project = {
   projectnummer: string;
 };
 
-const DienstItem = ({ dienst, onEdit }: { dienst: Dienst, onEdit: (dienst: Dienst) => void}) => {
+const DienstItem = ({ dienst, onEdit, onDelete }: { dienst: Dienst, onEdit: (dienst: Dienst) => void, onDelete: (dienst: Dienst) => void}) => {
     const firestore = useFirestore();
+    const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
 
     const medewerkerRef = React.useMemo(() => {
         if (!firestore) return null;
@@ -83,7 +96,11 @@ const DienstItem = ({ dienst, onEdit }: { dienst: Dienst, onEdit: (dienst: Diens
 
     const { data: voertuig } = useDoc<Voertuig>(voertuigRef);
 
-    const handleEdit = () => {
+    const handleEdit = (e: React.MouseEvent) => {
+        // Prevent triggering edit when clicking delete button
+        if ((e.target as HTMLElement).closest('.delete-button')) {
+            return;
+        }
         if (medewerker) {
             onEdit(dienst);
         }
@@ -97,31 +114,69 @@ const DienstItem = ({ dienst, onEdit }: { dienst: Dienst, onEdit: (dienst: Diens
     const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
       e.currentTarget.style.opacity = '1';
     }
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+            e.preventDefault();
+            setShowDeleteConfirm(true);
+        }
+    };
     
     const isZiek = dienst.werksoort === 'Ziek';
     const isVerlof = dienst.werksoort === 'Verlof' || dienst.werksoort === 'ATV';
 
     return (
-        <div 
-            onClick={handleEdit}
-            draggable
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            className={cn(
-                "rounded-md p-2 text-xs cursor-pointer",
-                 isZiek 
-                    ? "bg-red-200 text-red-900 hover:bg-red-300 dark:bg-red-900/50 dark:text-white dark:hover:bg-red-900/70"
-                 : isVerlof
-                    ? "bg-orange-200 text-orange-900 hover:bg-orange-300 dark:bg-orange-900/50 dark:text-white dark:hover:bg-orange-900/70"
-                    : "bg-blue-100 text-blue-900 hover:bg-blue-200 dark:bg-blue-900/50 dark:text-white dark:hover:bg-blue-900/70"
-            )}
-        >
-            <p className="font-semibold truncate">{dienst.werksoort}</p>
-            <p className="truncate">{dienst.starttijd} - {dienst.eindtijd}</p>
-            {voertuig && voertuig.voertuignummer && (
-                <p className="truncate">Voertuignummer: {voertuig.voertuignummer}</p>
-            )}
-        </div>
+        <>
+            <div 
+                onClick={handleEdit}
+                onKeyDown={handleKeyDown}
+                tabIndex={0}
+                draggable
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                className={cn(
+                    "rounded-md p-2 text-xs cursor-pointer relative group/dienst focus:outline-none focus:ring-2 focus:ring-primary",
+                     isZiek 
+                        ? "bg-red-200 text-red-900 hover:bg-red-300 dark:bg-red-900/50 dark:text-white dark:hover:bg-red-900/70"
+                     : isVerlof
+                        ? "bg-orange-200 text-orange-900 hover:bg-orange-300 dark:bg-orange-900/50 dark:text-white dark:hover:bg-orange-900/70"
+                        : "bg-blue-100 text-blue-900 hover:bg-blue-200 dark:bg-blue-900/50 dark:text-white dark:hover:bg-blue-900/70"
+                )}
+            >
+                <p className="font-semibold truncate">{dienst.werksoort}</p>
+                <p className="truncate">{dienst.starttijd} - {dienst.eindtijd}</p>
+                {voertuig && voertuig.voertuignummer && (
+                    <p className="truncate">Voertuignummer: {voertuig.voertuignummer}</p>
+                )}
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="delete-button absolute top-0 right-0 h-6 w-6 opacity-0 group-hover/dienst:opacity-100 focus:opacity-100"
+                    onClick={(e) => {
+                        e.stopPropagation(); // Prevent opening edit sheet
+                        setShowDeleteConfirm(true);
+                    }}
+                >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+            </div>
+             <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Deze actie kan niet ongedaan worden gemaakt. Dit zal de dienst permanent verwijderen.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => onDelete(dienst)}>
+                        Doorgaan
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </>
     );
 };
 
@@ -217,6 +272,13 @@ export default function WorkPlanningPage() {
     setIsSheetOpen(true);
   };
 
+  const handleDienstDelete = async (dienst: Dienst) => {
+      if (!firestore || !selectedProjectId) return;
+      const dienstRef = doc(firestore, 'projects', selectedProjectId, 'diensten', dienst.id);
+      await deleteDocumentNonBlocking(dienstRef);
+      fetchDiensten();
+  };
+
   const handleSheetSuccess = () => {
     fetchDiensten();
     setIsSheetOpen(false);
@@ -234,8 +296,8 @@ export default function WorkPlanningPage() {
     const droppedDienst: Dienst = JSON.parse(dienstJson);
     const newDatumString = format(newDatum, 'yyyy-MM-dd');
     
-    // Use Alt key for Mac (Option), Ctrl for Windows/Linux to copy
-    const isCopy = e.altKey;
+    // For Mac, Option key is metaKey. For Windows, use Ctrl key.
+    const isCopy = e.altKey || e.ctrlKey;
   
     // For a move, only update if there's a change
     if (!isCopy && droppedDienst.medewerkerId === newMedewerkerId && droppedDienst.datum === newDatumString) {
@@ -491,7 +553,7 @@ export default function WorkPlanningPage() {
                               <Skeleton className="h-10 w-full" />
                           ) : (
                             dienstenForDay?.map(dienst => (
-                                <DienstItem key={dienst.id} dienst={dienst} onEdit={handleOpenSheetForEdit} />
+                                <DienstItem key={dienst.id} dienst={dienst} onEdit={handleOpenSheetForEdit} onDelete={handleDienstDelete} />
                             ))
                           )}
                         </div>
