@@ -126,11 +126,16 @@ export default function RoutesPage() {
 
     const roadsInside = map.querySourceFeatures('composite', {
       sourceLayer: 'road',
-      filter: ['within', polygonFeature.geometry],
     });
 
     const clippedRoads = turf.featureCollection(
-      roadsInside.map(road => turf.intersect(road.geometry, polygonFeature.geometry)).filter(Boolean) as Feature[]
+      roadsInside.map(road => {
+        try {
+          return turf.intersect(road.geometry, polygonFeature.geometry);
+        } catch (e) {
+          return null; // turf.intersect can throw error on invalid topologies
+        }
+      }).filter(Boolean) as Feature[]
     );
   
     setHighlightedRoads(clippedRoads);
