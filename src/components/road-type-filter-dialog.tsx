@@ -40,30 +40,37 @@ export const allRoadTypes: Record<string, string> = {
   roundabout: 'Rotonde',
 };
 
-// Kleurcodering voor elk wegtype.
+// Kleurcodering voor elk wegtype, vereenvoudigd naar 4 themakleuren.
 export const roadColorMapping: Record<string, string> = {
-    motorway: '#ff7e33', // Oranje
-    motorway_link: '#ff7e33',
-    trunk: '#ffc133', // Licht oranje/geel
-    trunk_link: '#ffc133',
-    primary: '#fde433', // Geel
-    primary_link: '#fde433',
-    secondary: '#ffffff', // Wit
-    secondary_link: '#ffffff',
-    tertiary: '#ffffff', // Wit
-    tertiary_link: '#ffffff',
-    street: '#d9d9d9', // Lichtgrijs
-    street_limited: '#d9d9d9',
-    residential: '#d9d9d9',
-    living_street: '#e6e6e6', // Zeer lichtgrijs
-    road: '#d9d9d9',
-    unclassified: '#d9d9d9',
-    service: '#cccccc', // Iets donkerder grijs
-    path: '#a68f7b', // Bruinachtig
-    track: '#a68f7b',
-    pedestrian: '#b3b3b3', // Grijs voor voetgangers
-    ferry: '#40a6ff', // Lichtblauw voor veerboot
-    roundabout: '#d9d9d9', // Zelfde als straat
+    // Groep 1: Hoofdwegen (Oranje/Geel-achtig)
+    motorway: 'hsl(var(--chart-5))',
+    motorway_link: 'hsl(var(--chart-5))',
+    trunk: 'hsl(var(--chart-5))',
+    trunk_link: 'hsl(var(--chart-5))',
+
+    // Groep 2: Secundaire & Primaire wegen (Geel/Licht-geel-achtig)
+    primary: 'hsl(var(--chart-4))',
+    primary_link: 'hsl(var(--chart-4))',
+    secondary: 'hsl(var(--chart-4))',
+    secondary_link: 'hsl(var(--chart-4))',
+    
+    // Groep 3: Lokale wegen (Blauw)
+    tertiary: 'hsl(var(--chart-1))',
+    tertiary_link: 'hsl(var(--chart-1))',
+    street: 'hsl(var(--chart-1))',
+    street_limited: 'hsl(var(--chart-1))',
+    residential: 'hsl(var(--chart-1))',
+    living_street: 'hsl(var(--chart-1))',
+    road: 'hsl(var(--chart-1))',
+    unclassified: 'hsl(var(--chart-1))',
+    roundabout: 'hsl(var(--chart-1))',
+
+    // Groep 4: Speciale wegen (Groen)
+    service: 'hsl(var(--chart-2))',
+    pedestrian: 'hsl(var(--chart-2))',
+    path: 'hsl(var(--chart-2))',
+    track: 'hsl(var(--chart-2))',
+    ferry: 'hsl(var(--chart-2))',
 };
 
 
