@@ -41,19 +41,19 @@ export const allRoadTypes: Record<string, string> = {
 };
 
 export const roadColorMapping: Record<string, string> = {
-  // Groep 1: Hoofdwegen (Oranje)
+  // Hoofdwegen (Snelwegen/Autowegen): Oranje
   motorway: 'hsl(27, 87%, 67%)',
   motorway_link: 'hsl(27, 87%, 67%)',
   trunk: 'hsl(27, 87%, 67%)',
   trunk_link: 'hsl(27, 87%, 67%)',
-
-  // Groep 2: Primaire/Secundaire wegen (Geel)
+  
+  // Provinciale/Secundaire wegen: Geel
   primary: 'hsl(43, 74%, 66%)',
   primary_link: 'hsl(43, 74%, 66%)',
   secondary: 'hsl(43, 74%, 66%)',
   secondary_link: 'hsl(43, 74%, 66%)',
   
-  // Groep 3: Lokale wegen (Blauw)
+  // Lokale wegen (Woonstraten etc.): Blauw
   tertiary: 'hsl(199, 79%, 55%)',
   tertiary_link: 'hsl(199, 79%, 55%)',
   street: 'hsl(199, 79%, 55%)',
@@ -64,7 +64,7 @@ export const roadColorMapping: Record<string, string> = {
   unclassified: 'hsl(199, 79%, 55%)',
   roundabout: 'hsl(199, 79%, 55%)',
 
-  // Groep 4: Speciale wegen (Groen)
+  // Speciale wegen (Dienstwegen, paden): Groen
   service: 'hsl(174, 63%, 39%)',
   pedestrian: 'hsl(174, 63%, 39%)',
   path: 'hsl(174, 63%, 39%)',
