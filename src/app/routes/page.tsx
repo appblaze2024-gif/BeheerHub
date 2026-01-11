@@ -130,7 +130,7 @@ export default function RoutesPage() {
     });
 
     const clippedRoads = turf.featureCollection(
-      roadsInside.map(road => turf.intersect(road.geometry, polygonFeature.geometry)!).filter(Boolean) as any
+      roadsInside.map(road => turf.intersect(road.geometry, polygonFeature.geometry)).filter(Boolean) as Feature[]
     );
   
     setHighlightedRoads(clippedRoads);
