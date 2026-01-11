@@ -278,7 +278,7 @@ export default function RoutesPage() {
             layout={{
               'line-join': 'round',
               'line-cap': 'round',
-              visibility: maskPolygon ? 'none' : (selectedTypes.includes(type) ? 'visible' : 'none'),
+              visibility: selectedTypes.includes(type) ? 'visible' : 'none',
             }}
             paint={{
               'line-color': color,
@@ -289,39 +289,13 @@ export default function RoutesPage() {
         ))}
 
         {maskPolygon && (
-          <>
-            <Source id="mask-source" type="geojson" data={maskPolygon}>
-              <Layer
-                id="mask-layer"
-                type="fill"
-                paint={{ 'fill-color': '#000000', 'fill-opacity': 0.8 }}
-              />
-            </Source>
-            {Object.entries(roadColorMapping).map(([type, color]) => (
-                <Layer
-                    key={`highlight-${type}`}
-                    id={`highlight-${type}`}
-                    type="line"
-                    source="composite"
-                    source-layer="road"
-                    filter={[
-                        'all',
-                        ['==', 'class', type],
-                        ['within', maskPolygon.geometry]
-                    ]}
-                    layout={{
-                    'line-join': 'round',
-                    'line-cap': 'round',
-                    visibility: selectedTypes.includes(type) ? 'visible' : 'none',
-                    }}
-                    paint={{
-                    'line-color': color,
-                    'line-width': 5,
-                    'line-opacity': 1,
-                    }}
-                />
-            ))}
-          </>
+          <Source id="mask-source" type="geojson" data={maskPolygon}>
+            <Layer
+              id="mask-layer"
+              type="fill"
+              paint={{ 'fill-color': '#000000', 'fill-opacity': 0.8 }}
+            />
+          </Source>
         )}
       </Map>
       <GemeenteSelectDialog 
