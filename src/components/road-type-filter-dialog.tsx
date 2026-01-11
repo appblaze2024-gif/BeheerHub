@@ -75,7 +75,6 @@ export const roadColorMapping: Record<string, string> = {
 interface RoadTypeFilterDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  availableTypes: string[];
   selectedTypes: string[];
   setSelectedTypes: (types: string[]) => void;
   onConfirm: () => void;
@@ -84,7 +83,6 @@ interface RoadTypeFilterDialogProps {
 export function RoadTypeFilterDialog({
   open,
   onOpenChange,
-  availableTypes,
   selectedTypes,
   setSelectedTypes,
   onConfirm,
@@ -95,6 +93,8 @@ export function RoadTypeFilterDialog({
       : selectedTypes.filter((t) => t !== type);
     setSelectedTypes(newSelectedTypes);
   };
+  
+  const availableTypes = Object.keys(allRoadTypes);
 
   const handleSelectAll = () => {
     setSelectedTypes(availableTypes);
@@ -130,22 +130,13 @@ export function RoadTypeFilterDialog({
   
   const handleSelectBrushRoutes = () => {
     const brushTypes = [
-      'primary',
-      'secondary',
-      'tertiary',
-      'primary_link',
-      'secondary_link',
-      'tertiary_link',
+      'path',
+      'pedestrian',
+      'living_street',
+      'residential',
       'street',
       'street_limited',
       'service',
-      'residential',
-      'living_street',
-      'road',
-      'unclassified',
-      'pedestrian', // Voetgangersgebieden zijn vaak verhard
-      'roundabout',
-      'path', // Fietspaden en voetpaden
     ];
     const availableBrushTypes = brushTypes.filter((type) =>
       availableTypes.includes(type)
