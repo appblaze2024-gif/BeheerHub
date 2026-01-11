@@ -41,36 +41,37 @@ export const allRoadTypes: Record<string, string> = {
 };
 
 // Kleurcodering voor elk wegtype, gebaseerd op een professioneel schema zoals Jewel Software.
+// Directe HSL-waardes om compatibiliteitsproblemen met Mapbox te voorkomen.
 export const roadColorMapping: Record<string, string> = {
     // Groep 1: Hoofdwegen (Oranje)
-    motorway: 'hsl(var(--chart-5))',
-    motorway_link: 'hsl(var(--chart-5))',
-    trunk: 'hsl(var(--chart-5))',
-    trunk_link: 'hsl(var(--chart-5))',
+    motorway: 'hsl(27 87% 67%)',
+    motorway_link: 'hsl(27 87% 67%)',
+    trunk: 'hsl(27 87% 67%)',
+    trunk_link: 'hsl(27 87% 67%)',
 
     // Groep 2: Primaire/Secundaire wegen (Geel)
-    primary: 'hsl(var(--chart-4))',
-    primary_link: 'hsl(var(--chart-4))',
-    secondary: 'hsl(var(--chart-4))',
-    secondary_link: 'hsl(var(--chart-4))',
+    primary: 'hsl(43 74% 66%)',
+    primary_link: 'hsl(43 74% 66%)',
+    secondary: 'hsl(43 74% 66%)',
+    secondary_link: 'hsl(43 74% 66%)',
     
     // Groep 3: Lokale wegen (Blauw)
-    tertiary: 'hsl(var(--chart-1))',
-    tertiary_link: 'hsl(var(--chart-1))',
-    street: 'hsl(var(--chart-1))',
-    street_limited: 'hsl(var(--chart-1))',
-    residential: 'hsl(var(--chart-1))',
-    living_street: 'hsl(var(--chart-1))',
-    road: 'hsl(var(--chart-1))',
-    unclassified: 'hsl(var(--chart-1))',
-    roundabout: 'hsl(var(--chart-1))',
+    tertiary: 'hsl(199 79% 55%)',
+    tertiary_link: 'hsl(199 79% 55%)',
+    street: 'hsl(199 79% 55%)',
+    street_limited: 'hsl(199 79% 55%)',
+    residential: 'hsl(199 79% 55%)',
+    living_street: 'hsl(199 79% 55%)',
+    road: 'hsl(199 79% 55%)',
+    unclassified: 'hsl(199 79% 55%)',
+    roundabout: 'hsl(199 79% 55%)',
 
     // Groep 4: Speciale wegen (Groen)
-    service: 'hsl(var(--chart-2))',
-    pedestrian: 'hsl(var(--chart-2))',
-    path: 'hsl(var(--chart-2))',
-    track: 'hsl(var(--chart-2))',
-    ferry: 'hsl(var(--chart-2))',
+    service: 'hsl(174 63% 39%)',
+    pedestrian: 'hsl(174 63% 39%)',
+    path: 'hsl(174 63% 39%)',
+    track: 'hsl(174 63% 39%)',
+    ferry: 'hsl(174 63% 39%)',
 };
 
 
