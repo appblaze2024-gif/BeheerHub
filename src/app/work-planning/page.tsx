@@ -233,7 +233,9 @@ export default function WorkPlanningPage() {
   
     const droppedDienst: Dienst = JSON.parse(dienstJson);
     const newDatumString = format(newDatum, 'yyyy-MM-dd');
-    const isCopy = e.ctrlKey;
+    
+    // Use Alt key for Mac (Option), Ctrl for Windows/Linux to copy
+    const isCopy = e.altKey;
   
     // For a move, only update if there's a change
     if (!isCopy && droppedDienst.medewerkerId === newMedewerkerId && droppedDienst.datum === newDatumString) {
