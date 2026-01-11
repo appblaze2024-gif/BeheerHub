@@ -2,15 +2,13 @@
 
 import * as React from 'react';
 import Map, { Layer, Source } from 'react-map-gl';
-import MapboxDraw from '@mapbox/mapbox-gl-draw';
-import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   allRoadTypes,
   roadColorMapping,
 } from '@/components/road-type-filter-dialog';
-import { Edit, Trash2, Layers, X, Search } from 'lucide-react';
+import { Layers, X, Search, Trash2 } from 'lucide-react';
 import type { Feature, FeatureCollection, Polygon, MultiPolygon, LineString, MultiLineString } from 'geojson';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -18,24 +16,20 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { GemeenteSelectDialog } from '@/components/gemeente-select-dialog';
 import * as turf from '@turf/turf';
-import { useFirestore, useUser } from '@/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { useFirestore, useUser, addDocumentNonBlocking } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
 const MAPBOX_TOKEN =
   'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
 export default function RoutesPage() {
   const mapRef = React.useRef<any>(null);
-  const drawRef = React.useRef<MapboxDraw | null>(null);
   const firestore = useFirestore();
   const { user } = useUser();
 
-  const [drawnFeatures, setDrawnFeatures] = React.useState<Feature[]>([]);
   const [selectedTypes, setSelectedTypes] = React.useState<string[]>([]);
   const [showFilter, setShowFilter] = React.useState(true);
-  const [isDrawMode, setIsDrawMode] = React.useState(false);
   const [isGemeenteDialogOpen, setIsGemeenteDialogOpen] = React.useState(false);
-  const [highlightedRoads, setHighlightedRoads] = React.useState<FeatureCollection<LineString | MultiLineString> | null>(null);
   const [polygonFeature, setPolygonFeature] = React.useState<Feature<Polygon | MultiPolygon> | null>(null);
 
   const initialViewState = {
@@ -44,36 +38,9 @@ export default function RoutesPage() {
     zoom: 7,
   };
   
-  const onMapLoad = React.useCallback(() => {
-    if (mapRef.current && !drawRef.current) {
-      const map = mapRef.current.getMap();
-      const draw = new MapboxDraw({
-        displayControlsDefault: false,
-        controls: {},
-      });
-      map.addControl(draw);
-      drawRef.current = draw;
-
-      const updateFeatures = () => {
-        const data = draw.getAll();
-        setDrawnFeatures(data.features as Feature[]);
-      };
-      
-      map.on('draw.create', updateFeatures);
-      map.on('draw.update', updateFeatures);
-      map.on('draw.delete', updateFeatures);
-    }
-  }, []);
-
-  const clearDrawing = () => {
-    if (drawRef.current) {
-      drawRef.current.deleteAll();
-    }
-    setDrawnFeatures([]);
-    setHighlightedRoads(null);
+  const clearSelection = () => {
     setPolygonFeature(null);
     setSelectedTypes([]); 
-    setIsDrawMode(false);
     mapRef.current?.getMap().flyTo({
         center: [5.2913, 52.1326],
         zoom: 7,
@@ -82,9 +49,7 @@ export default function RoutesPage() {
   };
   
   const handleGemeenteSelect = async (gemeenteFeature: Feature<Polygon | MultiPolygon>) => {
-    if (drawRef.current && mapRef.current) {
-      drawRef.current.deleteAll();
-      setDrawnFeatures([gemeenteFeature]);
+    if (mapRef.current) {
       setSelectedTypes([]);
       setPolygonFeature(gemeenteFeature);
 
@@ -95,30 +60,8 @@ export default function RoutesPage() {
 
       if (user && firestore) {
         const routesColRef = collection(firestore, 'users', user.uid, 'routes');
-        await addDoc(routesColRef, { gemeente: gemeenteFeature.properties?.name || 'Onbekend', createdAt: new Date() });
+        await addDocumentNonBlocking(routesColRef, { gemeente: gemeenteFeature.properties?.name || 'Onbekend', createdAt: new Date() });
       }
-
-      const map = mapRef.current.getMap();
-      const afterMove = () => {
-        const roadsInside = map.querySourceFeatures('composite', {
-          sourceLayer: 'road',
-          filter: ['in', 'class', ...Object.keys(allRoadTypes)],
-        }).filter(road => {
-            if (!road.geometry || !road.geometry.coordinates || road.geometry.coordinates.length === 0) {
-              return false;
-            }
-            try {
-               return !turf.booleanDisjoint(road.geometry, gemeenteFeature.geometry);
-            } catch (e) {
-              console.warn("Turf intersection check failed", e);
-              return false;
-            }
-        }) as Feature<LineString | MultiLineString>[];
-        
-        setHighlightedRoads(turf.featureCollection(roadsInside));
-        map.off('moveend', afterMove);
-      };
-      map.on('moveend', afterMove);
     }
     setIsGemeenteDialogOpen(false);
   };
@@ -227,7 +170,7 @@ export default function RoutesPage() {
         <Button onClick={() => setIsGemeenteDialogOpen(true)}>
           <Search className="mr-2 h-4 w-4" /> Kies Gemeente
         </Button>
-        <Button onClick={clearDrawing} variant="destructive">
+        <Button onClick={clearSelection} variant="destructive">
           <Trash2 className="mr-2 h-4 w-4" /> Huidige selectie wissen
         </Button>
       </div>
@@ -238,7 +181,7 @@ export default function RoutesPage() {
         style={{ width: '100%', height: '100%' }}
         mapStyle="mapbox://styles/mapbox/streets-v11"
         mapboxAccessToken={MAPBOX_TOKEN}
-        onLoad={onMapLoad}
+        interactiveLayerIds={Object.keys(roadColorMapping)}
       >
         <Layer
           id="gemeente-labels"
@@ -258,61 +201,42 @@ export default function RoutesPage() {
           }}
         />
 
-        {/* Global Road Layers */}
+        {polygonFeature && (
+          <Source id="gemeente-boundary" type="geojson" data={polygonFeature}>
+            <Layer
+              id="mask-layer"
+              type="fill"
+              paint={{
+                'fill-color': 'rgba(0, 0, 0, 0.5)',
+              }}
+            />
+          </Source>
+        )}
+        
         {Object.entries(roadColorMapping).map(([type, color]) => (
           <Layer
-            key={`global-${type}`}
-            id={`global-${type}`}
+            key={type}
+            id={type}
             type="line"
             source="composite"
             source-layer="road"
-            filter={['==', 'class', type]}
-            layout={{ 
-              'line-join': 'round', 
+            filter={
+              polygonFeature
+                ? ['all', ['==', 'class', type], ['within', polygonFeature.geometry]]
+                : ['==', 'class', type]
+            }
+            layout={{
+              'line-join': 'round',
               'line-cap': 'round',
-              'visibility': polygonFeature ? 'none' : 'visible'
+              'visibility': selectedTypes.includes(type) ? 'visible' : 'none',
             }}
             paint={{
               'line-color': color,
               'line-width': 4,
-              'line-opacity': selectedTypes.includes(type) ? 0.8 : 0,
+              'line-opacity': 0.8,
             }}
           />
         ))}
-
-        {polygonFeature && (
-          <Source id="gemeente-boundary" type="geojson" data={polygonFeature}>
-              <Layer
-                  id="gemeente-boundary-line"
-                  type="line"
-                  paint={{
-                      'line-color': '#000000',
-                      'line-width': 2.5,
-                      'line-opacity': 0.8
-                  }}
-              />
-          </Source>
-        )}
-        
-        {highlightedRoads && polygonFeature && (
-           <Source id="highlighted-roads" type="geojson" data={highlightedRoads}>
-              {Object.entries(roadColorMapping).map(([type, color]) => (
-                 <Layer
-                  key={`highlight-${type}`}
-                  id={`highlight-${type}`}
-                  type="line"
-                  source="highlighted-roads"
-                  filter={['all', ['==', ['get', 'class'], type], ['in', type, ['literal', selectedTypes]]]}
-                  layout={{'line-join': 'round', 'line-cap': 'round', 'visibility': 'visible' }}
-                  paint={{
-                    'line-color': color,
-                    'line-width': 4,
-                    'line-opacity': 0.8
-                  }}
-                />
-              ))}
-           </Source>
-        )}
       </Map>
       <GemeenteSelectDialog 
         open={isGemeenteDialogOpen}
