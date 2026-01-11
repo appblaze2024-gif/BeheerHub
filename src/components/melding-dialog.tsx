@@ -209,6 +209,16 @@ export function MeldingDialog({
   
   const hoofdcategorie = form.watch('hoofdcategorie');
   const adresQuery = form.watch('adres');
+  const status = form.watch('status');
+
+  React.useEffect(() => {
+    if (status === 'Afgerond' && form.formState.isDirty) {
+        if (user?.displayName) {
+            form.setValue('afgehandeld_door', user.displayName);
+        }
+    }
+  }, [status, form, user]);
+
 
   const fetchCoordinates = React.useCallback(async (address: string): Promise<{ lat: number; lng: number } | null> => {
     if (!address) return null;
@@ -634,7 +644,7 @@ export function MeldingDialog({
                                   {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
                               </div>
                                {suggestions.length > 0 && (
-                                  <div className="relative z-10 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                  <div className="absolute z-10 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
                                       {suggestions.map((suggestion) => (
                                       <div
                                           key={suggestion.place_id}
