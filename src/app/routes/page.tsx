@@ -10,7 +10,7 @@ import {
   allRoadTypes,
   roadColorMapping,
 } from '@/components/road-type-filter-dialog';
-import { Download, Edit, Trash2, Layers, X, MapSearch } from 'lucide-react';
+import { Edit, Trash2, Layers, X, Search } from 'lucide-react';
 import * as turf from '@turf/turf';
 import type { Feature, FeatureCollection, Polygon, MultiPolygon } from 'geojson';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -267,7 +267,7 @@ export default function RoutesPage() {
 
       <div className="absolute top-4 right-4 z-10 flex gap-2">
         <Button onClick={() => setIsGemeenteDialogOpen(true)}>
-          <MapSearch className="mr-2 h-4 w-4" /> Kies Gemeente
+          <Search className="mr-2 h-4 w-4" /> Kies Gemeente
         </Button>
         <Button onClick={startDrawing} disabled={isDrawMode}>
           <Edit className="mr-2 h-4 w-4" /> Gebied tekenen
