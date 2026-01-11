@@ -458,7 +458,7 @@ export default function IssuesPage() {
             ref={mapRef}
             initialViewState={initialViewState}
             style={{ width: '100%', height: '100%' }}
-            mapStyle="mapbox://styles/mapbox/light-v11"
+            mapStyle="mapbox://styles/mapbox/streets-v12"
             mapboxAccessToken={MAPBOX_TOKEN}
             cursor="default"
         >

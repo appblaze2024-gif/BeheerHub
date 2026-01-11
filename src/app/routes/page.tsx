@@ -263,7 +263,7 @@ export default function RoutesPage() {
         ref={mapRef}
         initialViewState={initialViewState}
         style={{ width: '100%', height: '100%' }}
-        mapStyle="mapbox://styles/mapbox/light-v11"
+        mapStyle="mapbox://styles/mapbox/streets-v12"
         mapboxAccessToken={MAPBOX_TOKEN}
         interactiveLayerIds={Object.keys(roadColorMapping)}
       >
@@ -298,27 +298,27 @@ export default function RoutesPage() {
               />
             </Source>
             {Object.entries(roadColorMapping).map(([type, color]) => (
-                <Layer
-                    key={`highlight-${type}`}
-                    id={`highlight-${type}`}
-                    type="line"
-                    source="composite"
-                    source-layer="road"
-                    filter={[
-                        'all',
-                        ['==', 'class', type],
-                    ]}
-                    layout={{
-                      'line-join': 'round',
-                      'line-cap': 'round',
-                       visibility: selectedTypes.includes(type) ? 'visible' : 'none',
-                    }}
-                    paint={{
-                        'line-color': color,
-                        'line-width': 5,
-                        'line-opacity': 1,
-                    }}
-                />
+              <Layer
+                key={`highlight-${type}`}
+                id={`highlight-${type}`}
+                type="line"
+                source="composite"
+                source-layer="road"
+                filter={[
+                  'all',
+                  ['==', 'class', type]
+                ]}
+                layout={{
+                  'line-join': 'round',
+                  'line-cap': 'round',
+                   visibility: selectedTypes.includes(type) ? 'visible' : 'none',
+                }}
+                paint={{
+                  'line-color': color,
+                  'line-width': 5,
+                  'line-opacity': 1,
+                }}
+              />
             ))}
           </>
         )}

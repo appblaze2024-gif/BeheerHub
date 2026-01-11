@@ -320,7 +320,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
           <Map
             ref={mapRef}
             initialViewState={initialViewState}
-            mapStyle="mapbox://styles/mapbox/light-v11"
+            mapStyle="mapbox://styles/mapbox/streets-v12"
             mapboxAccessToken={MAPBOX_TOKEN}
             onLoad={onMapLoad}
             preserveDrawingBuffer
