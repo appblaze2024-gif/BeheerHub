@@ -17,7 +17,7 @@ import { Separator } from '@/components/ui/separator';
 import { GemeenteSelectDialog } from '@/components/gemeente-select-dialog';
 import * as turf from '@turf/turf';
 import { useFirestore, useUser, useCollection } from '@/firebase';
-import { collection, query, orderBy, getDocs, deleteDoc, doc, addDoc } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, deleteDoc, doc, addDoc, limit } from 'firebase/firestore';
 
 const MAPBOX_TOKEN =
   'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -273,10 +273,11 @@ export default function RoutesPage() {
                 type="line"
                 source="composite"
                 source-layer="road"
+                filter={['==', 'class', type]}
                 layout={{
                   'line-join': 'round',
                   'line-cap': 'round',
-                  visibility: selectedTypes.includes(type) ? 'visible' : 'none',
+                  visibility: maskPolygon ? 'none' : (selectedTypes.includes(type) ? 'visible' : 'none'),
                 }}
                 paint={{
                   'line-color': color,
@@ -287,22 +288,35 @@ export default function RoutesPage() {
         ))}
 
         {maskPolygon && (
-          <Source id="mask-source" type="geojson" data={maskPolygon}>
-            <Layer
-              id="mask-layer"
-              type="fill"
-              paint={{ 'fill-color': 'rgba(0, 0, 0, 0.5)' }}
-            />
-             <Layer
-              id="mask-outline-layer"
-              type="line"
-              paint={{
-                'line-color': '#000000',
-                'line-width': 2,
-                'line-opacity': 0.8,
-              }}
-            />
-          </Source>
+          <>
+            <Source id="mask-source" type="geojson" data={maskPolygon}>
+              <Layer
+                id="mask-layer"
+                type="fill"
+                paint={{ 'fill-color': 'rgba(0, 0, 0, 0.5)' }}
+              />
+            </Source>
+            {Object.entries(roadColorMapping).map(([type, color]) => (
+              <Layer
+                key={`highlight-${type}`}
+                id={`highlight-${type}`}
+                type="line"
+                source="composite"
+                source-layer="road"
+                filter={['==', 'class', type]}
+                layout={{
+                  'line-join': 'round',
+                  'line-cap': 'round',
+                  visibility: selectedTypes.includes(type) ? 'visible' : 'none',
+                }}
+                paint={{
+                  'line-color': color,
+                  'line-width': 4,
+                  'line-opacity': 1,
+                }}
+              />
+            ))}
+          </>
         )}
       </Map>
       <GemeenteSelectDialog 
