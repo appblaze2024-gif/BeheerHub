@@ -42,28 +42,28 @@ export const allRoadTypes: Record<string, string> = {
 
 // Kleurcodering voor elk wegtype.
 export const roadColorMapping: Record<string, string> = {
-    motorway: '#e60000', // Bright Red
-    motorway_link: '#ff8000', // Orange
-    trunk: '#e6e600', // Yellow
-    trunk_link: '#80ff00', // Light Green
-    primary: '#00ffbf', // Aqua Green
-    primary_link: '#00bfff', // Sky Blue
-    secondary: '#0040ff', // Royal Blue
-    secondary_link: '#8000ff', // Purple
-    tertiary: '#ff00ff', // Magenta
-    tertiary_link: '#ff0080', // Hot Pink
-    street: '#333333', // Dark Gray
-    street_limited: '#666666', // Medium Gray
-    pedestrian: '#999999', // Light Gray
-    path: '#bf4040', // Brownish Red
-    track: '#8c6600', // Brown
-    service: '#a9a9a9', // Default Gray for contrast
-    ferry: '#40a6ff', // Light Blue
-    living_street: '#ffcce6', // Light Pink
-    residential: '#cccccc', // Lighter Gray
-    road: '#f2f2f2',     // Very Light Gray
-    unclassified: '#ffffff', // White
-    roundabout: '#000000', // Black
+    motorway: '#ff7e33', // Oranje
+    motorway_link: '#ff7e33',
+    trunk: '#ffc133', // Licht oranje/geel
+    trunk_link: '#ffc133',
+    primary: '#fde433', // Geel
+    primary_link: '#fde433',
+    secondary: '#ffffff', // Wit
+    secondary_link: '#ffffff',
+    tertiary: '#ffffff', // Wit
+    tertiary_link: '#ffffff',
+    street: '#d9d9d9', // Lichtgrijs
+    street_limited: '#d9d9d9',
+    residential: '#d9d9d9',
+    living_street: '#e6e6e6', // Zeer lichtgrijs
+    road: '#d9d9d9',
+    unclassified: '#d9d9d9',
+    service: '#cccccc', // Iets donkerder grijs
+    path: '#a68f7b', // Bruinachtig
+    track: '#a68f7b',
+    pedestrian: '#b3b3b3', // Grijs voor voetgangers
+    ferry: '#40a6ff', // Lichtblauw voor veerboot
+    roundabout: '#d9d9d9', // Zelfde als straat
 };
 
 
