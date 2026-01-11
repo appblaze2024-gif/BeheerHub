@@ -11,13 +11,13 @@ import {
   roadColorMapping,
 } from '@/components/road-type-filter-dialog';
 import { Edit, Trash2, Layers, X, Search } from 'lucide-react';
-import * as turf from '@turf/turf';
 import type { Feature, FeatureCollection, Polygon, MultiPolygon } from 'geojson';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { GemeenteSelectDialog } from '@/components/gemeente-select-dialog';
+import * as turf from '@turf/turf';
 
 const MAPBOX_TOKEN =
   'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -107,56 +107,25 @@ export default function RoutesPage() {
       if (bbox[0] !== Infinity) {
         mapRef.current.getMap().fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
       }
+
+      // Query roads after the polygon is set and map has moved
+      const map = mapRef.current.getMap();
+      const afterMove = () => {
+        const roadsInside = map.querySourceFeatures('composite', {
+          sourceLayer: 'road'
+        });
+        const roadsInPolygon = roadsInside.filter(road => {
+            const roadPoints = turf.coordAll(road.geometry);
+            // Check if at least one point of the road is inside the polygon
+            return roadPoints.some(point => turf.booleanPointInPolygon(point, gemeenteFeature as Feature<Polygon | MultiPolygon>));
+        });
+        setHighlightedRoads(turf.featureCollection(roadsInPolygon));
+        map.off('moveend', afterMove);
+      };
+      map.on('moveend', afterMove);
     }
     setIsGemeenteDialogOpen(false);
   };
-  
-  const updateHighlightedRoads = React.useCallback(() => {
-    const map = mapRef.current?.getMap();
-    if (!map || !maskPolygon || drawnFeatures.length === 0) {
-      setHighlightedRoads(null);
-      return;
-    }
-
-    const polygonFeature = drawnFeatures[0];
-    if (!polygonFeature || !['Polygon', 'MultiPolygon'].includes(polygonFeature.geometry.type)) {
-      setHighlightedRoads(null);
-      return;
-    }
-
-    const roadsInside = map.querySourceFeatures('composite', {
-      sourceLayer: 'road',
-    });
-
-    const clippedRoads = turf.featureCollection(
-      roadsInside.map(road => {
-        try {
-          return turf.intersect(road.geometry, polygonFeature.geometry);
-        } catch (e) {
-          return null; // turf.intersect can throw error on invalid topologies
-        }
-      }).filter(Boolean) as Feature[]
-    );
-  
-    setHighlightedRoads(clippedRoads);
-
-  }, [drawnFeatures, maskPolygon]);
-
-  React.useEffect(() => {
-    const map = mapRef.current?.getMap();
-    if (map) {
-      const handleData = (e: any) => {
-        if (e.sourceId === 'composite' && e.isSourceLoaded) {
-          updateHighlightedRoads();
-        }
-      }
-      map.on('sourcedata', handleData);
-
-      return () => {
-        map.off('sourcedata', handleData);
-      }
-    }
-  }, [updateHighlightedRoads]);
 
   const handleCheckedChange = (type: string, checked: boolean) => {
     const newSelectedTypes = checked
@@ -310,12 +279,12 @@ export default function RoutesPage() {
             layout={{ 
               'line-join': 'round', 
               'line-cap': 'round',
-              'visibility': selectedTypes.includes(type) ? 'visible' : 'none'
+              'visibility': maskPolygon ? 'none' : (selectedTypes.includes(type) ? 'visible' : 'none')
             }}
             paint={{
               'line-color': color,
               'line-width': 4,
-              'line-opacity': maskPolygon ? 0 : 0.8,
+              'line-opacity': 0.8,
             }}
           />
         ))}
