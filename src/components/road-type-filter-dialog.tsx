@@ -13,6 +13,13 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from './ui/scroll-area';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { ChevronDown } from 'lucide-react';
 
 // Uitgebreide lijst met Engelse Mapbox-classificaties en hun Nederlandse vertalingen.
 export const allRoadTypes: Record<string, string> = {
@@ -137,6 +144,8 @@ export function RoadTypeFilterDialog({
       'street',
       'street_limited',
       'service',
+      'footway',
+      'cycleway'
     ];
     const availableBrushTypes = brushTypes.filter((type) =>
       availableTypes.includes(type)
@@ -166,38 +175,20 @@ export function RoadTypeFilterDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-wrap items-center gap-2 mb-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleSelectAll}
-              disabled={availableTypes.length === 0}
-            >
-              Alles
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleDeselectAll}
-              disabled={availableTypes.length === 0}
-            >
-              Niets
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleSelectSweepRoutes}
-              disabled={availableTypes.length === 0}
-            >
-              Veegwagen
-            </Button>
-             <Button
-              size="sm"
-              variant="outline"
-              onClick={handleSelectBrushRoutes}
-              disabled={availableTypes.length === 0}
-            >
-              Borstelen
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  Voorinstellingen
+                  <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={handleSelectAll}>Alles</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDeselectAll}>Niets</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSelectSweepRoutes}>Veegwagen</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSelectBrushRoutes}>Borstelen</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         {sortedAvailableTypes.length > 0 ? (
           <ScrollArea className="max-h-[60vh] h-full">
