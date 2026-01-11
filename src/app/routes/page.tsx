@@ -17,7 +17,7 @@ import { Separator } from '@/components/ui/separator';
 import { GemeenteSelectDialog } from '@/components/gemeente-select-dialog';
 import * as turf from '@turf/turf';
 import { useFirestore, useUser, useCollection } from '@/firebase';
-import { collection, addDoc, query, orderBy, limit, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, getDocs, deleteDoc, doc } from 'firebase/firestore';
 
 const MAPBOX_TOKEN =
   'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -40,21 +40,25 @@ export default function RoutesPage() {
 
   const routesQuery = React.useMemo(() => {
       if (!routesCollectionRef) return null;
+      // We only ever care about the most recent route selection.
       return query(routesCollectionRef, orderBy('createdAt', 'desc'), limit(1));
   }, [routesCollectionRef]);
 
+  // This hook now only fetches the single, most recent route document.
   const { data: routes, isLoading: isLoadingRoutes } = useCollection(routesQuery);
 
+  // Effect to set the active route based on what's fetched from Firestore.
   React.useEffect(() => {
-    if (routes && routes.length > 0) {
-        if (routes[0].id !== activeRoute?.id) {
-            setActiveRoute(routes[0]);
+    if (routes) { // routes is now an array with 0 or 1 elements.
+        const currentRoute = routes[0] || null;
+        if (currentRoute?.id !== activeRoute?.id) {
+             setActiveRoute(currentRoute);
         }
-    } else {
-        setActiveRoute(null);
     }
   }, [routes, activeRoute]);
 
+
+  // This effect fetches the geometry for the active route and creates the visual mask.
   React.useEffect(() => {
     const fetchAndSetPolygon = async () => {
         if (activeRoute && activeRoute.gemeente) {
@@ -71,14 +75,17 @@ export default function RoutesPage() {
                     geometry: data[0].geojson,
                 };
                 
+                // Create a polygon that covers the whole world.
                 const outerPolygon = turf.polygon([[
                     [-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90]
                 ]]);
                 
                 try {
+                    // "Cut out" the municipality shape from the world-covering polygon.
                     const mask = turf.difference(outerPolygon, feature);
                     setMaskPolygon(mask);
                     
+                    // Fit the map view to the selected municipality.
                     const map = mapRef.current?.getMap();
                     if(map) {
                       const bbox = turf.bbox(feature);
@@ -86,16 +93,19 @@ export default function RoutesPage() {
                     }
                 } catch (e) {
                     console.error("Error creating mask polygon:", e);
-                    setMaskPolygon(null);
+                    setMaskPolygon(null); // Reset on error
                 }
+            } else {
+                 setMaskPolygon(null);
             }
         } else {
-            setMaskPolygon(null);
+            setMaskPolygon(null); // Clear mask if no active route
         }
     };
     fetchAndSetPolygon();
-  }, [activeRoute]);
+  }, [activeRoute]); // Rerun when the active route changes.
 
+  // Deletes all routes for the current user and resets the UI.
   const clearSelection = async () => {
     if (routesCollectionRef) {
       const querySnapshot = await getDocs(routesCollectionRef);
@@ -104,9 +114,9 @@ export default function RoutesPage() {
       );
       await Promise.all(deletePromises);
     }
-    setActiveRoute(null);
-    setMaskPolygon(null);
-    setSelectedTypes([]);
+    // This will trigger the useCollection hook to get an empty array,
+    // which in turn will set activeRoute and maskPolygon to null.
+    setSelectedTypes([]); // Also clear selected types
     mapRef.current?.getMap().flyTo({
         center: [5.2913, 52.1326],
         zoom: 7,
@@ -114,15 +124,22 @@ export default function RoutesPage() {
     });
   };
   
+  // Called when a user selects a municipality from the dialog.
+  // This is the starting point of the user flow.
   const handleGemeenteSelect = async (gemeenteFeature: Feature<Polygon | MultiPolygon>) => {
     const gemeenteName = gemeenteFeature.properties?.name || 'Onbekend';
     
+    // First, clear any existing route selections.
+    await clearSelection();
+
+    // Now, add the new selection to Firestore.
     if (routesCollectionRef) {
         await addDoc(routesCollectionRef, { gemeente: gemeenteName, createdAt: new Date() });
     }
-
+    
+    // Close the dialog. The useCollection hook will pick up the new route and trigger the map update.
     setIsGemeenteDialogOpen(false);
-    setSelectedTypes([]); 
+    setSelectedTypes([]); // Explicitly reset filters.
   };
 
   const handleCheckedChange = (type: string, checked: boolean) => {
@@ -155,6 +172,7 @@ export default function RoutesPage() {
     setSelectedTypes(sweepTypes);
   };
   
+  // Disable the filter UI if no municipality is active.
   const isFilterDisabled = !activeRoute;
 
   const initialViewState = {
@@ -232,7 +250,7 @@ export default function RoutesPage() {
                   </div>
                 </ScrollArea>
               </fieldset>
-               {isFilterDisabled && (
+               {isFilterDisabled && !isLoadingRoutes && (
                 <div className="text-xs text-muted-foreground mt-2">Selecteer eerst een gemeente.</div>
               )}
             </CardContent>
@@ -259,11 +277,11 @@ export default function RoutesPage() {
         mapboxAccessToken={MAPBOX_TOKEN}
         interactiveLayerIds={Object.keys(roadColorMapping)}
       >
-        {/* Base road layers - visible only when NO municipality is selected */}
+        {/* Base road layers */}
         {Object.entries(roadColorMapping).map(([type, color]) => (
             <Layer
-                key={`base-${type}`}
-                id={`base-${type}`}
+                key={type}
+                id={type}
                 type="line"
                 source="composite"
                 source-layer="road"
@@ -271,7 +289,8 @@ export default function RoutesPage() {
                 layout={{
                   'line-join': 'round',
                   'line-cap': 'round',
-                  'visibility': maskPolygon ? 'none' : 'visible',
+                   // Hide this layer if a mask is active OR if the type is not selected
+                  'visibility': maskPolygon && !selectedTypes.includes(type) ? 'none' : 'visible'
                 }}
                 paint={{
                   'line-color': color,
@@ -281,7 +300,7 @@ export default function RoutesPage() {
             />
         ))}
 
-         {/* Mask layer to dim everything outside the selected polygon */}
+        {/* Mask layer to dim everything outside the selected polygon */}
         {maskPolygon && (
           <Source id="mask-source" type="geojson" data={maskPolygon}>
             <Layer
@@ -291,28 +310,6 @@ export default function RoutesPage() {
             />
           </Source>
         )}
-
-        {/* Highlighted road layers for selected municipality */}
-        {maskPolygon && Object.entries(roadColorMapping).map(([type, color]) => (
-            <Layer
-                key={`highlight-${type}`}
-                id={`highlight-${type}`}
-                type="line"
-                source="composite"
-                source-layer="road"
-                filter={['==', 'class', type]}
-                layout={{
-                    'line-join': 'round',
-                    'line-cap': 'round',
-                    'visibility': selectedTypes.includes(type) ? 'visible' : 'none',
-                }}
-                paint={{
-                    'line-color': color,
-                    'line-width': 5, // Slightly thicker for emphasis
-                    'line-opacity': 1,
-                }}
-            />
-        ))}
       </Map>
       <GemeenteSelectDialog 
         open={isGemeenteDialogOpen}
