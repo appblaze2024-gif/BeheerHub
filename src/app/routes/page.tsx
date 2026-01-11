@@ -174,11 +174,7 @@ export default function RoutesPage() {
 
   return (
     <div className="flex flex-col flex-1 min-h-0 relative">
-      <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
-        <Button onClick={() => setShowFilter(!showFilter)} className="w-fit">
-          <Layers className="mr-2 h-4 w-4" /> Wegtypes
-        </Button>
-
+      <div className="absolute top-4 left-4 z-10">
         {showFilter && (
           <Card className="w-80 shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between">
@@ -248,7 +244,10 @@ export default function RoutesPage() {
         )}
       </div>
 
-      <div className="absolute top-4 right-4 z-10 flex gap-2">
+      <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
+         <Button onClick={() => setShowFilter(!showFilter)} className="w-fit">
+          <Layers className="mr-2 h-4 w-4" /> Wegtypes
+        </Button>
         <Button onClick={() => setIsGemeenteDialogOpen(true)}>
           <Search className="mr-2 h-4 w-4" /> Kies Gemeente
         </Button>
@@ -294,7 +293,7 @@ export default function RoutesPage() {
               <Layer
                 id="mask-layer"
                 type="fill"
-                paint={{ 'fill-color': '#000000', 'fill-opacity': 1 }}
+                paint={{ 'fill-color': '#000000', 'fill-opacity': 0.8 }}
               />
             </Source>
             {Object.entries(roadColorMapping).map(([type, color]) => (
