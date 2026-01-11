@@ -17,7 +17,7 @@ import { Separator } from '@/components/ui/separator';
 import { GemeenteSelectDialog } from '@/components/gemeente-select-dialog';
 import * as turf from '@turf/turf';
 import { useFirestore, useUser, useCollection } from '@/firebase';
-import { collection, query, orderBy, deleteDoc, doc, addDoc, getDocs, limit } from 'firebase/firestore';
+import { collection, query, orderBy, deleteDoc, doc, addDoc, getDocs, limit, updateDoc } from 'firebase/firestore';
 
 const MAPBOX_TOKEN =
   'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -197,7 +197,7 @@ export default function RoutesPage() {
                   onClick={handleSelectSweepRoutes}
                   disabled={isFilterDisabled}
                 >
-                  Veegroutes
+                  Veegwagen
                 </Button>
               </div>
               <Separator className="mb-4" />
@@ -255,14 +255,6 @@ export default function RoutesPage() {
           className="w-48 justify-start"
         >
           <Layers className="mr-2 h-4 w-4" /> Wegtypes
-        </Button>
-        <Button
-          onClick={handleSelectSweepRoutes}
-          className="w-48 justify-start"
-          variant="outline"
-          disabled={isFilterDisabled}
-        >
-          Veegroutes
         </Button>
       </div>
 
