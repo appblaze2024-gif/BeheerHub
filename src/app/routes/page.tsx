@@ -74,15 +74,11 @@ export default function RoutesPage() {
         roadsInside.map(road => turf.intersect(road.geometry, polygon)!).filter(Boolean) as any
     );
   
-    const roadsToShow = clippedRoads.features.filter((f) =>
-      selectedTypes.includes(f.properties?.class)
-    );
-  
     setFilteredRoads({
       type: 'FeatureCollection',
-      features: roadsToShow,
+      features: clippedRoads.features,
     });
-  }, [drawnFeatures, selectedTypes]);
+  }, [drawnFeatures]);
 
   const onMapLoad = React.useCallback(() => {
     if (mapRef.current && !drawRef.current) {
@@ -115,7 +111,7 @@ export default function RoutesPage() {
     if(mapRef.current?.getMap()?.isStyleLoaded()) {
       updateFilteredRoads();
     }
-  }, [selectedTypes, drawnFeatures, updateFilteredRoads]);
+  }, [drawnFeatures, updateFilteredRoads]);
 
 
   const startDrawing = () => {
@@ -195,6 +191,14 @@ export default function RoutesPage() {
     ];
     setSelectedTypes(sweepTypes);
   };
+
+  const roadsToDisplay = React.useMemo(() => {
+    if (!filteredRoads) return null;
+    return {
+      ...filteredRoads,
+      features: filteredRoads.features.filter(f => selectedTypes.includes(f.properties?.class))
+    };
+  }, [filteredRoads, selectedTypes]);
 
   return (
     <div className="flex flex-col flex-1 min-h-0 relative">
@@ -315,25 +319,31 @@ export default function RoutesPage() {
             source="composite"
             source-layer="road"
             filter={['==', 'class', type]}
-            layout={{ 'line-join': 'round', 'line-cap': 'round' }}
+            layout={{ 'line-join': 'round', 'line-cap': 'round', 'visibility': maskPolygon ? 'none' : 'visible' }}
             paint={{
               'line-color': color,
               'line-width': 4,
-              'line-opacity': maskPolygon ? (selectedTypes.includes(type) ? 0.8 : 0) : (selectedTypes.includes(type) ? 0.8 : 0.1),
+              'line-opacity': 0.8,
             }}
           />
         ))}
 
-        {filteredRoads && (
-          <Source id="filtered-roads" type="geojson" data={filteredRoads}>
+        {roadsToDisplay && (
+          <Source id="filtered-roads" type="geojson" data={roadsToDisplay}>
             <Layer
               id="highlight-layer"
               type="line"
               paint={{
-                'line-color': '#ff00ff', // Magenta highlight
+                'line-color': [
+                  'match',
+                  ['get', 'class'],
+                  ...Object.entries(roadColorMapping).flat(),
+                  '#000000' // fallback color
+                ],
                 'line-width': 5,
                 'line-opacity': 0.9,
               }}
+              layout={{ 'line-join': 'round', 'line-cap': 'round' }}
             />
           </Source>
         )}
