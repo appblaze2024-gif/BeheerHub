@@ -31,7 +31,6 @@ export default function RoutesPage() {
   const [showFilter, setShowFilter] = React.useState(true);
   const [isGemeenteDialogOpen, setIsGemeenteDialogOpen] = React.useState(false);
   const [maskPolygon, setMaskPolygon] = React.useState<Feature<Polygon | MultiPolygon> | null>(null);
-  const [highlightedRoads, setHighlightedRoads] = React.useState<FeatureCollection | null>(null);
   const [activeRoute, setActiveRoute] = React.useState<any | null>(null);
   
   const routesCollectionRef = React.useMemo(() => {
@@ -39,7 +38,6 @@ export default function RoutesPage() {
     return collection(firestore, 'users', user.uid, 'routes');
   }, [user, firestore]);
 
-  // Use a query to get the most recent route.
   const routesQuery = React.useMemo(() => {
       if (!routesCollectionRef) return null;
       return query(routesCollectionRef, orderBy('createdAt', 'desc'), limit(1));
@@ -47,7 +45,6 @@ export default function RoutesPage() {
 
   const { data: routes, isLoading: isLoadingRoutes } = useCollection(routesQuery);
 
-  // Fetch polygon data when the active route changes
   React.useEffect(() => {
     if (routes && routes.length > 0) {
         if (routes[0].id !== activeRoute?.id) {
@@ -73,8 +70,7 @@ export default function RoutesPage() {
                     properties: { name: data[0].display_name },
                     geometry: data[0].geojson,
                 };
-                setMaskPolygon(feature);
-
+                
                 const outerPolygon = turf.polygon([[
                     [-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90]
                 ]]);
@@ -82,59 +78,26 @@ export default function RoutesPage() {
                 try {
                     const mask = turf.difference(outerPolygon, feature);
                     setMaskPolygon(mask);
+                    
+                    const map = mapRef.current?.getMap();
+                    if(map) {
+                      const bbox = turf.bbox(feature);
+                      map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
+                    }
                 } catch (e) {
                     console.error("Error creating mask polygon:", e);
-                    setMaskPolygon(null); // Fallback
+                    setMaskPolygon(null);
                 }
             }
         } else {
             setMaskPolygon(null);
-            setHighlightedRoads(null);
         }
     };
     fetchAndSetPolygon();
   }, [activeRoute]);
 
-
-  const updateHighlightedRoads = React.useCallback(() => {
-    if (!maskPolygon || !mapRef.current) return;
-
-    const map = mapRef.current.getMap();
-    if (!map.isStyleLoaded()) return;
-
-    const roadsInside = map.querySourceFeatures('composite', {
-      sourceLayer: 'road',
-    });
-    
-    setHighlightedRoads(turf.featureCollection(roadsInside));
-  }, [maskPolygon]);
-
-  React.useEffect(() => {
-    const map = mapRef.current?.getMap();
-    if (!map || !maskPolygon) return;
-    
-    const handleData = () => {
-        if (map.isStyleLoaded() && map.getSource('composite')) {
-            updateHighlightedRoads();
-            map.off('sourcedata', handleData); // Run only once after source is loaded
-        }
-    };
-
-    if (map.isStyleLoaded() && map.getSource('composite')) {
-       updateHighlightedRoads();
-    } else {
-       map.on('sourcedata', handleData);
-    }
-    
-    return () => {
-      map.off('sourcedata', handleData);
-    };
-
-  }, [maskPolygon, updateHighlightedRoads]);
-
   const clearSelection = async () => {
     if (routesCollectionRef) {
-      // Fetch and delete all documents in the collection
       const querySnapshot = await getDocs(routesCollectionRef);
       const deletePromises = querySnapshot.docs.map(docSnapshot => 
         deleteDoc(doc(routesCollectionRef, docSnapshot.id))
@@ -144,7 +107,6 @@ export default function RoutesPage() {
     setActiveRoute(null);
     setMaskPolygon(null);
     setSelectedTypes([]);
-    setHighlightedRoads(null);
     mapRef.current?.getMap().flyTo({
         center: [5.2913, 52.1326],
         zoom: 7,
@@ -160,7 +122,7 @@ export default function RoutesPage() {
     }
 
     setIsGemeenteDialogOpen(false);
-    setSelectedTypes([]); // Reset filters on new selection
+    setSelectedTypes([]); 
   };
 
   const handleCheckedChange = (type: string, checked: boolean) => {
@@ -297,24 +259,24 @@ export default function RoutesPage() {
         mapboxAccessToken={MAPBOX_TOKEN}
         interactiveLayerIds={Object.keys(roadColorMapping)}
       >
-        {/* Base road layers */}
+        {/* Base road layers - visible only when NO municipality is selected */}
         {Object.entries(roadColorMapping).map(([type, color]) => (
             <Layer
-                key={type}
-                id={type}
+                key={`base-${type}`}
+                id={`base-${type}`}
                 type="line"
                 source="composite"
                 source-layer="road"
                 filter={['==', 'class', type]}
                 layout={{
-                'line-join': 'round',
-                'line-cap': 'round',
-                'visibility': maskPolygon ? 'none' : 'visible',
+                  'line-join': 'round',
+                  'line-cap': 'round',
+                  'visibility': maskPolygon ? 'none' : 'visible',
                 }}
                 paint={{
-                'line-color': color,
-                'line-width': 4,
-                'line-opacity': 0.8,
+                  'line-color': color,
+                  'line-width': 4,
+                  'line-opacity': 0.8,
                 }}
             />
         ))}
@@ -331,28 +293,26 @@ export default function RoutesPage() {
         )}
 
         {/* Highlighted road layers for selected municipality */}
-        {highlightedRoads && maskPolygon && (
-          <Source id="highlighted-roads" type="geojson" data={highlightedRoads}>
-            {Object.entries(roadColorMapping).map(([type, color]) => (
-                <Layer
-                    key={`highlight-${type}`}
-                    id={`highlight-${type}`}
-                    type="line"
-                    source="highlighted-roads"
-                    filter={['==', 'class', type]}
-                    layout={{
-                      'line-join': 'round',
-                      'line-cap': 'round',
-                      'visibility': selectedTypes.includes(type) ? 'visible' : 'none',
-                    }}
-                    paint={{
-                      'line-color': color,
-                      'line-width': 4,
-                    }}
-                />
-            ))}
-          </Source>
-        )}
+        {maskPolygon && Object.entries(roadColorMapping).map(([type, color]) => (
+            <Layer
+                key={`highlight-${type}`}
+                id={`highlight-${type}`}
+                type="line"
+                source="composite"
+                source-layer="road"
+                filter={['==', 'class', type]}
+                layout={{
+                    'line-join': 'round',
+                    'line-cap': 'round',
+                    'visibility': selectedTypes.includes(type) ? 'visible' : 'none',
+                }}
+                paint={{
+                    'line-color': color,
+                    'line-width': 5, // Slightly thicker for emphasis
+                    'line-opacity': 1,
+                }}
+            />
+        ))}
       </Map>
       <GemeenteSelectDialog 
         open={isGemeenteDialogOpen}
