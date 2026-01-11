@@ -174,40 +174,7 @@ export function RoadTypeFilterDialog({
             Selecteer de wegtypes die u wilt opnemen in de route.
           </DialogDescription>
         </DialogHeader>
-        {sortedAvailableTypes.length > 0 ? (
-          <ScrollArea className="max-h-[60vh] h-full">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 p-1">
-              {sortedAvailableTypes.map((type) => (
-                <div key={type} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`type-${type}`}
-                    checked={selectedTypes.includes(type)}
-                    onCheckedChange={(checked) =>
-                      handleCheckedChange(type, !!checked)
-                    }
-                    style={{ color: roadColorMapping[type] }}
-                  />
-                  <Label
-                    htmlFor={`type-${type}`}
-                    className="font-normal capitalize flex items-center gap-2"
-                  >
-                    <div
-                      className="h-3 w-3 rounded-sm"
-                      style={{ backgroundColor: roadColorMapping[type] }}
-                    />
-                    {allRoadTypes[type] || type.replace(/_/g, ' ')}
-                  </Label>
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
-        ) : (
-          <div className="text-center text-muted-foreground p-8">
-            Geen wegen gevonden in het geselecteerde gebied.
-          </div>
-        )}
-        <DialogFooter className="sm:justify-between w-full">
-          <div className="flex gap-2 flex-wrap">
+        <div className="flex items-center gap-2 mb-2">
             <Button
               size="sm"
               variant="outline"
@@ -241,6 +208,39 @@ export function RoadTypeFilterDialog({
               Borstelen
             </Button>
           </div>
+        {sortedAvailableTypes.length > 0 ? (
+          <ScrollArea className="max-h-[60vh] h-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 p-1">
+              {sortedAvailableTypes.map((type) => (
+                <div key={type} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`type-${type}`}
+                    checked={selectedTypes.includes(type)}
+                    onCheckedChange={(checked) =>
+                      handleCheckedChange(type, !!checked)
+                    }
+                    style={{ color: roadColorMapping[type] }}
+                  />
+                  <Label
+                    htmlFor={`type-${type}`}
+                    className="font-normal capitalize flex items-center gap-2"
+                  >
+                    <div
+                      className="h-3 w-3 rounded-sm"
+                      style={{ backgroundColor: roadColorMapping[type] }}
+                    />
+                    {allRoadTypes[type] || type.replace(/_/g, ' ')}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        ) : (
+          <div className="text-center text-muted-foreground p-8">
+            Geen wegen gevonden in het geselecteerde gebied.
+          </div>
+        )}
+        <DialogFooter className="sm:justify-end w-full">
           <div className="flex gap-2">
             <Button variant="ghost" onClick={() => onOpenChange(false)}>
               Annuleren
