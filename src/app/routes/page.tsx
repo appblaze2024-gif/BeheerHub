@@ -65,6 +65,7 @@ export default function RoutesPage() {
         f.geometry.type === 'LineString' ||
         f.geometry.type === 'MultiLineString'
       ) {
+        // Use turf.booleanIntersects for better performance with complex polygons
         return turf.booleanIntersects(f.geometry, polygon);
       }
       return false;
@@ -99,7 +100,8 @@ export default function RoutesPage() {
       map.on('draw.update', updateFeatures);
       map.on('draw.delete', updateFeatures);
 
-      map.on('styledata', () => {
+      // It's better to update when the map is idle to ensure all tiles are loaded.
+      map.on('idle', () => {
         if (drawnFeatures.length > 0) {
           updateFilteredRoads();
         }
