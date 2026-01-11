@@ -49,7 +49,7 @@ export default function RoutesPage() {
     if (routes && routes.length > 0) {
       if(routes[0].id !== activeRoute?.id) {
          setActiveRoute(routes[0]);
-         setSelectedTypes([]); // Reset filter when route changes
+         setSelectedTypes(routes[0].selectedTypes || []);
       }
     } else if (routes && routes.length === 0) {
       setActiveRoute(null);
@@ -105,12 +105,9 @@ export default function RoutesPage() {
     const gemeenteName = gemeenteFeature.properties?.name || 'Onbekend';
     
     if (routesCollectionRef) {
-        // Clear old routes before adding a new one to ensure only one active route exists
-        const querySnapshot = await getDocs(routesCollectionRef);
-        const deletePromises = querySnapshot.docs.map(docSnapshot => deleteDoc(doc(routesCollectionRef, docSnapshot.id)));
-        await Promise.all(deletePromises);
-        
-        await addDoc(routesCollectionRef, { gemeente: gemeenteName, createdAt: new Date() });
+        const newRoute = { gemeente: gemeenteName, selectedTypes: [], createdAt: new Date() };
+        await addDoc(routesCollectionRef, newRoute);
+        setActiveRoute(newRoute);
     }
     
     setIsGemeenteDialogOpen(false);
@@ -146,7 +143,22 @@ export default function RoutesPage() {
     ];
     setSelectedTypes(sweepTypes);
   };
+
+  const handleSaveRoute = async () => {
+    if (!activeRoute || !routesCollectionRef) return;
   
+    // Since activeRoute is just a state object and not a doc ref,
+    // we need to find the corresponding document to update it.
+    // Assuming there's only one, based on the query.
+    if (routes && routes.length > 0) {
+      const routeToUpdateRef = doc(routesCollectionRef, routes[0].id);
+      await updateDoc(routeToUpdateRef, {
+        selectedTypes: selectedTypes,
+      });
+      // Optionally, show a success message
+    }
+  };
+
   const isFilterDisabled = !activeRoute;
 
   const initialViewState = {
@@ -211,7 +223,7 @@ export default function RoutesPage() {
                           >
                             <div
                               className="h-3 w-3 rounded-sm"
-                              style={{ backgroundColor: roadColorMapping[type] }}
+                              style={{ backgroundColor: roadColorMapping[type] || '#ccc' }}
                             />
                             {name}
                           </Label>
@@ -223,17 +235,34 @@ export default function RoutesPage() {
                {(isFilterDisabled && !isLoadingRoutes) && (
                 <div className="text-xs text-muted-foreground mt-2">Selecteer eerst een gemeente.</div>
               )}
+               {!isFilterDisabled && (
+                  <Button className='w-full mt-4' onClick={handleSaveRoute}>Route opslaan</Button>
+               )}
             </CardContent>
           </Card>
         )}
       </div>
 
       <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
-        <Button onClick={() => setIsGemeenteDialogOpen(true)} className="w-48 justify-start">
+        <Button
+          onClick={() => setIsGemeenteDialogOpen(true)}
+          className="w-48 justify-start"
+        >
           <Search className="mr-2 h-4 w-4" /> Kies Gemeente
         </Button>
-        <Button onClick={() => setShowFilter(!showFilter)} className="w-48 justify-start">
+        <Button
+          onClick={() => setShowFilter(!showFilter)}
+          className="w-48 justify-start"
+        >
           <Layers className="mr-2 h-4 w-4" /> Wegtypes
+        </Button>
+        <Button
+          onClick={handleSelectSweepRoutes}
+          className="w-48 justify-start"
+          variant="outline"
+          disabled={isFilterDisabled}
+        >
+          Veegroutes
         </Button>
       </div>
 
@@ -256,10 +285,10 @@ export default function RoutesPage() {
             layout={{
               'line-join': 'round',
               'line-cap': 'round',
-              visibility: maskPolygon ? 'none' : (selectedTypes.includes(type) ? 'visible' : 'none'),
+              visibility: maskPolygon ? 'none' : 'visible',
             }}
             paint={{
-              'line-color': color,
+              'line-color': '#cccccc',
               'line-width': 4,
               'line-opacity': 0.8,
             }}
