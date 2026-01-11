@@ -319,7 +319,7 @@ export default function RoutesPage() {
             paint={{
               'line-color': color,
               'line-width': 4,
-              'line-opacity': maskPolygon ? 0 : selectedTypes.includes(type) ? 0.8 : 0.1,
+              'line-opacity': maskPolygon ? (selectedTypes.includes(type) ? 0.8 : 0) : (selectedTypes.includes(type) ? 0.8 : 0.1),
             }}
           />
         ))}
