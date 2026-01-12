@@ -63,10 +63,12 @@ export default function RoutesPage() {
     if (selectedWijk && selectedWijk.subGebieden) {
       try {
         const features = JSON.parse(selectedWijk.subGebieden);
-        if (features && features.length > 0) {
-            const validGeometries = features.map((f: any) => f.geometry).filter(Boolean);
-            if (validGeometries.length > 0) {
-                const combined = turf.union(...validGeometries);
+        if (features && Array.isArray(features) && features.length > 0) {
+            // Filter for valid features with geometry before attempting to union
+            const validFeatures = features.filter(f => f && f.type === 'Feature' && f.geometry);
+            
+            if (validFeatures.length > 0) {
+                const combined = turf.union(...validFeatures);
                 if(combined) {
                     setWijkPolygon(combined);
                     const map = mapRef.current?.getMap();
@@ -74,11 +76,11 @@ export default function RoutesPage() {
                     const bbox = turf.bbox(combined);
                     map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
                     }
-                } else {
-                    setWijkPolygon(features[0]);
+                } else if (validFeatures.length === 1) { // Fallback for single valid feature if union fails
+                    setWijkPolygon(validFeatures[0]);
                     const map = mapRef.current?.getMap();
                     if (map) {
-                        const bbox = turf.bbox(features[0]);
+                        const bbox = turf.bbox(validFeatures[0]);
                         map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
                     }
                 }
