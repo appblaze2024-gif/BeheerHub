@@ -227,7 +227,7 @@ export default function NavigationModulePage() {
     try {
         const coordinates = limitedPoints.map(p => p.join(',')).join(';');
         const response = await fetch(
-            `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${coordinates}?geometries=geojson&overview=full&steps=true&access_token=${MAPBOX_TOKEN}`
+            `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${coordinates}?geometries=geojson&overview=full&steps=true&language=nl&access_token=${MAPBOX_TOKEN}`
         );
         const data = await response.json();
         
@@ -522,7 +522,7 @@ export default function NavigationModulePage() {
 
         {isNavigating && (
              <div className="absolute bottom-4 left-4 right-4 z-10 flex justify-between items-end">
-                <div className='flex flex-col gap-2'>
+                <div className='flex flex-col items-start gap-2'>
                    <div className="bg-card/90 backdrop-blur-sm p-2 rounded-lg shadow-lg text-card-foreground">
                         <div className="flex justify-between items-center mb-1 px-1">
                             <p className="font-semibold text-xs">Voortgang</p>
@@ -610,6 +610,7 @@ export default function NavigationModulePage() {
     </div>
   );
 }
+
 
 
 
