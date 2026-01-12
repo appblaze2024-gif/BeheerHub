@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import Map from 'react-map-gl';
+import Map, { Popup } from 'react-map-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import {
@@ -17,7 +17,7 @@ import { Wijk } from '@/app/projects/page';
 import { Input } from './ui/input';
 import { Loader2 } from 'lucide-react';
 import * as turf from '@turf/turf';
-import type { FillLayer, LineLayer, SymbolLayer } from 'react-map-gl';
+import type { FillLayer, LineLayer, SymbolLayer, MapLayerMouseEvent } from 'react-map-gl';
 import { Layer, Source } from 'react-map-gl';
 
 
@@ -37,6 +37,12 @@ interface Suggestion {
   geojson: any;
   lon: string;
   lat: string;
+}
+
+interface PopupInfo {
+  longitude: number;
+  latitude: number;
+  wijkNaam: string;
 }
 
 const polygonFillLayer: FillLayer = {
@@ -84,6 +90,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   const [isSearching, setIsSearching] = React.useState(false);
   const [suggestions, setSuggestions] = React.useState<Suggestion[]>([]);
   const [isDrawReady, setIsDrawReady] = React.useState(false);
+  const [popupInfo, setPopupInfo] = React.useState<PopupInfo | null>(null);
   const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   
   const initialFeaturesRef = React.useRef<any[]>([]);
@@ -115,12 +122,13 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     setIsDrawReady(false);
     setSearchQuery('');
     setSuggestions([]);
+    setPopupInfo(null);
     initialFeaturesRef.current = [];
   }, []);
 
 
   const onMapLoad = React.useCallback(() => {
-    if (mapRef.current && !drawRef.current) {
+    if (mapRef.current && !drawRef.current && !readOnly) {
       const map = mapRef.current.getMap();
       const draw = new MapboxDraw({
         displayControlsDefault: false,
@@ -194,8 +202,32 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
           map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
         }
       }
+    } else if (mapRef.current && readOnly) {
+       const map = mapRef.current.getMap();
+       if (geojson && geojson.features.length > 0) {
+           const bbox = turf.bbox(geojson);
+           if (bbox[0] !== Infinity) {
+               map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
+           }
+       }
     }
   }, [geojson, readOnly]);
+  
+  const handleMapClick = React.useCallback((event: MapLayerMouseEvent) => {
+    if (!readOnly || !event.features || event.features.length === 0) {
+      return;
+    }
+    
+    const clickedFeature = event.features[0];
+    if (clickedFeature.properties?.wijkNaam) {
+        setPopupInfo({
+            longitude: event.lngLat.lng,
+            latitude: event.lngLat.lat,
+            wijkNaam: clickedFeature.properties.wijkNaam,
+        });
+    }
+  }, [readOnly]);
+
 
   const handleSave = () => {
     if (drawRef.current && wijk) {
@@ -324,6 +356,9 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
             mapboxAccessToken={MAPBOX_TOKEN}
             onLoad={onMapLoad}
             preserveDrawingBuffer
+            interactiveLayerIds={readOnly ? ['wijk-polygon-fill'] : []}
+            onClick={handleMapClick}
+            cursor={readOnly ? 'pointer' : 'grab'}
           >
             {readOnly && geojson && (
               <Source id="wijk-polygons" type="geojson" data={geojson}>
@@ -331,6 +366,17 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                 <Layer {...polygonOutlineLayer} />
                 <Layer {...polygonLabelLayer} />
               </Source>
+            )}
+             {popupInfo && (
+                <Popup
+                    longitude={popupInfo.longitude}
+                    latitude={popupInfo.latitude}
+                    onClose={() => setPopupInfo(null)}
+                    closeOnClick={false}
+                    anchor="bottom"
+                >
+                    <div className='p-1 font-semibold'>{popupInfo.wijkNaam}</div>
+                </Popup>
             )}
           </Map>
         </div>
