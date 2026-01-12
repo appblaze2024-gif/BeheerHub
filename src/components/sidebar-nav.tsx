@@ -24,7 +24,6 @@ import {
   User,
   Settings,
   LogOut,
-  Route,
 } from 'lucide-react';
 import { useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
@@ -42,7 +41,6 @@ const menuItems = [
   { href: '/machine-management', label: 'Machinebeheer', icon: Wrench },
   { href: '/objects', label: 'Objecten', icon: Building2 },
   { href: '/kaarten', label: 'Kaarten', icon: Map },
-  { href: '/route-planner', label: 'Routeplanner', icon: Route },
   { href: '/inventory', label: 'Voorraadbeheer', icon: Package },
   { href: '/issues', label: 'Meldingen', icon: Bell },
 ];
