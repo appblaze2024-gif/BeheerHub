@@ -237,12 +237,15 @@ export default function NavigationModulePage() {
   }, [selectedRoute]);
 
   const calculateRoute = async (points: (number[] | null)[]) => {
-    const validPoints = points.filter((p): p is [number, number] => 
-        p != null && Array.isArray(p) && p.length === 2 && !isNaN(p[0]) && !isNaN(p[1])
+    const validPoints = points.filter((p): p is [number, number] =>
+      p != null && Array.isArray(p) && p.length === 2 && !isNaN(p[0]) && !isNaN(p[1])
     );
-    
+
     if (validPoints.length < 2) {
       console.error("Not enough valid points to calculate a route.");
+      setRoute(null);
+      setRouteInfo(null);
+      setRouteInstructions([]);
       return;
     }
 
@@ -645,7 +648,7 @@ export default function NavigationModulePage() {
                         Markeer dit object als voltooid en ga verder naar de volgende.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter className="justify-center gap-4">
+                <AlertDialogFooter className="sm:justify-center gap-4">
                     <AlertDialogCancel asChild>
                          <Button variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600 focus-visible:ring-red-500'>
                             <XCircle className='h-10 w-10'/>
