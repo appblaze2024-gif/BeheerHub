@@ -426,7 +426,7 @@ export default function SweeperRoutePlannerPage() {
               source-layer="road"
               filter={["literal", false]} // Initially hide all layers
               layout={{ 'line-join': 'round', 'line-cap': 'round' }}
-              paint={{ 'line-color': color, 'line-width': 4, 'line-opacity': 0.8 }}
+              paint={{ 'line-color': color, 'line-width': 2, 'line-opacity': 0.8 }}
             />
           ))}
 
