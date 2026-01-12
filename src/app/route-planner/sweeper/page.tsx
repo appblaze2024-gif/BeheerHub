@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -394,19 +395,6 @@ export default function SweeperRoutePlannerPage() {
             </CardContent>
         </Card>
         
-        <Button onClick={handleGenerateRoute} disabled={isGeneratingRoute || selectedRoadTypes.length === 0} className="w-full">
-          {isGeneratingRoute ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Route berekenen...
-            </>
-          ) : (
-            <>
-              <RouteIcon className="mr-2 h-4 w-4" />
-              Genereer Route
-            </>
-          )}
-        </Button>
       </aside>
 
       <main className="flex-1 min-h-0 relative">
@@ -435,7 +423,7 @@ export default function SweeperRoutePlannerPage() {
               <Layer
                 id="wijk-polygon-fill"
                 type="fill"
-                paint={{ 'fill-color': '#000000', 'fill-opacity': 0 }}
+                paint={{ 'fill-color': '#000000', 'fill-opacity': 0.3 }}
               />
               <Layer
                 id="wijk-polygon-outline"
