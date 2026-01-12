@@ -374,7 +374,7 @@ export default function NavigationModulePage() {
           {...viewState}
           onMove={(evt) => setViewState(evt.viewState)}
           style={{ width: '100%', height: '100%' }}
-          mapStyle={isNavigating ? "mapbox://styles/mapbox/dark-v11" : "mapbox://styles/mapbox/streets-v12"}
+          mapStyle="mapbox://styles/mapbox/streets-v12"
           mapboxAccessToken={MAPBOX_TOKEN}
         >
           {origin && (
