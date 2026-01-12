@@ -43,7 +43,6 @@ const menuItems = [
   { href: '/objects', label: 'Objecten', icon: Building2 },
   { href: '/inventory', label: 'Voorraadbeheer', icon: Package },
   { href: '/issues', label: 'Meldingen', icon: Bell },
-  { href: '/trash-bins', label: 'Prullenbakken', icon: Trash2 },
 ];
 
 export function SidebarNav({ isCollapsed }: { isCollapsed: boolean }) {
