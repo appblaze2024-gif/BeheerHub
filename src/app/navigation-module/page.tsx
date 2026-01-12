@@ -261,7 +261,7 @@ export default function NavigationModulePage() {
                  <Button onClick={handleGenerateRoute} disabled={!selectedWijkId || objectsInWijk.length === 0 || isCalculating}>
                     {isCalculating ? (
                         <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Bezig...</>
-                    ) : 'Genereer Route'}
+                    ) : 'Start Route'}
                  </Button>
             </div>
         </div>
