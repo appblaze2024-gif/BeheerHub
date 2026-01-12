@@ -109,7 +109,7 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
 
   return (
     <div className="overflow-y-auto">
-      <div className="grid grid-cols-[auto_1fr_1fr_1fr_1fr_2fr_1fr_1fr_120px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
+      <div className="grid grid-cols-[auto_1fr_1fr_1fr_1fr_2fr_1fr_1fr_1fr_120px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
         <span>Tijd</span>
         <span>Intakenummer</span>
         <span>Extern Nr.</span>
@@ -118,13 +118,14 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
         <span>Adres</span>
         <span>Omschrijving</span>
         <span>Melder</span>
+        <span>Afgehandeld door</span>
         <span>Status</span>
       </div>
       {meldingen.map((melding) => (
         <div
           key={melding.id}
           onClick={() => onMeldingClick(melding)}
-          className="grid grid-cols-[auto_1fr_1fr_1fr_1fr_2fr_1fr_1fr_120px] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
+          className="grid grid-cols-[auto_1fr_1fr_1fr_1fr_2fr_1fr_1fr_1fr_120px] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
         >
           <span className="truncate">{melding.tijdstip || '-'}</span>
           <span className="font-medium truncate">{melding.intakenummer}</span>
@@ -134,6 +135,7 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
           <span className="truncate">{formatAdres(melding)}</span>
           <span className="truncate">{melding.extra_informatie}</span>
           <span className="truncate">{melding.melder || '-'}</span>
+          <span className="truncate">{melding.afgehandeld_door || '-'}</span>
           <Badge
             style={{
               backgroundColor: statusConfig[melding.status]?.color || '#ccc',
