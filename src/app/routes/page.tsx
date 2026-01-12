@@ -16,7 +16,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import * as turf from '@turf/turf';
 import { useFirestore, useCollection } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection } from 'firebase/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Wijk } from '@/app/projects/page';
 
@@ -39,6 +39,8 @@ export default function RoutesPage() {
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
   const [selectedWijkId, setSelectedWijkId] = React.useState<string | null>(null);
   const [wijkGeoJson, setWijkGeoJson] = React.useState<FeatureCollection | null>(null);
+  const [maskGeoJson, setMaskGeoJson] = React.useState<Feature<Polygon | MultiPolygon> | null>(null);
+
 
   const projectsCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -63,11 +65,29 @@ export default function RoutesPage() {
     if (selectedWijk && selectedWijk.subGebieden) {
       try {
         const features = JSON.parse(selectedWijk.subGebieden);
-        const validFeatures = Array.isArray(features) ? features.filter(f => f && f.type === 'Feature' && f.geometry && f.geometry.type) : [];
+        const validFeatures: Feature[] = Array.isArray(features) 
+          ? features.filter(f => f && f.type === 'Feature' && f.geometry) 
+          : [];
 
         if (validFeatures.length > 0) {
             const featureCollection = turf.featureCollection(validFeatures);
             setWijkGeoJson(featureCollection);
+
+            // Create the mask
+            let world = turf.polygon([[
+              [-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90]
+            ]]);
+
+            validFeatures.forEach(feature => {
+              if (feature.geometry) {
+                // turf.difference returns a Feature, not just a geometry
+                const newWorld = turf.difference(world, feature as Feature<Polygon | MultiPolygon>);
+                if (newWorld) {
+                    world = newWorld;
+                }
+              }
+            });
+            setMaskGeoJson(world);
 
             const map = mapRef.current?.getMap();
             if (map) {
@@ -76,13 +96,16 @@ export default function RoutesPage() {
             }
         } else {
             setWijkGeoJson(null);
+            setMaskGeoJson(null);
         }
       } catch (e) {
         console.error("Invalid GeoJSON in wijk.subGebieden", e);
         setWijkGeoJson(null);
+        setMaskGeoJson(null);
       }
     } else {
       setWijkGeoJson(null);
+      setMaskGeoJson(null);
     }
   }, [selectedWijkId, sortedWijken]);
 
@@ -201,6 +224,7 @@ export default function RoutesPage() {
                   setSelectedProjectId(value);
                   setSelectedWijkId(null);
                   setWijkGeoJson(null);
+                  setMaskGeoJson(null);
                 }}
                 disabled={isLoadingProjects}
               >
@@ -285,6 +309,19 @@ export default function RoutesPage() {
                     paint={{
                         'line-color': '#000000',
                         'line-width': 2
+                    }}
+                />
+            </Source>
+        )}
+        
+        {maskGeoJson && (
+            <Source id="mask-source" type="geojson" data={maskGeoJson}>
+                <Layer
+                    id="mask-layer"
+                    type="fill"
+                    paint={{
+                        'fill-color': 'black',
+                        'fill-opacity': 1
                     }}
                 />
             </Source>
