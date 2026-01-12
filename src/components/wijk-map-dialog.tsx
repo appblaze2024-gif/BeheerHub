@@ -247,17 +247,18 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
       );
       const data = await response.json();
       
-      let displayName = data.display_name;
+      let displayName: string;
       let canDraw = false;
-      // Try to find a more specific name for the popup
-      const relevantName = data.name || data.address?.neighbourhood || data.address?.suburb || data.address?.city_district;
-      if (relevantName) {
-        displayName = relevantName;
+      
+      const areaName = data.address?.neighbourhood || data.address?.suburb || data.address?.city_district || data.name;
+
+      if (areaName) {
+        displayName = areaName;
         canDraw = true;
       } else if (data.display_name) {
         displayName = data.display_name.split(',')[0];
       } else {
-        displayName = "Onbekend gebied"
+        displayName = "Onbekend gebied";
       }
 
       setClickPopupInfo({ longitude: lng, latitude: lat, name: displayName, isLoading: false, canDraw });
