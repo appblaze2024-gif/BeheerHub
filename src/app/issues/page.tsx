@@ -123,7 +123,7 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
           <span className="truncate">{melding.wijk || '-'}</span>
           <span className="truncate">{melding.subcategorie}</span>
           <span className="truncate">{melding.extra_informatie}</span>
-          <span className="truncate">{`${melding.straatnaam || ''} ${melding.huisnummer || ''}, ${melding.plaats || ''}`.trim()}</span>
+          <span className="truncate">{`${melding.huisnummer || ''}, ${melding.straatnaam || ''}, ${melding.plaats || ''}`.trim()}</span>
           <span className="truncate">{melding.melder || '-'}</span>
           <Badge
             style={{
