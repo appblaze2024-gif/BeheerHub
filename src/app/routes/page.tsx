@@ -38,7 +38,7 @@ export default function RoutesPage() {
   const [showFilter, setShowFilter] = React.useState(true);
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
   const [selectedWijkId, setSelectedWijkId] = React.useState<string | null>(null);
-  const [wijkPolygon, setWijkPolygon] = React.useState<Feature<Polygon | MultiPolygon> | null>(null);
+  const [wijkGeoJson, setWijkGeoJson] = React.useState<FeatureCollection | null>(null);
 
   const projectsCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -63,39 +63,26 @@ export default function RoutesPage() {
     if (selectedWijk && selectedWijk.subGebieden) {
       try {
         const features = JSON.parse(selectedWijk.subGebieden);
-        if (features && Array.isArray(features) && features.length > 0) {
-            // Filter for valid features with geometry before attempting to union
-            const validFeatures = features.filter(f => f && f.type === 'Feature' && f.geometry);
-            
-            if (validFeatures.length > 0) {
-                const combined = turf.union(...validFeatures);
-                if(combined) {
-                    setWijkPolygon(combined);
-                    const map = mapRef.current?.getMap();
-                    if (map) {
-                    const bbox = turf.bbox(combined);
-                    map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
-                    }
-                } else if (validFeatures.length === 1) { // Fallback for single valid feature if union fails
-                    setWijkPolygon(validFeatures[0]);
-                    const map = mapRef.current?.getMap();
-                    if (map) {
-                        const bbox = turf.bbox(validFeatures[0]);
-                        map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
-                    }
-                }
-            } else {
-                setWijkPolygon(null);
+        const validFeatures = Array.isArray(features) ? features.filter(f => f && f.type === 'Feature' && f.geometry && f.geometry.type) : [];
+
+        if (validFeatures.length > 0) {
+            const featureCollection = turf.featureCollection(validFeatures);
+            setWijkGeoJson(featureCollection);
+
+            const map = mapRef.current?.getMap();
+            if (map) {
+                const bbox = turf.bbox(featureCollection);
+                map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
             }
         } else {
-          setWijkPolygon(null);
+            setWijkGeoJson(null);
         }
       } catch (e) {
         console.error("Invalid GeoJSON in wijk.subGebieden", e);
-        setWijkPolygon(null);
+        setWijkGeoJson(null);
       }
     } else {
-      setWijkPolygon(null);
+      setWijkGeoJson(null);
     }
   }, [selectedWijkId, sortedWijken]);
 
@@ -135,13 +122,6 @@ export default function RoutesPage() {
     zoom: 7,
   };
 
-  const wijkGeoJson = React.useMemo(() => {
-    if (!wijkPolygon) return null;
-    return {
-        type: 'FeatureCollection',
-        features: [wijkPolygon]
-    };
-  }, [wijkPolygon]);
 
   return (
     <div className="flex flex-col flex-1 min-h-0 relative">
@@ -220,7 +200,7 @@ export default function RoutesPage() {
                 onValueChange={(value) => {
                   setSelectedProjectId(value);
                   setSelectedWijkId(null);
-                  setWijkPolygon(null);
+                  setWijkGeoJson(null);
                 }}
                 disabled={isLoadingProjects}
               >
