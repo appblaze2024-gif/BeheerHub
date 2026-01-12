@@ -108,7 +108,8 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
 
   return (
     <div className="overflow-y-auto">
-      <div className="grid grid-cols-[auto_1fr_1fr_1fr_1fr_2fr_1fr_1fr_1fr_120px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
+      <div className="grid grid-cols-[1fr_auto_1fr_1fr_1fr_1fr_2fr_1fr_1fr_1fr_120px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
+        <span>Datum</span>
         <span>Tijd</span>
         <span>Intakenummer</span>
         <span>Extern Nr.</span>
@@ -124,8 +125,9 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
         <div
           key={melding.id}
           onClick={() => onMeldingClick(melding)}
-          className="grid grid-cols-[auto_1fr_1fr_1fr_1fr_2fr_1fr_1fr_1fr_120px] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
+          className="grid grid-cols-[1fr_auto_1fr_1fr_1fr_1fr_2fr_1fr_1fr_1fr_120px] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
         >
+          <span className="truncate">{melding.datum ? format(new Date(melding.datum), 'dd-MM-yyyy') : '-'}</span>
           <span className="truncate">{melding.tijdstip || '-'}</span>
           <span className="font-medium truncate">{melding.intakenummer}</span>
           <span className="truncate">{melding.extern_meldingsnummer || '-'}</span>
@@ -233,25 +235,25 @@ export default function IssuesPage() {
     let timeFilteredMeldingen = meldingen;
 
     if (selectedDate) {
-      const dayStart = startOfDay(selectedDate);
-      timeFilteredMeldingen = meldingen.filter(melding => {
-        try {
-          const creationDate = startOfDay(new Date(melding.datum));
-          
-          const isCompletedToday =
-            melding.status === 'Afgerond' &&
-            melding.afhandeling_datum &&
-            isSameDay(startOfDay(new Date(melding.afhandeling_datum)), dayStart);
-          
-          const isOpenAndRelevant =
-            melding.status !== 'Afgerond' && creationDate <= dayStart;
+        const dayStart = startOfDay(selectedDate);
+        timeFilteredMeldingen = meldingen.filter(melding => {
+            try {
+                const creationDate = startOfDay(new Date(melding.datum));
+                
+                const isCompletedToday =
+                    melding.status === 'Afgerond' &&
+                    melding.afhandeling_datum &&
+                    isSameDay(startOfDay(new Date(melding.afhandeling_datum)), dayStart);
+                
+                const isOpenAndRelevant =
+                    melding.status !== 'Afgerond' && creationDate <= dayStart;
 
-          return isCompletedToday || isOpenAndRelevant;
-        } catch (e) {
-          console.error("Invalid date for melding:", melding.id, melding.datum);
-          return false;
-        }
-      });
+                return isCompletedToday || isOpenAndRelevant;
+            } catch (e) {
+                console.error("Invalid date for melding:", melding.id, melding.datum);
+                return false;
+            }
+        });
     }
 
     const searchedMeldingen = searchQuery
