@@ -223,7 +223,7 @@ export default function NavigationModulePage() {
 
     mapRef.current?.getMap().flyTo({
         center: origin,
-        zoom: 18,
+        zoom: 20,
         pitch: 60,
         bearing: -20,
     });
