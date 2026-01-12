@@ -645,7 +645,7 @@ export default function NavigationModulePage() {
                         Markeer dit object als voltooid en ga verder naar de volgende.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter className='flex-row justify-center gap-4'>
+                <AlertDialogFooter className="justify-center gap-4">
                     <AlertDialogCancel asChild>
                          <Button variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600 focus-visible:ring-red-500'>
                             <XCircle className='h-10 w-10'/>
