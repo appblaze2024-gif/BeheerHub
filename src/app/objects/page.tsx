@@ -82,6 +82,14 @@ export default function ObjectsPage() {
   const selectedProject = React.useMemo(() => {
     return projects?.find(p => p.id === selectedProjectId) ?? null;
   }, [projects, selectedProjectId]);
+  
+  const projectWijken = React.useMemo(() => {
+    if (!selectedProject?.wijken) return [];
+    return selectedProject.wijken.filter(w => 
+      !w.naam.toLowerCase().includes('voorvegen')
+    );
+  }, [selectedProject]);
+
 
   const filteredObjectsList = React.useMemo(() => {
     if (!objects) return [];
@@ -496,8 +504,8 @@ export default function ObjectsPage() {
                 <div>
                   <Label>Wijken</Label>
                   <div className="mt-2 space-y-2 border rounded-md p-2 max-h-64 overflow-y-auto">
-                    {(selectedProject.wijken && selectedProject.wijken.length > 0) ? (
-                        selectedProject.wijken.map(wijk => (
+                    {(projectWijken && projectWijken.length > 0) ? (
+                        projectWijken.map(wijk => (
                             <div key={wijk.id} className="flex items-center space-x-2">
                                 <Checkbox
                                     id={`wijk-${wijk.id}`}
