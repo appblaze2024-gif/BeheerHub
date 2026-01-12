@@ -18,12 +18,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useCollection, useFirestore } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useFirestore, useCollection } from '@/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { MapboxView } from '@/components/mapbox-view';
 import * as turf from '@turf/turf';
 import type { Wijk } from '@/app/projects/page';
 import { PageHeader } from '@/components/page-header';
+import { toast } from '@/components/ui/use-toast';
 
 type Project = {
   id: string;
@@ -116,7 +117,9 @@ export default function TrashBinsPage() {
     } else {
       // This part is tricky. If you uncheck 'select all', do you want to clear all selections?
       // For now, let's assume yes.
-      setSelectedObjects([]);
+      if (selectedObjects.length === objectsInSelectedWijken.length) {
+          setSelectedObjects([]);
+      }
     }
   }, [selectAll, objectsInSelectedWijken]);
 
@@ -136,8 +139,39 @@ export default function TrashBinsPage() {
     setSelectAll(false);
   }, [selectedProjectId]);
 
+  const handleSaveRoute = async () => {
+    if (!firestore || selectedObjects.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Fout bij opslaan",
+        description: "Geen objecten geselecteerd om op te slaan.",
+      });
+      return;
+    }
+
+    try {
+      const routesCollection = collection(firestore, 'prullenbakroutes');
+      await addDoc(routesCollection, {
+        objectIds: selectedObjects.map(obj => obj.id),
+        createdAt: serverTimestamp(),
+        objectCount: selectedObjects.length,
+      });
+      toast({
+        title: "Route Opgeslagen",
+        description: `Route met ${selectedObjects.length} objecten is succesvol opgeslagen.`,
+      });
+    } catch (error) {
+      console.error("Fout bij het opslaan van de route:", error);
+      toast({
+        variant: "destructive",
+        title: "Fout bij opslaan",
+        description: "Er is een onverwachte fout opgetreden.",
+      });
+    }
+  };
+
   return (
-    <div className="flex flex-col flex-1 min-h-0">
+    <div className="flex flex-col flex-1 h-full min-h-0">
       <PageHeader title="Prullenbakken Routeplanner" />
       <div className="flex-1 grid grid-cols-[350px_1fr] gap-6 px-6 pb-6 min-h-0">
         <aside className="flex flex-col gap-6 min-h-0">
@@ -220,8 +254,8 @@ export default function TrashBinsPage() {
                         />
                         <Label htmlFor="select-all">Selecteer alle ({objectsInSelectedWijken.length})</Label>
                     </div>
-                     <Button size="sm" disabled={selectedObjects.length === 0}>
-                        Genereer Route
+                     <Button size="sm" disabled={selectedObjects.length === 0} onClick={handleSaveRoute}>
+                        Opslaan Route
                     </Button>
                 </div>
              </CardHeader>

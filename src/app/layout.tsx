@@ -14,6 +14,7 @@ import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { PanelLeftClose, PanelRightClose } from 'lucide-react';
+import { Toaster } from '@/components/ui/toaster';
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -85,6 +86,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 flex flex-col overflow-auto bg-background">
         {children}
       </main>
+      <Toaster />
     </div>
   );
 }
