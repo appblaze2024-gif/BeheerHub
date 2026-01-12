@@ -63,6 +63,8 @@ type Project = {
   id: string;
   projectnaam: string;
   wijken?: Wijk[];
+  veegroutes?: Wijk[];
+  prullenbakkenroutes?: Wijk[];
 };
 
 interface RouteInfo {
@@ -129,7 +131,8 @@ export default function NavigationModulePage() {
   const [destination, setDestination] = React.useState<MapObject | null>(null);
   
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
-  const [selectedWijkId, setSelectedWijkId] = React.useState<string | null>(null);
+  const [selectedRouteType, setSelectedRouteType] = React.useState<'veeg' | 'prullenbak' | null>(null);
+  const [selectedRouteId, setSelectedRouteId] = React.useState<string | null>(null);
   const [isCompletionDialogOpen, setIsCompletionDialogOpen] = React.useState(false);
   
   const watchIdRef = React.useRef<number | null>(null);
@@ -142,23 +145,28 @@ export default function NavigationModulePage() {
     return projects?.find(p => p.id === selectedProjectId) ?? null;
   }, [projects, selectedProjectId]);
 
-  const projectWijken = React.useMemo(() => {
-    if (!selectedProject?.wijken) return [];
-    return selectedProject.wijken.filter(w => 
-      !w.naam.toLowerCase().includes('veegmachine') && !w.naam.toLowerCase().includes('voorvegen')
-    ).sort((a, b) => a.naam.localeCompare(b.naam, undefined, { numeric: true }));
-  }, [selectedProject]);
+ const availableRoutes = React.useMemo(() => {
+    if (!selectedProject) return [];
+    if (selectedRouteType === 'veeg') {
+      return selectedProject.veegroutes || [];
+    }
+    if (selectedRouteType === 'prullenbak') {
+      return selectedProject.prullenbakkenroutes || [];
+    }
+    return [];
+  }, [selectedProject, selectedRouteType]);
+
+  const selectedRoute = React.useMemo(() => {
+    if (!selectedRouteId) return null;
+    return availableRoutes.find(r => r.id === selectedRouteId) ?? null;
+  }, [availableRoutes, selectedRouteId]);
   
-  const selectedWijk = React.useMemo(() => {
-      if (!selectedProject || !selectedWijkId) return null;
-      return selectedProject.wijken?.find(w => w.id === selectedWijkId) ?? null;
-  }, [selectedProject, selectedWijkId]);
   
   const objectsInWijk = React.useMemo(() => {
-    if (!objects || !selectedWijk) return [];
+    if (!objects || !selectedRoute) return [];
 
     try {
-        const wijkFeatures = JSON.parse(selectedWijk.subGebieden);
+        const wijkFeatures = JSON.parse(selectedRoute.subGebieden);
         if (!Array.isArray(wijkFeatures) || wijkFeatures.length === 0) return [];
 
         return objects.filter(obj => {
@@ -177,7 +185,7 @@ export default function NavigationModulePage() {
         console.error("Error filtering objects in wijk:", e);
         return [];
     }
-  }, [objects, selectedWijk]);
+  }, [objects, selectedRoute]);
 
   React.useEffect(() => {
     const timer = setInterval(() => {
@@ -208,9 +216,9 @@ export default function NavigationModulePage() {
   }, []);
 
   React.useEffect(() => {
-    if (selectedWijk && mapRef.current) {
+    if (selectedRoute && mapRef.current) {
       try {
-        const features = JSON.parse(selectedWijk.subGebieden);
+        const features = JSON.parse(selectedRoute.subGebieden);
         if (!Array.isArray(features) || features.length === 0) return;
 
         const featureCollection = turf.featureCollection(features);
@@ -226,9 +234,9 @@ export default function NavigationModulePage() {
         console.error("Error calculating bounding box for wijk:", error);
       }
     }
-  }, [selectedWijk]);
+  }, [selectedRoute]);
 
-  const calculateRoute = async (points: ([number, number] | null)[]) => {
+  const calculateRoute = async (points: (number[] | null)[]) => {
     const validPoints = points.filter((p): p is [number, number] => 
         p != null && Array.isArray(p) && p.length === 2 && !isNaN(p[0]) && !isNaN(p[1])
     );
@@ -349,7 +357,7 @@ export default function NavigationModulePage() {
     
     if (firstObject) {
       setDestination(firstObject);
-      const routePoints: [number, number][] = [
+      const routePoints: ([number, number] | null)[] = [
         origin,
         [firstObject.longitude, firstObject.latitude]
       ];
@@ -381,7 +389,7 @@ export default function NavigationModulePage() {
 
     if (nextObject) {
       setDestination(nextObject);
-      const routePoints: [number, number][] = [origin, [nextObject.longitude, nextObject.latitude]];
+      const routePoints: ([number, number] | null)[] = [origin, [nextObject.longitude, nextObject.latitude]];
       calculateRoute(routePoints);
     } else {
       // All objects are done
@@ -454,7 +462,8 @@ export default function NavigationModulePage() {
                         value={selectedProjectId || ''}
                         onValueChange={(value) => {
                             setSelectedProjectId(value);
-                            setSelectedWijkId(null);
+                            setSelectedRouteType(null);
+                            setSelectedRouteId(null);
                             setRoute(null);
                         }}
                         disabled={isLoadingProjects}
@@ -467,33 +476,41 @@ export default function NavigationModulePage() {
                         </SelectContent>
                         </Select>
                     </div>
-                    <div>
-                    <Label htmlFor='wijk-select'>Wijk</Label>
-                        <Select
-                            value={selectedWijkId || ''}
-                            onValueChange={v => setSelectedWijkId(v)}
-                            disabled={!selectedProject}
-                        >
-                            <SelectTrigger id="wijk-select">
-                                <SelectValue placeholder="Selecteer een wijk" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {projectWijken.map(w => (
-                                <SelectItem key={w.id} value={w.id}>
-                                    {w.naam} ({objects?.filter(obj => {
-                                        if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
-                                        const point = turf.point([obj.longitude, obj.latitude]);
-                                        try {
-                                            const features = JSON.parse(w.subGebieden);
-                                            return features.some((f:any) => turf.booleanPointInPolygon(point, f));
-                                        } catch { return false; }
-                                    }).length})
-                                </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <Button onClick={handleStartNavigation} disabled={!selectedWijkId || !objectsInWijk || objectsInWijk.length === 0 || isCalculating}>
+                     {selectedProjectId && (
+                        <div>
+                          <Label>Route Type</Label>
+                           <div className='grid grid-cols-2 gap-2 mt-2'>
+                              <Button variant={selectedRouteType === 'veeg' ? 'secondary' : 'outline'} onClick={() => { setSelectedRouteType('veeg'); setSelectedRouteId(null); }}>
+                                Veegwagenroutes
+                              </Button>
+                              <Button variant={selectedRouteType === 'prullenbak' ? 'secondary' : 'outline'} onClick={() => { setSelectedRouteType('prullenbak'); setSelectedRouteId(null); }}>
+                                Prullenbakkenroutes
+                              </Button>
+                           </div>
+                        </div>
+                    )}
+                    {selectedRouteType && (
+                      <div>
+                        <Label htmlFor='route-select'>Route</Label>
+                          <Select
+                              value={selectedRouteId || ''}
+                              onValueChange={v => setSelectedRouteId(v)}
+                              disabled={!selectedProject || availableRoutes.length === 0}
+                          >
+                              <SelectTrigger id="route-select">
+                                  <SelectValue placeholder="Selecteer een route" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  {availableRoutes.map(w => (
+                                  <SelectItem key={w.id} value={w.id}>
+                                      {w.naam}
+                                  </SelectItem>
+                                  ))}
+                              </SelectContent>
+                          </Select>
+                      </div>
+                    )}
+                    <Button onClick={handleStartNavigation} disabled={!selectedRouteId || !objectsInWijk || objectsInWijk.length === 0 || isCalculating}>
                         {isCalculating ? (
                             <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Bezig...</>
                         ) : 'Start Route'}
