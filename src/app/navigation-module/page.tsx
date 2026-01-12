@@ -149,7 +149,7 @@ export default function NavigationModulePage() {
     <div className="flex flex-1 flex-col bg-stone-900 text-white overflow-hidden">
       <div className="flex-1 relative">
         <aside className='absolute top-0 left-0 z-10 m-4 w-96 h-[calc(100%-2rem)]'>
-           <Card className="bg-black/70 border-stone-700 backdrop-blur-sm h-full flex flex-col">
+           <Card className="bg-white/90 border-stone-200 backdrop-blur-sm h-full flex flex-col text-black">
               <CardHeader>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-stone-400" />
@@ -157,7 +157,7 @@ export default function NavigationModulePage() {
                     placeholder="Zoek object op ID, straat..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 h-11 text-base bg-stone-800 border-stone-700 focus-visible:ring-blue-500 text-white"
+                    className="pl-10 h-11 text-base bg-stone-50 border-stone-300 focus-visible:ring-blue-500 text-black"
                   />
                 </div>
                 {locationError && (
@@ -180,15 +180,15 @@ export default function NavigationModulePage() {
                         key={obj.id}
                         onClick={() => handleObjectClick(obj)}
                         className={cn(
-                          'flex items-center gap-3 w-full text-left p-3 rounded-md hover:bg-stone-700/80',
-                          destination?.id === obj.id && 'bg-blue-600/30 hover:bg-blue-600/40'
+                          'flex items-center gap-3 w-full text-left p-3 rounded-md hover:bg-stone-100',
+                          destination?.id === obj.id && 'bg-blue-100 hover:bg-blue-200'
                         )}
                         disabled={!origin}
                       >
-                        <MapPin className="h-5 w-5 shrink-0 text-stone-400" />
+                        <MapPin className="h-5 w-5 shrink-0 text-stone-500" />
                         <div className="flex-1 overflow-hidden">
                           <p className="font-semibold truncate">{obj.id}</p>
-                          <p className="text-sm text-stone-300 truncate">{obj.straatnaam || obj.locatieSubType || 'Geen details'}</p>
+                          <p className="text-sm text-stone-500 truncate">{obj.straatnaam || obj.locatieSubType || 'Geen details'}</p>
                         </div>
                       </button>
                     ))}
@@ -199,7 +199,7 @@ export default function NavigationModulePage() {
         </aside>
 
         <div className="absolute top-4 right-4 z-10">
-          <Button onClick={centerOnLocation} variant="outline" size="icon" className="bg-black/70 border-stone-700 text-white hover:bg-stone-700">
+          <Button onClick={centerOnLocation} variant="outline" size="icon" className="bg-white border-stone-300 text-black hover:bg-stone-100">
             <LocateFixed className="h-5 w-5" />
           </Button>
         </div>
@@ -209,7 +209,7 @@ export default function NavigationModulePage() {
           {...viewState}
           onMove={(evt) => setViewState(evt.viewState)}
           style={{ width: '100%', height: '100%' }}
-          mapStyle="mapbox://styles/mapbox/dark-v11"
+          mapStyle="mapbox://styles/mapbox/streets-v12"
           mapboxAccessToken={MAPBOX_TOKEN}
         >
           {origin && (
@@ -242,7 +242,7 @@ export default function NavigationModulePage() {
               <div
                 className={cn(
                   'w-2.5 h-2.5 rounded-full cursor-pointer transition-all',
-                  destination?.id === obj.id ? 'bg-red-500 scale-150 border-2 border-white' : 'bg-stone-400'
+                  destination?.id === obj.id ? 'bg-red-500 scale-150 border-2 border-white' : 'bg-gray-700'
                 )}
               />
             </Marker>
@@ -251,7 +251,7 @@ export default function NavigationModulePage() {
 
         {(isCalculating) && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-full max-w-sm px-4">
-                <div className='bg-black/70 border border-stone-700 backdrop-blur-sm rounded-lg p-4 flex items-center justify-center'>
+                <div className='bg-white/80 border border-stone-200 backdrop-blur-sm rounded-lg p-4 flex items-center justify-center text-black'>
                     <Loader2 className="mr-3 h-6 w-6 animate-spin" />
                     <span className='text-lg font-semibold'>Route berekenen...</span>
                 </div>
