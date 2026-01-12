@@ -95,11 +95,10 @@ export default function ObjectsPage() {
   const projectAreas = React.useMemo<Area[]>(() => {
     if (!selectedProject) return [];
     
-    const wijken: Area[] = (selectedProject.wijken || []).map(w => ({ ...w, type: 'wijk' }));
-    const veegroutes: Area[] = (selectedProject.veegroutes || []).map(r => ({ ...r, type: 'veegroute' }));
+    // Alleen prullenbakkenroutes tonen zoals gevraagd.
     const prullenbakkenroutes: Area[] = (selectedProject.prullenbakkenroutes || []).map(r => ({ ...r, type: 'prullenbakkenroute' }));
 
-    return [...wijken, ...veegroutes, ...prullenbakkenroutes];
+    return prullenbakkenroutes;
   }, [selectedProject]);
 
 
@@ -531,7 +530,7 @@ export default function ObjectsPage() {
                             </div>
                         ))
                     ) : (
-                        <p className="text-sm text-muted-foreground">Geen gebieden voor dit project.</p>
+                        <p className="text-sm text-muted-foreground">Geen prullenbakkenroutes voor dit project.</p>
                     )}
                   </div>
                 </div>
