@@ -229,7 +229,7 @@ export default function NavigationModulePage() {
   }, [selectedWijk]);
 
   const calculateRoute = async (points: [number, number][]) => {
-    if (points.length < 2) return;
+    if (points.length < 2 || !points.every(p => p && p.length === 2)) return;
     setIsCalculating(true);
     setRoute(null);
     setRouteInfo(null);
@@ -536,7 +536,7 @@ export default function NavigationModulePage() {
 
         {isNavigating && (
              <div className="absolute bottom-4 left-0 right-0 z-10 px-4">
-                <div className='flex items-end justify-between'>
+                <div className="flex items-end justify-between">
                     <Button variant="destructive" className="rounded-full h-16 w-16 p-0 flex items-center justify-center shadow-lg" onClick={handleStopNavigation}>
                         <X className="h-8 w-8" />
                     </Button>
