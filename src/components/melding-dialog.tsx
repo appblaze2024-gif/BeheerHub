@@ -199,6 +199,8 @@ export function MeldingDialog({
     return `${year}${month}${day}`;
   }, []);
 
+  const [selectedLocation, setSelectedLocation] = React.useState<{lat: number, lon: number} | null>(null);
+
 
   const projectsCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -279,6 +281,7 @@ export function MeldingDialog({
     if (open) {
       setAutoGenerateIntake(true);
       setManualIntakeSuffix('');
+      setSelectedLocation(null);
 
       meldingIdRef.current = melding?.id || doc(collection(firestore, 'temp')).id;
       const initialFiles = melding?.files || [];
@@ -286,6 +289,7 @@ export function MeldingDialog({
 
       const userName = user?.displayName || user?.email || '';
       if (melding) {
+          setSelectedLocation({ lat: melding.latitude, lon: melding.longitude });
           const formValues: Partial<MeldingFormValues> = {
             ...melding,
             adres: `${melding.straatnaam || ''}${melding.huisnummer ? ' ' + melding.huisnummer : ''}, ${melding.postcode || ''}, ${melding.plaats || ''}`.trim(),
@@ -384,9 +388,11 @@ export function MeldingDialog({
     const lon = parseFloat(suggestion.lon);
 
     if (!isNaN(lat) && !isNaN(lon)) {
+        setSelectedLocation({ lat, lon });
         const foundWijk = findWijkForPoint(lat, lon);
         form.setValue('wijk', foundWijk || '');
     } else {
+        setSelectedLocation(null);
         form.setValue('wijk', '');
     }
     setSuggestions([]);
@@ -495,11 +501,21 @@ export function MeldingDialog({
     if (!firestore) return;
     setIsSubmitting(true);
 
-    const addressDetails = await fetchAddressDetails(
-        melding?.latitude,
-        melding?.longitude
-    );
+    let lat, lon;
+    if (melding) {
+      lat = melding.latitude;
+      lon = melding.longitude;
+    } else {
+      if (!selectedLocation) {
+        form.setError('adres', { type: 'manual', message: 'Selecteer een geldig adres uit de suggesties.' });
+        setIsSubmitting(false);
+        return;
+      }
+      lat = selectedLocation.lat;
+      lon = selectedLocation.lon;
+    }
 
+    const addressDetails = await fetchAddressDetails(lat, lon);
     if (!addressDetails) {
         form.setError('adres', { type: 'manual', message: 'Kon adres niet vinden. Controleer de invoer.'});
         setIsSubmitting(false);
@@ -511,7 +527,7 @@ export function MeldingDialog({
     const postcode = addressDetails.postcode || '';
     const plaats = addressDetails.city || addressDetails.town || addressDetails.village || addressDetails.suburb || '';
 
-    const wijk = data.wijk || findWijkForPoint(melding.latitude, melding.longitude);
+    const wijk = data.wijk || findWijkForPoint(lat, lon);
     
     const finalIntakeNumber = autoGenerateIntake ? generateIntakeNummer() : `${intakePrefix}${manualIntakeSuffix}`;
 
@@ -523,8 +539,8 @@ export function MeldingDialog({
       huisnummer,
       postcode,
       plaats,
-      latitude: melding.latitude,
-      longitude: melding.longitude,
+      latitude: lat,
+      longitude: lon,
       wijk: wijk || 'Onbekend',
       datum: melding ? melding.datum : format(new Date(), 'yyyy-MM-dd'),
       files: uploadedFiles,
