@@ -54,6 +54,11 @@ type Project = {
   wijken?: Wijk[];
 };
 
+interface RouteInfo {
+    distance: number; // in meters
+    duration: number; // in seconds
+}
+
 
 const routeLayer: any = {
   id: 'route',
@@ -95,6 +100,7 @@ export default function NavigationModulePage() {
   const [origin, setOrigin] = React.useState<[number, number] | null>(null);
   const [locationError, setLocationError] = React.useState<string | null>(null);
   const [route, setRoute] = React.useState<any>(null);
+  const [routeInfo, setRouteInfo] = React.useState<RouteInfo | null>(null);
   const [isCalculating, setIsCalculating] = React.useState(false);
   const [isNavigating, setIsNavigating] = React.useState(false);
   const [destination, setDestination] = React.useState<MapObject | null>(null);
@@ -202,6 +208,7 @@ export default function NavigationModulePage() {
     if (points.length < 2) return;
     setIsCalculating(true);
     setRoute(null);
+    setRouteInfo(null);
 
     const limitedPoints = points.slice(0, 25);
 
@@ -218,6 +225,10 @@ export default function NavigationModulePage() {
                 type: 'Feature',
                 properties: {},
                 geometry: routeGeometry,
+            });
+            setRouteInfo({
+                distance: data.routes[0].distance,
+                duration: data.routes[0].duration,
             });
         }
     } catch (error) {
@@ -340,12 +351,14 @@ export default function NavigationModulePage() {
       // All objects are done
       setDestination(null);
       setRoute(null);
+      setRouteInfo(null);
     }
   };
 
   const handleStopNavigation = () => {
     setIsNavigating(false);
     setRoute(null);
+    setRouteInfo(null);
     setDestination(null);
     setPendingObjects([]);
     setCompletedObjects([]);
@@ -374,6 +387,18 @@ export default function NavigationModulePage() {
   
   const progressValue = objectsInWijk.length > 0 ? (completedObjects.length / objectsInWijk.length) * 100 : 0;
   const allObjectsCompleted = pendingObjects.length === 0 && completedObjects.length > 0 && objectsInWijk.length > 0;
+  
+  const formatDistance = (meters: number) => {
+    if (meters < 1000) {
+      return `${Math.round(meters)} m`;
+    }
+    return `${(meters / 1000).toFixed(1)} km`;
+  };
+
+  const formatDuration = (seconds: number) => {
+    const arrivalTime = new Date(Date.now() + seconds * 1000);
+    return arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
 
 
   return (
@@ -494,10 +519,10 @@ export default function NavigationModulePage() {
                         </div>
                         <div className="flex items-center gap-2 text-muted-foreground">
                             <Route className="h-5 w-5" />
-                            <span>52 km</span>
+                            <span>{routeInfo ? formatDistance(routeInfo.distance) : '-'}</span>
                         </div>
                          <div className="text-muted-foreground text-sm">
-                            13:15 aankomst
+                            {routeInfo ? `${formatDuration(routeInfo.duration)} aankomst` : '-'}
                         </div>
                     </div>
                 </div>
@@ -567,4 +592,5 @@ export default function NavigationModulePage() {
     </div>
   );
 }
+
 
