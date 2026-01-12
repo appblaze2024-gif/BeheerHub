@@ -15,6 +15,8 @@ import {
   Volume2,
   CheckCircle,
   ChevronRight,
+  Clock,
+  Route,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -468,29 +470,47 @@ export default function NavigationModulePage() {
         )}
 
         {isNavigating && (
-             <div className="absolute bottom-4 left-4 right-4 z-10 flex justify-between items-center gap-4">
-                <div className="bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg flex-1 text-card-foreground">
-                    <div className="flex justify-between items-center mb-2 px-1">
-                        <p className="font-semibold text-sm">Voortgang</p>
-                        <p className="font-semibold text-sm">{completedObjects.length} / {objectsInWijk.length} objecten</p>
+            <div className="absolute bottom-4 left-4 right-4 z-10 flex flex-col gap-2">
+                {/* Progress Bar */}
+                <div className="bg-card/90 backdrop-blur-sm p-2 rounded-lg shadow-lg flex-1 text-card-foreground">
+                    <div className="flex justify-between items-center mb-1 px-1">
+                        <p className="font-semibold text-xs">Voortgang</p>
+                        <p className="font-semibold text-xs">{completedObjects.length} / {objectsInWijk.length} objecten</p>
                     </div>
-                    <Progress value={progressValue} />
+                    <Progress value={progressValue} className='h-2' />
                 </div>
+                
+                {/* Main Action Bar */}
+                 <div className="flex justify-between items-center gap-4">
+                     <div className="bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg flex items-center gap-4 text-card-foreground">
+                        <div className="flex items-center gap-2">
+                            <Clock className="h-5 w-5" />
+                            <span className="font-bold text-lg">12:30</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                            <Route className="h-5 w-5" />
+                            <span>52 km</span>
+                        </div>
+                         <div className="text-muted-foreground text-sm">
+                            13:15 aankomst
+                        </div>
+                    </div>
+                    
+                    {allObjectsCompleted ? (
+                       <div className='flex items-center gap-2 bg-green-600 text-white font-bold p-3 rounded-lg shadow-lg'>
+                            <CheckCircle className="h-6 w-6" />
+                            <span>Route Voltooid!</span>
+                       </div>
+                    ) : (
+                        <Button size="lg" onClick={handleNextObject} disabled={!destination}>
+                            Volgende Object <ChevronRight className="h-5 w-5 ml-2" />
+                        </Button>
+                    )}
 
-                {allObjectsCompleted ? (
-                   <div className='flex items-center gap-2 bg-green-600 text-white font-bold p-3 rounded-lg shadow-lg'>
-                        <CheckCircle className="h-6 w-6" />
-                        <span>Route Voltooid!</span>
-                   </div>
-                ) : (
-                    <Button size="lg" onClick={handleNextObject} disabled={!destination}>
-                        Volgende Object <ChevronRight className="h-5 w-5 ml-2" />
+                    <Button variant="destructive" size="icon" className="rounded-full h-12 w-12" onClick={handleStopNavigation}>
+                        <X className="h-6 w-6" />
                     </Button>
-                )}
-
-                <Button variant="destructive" size="icon" className="rounded-full h-12 w-12" onClick={handleStopNavigation}>
-                    <X className="h-6 w-6" />
-                </Button>
+                </div>
             </div>
         )}
 
@@ -541,4 +561,3 @@ export default function NavigationModulePage() {
     </div>
   );
 }
-
