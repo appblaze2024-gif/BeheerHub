@@ -331,7 +331,7 @@ export default function SweeperRoutePlannerPage() {
           ref={mapRef}
           initialViewState={initialViewState}
           style={{ width: '100%', height: '100%' }}
-          mapStyle="mapbox://styles/mapbox/dark-v11"
+          mapStyle="mapbox://styles/mapbox/streets-v12"
           mapboxAccessToken={MAPBOX_TOKEN}
         >
           {Object.entries(roadColorMapping).map(([type, color]) => (
