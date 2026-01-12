@@ -14,7 +14,7 @@ import {
   Settings,
   Volume2,
   CheckCircle,
-  ChevronRight,
+  XCircle,
   Clock,
   Route,
   ArrowUp,
@@ -24,10 +24,20 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import * as turf from '@turf/turf';
 import { useCollection, useFirestore, useUser } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
@@ -119,6 +129,7 @@ export default function NavigationModulePage() {
   
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
   const [selectedWijkId, setSelectedWijkId] = React.useState<string | null>(null);
+  const [isCompletionDialogOpen, setIsCompletionDialogOpen] = React.useState(false);
   
   const watchIdRef = React.useRef<number | null>(null);
   
@@ -370,6 +381,7 @@ export default function NavigationModulePage() {
       setRouteInfo(null);
       setRouteInstructions([]);
     }
+    setIsCompletionDialogOpen(false);
   };
 
   const handleStopNavigation = () => {
@@ -574,6 +586,8 @@ export default function NavigationModulePage() {
               longitude={destination.longitude}
               latitude={destination.latitude}
               anchor="bottom"
+              onClick={() => setIsCompletionDialogOpen(true)}
+              className="cursor-pointer"
             >
               <MapPin className="w-8 h-8 text-blue-600" />
             </Marker>
@@ -595,6 +609,28 @@ export default function NavigationModulePage() {
             </Source>
           )}
         </Map>
+         <AlertDialog open={isCompletionDialogOpen} onOpenChange={setIsCompletionDialogOpen}>
+            <AlertDialogContent className='max-w-xs'>
+                <AlertDialogHeader>
+                    <AlertDialogTitle className='text-center'>Object Voltooien?</AlertDialogTitle>
+                    <AlertDialogDescription className='text-center'>
+                        Markeer dit object als voltooid en ga verder naar de volgende.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className='flex-row justify-center gap-4'>
+                    <AlertDialogCancel asChild>
+                        <Button variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600'>
+                            <XCircle className='h-10 w-10'/>
+                        </Button>
+                    </AlertDialogCancel>
+                    <AlertDialogAction asChild>
+                         <Button onClick={handleNextObject} variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600'>
+                            <CheckCircle className='h-10 w-10' />
+                        </Button>
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
