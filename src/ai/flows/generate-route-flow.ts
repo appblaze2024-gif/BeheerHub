@@ -11,14 +11,14 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import * as turf from '@turf/turf';
 
-export const GenerateRouteInputSchema = z.object({
+const GenerateRouteInputSchema = z.object({
   roadNetworkGeoJson: z.string().describe(
     "A GeoJSON FeatureCollection of LineStrings representing the road network to be routed, as a JSON string."
   ),
 });
 export type GenerateRouteInput = z.infer<typeof GenerateRouteInputSchema>;
 
-export const GenerateRouteOutputSchema = z.object({
+const GenerateRouteOutputSchema = z.object({
     route: z.array(z.array(z.number())).describe("An array of [longitude, latitude] coordinates representing the optimized route path."),
     totalDistance: z.number().describe("The total distance of the route in kilometers."),
     totalDuration: z.number().describe("The estimated total duration of the route in minutes, assuming an average speed."),
