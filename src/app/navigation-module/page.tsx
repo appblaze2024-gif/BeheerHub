@@ -183,8 +183,12 @@ export default function NavigationModulePage() {
     setIsCalculating(true);
     setRoute(null);
 
+    // Mapbox Directions API has a limit of 25 coordinates for driving-traffic profile.
+    // We use 24 for destinations + 1 for origin.
+    const limitedPoints = points.slice(0, 25);
+
     try {
-        const coordinates = points.map(p => p.join(',')).join(';');
+        const coordinates = limitedPoints.map(p => p.join(',')).join(';');
         const response = await fetch(
             `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${coordinates}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`
         );
@@ -217,7 +221,6 @@ export default function NavigationModulePage() {
     
     calculateRoute(allPoints);
 
-    setViewState(prev => ({ ...prev, pitch: 60, zoom: 18, bearing: -20 }));
     mapRef.current?.getMap().flyTo({
         center: origin,
         zoom: 18,
