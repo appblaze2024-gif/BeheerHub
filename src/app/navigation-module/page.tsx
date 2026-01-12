@@ -141,7 +141,7 @@ export default function NavigationModulePage() {
           setViewState(prev => ({...prev, longitude, latitude, zoom: 14}));
           setLocationError(null);
         },
-        (error) => {
+        () => {
           setLocationError("Kon uw locatie niet ophalen. Zorg ervoor dat u locatietoestemming heeft gegeven.");
           // Fallback to a default origin if location is denied
           setOrigin([5.4697, 51.4416]); 
@@ -152,6 +152,27 @@ export default function NavigationModulePage() {
       setOrigin([5.4697, 51.4416]); // Fallback for old browsers
     }
   }, []);
+
+  React.useEffect(() => {
+    if (selectedWijk && mapRef.current) {
+      try {
+        const features = JSON.parse(selectedWijk.subGebieden);
+        if (!Array.isArray(features) || features.length === 0) return;
+
+        const featureCollection = turf.featureCollection(features);
+        const bbox = turf.bbox(featureCollection);
+        
+        if (bbox[0] !== Infinity) {
+          mapRef.current.getMap().fitBounds(bbox, {
+            padding: { top: 100, bottom: 100, left: 500, right: 100 },
+            duration: 1000
+          });
+        }
+      } catch (error) {
+        console.error("Error calculating bounding box for wijk:", error);
+      }
+    }
+  }, [selectedWijk]);
 
   const calculateRoute = async (points: [number, number][]) => {
     if (points.length < 2) return;
@@ -173,7 +194,7 @@ export default function NavigationModulePage() {
             const bbox = turf.bbox(routeFeature);
 
             mapRef.current?.getMap().fitBounds(bbox, {
-                padding: { top: 100, bottom: 100, left: 100, right: 100 },
+                padding: { top: 100, bottom: 100, left: 500, right: 100 },
                 duration: 1000
             });
         }
@@ -208,9 +229,9 @@ export default function NavigationModulePage() {
   };
   
   return (
-    <div className="flex flex-1 flex-col bg-stone-900 text-white overflow-hidden">
+    <div className="flex flex-1 flex-col overflow-hidden">
       <div className="flex-1 relative">
-         <div className="absolute top-4 left-4 z-10 bg-card/90 backdrop-blur-sm p-4 rounded-lg shadow-lg w-full max-w-sm text-black">
+         <div className="absolute top-4 left-4 z-10 bg-card/90 backdrop-blur-sm p-4 rounded-lg shadow-lg w-full max-w-sm text-card-foreground">
             <h2 className="text-lg font-bold mb-2">Navigatie per Wijk</h2>
             <div className="space-y-4">
                 <div>
@@ -267,7 +288,7 @@ export default function NavigationModulePage() {
         </div>
 
         <div className="absolute top-4 right-4 z-10">
-          <Button onClick={centerOnLocation} variant="outline" size="icon" className="bg-white border-stone-300 text-black hover:bg-stone-100">
+          <Button onClick={centerOnLocation} variant="outline" size="icon" className="bg-card border-stone-300 text-card-foreground hover:bg-muted">
             <LocateFixed className="h-5 w-5" />
           </Button>
         </div>
