@@ -101,8 +101,9 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
   }
 
   const formatAdres = (melding: Melding) => {
-    const parts = [melding.straatnaam, melding.huisnummer].filter(Boolean);
-    return parts.join(' ');
+    const streetAndNumber = [melding.straatnaam, melding.huisnummer].filter(Boolean).join(' ');
+    const cityAndZip = [melding.postcode, melding.plaats].filter(Boolean).join(' ');
+    return [streetAndNumber, cityAndZip].filter(Boolean).join(', ');
   }
 
   return (
@@ -219,13 +220,11 @@ export default function IssuesPage() {
         try {
           const creationDate = startOfDay(new Date(melding.datum));
           
-          // Show if it was completed today
           const isCompletedToday =
             melding.status === 'Afgerond' &&
             melding.afhandeling_datum &&
             isSameDay(startOfDay(new Date(melding.afhandeling_datum)), dayStart);
           
-          // Show if it's open and was created on or before the selected date
           const isOpenAndRelevant =
             melding.status !== 'Afgerond' && creationDate <= dayStart;
 
