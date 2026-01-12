@@ -100,6 +100,11 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
     );
   }
 
+  const formatAdres = (melding: Melding) => {
+    const parts = [melding.straatnaam, melding.huisnummer, melding.plaats].filter(Boolean);
+    return parts.join(', ');
+  }
+
   return (
     <div className="overflow-y-auto">
       <div className="grid grid-cols-[1fr_1fr_1fr_1fr_2fr_2fr_1fr_120px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
@@ -123,7 +128,7 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
           <span className="truncate">{melding.wijk || '-'}</span>
           <span className="truncate">{melding.subcategorie}</span>
           <span className="truncate">{melding.extra_informatie}</span>
-          <span className="truncate">{`${melding.huisnummer || ''}, ${melding.straatnaam || ''}, ${melding.plaats || ''}`.trim()}</span>
+          <span className="truncate">{formatAdres(melding)}</span>
           <span className="truncate">{melding.melder || '-'}</span>
           <Badge
             style={{
@@ -211,16 +216,21 @@ export default function IssuesPage() {
     if (selectedDate) {
       const dayStart = startOfDay(selectedDate);
       timeFilteredMeldingen = meldingen.filter(melding => {
-        const creationDate = startOfDay(new Date(melding.datum));
-        const isCompletedToday =
-          melding.status === 'Afgerond' &&
-          melding.afhandeling_datum &&
-          isSameDay(startOfDay(new Date(melding.afhandeling_datum)), dayStart);
-        
-        const isOpenAndRelevant =
-          melding.status !== 'Afgerond' && creationDate <= dayStart;
+        try {
+          const creationDate = startOfDay(new Date(melding.datum));
+          const isCompletedToday =
+            melding.status === 'Afgerond' &&
+            melding.afhandeling_datum &&
+            isSameDay(startOfDay(new Date(melding.afhandeling_datum)), dayStart);
+          
+          const isOpenAndRelevant =
+            melding.status !== 'Afgerond' && creationDate <= dayStart;
 
-        return isCompletedToday || isOpenAndRelevant;
+          return isCompletedToday || isOpenAndRelevant;
+        } catch (e) {
+          console.error("Invalid date for melding:", melding.id, melding.datum);
+          return false;
+        }
       });
     }
 
