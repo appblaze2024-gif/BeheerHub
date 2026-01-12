@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import Map, { Layer, Marker, Source } from 'react-map-gl';
+import Map, { Marker, Source, Layer } from 'react-map-gl';
 import {
   Search,
   Navigation,
@@ -148,56 +148,6 @@ export default function NavigationModulePage() {
   return (
     <div className="flex flex-1 flex-col bg-stone-900 text-white overflow-hidden">
       <div className="flex-1 relative">
-        <aside className='absolute top-0 left-0 z-10 m-4 w-96 h-[calc(100%-2rem)]'>
-           <Card className="bg-white/90 border-stone-200 backdrop-blur-sm h-full flex flex-col text-black">
-              <CardHeader>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-stone-400" />
-                  <Input
-                    placeholder="Zoek object op ID, straat..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 h-11 text-base bg-stone-50 border-stone-300 focus-visible:ring-blue-500 text-black"
-                  />
-                </div>
-                {locationError && (
-                    <Alert variant="destructive" className="mt-2">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Locatie Fout</AlertTitle>
-                        <AlertDescription>{locationError}</AlertDescription>
-                    </Alert>
-                )}
-              </CardHeader>
-              <CardContent className="p-2 flex-1 overflow-y-auto">
-                {isLoadingObjects ? (
-                  <div className="flex items-center justify-center h-full">
-                    <Loader2 className="h-6 w-6 animate-spin text-stone-400" />
-                  </div>
-                ) : (
-                  <div className='flex flex-col gap-1'>
-                    {filteredObjects?.map(obj => (
-                      <button
-                        key={obj.id}
-                        onClick={() => handleObjectClick(obj)}
-                        className={cn(
-                          'flex items-center gap-3 w-full text-left p-3 rounded-md hover:bg-stone-100',
-                          destination?.id === obj.id && 'bg-blue-100 hover:bg-blue-200'
-                        )}
-                        disabled={!origin}
-                      >
-                        <MapPin className="h-5 w-5 shrink-0 text-stone-500" />
-                        <div className="flex-1 overflow-hidden">
-                          <p className="font-semibold truncate">{obj.id}</p>
-                          <p className="text-sm text-stone-500 truncate">{obj.straatnaam || obj.locatieSubType || 'Geen details'}</p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-           </Card>
-        </aside>
-
         <div className="absolute top-4 right-4 z-10">
           <Button onClick={centerOnLocation} variant="outline" size="icon" className="bg-white border-stone-300 text-black hover:bg-stone-100">
             <LocateFixed className="h-5 w-5" />
