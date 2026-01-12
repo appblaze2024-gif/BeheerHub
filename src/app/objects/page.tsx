@@ -49,10 +49,19 @@ import { Checkbox } from '@/components/ui/checkbox';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
+type Area = {
+  id: string;
+  naam: string;
+  subGebieden: string;
+  type: 'wijk' | 'veegroute' | 'prullenbakkenroute';
+};
+
 type Project = {
   id: string;
   projectnaam: string;
   wijken?: Wijk[];
+  veegroutes?: Wijk[]; // Using Wijk type as it's identical
+  prullenbakkenroutes?: Wijk[]; // Using Wijk type as it's identical
 };
 
 export default function ObjectsPage() {
@@ -64,7 +73,7 @@ export default function ObjectsPage() {
 
   // State for map view filtering
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
-  const [selectedWijkIds, setSelectedWijkIds] = React.useState<string[]>([]);
+  const [selectedAreaIds, setSelectedAreaIds] = React.useState<string[]>([]);
 
   const objectsCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -83,11 +92,14 @@ export default function ObjectsPage() {
     return projects?.find(p => p.id === selectedProjectId) ?? null;
   }, [projects, selectedProjectId]);
   
-  const projectWijken = React.useMemo(() => {
-    if (!selectedProject?.wijken) return [];
-    return selectedProject.wijken.filter(w => 
-      !w.naam.toLowerCase().includes('voorvegen')
-    );
+  const projectAreas = React.useMemo<Area[]>(() => {
+    if (!selectedProject) return [];
+    
+    const wijken: Area[] = (selectedProject.wijken || []).map(w => ({ ...w, type: 'wijk' }));
+    const veegroutes: Area[] = (selectedProject.veegroutes || []).map(r => ({ ...r, type: 'veegroute' }));
+    const prullenbakkenroutes: Area[] = (selectedProject.prullenbakkenroutes || []).map(r => ({ ...r, type: 'prullenbakkenroute' }));
+
+    return [...wijken, ...veegroutes, ...prullenbakkenroutes];
   }, [selectedProject]);
 
 
@@ -123,39 +135,39 @@ export default function ObjectsPage() {
     setSelectedObject((prev: any) => ({ ...prev, [field]: value }));
   };
 
-  const handleWijkSelectionChange = (wijkId: string, checked: boolean) => {
-    setSelectedWijkIds(prev => 
-      checked ? [...prev, wijkId] : prev.filter(id => id !== wijkId)
+  const handleAreaSelectionChange = (areaId: string, checked: boolean) => {
+    setSelectedAreaIds(prev => 
+      checked ? [...prev, areaId] : prev.filter(id => id !== areaId)
     );
   };
   
-  const selectedWijken = React.useMemo(() => {
-      if (!selectedProject || !selectedProject.wijken) return [];
-      return selectedProject.wijken.filter(w => selectedWijkIds.includes(w.id));
-  }, [selectedProject, selectedWijkIds]);
+  const selectedAreas = React.useMemo(() => {
+      if (!projectAreas) return [];
+      return projectAreas.filter(area => selectedAreaIds.includes(area.id));
+  }, [projectAreas, selectedAreaIds]);
 
 
- const wijkPolygons = React.useMemo(() => {
-    return selectedWijken.flatMap(wijk => {
+ const areaPolygons = React.useMemo(() => {
+    return selectedAreas.flatMap(area => {
       try {
-        const features = JSON.parse(wijk.subGebieden);
+        const features = JSON.parse(area.subGebieden);
         if (Array.isArray(features)) {
           return features.map((feature: any) => ({
             ...feature,
-            properties: { ...feature.properties, wijkNaam: wijk.naam },
+            properties: { ...feature.properties, areaNaam: area.naam },
           }));
         }
         return [];
       } catch (e) {
-        console.error(`Invalid GeoJSON for wijk ${wijk.naam}:`, e);
+        console.error(`Invalid GeoJSON for area ${area.naam}:`, e);
         return [];
       }
     });
-  }, [selectedWijken]);
+  }, [selectedAreas]);
 
   const objectsOnMap = React.useMemo(() => {
     if (!objects) return [];
-    if (wijkPolygons.length === 0) {
+    if (areaPolygons.length === 0) {
       // If no districts are selected, show all objects.
       return objects;
     }
@@ -166,24 +178,24 @@ export default function ObjectsPage() {
       }
       const point = turf.point([obj.longitude, obj.latitude]);
       
-      for (const polygon of wijkPolygons) {
+      for (const polygon of areaPolygons) {
           if (turf.booleanPointInPolygon(point, polygon)) {
               return true;
           }
       }
       return false;
     });
-  }, [objects, wijkPolygons]);
+  }, [objects, areaPolygons]);
 
-  const objectCountsPerWijk = React.useMemo(() => {
-    if (!objects || !selectedProject?.wijken) return {};
+  const objectCountsPerArea = React.useMemo(() => {
+    if (!objects || !projectAreas) return {};
 
-    const counts: { [wijkId: string]: number } = {};
+    const counts: { [areaId: string]: number } = {};
 
-    for (const wijk of selectedProject.wijken) {
+    for (const area of projectAreas) {
       let objectCount = 0;
       try {
-        const features = JSON.parse(wijk.subGebieden);
+        const features = JSON.parse(area.subGebieden);
         if (Array.isArray(features)) {
           for (const obj of objects) {
             if (typeof obj.latitude === 'number' && typeof obj.longitude === 'number') {
@@ -200,10 +212,10 @@ export default function ObjectsPage() {
       } catch (e) {
         // Ignore parsing errors for this calculation
       }
-      counts[wijk.id] = objectCount;
+      counts[area.id] = objectCount;
     }
     return counts;
-  }, [objects, selectedProject?.wijken]);
+  }, [objects, projectAreas]);
 
 
   return (
@@ -488,7 +500,7 @@ export default function ObjectsPage() {
                   value={selectedProjectId || ''}
                   onValueChange={(value) => {
                     setSelectedProjectId(value);
-                    setSelectedWijkIds([]);
+                    setSelectedAreaIds([]);
                   }}
                   disabled={isLoadingProjects}
                 >
@@ -502,31 +514,31 @@ export default function ObjectsPage() {
               </div>
               {selectedProject && (
                 <div>
-                  <Label>Wijken</Label>
+                  <Label>Gebieden</Label>
                   <div className="mt-2 space-y-2 border rounded-md p-2 max-h-64 overflow-y-auto">
-                    {(projectWijken && projectWijken.length > 0) ? (
-                        projectWijken.map(wijk => (
-                            <div key={wijk.id} className="flex items-center space-x-2">
+                    {(projectAreas && projectAreas.length > 0) ? (
+                        projectAreas.map(area => (
+                            <div key={area.id} className="flex items-center space-x-2">
                                 <Checkbox
-                                    id={`wijk-${wijk.id}`}
-                                    checked={selectedWijkIds.includes(wijk.id)}
-                                    onCheckedChange={(checked) => handleWijkSelectionChange(wijk.id, !!checked)}
+                                    id={`area-${area.id}`}
+                                    checked={selectedAreaIds.includes(area.id)}
+                                    onCheckedChange={(checked) => handleAreaSelectionChange(area.id, !!checked)}
                                 />
-                                <Label htmlFor={`wijk-${wijk.id}`} className="font-normal flex justify-between w-full">
-                                  <span>{wijk.naam}</span>
-                                  <span className="text-muted-foreground">({objectCountsPerWijk[wijk.id] || 0})</span>
+                                <Label htmlFor={`area-${area.id}`} className="font-normal flex justify-between w-full">
+                                  <span>{area.naam}</span>
+                                  <span className="text-muted-foreground">({objectCountsPerArea[area.id] || 0})</span>
                                 </Label>
                             </div>
                         ))
                     ) : (
-                        <p className="text-sm text-muted-foreground">Geen wijken voor dit project.</p>
+                        <p className="text-sm text-muted-foreground">Geen gebieden voor dit project.</p>
                     )}
                   </div>
                 </div>
               )}
             </div>
           </aside>
-          <MapboxView objects={objectsOnMap} wijkPolygons={wijkPolygons} />
+          <MapboxView objects={objectsOnMap} wijkPolygons={areaPolygons} />
         </div>
       )}
     </div>
