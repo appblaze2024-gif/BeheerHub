@@ -94,6 +94,8 @@ export default function NavigationModulePage() {
   
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
   const [selectedWijkId, setSelectedWijkId] = React.useState<string | null>(null);
+  
+  const watchIdRef = React.useRef<number | null>(null);
 
   const selectedProject = React.useMemo(() => {
     return projects?.find(p => p.id === selectedProjectId) ?? null;
@@ -209,6 +211,50 @@ export default function NavigationModulePage() {
     }
   };
 
+  const startTracking = () => {
+    if (!navigator.geolocation) {
+      console.log("Geolocation is not supported by this browser.");
+      return;
+    }
+    
+    if (watchIdRef.current) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+    }
+
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (position) => {
+        const { longitude, latitude, heading } = position.coords;
+        setOrigin([longitude, latitude]);
+
+        const map = mapRef.current?.getMap();
+        if (map) {
+          map.easeTo({
+            center: [longitude, latitude],
+            bearing: heading ?? map.getBearing(), // Use current bearing if heading is null
+            zoom: 20,
+            pitch: 60,
+            duration: 500
+          });
+        }
+      },
+      (error) => {
+        console.error("Error watching position:", error);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+  };
+
+  const stopTracking = () => {
+    if (watchIdRef.current) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+    }
+  };
+
   const handleStartNavigation = () => {
     if (!origin || objectsInWijk.length === 0) return;
     
@@ -220,18 +266,21 @@ export default function NavigationModulePage() {
     ];
     
     calculateRoute(allPoints);
+    startTracking();
 
     mapRef.current?.getMap().flyTo({
         center: origin,
         zoom: 20,
         pitch: 60,
-        bearing: -20,
+        bearing: 0,
     });
   };
   
   const handleStopNavigation = () => {
     setIsNavigating(false);
     setRoute(null);
+    stopTracking();
+    
     setViewState(prev => ({ ...prev, pitch: 0, bearing: 0, zoom: 14 }));
      if(origin) {
         mapRef.current?.getMap().flyTo({
@@ -247,7 +296,7 @@ export default function NavigationModulePage() {
     if (origin) {
         mapRef.current?.getMap().flyTo({
             center: origin,
-            zoom: isNavigating ? 18 : 15,
+            zoom: isNavigating ? 20 : 15,
             pitch: isNavigating ? 60 : 0,
         });
     }
