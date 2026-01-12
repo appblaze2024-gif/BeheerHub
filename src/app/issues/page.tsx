@@ -102,9 +102,8 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
   }
 
   const formatAdres = (melding: Melding) => {
-    const streetAndNumber = [melding.straatnaam, melding.huisnummer].filter(Boolean).join(' ');
-    const cityAndZip = [melding.postcode, melding.plaats].filter(Boolean).join(' ');
-    return [streetAndNumber, cityAndZip].filter(Boolean).join(', ');
+    const parts = [melding.straatnaam, melding.huisnummer, melding.postcode, melding.plaats];
+    return parts.filter(Boolean).join(' ');
   }
 
   return (
@@ -194,24 +193,38 @@ export default function IssuesPage() {
   }, [selectedProject, selectedWijkId]);
   
   const wijkGeoJSON = React.useMemo(() => {
-    if (!selectedWijk) return null;
+    const wijkenToDraw = selectedWijk
+      ? [selectedWijk]
+      : selectedWijkId === 'all' && selectedProject?.wijken
+      ? selectedProject.wijken
+      : [];
+
+    if (wijkenToDraw.length === 0) return null;
+
     try {
-        const features = JSON.parse(selectedWijk.subGebieden);
-        if (Array.isArray(features) && features.length > 0) {
-            return {
-                type: 'FeatureCollection',
-                features: features.map(feature => ({
-                    type: 'Feature',
-                    properties: {},
-                    geometry: feature.geometry,
-                })),
-            };
+      const features = wijkenToDraw.flatMap(wijk => {
+        try {
+          return JSON.parse(wijk.subGebieden) || [];
+        } catch {
+          return [];
         }
-    } catch(e) {
-        console.error("Invalid GeoJSON for wijk", selectedWijk.naam, e);
+      });
+
+      if (features.length > 0) {
+        return {
+          type: 'FeatureCollection',
+          features: features.map((feature: any) => ({
+            type: 'Feature',
+            properties: {},
+            geometry: feature.geometry,
+          })),
+        };
+      }
+    } catch (e) {
+      console.error('Invalid GeoJSON for wijk(en)', e);
     }
     return null;
-  }, [selectedWijk]);
+  }, [selectedWijk, selectedWijkId, selectedProject?.wijken]);
 
 
   const filteredMeldingen = React.useMemo(() => {
@@ -341,6 +354,9 @@ export default function IssuesPage() {
 
     try {
         const bbox = turf.bbox(wijkGeoJSON);
+        if(bbox[0] === Infinity || bbox[1] === Infinity || bbox[2] === -Infinity || bbox[3] === -Infinity) {
+          return;
+        }
         map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
     } catch (e) {
         console.error("Error fitting bounds:", e);
