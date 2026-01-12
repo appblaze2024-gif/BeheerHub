@@ -23,7 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import * as turf from '@turf/turf';
-import { useCollection, useFirestore } from '@/firebase';
+import { useCollection, useFirestore, useUser } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -88,6 +88,7 @@ const routeLayer: any = {
 export default function NavigationModulePage() {
   const mapRef = React.useRef<any>();
   const firestore = useFirestore();
+  const { user } = useUser();
   const [viewState, setViewState] = React.useState({
     longitude: 5.2913, // Default center of NL
     latitude: 52.1326,
@@ -95,9 +96,9 @@ export default function NavigationModulePage() {
   });
   
   const objectsCollection = React.useMemo(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return collection(firestore, 'objects');
-  }, [firestore]);
+  }, [firestore, user]);
   
   const projectsCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -610,6 +611,7 @@ export default function NavigationModulePage() {
     </div>
   );
 }
+
 
 
 
