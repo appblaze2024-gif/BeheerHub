@@ -106,6 +106,7 @@ export default function NavigationModulePage() {
   
   const [pendingObjects, setPendingObjects] = React.useState<MapObject[]>([]);
   const [completedObjects, setCompletedObjects] = React.useState<string[]>([]);
+  const [currentTime, setCurrentTime] = React.useState('');
 
   const selectedProject = React.useMemo(() => {
     return projects?.find(p => p.id === selectedProjectId) ?? null;
@@ -148,6 +149,13 @@ export default function NavigationModulePage() {
     }
   }, [objects, selectedWijk]);
 
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      setCurrentTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   React.useEffect(() => {
     if (navigator.geolocation) {
@@ -482,7 +490,7 @@ export default function NavigationModulePage() {
                     <div className="bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg flex items-center gap-4 text-card-foreground">
                         <div className="flex items-center gap-2">
                             <Clock className="h-5 w-5" />
-                            <span className="font-bold text-lg">12:30</span>
+                            <span className="font-bold text-lg">{currentTime}</span>
                         </div>
                         <div className="flex items-center gap-2 text-muted-foreground">
                             <Route className="h-5 w-5" />
@@ -559,3 +567,4 @@ export default function NavigationModulePage() {
     </div>
   );
 }
+
