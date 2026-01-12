@@ -123,7 +123,7 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
           <span className="truncate">{melding.wijk || '-'}</span>
           <span className="truncate">{melding.subcategorie}</span>
           <span className="truncate">{melding.extra_informatie}</span>
-          <span className="truncate">{`${melding.straatnaam || ''}, ${melding.plaats || ''}`}</span>
+          <span className="truncate">{`${melding.straatnaam || ''} ${melding.huisnummer || ''}, ${melding.plaats || ''}`.trim()}</span>
           <span className="truncate">{melding.melder || '-'}</span>
           <Badge
             style={{
@@ -216,8 +216,10 @@ export default function IssuesPage() {
           melding.status === 'Afgerond' &&
           melding.afhandeling_datum &&
           isSameDay(startOfDay(new Date(melding.afhandeling_datum)), dayStart);
+        
         const isOpenAndRelevant =
           melding.status !== 'Afgerond' && creationDate <= dayStart;
+
         return isCompletedToday || isOpenAndRelevant;
       });
     }
