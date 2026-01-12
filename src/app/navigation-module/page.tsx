@@ -229,11 +229,13 @@ export default function NavigationModulePage() {
   }, [selectedWijk]);
 
   const calculateRoute = async (points: ([number, number] | null)[]) => {
-    const validPoints = points.filter(p => p && Array.isArray(p) && p.length === 2 && !isNaN(p[0]) && !isNaN(p[1])) as [number, number][];
-
+    const validPoints = points.filter((p): p is [number, number] => 
+        p != null && Array.isArray(p) && p.length === 2 && !isNaN(p[0]) && !isNaN(p[1])
+    );
+    
     if (validPoints.length < 2) {
-        console.error("Not enough valid points to calculate a route.");
-        return;
+      console.error("Not enough valid points to calculate a route.");
+      return;
     }
 
     setIsCalculating(true);
@@ -547,14 +549,14 @@ export default function NavigationModulePage() {
                         <X className="h-8 w-8" />
                     </Button>
                     <div className='flex flex-col items-center gap-4'>
-                        <div className="bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg text-card-foreground w-80">
+                        <div className="bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg text-card-foreground w-96">
                             <div className="flex justify-between items-center mb-1 px-1">
                                 <p className="font-semibold text-sm">Voortgang</p>
                                 <p className="font-semibold text-sm">{completedObjects.length} / {(objectsInWijk || []).length} objecten</p>
                             </div>
                             <Progress value={progressValue} className='h-2' />
                         </div>
-                        <div className="bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg flex items-center justify-between gap-4 text-card-foreground w-80">
+                        <div className="bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg flex items-center justify-between gap-4 text-card-foreground w-96">
                             <div className="flex items-center gap-2">
                                 <Clock className="h-5 w-5" />
                                 <span className="font-bold text-lg">{currentTime}</span>
