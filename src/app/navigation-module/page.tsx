@@ -228,14 +228,20 @@ export default function NavigationModulePage() {
     }
   }, [selectedWijk]);
 
-  const calculateRoute = async (points: [number, number][]) => {
-    if (points.length < 2 || !points.every(p => p && p.length === 2)) return;
+  const calculateRoute = async (points: ([number, number] | null)[]) => {
+    const validPoints = points.filter(p => p && Array.isArray(p) && p.length === 2 && !isNaN(p[0]) && !isNaN(p[1])) as [number, number][];
+
+    if (validPoints.length < 2) {
+        console.error("Not enough valid points to calculate a route.");
+        return;
+    }
+
     setIsCalculating(true);
     setRoute(null);
     setRouteInfo(null);
     setRouteInstructions([]);
 
-    const limitedPoints = points.slice(0, 25);
+    const limitedPoints = validPoints.slice(0, 25);
 
     try {
         const coordinates = limitedPoints.map(p => p.join(',')).join(';');
@@ -622,12 +628,12 @@ export default function NavigationModulePage() {
                 </AlertDialogHeader>
                 <AlertDialogFooter className='flex-row justify-center gap-4'>
                     <AlertDialogCancel asChild>
-                         <Button variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600'>
+                         <Button variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600 focus-visible:ring-red-500'>
                             <XCircle className='h-10 w-10'/>
                         </Button>
                     </AlertDialogCancel>
                     <AlertDialogAction asChild>
-                         <Button onClick={handleNextObject} variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600'>
+                         <Button onClick={handleNextObject} variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600 focus-visible:ring-green-500'>
                             <CheckCircle className='h-10 w-10' />
                         </Button>
                     </AlertDialogAction>
