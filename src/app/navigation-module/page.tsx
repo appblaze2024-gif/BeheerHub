@@ -99,6 +99,7 @@ export default function NavigationModulePage() {
   const mapRef = React.useRef<any>();
   const firestore = useFirestore();
   const { user } = useUser();
+  
   const [viewState, setViewState] = React.useState({
     longitude: 5.2913, // Default center of NL
     latitude: 52.1326,
@@ -534,33 +535,35 @@ export default function NavigationModulePage() {
         )}
 
         {isNavigating && (
-             <div className="absolute bottom-4 left-0 right-0 z-10 flex items-end justify-between px-4">
-                <Button variant="destructive" className="rounded-full h-16 w-16 p-0 flex items-center justify-center shadow-lg" onClick={handleStopNavigation}>
-                    <X className="h-8 w-8" />
-                </Button>
-                <div className='flex flex-col items-center gap-4'>
-                    <div className="bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg text-card-foreground w-80">
-                        <div className="flex justify-between items-center mb-1 px-1">
-                            <p className="font-semibold text-sm">Voortgang</p>
-                            <p className="font-semibold text-sm">{completedObjects.length} / {(objectsInWijk || []).length} objecten</p>
+             <div className="absolute bottom-4 left-0 right-0 z-10 px-4">
+                <div className='flex items-end justify-between'>
+                    <Button variant="destructive" className="rounded-full h-16 w-16 p-0 flex items-center justify-center shadow-lg" onClick={handleStopNavigation}>
+                        <X className="h-8 w-8" />
+                    </Button>
+                    <div className='flex flex-col items-center gap-4'>
+                        <div className="bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg text-card-foreground w-80">
+                            <div className="flex justify-between items-center mb-1 px-1">
+                                <p className="font-semibold text-sm">Voortgang</p>
+                                <p className="font-semibold text-sm">{completedObjects.length} / {(objectsInWijk || []).length} objecten</p>
+                            </div>
+                            <Progress value={progressValue} className='h-2' />
                         </div>
-                        <Progress value={progressValue} className='h-2' />
+                        <div className="bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg flex items-center justify-between gap-4 text-card-foreground w-80">
+                            <div className="flex items-center gap-2">
+                                <Clock className="h-5 w-5" />
+                                <span className="font-bold text-lg">{currentTime}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                                <Route className="h-5 w-5" />
+                                <span>{routeInfo ? formatDistance(routeInfo.distance) : '-'}</span>
+                            </div>
+                            <div className="text-muted-foreground text-sm">
+                                {routeInfo ? `${formatDuration(routeInfo.duration)} aankomst` : '-'}
+                            </div>
+                        </div>
                     </div>
-                    <div className="bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg flex items-center justify-between gap-4 text-card-foreground w-80">
-                        <div className="flex items-center gap-2">
-                            <Clock className="h-5 w-5" />
-                            <span className="font-bold text-lg">{currentTime}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                            <Route className="h-5 w-5" />
-                            <span>{routeInfo ? formatDistance(routeInfo.distance) : '-'}</span>
-                        </div>
-                        <div className="text-muted-foreground text-sm">
-                            {routeInfo ? `${formatDuration(routeInfo.duration)} aankomst` : '-'}
-                        </div>
-                    </div>
+                    <div className='w-16'></div>
                 </div>
-                <div className='w-16'></div>
             </div>
         )}
 
@@ -619,7 +622,7 @@ export default function NavigationModulePage() {
                 </AlertDialogHeader>
                 <AlertDialogFooter className='flex-row justify-center gap-4'>
                     <AlertDialogCancel asChild>
-                        <Button variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600'>
+                         <Button variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600'>
                             <XCircle className='h-10 w-10'/>
                         </Button>
                     </AlertDialogCancel>
