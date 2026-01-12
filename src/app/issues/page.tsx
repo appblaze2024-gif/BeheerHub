@@ -26,6 +26,7 @@ const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGt
 type Melding = {
   id: string;
   intakenummer: string;
+  extern_meldingsnummer?: string;
   latitude: number;
   longitude: number;
   subcategorie: string;
@@ -108,13 +109,14 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
 
   return (
     <div className="overflow-y-auto">
-      <div className="grid grid-cols-[1fr_1fr_1fr_1fr_2fr_2fr_1fr_120px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
+      <div className="grid grid-cols-[auto_1fr_1fr_1fr_1fr_2fr_1fr_1fr_120px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
         <span>Tijd</span>
         <span>Intakenummer</span>
+        <span>Extern Nr.</span>
         <span>Wijk</span>
         <span>Subcategorie</span>
-        <span>Omschrijving</span>
         <span>Adres</span>
+        <span>Omschrijving</span>
         <span>Melder</span>
         <span>Status</span>
       </div>
@@ -122,14 +124,15 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
         <div
           key={melding.id}
           onClick={() => onMeldingClick(melding)}
-          className="grid grid-cols-[1fr_1fr_1fr_1fr_2fr_2fr_1fr_120px] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
+          className="grid grid-cols-[auto_1fr_1fr_1fr_1fr_2fr_1fr_1fr_120px] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
         >
           <span className="truncate">{melding.tijdstip || '-'}</span>
           <span className="font-medium truncate">{melding.intakenummer}</span>
+          <span className="truncate">{melding.extern_meldingsnummer || '-'}</span>
           <span className="truncate">{melding.wijk || '-'}</span>
           <span className="truncate">{melding.subcategorie}</span>
-          <span className="truncate">{melding.extra_informatie}</span>
           <span className="truncate">{formatAdres(melding)}</span>
+          <span className="truncate">{melding.extra_informatie}</span>
           <span className="truncate">{melding.melder || '-'}</span>
           <Badge
             style={{
@@ -242,6 +245,7 @@ export default function IssuesPage() {
             const query = searchQuery.toLowerCase();
             return (
                 m.intakenummer?.toLowerCase().includes(query) ||
+                m.extern_meldingsnummer?.toLowerCase().includes(query) ||
                 m.straatnaam?.toLowerCase().includes(query) ||
                 m.plaats?.toLowerCase().includes(query) ||
                 m.postcode?.toLowerCase().includes(query) ||
