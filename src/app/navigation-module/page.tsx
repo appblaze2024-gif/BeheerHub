@@ -319,7 +319,7 @@ export default function NavigationModulePage() {
   }
 
   const handleStartNavigation = () => {
-    if (!origin || objectsInWijk.length === 0) return;
+    if (!origin || !objectsInWijk || objectsInWijk.length === 0) return;
     
     setPendingObjects(objectsInWijk);
     setCompletedObjects([]);
@@ -403,8 +403,8 @@ export default function NavigationModulePage() {
     }
   };
   
-  const progressValue = objectsInWijk.length > 0 ? (completedObjects.length / objectsInWijk.length) * 100 : 0;
-  const allObjectsCompleted = pendingObjects.length === 0 && completedObjects.length > 0 && objectsInWijk.length > 0;
+  const progressValue = objectsInWijk && objectsInWijk.length > 0 ? (completedObjects.length / objectsInWijk.length) * 100 : 0;
+  const allObjectsCompleted = pendingObjects.length === 0 && completedObjects.length > 0 && objectsInWijk && objectsInWijk.length > 0;
   
   const formatDistance = (meters: number) => {
     if (meters < 1000) {
@@ -472,7 +472,7 @@ export default function NavigationModulePage() {
                             </SelectContent>
                         </Select>
                     </div>
-                    <Button onClick={handleStartNavigation} disabled={!selectedWijkId || objectsInWijk.length === 0 || isCalculating}>
+                    <Button onClick={handleStartNavigation} disabled={!selectedWijkId || !objectsInWijk || objectsInWijk.length === 0 || isCalculating}>
                         {isCalculating ? (
                             <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Bezig...</>
                         ) : 'Start Route'}
@@ -523,18 +523,19 @@ export default function NavigationModulePage() {
 
         {isNavigating && (
              <div className="absolute bottom-4 left-4 right-4 z-10 flex items-end justify-between">
-                  <Button variant="destructive" size="icon" className="rounded-full h-12 w-12" onClick={handleStopNavigation}>
-                        <X className="h-6 w-6" />
-                    </Button>
-                <div className='flex flex-col gap-2'>
-                    <div className="bg-card/90 backdrop-blur-sm p-2 rounded-lg shadow-lg text-card-foreground w-72">
+                <Button variant="destructive" className="rounded-full h-16 w-16 p-0 flex items-center justify-center shadow-lg" onClick={handleStopNavigation}>
+                    <X className="h-8 w-8" />
+                </Button>
+
+                <div className="flex items-end gap-4">
+                    <div className="bg-card/90 backdrop-blur-sm p-2 rounded-lg shadow-lg text-card-foreground">
                         <div className="flex justify-between items-center mb-1 px-1">
                             <p className="font-semibold text-xs">Voortgang</p>
-                            <p className="font-semibold text-xs">{completedObjects.length} / {objectsInWijk.length} objecten</p>
+                            <p className="font-semibold text-xs">{completedObjects.length} / {(objectsInWijk || []).length} objecten</p>
                         </div>
                         <Progress value={progressValue} className='h-2' />
                     </div>
-                    <div className="bg-card/90 backdrop-blur-sm p-2 rounded-lg shadow-lg flex items-center justify-between gap-4 text-card-foreground w-72">
+                    <div className="bg-card/90 backdrop-blur-sm p-2 rounded-lg shadow-lg flex items-center justify-between gap-4 text-card-foreground">
                         <div className="flex items-center gap-2">
                             <Clock className="h-5 w-5" />
                             <span className="font-bold text-lg">{currentTime}</span>
@@ -548,15 +549,7 @@ export default function NavigationModulePage() {
                         </div>
                     </div>
                 </div>
-                 <div className="flex flex-col items-end gap-2">
-                    {allObjectsCompleted && (
-                       <div className='flex items-center gap-2 bg-green-600 text-white font-bold p-3 rounded-lg shadow-lg'>
-                            <CheckCircle className="h-6 w-6" />
-                            <span>Route Voltooid!</span>
-                       </div>
-                    )}
-                     <Button size="lg" onClick={handleNextObject}>Volgende Object <ChevronRight className="ml-2 h-5 w-5" /></Button>
-                </div>
+                 <div className="w-16 h-16"></div>
             </div>
         )}
 
@@ -587,7 +580,7 @@ export default function NavigationModulePage() {
             </Marker>
           )}
 
-          {!isNavigating && objectsInWijk.map(obj => (
+          {!isNavigating && objectsInWijk && objectsInWijk.map(obj => (
              <Marker
                 key={obj.id}
                 longitude={obj.longitude}
