@@ -15,10 +15,11 @@ import {
 import { Button } from './ui/button';
 import { Wijk } from '@/app/projects/page';
 import { Input } from './ui/input';
-import { Loader2 } from 'lucide-react';
+import { Loader2, BoxSelect } from 'lucide-react';
 import * as turf from '@turf/turf';
 import type { FillLayer, LineLayer, SymbolLayer, MapLayerMouseEvent } from 'react-map-gl';
 import { Layer, Source } from 'react-map-gl';
+import { cn } from '@/lib/utils';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -94,6 +95,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   const [isDrawReady, setIsDrawReady] = React.useState(false);
   const [clickPopupInfo, setClickPopupInfo] = React.useState<ClickPopupInfo | null>(null);
   const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const [isFillMode, setIsFillMode] = React.useState(false);
   
   const initialFeaturesRef = React.useRef<any[]>([]);
 
@@ -126,8 +128,41 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     setSuggestions([]);
     setClickPopupInfo(null);
     initialFeaturesRef.current = [];
+    setIsFillMode(false);
   }, []);
 
+   const onDrawCreate = React.useCallback((e: { features: turf.Feature[] }) => {
+    if (!isFillMode) return;
+
+    const newBoundary = e.features[0] as turf.Feature<turf.Polygon | turf.MultiPolygon>;
+    if (!newBoundary) return;
+    
+    // Immediately delete the drawn boundary, we only use it for calculation
+    if (drawRef.current) {
+        drawRef.current.delete(newBoundary.id as string);
+    }
+    
+    // Get all other polygons that were already on the map
+    const existingFeatures = drawRef.current?.getAll().features || [];
+    const existingPolygons = existingFeatures.filter(f => f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon') as turf.Feature<turf.Polygon | turf.MultiPolygon>[];
+
+    let filledArea: turf.Feature<turf.Polygon | turf.MultiPolygon> | null = newBoundary;
+
+    // Subtract each existing polygon from the new boundary
+    for (const existing of existingPolygons) {
+        if (filledArea) {
+            filledArea = turf.difference(filledArea, existing);
+        }
+    }
+
+    // If there's a resulting area, add it to the map
+    if (filledArea) {
+        // turf.difference can return null or a feature with no geometry
+        if (filledArea.geometry) {
+            drawRef.current?.add(filledArea as any);
+        }
+    }
+  }, [isFillMode]);
 
   const onMapLoad = React.useCallback(() => {
     if (mapRef.current && !drawRef.current && !readOnly) {
@@ -195,6 +230,8 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
       drawRef.current = draw;
       setIsDrawReady(true);
       
+      map.on('draw.create', onDrawCreate);
+
       if (geojson && geojson.features.length > 0) {
         initialFeaturesRef.current = geojson.features; // Store initial features
         draw.add(geojson as any);
@@ -213,7 +250,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
            }
        }
     }
-  }, [geojson, readOnly]);
+  }, [geojson, readOnly, onDrawCreate]);
   
   const handleMapClick = React.useCallback(async (event: MapLayerMouseEvent) => {
     // In edit mode, don't trigger reverse geocode if user is drawing or clicking a drawn feature.
@@ -359,8 +396,8 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         </DialogHeader>
 
         {!readOnly && (
-          <div className="px-6 pb-4 relative">
-              <div className="flex w-full max-w-md items-center space-x-2">
+          <div className="px-6 pb-4 flex justify-between items-center">
+              <div className="flex w-full max-w-md items-center space-x-2 relative">
                   <div className='relative w-full'>
                       <Input
                           type="text"
@@ -385,6 +422,15 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                       )}
                   </div>
               </div>
+              <Button 
+                variant={isFillMode ? 'secondary' : 'outline'}
+                onClick={() => setIsFillMode(!isFillMode)}
+                disabled={!isDrawReady}
+                title="Vul de vrije ruimte binnen een getekend gebied"
+              >
+                  <BoxSelect className="mr-2 h-4 w-4"/>
+                  Vul vrije ruimte
+              </Button>
               {!isDrawReady && <p className='text-xs text-muted-foreground mt-1'>Kaart laden...</p>}
           </div>
         )}
