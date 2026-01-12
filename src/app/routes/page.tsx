@@ -55,9 +55,11 @@ export default function RoutesPage() {
 
   const sortedWijken = React.useMemo(() => {
     if (!selectedProject?.wijken) return [];
-    return [...selectedProject.wijken].sort((a, b) => 
-      a.naam.localeCompare(b.naam, undefined, { numeric: true, sensitivity: 'base' })
-    );
+    return [...selectedProject.wijken]
+      .filter(wijk => wijk.locatie?.toLowerCase().includes('veegmachine'))
+      .sort((a, b) => 
+        a.naam.localeCompare(b.naam, undefined, { numeric: true, sensitivity: 'base' })
+      );
   }, [selectedProject?.wijken]);
 
   React.useEffect(() => {
