@@ -79,8 +79,7 @@ export default function SweeperRoutePlannerPage() {
   const [selectedWijkId, setSelectedWijkId] = React.useState<string | null>(null);
   const [selectedRouteId, setSelectedRouteId] = React.useState<string | null>(null);
   
-  const [wijkPolygon, setWijkPolygon] = React.useState<FeatureCollection | null>(null);
-  const [maskPolygon, setMaskPolygon] = React.useState<Feature<Polygon | MultiPolygon> | null>(null);
+  const [wijkPolygon, setWijkPolygon] = React.useState<FeatureCollection<Polygon | MultiPolygon> | null>(null);
   
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [selectedRoadTypes, setSelectedRoadTypes] = React.useState<string[]>([]);
@@ -129,38 +128,30 @@ export default function SweeperRoutePlannerPage() {
     if (selectedWijk?.subGebieden) {
         try {
             const features = JSON.parse(selectedWijk.subGebieden);
-            const validFeatures = (Array.isArray(features) ? features : []).filter(
-                (f: any) => f && f.type === 'Feature' && f.geometry
+            const validFeatures: Feature<Polygon | MultiPolygon>[] = (Array.isArray(features) ? features : []).filter(
+                (f: any) => f && f.type === 'Feature' && (f.geometry?.type === 'Polygon' || f.geometry?.type === 'MultiPolygon')
             );
 
             if (validFeatures.length > 0) {
                 const featureCollection = turf.featureCollection(validFeatures);
                 setWijkPolygon(featureCollection);
 
-                let world = turf.polygon([[
-                    [-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90]
-                ]]);
-
-                validFeatures.forEach((feature: Feature<Polygon | MultiPolygon>) => {
-                    const newWorld = turf.difference(world, feature);
-                    if (newWorld) world = newWorld;
-                });
-                setMaskPolygon(world);
-
                 const map = mapRef.current?.getMap();
                 if (map) {
                     const bbox = turf.bbox(featureCollection);
-                    map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
+                    if (bbox[0] !== Infinity) {
+                        map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
+                    }
                 }
             } else {
-                setWijkPolygon(null); setMaskPolygon(null);
+                setWijkPolygon(null);
             }
         } catch (e) {
             console.error("Invalid GeoJSON in wijk.subGebieden", e);
-            setWijkPolygon(null); setMaskPolygon(null);
+            setWijkPolygon(null);
         }
     } else {
-        setWijkPolygon(null); setMaskPolygon(null);
+        setWijkPolygon(null);
     }
     // Reset route when wijk changes
     setSelectedRouteId(null);
@@ -168,6 +159,35 @@ export default function SweeperRoutePlannerPage() {
     setNewRouteName('');
     setGeneratedRoute(null);
   }, [selectedWijk]);
+
+  // This effect updates the map layers based on the selected district polygon.
+  React.useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || !map.isStyleLoaded()) return;
+    
+    // The filter to apply to the road layers.
+    // It combines the selected road types with a geographic 'within' check.
+    const getLayerFilter = (types: string[], polygon: FeatureCollection | null) => {
+        const typeFilter = ['in', ['get', 'class'], ['literal', types]];
+        if (polygon) {
+            // This is the core change: we use `within` which is a Mapbox GL JS expression
+            // to filter features geometrically.
+            const polygonFilter = ['any', ...polygon.features.map(f => ['within', f])];
+            return ['all', typeFilter, polygonFilter];
+        }
+        return ['all', typeFilter, ['literal', false]]; // If no polygon, show no roads
+    };
+
+    const filter = getLayerFilter(selectedRoadTypes, wijkPolygon);
+    
+    Object.keys(roadColorMapping).forEach(type => {
+        if (map.getLayer(type)) {
+          // Set the filter for each road layer
+          map.setFilter(type, filter);
+        }
+    });
+
+  }, [selectedRoadTypes, wijkPolygon]);
   
   React.useEffect(() => {
       if (selectedRouteId) {
@@ -214,17 +234,18 @@ export default function SweeperRoutePlannerPage() {
     setGeneratedRoute(null);
 
     const map = mapRef.current.getMap();
-    const roads = map.querySourceFeatures('composite', {
+    
+    const roadFeatures = map.querySourceFeatures('composite', {
       sourceLayer: 'road',
       filter: ['all',
         ['in', ['get', 'class'], ['literal', selectedRoadTypes]],
-        ['within', wijkPolygon]
+        ['any', ...wijkPolygon.features.map(f => ['within', f])]
       ]
     });
     
     const roadNetwork: FeatureCollection<LineString> = {
       type: 'FeatureCollection',
-      features: roads.map(r => ({
+      features: roadFeatures.map(r => ({
           type: 'Feature',
           properties: r.properties,
           geometry: r.geometry as LineString,
@@ -403,13 +424,9 @@ export default function SweeperRoutePlannerPage() {
               type="line"
               source="composite"
               source-layer="road"
-              filter={['==', 'class', type]}
-              layout={{
-                'line-join': 'round',
-                'line-cap': 'round',
-                visibility: selectedRoadTypes.includes(type) ? 'visible' : 'none',
-              }}
-              paint={{ 'line-color': color, 'line-width': 2, 'line-opacity': 0.8 }}
+              filter={["literal", false]} // Initially hide all layers
+              layout={{ 'line-join': 'round', 'line-cap': 'round' }}
+              paint={{ 'line-color': color, 'line-width': 4, 'line-opacity': 0.8 }}
             />
           ))}
 
@@ -423,17 +440,7 @@ export default function SweeperRoutePlannerPage() {
               <Layer
                 id="wijk-polygon-outline"
                 type="line"
-                paint={{ 'line-color': '#3b82f6', 'line-width': 2 }}
-              />
-            </Source>
-          )}
-
-          {maskPolygon && (
-            <Source id="mask-source" type="geojson" data={maskPolygon}>
-              <Layer
-                id="mask-layer"
-                type="fill"
-                paint={{ 'fill-color': 'black', 'fill-opacity': 1 }}
+                paint={{ 'line-color': '#2563eb', 'line-width': 2 }}
               />
             </Source>
           )}
