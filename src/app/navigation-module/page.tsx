@@ -91,6 +91,7 @@ export default function NavigationModulePage() {
   const [route, setRoute] = React.useState<any>(null);
   const [isCalculating, setIsCalculating] = React.useState(false);
   const [isNavigating, setIsNavigating] = React.useState(false);
+  const [destination, setDestination] = React.useState<MapObject | null>(null);
   
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
   const [selectedWijkId, setSelectedWijkId] = React.useState<string | null>(null);
@@ -275,6 +276,7 @@ export default function NavigationModulePage() {
     });
 
     if (closestObject) {
+      setDestination(closestObject);
       const routePoints: [number, number][] = [
         origin,
         [closestObject.longitude, closestObject.latitude]
@@ -295,6 +297,7 @@ export default function NavigationModulePage() {
   const handleStopNavigation = () => {
     setIsNavigating(false);
     setRoute(null);
+    setDestination(null);
     stopTracking();
     
     setViewState(prev => ({ ...prev, pitch: 0, bearing: 0, zoom: 14 }));
@@ -449,6 +452,16 @@ export default function NavigationModulePage() {
               </div>
             </Marker>
           )}
+          
+          {isNavigating && destination && (
+            <Marker
+              longitude={destination.longitude}
+              latitude={destination.latitude}
+              anchor="bottom"
+            >
+              <MapPin className="w-8 h-8 text-blue-600" />
+            </Marker>
+          )}
 
           {!isNavigating && objectsInWijk.map(obj => (
              <Marker
@@ -470,5 +483,3 @@ export default function NavigationModulePage() {
     </div>
   );
 }
-
-    
