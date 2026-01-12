@@ -24,6 +24,7 @@ import {
   User,
   Settings,
   LogOut,
+  Trash2,
 } from 'lucide-react';
 import { useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
@@ -42,6 +43,7 @@ const menuItems = [
   { href: '/objects', label: 'Objecten', icon: Building2 },
   { href: '/inventory', label: 'Voorraadbeheer', icon: Package },
   { href: '/issues', label: 'Meldingen', icon: Bell },
+  { href: '/trash-bins', label: 'Prullenbakken', icon: Trash2 },
 ];
 
 export function SidebarNav({ isCollapsed }: { isCollapsed: boolean }) {
