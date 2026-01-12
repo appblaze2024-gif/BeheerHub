@@ -470,19 +470,16 @@ export default function NavigationModulePage() {
         )}
 
         {isNavigating && (
-            <div className="absolute bottom-4 left-4 right-4 z-10 flex flex-col gap-2">
-                {/* Progress Bar */}
-                <div className="bg-card/90 backdrop-blur-sm p-2 rounded-lg shadow-lg flex-1 text-card-foreground">
-                    <div className="flex justify-between items-center mb-1 px-1">
-                        <p className="font-semibold text-xs">Voortgang</p>
-                        <p className="font-semibold text-xs">{completedObjects.length} / {objectsInWijk.length} objecten</p>
+             <div className="absolute bottom-4 left-4 right-4 z-10 flex justify-between items-end">
+                <div className='flex flex-col gap-2'>
+                    <div className="bg-card/90 backdrop-blur-sm p-2 rounded-lg shadow-lg text-card-foreground">
+                        <div className="flex justify-between items-center mb-1 px-1">
+                            <p className="font-semibold text-xs">Voortgang</p>
+                            <p className="font-semibold text-xs">{completedObjects.length} / {objectsInWijk.length} objecten</p>
+                        </div>
+                        <Progress value={progressValue} className='h-2' />
                     </div>
-                    <Progress value={progressValue} className='h-2' />
-                </div>
-                
-                {/* Main Action Bar */}
-                 <div className="flex justify-between items-center gap-4">
-                     <div className="bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg flex items-center gap-4 text-card-foreground">
+                    <div className="bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg flex items-center gap-4 text-card-foreground">
                         <div className="flex items-center gap-2">
                             <Clock className="h-5 w-5" />
                             <span className="font-bold text-lg">12:30</span>
@@ -495,7 +492,8 @@ export default function NavigationModulePage() {
                             13:15 aankomst
                         </div>
                     </div>
-                    
+                </div>
+                 <div className="flex items-end gap-4">
                     {allObjectsCompleted ? (
                        <div className='flex items-center gap-2 bg-green-600 text-white font-bold p-3 rounded-lg shadow-lg'>
                             <CheckCircle className="h-6 w-6" />
