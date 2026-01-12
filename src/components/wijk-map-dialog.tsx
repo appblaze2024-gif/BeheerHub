@@ -137,30 +137,31 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     const newBoundary = e.features[0] as turf.Feature<turf.Polygon | turf.MultiPolygon>;
     if (!newBoundary) return;
     
-    // Immediately delete the drawn boundary, we only use it for calculation
     if (drawRef.current) {
         drawRef.current.delete(newBoundary.id as string);
     }
     
-    // Get all other polygons that were already on the map
     const existingFeatures = drawRef.current?.getAll().features || [];
     const existingPolygons = existingFeatures.filter(f => f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon') as turf.Feature<turf.Polygon | turf.MultiPolygon>[];
 
     let filledArea: turf.Feature<turf.Polygon | turf.MultiPolygon> | null = newBoundary;
 
-    // Subtract each existing polygon from the new boundary
     for (const existing of existingPolygons) {
         if (filledArea) {
             filledArea = turf.difference(filledArea, existing);
         }
     }
 
-    // If there's a resulting area, add it to the map
     if (filledArea) {
-        // turf.difference can return null or a feature with no geometry
         if (filledArea.geometry) {
             drawRef.current?.add(filledArea as any);
         }
+    }
+    
+    // Deactivate fill mode and switch back to simple select after drawing
+    setIsFillMode(false);
+    if(drawRef.current){
+        drawRef.current.changeMode('simple_select');
     }
   }, [isFillMode]);
 
@@ -362,6 +363,18 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         mapRef.current?.getMap().flyTo({ center: [lon, lat], zoom: 13 });
     }
   };
+
+  const toggleFillMode = () => {
+    const nextFillMode = !isFillMode;
+    setIsFillMode(nextFillMode);
+    if (drawRef.current) {
+        if (nextFillMode) {
+            drawRef.current.changeMode('draw_polygon');
+        } else {
+            drawRef.current.changeMode('simple_select');
+        }
+    }
+  };
   
   React.useEffect(() => {
     return () => {
@@ -424,7 +437,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
               </div>
               <Button 
                 variant={isFillMode ? 'secondary' : 'outline'}
-                onClick={() => setIsFillMode(!isFillMode)}
+                onClick={toggleFillMode}
                 disabled={!isDrawReady}
                 title="Vul de vrije ruimte binnen een getekend gebied"
               >
@@ -474,7 +487,8 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                                 handleSuggestionClick({ 
                                   display_name: clickPopupInfo.name, 
                                   lat: clickPopupInfo.latitude.toString(),
-                                  lon: clickPopupInfo.longitude.toString()
+                                  lon: clickPopupInfo.longitude.toString(),
+                                  geojson: { type: 'Polygon', coordinates: [] } // Dummy geojson
                                 } as Suggestion)
                                 setClickPopupInfo(null);
                               }}
