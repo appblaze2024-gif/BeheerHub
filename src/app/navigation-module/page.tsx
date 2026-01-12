@@ -90,7 +90,6 @@ export default function NavigationModulePage() {
           setLocationError(null);
         },
         (error) => {
-          console.error("Geolocation error:", error);
           setLocationError("Kon uw locatie niet ophalen. Zorg ervoor dat u locatietoestemming heeft gegeven.");
           // Fallback to a default origin if location is denied
           setOrigin([5.4697, 51.4416]); 
