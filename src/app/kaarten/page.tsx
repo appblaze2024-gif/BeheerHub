@@ -31,7 +31,7 @@ type Project = {
 };
 
 
-export default function RoutesPage() {
+export default function KaartenPage() {
   const mapRef = React.useRef<any>(null);
   const firestore = useFirestore();
   const [selectedTypes, setSelectedTypes] = React.useState<string[]>([]);

@@ -16,7 +16,7 @@ import {
   Truck,
   Wrench,
   Building2,
-  Route,
+  Map,
   Package,
   Bell,
   Home,
@@ -40,7 +40,7 @@ const menuItems = [
   { href: '/vehicles', label: 'Voertuigen', icon: Truck },
   { href: '/machine-management', label: 'Machinebeheer', icon: Wrench },
   { href: '/objects', label: 'Objecten', icon: Building2 },
-  { href: '/routes', label: 'Routes', icon: Route },
+  { href: '/kaarten', label: 'Kaarten', icon: Map },
   { href: '/inventory', label: 'Voorraadbeheer', icon: Package },
   { href: '/issues', label: 'Meldingen', icon: Bell },
 ];
