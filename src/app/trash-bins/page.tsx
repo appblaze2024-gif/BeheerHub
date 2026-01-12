@@ -139,8 +139,8 @@ export default function TrashBinsPage() {
   return (
     <div className="flex flex-col flex-1 min-h-0">
       <PageHeader title="Prullenbakken Routeplanner" />
-      <div className="flex-1 grid grid-cols-[350px_1fr] gap-6 p-6 min-h-0">
-        <aside className="flex flex-col gap-6">
+      <div className="flex-1 grid grid-cols-[350px_1fr] gap-6 px-6 pb-6 min-h-0">
+        <aside className="flex flex-col gap-6 min-h-0">
           <Card>
             <CardHeader>
               <CardTitle>Filters</CardTitle>
@@ -237,7 +237,7 @@ export default function TrashBinsPage() {
              </CardContent>
           </Card>
         </aside>
-        <main className="rounded-lg overflow-hidden border">
+        <main className="rounded-lg overflow-hidden border min-h-0">
             <MapboxView 
                 objects={objectsInSelectedWijken} 
                 selectedObjects={selectedObjects}
