@@ -240,7 +240,7 @@ export default function NavigationModulePage() {
     const validPoints = points.filter((p): p is [number, number] =>
       p != null && Array.isArray(p) && p.length === 2 && !isNaN(p[0]) && !isNaN(p[1])
     );
-
+  
     if (validPoints.length < 2) {
       console.error("Not enough valid points to calculate a route.");
       setRoute(null);
@@ -248,40 +248,45 @@ export default function NavigationModulePage() {
       setRouteInstructions([]);
       return;
     }
-
+  
     setIsCalculating(true);
     setRoute(null);
     setRouteInfo(null);
     setRouteInstructions([]);
-
+  
     const limitedPoints = validPoints.slice(0, 25);
-
+  
     try {
-        const coordinates = limitedPoints.map(p => p.join(',')).join(';');
-        const response = await fetch(
-            `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${coordinates}?geometries=geojson&overview=full&steps=true&language=nl&access_token=${MAPBOX_TOKEN}`
-        );
-        const data = await response.json();
-        
-        if (data.routes && data.routes.length > 0) {
-            const currentRoute = data.routes[0];
-            setRoute({
-                type: 'Feature',
-                properties: {},
-                geometry: currentRoute.geometry,
-            });
-            setRouteInfo({
-                distance: currentRoute.distance,
-                duration: currentRoute.duration,
-            });
-            if (currentRoute.legs[0]?.steps) {
-              setRouteInstructions(currentRoute.legs[0].steps);
-            }
+      const coordinates = limitedPoints.map(p => p.join(',')).join(';');
+      const response = await fetch(
+        `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${coordinates}?geometries=geojson&overview=full&steps=true&language=nl&access_token=${MAPBOX_TOKEN}`
+      );
+  
+      if (!response.ok) {
+        throw new Error(`Failed to fetch route: ${response.statusText}`);
+      }
+  
+      const data = await response.json();
+      
+      if (data.routes && data.routes.length > 0) {
+        const currentRoute = data.routes[0];
+        setRoute({
+          type: 'Feature',
+          properties: {},
+          geometry: currentRoute.geometry,
+        });
+        setRouteInfo({
+          distance: currentRoute.distance,
+          duration: currentRoute.duration,
+        });
+        if (currentRoute.legs[0]?.steps) {
+          setRouteInstructions(currentRoute.legs[0].steps);
         }
+      }
     } catch (error) {
-        console.error('Error calculating route:', error);
+      console.error('Error calculating route:', error);
     } finally {
-        setIsCalculating(false);
+      setIsCalculating(false);
     }
   };
 
@@ -563,34 +568,49 @@ export default function NavigationModulePage() {
         )}
 
         {isNavigating && (
-             <div className="absolute bottom-4 left-0 right-0 z-10 px-4">
+            <div className="absolute bottom-4 left-0 right-0 z-10 px-4">
                 <div className="flex items-end justify-between">
-                    <Button variant="destructive" className="rounded-full h-16 w-16 p-0 flex items-center justify-center shadow-lg" onClick={handleStopNavigation}>
-                        <X className="h-8 w-8" />
+                <div className="w-16">
+                    <Button
+                    variant="destructive"
+                    className="rounded-full h-16 w-16 p-0 flex items-center justify-center shadow-lg"
+                    onClick={handleStopNavigation}
+                    >
+                    <X className="h-8 w-8" />
                     </Button>
-                    <div className='flex flex-col items-center gap-4'>
-                        <div className="bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg text-card-foreground w-96">
-                            <div className="flex justify-between items-center mb-1 px-1">
-                                <p className="font-semibold text-sm">Voortgang</p>
-                                <p className="font-semibold text-sm">{completedObjects.length} / {(objectsInWijk || []).length} objecten</p>
-                            </div>
-                            <Progress value={progressValue} className='h-2' />
-                        </div>
-                        <div className="bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg flex items-center justify-between gap-4 text-card-foreground w-96">
-                            <div className="flex items-center gap-2">
-                                <Clock className="h-5 w-5" />
-                                <span className="font-bold text-lg">{currentTime}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                                <Route className="h-5 w-5" />
-                                <span>{routeInfo ? formatDistance(routeInfo.distance) : '-'}</span>
-                            </div>
-                            <div className="text-muted-foreground text-sm">
-                                {routeInfo ? `${formatDuration(routeInfo.duration)} aankomst` : '-'}
-                            </div>
-                        </div>
+                </div>
+
+                <div className="flex flex-col items-center gap-4">
+                    <div className="bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg text-card-foreground w-96">
+                    <div className="flex justify-between items-center mb-1 px-1">
+                        <p className="font-semibold text-sm">Voortgang</p>
+                        <p className="font-semibold text-sm">
+                        {completedObjects.length} / {(objectsInWijk || []).length}{' '}
+                        objecten
+                        </p>
                     </div>
-                    <div className='w-16'></div>
+                    <Progress value={progressValue} className="h-2" />
+                    </div>
+                    <div className="bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg flex items-center justify-between gap-4 text-card-foreground w-96">
+                    <div className="flex items-center gap-2">
+                        <Clock className="h-5 w-5" />
+                        <span className="font-bold text-lg">{currentTime}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                        <Route className="h-5 w-5" />
+                        <span>
+                        {routeInfo ? formatDistance(routeInfo.distance) : '-'}
+                        </span>
+                    </div>
+                    <div className="text-muted-foreground text-sm">
+                        {routeInfo
+                        ? `${formatDuration(routeInfo.duration)} aankomst`
+                        : '-'}
+                    </div>
+                    </div>
+                </div>
+
+                <div className="w-16"></div>
                 </div>
             </div>
         )}
@@ -655,7 +675,7 @@ export default function NavigationModulePage() {
                         </Button>
                     </AlertDialogCancel>
                     <AlertDialogAction asChild>
-                         <Button onClick={handleNextObject} variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600 focus-visible:ring-green-500'>
+                         <Button onClick={handleNextObject} variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600 focus-visible:ring-green-500 focus-visible:ring-offset-0 focus:ring-0 focus-visible:ring-0 ring-offset-0 ring-0'>
                             <CheckCircle className='h-10 w-10' />
                         </Button>
                     </AlertDialogAction>
