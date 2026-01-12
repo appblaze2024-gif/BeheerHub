@@ -53,6 +53,20 @@ export type Wijk = {
   subGebieden: string;
 };
 
+type Veegroute = {
+  id: string;
+  naam: string;
+  locatie: string;
+  subGebieden: string;
+};
+
+type Prullenbakkenroute = {
+  id: string;
+  naam: string;
+  locatie: string;
+  subGebieden: string;
+};
+
 type Boekingregel = {
     id: string;
     naam: string;
@@ -74,6 +88,8 @@ type Project = {
   werksoorten: Werksoort[];
   boekingregels?: Boekingregel[];
   wijken?: Wijk[];
+  veegroutes?: Veegroute[];
+  prullenbakkenroutes?: Prullenbakkenroute[];
 };
 
 export type Afspraak = {
@@ -118,6 +134,8 @@ const EMPTY_PROJECT: Project = {
   werksoorten: [],
   boekingregels: [],
   wijken: [],
+  veegroutes: [],
+  prullenbakkenroutes: [],
 };
 
 function WerksoortenTab({
@@ -677,6 +695,205 @@ function WijkenTab({
   );
 }
 
+function VeegroutesTab({
+  veegroutes,
+  setCurrentProject,
+}: {
+  veegroutes: Veegroute[];
+  setCurrentProject: React.Dispatch<React.SetStateAction<Project>>;
+}) {
+  const [mapRoute, setMapRoute] = React.useState<Veegroute | null>(null);
+
+  const sortedRoutes = React.useMemo(() => {
+    if (!veegroutes) return [];
+    return [...veegroutes].sort((a, b) =>
+      a.naam.localeCompare(b.naam, undefined, { numeric: true, sensitivity: 'base' })
+    );
+  }, [veegroutes]);
+
+  const setVeegroutes = (updater: Veegroute[] | ((prev: Veegroute[]) => Veegroute[])) => {
+    setCurrentProject(prevProject => ({
+      ...prevProject,
+      veegroutes: typeof updater === 'function' ? updater(prevProject.veegroutes || []) : updater,
+    }));
+  };
+
+  const addRow = () => {
+    setVeegroutes(prev => [
+      ...(prev || []),
+      {
+        id: new Date().toISOString(),
+        naam: '',
+        locatie: '',
+        subGebieden: '[]',
+      },
+    ]);
+  };
+
+  const removeRow = (id: string) => {
+    setVeegroutes(prev => (prev || []).filter((r) => r.id !== id));
+  };
+
+  const handleInputChange = (
+    id: string,
+    field: keyof Veegroute,
+    value: string
+  ) => {
+    setVeegroutes(prev => (prev || []).map((r) => (r.id === id ? { ...r, [field]: value } : r)));
+  };
+  
+  const handleSaveCoordinates = (routeId: string, coordinates: string) => {
+    handleInputChange(routeId, 'subGebieden', coordinates);
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-x-4 px-1 text-sm font-semibold">
+        <Label>Veegroute</Label>
+        <Label>Locatie</Label>
+        <Label>Gebied</Label>
+        <span />
+      </div>
+      {sortedRoutes.map((route) => (
+        <div
+          key={route.id}
+          className="grid grid-cols-[1fr_1fr_auto_auto] items-center gap-x-4"
+        >
+          <Input
+            value={route.naam}
+            onChange={(e) => handleInputChange(route.id, 'naam', e.target.value)}
+          />
+          <Input
+            value={route.locatie}
+            onChange={(e) => handleInputChange(route.id, 'locatie', e.target.value)}
+          />
+          <Button variant="outline" onClick={() => setMapRoute(route)}>
+            <MapPin className="mr-2 h-4 w-4" />
+            Gebied tekenen/bewerken
+          </Button>
+          <div className="flex items-center">
+            <Button variant="ghost" size="icon" onClick={() => removeRow(route.id)}>
+                <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
+        </div>
+      ))}
+      <Button variant="outline" onClick={addRow}>
+        Veegroute toevoegen
+      </Button>
+      
+      {mapRoute && (
+        <WijkMapDialog
+          open={!!mapRoute}
+          onOpenChange={(open) => !open && setMapRoute(null)}
+          wijk={mapRoute}
+          onSave={handleSaveCoordinates}
+        />
+      )}
+    </div>
+  );
+}
+
+function PrullenbakkenroutesTab({
+  prullenbakkenroutes,
+  setCurrentProject,
+}: {
+  prullenbakkenroutes: Prullenbakkenroute[];
+  setCurrentProject: React.Dispatch<React.SetStateAction<Project>>;
+}) {
+  const [mapRoute, setMapRoute] = React.useState<Prullenbakkenroute | null>(null);
+
+  const sortedRoutes = React.useMemo(() => {
+    if (!prullenbakkenroutes) return [];
+    return [...prullenbakkenroutes].sort((a, b) =>
+      a.naam.localeCompare(b.naam, undefined, { numeric: true, sensitivity: 'base' })
+    );
+  }, [prullenbakkenroutes]);
+
+  const setPrullenbakkenroutes = (updater: Prullenbakkenroute[] | ((prev: Prullenbakkenroute[]) => Prullenbakkenroute[])) => {
+    setCurrentProject(prevProject => ({
+      ...prevProject,
+      prullenbakkenroutes: typeof updater === 'function' ? updater(prevProject.prullenbakkenroutes || []) : updater,
+    }));
+  };
+
+  const addRow = () => {
+    setPrullenbakkenroutes(prev => [
+      ...(prev || []),
+      {
+        id: new Date().toISOString(),
+        naam: '',
+        locatie: '',
+        subGebieden: '[]',
+      },
+    ]);
+  };
+
+  const removeRow = (id: string) => {
+    setPrullenbakkenroutes(prev => (prev || []).filter((r) => r.id !== id));
+  };
+
+  const handleInputChange = (
+    id: string,
+    field: keyof Prullenbakkenroute,
+    value: string
+  ) => {
+    setPrullenbakkenroutes(prev => (prev || []).map((r) => (r.id === id ? { ...r, [field]: value } : r)));
+  };
+  
+  const handleSaveCoordinates = (routeId: string, coordinates: string) => {
+    handleInputChange(routeId, 'subGebieden', coordinates);
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-x-4 px-1 text-sm font-semibold">
+        <Label>Prullenbakkenroute</Label>
+        <Label>Locatie</Label>
+        <Label>Gebied</Label>
+        <span />
+      </div>
+      {sortedRoutes.map((route) => (
+        <div
+          key={route.id}
+          className="grid grid-cols-[1fr_1fr_auto_auto] items-center gap-x-4"
+        >
+          <Input
+            value={route.naam}
+            onChange={(e) => handleInputChange(route.id, 'naam', e.target.value)}
+          />
+          <Input
+            value={route.locatie}
+            onChange={(e) => handleInputChange(route.id, 'locatie', e.target.value)}
+          />
+          <Button variant="outline" onClick={() => setMapRoute(route)}>
+            <MapPin className="mr-2 h-4 w-4" />
+            Gebied tekenen/bewerken
+          </Button>
+          <div className="flex items-center">
+            <Button variant="ghost" size="icon" onClick={() => removeRow(route.id)}>
+                <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
+        </div>
+      ))}
+      <Button variant="outline" onClick={addRow}>
+        Prullenbakkenroute toevoegen
+      </Button>
+      
+      {mapRoute && (
+        <WijkMapDialog
+          open={!!mapRoute}
+          onOpenChange={(open) => !open && setMapRoute(null)}
+          wijk={mapRoute}
+          onSave={handleSaveCoordinates}
+        />
+      )}
+    </div>
+  );
+}
+
+
 export default function ProjectsPage() {
   const firestore = useFirestore();
   const [selectedProjectId, setSelectedProjectId] = React.useState<
@@ -724,7 +941,9 @@ export default function ProjectsPage() {
         setCurrentProject({
             ...EMPTY_PROJECT,
             ...project,
-            wijken: project.wijken || [], // Ensure wijken is an array
+            wijken: project.wijken || [],
+            veegroutes: project.veegroutes || [],
+            prullenbakkenroutes: project.prullenbakkenroutes || [],
         });
         if (project.einddatum === format(new Date(), 'yyyy-MM-dd')) {
             setIsEndDateHeden(true);
@@ -973,10 +1192,16 @@ export default function ProjectsPage() {
           />
         </TabsContent>
         <TabsContent value="veegroutes" className="flex-1 overflow-y-auto p-6">
-          <div className="text-center text-muted-foreground">Hier komt de content voor veegroutes.</div>
+          <VeegroutesTab
+            veegroutes={currentProject.veegroutes || []}
+            setCurrentProject={setCurrentProject}
+          />
         </TabsContent>
         <TabsContent value="prullenbakkenroutes" className="flex-1 overflow-y-auto p-6">
-          <div className="text-center text-muted-foreground">Hier komt de content voor prullenbakkenroutes.</div>
+          <PrullenbakkenroutesTab
+            prullenbakkenroutes={currentProject.prullenbakkenroutes || []}
+            setCurrentProject={setCurrentProject}
+          />
         </TabsContent>
       </Tabs>
       

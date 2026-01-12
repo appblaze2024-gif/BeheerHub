@@ -87,6 +87,18 @@
           "items": {
             "$ref": "#/backend/entities/Wijk"
           }
+        },
+        "veegroutes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/backend/entities/Veegroute"
+          }
+        },
+        "prullenbakkenroutes": {
+            "type": "array",
+            "items": {
+                "$ref": "#/backend/entities/Prullenbakkenroute"
+            }
         }
       },
       "required": [
@@ -98,6 +110,30 @@
         "title": "Wijk",
         "type": "object",
         "description": "Represents a district within a project.",
+        "properties": {
+            "id": { "type": "string" },
+            "naam": { "type": "string" },
+            "locatie": { "type": "string" },
+            "subGebieden": { "type": "string" }
+        },
+        "required": ["naam"]
+    },
+    "Veegroute": {
+        "title": "Veegroute",
+        "type": "object",
+        "description": "Represents a sweeping route within a project.",
+        "properties": {
+            "id": { "type": "string" },
+            "naam": { "type": "string" },
+            "locatie": { "type": "string" },
+            "subGebieden": { "type": "string" }
+        },
+        "required": ["naam"]
+    },
+    "Prullenbakkenroute": {
+        "title": "Prullenbakkenroute",
+        "type": "object",
+        "description": "Represents a trash can route within a project.",
         "properties": {
             "id": { "type": "string" },
             "naam": { "type": "string" },
