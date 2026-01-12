@@ -522,26 +522,31 @@ export default function NavigationModulePage() {
         )}
 
         {isNavigating && (
-             <div className="absolute bottom-4 left-4 right-4 z-10 flex justify-between items-end">
-                <div className='bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg text-card-foreground flex flex-col gap-2 w-72'>
-                    <div>
-                        <div className="flex justify-between items-center mb-1 px-1">
-                            <p className="font-semibold text-xs">Voortgang</p>
-                            <p className="font-semibold text-xs">{completedObjects.length} / {objectsInWijk.length} objecten</p>
+             <div className="absolute bottom-4 left-4 right-4 z-10 flex flex-col gap-2 items-start">
+                  <Button variant="destructive" size="icon" className="rounded-full h-12 w-12" onClick={handleStopNavigation}>
+                        <X className="h-6 w-6" />
+                    </Button>
+                <div className='bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg text-card-foreground w-72'>
+                     <div className='bg-card/90 backdrop-blur-sm rounded-lg text-card-foreground flex flex-col gap-2'>
+                        <div>
+                            <div className="flex justify-between items-center mb-1 px-1">
+                                <p className="font-semibold text-xs">Voortgang</p>
+                                <p className="font-semibold text-xs">{completedObjects.length} / {objectsInWijk.length} objecten</p>
+                            </div>
+                            <Progress value={progressValue} className='h-2' />
                         </div>
-                        <Progress value={progressValue} className='h-2' />
-                    </div>
-                    <div className="flex items-center gap-4 text-card-foreground">
-                        <div className="flex items-center gap-2">
-                            <Clock className="h-5 w-5" />
-                            <span className="font-bold text-lg">{currentTime}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                            <Route className="h-5 w-5" />
-                            <span>{routeInfo ? formatDistance(routeInfo.distance) : '-'}</span>
-                        </div>
-                         <div className="text-muted-foreground text-sm">
-                            {routeInfo ? `${formatDuration(routeInfo.duration)} aankomst` : '-'}
+                        <div className="flex items-center gap-4 text-card-foreground">
+                            <div className="flex items-center gap-2">
+                                <Clock className="h-5 w-5" />
+                                <span className="font-bold text-lg">{currentTime}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                                <Route className="h-5 w-5" />
+                                <span>{routeInfo ? formatDistance(routeInfo.distance) : '-'}</span>
+                            </div>
+                            <div className="text-muted-foreground text-sm">
+                                {routeInfo ? `${formatDuration(routeInfo.duration)} aankomst` : '-'}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -553,9 +558,6 @@ export default function NavigationModulePage() {
                        </div>
                     )}
 
-                    <Button variant="destructive" size="icon" className="rounded-full h-12 w-12" onClick={handleStopNavigation}>
-                        <X className="h-6 w-6" />
-                    </Button>
                 </div>
             </div>
         )}
