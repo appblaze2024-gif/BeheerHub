@@ -19,6 +19,8 @@ interface MapboxViewProps {
   longitude?: number;
   latitude?: number;
   objects?: MapObject[];
+  selectedObjects?: MapObject[];
+  onObjectSelect?: (object: MapObject, selected: boolean) => void;
   wijkPolygons?: turf.Feature<turf.Polygon | turf.MultiPolygon>[];
 }
 
@@ -27,7 +29,7 @@ const polygonFillLayer: FillLayer = {
     type: 'fill',
     paint: {
         'fill-color': '#000000',
-        'fill-opacity': 0.3,
+        'fill-opacity': 0.1,
     },
 };
 
@@ -40,7 +42,7 @@ const polygonOutlineLayer: LineLayer = {
     },
 };
 
-export function MapboxView({ longitude, latitude, objects, wijkPolygons = [] }: MapboxViewProps) {
+export function MapboxView({ longitude, latitude, objects, selectedObjects = [], onObjectSelect, wijkPolygons = [] }: MapboxViewProps) {
   const [selectedPin, setSelectedPin] = React.useState<MapObject | null>(null);
   
   const geojson: turf.FeatureCollection<turf.Geometry> = React.useMemo(() => {
@@ -65,8 +67,12 @@ export function MapboxView({ longitude, latitude, objects, wijkPolygons = [] }: 
     if (wijkPolygons.length > 0) {
       try {
         const featureCollection = { type: 'FeatureCollection', features: wijkPolygons };
+        if (featureCollection.features.length === 0) return;
+        
         const bbox = turf.bbox(featureCollection);
-        map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
+        if (bbox[0] !== Infinity) {
+          map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
+        }
       } catch (e) {
         console.error("Error fitting bounds:", e);
       }
@@ -89,20 +95,27 @@ export function MapboxView({ longitude, latitude, objects, wijkPolygons = [] }: 
 
   const markers = React.useMemo(() => {
     if (objects) {
-      return objects.map(obj => (
-        <Marker
-          key={obj.id}
-          longitude={obj.longitude}
-          latitude={obj.latitude}
-          anchor="center"
-          onClick={e => {
-            e.originalEvent.stopPropagation();
-            setSelectedPin(obj);
-          }}
-        >
-          <div className="h-3 w-3 bg-blue-500 rounded-full border-2 border-white cursor-pointer" />
-        </Marker>
-      ));
+      return objects.map(obj => {
+        const isSelected = selectedObjects.some(so => so.id === obj.id);
+        return (
+            <Marker
+              key={obj.id}
+              longitude={obj.longitude}
+              latitude={obj.latitude}
+              anchor="center"
+              onClick={e => {
+                e.originalEvent.stopPropagation();
+                if (onObjectSelect) {
+                    onObjectSelect(obj, !isSelected);
+                } else {
+                    setSelectedPin(obj);
+                }
+              }}
+            >
+              <div className={`h-3 w-3 rounded-full border-2 border-white cursor-pointer ${isSelected ? 'bg-primary' : 'bg-blue-500'}`} />
+            </Marker>
+        )
+      });
     } else if (longitude && latitude) {
       return (
         <Marker longitude={longitude} latitude={latitude} anchor="center">
@@ -111,7 +124,7 @@ export function MapboxView({ longitude, latitude, objects, wijkPolygons = [] }: 
       );
     }
     return null;
-  }, [objects, longitude, latitude]);
+  }, [objects, longitude, latitude, selectedObjects, onObjectSelect]);
 
   return (
     <Map
