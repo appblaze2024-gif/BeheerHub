@@ -185,8 +185,6 @@ export default function NavigationModulePage() {
     setIsCalculating(true);
     setRoute(null);
 
-    // Mapbox Directions API has a limit of 25 coordinates for driving-traffic profile.
-    // We use 24 for destinations + 1 for origin.
     const limitedPoints = points.slice(0, 25);
 
     try {
@@ -230,7 +228,7 @@ export default function NavigationModulePage() {
         if (map) {
           map.easeTo({
             center: [longitude, latitude],
-            bearing: heading ?? map.getBearing(), // Use current bearing if heading is null
+            bearing: heading ?? map.getBearing(),
             zoom: 20,
             pitch: 60,
             duration: 500
@@ -260,12 +258,30 @@ export default function NavigationModulePage() {
     
     setIsNavigating(true);
 
-    const allPoints: [number, number][] = [
-      origin,
-      ...objectsInWijk.map(o => [o.longitude, o.latitude] as [number, number])
-    ];
+    const from = turf.point(origin);
     
-    calculateRoute(allPoints);
+    let closestObject = null;
+    let minDistance = Infinity;
+
+    objectsInWijk.forEach(obj => {
+        if (obj.latitude != null && obj.longitude != null) {
+            const to = turf.point([obj.longitude, obj.latitude]);
+            const distance = turf.distance(from, to, { units: 'kilometers' });
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestObject = obj;
+            }
+        }
+    });
+
+    if (closestObject) {
+      const routePoints: [number, number][] = [
+        origin,
+        [closestObject.longitude, closestObject.latitude]
+      ];
+      calculateRoute(routePoints);
+    }
+
     startTracking();
 
     mapRef.current?.getMap().flyTo({
