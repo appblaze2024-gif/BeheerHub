@@ -101,8 +101,8 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
   }
 
   const formatAdres = (melding: Melding) => {
-    const parts = [melding.straatnaam, melding.huisnummer, melding.plaats].filter(Boolean);
-    return parts.join(', ');
+    const parts = [melding.straatnaam, melding.huisnummer].filter(Boolean);
+    return parts.join(' ');
   }
 
   return (
@@ -218,11 +218,14 @@ export default function IssuesPage() {
       timeFilteredMeldingen = meldingen.filter(melding => {
         try {
           const creationDate = startOfDay(new Date(melding.datum));
+          
+          // Show if it was completed today
           const isCompletedToday =
             melding.status === 'Afgerond' &&
             melding.afhandeling_datum &&
             isSameDay(startOfDay(new Date(melding.afhandeling_datum)), dayStart);
           
+          // Show if it's open and was created on or before the selected date
           const isOpenAndRelevant =
             melding.status !== 'Afgerond' && creationDate <= dayStart;
 
