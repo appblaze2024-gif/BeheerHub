@@ -64,23 +64,27 @@ export default function RoutesPage() {
       try {
         const features = JSON.parse(selectedWijk.subGebieden);
         if (features && features.length > 0) {
-          const combined = turf.union(...features.map((f: any) => f.geometry));
-          
-          if(combined) {
-            setWijkPolygon(combined);
-            const map = mapRef.current?.getMap();
-            if (map) {
-              const bbox = turf.bbox(combined);
-              map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
+            const validGeometries = features.map((f: any) => f.geometry).filter(Boolean);
+            if (validGeometries.length > 0) {
+                const combined = turf.union(...validGeometries);
+                if(combined) {
+                    setWijkPolygon(combined);
+                    const map = mapRef.current?.getMap();
+                    if (map) {
+                    const bbox = turf.bbox(combined);
+                    map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
+                    }
+                } else {
+                    setWijkPolygon(features[0]);
+                    const map = mapRef.current?.getMap();
+                    if (map) {
+                        const bbox = turf.bbox(features[0]);
+                        map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
+                    }
+                }
+            } else {
+                setWijkPolygon(null);
             }
-          } else {
-             setWijkPolygon(features[0]);
-             const map = mapRef.current?.getMap();
-              if (map) {
-                const bbox = turf.bbox(features[0]);
-                map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
-              }
-          }
         } else {
           setWijkPolygon(null);
         }
