@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Map, { Layer, Source } from 'react-map-gl';
-import type { Feature, FeatureCollection, Polygon, MultiPolygon } from 'geojson';
+import type { Feature, FeatureCollection, Polygon, MultiPolygon, LineString } from 'geojson';
 import {
   useFirestore,
   useCollection,
@@ -31,7 +31,7 @@ import {
 } from '@/components/road-type-filter-dialog';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { Save, Trash2, Settings, Route as RouteIcon } from 'lucide-react';
+import { Save, Trash2, Settings, Route as RouteIcon, Loader2, Play, Pause, RotateCcw } from 'lucide-react';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -43,6 +43,8 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { generateRoute, GenerateRouteInput, GenerateRouteOutput } from '@/ai/flows/generate-route-flow';
+import { cn } from '@/lib/utils';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -84,6 +86,8 @@ export default function SweeperRoutePlannerPage() {
   const [selectedRoadTypes, setSelectedRoadTypes] = React.useState<string[]>([]);
   const [newRouteName, setNewRouteName] = React.useState('');
 
+  const [isGeneratingRoute, setIsGeneratingRoute] = React.useState(false);
+  const [generatedRoute, setGeneratedRoute] = React.useState<GenerateRouteOutput | null>(null);
 
   // --- Data Fetching ---
   const projectsCollection = React.useMemo(() => {
@@ -162,6 +166,7 @@ export default function SweeperRoutePlannerPage() {
     setSelectedRouteId(null);
     setSelectedRoadTypes([]);
     setNewRouteName('');
+    setGeneratedRoute(null);
   }, [selectedWijk]);
   
   React.useEffect(() => {
@@ -176,6 +181,7 @@ export default function SweeperRoutePlannerPage() {
           setSelectedRoadTypes([]);
           setNewRouteName('');
       }
+      setGeneratedRoute(null);
   }, [selectedRouteId, savedRoutes]);
 
   // --- Handlers ---
@@ -201,6 +207,53 @@ export default function SweeperRoutePlannerPage() {
     const routeRef = doc(firestore, `users/${user.uid}/routes`, routeId);
     deleteDocumentNonBlocking(routeRef);
   };
+
+  const handleGenerateRoute = async () => {
+    if (!mapRef.current || !wijkPolygon || selectedRoadTypes.length === 0) return;
+    setIsGeneratingRoute(true);
+    setGeneratedRoute(null);
+
+    const map = mapRef.current.getMap();
+    const roads = map.querySourceFeatures('composite', {
+      sourceLayer: 'road',
+      filter: ['all',
+        ['in', ['get', 'class'], ['literal', selectedRoadTypes]],
+        ['within', wijkPolygon]
+      ]
+    });
+    
+    const roadNetwork: FeatureCollection<LineString> = {
+      type: 'FeatureCollection',
+      features: roads.map(r => ({
+          type: 'Feature',
+          properties: r.properties,
+          geometry: r.geometry as LineString,
+      }))
+    };
+
+    try {
+      const input: GenerateRouteInput = { roadNetworkGeoJson: JSON.stringify(roadNetwork) };
+      const result = await generateRoute(input);
+      setGeneratedRoute(result);
+    } catch (error) {
+      console.error("Route generation failed:", error);
+    } finally {
+      setIsGeneratingRoute(false);
+    }
+  };
+
+  const generatedRouteGeoJson = React.useMemo((): Feature<LineString> | null => {
+    if (!generatedRoute) return null;
+    return {
+      type: 'Feature',
+      properties: {},
+      geometry: {
+        type: 'LineString',
+        coordinates: generatedRoute.route,
+      }
+    }
+  }, [generatedRoute]);
+
 
   const initialViewState = { longitude: 5.2913, latitude: 52.1326, zoom: 7 };
 
@@ -320,13 +373,22 @@ export default function SweeperRoutePlannerPage() {
             </CardContent>
         </Card>
         
-        <Button disabled={selectedRoadTypes.length === 0} className="w-full">
-            <RouteIcon className="mr-2 h-4 w-4" />
-            Genereer Route
+        <Button onClick={handleGenerateRoute} disabled={isGeneratingRoute || selectedRoadTypes.length === 0} className="w-full">
+          {isGeneratingRoute ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Route berekenen...
+            </>
+          ) : (
+            <>
+              <RouteIcon className="mr-2 h-4 w-4" />
+              Genereer Route
+            </>
+          )}
         </Button>
       </aside>
 
-      <main className="flex-1 min-h-0">
+      <main className="flex-1 min-h-0 relative">
         <Map
           ref={mapRef}
           initialViewState={initialViewState}
@@ -375,7 +437,54 @@ export default function SweeperRoutePlannerPage() {
               />
             </Source>
           )}
+
+          {generatedRouteGeoJson && (
+              <Source id="generated-route" type="geojson" data={generatedRouteGeoJson}>
+                  <Layer 
+                    id="route-line"
+                    type="line"
+                    paint={{
+                        'line-color': '#ff4500',
+                        'line-width': 5,
+                        'line-opacity': 0.9,
+                    }}
+                    layout={{
+                        'line-join': 'round',
+                        'line-cap': 'round'
+                    }}
+                  />
+              </Source>
+          )}
         </Map>
+
+        {generatedRoute && (
+          <Card className="absolute bottom-4 left-4 z-10 w-80 shadow-lg">
+            <CardHeader>
+              <CardTitle>Route Informatie</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Afstand:</span>
+                <span className="font-medium">{generatedRoute.totalDistance.toFixed(2)} km</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Geschatte duur:</span>
+                <span className="font-medium">{Math.round(generatedRoute.totalDuration)} min</span>
+              </div>
+              <div className="flex justify-around pt-2">
+                <Button variant="outline" size="icon" disabled>
+                  <Play className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="icon" disabled>
+                  <Pause className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="icon" onClick={() => setGeneratedRoute(null)}>
+                  <RotateCcw className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </main>
 
        <RoadTypeFilterDialog
