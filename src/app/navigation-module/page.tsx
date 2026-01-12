@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import Map, { Marker, Source, Layer } from 'react-map-gl';
+import Map, { Marker, Source, Layer, Popup } from 'react-map-gl';
 import {
   Search,
   Navigation,
@@ -12,13 +12,15 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import * as turf from '@turf/turf';
 import { useCollection, useFirestore } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, doc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -28,6 +30,19 @@ interface MapObject {
     longitude: number;
     [key: string]: any;
 }
+
+interface Wijk {
+  id: string;
+  naam: string;
+  locatie: string;
+  subGebieden: string;
+};
+
+type Project = {
+  id: string;
+  projectnaam: string;
+  wijken?: Wijk[];
+};
 
 
 const routeLayer: any = {
@@ -58,27 +73,64 @@ export default function NavigationModulePage() {
     if (!firestore) return null;
     return collection(firestore, 'objects');
   }, [firestore]);
+  
+  const projectsCollection = React.useMemo(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'projects');
+  }, [firestore]);
 
   const { data: objects, isLoading: isLoadingObjects } = useCollection<MapObject>(objectsCollection);
-
-  const [searchQuery, setSearchQuery] = React.useState('');
-  
-  const filteredObjects = React.useMemo(() => {
-    if (!objects) return [];
-    if (!searchQuery.trim()) return objects;
-    return objects.filter(obj => 
-      obj.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      obj.straatnaam?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      obj.locatieSubType?.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  }, [objects, searchQuery]);
-
+  const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsCollection);
 
   const [origin, setOrigin] = React.useState<[number, number] | null>(null);
   const [locationError, setLocationError] = React.useState<string | null>(null);
-  const [destination, setDestination] = React.useState<MapObject | null>(null);
   const [route, setRoute] = React.useState<any>(null);
   const [isCalculating, setIsCalculating] = React.useState(false);
+  
+  const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
+  const [selectedWijkId, setSelectedWijkId] = React.useState<string | null>(null);
+
+  const selectedProject = React.useMemo(() => {
+    return projects?.find(p => p.id === selectedProjectId) ?? null;
+  }, [projects, selectedProjectId]);
+
+  const projectWijken = React.useMemo(() => {
+    if (!selectedProject?.wijken) return [];
+    return selectedProject.wijken.filter(w => 
+      !w.naam.toLowerCase().includes('veegmachine') && !w.naam.toLowerCase().includes('voorvegen')
+    ).sort((a, b) => a.naam.localeCompare(b.naam, undefined, { numeric: true }));
+  }, [selectedProject]);
+  
+  const selectedWijk = React.useMemo(() => {
+      if (!selectedProject || !selectedWijkId) return null;
+      return selectedProject.wijken?.find(w => w.id === selectedWijkId) ?? null;
+  }, [selectedProject, selectedWijkId]);
+  
+  const objectsInWijk = React.useMemo(() => {
+    if (!objects || !selectedWijk) return [];
+
+    try {
+        const wijkFeatures = JSON.parse(selectedWijk.subGebieden);
+        if (!Array.isArray(wijkFeatures) || wijkFeatures.length === 0) return [];
+
+        return objects.filter(obj => {
+            if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') {
+                return false;
+            }
+            const point = turf.point([obj.longitude, obj.latitude]);
+            for (const feature of wijkFeatures) {
+                if (turf.booleanPointInPolygon(point, feature)) {
+                    return true;
+                }
+            }
+            return false;
+        });
+    } catch(e) {
+        console.error("Error filtering objects in wijk:", e);
+        return [];
+    }
+  }, [objects, selectedWijk]);
+
 
   React.useEffect(() => {
     if (navigator.geolocation) {
@@ -101,39 +153,49 @@ export default function NavigationModulePage() {
     }
   }, []);
 
-  const handleObjectClick = (object: MapObject) => {
-    setDestination(object);
-    if(origin) {
-        calculateRoute(origin, [object.longitude, object.latitude]);
+  const calculateRoute = async (points: [number, number][]) => {
+    if (points.length < 2) return;
+    setIsCalculating(true);
+    setRoute(null);
+
+    try {
+        const coordinates = points.map(p => p.join(',')).join(';');
+        const response = await fetch(
+            `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${coordinates}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`
+        );
+        const data = await response.json();
+        
+        if (data.routes && data.routes.length > 0) {
+            const routeGeometry = data.routes[0].geometry;
+            setRoute(routeGeometry);
+            
+            const routeFeature = turf.feature(routeGeometry);
+            const bbox = turf.bbox(routeFeature);
+
+            mapRef.current?.getMap().fitBounds(bbox, {
+                padding: { top: 100, bottom: 100, left: 100, right: 100 },
+                duration: 1000
+            });
+        }
+    } catch (error) {
+        console.error('Error calculating route:', error);
+    } finally {
+        setIsCalculating(false);
     }
   };
 
-  const calculateRoute = async (start: [number, number], end: [number, number]) => {
-    setIsCalculating(true);
-    setRoute(null);
-    try {
-      const coords = `${start[0]},${start[1]};${end[0]},${end[1]}`;
-      const response = await fetch(
-        `https://api.mapbox.com/directions/v5/mapbox/driving/${coords}?geometries=geojson&access_token=${MAPBOX_TOKEN}`
-      );
-      const data = await response.json();
-      if (data.routes && data.routes.length > 0) {
-        const routeGeoJSON = data.routes[0].geometry;
-        setRoute(routeGeoJSON);
-        
-        const routeFeature = turf.feature(routeGeoJSON);
-        const bbox = turf.bbox(routeFeature);
+  const handleGenerateRoute = () => {
+    if (!origin || objectsInWijk.length === 0) return;
 
-        mapRef.current?.getMap().fitBounds(bbox, {
-          padding: { top: 100, bottom: 50, left: 450, right: 50 },
-          duration: 1000
-        });
-      }
-    } catch (error) {
-      console.error('Error calculating route:', error);
-    } finally {
-      setIsCalculating(false);
-    }
+    // Create a list of coordinates including origin and all objects
+    const allPoints: [number, number][] = [
+      origin,
+      ...objectsInWijk.map(o => [o.longitude, o.latitude] as [number, number])
+    ];
+    
+    // Here you would typically call an optimization API like Mapbox Optimization API
+    // For now, we just connect them in order.
+    calculateRoute(allPoints);
   };
 
   const centerOnLocation = () => {
@@ -148,11 +210,77 @@ export default function NavigationModulePage() {
   return (
     <div className="flex flex-1 flex-col bg-stone-900 text-white overflow-hidden">
       <div className="flex-1 relative">
+         <div className="absolute top-4 left-4 z-10 bg-card/90 backdrop-blur-sm p-4 rounded-lg shadow-lg w-full max-w-sm text-black">
+            <h2 className="text-lg font-bold mb-2">Navigatie per Wijk</h2>
+            <div className="space-y-4">
+                <div>
+                    <Label htmlFor="project-select">Project</Label>
+                    <Select
+                      value={selectedProjectId || ''}
+                      onValueChange={(value) => {
+                        setSelectedProjectId(value);
+                        setSelectedWijkId(null);
+                        setRoute(null);
+                      }}
+                      disabled={isLoadingProjects}
+                    >
+                      <SelectTrigger id="project-select">
+                        <SelectValue placeholder="Selecteer een project" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {projects?.map(p => <SelectItem key={p.id} value={p.id}>{p.projectnaam}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                </div>
+                <div>
+                  <Label htmlFor='wijk-select'>Wijk</Label>
+                    <Select
+                        value={selectedWijkId || ''}
+                        onValueChange={v => setSelectedWijkId(v)}
+                        disabled={!selectedProject}
+                    >
+                         <SelectTrigger id="wijk-select">
+                            <SelectValue placeholder="Selecteer een wijk" />
+                         </SelectTrigger>
+                         <SelectContent>
+                            {projectWijken.map(w => (
+                              <SelectItem key={w.id} value={w.id}>
+                                  {w.naam} ({objects?.filter(obj => {
+                                      if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
+                                      const point = turf.point([obj.longitude, obj.latitude]);
+                                      try {
+                                          const features = JSON.parse(w.subGebieden);
+                                          return features.some((f:any) => turf.booleanPointInPolygon(point, f));
+                                      } catch { return false; }
+                                  }).length})
+                              </SelectItem>
+                            ))}
+                         </SelectContent>
+                    </Select>
+                </div>
+                 <Button onClick={handleGenerateRoute} disabled={!selectedWijkId || objectsInWijk.length === 0 || isCalculating}>
+                    {isCalculating ? (
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Bezig...</>
+                    ) : 'Genereer Route'}
+                 </Button>
+            </div>
+        </div>
+
         <div className="absolute top-4 right-4 z-10">
           <Button onClick={centerOnLocation} variant="outline" size="icon" className="bg-white border-stone-300 text-black hover:bg-stone-100">
             <LocateFixed className="h-5 w-5" />
           </Button>
         </div>
+        
+        {locationError && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 w-full max-w-md">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Locatie Fout</AlertTitle>
+              <AlertDescription>{locationError}</AlertDescription>
+            </Alert>
+          </div>
+        )}
 
         <Map
           ref={mapRef}
@@ -170,43 +298,22 @@ export default function NavigationModulePage() {
             </Marker>
           )}
 
-          {destination && (
-             <Marker longitude={destination.longitude} latitude={destination.latitude}>
-                <MapPin className="text-red-500 w-8 h-8 drop-shadow-lg" fill="currentColor" />
-             </Marker>
-          )}
+          {objectsInWijk.map(obj => (
+             <Marker
+                key={obj.id}
+                longitude={obj.longitude}
+                latitude={obj.latitude}
+             >
+              <div className="w-2.5 h-2.5 bg-gray-700 rounded-full border-2 border-white" />
+            </Marker>
+          ))}
 
           {route && (
             <Source id="route" type="geojson" data={route}>
               <Layer {...routeLayer} />
             </Source>
           )}
-
-          {objects?.map(obj => (
-             <Marker
-                key={obj.id}
-                longitude={obj.longitude}
-                latitude={obj.latitude}
-                onClick={() => handleObjectClick(obj)}
-             >
-              <div
-                className={cn(
-                  'w-2.5 h-2.5 rounded-full cursor-pointer transition-all',
-                  destination?.id === obj.id ? 'bg-red-500 scale-150 border-2 border-white' : 'bg-gray-700'
-                )}
-              />
-            </Marker>
-          ))}
         </Map>
-
-        {(isCalculating) && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-full max-w-sm px-4">
-                <div className='bg-white/80 border border-stone-200 backdrop-blur-sm rounded-lg p-4 flex items-center justify-center text-black'>
-                    <Loader2 className="mr-3 h-6 w-6 animate-spin" />
-                    <span className='text-lg font-semibold'>Route berekenen...</span>
-                </div>
-            </div>
-        )}
       </div>
     </div>
   );
