@@ -523,8 +523,8 @@ export default function NavigationModulePage() {
 
         {isNavigating && (
              <div className="absolute bottom-4 left-4 right-4 z-10 flex justify-between items-end">
-                <div className='flex flex-col items-start gap-2'>
-                   <div className="bg-card/90 backdrop-blur-sm p-2 rounded-lg shadow-lg text-card-foreground">
+                <div className="flex flex-col items-start gap-2">
+                    <div className="bg-card/90 backdrop-blur-sm p-2 rounded-lg shadow-lg text-card-foreground">
                         <div className="flex justify-between items-center mb-1 px-1">
                             <p className="font-semibold text-xs">Voortgang</p>
                             <p className="font-semibold text-xs">{completedObjects.length} / {objectsInWijk.length} objecten</p>
@@ -611,6 +611,7 @@ export default function NavigationModulePage() {
     </div>
   );
 }
+
 
 
 
