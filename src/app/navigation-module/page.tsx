@@ -101,8 +101,8 @@ export default function NavigationModulePage() {
   }, [firestore, user]);
   
   const projectsCollection = React.useMemo(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'projects');
+      if (!firestore) return null;
+      return collection(firestore, 'projects');
   }, [firestore]);
 
   const { data: objects, isLoading: isLoadingObjects } = useCollection<MapObject>(objectsCollection);
@@ -523,15 +523,15 @@ export default function NavigationModulePage() {
 
         {isNavigating && (
              <div className="absolute bottom-4 left-4 right-4 z-10 flex justify-between items-end">
-                <div className="flex flex-col items-start gap-2">
-                    <div className="bg-card/90 backdrop-blur-sm p-2 rounded-lg shadow-lg text-card-foreground">
+                <div className='bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg text-card-foreground flex flex-col gap-2'>
+                    <div>
                         <div className="flex justify-between items-center mb-1 px-1">
                             <p className="font-semibold text-xs">Voortgang</p>
                             <p className="font-semibold text-xs">{completedObjects.length} / {objectsInWijk.length} objecten</p>
                         </div>
                         <Progress value={progressValue} className='h-2' />
                     </div>
-                    <div className="bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg flex items-center gap-4 text-card-foreground">
+                    <div className="flex items-center gap-4 text-card-foreground">
                         <div className="flex items-center gap-2">
                             <Clock className="h-5 w-5" />
                             <span className="font-bold text-lg">{currentTime}</span>
@@ -611,10 +611,3 @@ export default function NavigationModulePage() {
     </div>
   );
 }
-
-
-
-
-
-
-
