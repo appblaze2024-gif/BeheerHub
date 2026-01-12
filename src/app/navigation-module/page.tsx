@@ -17,6 +17,7 @@ import {
   ChevronRight,
   Clock,
   Route,
+  ArrowUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,6 +58,15 @@ type Project = {
 interface RouteInfo {
     distance: number; // in meters
     duration: number; // in seconds
+}
+
+interface RouteInstruction {
+  distance: number;
+  maneuver: {
+    instruction: string;
+    type: string;
+    modifier?: string;
+  }
 }
 
 
@@ -101,6 +111,7 @@ export default function NavigationModulePage() {
   const [locationError, setLocationError] = React.useState<string | null>(null);
   const [route, setRoute] = React.useState<any>(null);
   const [routeInfo, setRouteInfo] = React.useState<RouteInfo | null>(null);
+  const [routeInstructions, setRouteInstructions] = React.useState<RouteInstruction[]>([]);
   const [isCalculating, setIsCalculating] = React.useState(false);
   const [isNavigating, setIsNavigating] = React.useState(false);
   const [destination, setDestination] = React.useState<MapObject | null>(null);
@@ -209,27 +220,31 @@ export default function NavigationModulePage() {
     setIsCalculating(true);
     setRoute(null);
     setRouteInfo(null);
+    setRouteInstructions([]);
 
     const limitedPoints = points.slice(0, 25);
 
     try {
         const coordinates = limitedPoints.map(p => p.join(',')).join(';');
         const response = await fetch(
-            `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${coordinates}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`
+            `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${coordinates}?geometries=geojson&overview=full&steps=true&access_token=${MAPBOX_TOKEN}`
         );
         const data = await response.json();
         
         if (data.routes && data.routes.length > 0) {
-            const routeGeometry = data.routes[0].geometry;
+            const currentRoute = data.routes[0];
             setRoute({
                 type: 'Feature',
                 properties: {},
-                geometry: routeGeometry,
+                geometry: currentRoute.geometry,
             });
             setRouteInfo({
-                distance: data.routes[0].distance,
-                duration: data.routes[0].duration,
+                distance: currentRoute.distance,
+                duration: currentRoute.duration,
             });
+            if (currentRoute.legs[0]?.steps) {
+              setRouteInstructions(currentRoute.legs[0].steps);
+            }
         }
     } catch (error) {
         console.error('Error calculating route:', error);
@@ -254,7 +269,7 @@ export default function NavigationModulePage() {
         setOrigin([longitude, latitude]);
 
         const map = mapRef.current?.getMap();
-        if (map) {
+        if (map && isNavigating) { // Only easeTo when navigating
           map.easeTo({
             center: [longitude, latitude],
             bearing: heading ?? map.getBearing(),
@@ -352,6 +367,7 @@ export default function NavigationModulePage() {
       setDestination(null);
       setRoute(null);
       setRouteInfo(null);
+      setRouteInstructions([]);
     }
   };
 
@@ -359,6 +375,7 @@ export default function NavigationModulePage() {
     setIsNavigating(false);
     setRoute(null);
     setRouteInfo(null);
+    setRouteInstructions([]);
     setDestination(null);
     setPendingObjects([]);
     setCompletedObjects([]);
@@ -399,7 +416,8 @@ export default function NavigationModulePage() {
     const arrivalTime = new Date(Date.now() + seconds * 1000);
     return arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
-
+  
+  const firstInstruction = routeInstructions[0];
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
@@ -462,14 +480,14 @@ export default function NavigationModulePage() {
             </div>
         )}
         
-        {isNavigating && (
-             <div className="absolute top-4 left-4 z-10 w-64">
+        {isNavigating && firstInstruction && (
+             <div className="absolute top-4 left-4 z-10 w-80">
                 <div className="bg-blue-600 text-white p-4 rounded-xl shadow-lg">
                     <div className="flex items-center gap-4">
-                        <Navigation className="h-10 w-10 transform -rotate-45" />
+                        <ArrowUp className="h-10 w-10" />
                         <div>
-                            <p className="text-3xl font-bold">500m</p>
-                            <p className="text-lg">Volgende afslag</p>
+                            <p className="text-3xl font-bold">{formatDistance(firstInstruction.distance)}</p>
+                            <p className="text-lg font-medium leading-tight">{firstInstruction.maneuver.instruction}</p>
                         </div>
                     </div>
                 </div>
@@ -505,7 +523,7 @@ export default function NavigationModulePage() {
         {isNavigating && (
              <div className="absolute bottom-4 left-4 right-4 z-10 flex justify-between items-end">
                 <div className='flex flex-col gap-2'>
-                    <div className="bg-card/90 backdrop-blur-sm p-2 rounded-lg shadow-lg text-card-foreground">
+                   <div className="bg-card/90 backdrop-blur-sm p-2 rounded-lg shadow-lg text-card-foreground">
                         <div className="flex justify-between items-center mb-1 px-1">
                             <p className="font-semibold text-xs">Voortgang</p>
                             <p className="font-semibold text-xs">{completedObjects.length} / {objectsInWijk.length} objecten</p>
@@ -592,5 +610,6 @@ export default function NavigationModulePage() {
     </div>
   );
 }
+
 
 
