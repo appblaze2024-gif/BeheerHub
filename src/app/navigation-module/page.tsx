@@ -522,20 +522,16 @@ export default function NavigationModulePage() {
         )}
 
         {isNavigating && (
-             <div className="absolute bottom-4 left-4 right-4 z-10 flex items-end justify-between">
-                <Button variant="destructive" className="rounded-full h-16 w-16 p-0 flex items-center justify-center shadow-lg" onClick={handleStopNavigation}>
-                    <X className="h-8 w-8" />
-                </Button>
-
-                <div className="flex items-end gap-4">
-                    <div className="bg-card/90 backdrop-blur-sm p-2 rounded-lg shadow-lg text-card-foreground">
+             <div className="absolute bottom-4 left-0 right-0 z-10 flex justify-center">
+                <div className='flex flex-col items-center gap-4'>
+                    <div className="bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg text-card-foreground w-80">
                         <div className="flex justify-between items-center mb-1 px-1">
-                            <p className="font-semibold text-xs">Voortgang</p>
-                            <p className="font-semibold text-xs">{completedObjects.length} / {(objectsInWijk || []).length} objecten</p>
+                            <p className="font-semibold text-sm">Voortgang</p>
+                            <p className="font-semibold text-sm">{completedObjects.length} / {(objectsInWijk || []).length} objecten</p>
                         </div>
                         <Progress value={progressValue} className='h-2' />
                     </div>
-                    <div className="bg-card/90 backdrop-blur-sm p-2 rounded-lg shadow-lg flex items-center justify-between gap-4 text-card-foreground">
+                    <div className="bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg flex items-center justify-between gap-4 text-card-foreground w-80">
                         <div className="flex items-center gap-2">
                             <Clock className="h-5 w-5" />
                             <span className="font-bold text-lg">{currentTime}</span>
@@ -548,8 +544,10 @@ export default function NavigationModulePage() {
                             {routeInfo ? `${formatDuration(routeInfo.duration)} aankomst` : '-'}
                         </div>
                     </div>
+                    <Button variant="destructive" className="rounded-full h-16 w-16 p-0 flex items-center justify-center shadow-lg" onClick={handleStopNavigation}>
+                        <X className="h-8 w-8" />
+                    </Button>
                 </div>
-                 <div className="w-16 h-16"></div>
             </div>
         )}
 
