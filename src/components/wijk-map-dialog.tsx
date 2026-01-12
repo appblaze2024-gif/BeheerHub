@@ -39,10 +39,12 @@ interface Suggestion {
   lat: string;
 }
 
-interface PopupInfo {
+interface ClickPopupInfo {
   longitude: number;
   latitude: number;
-  wijkNaam: string;
+  name: string;
+  isLoading: boolean;
+  canDraw: boolean;
 }
 
 const polygonFillLayer: FillLayer = {
@@ -90,7 +92,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   const [isSearching, setIsSearching] = React.useState(false);
   const [suggestions, setSuggestions] = React.useState<Suggestion[]>([]);
   const [isDrawReady, setIsDrawReady] = React.useState(false);
-  const [popupInfo, setPopupInfo] = React.useState<PopupInfo | null>(null);
+  const [clickPopupInfo, setClickPopupInfo] = React.useState<ClickPopupInfo | null>(null);
   const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   
   const initialFeaturesRef = React.useRef<any[]>([]);
@@ -122,7 +124,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     setIsDrawReady(false);
     setSearchQuery('');
     setSuggestions([]);
-    setPopupInfo(null);
+    setClickPopupInfo(null);
     initialFeaturesRef.current = [];
   }, []);
 
@@ -213,19 +215,57 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     }
   }, [geojson, readOnly]);
   
-  const handleMapClick = React.useCallback((event: MapLayerMouseEvent) => {
-    if (!readOnly || !event.features || event.features.length === 0) {
-      return;
+  const handleMapClick = React.useCallback(async (event: MapLayerMouseEvent) => {
+    // In edit mode, don't trigger reverse geocode if user is drawing or clicking a drawn feature.
+    if (!readOnly) {
+      const drawMode = drawRef.current?.getMode();
+      if (drawMode !== 'simple_select' || event.features?.some(f => f.layer.id.startsWith('gl-draw'))) {
+        return;
+      }
     }
-    
-    const clickedFeature = event.features[0];
-    if (clickedFeature.properties?.wijkNaam) {
-        setPopupInfo({
-            longitude: event.lngLat.lng,
-            latitude: event.lngLat.lat,
-            wijkNaam: clickedFeature.properties.wijkNaam,
-        });
+     // In read-only mode, prioritize showing wijk name from existing polygons.
+    if (readOnly && event.features?.some(f => f.layer.id === 'wijk-polygon-fill')) {
+        const wijkFeature = event.features.find(f => f.layer.id === 'wijk-polygon-fill');
+        if (wijkFeature?.properties?.wijkNaam) {
+            setClickPopupInfo({
+                longitude: event.lngLat.lng,
+                latitude: event.lngLat.lat,
+                name: wijkFeature.properties.wijkNaam,
+                isLoading: false,
+                canDraw: false,
+            });
+        }
+        return;
     }
+
+    const { lng, lat } = event.lngLat;
+    setClickPopupInfo({ longitude: lng, latitude: lat, name: 'Laden...', isLoading: true, canDraw: false });
+
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=16` // Zoom 16 for neighborhood level
+      );
+      const data = await response.json();
+      
+      let displayName = data.display_name;
+      let canDraw = false;
+      // Try to find a more specific name for the popup
+      const relevantName = data.name || data.address?.neighbourhood || data.address?.suburb || data.address?.city_district;
+      if (relevantName) {
+        displayName = relevantName;
+        canDraw = true;
+      } else if (data.display_name) {
+        displayName = data.display_name.split(',')[0];
+      } else {
+        displayName = "Onbekend gebied"
+      }
+
+      setClickPopupInfo({ longitude: lng, latitude: lat, name: displayName, isLoading: false, canDraw });
+    } catch (error) {
+      console.error("Reverse geocoding error:", error);
+      setClickPopupInfo({ longitude: lng, latitude: lat, name: "Fout bij ophalen", isLoading: false, canDraw: false });
+    }
+
   }, [readOnly]);
 
 
@@ -279,7 +319,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
             properties: { name: suggestion.display_name },
             geometry: suggestion.geojson,
         };
-        const newIds = drawRef.current.add(feature as any);
+        drawRef.current.add(feature as any);
         const [lon, lat] = [parseFloat(suggestion.lon), parseFloat(suggestion.lat)];
         mapRef.current?.getMap().flyTo({ center: [lon, lat], zoom: 13 });
     }
@@ -312,7 +352,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
           <DialogTitle>{readOnly ? wijk?.naam : `Teken gebied voor wijk: ${wijk?.naam}`}</DialogTitle>
           {!readOnly && (
             <DialogDescription>
-              Zoek een gebied op naam en klik op een suggestie om de grenzen automatisch te tekenen.
+              Zoek een gebied op naam, teken handmatig, of klik op de kaart om een gebied te identificeren en de grenzen te tekenen.
             </DialogDescription>
           )}
         </DialogHeader>
@@ -367,15 +407,37 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                 <Layer {...polygonLabelLayer} />
               </Source>
             )}
-             {popupInfo && (
+             {clickPopupInfo && (
                 <Popup
-                    longitude={popupInfo.longitude}
-                    latitude={popupInfo.latitude}
-                    onClose={() => setPopupInfo(null)}
+                    longitude={clickPopupInfo.longitude}
+                    latitude={clickPopupInfo.latitude}
+                    onClose={() => setClickPopupInfo(null)}
                     closeOnClick={false}
                     anchor="bottom"
                 >
-                    <div className='p-1 font-semibold'>{popupInfo.wijkNaam}</div>
+                    <div className='p-1 font-semibold max-w-xs'>
+                      {clickPopupInfo.isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
+                        <>
+                          <p>{clickPopupInfo.name}</p>
+                           {!readOnly && clickPopupInfo.canDraw && (
+                            <Button 
+                              size="sm" 
+                              className='mt-2 w-full'
+                              onClick={() => {
+                                handleSuggestionClick({ 
+                                  display_name: clickPopupInfo.name, 
+                                  lat: clickPopupInfo.latitude.toString(),
+                                  lon: clickPopupInfo.longitude.toString()
+                                } as Suggestion)
+                                setClickPopupInfo(null);
+                              }}
+                            >
+                              Teken grenzen
+                            </Button>
+                          )}
+                        </>
+                      )}
+                    </div>
                 </Popup>
             )}
           </Map>
