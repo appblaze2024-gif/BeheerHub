@@ -522,7 +522,10 @@ export default function NavigationModulePage() {
         )}
 
         {isNavigating && (
-             <div className="absolute bottom-4 left-0 right-0 z-10 flex justify-center">
+             <div className="absolute bottom-4 left-0 right-0 z-10 flex items-end justify-between px-4">
+                <Button variant="destructive" className="rounded-full h-16 w-16 p-0 flex items-center justify-center shadow-lg" onClick={handleStopNavigation}>
+                    <X className="h-8 w-8" />
+                </Button>
                 <div className='flex flex-col items-center gap-4'>
                     <div className="bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg text-card-foreground w-80">
                         <div className="flex justify-between items-center mb-1 px-1">
@@ -544,10 +547,8 @@ export default function NavigationModulePage() {
                             {routeInfo ? `${formatDuration(routeInfo.duration)} aankomst` : '-'}
                         </div>
                     </div>
-                    <Button variant="destructive" className="rounded-full h-16 w-16 p-0 flex items-center justify-center shadow-lg" onClick={handleStopNavigation}>
-                        <X className="h-8 w-8" />
-                    </Button>
                 </div>
+                <div className='w-16'></div>
             </div>
         )}
 
