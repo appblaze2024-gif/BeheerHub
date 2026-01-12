@@ -435,12 +435,12 @@ export default function SweeperRoutePlannerPage() {
               <Layer
                 id="wijk-polygon-fill"
                 type="fill"
-                paint={{ 'fill-color': '#3b82f6', 'fill-opacity': 0.1 }}
+                paint={{ 'fill-color': '#000000', 'fill-opacity': 0 }}
               />
               <Layer
                 id="wijk-polygon-outline"
                 type="line"
-                paint={{ 'line-color': '#2563eb', 'line-width': 2 }}
+                paint={{ 'line-color': '#000000', 'line-width': 2 }}
               />
             </Source>
           )}
