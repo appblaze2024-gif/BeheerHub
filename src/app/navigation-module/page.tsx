@@ -523,7 +523,7 @@ export default function NavigationModulePage() {
 
         {isNavigating && (
              <div className="absolute bottom-4 left-4 right-4 z-10 flex justify-between items-end">
-                <div className='bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg text-card-foreground flex flex-col gap-2'>
+                <div className='bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg text-card-foreground flex flex-col gap-2 w-72'>
                     <div>
                         <div className="flex justify-between items-center mb-1 px-1">
                             <p className="font-semibold text-xs">Voortgang</p>
@@ -546,15 +546,11 @@ export default function NavigationModulePage() {
                     </div>
                 </div>
                  <div className="flex items-end gap-4">
-                    {allObjectsCompleted ? (
+                    {allObjectsCompleted && (
                        <div className='flex items-center gap-2 bg-green-600 text-white font-bold p-3 rounded-lg shadow-lg'>
                             <CheckCircle className="h-6 w-6" />
                             <span>Route Voltooid!</span>
                        </div>
-                    ) : (
-                        <Button size="lg" onClick={handleNextObject} disabled={!destination}>
-                            Volgende Object <ChevronRight className="h-5 w-5 ml-2" />
-                        </Button>
                     )}
 
                     <Button variant="destructive" size="icon" className="rounded-full h-12 w-12" onClick={handleStopNavigation}>
