@@ -71,12 +71,12 @@ export const roadColorMapping: Record<string, string> = {
   unclassified: 'hsl(199, 79%, 55%)',
   roundabout: 'hsl(199, 79%, 55%)',
 
-  // Speciale wegen (Dienstwegen, paden): Groen
-  service: 'hsl(174, 63%, 39%)',
-  pedestrian: 'hsl(174, 63%, 39%)',
-  path: 'hsl(174, 63%, 39%)',
-  track: 'hsl(174, 63%, 39%)',
-  ferry: 'hsl(174, 63%, 39%)',
+  // Speciale wegen (Dienstwegen, paden): Grijs
+  service: '#808080',
+  pedestrian: '#808080',
+  path: '#808080',
+  track: '#808080',
+  ferry: '#808080',
 };
 
 interface RoadTypeFilterDialogProps {
