@@ -192,14 +192,10 @@ export default function NavigationModulePage() {
         
         if (data.routes && data.routes.length > 0) {
             const routeGeometry = data.routes[0].geometry;
-            setRoute(routeGeometry);
-            
-            const routeFeature = turf.feature(routeGeometry);
-            const bbox = turf.bbox(routeFeature);
-
-            mapRef.current?.getMap().fitBounds(bbox, {
-                padding: { top: 100, bottom: 100, left: 100, right: 100 },
-                duration: 1000
+            setRoute({
+                type: 'Feature',
+                properties: {},
+                geometry: routeGeometry,
             });
         }
     } catch (error) {
@@ -221,10 +217,10 @@ export default function NavigationModulePage() {
     
     calculateRoute(allPoints);
 
-    setViewState(prev => ({ ...prev, pitch: 60, zoom: 16, bearing: -20 }));
+    setViewState(prev => ({ ...prev, pitch: 60, zoom: 18, bearing: -20 }));
     mapRef.current?.getMap().flyTo({
         center: origin,
-        zoom: 16,
+        zoom: 18,
         pitch: 60,
         bearing: -20,
     });
@@ -248,7 +244,7 @@ export default function NavigationModulePage() {
     if (origin) {
         mapRef.current?.getMap().flyTo({
             center: origin,
-            zoom: isNavigating ? 16 : 15,
+            zoom: isNavigating ? 18 : 15,
             pitch: isNavigating ? 60 : 0,
         });
     }
