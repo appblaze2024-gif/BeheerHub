@@ -64,6 +64,12 @@ const generateRouteFlow = ai.defineFlow(
         
         roadNetwork.features.forEach(line => {
             const lineLength = turf.length(line, { units: 'meters' });
+            
+            // Check for valid line length before proceeding
+            if (isNaN(lineLength) || lineLength === 0) {
+                return; 
+            }
+
             const numPointsInLine = Math.max(1, Math.round(lineLength / distancePerWaypoint));
             
             for (let i = 0; i < numPointsInLine; i++) {
