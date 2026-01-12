@@ -8,6 +8,7 @@ import {
   Loader2,
   MapPin,
   List,
+  LocateFixed,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +17,8 @@ import * as turf from '@turf/turf';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -46,7 +49,7 @@ export default function NavigationModulePage() {
   const mapRef = React.useRef<any>();
   const firestore = useFirestore();
   const [viewState, setViewState] = React.useState({
-    longitude: 5.2913,
+    longitude: 5.2913, // Default center of NL
     latitude: 52.1326,
     zoom: 7,
   });
@@ -71,22 +74,46 @@ export default function NavigationModulePage() {
   }, [objects, searchQuery]);
 
 
-  const [origin, setOrigin] = React.useState<[number, number]>([5.4697, 51.4416]); // Default to Eindhoven
+  const [origin, setOrigin] = React.useState<[number, number] | null>(null);
+  const [locationError, setLocationError] = React.useState<string | null>(null);
   const [destination, setDestination] = React.useState<MapObject | null>(null);
   const [route, setRoute] = React.useState<any>(null);
   const [isCalculating, setIsCalculating] = React.useState(false);
 
+  React.useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { longitude, latitude } = position.coords;
+          setOrigin([longitude, latitude]);
+          setViewState(prev => ({...prev, longitude, latitude, zoom: 14}));
+          setLocationError(null);
+        },
+        (error) => {
+          console.error("Geolocation error:", error);
+          setLocationError("Kon uw locatie niet ophalen. Zorg ervoor dat u locatietoestemming heeft gegeven.");
+          // Fallback to a default origin if location is denied
+          setOrigin([5.4697, 51.4416]); 
+        }
+      );
+    } else {
+      setLocationError("Geolocatie wordt niet ondersteund door deze browser.");
+      setOrigin([5.4697, 51.4416]); // Fallback for old browsers
+    }
+  }, []);
+
   const handleObjectClick = (object: MapObject) => {
     setDestination(object);
-    calculateRoute(object.longitude, object.latitude);
+    if(origin) {
+        calculateRoute(origin, [object.longitude, object.latitude]);
+    }
   };
 
-  const calculateRoute = async (destLon: number, destLat: number) => {
-    if (!destLon || !destLat) return;
+  const calculateRoute = async (start: [number, number], end: [number, number]) => {
     setIsCalculating(true);
     setRoute(null);
     try {
-      const coords = `${origin[0]},${origin[1]};${destLon},${destLat}`;
+      const coords = `${start[0]},${start[1]};${end[0]},${end[1]}`;
       const response = await fetch(
         `https://api.mapbox.com/directions/v5/mapbox/driving/${coords}?geometries=geojson&access_token=${MAPBOX_TOKEN}`
       );
@@ -109,6 +136,15 @@ export default function NavigationModulePage() {
       setIsCalculating(false);
     }
   };
+
+  const centerOnLocation = () => {
+    if (origin) {
+        mapRef.current?.getMap().flyTo({
+            center: origin,
+            zoom: 15,
+        });
+    }
+  };
   
   return (
     <div className="flex flex-1 flex-col bg-stone-900 text-white overflow-hidden">
@@ -125,6 +161,13 @@ export default function NavigationModulePage() {
                     className="pl-10 h-11 text-base bg-stone-800 border-stone-700 focus-visible:ring-blue-500 text-white"
                   />
                 </div>
+                {locationError && (
+                    <Alert variant="destructive" className="mt-2">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Locatie Fout</AlertTitle>
+                        <AlertDescription>{locationError}</AlertDescription>
+                    </Alert>
+                )}
               </CardHeader>
               <CardContent className="p-2 flex-1 overflow-y-auto">
                 {isLoadingObjects ? (
@@ -141,6 +184,7 @@ export default function NavigationModulePage() {
                           'flex items-center gap-3 w-full text-left p-3 rounded-md hover:bg-stone-700/80',
                           destination?.id === obj.id && 'bg-blue-600/30 hover:bg-blue-600/40'
                         )}
+                        disabled={!origin}
                       >
                         <MapPin className="h-5 w-5 shrink-0 text-stone-400" />
                         <div className="flex-1 overflow-hidden">
@@ -154,6 +198,12 @@ export default function NavigationModulePage() {
               </CardContent>
            </Card>
         </aside>
+
+        <div className="absolute top-4 right-4 z-10">
+          <Button onClick={centerOnLocation} variant="outline" size="icon" className="bg-black/70 border-stone-700 text-white hover:bg-stone-700">
+            <LocateFixed className="h-5 w-5" />
+          </Button>
+        </div>
 
         <Map
           ref={mapRef}
