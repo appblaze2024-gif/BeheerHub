@@ -13,6 +13,8 @@ import {
   Mic,
   Settings,
   Volume2,
+  CheckCircle,
+  ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +27,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
+
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -97,6 +101,9 @@ export default function NavigationModulePage() {
   const [selectedWijkId, setSelectedWijkId] = React.useState<string | null>(null);
   
   const watchIdRef = React.useRef<number | null>(null);
+  
+  const [pendingObjects, setPendingObjects] = React.useState<MapObject[]>([]);
+  const [completedObjects, setCompletedObjects] = React.useState<string[]>([]);
 
   const selectedProject = React.useMemo(() => {
     return projects?.find(p => p.id === selectedProjectId) ?? null;
@@ -253,33 +260,41 @@ export default function NavigationModulePage() {
         watchIdRef.current = null;
     }
   };
+  
+  const findNextObject = (currentOrigin: [number, number], availableObjects: MapObject[]): MapObject | null => {
+      if (!currentOrigin || availableObjects.length === 0) return null;
+      
+      const from = turf.point(currentOrigin);
+      let closestObject: MapObject | null = null;
+      let minDistance = Infinity;
+
+      availableObjects.forEach(obj => {
+          if (obj.latitude != null && obj.longitude != null) {
+              const to = turf.point([obj.longitude, obj.latitude]);
+              const distance = turf.distance(from, to, { units: 'kilometers' });
+              if (distance < minDistance) {
+                  minDistance = distance;
+                  closestObject = obj;
+              }
+          }
+      });
+      return closestObject;
+  }
 
   const handleStartNavigation = () => {
     if (!origin || objectsInWijk.length === 0) return;
     
+    setPendingObjects(objectsInWijk);
+    setCompletedObjects([]);
     setIsNavigating(true);
 
-    const from = turf.point(origin);
+    const firstObject = findNextObject(origin, objectsInWijk);
     
-    let closestObject = null;
-    let minDistance = Infinity;
-
-    objectsInWijk.forEach(obj => {
-        if (obj.latitude != null && obj.longitude != null) {
-            const to = turf.point([obj.longitude, obj.latitude]);
-            const distance = turf.distance(from, to, { units: 'kilometers' });
-            if (distance < minDistance) {
-                minDistance = distance;
-                closestObject = obj;
-            }
-        }
-    });
-
-    if (closestObject) {
-      setDestination(closestObject);
+    if (firstObject) {
+      setDestination(firstObject);
       const routePoints: [number, number][] = [
         origin,
-        [closestObject.longitude, closestObject.latitude]
+        [firstObject.longitude, firstObject.latitude]
       ];
       calculateRoute(routePoints);
     }
@@ -294,10 +309,36 @@ export default function NavigationModulePage() {
     });
   };
   
+  const handleNextObject = () => {
+    if (!origin || !destination) return;
+    
+    // Mark current destination as complete
+    const newCompleted = [...completedObjects, destination.id];
+    setCompletedObjects(newCompleted);
+
+    // Find next closest from pending objects
+    const newPending = pendingObjects.filter(obj => !newCompleted.includes(obj.id));
+    setPendingObjects(newPending);
+
+    const nextObject = findNextObject(origin, newPending);
+
+    if (nextObject) {
+      setDestination(nextObject);
+      const routePoints: [number, number][] = [origin, [nextObject.longitude, nextObject.latitude]];
+      calculateRoute(routePoints);
+    } else {
+      // All objects are done
+      setDestination(null);
+      setRoute(null);
+    }
+  };
+
   const handleStopNavigation = () => {
     setIsNavigating(false);
     setRoute(null);
     setDestination(null);
+    setPendingObjects([]);
+    setCompletedObjects([]);
     stopTracking();
     
     setViewState(prev => ({ ...prev, pitch: 0, bearing: 0, zoom: 14 }));
@@ -321,6 +362,10 @@ export default function NavigationModulePage() {
     }
   };
   
+  const progressValue = objectsInWijk.length > 0 ? (completedObjects.length / objectsInWijk.length) * 100 : 0;
+  const allObjectsCompleted = pendingObjects.length === 0 && completedObjects.length > 0 && objectsInWijk.length > 0;
+
+
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       <div className="flex-1 relative bg-gray-800">
@@ -423,13 +468,26 @@ export default function NavigationModulePage() {
         )}
 
         {isNavigating && (
-             <div className="absolute bottom-4 left-4 right-4 z-10 flex justify-between items-center">
-                <div className="bg-card/90 backdrop-blur-sm p-3 rounded-full shadow-lg flex items-center gap-4 text-card-foreground">
-                    <p className="font-semibold text-lg">12:30 PM</p>
-                    <div className="border-l border-gray-300 h-6"></div>
-                    <p className="text-sm">52 km</p>
-                    <p className="text-sm text-gray-500">1:15 PM aankomst</p>
+             <div className="absolute bottom-4 left-4 right-4 z-10 flex justify-between items-center gap-4">
+                <div className="bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg flex-1 text-card-foreground">
+                    <div className="flex justify-between items-center mb-2 px-1">
+                        <p className="font-semibold text-sm">Voortgang</p>
+                        <p className="font-semibold text-sm">{completedObjects.length} / {objectsInWijk.length} objecten</p>
+                    </div>
+                    <Progress value={progressValue} />
                 </div>
+
+                {allObjectsCompleted ? (
+                   <div className='flex items-center gap-2 bg-green-600 text-white font-bold p-3 rounded-lg shadow-lg'>
+                        <CheckCircle className="h-6 w-6" />
+                        <span>Route Voltooid!</span>
+                   </div>
+                ) : (
+                    <Button size="lg" onClick={handleNextObject} disabled={!destination}>
+                        Volgende Object <ChevronRight className="h-5 w-5 ml-2" />
+                    </Button>
+                )}
+
                 <Button variant="destructive" size="icon" className="rounded-full h-12 w-12" onClick={handleStopNavigation}>
                     <X className="h-6 w-6" />
                 </Button>
@@ -469,7 +527,7 @@ export default function NavigationModulePage() {
                 longitude={obj.longitude}
                 latitude={obj.latitude}
              >
-              <div className="w-2.5 h-2.5 bg-gray-700 rounded-full border-2 border-white" />
+              <div className={cn("w-2.5 h-2.5 rounded-full border-2 border-white", completedObjects.includes(obj.id) ? "bg-green-500" : "bg-gray-700" )} />
             </Marker>
           ))}
 
@@ -483,3 +541,4 @@ export default function NavigationModulePage() {
     </div>
   );
 }
+
