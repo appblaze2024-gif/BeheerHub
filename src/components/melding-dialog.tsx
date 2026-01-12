@@ -72,6 +72,16 @@ type Project = {
     wijken?: Wijk[];
 };
 
+interface GeocodedAddress {
+    house_number?: string;
+    road?: string;
+    postcode?: string;
+    city?: string;
+    town?: string;
+    village?: string;
+    suburb?: string;
+    country?: string;
+}
 
 const meldingFormSchema = z.object({
   // Melding
@@ -221,20 +231,17 @@ export function MeldingDialog({
   }, [status, form, user]);
 
 
-  const fetchCoordinates = React.useCallback(async (address: string): Promise<{ lat: number; lng: number } | null> => {
-    if (!address) return null;
+  const fetchAddressDetails = React.useCallback(async (lat: number, lon: number): Promise<GeocodedAddress | null> => {
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1&countrycodes=nl`
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1`
       );
       const data = await response.json();
-      if (data && data.length > 0) {
-        return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-      }
+      return data.address;
     } catch (error) {
-      console.error('Error fetching coordinates:', error);
+      console.error('Error fetching address details:', error);
+      return null;
     }
-    return null;
   }, []);
 
   const findWijkForPoint = React.useCallback((lat: number, lng: number): string | null => {
@@ -488,20 +495,23 @@ export function MeldingDialog({
     if (!firestore) return;
     setIsSubmitting(true);
 
-    const coordinates = await fetchCoordinates(data.adres);
+    const addressDetails = await fetchAddressDetails(
+        melding?.latitude,
+        melding?.longitude
+    );
 
-    if (!coordinates) {
+    if (!addressDetails) {
         form.setError('adres', { type: 'manual', message: 'Kon adres niet vinden. Controleer de invoer.'});
         setIsSubmitting(false);
         return;
     }
     
-    const addressParts = data.adres.split(',').map(s => s.trim());
-    const straatnaam = addressParts[0] || '';
-    const postcode = addressParts.length > 1 ? addressParts[1] : '';
-    const plaats = addressParts.length > 2 ? addressParts[2] : '';
+    const straatnaam = addressDetails.road || '';
+    const huisnummer = addressDetails.house_number || '';
+    const postcode = addressDetails.postcode || '';
+    const plaats = addressDetails.city || addressDetails.town || addressDetails.village || addressDetails.suburb || '';
 
-    const wijk = data.wijk || findWijkForPoint(coordinates.lat, coordinates.lng);
+    const wijk = data.wijk || findWijkForPoint(melding.latitude, melding.longitude);
     
     const finalIntakeNumber = autoGenerateIntake ? generateIntakeNummer() : `${intakePrefix}${manualIntakeSuffix}`;
 
@@ -510,10 +520,11 @@ export function MeldingDialog({
       ...data,
       intakenummer: finalIntakeNumber,
       straatnaam,
+      huisnummer,
       postcode,
       plaats,
-      latitude: coordinates.lat,
-      longitude: coordinates.lng,
+      latitude: melding.latitude,
+      longitude: melding.longitude,
       wijk: wijk || 'Onbekend',
       datum: melding ? melding.datum : format(new Date(), 'yyyy-MM-dd'),
       files: uploadedFiles,
