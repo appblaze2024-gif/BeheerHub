@@ -67,9 +67,9 @@ export default function KaartenPage() {
     if (selectedWijk && selectedWijk.subGebieden) {
       try {
         const features = JSON.parse(selectedWijk.subGebieden);
-        const validFeatures: Feature[] = Array.isArray(features) 
-          ? features.filter(f => f && f.type === 'Feature' && f.geometry) 
-          : [];
+        const validFeatures: Feature[] = (Array.isArray(features) ? features : []).filter(
+          (f: any) => f && f.type === 'Feature' && f.geometry
+        );
 
         if (validFeatures.length > 0) {
             const featureCollection = turf.featureCollection(validFeatures);
@@ -270,7 +270,7 @@ export default function KaartenPage() {
         ref={mapRef}
         initialViewState={initialViewState}
         style={{ width: '100%', height: '100%' }}
-        mapStyle="mapbox://styles/mapbox/streets-v12"
+        mapStyle="mapbox://styles/mapbox/dark-v11"
         mapboxAccessToken={MAPBOX_TOKEN}
         interactiveLayerIds={Object.keys(roadColorMapping)}
       >
@@ -301,15 +301,15 @@ export default function KaartenPage() {
                     id="wijk-polygon-fill"
                     type="fill"
                     paint={{
-                        'fill-color': '#000000',
-                        'fill-opacity': 0.3
+                        'fill-color': 'hsl(var(--primary))',
+                        'fill-opacity': 0.1
                     }}
                 />
                 <Layer
                     id="wijk-polygon-outline"
                     type="line"
                     paint={{
-                        'line-color': '#000000',
+                        'line-color': 'hsl(var(--primary))',
                         'line-width': 2
                     }}
                 />

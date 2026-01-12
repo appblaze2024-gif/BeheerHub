@@ -8,7 +8,7 @@ import Link from "next/link";
 export default function RoutePlannerPage() {
   return (
     <div className="flex flex-col flex-1 p-6 min-h-0">
-      <PageHeader title="Routeplanner" description="Kies het type route dat u wilt plannen." />
+      <PageHeader title="Routeplanner" description="Kies het type route dat u wilt plannen." className="pb-0"/>
       <div className="flex-1 flex items-center justify-center">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <Link href="/route-planner/sweeper">
