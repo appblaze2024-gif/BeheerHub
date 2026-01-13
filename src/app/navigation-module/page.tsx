@@ -513,8 +513,6 @@ export default function NavigationModulePage() {
     }
 
     startTracking();
-    setIsCalculating(false);
-
     mapRef.current?.getMap().easeTo({
         center: origin,
         zoom: 20,
@@ -653,6 +651,14 @@ export default function NavigationModulePage() {
       });
     }
 
+    if (isSimulating) {
+      if (simulationIntervalRef.current) {
+        clearInterval(simulationIntervalRef.current);
+        simulationIntervalRef.current = null;
+      }
+      setIsSimulating(false);
+    }
+
     setIsNavigating(false);
     setRoute(null);
     setRouteInfo(null);
@@ -666,9 +672,6 @@ export default function NavigationModulePage() {
     setSelectedRouteType(null);
     setSelectedHistoryId(null);
     stopTracking();
-    if (isSimulating) {
-      handleToggleSimulation();
-    }
     
     setViewState(prev => ({ ...prev, pitch: 0, bearing: 0, zoom: 14 }));
      if(origin) {
