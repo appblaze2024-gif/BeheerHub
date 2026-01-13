@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import MapGL, { Marker, Popup, Source, Layer } from 'react-map-gl';
-import type { FillLayer, LineLayer } from 'react-map-gl';
+import type { FillLayer, LineLayer, SymbolLayer, MapLayerMouseEvent } from 'react-map-gl';
 import * as turf from '@turf/turf';
 
 
@@ -44,7 +44,8 @@ const polygonOutlineLayer: LineLayer = {
 
 export function MapboxView({ longitude, latitude, objects, selectedObjects = [], onObjectSelect, wijkPolygons = [] }: MapboxViewProps) {
   const [selectedPin, setSelectedPin] = React.useState<MapObject | null>(null);
-  
+  const [hoveredPin, setHoveredPin] = React.useState<MapObject | null>(null);
+
   const geojson: turf.FeatureCollection<turf.Geometry> = React.useMemo(() => {
     return {
       type: 'FeatureCollection',
@@ -111,6 +112,8 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
                     setSelectedPin(obj);
                 }
               }}
+              onMouseEnter={() => setHoveredPin(obj)}
+              onMouseLeave={() => setHoveredPin(null)}
             >
               <div className={`h-3 w-3 rounded-full border-2 border-white cursor-pointer ${isSelected ? 'bg-primary' : 'bg-blue-500'}`} />
             </Marker>
@@ -125,6 +128,8 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
     }
     return null;
   }, [objects, longitude, latitude, selectedObjects, onObjectSelect]);
+
+  const pinToShow = hoveredPin || selectedPin;
 
   return (
     <MapGL
@@ -143,18 +148,26 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
 
       {markers}
 
-      {selectedPin && (
+      {pinToShow && (
         <Popup
           anchor="top"
-          longitude={Number(selectedPin.longitude)}
-          latitude={Number(selectedPin.latitude)}
-          onClose={() => setSelectedPin(null)}
+          longitude={Number(pinToShow.longitude)}
+          latitude={Number(pinToShow.latitude)}
+          onClose={() => {
+            if (pinToShow === selectedPin) setSelectedPin(null);
+            if (pinToShow === hoveredPin) setHoveredPin(null);
+          }}
           closeOnClick={false}
+          closeButton={!hoveredPin}
         >
           <div>
-            <h3 className="font-bold">{selectedPin.id}</h3>
-            <p>{selectedPin.locatieSubType}</p>
-            <p>{selectedPin.straatnaam} {selectedPin.huisnummer}</p>
+            <h3 className="font-bold">{pinToShow.id}</h3>
+            {hoveredPin ? null : (
+                <>
+                    <p>{pinToShow.locatieSubType}</p>
+                    <p>{pinToShow.straatnaam} {pinToShow.huisnummer}</p>
+                </>
+            )}
           </div>
         </Popup>
       )}
