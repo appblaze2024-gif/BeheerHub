@@ -398,53 +398,28 @@ export default function NavigationModulePage() {
   }
 
   const handleStartOrResume = () => {
-    const routeToResume = historyRoutes?.find(r => r.id === selectedHistoryId);
-
-    if (routeToResume) {
-        if (routeToResume.endTime) {
-            // It's a completed route, so we treat it as starting a new one based on it
-            handleStartNavigation(routeToResume);
-        } else {
-            // It's an unfinished route, so we resume it
-            handleResumeRoute(selectedHistoryId);
-        }
+    if (selectedHistoryId) {
+        handleResumeRoute(selectedHistoryId);
     } else if (selectedRouteId) {
-        // No history selected, but a new route type is, so start a fresh one.
         handleStartNavigation();
     }
   };
   
-  const handleStartNavigation = async (routeToCopy?: Route) => {
-    if (!origin || !user || !firestore || !selectedProjectId) return;
-
-    let currentRouteId = selectedRouteId;
-    let currentRouteName = selectedRoute?.naam;
-    let allObjects = objectsInWijk;
-    
-    if (routeToCopy) {
-      currentRouteId = routeToCopy.originalRouteId;
-      currentRouteName = routeToCopy.routeName;
-      allObjects = (routeToCopy.allObjectIds || [])
-        .map(id => objects?.find(o => o.id === id))
-        .filter((o): o is MapObject => !!o);
-    }
-    
-    if (!currentRouteId || !currentRouteName || !allObjects) return;
+  const handleStartNavigation = async () => {
+    if (!origin || !user || !firestore || !selectedProjectId || !selectedRouteId || !selectedRoute) return;
 
     setIsCalculating(true);
     
+    const allObjects = objectsInWijk;
     const allObjectIds = allObjects.map(obj => obj.id);
 
     const routesCollection = collection(firestore, `users/${user.uid}/routes`);
-    const routeHistoryRef = doc(routesCollection);
-    setActiveRouteHistoryId(routeHistoryRef.id);
     
     const routeHistoryData: Partial<Route> = {
-      id: routeHistoryRef.id,
       userId: user.uid,
       projectId: selectedProjectId,
-      originalRouteId: currentRouteId,
-      routeName: currentRouteName,
+      originalRouteId: selectedRouteId,
+      routeName: selectedRoute.naam,
       date: new Date().toISOString().split('T')[0],
       startTime: serverTimestamp(),
       endTime: null,
@@ -454,7 +429,14 @@ export default function NavigationModulePage() {
       totalObjects: allObjectIds.length,
     };
     
-    await setDoc(routeHistoryRef, routeHistoryData, { merge: true });
+    // This is a new route, so add a new document
+    const newDocRef = await addDocumentNonBlocking(routesCollection, routeHistoryData);
+    if (!newDocRef.id) {
+        console.error("Failed to create new route history document.");
+        setIsCalculating(false);
+        return;
+    }
+    setActiveRouteHistoryId(newDocRef.id);
     
     setCompletedObjects([]);
     setSkippedObjects([]);
@@ -506,9 +488,12 @@ export default function NavigationModulePage() {
     if (isNavigating || !selectedHistoryId || !objects || !origin) return;
 
     const routeToResume = historyRoutes?.find(r => r.id === selectedHistoryId);
-    if (!routeToResume || routeToResume.endTime) return;
-    
-    const routeObjects = (routeToResume.allObjectIds || []).map(id => objects.find(o => o.id === id)).filter((o): o is MapObject => !!o);
+    if (!routeToResume) return;
+
+    // Wait until objectsInWijk has been computed for the selected route
+    const routeObjects = (routeToResume.allObjectIds || [])
+        .map(id => objects.find(o => o.id === id))
+        .filter((o): o is MapObject => !!o);
     
     if(routeObjects.length === 0 && (routeToResume.allObjectIds || []).length > 0){
       return;
@@ -540,8 +525,6 @@ export default function NavigationModulePage() {
         bearing: 0,
     });
     
-    setSelectedHistoryId(null); 
-
   }, [objects, selectedHistoryId, historyRoutes, isNavigating, origin]); 
   
   const updateObjectStatus = async (objectId: string, status: 'completed' | 'skipped') => {
@@ -768,7 +751,7 @@ export default function NavigationModulePage() {
                     <Button onClick={handleStartOrResume} disabled={(!selectedRouteId && !selectedHistoryId) || isCalculating}>
                         {isCalculating ? (
                             <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Bezig...</>
-                        ) : selectedHistoryId ? 'Start Route' : 'Start Route'}
+                        ) : selectedHistoryId ? 'Hervat Route' : 'Start Route'}
                     </Button>
 
                 </div>
@@ -950,7 +933,7 @@ export default function NavigationModulePage() {
                 latitude={selectedObjectForInfo.latitude}
                 closeButton={true}
                 closeOnClick={true}
-                anchor="bottom"
+                anchor="top"
                 offset={10}
                 onClose={() => setSelectedObjectForInfo(null)}
               >
