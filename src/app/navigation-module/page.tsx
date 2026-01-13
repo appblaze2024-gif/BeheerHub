@@ -135,6 +135,7 @@ export default function NavigationModulePage() {
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
   const [selectedRouteType, setSelectedRouteType] = React.useState<'veeg' | 'prullenbak' | null>(null);
   const [selectedRouteId, setSelectedRouteId] = React.useState<string | null>(null);
+  const [selectedHistoryId, setSelectedHistoryId] = React.useState<string | null>(null);
   const [isCompletionDialogOpen, setIsCompletionDialogOpen] = React.useState(false);
   
   const watchIdRef = React.useRef<number | null>(null);
@@ -378,9 +379,18 @@ export default function NavigationModulePage() {
       return closestObject;
   }
 
+  const handleStartOrResume = () => {
+    if (selectedHistoryId) {
+      handleResumeRoute(selectedHistoryId);
+    } else {
+      handleStartNavigation();
+    }
+  };
+
   const handleStartNavigation = async () => {
     if (!origin || !objectsInWijk || objectsInWijk.length === 0 || !user || !firestore || !selectedProjectId || !selectedRouteId || !selectedRoute) return;
     
+    setIsCalculating(true);
     // 1. Create Route History Entry
     const routesCollection = collection(firestore, `users/${user.uid}/routes`);
     const newRouteHistoryData = {
@@ -408,14 +418,11 @@ export default function NavigationModulePage() {
     
     if (firstObject) {
       setDestination(firstObject);
-      const routePoints: ([number, number] | null)[] = [
-        origin,
-        [firstObject.longitude, firstObject.latitude]
-      ];
-      calculateRoute(routePoints);
+      await calculateRoute([origin, [firstObject.longitude, firstObject.latitude]]);
     }
 
     startTracking();
+    setIsCalculating(false);
 
     mapRef.current?.getMap().flyTo({
         center: origin,
@@ -555,6 +562,7 @@ export default function NavigationModulePage() {
     setActiveRouteHistoryId(null);
     setSelectedRouteId(null);
     setSelectedRouteType(null);
+    setSelectedHistoryId(null);
     stopTracking();
     
     setViewState(prev => ({ ...prev, pitch: 0, bearing: 0, zoom: 14 }));
@@ -620,6 +628,7 @@ export default function NavigationModulePage() {
                             setSelectedProjectId(value);
                             setSelectedRouteType(null);
                             setSelectedRouteId(null);
+                            setSelectedHistoryId(null);
                             setRoute(null);
                         }}
                         disabled={isLoadingProjects}
@@ -632,7 +641,7 @@ export default function NavigationModulePage() {
                         </SelectContent>
                         </Select>
                     </div>
-                     {selectedProjectId && (
+                     {selectedProjectId && !selectedHistoryId && (
                         <div>
                           <Label>Route Type</Label>
                            <div className='grid grid-cols-2 gap-2 mt-2'>
@@ -645,7 +654,7 @@ export default function NavigationModulePage() {
                            </div>
                         </div>
                     )}
-                    {selectedRouteType && (
+                    {selectedRouteType && !selectedHistoryId && (
                       <div>
                         <Label htmlFor='route-select'>Route</Label>
                           <Select
@@ -666,11 +675,6 @@ export default function NavigationModulePage() {
                           </Select>
                       </div>
                     )}
-                    <Button onClick={handleStartNavigation} disabled={!selectedRouteId || !objectsInWijk || objectsInWijk.length === 0 || isCalculating}>
-                        {isCalculating ? (
-                            <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Bezig...</>
-                        ) : 'Start Route'}
-                    </Button>
                     
                     {inProgressRoutes.length > 0 && (
                         <>
@@ -680,18 +684,25 @@ export default function NavigationModulePage() {
                             </div>
 
                             <div>
-                                <Label htmlFor="resume-route-select">Of hervat een lopende route</Label>
-                                <Select onValueChange={handleResumeRoute}>
+                                <Label htmlFor="resume-route-select">Hervat een lopende route</Label>
+                                <Select onValueChange={setSelectedHistoryId} value={selectedHistoryId || ''}>
                                 <SelectTrigger id="resume-route-select">
                                     <SelectValue placeholder="Selecteer een lopende route" />
                                 </SelectTrigger>
                                 <SelectContent>
+                                    <SelectItem value="">-- Nieuwe Route --</SelectItem>
                                     {inProgressRoutes.map(r => <SelectItem key={r.id} value={r.id}>{r.routeName}</SelectItem>)}
                                 </SelectContent>
                                 </Select>
                             </div>
                         </>
                     )}
+
+                    <Button onClick={handleStartOrResume} disabled={(!selectedRouteId && !selectedHistoryId) || isCalculating}>
+                        {isCalculating ? (
+                            <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Bezig...</>
+                        ) : selectedHistoryId ? 'Hervat Route' : 'Start Route'}
+                    </Button>
 
                 </div>
             </div>
@@ -857,16 +868,12 @@ export default function NavigationModulePage() {
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                  <AlertDialogFooter className="sm:justify-center gap-4">
-                  <AlertDialogAction asChild>
-                    <Button onClick={() => handleNextObject('skipped')} variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600'>
-                        <XCircle className='h-10 w-10' />
-                    </Button>
-                   </AlertDialogAction>
-                   <AlertDialogAction asChild>
-                     <Button onClick={() => handleNextObject('completed')} variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600 focus-visible:ring-0'>
-                        <CheckCircle className='h-10 w-10' />
-                    </Button>
-                  </AlertDialogAction>
+                  <Button onClick={() => handleNextObject('skipped')} variant='outline' size="icon" className='h-10 w-10 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600'>
+                      <XCircle className='h-6 w-6' />
+                  </Button>
+                   <Button onClick={() => handleNextObject('completed')} variant='outline' size="icon" className='h-10 w-10 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600 focus-visible:ring-0'>
+                      <CheckCircle className='h-6 w-6' />
+                  </Button>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
