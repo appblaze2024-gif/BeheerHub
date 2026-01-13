@@ -157,7 +157,6 @@ export default function NavigationModulePage() {
     if (!historyRoutes || !selectedProjectId) return [];
     return historyRoutes.filter((r) => r.projectId === selectedProjectId)
       .sort((a, b) => {
-        // Handle cases where startTime might be null (e.g., just created client-side)
         const timeA = a.startTime ? new Date(a.startTime.toDate()).getTime() : Date.now();
         const timeB = b.startTime ? new Date(b.startTime.toDate()).getTime() : Date.now();
         return timeB - timeA;
@@ -444,48 +443,75 @@ export default function NavigationModulePage() {
   };
 
   const handleResumeRoute = async (historyId: string) => {
-    if (!historyRoutes) return;
-
-    const routeToResume = historyRoutes.find(r => r.id === historyId);
-    if (!routeToResume) return;
-
-    // A "resumed" route is actually a new route that copies the old one.
-    const project = projects?.find(p => p.id === routeToResume.projectId);
-    const allProjectRoutes = [
-        ...(project?.veegroutes || []),
-        ...(project?.prullenbakkenroutes || [])
-    ];
-    const originalRoute = allProjectRoutes.find(r => r.id === routeToResume.originalRouteId);
-
-    if (!originalRoute || !objects) {
-        console.error("Original route or objects definition not found for this history item.");
-        setLocationError("Kon de oorspronkelijke route niet vinden.");
+      if (!historyRoutes || !origin) return;
+      const routeToResume = historyRoutes.find(r => r.id === historyId);
+      if (!routeToResume) {
+          console.error("Route to resume not found in history.");
+          return;
+      }
+  
+      // Find the original route definition
+      const project = projects?.find(p => p.id === routeToResume.projectId);
+      if (!project) {
+        console.error("Project for the route not found.");
         return;
-    }
-    
-    // Set the selected route so objectsInWijk can be calculated
-    setSelectedRouteId(originalRoute.id);
-    
-    if(project?.veegroutes?.some(r => r.id === originalRoute.id)) {
-        setSelectedRouteType('veeg');
-    } else if (project?.prullenbakkenroutes?.some(r => r.id === originalRoute.id)) {
-        setSelectedRouteType('prullenbak');
-    }
+      }
+      const allProjectRoutes = [...(project.veegroutes || []), ...(project.prullenbakkenroutes || [])];
+      const originalRouteDef = allProjectRoutes.find(r => r.id === routeToResume.originalRouteId);
+      if (!originalRouteDef) {
+        console.error("Original route definition not found.");
+        return;
+      }
 
-    // The actual start logic will trigger in a useEffect once objectsInWijk is recalculated
+      // Set the active route definition for objectsInWijk calculation
+      setSelectedRouteId(originalRouteDef.id);
+      if (project.veegroutes?.some(r => r.id === originalRouteDef.id)) {
+        setSelectedRouteType('veeg');
+      } else {
+        setSelectedRouteType('prullenbak');
+      }
+      
+      // Wait for objectsInWijk to be recalculated
+      // We'll use a useEffect to continue after objectsInWijk is ready.
+      // This is a bit of a workaround for the async nature of state updates.
   };
 
-  // This effect continues the resume process after state updates trigger recalculation of objectsInWijk
+  // This effect will trigger after handleResumeRoute sets the selectedRouteId
+  // and objectsInWijk gets recalculated based on it.
   React.useEffect(() => {
-    // Only trigger for "resume" flow, not for starting a totally new route
-    if (selectedHistoryId && objectsInWijk && !isNavigating) {
-      const historyRoute = historyRoutes?.find(r => r.id === selectedHistoryId);
-      const originalRouteDef = selectedRoute;
-      if (historyRoute && originalRouteDef) {
-          startNewNavigationFromRoute(originalRouteDef, objectsInWijk.length);
-      }
+    if (isNavigating || !selectedHistoryId || !objectsInWijk || !origin) return;
+
+    const routeToResume = historyRoutes?.find(r => r.id === selectedHistoryId);
+    if (!routeToResume) return;
+
+    // Now that objectsInWijk is correct, set up the navigation state
+    setActiveRouteHistoryId(routeToResume.id);
+    const completed = routeToResume.completedObjects || [];
+    const skipped = routeToResume.skippedObjects || [];
+    setCompletedObjects(completed);
+    setSkippedObjects(skipped);
+    
+    const remainingObjects = objectsInWijk.filter(
+        obj => !completed.includes(obj.id) && !skipped.includes(obj.id)
+    );
+    setPendingObjects(remainingObjects);
+    setIsNavigating(true);
+
+    const nextObject = findNextObject(origin, remainingObjects);
+    if (nextObject) {
+        setDestination(nextObject);
+        calculateRoute([origin, [nextObject.longitude, nextObject.latitude]]);
     }
-  }, [selectedHistoryId, objectsInWijk, isNavigating, historyRoutes, selectedRoute]);
+
+    startTracking();
+    mapRef.current?.getMap().flyTo({
+        center: origin,
+        zoom: 20,
+        pitch: 60,
+        bearing: 0,
+    });
+
+  }, [objectsInWijk, selectedHistoryId]); // Depends on objectsInWijk to be ready
   
   const updateObjectStatus = async (objectId: string, status: 'completed' | 'skipped') => {
       if (!firestore || !user || !activeRouteHistoryId) return;
@@ -693,7 +719,7 @@ export default function NavigationModulePage() {
                     <Button onClick={handleStartOrResume} disabled={(!selectedRouteId && !selectedHistoryId) || isCalculating}>
                         {isCalculating ? (
                             <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Bezig...</>
-                        ) : selectedHistoryId ? 'Start Route Opnieuw' : 'Start Route'}
+                        ) : selectedHistoryId ? 'Start Route' : 'Start Route'}
                     </Button>
 
                 </div>
@@ -860,12 +886,10 @@ export default function NavigationModulePage() {
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                  <AlertDialogFooter className="sm:justify-center gap-4">
-                    <AlertDialogCancel asChild>
-                      <Button onClick={() => handleNextObject('skipped')} variant='outline' size="icon" className='h-4 w-4 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600'>
+                    <Button onClick={() => handleNextObject('skipped')} variant='outline' size="icon" className='h-1 w-1 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600'>
                         <XCircle className='h-1 w-1' />
-                      </Button>
-                    </AlertDialogCancel>
-                      <Button onClick={() => handleNextObject('completed')} variant='outline' size="icon" className='h-4 w-4 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600'>
+                    </Button>
+                      <Button onClick={() => handleNextObject('completed')} variant='outline' size="icon" className='h-1 w-1 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600'>
                         <CheckCircle className='h-1 w-1' />
                       </Button>
                 </AlertDialogFooter>
