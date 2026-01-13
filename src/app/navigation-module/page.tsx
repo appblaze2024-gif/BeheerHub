@@ -959,7 +959,7 @@ export default function NavigationModulePage() {
           )}
         </MapGL>
         <Sheet open={isCompletionSheetOpen} onOpenChange={setIsCompletionSheetOpen}>
-            <SheetContent side="bottom" className="w-full max-w-md mx-auto rounded-t-lg">
+            <SheetContent side="bottom" className="w-full h-1/3 rounded-t-lg">
                 <SheetHeader className="text-center">
                     <SheetTitle>Object Voltooien?</SheetTitle>
                     <SheetDescription>
@@ -990,4 +990,3 @@ export default function NavigationModulePage() {
   );
 }
 
-    
