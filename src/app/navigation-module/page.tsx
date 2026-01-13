@@ -16,15 +16,15 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  Route,
+  Route as RouteIcon,
   ArrowUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import * as turf from '@turf/turf';
-import { useCollection, useFirestore, useUser } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { useCollection, useFirestore, useUser, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { collection, query, where, doc, serverTimestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
@@ -139,7 +139,10 @@ export default function NavigationModulePage() {
   
   const [pendingObjects, setPendingObjects] = React.useState<MapObject[]>([]);
   const [completedObjects, setCompletedObjects] = React.useState<string[]>([]);
+  const [skippedObjects, setSkippedObjects] = React.useState<string[]>([]);
   const [currentTime, setCurrentTime] = React.useState('');
+  const [activeRouteHistoryId, setActiveRouteHistoryId] = React.useState<string | null>(null);
+
 
   const selectedProject = React.useMemo(() => {
     return projects?.find(p => p.id === selectedProjectId) ?? null;
@@ -354,11 +357,30 @@ export default function NavigationModulePage() {
       return closestObject;
   }
 
-  const handleStartNavigation = () => {
-    if (!origin || !objectsInWijk || objectsInWijk.length === 0) return;
+  const handleStartNavigation = async () => {
+    if (!origin || !objectsInWijk || objectsInWijk.length === 0 || !user || !firestore || !selectedProjectId || !selectedRouteId || !selectedRoute) return;
     
+    // 1. Create Route History Entry
+    const routesCollection = collection(firestore, `users/${user.uid}/routes`);
+    const newRouteHistoryData = {
+      userId: user.uid,
+      projectId: selectedProjectId,
+      originalRouteId: selectedRouteId,
+      routeName: selectedRoute.naam,
+      date: new Date().toISOString().split('T')[0],
+      startTime: serverTimestamp(),
+      endTime: null,
+      completedObjects: [],
+      skippedObjects: [],
+      totalObjects: objectsInWijk.length,
+    };
+    const routeHistoryRef = await addDocumentNonBlocking(routesCollection, newRouteHistoryData);
+    setActiveRouteHistoryId(routeHistoryRef.id);
+
+    // 2. Set up navigation state
     setPendingObjects(objectsInWijk);
     setCompletedObjects([]);
+    setSkippedObjects([]);
     setIsNavigating(true);
 
     const firstObject = findNextObject(origin, objectsInWijk);
@@ -382,16 +404,32 @@ export default function NavigationModulePage() {
     });
   };
   
-  const handleNextObject = () => {
+  const updateObjectStatus = async (objectId: string, status: 'completed' | 'skipped') => {
+      if (!firestore || !user || !activeRouteHistoryId) return;
+
+      const newCompleted = status === 'completed' ? [...completedObjects, objectId] : completedObjects;
+      const newSkipped = status === 'skipped' ? [...skippedObjects, objectId] : skippedObjects;
+
+      setCompletedObjects(newCompleted);
+      setSkippedObjects(newSkipped);
+
+      const routeHistoryRef = doc(firestore, `users/${user.uid}/routes`, activeRouteHistoryId);
+      updateDocumentNonBlocking(routeHistoryRef, {
+        completedObjects: newCompleted,
+        skippedObjects: newSkipped
+      });
+
+      const newPending = pendingObjects.filter(obj => obj.id !== objectId);
+      setPendingObjects(newPending);
+      
+      return newPending;
+  }
+
+
+  const handleNextObject = async (status: 'completed' | 'skipped') => {
     if (!origin || !destination) return;
     
-    // Mark current destination as complete
-    const newCompleted = [...completedObjects, destination.id];
-    setCompletedObjects(newCompleted);
-
-    // Find next closest from pending objects
-    const newPending = pendingObjects.filter(obj => !newCompleted.includes(obj.id));
-    setPendingObjects(newPending);
+    const newPending = await updateObjectStatus(destination.id, status);
 
     const nextObject = findNextObject(origin, newPending);
 
@@ -405,11 +443,19 @@ export default function NavigationModulePage() {
       setRoute(null);
       setRouteInfo(null);
       setRouteInstructions([]);
+      handleStopNavigation(); // Also stop navigation fully
     }
     setIsCompletionDialogOpen(false);
   };
 
   const handleStopNavigation = () => {
+    if (firestore && user && activeRouteHistoryId) {
+      const routeHistoryRef = doc(firestore, `users/${user.uid}/routes`, activeRouteHistoryId);
+      updateDocumentNonBlocking(routeHistoryRef, {
+        endTime: serverTimestamp()
+      });
+    }
+
     setIsNavigating(false);
     setRoute(null);
     setRouteInfo(null);
@@ -417,6 +463,8 @@ export default function NavigationModulePage() {
     setDestination(null);
     setPendingObjects([]);
     setCompletedObjects([]);
+    setSkippedObjects([]);
+    setActiveRouteHistoryId(null);
     stopTracking();
     
     setViewState(prev => ({ ...prev, pitch: 0, bearing: 0, zoom: 14 }));
@@ -440,8 +488,8 @@ export default function NavigationModulePage() {
     }
   };
   
-  const progressValue = objectsInWijk && objectsInWijk.length > 0 ? (completedObjects.length / objectsInWijk.length) * 100 : 0;
-  const allObjectsCompleted = pendingObjects.length === 0 && completedObjects.length > 0 && objectsInWijk && objectsInWijk.length > 0;
+  const progressValue = objectsInWijk && objectsInWijk.length > 0 ? ((completedObjects.length + skippedObjects.length) / objectsInWijk.length) * 100 : 0;
+  const allObjectsCompleted = pendingObjects.length === 0 && (completedObjects.length > 0 || skippedObjects.length > 0) && objectsInWijk && objectsInWijk.length > 0;
   
   const formatDistance = (meters: number) => {
     if (meters < 1000) {
@@ -457,12 +505,22 @@ export default function NavigationModulePage() {
   
   const firstInstruction = routeInstructions[0];
 
+  const getMarkerColor = (objectId: string): string => {
+    if (completedObjects.includes(objectId)) {
+      return 'bg-green-500';
+    }
+    if (skippedObjects.includes(objectId)) {
+      return 'bg-gray-500';
+    }
+    return 'bg-blue-600';
+  }
+
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       <div className="flex-1 relative bg-gray-800">
         {!isNavigating && (
             <div className="absolute top-4 left-4 z-10 bg-card/90 backdrop-blur-sm p-4 rounded-lg shadow-lg w-full max-w-sm text-card-foreground">
-                <h2 className="text-lg font-bold mb-2">Navigatie per Wijk</h2>
+                <h2 className="text-lg font-bold mb-2">Navigatie per Route</h2>
                 <div className="space-y-4">
                     <div>
                         <Label htmlFor="project-select">Project</Label>
@@ -569,8 +627,8 @@ export default function NavigationModulePage() {
 
         {isNavigating && (
             <div className="absolute bottom-4 left-0 right-0 z-10 px-4">
-                <div className="flex items-end justify-between">
-                <div className="w-16">
+              <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-4">
+                <div className="flex justify-start">
                     <Button
                     variant="destructive"
                     className="rounded-full h-16 w-16 p-0 flex items-center justify-center shadow-lg"
@@ -579,13 +637,13 @@ export default function NavigationModulePage() {
                     <X className="h-8 w-8" />
                     </Button>
                 </div>
-
-                <div className="flex flex-col items-center gap-4">
+                
+                <div className="flex flex-col items-center gap-2">
                     <div className="bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg text-card-foreground w-96">
                     <div className="flex justify-between items-center mb-1 px-1">
                         <p className="font-semibold text-sm">Voortgang</p>
                         <p className="font-semibold text-sm">
-                        {completedObjects.length} / {(objectsInWijk || []).length}{' '}
+                        {completedObjects.length + skippedObjects.length} / {(objectsInWijk || []).length}{' '}
                         objecten
                         </p>
                     </div>
@@ -597,7 +655,7 @@ export default function NavigationModulePage() {
                         <span className="font-bold text-lg">{currentTime}</span>
                     </div>
                     <div className="flex items-center gap-2 text-muted-foreground">
-                        <Route className="h-5 w-5" />
+                        <RouteIcon className="h-5 w-5" />
                         <span>
                         {routeInfo ? formatDistance(routeInfo.distance) : '-'}
                         </span>
@@ -610,8 +668,8 @@ export default function NavigationModulePage() {
                     </div>
                 </div>
 
-                <div className="w-16"></div>
-                </div>
+                <div className="flex justify-end"></div>
+              </div>
             </div>
         )}
 
@@ -632,17 +690,35 @@ export default function NavigationModulePage() {
             </Marker>
           )}
           
-          {isNavigating && destination && (
-            <Marker
-              longitude={destination.longitude}
-              latitude={destination.latitude}
-              anchor="bottom"
-              onClick={() => setIsCompletionDialogOpen(true)}
-              className="cursor-pointer"
-            >
-              <MapPin className="w-8 h-8 text-blue-600" />
-            </Marker>
-          )}
+          {isNavigating && objectsInWijk?.map(obj => {
+              const isCurrentDestination = destination?.id === obj.id;
+              
+              if (isCurrentDestination) {
+                return (
+                  <Marker
+                    key={obj.id}
+                    longitude={obj.longitude}
+                    latitude={obj.latitude}
+                    anchor="bottom"
+                    onClick={() => setIsCompletionDialogOpen(true)}
+                    className="cursor-pointer"
+                  >
+                    <MapPin className="w-8 h-8 text-blue-600 animate-pulse" />
+                  </Marker>
+                )
+              }
+              
+              return (
+                 <Marker
+                    key={obj.id}
+                    longitude={obj.longitude}
+                    latitude={obj.latitude}
+                    anchor="center"
+                 >
+                  <div className={cn("w-3 h-3 rounded-full border-2 border-white", getMarkerColor(obj.id))} />
+                </Marker>
+              )
+          })}
 
           {!isNavigating && objectsInWijk && objectsInWijk.map(obj => (
              <Marker
@@ -650,7 +726,7 @@ export default function NavigationModulePage() {
                 longitude={obj.longitude}
                 latitude={obj.latitude}
              >
-              <div className={cn("w-2.5 h-2.5 rounded-full border-2 border-white", completedObjects.includes(obj.id) ? "bg-green-500" : "bg-gray-700" )} />
+              <div className={cn("w-2.5 h-2.5 rounded-full border-2 border-white", getMarkerColor(obj.id) )} />
             </Marker>
           ))}
 
@@ -669,16 +745,16 @@ export default function NavigationModulePage() {
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter className="sm:justify-center gap-4">
-                    <AlertDialogCancel asChild>
-                         <Button variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600 focus-visible:ring-red-500'>
-                            <XCircle className='h-10 w-10'/>
-                        </Button>
-                    </AlertDialogCancel>
-                    <AlertDialogAction asChild>
-                         <Button onClick={handleNextObject} variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600 focus-visible:ring-green-500 focus-visible:ring-offset-0 focus:ring-0 focus-visible:ring-0 ring-offset-0 ring-0'>
-                            <CheckCircle className='h-10 w-10' />
-                        </Button>
-                    </AlertDialogAction>
+                  <AlertDialogAction asChild>
+                    <Button onClick={() => handleNextObject('skipped')} variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600 focus-visible:ring-red-500'>
+                        <XCircle className='h-10 w-10' />
+                    </Button>
+                   </AlertDialogAction>
+                   <AlertDialogAction asChild>
+                     <Button onClick={() => handleNextObject('completed')} variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600 focus-visible:ring-green-500 focus-visible:ring-offset-0 focus:ring-0 focus-visible:ring-0 ring-offset-0 ring-0'>
+                        <CheckCircle className='h-10 w-10' />
+                    </Button>
+                  </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
@@ -686,3 +762,5 @@ export default function NavigationModulePage() {
     </div>
   );
 }
+
+    

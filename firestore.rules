@@ -108,7 +108,7 @@ service cloud.firestore {
       allow delete: if false;
 
       /**
-       * @description Secures a user's route preferences.
+       * @description Secures a user's route history.
        */
       match /routes/{routeId} {
         allow get, list, create, update, delete: if isOwner(userId);
@@ -187,3 +187,5 @@ service cloud.firestore {
     }
   }
 }
+
+    

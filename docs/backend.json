@@ -1,14 +1,23 @@
 {
   "entities": {
     "Route": {
-        "title": "Route",
-        "type": "object",
-        "description": "Represents a user-saved route preference.",
-        "properties": {
-            "id": { "type": "string" },
-            "gemeente": { "type": "string" }
-        },
-        "required": ["gemeente"]
+      "title": "Route",
+      "type": "object",
+      "description": "Represents a user-driven route history.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "projectId": { "type": "string" },
+        "originalRouteId": { "type": "string" },
+        "routeName": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "startTime": { "type": "string", "format": "date-time" },
+        "endTime": { "type": "string", "format": "date-time" },
+        "completedObjects": { "type": "array", "items": { "type": "string" } },
+        "skippedObjects": { "type": "array", "items": { "type": "string" } },
+        "totalObjects": { "type": "number" }
+      },
+      "required": ["userId", "projectId", "originalRouteId", "routeName", "date", "startTime"]
     },
     "Project": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -501,10 +510,10 @@
         "definition": {
             "entityName": "Route",
             "schema": { "$ref": "#/backend/entities/Route" },
-            "description": "Stores user-specific route preferences.",
+            "description": "Stores user-specific route history.",
             "params": [
                 { "name": "userId", "description": "The ID of the user." },
-                { "name": "routeId", "description": "The ID of the route preference." }
+                { "name": "routeId", "description": "The ID of the route history entry." }
             ]
         }
       },
@@ -705,3 +714,5 @@
     "reasoning": "The Firestore structure is designed to provide a secure and scalable foundation for the BizBoard application, focusing on clear ownership and authorization. Each user's data (revenues, expenses, and appointments) is stored under their respective user ID, ensuring data isolation and simplified security rules. This design avoids complex queries and `get()` calls in security rules, which aligns with the principles of Authorization Independence and facilitates easier debugging. The use of path-based ownership `/users/{userId}/revenues/{revenueId}` makes it straightforward to implement security rules that grant access only to the owner of the data.\n\n*   **Authorization Independence:** Achieved by structuring data under user-specific paths, eliminating the need for `get()` calls to parent documents for authorization. All data needed for authorization is implicitly available in the path.\n*   **QAPs:** Secure list operations are supported by the path-based ownership model. Listing revenues, expenses, or appointments is always scoped to a specific user, preventing unauthorized access to other users' data.\n\nBy adhering to these principles, the data structure promotes a maintainable and secure application."
   }
 }
+
+    
