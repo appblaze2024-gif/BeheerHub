@@ -18,6 +18,7 @@ import {
   Clock,
   Route as RouteIcon,
   ArrowUp,
+  DialogClose,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,7 +41,7 @@ import { Progress } from '@/components/ui/progress';
 import type { Route } from 'docs/backend';
 import { Separator } from '@/components/ui/separator';
 import { Slider } from '@/components/ui/slider';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
@@ -364,7 +365,7 @@ export default function NavigationModulePage() {
             bearing: heading ?? map.getBearing(),
             zoom: 20,
             pitch: 60,
-            duration: 1,
+            duration: 1, // Using 1ms for near-instant updates
             easing(t: any) {
               return t;
             }
@@ -460,7 +461,7 @@ export default function NavigationModulePage() {
     startTracking();
     setIsCalculating(false);
 
-    mapRef.current?.getMap().flyTo({
+    mapRef.current?.getMap().easeTo({
         center: origin,
         zoom: 20,
         pitch: 60,
@@ -525,7 +526,7 @@ export default function NavigationModulePage() {
     }
 
     startTracking();
-    mapRef.current?.getMap().flyTo({
+    mapRef.current?.getMap().easeTo({
         center: origin,
         zoom: 20,
         pitch: 60,
@@ -614,7 +615,7 @@ export default function NavigationModulePage() {
     
     setViewState(prev => ({ ...prev, pitch: 0, bearing: 0, zoom: 14 }));
      if(origin) {
-        mapRef.current?.getMap().flyTo({
+        mapRef.current?.getMap().easeTo({
             center: origin,
             zoom: 14,
             pitch: 0,
@@ -625,7 +626,7 @@ export default function NavigationModulePage() {
 
   const centerOnLocation = () => {
     if (origin) {
-        mapRef.current?.getMap().flyTo({
+        mapRef.current?.getMap().easeTo({
             center: origin,
             zoom: isNavigating ? 20 : 15,
             pitch: isNavigating ? 60 : 0,
