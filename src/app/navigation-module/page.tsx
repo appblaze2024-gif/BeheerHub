@@ -439,46 +439,45 @@ export default function NavigationModulePage() {
 
   const handleStartNavigation = async () => {
     if (!selectedRoute || !objectsInWijk) return;
-    await startNewNavigationFromRoute(selectedRoute, objectsInWijk.length);
-  };
 
-  const handleResumeRoute = async (historyId: string) => {
-      if (!historyRoutes || !origin) return;
-      const routeToResume = historyRoutes.find(r => r.id === historyId);
+    if (selectedHistoryId) {
+        // Find if this exact route is already in history to decide whether to create new or update.
+        // For now, let's assume we always create a new one if it's from the "template" list.
+        await startNewNavigationFromRoute(selectedRoute, objectsInWijk.length);
+    } else {
+        await startNewNavigationFromRoute(selectedRoute, objectsInWijk.length);
+    }
+  };
+  
+  const handleResumeRoute = (historyId: string) => {
+      const routeToResume = historyRoutes?.find(r => r.id === historyId);
       if (!routeToResume) {
           console.error("Route to resume not found in history.");
           return;
       }
-  
-      // Find the original route definition
+      
       const project = projects?.find(p => p.id === routeToResume.projectId);
       if (!project) {
         console.error("Project for the route not found.");
         return;
       }
-      const allProjectRoutes = [...(project.veegroutes || []), ...(project.prullenbakkenroutes || [])];
-      const originalRouteDef = allProjectRoutes.find(r => r.id === routeToResume.originalRouteId);
-      if (!originalRouteDef) {
-        console.error("Original route definition not found.");
-        return;
-      }
 
-      // Set the active route definition for objectsInWijk calculation
-      setSelectedRouteId(originalRouteDef.id);
-      if (project.veegroutes?.some(r => r.id === originalRouteDef.id)) {
+      // We need to set the project and route definition so `objectsInWijk` can be calculated correctly.
+      setSelectedProjectId(project.id);
+      setSelectedRouteId(routeToResume.originalRouteId);
+      if (project.veegroutes?.some(r => r.id === routeToResume.originalRouteId)) {
         setSelectedRouteType('veeg');
-      } else {
+      } else if (project.prullenbakkenroutes?.some(r => r.id === routeToResume.originalRouteId)) {
         setSelectedRouteType('prullenbak');
       }
-      
-      // Wait for objectsInWijk to be recalculated
-      // We'll use a useEffect to continue after objectsInWijk is ready.
-      // This is a bit of a workaround for the async nature of state updates.
+
+      // The actual resume logic will now be handled by the useEffect that watches for `objectsInWijk`
   };
 
-  // This effect will trigger after handleResumeRoute sets the selectedRouteId
-  // and objectsInWijk gets recalculated based on it.
+
   React.useEffect(() => {
+    // This effect runs when we want to resume a route.
+    // It waits until objectsInWijk is populated based on the selected route definition.
     if (isNavigating || !selectedHistoryId || !objectsInWijk || !origin) return;
 
     const routeToResume = historyRoutes?.find(r => r.id === selectedHistoryId);
@@ -510,8 +509,12 @@ export default function NavigationModulePage() {
         pitch: 60,
         bearing: 0,
     });
+    
+    // We've resumed, clear selectedHistoryId so this effect doesn't re-run
+    // without explicit user action. Keep activeRouteHistoryId to track the session.
+    setSelectedHistoryId(null); 
 
-  }, [objectsInWijk, selectedHistoryId]); // Depends on objectsInWijk to be ready
+  }, [objectsInWijk, selectedHistoryId, historyRoutes, isNavigating, origin]); 
   
   const updateObjectStatus = async (objectId: string, status: 'completed' | 'skipped') => {
       if (!firestore || !user || !activeRouteHistoryId) return;
