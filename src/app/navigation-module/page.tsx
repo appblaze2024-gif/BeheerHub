@@ -43,6 +43,7 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import type { Route } from 'docs/backend';
 import { Separator } from '@/components/ui/separator';
+import { Slider } from '@/components/ui/slider';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -148,6 +149,7 @@ export default function NavigationModulePage() {
   const [skippedObjects, setSkippedObjects] = React.useState<string[]>([]);
   const [currentTime, setCurrentTime] = React.useState('');
   const [activeRouteHistoryId, setActiveRouteHistoryId] = React.useState<string | null>(null);
+  const [vulgraad, setVulgraad] = React.useState([50]);
 
   const userHistoryCollection = React.useMemo(() => {
     if (!firestore || !user) return null;
@@ -429,14 +431,9 @@ export default function NavigationModulePage() {
       totalObjects: allObjectIds.length,
     };
     
-    // This is a new route, so add a new document
-    const newDocRef = await addDocumentNonBlocking(routesCollection, routeHistoryData);
-    if (!newDocRef.id) {
-        console.error("Failed to create new route history document.");
-        setIsCalculating(false);
-        return;
-    }
-    setActiveRouteHistoryId(newDocRef.id);
+    const docRef = doc(routesCollection);
+    await setDoc(docRef, routeHistoryData);
+    setActiveRouteHistoryId(docRef.id);
     
     setCompletedObjects([]);
     setSkippedObjects([]);
@@ -490,7 +487,6 @@ export default function NavigationModulePage() {
     const routeToResume = historyRoutes?.find(r => r.id === selectedHistoryId);
     if (!routeToResume) return;
 
-    // Wait until objectsInWijk has been computed for the selected route
     const routeObjects = (routeToResume.allObjectIds || [])
         .map(id => objects.find(o => o.id === id))
         .filter((o): o is MapObject => !!o);
@@ -541,6 +537,14 @@ export default function NavigationModulePage() {
         completedObjects: newCompleted,
         skippedObjects: newSkipped
       });
+
+      if (status === 'completed' && destination) {
+        const objectRef = doc(firestore, 'objects', destination.id);
+        updateDocumentNonBlocking(objectRef, {
+            vulgraad: vulgraad[0],
+            lastCleaned: serverTimestamp() 
+        });
+      }
 
       const newPending = pendingObjects.filter(obj => obj.id !== objectId);
       setPendingObjects(newPending);
@@ -652,6 +656,7 @@ export default function NavigationModulePage() {
   
   const handleMarkerClick = (obj: MapObject) => {
     if (isNavigating && destination?.id === obj.id) {
+        setVulgraad([obj.vulgraad || 50]);
         setIsCompletionDialogOpen(true);
     } else {
         setSelectedObjectForInfo(obj);
@@ -917,7 +922,7 @@ export default function NavigationModulePage() {
                 latitude={hoveredObject.latitude}
                 closeButton={false}
                 closeOnClick={false}
-                anchor="bottom"
+                anchor="top"
                 offset={10}
                 onClose={() => setHoveredObject(null)}
               >
@@ -957,6 +962,16 @@ export default function NavigationModulePage() {
                         Markeer dit object als voltooid en ga verder naar de volgende.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
+                 <div className='py-4 space-y-4'>
+                    <Label>Vulgraad: {vulgraad[0]}%</Label>
+                    <Slider 
+                        defaultValue={[50]}
+                        value={vulgraad}
+                        onValueChange={setVulgraad}
+                        max={100}
+                        step={25}
+                    />
+                 </div>
                  <AlertDialogFooter className="sm:justify-center gap-4">
                     <Button onClick={() => handleNextObject('skipped')} variant='outline' size="icon" className='h-12 w-12 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600'>
                         <XCircle className='h-6 w-6' />
