@@ -29,21 +29,25 @@ import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import type { Route } from 'docs/backend';
 import { Separator } from '@/components/ui/separator';
 import { Slider } from '@/components/ui/slider';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from '@/components/ui/sheet';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -140,7 +144,7 @@ export default function NavigationModulePage() {
   const [selectedRouteType, setSelectedRouteType] = React.useState<'veeg' | 'prullenbak' | null>(null);
   const [selectedRouteId, setSelectedRouteId] = React.useState<string | null>(null);
   const [selectedHistoryId, setSelectedHistoryId] = React.useState<string | null>(null);
-  const [isCompletionDialogOpen, setIsCompletionDialogOpen] = React.useState(false);
+  const [isCompletionSheetOpen, setIsCompletionSheetOpen] = React.useState(false);
   
   const watchIdRef = React.useRef<number | null>(null);
   
@@ -572,7 +576,7 @@ export default function NavigationModulePage() {
       setRouteInstructions([]);
       handleStopNavigation(); // Also stop navigation fully
     }
-    setIsCompletionDialogOpen(false);
+    setIsCompletionSheetOpen(false);
   };
 
   const handleStopNavigation = () => {
@@ -657,7 +661,7 @@ export default function NavigationModulePage() {
   const handleMarkerClick = (obj: MapObject) => {
     if (isNavigating && destination?.id === obj.id) {
         setVulgraad([obj.vulgraad || 50]);
-        setIsCompletionDialogOpen(true);
+        setIsCompletionSheetOpen(true);
     } else {
         setSelectedObjectForInfo(obj);
     }
@@ -916,7 +920,7 @@ export default function NavigationModulePage() {
             </Marker>
           ))}
           
-          {hoveredObject && (
+          {hoveredObject && !selectedObjectForInfo && (
               <Popup
                 longitude={hoveredObject.longitude}
                 latitude={hoveredObject.latitude}
@@ -954,35 +958,36 @@ export default function NavigationModulePage() {
             </Source>
           )}
         </MapGL>
-         <AlertDialog open={isCompletionDialogOpen} onOpenChange={setIsCompletionDialogOpen}>
-            <AlertDialogContent className='max-w-xs'>
-                <AlertDialogHeader>
-                    <AlertDialogTitle className='text-center'>Object Voltooien?</AlertDialogTitle>
-                    <AlertDialogDescription className='text-center'>
+        <Sheet open={isCompletionSheetOpen} onOpenChange={setIsCompletionSheetOpen}>
+            <SheetContent side="bottom" className="w-full max-w-md mx-auto rounded-t-lg">
+                <SheetHeader className="text-center">
+                    <SheetTitle>Object Voltooien?</SheetTitle>
+                    <SheetDescription>
                         Markeer dit object als voltooid en ga verder naar de volgende.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                 <div className='py-4 space-y-4'>
+                    </SheetDescription>
+                </SheetHeader>
+                <div className='py-6 space-y-4'>
                     <Label>Vulgraad: {vulgraad[0]}%</Label>
                     <Slider 
-                        defaultValue={[50]}
                         value={vulgraad}
                         onValueChange={setVulgraad}
                         max={100}
                         step={25}
                     />
-                 </div>
-                 <AlertDialogFooter className="sm:justify-center gap-4">
-                    <Button onClick={() => handleNextObject('skipped')} variant='outline' size="icon" className='h-12 w-12 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600'>
-                        <XCircle className='h-6 w-6' />
+                </div>
+                <SheetFooter className="flex-row justify-center gap-4">
+                    <Button onClick={() => handleNextObject('skipped')} variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600'>
+                        <XCircle className='h-8 w-8' />
                     </Button>
-                      <Button onClick={() => handleNextObject('completed')} variant='outline' size="icon" className='h-12 w-12 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600'>
-                        <CheckCircle className='h-6 w-6' />
-                      </Button>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+                    <Button onClick={() => handleNextObject('completed')} variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600'>
+                        <CheckCircle className='h-8 w-8' />
+                    </Button>
+                </SheetFooter>
+            </SheetContent>
+        </Sheet>
       </div>
     </div>
   );
 }
+
+    
