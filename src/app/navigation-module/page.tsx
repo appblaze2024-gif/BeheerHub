@@ -18,7 +18,6 @@ import {
   Clock,
   Route as RouteIcon,
   ArrowUp,
-  DialogClose,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,7 +40,7 @@ import { Progress } from '@/components/ui/progress';
 import type { Route } from 'docs/backend';
 import { Separator } from '@/components/ui/separator';
 import { Slider } from '@/components/ui/slider';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
@@ -367,7 +366,7 @@ export default function NavigationModulePage() {
             pitch: 60,
             speed: 1.2,
             curve: 1,
-            easing(t) {
+            easing(t: any) {
               return t;
             }
           });
@@ -848,7 +847,7 @@ export default function NavigationModulePage() {
                 </div>
                 
                 <div className="flex justify-center">
-                    <div className="bg-card/90 backdrop-blur-sm p-3 rounded-xl shadow-lg flex items-center justify-between gap-4 text-card-foreground w-96">
+                    <div className="bg-card/90 backdrop-blur-sm p-3 rounded-xl shadow-lg flex items-center justify-center gap-4 text-card-foreground w-96">
                         <div className="flex items-center gap-2">
                             <Clock className="h-5 w-5" />
                             <span className="font-bold text-lg">{currentTime}</span>
@@ -1055,15 +1054,15 @@ export default function NavigationModulePage() {
                         />
                       )}
                   </TabsContent>
-                  <TabsContent value="actie" className="pt-8">
-                     <DialogFooter className="flex-row justify-center gap-4">
+                  <TabsContent value="actie" className="pt-8 flex items-center justify-center">
+                    <div className="flex-row justify-center gap-4 flex">
                         <Button onClick={() => handleNextObject('skipped')} variant='outline' size="icon" className='h-32 w-32 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600'>
                             <XCircle className='h-16 w-16' />
                         </Button>
                         <Button onClick={() => handleNextObject('completed')} variant='outline' size="icon" className='h-32 w-32 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600'>
                             <CheckCircle className='h-16 w-16' />
                         </Button>
-                    </DialogFooter>
+                    </div>
                   </TabsContent>
                 </Tabs>
             </DialogContent>
