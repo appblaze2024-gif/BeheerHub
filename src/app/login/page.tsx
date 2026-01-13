@@ -38,8 +38,8 @@ export default function LoginPage() {
       <Image
         src="https://i.ibb.co/pFvkdLH/Chat-GPT-Image-8-jan-2026-20-56-49-removebg-preview.png"
         alt="Logo"
-        width={600}
-        height={200}
+        width={300}
+        height={100}
         className="h-auto w-auto"
       />
       <Card className="w-full max-w-sm">
