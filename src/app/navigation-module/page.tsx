@@ -478,9 +478,6 @@ export default function NavigationModulePage() {
         setSelectedRouteType('prullenbak');
       }
       
-      // Set the history ID so the useEffect can pick it up
-      setSelectedHistoryId(historyId);
-      
       // We will now wait for the useEffect that watches for `objectsInWijk`
   };
 
@@ -928,5 +925,3 @@ export default function NavigationModulePage() {
     </div>
   );
 }
-
-    
