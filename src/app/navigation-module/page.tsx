@@ -151,6 +151,7 @@ export default function NavigationModulePage() {
   const [activeRouteHistoryId, setActiveRouteHistoryId] = React.useState<string | null>(null);
   
   // State for the new completion dialog
+  const [activeCompletionTab, setActiveCompletionTab] = React.useState('dag');
   const [completionDay, setCompletionDay] = React.useState<string>('maandag');
   const [completionVulgraad, setCompletionVulgraad] = React.useState<string>('25-50');
   const [hasBijzonderheden, setHasBijzonderheden] = React.useState<string>('nee');
@@ -535,8 +536,8 @@ export default function NavigationModulePage() {
     
   }, [objects, selectedHistoryId, historyRoutes, isNavigating, origin]); 
   
-  const updateObjectStatus = (objectId: string, status: 'completed' | 'skipped') => {
-      if (!firestore || !user || !activeRouteHistoryId) return;
+  const updateObjectStatus = async (objectId: string, status: 'completed' | 'skipped'): Promise<MapObject[]> => {
+      if (!firestore || !user || !activeRouteHistoryId) return pendingObjects;
 
       const newCompleted = status === 'completed' ? [...completedObjects, objectId] : completedObjects;
       const newSkipped = status === 'skipped' ? [...skippedObjects, objectId] : skippedObjects;
@@ -562,25 +563,23 @@ export default function NavigationModulePage() {
             bijzonderheden: hasBijzonderheden === 'ja' ? bijzonderhedenText : null,
         });
       }
-
       const newPending = pendingObjects.filter(obj => obj.id !== objectId);
       setPendingObjects(newPending);
+      return newPending;
   }
 
 
-  const handleNextObject = (status: 'completed' | 'skipped') => {
+  const handleNextObject = async (status: 'completed' | 'skipped') => {
     if (!origin || !destination) return;
     
-    updateObjectStatus(destination.id, status);
+    const newPendingObjects = await updateObjectStatus(destination.id, status);
 
-    const newPending = pendingObjects.filter(obj => obj.id !== destination.id);
-
-    const nextObject = findNextObject(origin, newPending);
+    const nextObject = findNextObject(origin, newPendingObjects);
 
     if (nextObject) {
       setDestination(nextObject);
       const routePoints: ([number, number] | null)[] = [origin, [nextObject.longitude, nextObject.latitude]];
-      calculateRoute(routePoints);
+      await calculateRoute(routePoints);
     } else {
       // All objects are done
       setDestination(null);
@@ -673,6 +672,7 @@ export default function NavigationModulePage() {
   
   const handleMarkerClick = (obj: MapObject) => {
     if (isNavigating && destination?.id === obj.id) {
+        setActiveCompletionTab('dag');
         setCompletionDay('maandag');
         setCompletionVulgraad('25-50');
         setHasBijzonderheden('nee');
@@ -982,7 +982,7 @@ export default function NavigationModulePage() {
                         Markeer dit object als voltooid en ga verder naar de volgende.
                     </DialogDescription>
                 </DialogHeader>
-                <Tabs defaultValue="dag" className="w-full">
+                <Tabs value={activeCompletionTab} onValueChange={setActiveCompletionTab} className="w-full">
                   <TabsList className="grid w-full grid-cols-4">
                     <TabsTrigger value="dag">Dag</TabsTrigger>
                     <TabsTrigger value="vulgraad">Vulgraad</TabsTrigger>
@@ -990,7 +990,13 @@ export default function NavigationModulePage() {
                     <TabsTrigger value="actie">Actie</TabsTrigger>
                   </TabsList>
                   <TabsContent value="dag" className="pt-4">
-                    <RadioGroup value={completionDay} onValueChange={setCompletionDay}>
+                    <RadioGroup
+                      value={completionDay}
+                      onValueChange={(value) => {
+                        setCompletionDay(value);
+                        setActiveCompletionTab('vulgraad');
+                      }}
+                    >
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                           {['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag'].map(day => (
                             <div key={day} className="flex items-center space-x-2">
@@ -1002,7 +1008,13 @@ export default function NavigationModulePage() {
                     </RadioGroup>
                   </TabsContent>
                   <TabsContent value="vulgraad" className="pt-4">
-                      <RadioGroup value={completionVulgraad} onValueChange={setCompletionVulgraad}>
+                      <RadioGroup
+                        value={completionVulgraad}
+                        onValueChange={(value) => {
+                          setCompletionVulgraad(value);
+                          setActiveCompletionTab('bijzonderheden');
+                        }}
+                      >
                         <div className="grid grid-cols-2 gap-4">
                             {['0-25', '25-50', '50-75', '75-100'].map(range => (
                                 <div key={range} className="flex items-center space-x-2">
@@ -1014,7 +1026,15 @@ export default function NavigationModulePage() {
                       </RadioGroup>
                   </TabsContent>
                   <TabsContent value="bijzonderheden" className="pt-4 space-y-4">
-                      <RadioGroup value={hasBijzonderheden} onValueChange={setHasBijzonderheden}>
+                      <RadioGroup
+                        value={hasBijzonderheden}
+                        onValueChange={(value) => {
+                          setHasBijzonderheden(value);
+                          if (value === 'nee') {
+                            setActiveCompletionTab('actie');
+                          }
+                        }}
+                      >
                         <div className="flex items-center space-x-4">
                             <div className="flex items-center space-x-2">
                               <RadioGroupItem value="ja" id="bijzonderheden-ja" />
