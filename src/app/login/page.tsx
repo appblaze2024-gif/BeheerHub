@@ -34,7 +34,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex h-screen w-screen flex-col items-center justify-center gap-8 bg-gradient-to-br from-stone-50 to-stone-200 dark:from-stone-800 dark:to-stone-950">
+    <div className="flex h-screen w-screen flex-col items-center justify-start pt-24 gap-8 bg-gradient-to-br from-stone-50 to-stone-200 dark:from-stone-800 dark:to-stone-950">
       <Image
         src="https://i.ibb.co/pFvkdLH/Chat-GPT-Image-8-jan-2026-20-56-49-removebg-preview.png"
         alt="Logo"
