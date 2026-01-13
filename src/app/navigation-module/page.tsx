@@ -406,6 +406,8 @@ export default function NavigationModulePage() {
         routeHistoryRef = doc(routesCollection); // Create a new doc reference
     }
 
+    const allObjectIds = objectsInWijk.map(obj => obj.id);
+
     const routeHistoryData = {
       userId: user.uid,
       projectId: selectedProjectId,
@@ -414,9 +416,10 @@ export default function NavigationModulePage() {
       date: existingData?.date || new Date().toISOString().split('T')[0],
       startTime: existingData?.startTime || serverTimestamp(),
       endTime: null,
+      allObjectIds: existingData?.allObjectIds || allObjectIds,
       completedObjects: existingData?.completedObjects || [],
       skippedObjects: existingData?.skippedObjects || [],
-      totalObjects: objectsInWijk.length,
+      totalObjects: allObjectIds.length,
     };
     
     await setDoc(routeHistoryRef, routeHistoryData, { merge: true });
@@ -483,10 +486,12 @@ export default function NavigationModulePage() {
   React.useEffect(() => {
     // This effect runs when we want to resume a route.
     // It waits until objectsInWijk is populated based on the selected route definition.
-    if (isNavigating || !selectedHistoryId || !objectsInWijk || !origin) return;
+    if (isNavigating || !selectedHistoryId || !objects || !origin) return;
 
     const routeToResume = historyRoutes?.find(r => r.id === selectedHistoryId);
     if (!routeToResume) return;
+
+    const routeObjects = (routeToResume.allObjectIds || []).map(id => objects.find(o => o.id === id)).filter((o): o is MapObject => !!o);
 
     // Now that objectsInWijk is correct, set up the navigation state
     setActiveRouteHistoryId(routeToResume.id);
@@ -495,7 +500,7 @@ export default function NavigationModulePage() {
     setCompletedObjects(completed);
     setSkippedObjects(skipped);
     
-    const remainingObjects = objectsInWijk.filter(
+    const remainingObjects = routeObjects.filter(
         obj => !completed.includes(obj.id) && !skipped.includes(obj.id)
     );
     setPendingObjects(remainingObjects);
@@ -519,7 +524,7 @@ export default function NavigationModulePage() {
     // without explicit user action. Keep activeRouteHistoryId to track the session.
     setSelectedHistoryId(null); 
 
-  }, [objectsInWijk, selectedHistoryId, historyRoutes, isNavigating, origin]); 
+  }, [objects, selectedHistoryId, historyRoutes, isNavigating, origin]); 
   
   const updateObjectStatus = async (objectId: string, status: 'completed' | 'skipped') => {
       if (!firestore || !user || !activeRouteHistoryId) return;
@@ -608,8 +613,17 @@ export default function NavigationModulePage() {
     }
   };
   
-  const progressValue = objectsInWijk && objectsInWijk.length > 0 ? ((completedObjects.length + skippedObjects.length) / objectsInWijk.length) * 100 : 0;
-  const allObjectsCompleted = pendingObjects.length === 0 && (completedObjects.length > 0 || skippedObjects.length > 0) && objectsInWijk && objectsInWijk.length > 0;
+  const objectsForCurrentRoute = React.useMemo(() => {
+      const currentHistoryRoute = historyRoutes?.find(r => r.id === activeRouteHistoryId);
+      if (isNavigating && currentHistoryRoute && currentHistoryRoute.allObjectIds) {
+          return (currentHistoryRoute.allObjectIds || [])
+              .map(id => objects?.find(o => o.id === id))
+              .filter((o): o is MapObject => !!o);
+      }
+      return objectsInWijk || [];
+  }, [isNavigating, activeRouteHistoryId, historyRoutes, objects, objectsInWijk]);
+  
+  const progressValue = objectsForCurrentRoute && objectsForCurrentRoute.length > 0 ? ((completedObjects.length + skippedObjects.length) / objectsForCurrentRoute.length) * 100 : 0;
   
   const formatDistance = (meters: number) => {
     if (meters < 1000) {
@@ -715,7 +729,7 @@ export default function NavigationModulePage() {
                                     <SelectItem value="new">-- Nieuwe Route --</SelectItem>
                                     {availableHistoryRoutes.map(r => (
                                       <SelectItem key={r.id} value={r.id}>
-                                        {r.routeName} - {r.startTime ? new Date(r.startTime.toDate()).toLocaleString() : 'Recent'}
+                                        {r.routeName} - {r.startTime?.toDate ? new Date(r.startTime.toDate()).toLocaleString() : 'Recent'}
                                       </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -792,7 +806,7 @@ export default function NavigationModulePage() {
                     <div className="flex justify-between items-center mb-1 px-1">
                         <p className="font-semibold text-sm">Voortgang</p>
                         <p className="font-semibold text-sm">
-                        {completedObjects.length + skippedObjects.length} / {(objectsInWijk || []).length}{' '}
+                        {completedObjects.length + skippedObjects.length} / {objectsForCurrentRoute.length}{' '}
                         objecten
                         </p>
                     </div>
@@ -839,7 +853,7 @@ export default function NavigationModulePage() {
             </Marker>
           )}
           
-          {isNavigating && objectsInWijk?.map(obj => {
+          {isNavigating && objectsForCurrentRoute.map(obj => {
               const isCurrentDestination = destination?.id === obj.id;
               
               if (isCurrentDestination) {
@@ -894,11 +908,11 @@ export default function NavigationModulePage() {
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                  <AlertDialogFooter className="sm:justify-center gap-4">
-                    <Button onClick={() => handleNextObject('skipped')} variant='outline' size="icon" className='h-1 w-1 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600'>
-                        <XCircle className='h-1 w-1' />
+                    <Button onClick={() => handleNextObject('skipped')} variant='outline' size="icon" className='h-12 w-12 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600'>
+                        <XCircle className='h-6 w-6' />
                     </Button>
-                      <Button onClick={() => handleNextObject('completed')} variant='outline' size="icon" className='h-1 w-1 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600'>
-                        <CheckCircle className='h-1 w-1' />
+                      <Button onClick={() => handleNextObject('completed')} variant='outline' size="icon" className='h-12 w-12 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600'>
+                        <CheckCircle className='h-6 w-6' />
                       </Button>
                 </AlertDialogFooter>
             </AlertDialogContent>

@@ -106,12 +106,26 @@ service cloud.firestore {
       allow create: if isOwner(userId);
       allow update: if false;
       allow delete: if false;
+
+      /**
+       * @description Secures a user's route history.
+       */
+      match /routes/{routeId} {
+        allow get, list, create, update, delete: if isOwner(userId);
+      }
     }
 
     /**
      * @description Manages the root objects collection. Any authenticated user can manage objects.
      */
     match /objects/{objectId} {
+        allow read, write: if isSignedIn();
+    }
+    
+    /**
+     * @description Manages the root issues (meldingen) collection. Any authenticated user can manage issues.
+     */
+    match /meldingen/{meldingId} {
         allow read, write: if isSignedIn();
     }
     
