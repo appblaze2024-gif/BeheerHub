@@ -307,7 +307,7 @@ export default function NavigationModulePage() {
   
     const limitedPoints = validPoints.slice(0, 25);
     const coordinates = limitedPoints.map(p => p.join(',')).join(';');
-    const radiuses = limitedPoints.map((_, index) => index === 0 ? 'unlimited' : '20').join(';');
+    const radiuses = limitedPoints.map((_, index) => index === 0 ? 'unlimited' : '100').join(';');
   
     try {
       const response = await fetch(
@@ -847,7 +847,7 @@ export default function NavigationModulePage() {
                 </div>
                 
                 <div className="flex justify-center">
-                    <div className="bg-card/90 backdrop-blur-sm p-3 rounded-xl shadow-lg flex items-center justify-center gap-4 text-card-foreground w-96">
+                    <div className="bg-card/90 backdrop-blur-sm p-3 rounded-xl shadow-lg flex items-center justify-center gap-4 text-card-foreground">
                         <div className="flex items-center gap-2">
                             <Clock className="h-5 w-5" />
                             <span className="font-bold text-lg">{currentTime}</span>
