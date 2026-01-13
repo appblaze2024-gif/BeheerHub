@@ -381,7 +381,7 @@ export default function NavigationModulePage() {
             bearing: heading ?? map.getBearing(),
             zoom: 20,
             pitch: 60,
-            duration: 1000, 
+            duration: 1, 
             easing(t: any) {
               return t;
             }
@@ -423,23 +423,21 @@ export default function NavigationModulePage() {
           const routeLine = route.geometry;
           const totalDistance = turf.length(routeLine, { units: 'meters' });
   
-          // Simulate acceleration and deceleration
           const { speed, maxSpeed, acceleration, distance } = simulationStateRef.current;
           const remainingDistance = totalDistance - distance;
   
           let newSpeed = speed;
-          // Decelerate if close to the end
           if (remainingDistance < 50) {
-            newSpeed = Math.max(3, speed - acceleration); // min speed 3m/s
+            newSpeed = Math.max(3, speed - acceleration);
           } else {
             newSpeed = Math.min(maxSpeed, speed + acceleration);
           }
   
           simulationStateRef.current.speed = newSpeed;
-          simulationStateRef.current.distance += newSpeed; // distance moved in 1 sec
+          simulationStateRef.current.distance += newSpeed;
   
           if (simulationStateRef.current.distance >= totalDistance) {
-            handleToggleSimulation(); // Stop simulation
+            handleToggleSimulation();
             return;
           }
   
@@ -449,16 +447,15 @@ export default function NavigationModulePage() {
   
           const startPoint = turf.point(newCoords);
           const endPoint = turf.point(routeLine.coordinates[routeLine.coordinates.length - 1]);
-          const remainingRoute = turf.lineSlice(startPoint, endPoint, route);
-          setDisplayedRoute(remainingRoute);
+          setDisplayedRoute(turf.lineSlice(startPoint, endPoint, route));
   
-          const nextPointDistance = simulationStateRef.current.distance + 10;
+          const nextPointDistance = simulationStateRef.current.distance + 10; // Look 10 meters ahead for bearing
           if (nextPointDistance <= totalDistance) {
             const nextPoint = turf.along(routeLine, nextPointDistance, { units: 'meters' });
             const bearing = turf.bearing(newPoint, nextPoint);
-            mapRef.current?.getMap().easeTo({ center: newCoords, zoom: 20, bearing: bearing, pitch: 60, duration: 1000 });
+            mapRef.current?.getMap().easeTo({ center: newCoords, zoom: 20, bearing: bearing, pitch: 60, duration: 1000, easing: (t: any) => t });
           } else {
-            mapRef.current?.getMap().easeTo({ center: newCoords, zoom: 20, pitch: 60, duration: 1000 });
+            mapRef.current?.getMap().easeTo({ center: newCoords, zoom: 20, pitch: 60, duration: 1000, easing: (t: any) => t });
           }
         }, 1000);
       } else {
