@@ -41,6 +41,9 @@ import type { Route } from 'docs/backend';
 import { Separator } from '@/components/ui/separator';
 import { Slider } from '@/components/ui/slider';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Textarea } from '@/components/ui/textarea';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -146,7 +149,12 @@ export default function NavigationModulePage() {
   const [skippedObjects, setSkippedObjects] = React.useState<string[]>([]);
   const [currentTime, setCurrentTime] = React.useState('');
   const [activeRouteHistoryId, setActiveRouteHistoryId] = React.useState<string | null>(null);
-  const [vulgraad, setVulgraad] = React.useState([50]);
+  
+  // State for the new completion dialog
+  const [completionDay, setCompletionDay] = React.useState<string>('maandag');
+  const [completionVulgraad, setCompletionVulgraad] = React.useState<string>('25-50');
+  const [hasBijzonderheden, setHasBijzonderheden] = React.useState<string>('nee');
+  const [bijzonderhedenText, setBijzonderhedenText] = React.useState<string>('');
 
   const userHistoryCollection = React.useMemo(() => {
     if (!firestore || !user) return null;
@@ -544,9 +552,14 @@ export default function NavigationModulePage() {
 
       if (status === 'completed' && destination) {
         const objectRef = doc(firestore, 'objects', destination.id);
+        const [min, max] = completionVulgraad.split('-').map(Number);
+        const vulgraadValue = (min + max) / 2;
+
         updateDocumentNonBlocking(objectRef, {
-            vulgraad: vulgraad[0],
-            lastCleaned: serverTimestamp() 
+            lastCleaned: serverTimestamp(),
+            lastCleanedDay: completionDay,
+            vulgraad: vulgraadValue,
+            bijzonderheden: hasBijzonderheden === 'ja' ? bijzonderhedenText : null,
         });
       }
 
@@ -660,7 +673,10 @@ export default function NavigationModulePage() {
   
   const handleMarkerClick = (obj: MapObject) => {
     if (isNavigating && destination?.id === obj.id) {
-        setVulgraad([obj.vulgraad || 50]);
+        setCompletionDay('maandag');
+        setCompletionVulgraad('25-50');
+        setHasBijzonderheden('nee');
+        setBijzonderhedenText('');
         setIsCompletionSheetOpen(true);
     } else {
         setSelectedObjectForInfo(obj);
@@ -959,30 +975,76 @@ export default function NavigationModulePage() {
           )}
         </MapGL>
         <Dialog open={isCompletionSheetOpen} onOpenChange={setIsCompletionSheetOpen}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
                     <DialogTitle>OBJECT-ID: {destination?.id}</DialogTitle>
                     <DialogDescription>
                         Markeer dit object als voltooid en ga verder naar de volgende.
                     </DialogDescription>
                 </DialogHeader>
-                <div className='py-6 space-y-4'>
-                    <Label>Vulgraad: {vulgraad[0]}%</Label>
-                    <Slider 
-                        value={vulgraad}
-                        onValueChange={setVulgraad}
-                        max={100}
-                        step={25}
-                    />
-                </div>
-                <DialogFooter className="flex-row justify-center gap-4">
-                    <Button onClick={() => handleNextObject('skipped')} variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600'>
-                        <XCircle className='h-8 w-8' />
-                    </Button>
-                    <Button onClick={() => handleNextObject('completed')} variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600'>
-                        <CheckCircle className='h-8 w-8' />
-                    </Button>
-                </DialogFooter>
+                <Tabs defaultValue="dag" className="w-full">
+                  <TabsList className="grid w-full grid-cols-4">
+                    <TabsTrigger value="dag">Dag</TabsTrigger>
+                    <TabsTrigger value="vulgraad">Vulgraad</TabsTrigger>
+                    <TabsTrigger value="bijzonderheden">Bijzonderheden</TabsTrigger>
+                    <TabsTrigger value="actie">Actie</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="dag" className="pt-4">
+                    <RadioGroup value={completionDay} onValueChange={setCompletionDay}>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                          {['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag'].map(day => (
+                            <div key={day} className="flex items-center space-x-2">
+                               <RadioGroupItem value={day} id={`day-${day}`} />
+                               <Label htmlFor={`day-${day}`} className='capitalize'>{day}</Label>
+                            </div>
+                          ))}
+                      </div>
+                    </RadioGroup>
+                  </TabsContent>
+                  <TabsContent value="vulgraad" className="pt-4">
+                      <RadioGroup value={completionVulgraad} onValueChange={setCompletionVulgraad}>
+                        <div className="grid grid-cols-2 gap-4">
+                            {['0-25', '25-50', '50-75', '75-100'].map(range => (
+                                <div key={range} className="flex items-center space-x-2">
+                                  <RadioGroupItem value={range} id={`vulgraad-${range}`} />
+                                  <Label htmlFor={`vulgraad-${range}`}>{range}%</Label>
+                                </div>
+                            ))}
+                        </div>
+                      </RadioGroup>
+                  </TabsContent>
+                  <TabsContent value="bijzonderheden" className="pt-4 space-y-4">
+                      <RadioGroup value={hasBijzonderheden} onValueChange={setHasBijzonderheden}>
+                        <div className="flex items-center space-x-4">
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="ja" id="bijzonderheden-ja" />
+                              <Label htmlFor="bijzonderheden-ja">Ja</Label>
+                            </div>
+                             <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="nee" id="bijzonderheden-nee" />
+                              <Label htmlFor="bijzonderheden-nee">Nee</Label>
+                            </div>
+                        </div>
+                      </RadioGroup>
+                      {hasBijzonderheden === 'ja' && (
+                        <Textarea 
+                            placeholder="Voer bijzonderheden in..."
+                            value={bijzonderhedenText}
+                            onChange={(e) => setBijzonderhedenText(e.target.value)}
+                        />
+                      )}
+                  </TabsContent>
+                  <TabsContent value="actie" className="pt-8">
+                     <DialogFooter className="flex-row justify-center gap-4">
+                        <Button onClick={() => handleNextObject('skipped')} variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600'>
+                            <XCircle className='h-8 w-8' />
+                        </Button>
+                        <Button onClick={() => handleNextObject('completed')} variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600'>
+                            <CheckCircle className='h-8 w-8' />
+                        </Button>
+                    </DialogFooter>
+                  </TabsContent>
+                </Tabs>
             </DialogContent>
         </Dialog>
       </div>
