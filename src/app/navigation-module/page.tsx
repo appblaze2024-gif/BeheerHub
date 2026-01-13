@@ -390,36 +390,50 @@ export default function NavigationModulePage() {
     }
   };
   
-  const startNewNavigationFromRoute = async (routeDefinition: any, totalObjects: number) => {
-    if (!origin || !user || !firestore || !selectedProjectId) return;
+  const handleStartNavigation = async () => {
+    if (!origin || !user || !firestore || !selectedProjectId || !selectedRoute || !objectsInWijk) return;
 
     setIsCalculating(true);
     const routesCollection = collection(firestore, `users/${user.uid}/routes`);
-    const newRouteDocRef = doc(routesCollection); // Create a new doc reference with a generated ID
+    
+    let routeHistoryRef: any;
+    let existingData: Route | undefined;
 
-    const newRouteHistoryData: Omit<Route, 'id'> = {
+    if (selectedHistoryId) {
+        routeHistoryRef = doc(routesCollection, selectedHistoryId);
+        existingData = historyRoutes?.find(r => r.id === selectedHistoryId);
+    } else {
+        routeHistoryRef = doc(routesCollection); // Create a new doc reference
+    }
+
+    const routeHistoryData = {
       userId: user.uid,
       projectId: selectedProjectId,
-      originalRouteId: routeDefinition.id,
-      routeName: routeDefinition.naam,
-      date: new Date().toISOString().split('T')[0],
-      startTime: serverTimestamp() as any, // Cast because SDK types can be tricky
+      originalRouteId: selectedRoute.id,
+      routeName: selectedRoute.naam,
+      date: existingData?.date || new Date().toISOString().split('T')[0],
+      startTime: existingData?.startTime || serverTimestamp(),
       endTime: null,
-      completedObjects: [],
-      skippedObjects: [],
-      totalObjects: totalObjects,
+      completedObjects: existingData?.completedObjects || [],
+      skippedObjects: existingData?.skippedObjects || [],
+      totalObjects: objectsInWijk.length,
     };
     
-    await setDoc(newRouteDocRef, newRouteHistoryData);
-    setActiveRouteHistoryId(newRouteDocRef.id);
+    await setDoc(routeHistoryRef, routeHistoryData, { merge: true });
+    setActiveRouteHistoryId(routeHistoryRef.id);
+    
+    const completed = routeHistoryData.completedObjects;
+    const skipped = routeHistoryData.skippedObjects;
+    setCompletedObjects(completed);
+    setSkippedObjects(skipped);
 
-    // 2. Set up navigation state
-    setPendingObjects(objectsInWijk || []);
-    setCompletedObjects([]);
-    setSkippedObjects([]);
+    const remainingObjects = objectsInWijk.filter(
+        obj => !completed.includes(obj.id) && !skipped.includes(obj.id)
+    );
+    setPendingObjects(remainingObjects);
     setIsNavigating(true);
 
-    const firstObject = findNextObject(origin, objectsInWijk || []);
+    const firstObject = findNextObject(origin, remainingObjects);
     
     if (firstObject) {
       setDestination(firstObject);
@@ -437,18 +451,6 @@ export default function NavigationModulePage() {
     });
   }
 
-  const handleStartNavigation = async () => {
-    if (!selectedRoute || !objectsInWijk) return;
-
-    if (selectedHistoryId) {
-        // Find if this exact route is already in history to decide whether to create new or update.
-        // For now, let's assume we always create a new one if it's from the "template" list.
-        await startNewNavigationFromRoute(selectedRoute, objectsInWijk.length);
-    } else {
-        await startNewNavigationFromRoute(selectedRoute, objectsInWijk.length);
-    }
-  };
-  
   const handleResumeRoute = (historyId: string) => {
       const routeToResume = historyRoutes?.find(r => r.id === historyId);
       if (!routeToResume) {
@@ -470,8 +472,11 @@ export default function NavigationModulePage() {
       } else if (project.prullenbakkenroutes?.some(r => r.id === routeToResume.originalRouteId)) {
         setSelectedRouteType('prullenbak');
       }
-
-      // The actual resume logic will now be handled by the useEffect that watches for `objectsInWijk`
+      
+      // Set the history ID so the useEffect can pick it up
+      setSelectedHistoryId(historyId);
+      
+      // We will now wait for the useEffect that watches for `objectsInWijk`
   };
 
 
