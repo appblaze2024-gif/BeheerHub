@@ -64,6 +64,63 @@ type Project = {
   prullenbakkenroutes?: Wijk[]; // Using Wijk type as it's identical
 };
 
+function PlanningAccordionContent({ selectedObject, handleUpdateField, projects, isLoadingProjects }: { selectedObject: any, handleUpdateField: (field: string, value: any) => void, projects: Project[] | null, isLoadingProjects: boolean }) {
+  const [selectedProjectId, setSelectedProjectId] = React.useState('');
+
+  const projectRoutes = React.useMemo(() => {
+    if (!selectedProjectId) return [];
+    const project = projects?.find(p => p.id === selectedProjectId);
+    return project?.prullenbakkenroutes || [];
+  }, [selectedProjectId, projects]);
+
+  const handleRouteAssignment = (routeName: string, isChecked: boolean) => {
+    const currentAssignments = selectedObject.locatieWerkgebieden || [];
+    let newAssignments;
+    if (isChecked) {
+      newAssignments = [...currentAssignments, routeName];
+    } else {
+      newAssignments = currentAssignments.filter((name: string) => name !== routeName);
+    }
+    handleUpdateField('locatieWerkgebieden', newAssignments);
+  };
+  
+  if (!selectedObject) return null;
+
+  return (
+    <div className='space-y-4'>
+      <Select onValueChange={setSelectedProjectId} value={selectedProjectId} disabled={isLoadingProjects}>
+        <SelectTrigger>
+          <SelectValue placeholder="Selecteer een project" />
+        </SelectTrigger>
+        <SelectContent>
+          {projects?.map(p => (
+            <SelectItem key={p.id} value={p.id}>{p.projectnaam}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {selectedProjectId && (
+        <div className="space-y-2 border rounded-md p-4 max-h-48 overflow-y-auto">
+          <h4 className="font-semibold text-sm">Prullenbakkenroutes</h4>
+          {projectRoutes.length > 0 ? projectRoutes.map(route => (
+            <div key={route.id} className="flex items-center space-x-2">
+              <Checkbox
+                id={`route-${route.id}`}
+                checked={(selectedObject.locatieWerkgebieden || []).includes(route.naam)}
+                onCheckedChange={(checked) => handleRouteAssignment(route.naam, !!checked)}
+              />
+              <Label htmlFor={`route-${route.id}`} className="font-normal">{route.naam}</Label>
+            </div>
+          )) : (
+            <p className="text-sm text-muted-foreground">Geen prullenbakkenroutes voor dit project.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 export default function ObjectsPage() {
   const firestore = useFirestore();
   const [isImporting, setIsImporting] = React.useState(false);
@@ -416,7 +473,7 @@ export default function ObjectsPage() {
                          <AccordionItem value="planning">
                              <AccordionTrigger className="px-0 py-3">Planning</AccordionTrigger>
                              <AccordionContent>
-                             Hier komt de planning.
+                                <PlanningAccordionContent selectedObject={selectedObject} handleUpdateField={handleUpdateField} projects={projects} isLoadingProjects={isLoadingProjects} />
                              </AccordionContent>
                          </AccordionItem>
                          <AccordionItem value="bewerk-locatie" className='border-b-0'>
@@ -445,12 +502,11 @@ export default function ObjectsPage() {
                          <div>
                              <div className="flex justify-between items-center mb-2">
                                  <h3 className="font-medium">Locatie werkgebieden</h3>
-                                 <Button size="sm" variant="secondary">
-                                     <Plus className="mr-2 h-4 w-4" />
-                                 </Button>
                              </div>
                              <div className="flex flex-wrap gap-2">
-                                 <div className="bg-muted text-muted-foreground px-3 py-1 rounded-full text-sm">Afvalbakken</div>
+                              {(selectedObject.locatieWerkgebieden || []).map((gebied: string) => (
+                                <div key={gebied} className="bg-muted text-muted-foreground px-3 py-1 rounded-full text-sm">{gebied}</div>
+                              ))}
                              </div>
                          </div>
                      </div>
@@ -543,3 +599,5 @@ export default function ObjectsPage() {
     </div>
   );
 }
+
+    

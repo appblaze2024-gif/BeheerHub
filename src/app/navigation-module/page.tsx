@@ -51,6 +51,7 @@ interface MapObject {
     id: string;
     latitude: number;
     longitude: number;
+    locatieWerkgebieden?: string[];
     [key: string]: any;
 }
 
@@ -157,8 +158,8 @@ export default function NavigationModulePage() {
     if (!historyRoutes || !selectedProjectId) return [];
     return historyRoutes.filter((r) => r.projectId === selectedProjectId)
       .sort((a, b) => {
-        const timeA = a.startTime ? new Date(a.startTime.toDate()).getTime() : Date.now();
-        const timeB = b.startTime ? new Date(b.startTime.toDate()).getTime() : Date.now();
+        const timeA = a.startTime?.toDate ? new Date(a.startTime.toDate()).getTime() : Date.now();
+        const timeB = b.startTime?.toDate ? new Date(b.startTime.toDate()).getTime() : Date.now();
         return timeB - timeA;
       });
   }, [historyRoutes, selectedProjectId]);
@@ -193,26 +194,38 @@ export default function NavigationModulePage() {
   const objectsInWijk = React.useMemo(() => {
     if (!objects || !selectedRoute) return [];
 
+    // Geographic filtering
+    let geoObjects: MapObject[] = [];
     try {
         const wijkFeatures = JSON.parse(selectedRoute.subGebieden);
-        if (!Array.isArray(wijkFeatures) || wijkFeatures.length === 0) return [];
-
-        return objects.filter(obj => {
-            if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') {
-                return false;
-            }
-            const point = turf.point([obj.longitude, obj.latitude]);
-            for (const feature of wijkFeatures) {
-                if (turf.booleanPointInPolygon(point, feature)) {
-                    return true;
+        if (Array.isArray(wijkFeatures) && wijkFeatures.length > 0) {
+            geoObjects = objects.filter(obj => {
+                if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') {
+                    return false;
                 }
-            }
-            return false;
-        });
+                const point = turf.point([obj.longitude, obj.latitude]);
+                for (const feature of wijkFeatures) {
+                    if (turf.booleanPointInPolygon(point, feature)) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+        }
     } catch(e) {
         console.error("Error filtering objects in wijk:", e);
-        return [];
     }
+    
+    // Manual assignment filtering
+    const manualObjects = objects.filter(obj =>
+        (obj.locatieWerkgebieden || []).includes(selectedRoute.naam)
+    );
+    
+    // Combine and remove duplicates
+    const combined = [...geoObjects, ...manualObjects];
+    const uniqueObjects = Array.from(new Map(combined.map(item => [item.id, item])).values());
+    
+    return uniqueObjects;
   }, [objects, selectedRoute]);
 
   React.useEffect(() => {
@@ -396,43 +409,32 @@ export default function NavigationModulePage() {
     setIsCalculating(true);
     const routesCollection = collection(firestore, `users/${user.uid}/routes`);
     
-    let routeHistoryRef: any;
-    let existingData: Route | undefined;
-
-    if (selectedHistoryId) {
-        routeHistoryRef = doc(routesCollection, selectedHistoryId);
-        existingData = historyRoutes?.find(r => r.id === selectedHistoryId);
-    } else {
-        routeHistoryRef = doc(routesCollection); // Create a new doc reference
-    }
+    const routeHistoryRef = doc(routesCollection);
 
     const allObjectIds = objectsInWijk.map(obj => obj.id);
 
     const routeHistoryData = {
+      id: routeHistoryRef.id,
       userId: user.uid,
       projectId: selectedProjectId,
       originalRouteId: selectedRoute.id,
       routeName: selectedRoute.naam,
-      date: existingData?.date || new Date().toISOString().split('T')[0],
-      startTime: existingData?.startTime || serverTimestamp(),
+      date: new Date().toISOString().split('T')[0],
+      startTime: serverTimestamp(),
       endTime: null,
-      allObjectIds: existingData?.allObjectIds || allObjectIds,
-      completedObjects: existingData?.completedObjects || [],
-      skippedObjects: existingData?.skippedObjects || [],
+      allObjectIds: allObjectIds,
+      completedObjects: [],
+      skippedObjects: [],
       totalObjects: allObjectIds.length,
     };
     
     await setDoc(routeHistoryRef, routeHistoryData, { merge: true });
     setActiveRouteHistoryId(routeHistoryRef.id);
     
-    const completed = routeHistoryData.completedObjects;
-    const skipped = routeHistoryData.skippedObjects;
-    setCompletedObjects(completed);
-    setSkippedObjects(skipped);
+    setCompletedObjects([]);
+    setSkippedObjects([]);
 
-    const remainingObjects = objectsInWijk.filter(
-        obj => !completed.includes(obj.id) && !skipped.includes(obj.id)
-    );
+    const remainingObjects = objectsInWijk;
     setPendingObjects(remainingObjects);
     setIsNavigating(true);
 
@@ -467,7 +469,7 @@ export default function NavigationModulePage() {
         return;
       }
 
-      // We need to set the project and route definition so `objectsInWijk` can be calculated correctly.
+      // We need to set the project and route definition so objectsInWijk can be calculated correctly.
       setSelectedProjectId(project.id);
       setSelectedRouteId(routeToResume.originalRouteId);
       if (project.veegroutes?.some(r => r.id === routeToResume.originalRouteId)) {
@@ -485,15 +487,20 @@ export default function NavigationModulePage() {
 
   React.useEffect(() => {
     // This effect runs when we want to resume a route.
-    // It waits until objectsInWijk is populated based on the selected route definition.
+    // It waits until all object data is populated.
     if (isNavigating || !selectedHistoryId || !objects || !origin) return;
 
     const routeToResume = historyRoutes?.find(r => r.id === selectedHistoryId);
     if (!routeToResume) return;
 
     const routeObjects = (routeToResume.allObjectIds || []).map(id => objects.find(o => o.id === id)).filter((o): o is MapObject => !!o);
+    
+    if(routeObjects.length !== routeToResume.allObjectIds.length){
+      // not all objects are loaded yet, wait.
+      return;
+    }
 
-    // Now that objectsInWijk is correct, set up the navigation state
+    // Now that all objects are available, set up the navigation state
     setActiveRouteHistoryId(routeToResume.id);
     const completed = routeToResume.completedObjects || [];
     const skipped = routeToResume.skippedObjects || [];
@@ -921,3 +928,5 @@ export default function NavigationModulePage() {
     </div>
   );
 }
+
+    
