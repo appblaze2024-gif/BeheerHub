@@ -81,7 +81,7 @@ export function VehicleImageUploader({
   return (
     <div
       className={cn(
-        'group relative w-full max-w-[250px] aspect-video rounded-md overflow-hidden border cursor-pointer',
+        'group relative w-full max-w-md aspect-video rounded-md overflow-hidden border cursor-pointer',
         className
       )}
       onClick={handleImageClick}
@@ -100,7 +100,7 @@ export function VehicleImageUploader({
           src={imageUrl}
           alt={imageHint || 'Voertuig afbeelding'}
           fill
-          className={cn('object-contain transition-opacity', isUploadingState && 'opacity-30')}
+          className={cn('object-cover transition-opacity', isUploadingState && 'opacity-30')}
           data-ai-hint={imageHint}
         />
       )}
