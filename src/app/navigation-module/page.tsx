@@ -156,7 +156,12 @@ export default function NavigationModulePage() {
   const availableHistoryRoutes = React.useMemo(() => {
     if (!historyRoutes || !selectedProjectId) return [];
     return historyRoutes.filter((r) => r.projectId === selectedProjectId)
-      .sort((a, b) => new Date(b.startTime.toDate()).getTime() - new Date(a.startTime.toDate()).getTime());
+      .sort((a, b) => {
+        // Handle cases where startTime might be null (e.g., just created client-side)
+        const timeA = a.startTime ? new Date(a.startTime.toDate()).getTime() : Date.now();
+        const timeB = b.startTime ? new Date(b.startTime.toDate()).getTime() : Date.now();
+        return timeB - timeA;
+      });
   }, [historyRoutes, selectedProjectId]);
 
 
@@ -674,7 +679,11 @@ export default function NavigationModulePage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="new">-- Nieuwe Route --</SelectItem>
-                                    {availableHistoryRoutes.map(r => <SelectItem key={r.id} value={r.id}>{r.routeName} - {new Date(r.startTime.toDate()).toLocaleString()}</SelectItem>)}
+                                    {availableHistoryRoutes.map(r => (
+                                      <SelectItem key={r.id} value={r.id}>
+                                        {r.routeName} - {r.startTime ? new Date(r.startTime.toDate()).toLocaleString() : 'Recent'}
+                                      </SelectItem>
+                                    ))}
                                 </SelectContent>
                                 </Select>
                             </div>
@@ -851,16 +860,14 @@ export default function NavigationModulePage() {
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                  <AlertDialogFooter className="sm:justify-center gap-4">
-                     <AlertDialogCancel asChild>
-                        <Button onClick={() => handleNextObject('skipped')} variant='outline' size="icon" className='h-6 w-6 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600'>
-                            <XCircle className='h-3 w-3' />
-                        </Button>
+                    <AlertDialogCancel asChild>
+                      <Button onClick={() => handleNextObject('skipped')} variant='outline' size="icon" className='h-4 w-4 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600'>
+                        <XCircle className='h-1 w-1' />
+                      </Button>
                     </AlertDialogCancel>
-                    <AlertDialogAction asChild>
-                         <Button onClick={() => handleNextObject('completed')} variant='outline' size="icon" className='h-6 w-6 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600'>
-                            <CheckCircle className='h-3 w-3' />
-                        </Button>
-                    </AlertDialogAction>
+                      <Button onClick={() => handleNextObject('completed')} variant='outline' size="icon" className='h-4 w-4 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600'>
+                        <CheckCircle className='h-1 w-1' />
+                      </Button>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
