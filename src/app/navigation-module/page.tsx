@@ -162,7 +162,12 @@ export default function NavigationModulePage() {
   // Simulation state
   const [isSimulating, setIsSimulating] = React.useState(false);
   const simulationIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
-  const simulationStateRef = React.useRef({ distance: 0, speed: 50 / 3.6 }); // 50 km/h in m/s
+    const simulationStateRef = React.useRef({
+    distance: 0,
+    speed: 0, // Start at 0 km/h
+    acceleration: 2, // m/s^2
+    maxSpeed: 50 / 3.6, // 50 km/h in m/s
+  });
 
   const userHistoryCollection = React.useMemo(() => {
     if (!firestore || !user) return null;
@@ -405,29 +410,48 @@ export default function NavigationModulePage() {
     setIsSimulating(prev => {
       const nextState = !prev;
       if (nextState) {
-        stopTracking(); 
-        simulationStateRef.current.distance = 0; 
+        stopTracking();
+        simulationStateRef.current = {
+          distance: 0,
+          speed: 0,
+          acceleration: 2,
+          maxSpeed: 50 / 3.6,
+        };
         simulationIntervalRef.current = setInterval(() => {
           if (!route || !origin) return;
-
+  
           const routeLine = route.geometry;
           const totalDistance = turf.length(routeLine, { units: 'meters' });
-          simulationStateRef.current.distance += simulationStateRef.current.speed; 
-
+  
+          // Simulate acceleration and deceleration
+          const { speed, maxSpeed, acceleration, distance } = simulationStateRef.current;
+          const remainingDistance = totalDistance - distance;
+  
+          let newSpeed = speed;
+          // Decelerate if close to the end
+          if (remainingDistance < 50) {
+            newSpeed = Math.max(3, speed - acceleration); // min speed 3m/s
+          } else {
+            newSpeed = Math.min(maxSpeed, speed + acceleration);
+          }
+  
+          simulationStateRef.current.speed = newSpeed;
+          simulationStateRef.current.distance += newSpeed; // distance moved in 1 sec
+  
           if (simulationStateRef.current.distance >= totalDistance) {
-            handleToggleSimulation();
+            handleToggleSimulation(); // Stop simulation
             return;
           }
-
+  
           const newPoint = turf.along(routeLine, simulationStateRef.current.distance, { units: 'meters' });
           const newCoords = newPoint.geometry.coordinates as [number, number];
           setOrigin(newCoords);
-
-          const startPoint = turf.point(origin);
-          const endPoint = turf.point(newCoords);
-          const remainingRoute = turf.lineSlice(startPoint, turf.point(routeLine.coordinates[routeLine.coordinates.length - 1]), route);
+  
+          const startPoint = turf.point(newCoords);
+          const endPoint = turf.point(routeLine.coordinates[routeLine.coordinates.length - 1]);
+          const remainingRoute = turf.lineSlice(startPoint, endPoint, route);
           setDisplayedRoute(remainingRoute);
-          
+  
           const nextPointDistance = simulationStateRef.current.distance + 10;
           if (nextPointDistance <= totalDistance) {
             const nextPoint = turf.along(routeLine, nextPointDistance, { units: 'meters' });
@@ -436,14 +460,13 @@ export default function NavigationModulePage() {
           } else {
             mapRef.current?.getMap().easeTo({ center: newCoords, zoom: 20, pitch: 60, duration: 1000 });
           }
-
         }, 1000);
       } else {
         if (simulationIntervalRef.current) {
           clearInterval(simulationIntervalRef.current);
           simulationIntervalRef.current = null;
         }
-        startTracking(); 
+        startTracking();
       }
       return nextState;
     });
