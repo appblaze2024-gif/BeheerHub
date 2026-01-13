@@ -40,14 +40,7 @@ import { Progress } from '@/components/ui/progress';
 import type { Route } from 'docs/backend';
 import { Separator } from '@/components/ui/separator';
 import { Slider } from '@/components/ui/slider';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetFooter,
-} from '@/components/ui/sheet';
+import { DraggableSheet, DraggableSheetContent, DraggableSheetHeader, DraggableSheetTitle, DraggableSheetDescription, DraggableSheetFooter } from '@/components/ui/draggable-sheet';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -527,7 +520,7 @@ export default function NavigationModulePage() {
     
   }, [objects, selectedHistoryId, historyRoutes, isNavigating, origin]); 
   
-  const updateObjectStatus = async (objectId: string, status: 'completed' | 'skipped') => {
+  const updateObjectStatus = (objectId: string, status: 'completed' | 'skipped') => {
       if (!firestore || !user || !activeRouteHistoryId) return;
 
       const newCompleted = status === 'completed' ? [...completedObjects, objectId] : completedObjects;
@@ -552,15 +545,15 @@ export default function NavigationModulePage() {
 
       const newPending = pendingObjects.filter(obj => obj.id !== objectId);
       setPendingObjects(newPending);
-      
-      return newPending;
   }
 
 
-  const handleNextObject = async (status: 'completed' | 'skipped') => {
+  const handleNextObject = (status: 'completed' | 'skipped') => {
     if (!origin || !destination) return;
     
-    const newPending = await updateObjectStatus(destination.id, status);
+    updateObjectStatus(destination.id, status);
+
+    const newPending = pendingObjects.filter(obj => obj.id !== destination.id);
 
     const nextObject = findNextObject(origin, newPending);
 
@@ -778,6 +771,16 @@ export default function NavigationModulePage() {
                         </div>
                     </div>
                 </div>
+                 <div className="bg-card/90 backdrop-blur-sm p-3 rounded-xl shadow-lg text-card-foreground w-80 mt-2">
+                    <div className="flex justify-between items-center mb-1 px-1">
+                        <p className="font-semibold text-sm">Voortgang</p>
+                        <p className="font-semibold text-sm">
+                        {completedObjects.length + skippedObjects.length} / {objectsForCurrentRoute.length}{' '}
+                        objecten
+                        </p>
+                    </div>
+                    <Progress value={progressValue} className="h-2" />
+                </div>
              </div>
         )}
         
@@ -820,33 +823,23 @@ export default function NavigationModulePage() {
                     </Button>
                 </div>
                 
-                <div className="flex flex-col items-center gap-2">
-                    <div className="bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg text-card-foreground w-96">
-                    <div className="flex justify-between items-center mb-1 px-1">
-                        <p className="font-semibold text-sm">Voortgang</p>
-                        <p className="font-semibold text-sm">
-                        {completedObjects.length + skippedObjects.length} / {objectsForCurrentRoute.length}{' '}
-                        objecten
-                        </p>
-                    </div>
-                    <Progress value={progressValue} className="h-2" />
-                    </div>
+                <div className="flex justify-center">
                     <div className="bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg flex items-center justify-between gap-4 text-card-foreground w-96">
-                    <div className="flex items-center gap-2">
-                        <Clock className="h-5 w-5" />
-                        <span className="font-bold text-lg">{currentTime}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                        <RouteIcon className="h-5 w-5" />
-                        <span>
-                        {routeInfo ? formatDistance(routeInfo.distance) : '-'}
-                        </span>
-                    </div>
-                    <div className="text-muted-foreground text-sm">
-                        {routeInfo
-                        ? `${formatDuration(routeInfo.duration)} aankomst`
-                        : '-'}
-                    </div>
+                        <div className="flex items-center gap-2">
+                            <Clock className="h-5 w-5" />
+                            <span className="font-bold text-lg">{currentTime}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                            <RouteIcon className="h-5 w-5" />
+                            <span>
+                            {routeInfo ? formatDistance(routeInfo.distance) : '-'}
+                            </span>
+                        </div>
+                        <div className="text-muted-foreground text-sm">
+                            {routeInfo
+                            ? `${formatDuration(routeInfo.duration)} aankomst`
+                            : '-'}
+                        </div>
                     </div>
                 </div>
 
@@ -958,14 +951,14 @@ export default function NavigationModulePage() {
             </Source>
           )}
         </MapGL>
-        <Sheet open={isCompletionSheetOpen} onOpenChange={setIsCompletionSheetOpen}>
-            <SheetContent side="bottom" className="w-full h-1/3 rounded-t-lg">
-                <SheetHeader className="text-center">
-                    <SheetTitle>OBJECT-ID: {destination?.id}</SheetTitle>
-                    <SheetDescription>
+        <DraggableSheet open={isCompletionSheetOpen} onOpenChange={setIsCompletionSheetOpen}>
+            <DraggableSheetContent side="bottom" className="w-full h-1/3 rounded-t-lg">
+                <DraggableSheetHeader className="text-center">
+                    <DraggableSheetTitle>OBJECT-ID: {destination?.id}</DraggableSheetTitle>
+                    <DraggableSheetDescription>
                         Markeer dit object als voltooid en ga verder naar de volgende.
-                    </SheetDescription>
-                </SheetHeader>
+                    </DraggableSheetDescription>
+                </DraggableSheetHeader>
                 <div className='py-6 space-y-4'>
                     <Label>Vulgraad: {vulgraad[0]}%</Label>
                     <Slider 
@@ -975,16 +968,16 @@ export default function NavigationModulePage() {
                         step={25}
                     />
                 </div>
-                <SheetFooter className="flex-row justify-center gap-4">
+                <DraggableSheetFooter className="flex-row justify-center gap-4">
                     <Button onClick={() => handleNextObject('skipped')} variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600'>
                         <XCircle className='h-8 w-8' />
                     </Button>
                     <Button onClick={() => handleNextObject('completed')} variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600'>
                         <CheckCircle className='h-8 w-8' />
                     </Button>
-                </SheetFooter>
-            </SheetContent>
-        </Sheet>
+                </DraggableSheetFooter>
+            </DraggableSheetContent>
+        </DraggableSheet>
       </div>
     </div>
   );
