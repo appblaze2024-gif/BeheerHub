@@ -18,6 +18,7 @@ import {
   Clock,
   Route as RouteIcon,
   ArrowUp,
+  DialogClose,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,7 +41,7 @@ import { Progress } from '@/components/ui/progress';
 import type { Route } from 'docs/backend';
 import { Separator } from '@/components/ui/separator';
 import { Slider } from '@/components/ui/slider';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
@@ -794,7 +795,7 @@ export default function NavigationModulePage() {
                         </div>
                     </div>
                 </div>
-                 <div className="bg-card/90 backdrop-blur-sm p-3 rounded-xl shadow-lg text-card-foreground w-80 mt-2">
+                 <div className="bg-card/90 backdrop-blur-sm p-3 rounded-xl shadow-lg text-card-foreground mt-2">
                     <div className="flex justify-between items-center mb-1 px-1">
                         <p className="font-semibold text-sm">Voortgang</p>
                         <p className="font-semibold text-sm">
@@ -1056,11 +1057,11 @@ export default function NavigationModulePage() {
                   </TabsContent>
                   <TabsContent value="actie" className="pt-8">
                      <DialogFooter className="flex-row justify-center gap-4">
-                        <Button onClick={() => handleNextObject('skipped')} variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600'>
-                            <XCircle className='h-8 w-8' />
+                        <Button onClick={() => handleNextObject('skipped')} variant='outline' size="icon" className='h-32 w-32 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600'>
+                            <XCircle className='h-16 w-16' />
                         </Button>
-                        <Button onClick={() => handleNextObject('completed')} variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600'>
-                            <CheckCircle className='h-8 w-8' />
+                        <Button onClick={() => handleNextObject('completed')} variant='outline' size="icon" className='h-32 w-32 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600'>
+                            <CheckCircle className='h-16 w-16' />
                         </Button>
                     </DialogFooter>
                   </TabsContent>
