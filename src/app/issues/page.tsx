@@ -407,12 +407,12 @@ export default function IssuesPage() {
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
       <header className="absolute top-0 left-0 z-10 p-4 flex flex-col gap-2 items-start w-full">
-        <div className="flex items-start justify-between w-full">
+        <div className="flex flex-col md:flex-row items-start md:items-end justify-between w-full gap-4">
             <div className="flex flex-col gap-2 items-start pointer-events-auto">
                 <div className="bg-card p-2 rounded-lg shadow-md">
                     <h1 className="text-xl font-bold">Meldingen Portaal</h1>
                 </div>
-                 <div className='flex gap-4'>
+                 <div className='flex flex-col sm:flex-row gap-2'>
                     <div>
                         <Label htmlFor='project-select' className='text-sm font-medium sr-only'>Project</Label>
                          <Select
@@ -423,7 +423,7 @@ export default function IssuesPage() {
                           }}
                           disabled={isLoadingProjects}
                         >
-                          <SelectTrigger id="project-select" className="w-[200px] bg-card">
+                          <SelectTrigger id="project-select" className="w-full sm:w-[200px] bg-card">
                             <SelectValue placeholder="Selecteer een project" />
                           </SelectTrigger>
                           <SelectContent>
@@ -438,7 +438,7 @@ export default function IssuesPage() {
                             onValueChange={setSelectedWijkId}
                             disabled={!selectedProject}
                         >
-                             <SelectTrigger id="wijk-select" className="w-[200px] bg-card">
+                             <SelectTrigger id="wijk-select" className="w-full sm:w-[200px] bg-card">
                                 <SelectValue placeholder="Selecteer een wijk" />
                              </SelectTrigger>
                              <SelectContent>
@@ -462,7 +462,7 @@ export default function IssuesPage() {
                                 <Button
                                 variant={"outline"}
                                 className={cn(
-                                    "w-[200px] justify-start text-left font-normal bg-card",
+                                    "w-full sm:w-[200px] justify-start text-left font-normal bg-card",
                                     !selectedDate && "text-muted-foreground"
                                 )}
                                 >
@@ -493,7 +493,7 @@ export default function IssuesPage() {
                     </Button>
                 </div>
             </div>
-            <div className="w-full max-w-sm pointer-events-auto">
+            <div className="w-full md:max-w-sm pointer-events-auto">
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 

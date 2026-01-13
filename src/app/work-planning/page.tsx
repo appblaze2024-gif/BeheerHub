@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { ChevronLeft, ChevronRight, Clock, Plus, Printer, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, MoreHorizontal, Plus, Printer, Trash2 } from 'lucide-react';
 import {
   startOfWeek,
   endOfWeek,
@@ -49,6 +49,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useIsMobile } from '@/hooks/use-mobile';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 
 
 const getInitials = (firstName?: string, lastName?: string) => {
@@ -176,6 +178,7 @@ export default function WorkPlanningPage() {
   const [diensten, setDiensten] = React.useState<Dienst[] | null>(null);
   const [isLoadingDiensten, setIsLoadingDiensten] = React.useState(false);
   const [dragOverCell, setDragOverCell] = React.useState<{medewerkerId: string, day: string} | null>(null);
+  const isTablet = useIsMobile(1024);
 
 
   const firestore = useFirestore();
@@ -425,12 +428,34 @@ export default function WorkPlanningPage() {
     };
   }, []);
 
+  const renderActionButtons = () => {
+    const buttons = [
+      <Button key="print-day" variant="outline" onClick={() => setIsPrintDayDialogOpen(true)}><Printer className="mr-2 h-4 w-4" /> Print Dag</Button>,
+      <Button key="print-week" variant="outline" onClick={handlePrintWeek}><Printer className="mr-2 h-4 w-4" /> Print Week</Button>
+    ];
+
+    if (isTablet) {
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon"><MoreHorizontal className="h-4 w-4"/></Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            {buttons.map((btn, i) => <DropdownMenuItem key={i} asChild>{btn}</DropdownMenuItem>)}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )
+    }
+    return buttons;
+  }
+
 
   return (
     <div className="flex flex-col flex-1 h-full min-h-0" id="planning-container">
       <PageHeader title="Bezetting">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-muted-foreground">
+          {renderActionButtons()}
+          <span className="text-sm font-medium text-muted-foreground hidden lg:inline">
             Project:
           </span>
           <Select 
@@ -449,14 +474,12 @@ export default function WorkPlanningPage() {
               ))}
             </SelectContent>
           </Select>
-          <Button variant="outline" onClick={() => setIsPrintDayDialogOpen(true)}><Printer className="mr-2 h-4 w-4" /> Print Dag</Button>
-          <Button variant="outline" onClick={handlePrintWeek}><Printer className="mr-2 h-4 w-4" /> Print Week</Button>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={prevWeek}>
             <ChevronLeft className="h-5 w-5" />
           </Button>
-          <span className="text-sm font-semibold">
+          <span className="text-sm font-semibold text-center w-64">
             {format(start, 'd MMMM', { locale: nl })} -{' '}
             {format(end, 'd MMMM yyyy', { locale: nl })}
           </span>

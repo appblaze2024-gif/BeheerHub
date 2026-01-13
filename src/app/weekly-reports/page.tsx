@@ -229,17 +229,17 @@ export default function WeeklyReportsPage() {
   return (
     <div className="flex flex-col flex-1 p-6 min-h-0 bg-gray-50 dark:bg-gray-900/50">
       <header className="bg-white dark:bg-card p-4 rounded-lg shadow-sm mb-6">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 flex-shrink-0">
             {renderActionButtons()}
           </div>
-          <div className="flex items-center justify-end gap-2 flex-1 min-w-0">
+          <div className="flex flex-col md:flex-row items-center justify-end gap-2 flex-1 min-w-0 w-full">
             <Select
                 value={selectedProjectId}
                 onValueChange={setSelectedProjectId}
                 disabled={isLoadingProjects}
             >
-              <SelectTrigger className="w-full min-w-[200px] md:w-auto md:max-w-xs">
+              <SelectTrigger className="w-full md:w-auto md:max-w-xs">
                 <SelectValue placeholder="Selecteer een project" />
               </SelectTrigger>
               <SelectContent>

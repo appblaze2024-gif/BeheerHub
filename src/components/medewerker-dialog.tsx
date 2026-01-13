@@ -243,7 +243,7 @@ export function MedewerkerDialog({
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="tussenvoegsel"
@@ -271,7 +271,7 @@ export function MedewerkerDialog({
                 )}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="email"
@@ -299,7 +299,7 @@ export function MedewerkerDialog({
                 )}
               />
             </div>
-            <div className='grid grid-cols-2 gap-4'>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <FormField
                   control={form.control}
                   name="mobiel"
@@ -340,7 +340,7 @@ export function MedewerkerDialog({
       case 'Details':
         return (
           <div className='space-y-6'>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                   control={form.control}
                   name="functie"
@@ -396,7 +396,7 @@ export function MedewerkerDialog({
                     </FormItem>
                 )}
             />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                   control={form.control}
                   name="kostprijs"
@@ -429,7 +429,7 @@ export function MedewerkerDialog({
       case 'Contract':
         return (
           <div className='space-y-6'>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="indiensttreding"
@@ -477,7 +477,7 @@ export function MedewerkerDialog({
               />
               <div>
                 <FormLabel>Uren per dag</FormLabel>
-                <div className="grid grid-cols-7 gap-2 mt-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 mt-2">
                   {weekDagen.map((day) => (
                     <FormField
                       key={day}
@@ -524,15 +524,15 @@ export function MedewerkerDialog({
             <Info className="h-4 w-4 text-muted-foreground" />
           </DialogTitle>
         </DialogHeader>
-        <div className="flex border-t">
-            <div className="w-1/4 border-r p-6">
-                <nav className="flex flex-col gap-1">
+        <div className="flex flex-col md:flex-row border-t">
+            <div className="w-full md:w-1/4 border-b md:border-b-0 md:border-r p-4 md:p-6">
+                <nav className="flex flex-row md:flex-col gap-1 overflow-x-auto">
                     {navItems.map((item) => (
                         <Button
                             key={item}
                             type="button"
                             variant={activeTab === item ? "secondary" : "ghost"}
-                            className="justify-start"
+                            className="justify-start shrink-0"
                             onClick={() => setActiveTab(item)}
                             disabled={item === 'Vrije velden'}
                         >
@@ -541,7 +541,7 @@ export function MedewerkerDialog({
                     ))}
                 </nav>
             </div>
-            <div className="w-3/4 p-6 max-h-[60vh] overflow-y-auto">
+            <div className="w-full md:w-3/4 p-6 max-h-[60vh] overflow-y-auto">
                 <Form {...form}>
                   <form id="medewerker-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     {renderActiveTab()}
@@ -550,8 +550,8 @@ export function MedewerkerDialog({
             </div>
         </div>
         <Separator />
-         <DialogFooter className="p-6 pt-0 flex justify-between w-full">
-            <div className="flex items-center space-x-2">
+         <DialogFooter className="p-6 pt-0 flex flex-col-reverse sm:flex-row sm:justify-between w-full">
+            <div className="flex items-center space-x-2 pt-4 sm:pt-0">
                   <Checkbox
                     id="add-another"
                     checked={addAnother}

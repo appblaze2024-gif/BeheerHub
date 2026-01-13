@@ -366,9 +366,9 @@ export default function ObjectsPage() {
          <main className="flex-1 p-4 overflow-y-auto">
               {selectedObject ? (
                <Card className="h-full">
-               <CardContent className="p-4 h-full grid grid-cols-1 lg:grid-cols-3 gap-4">
-                 <div className="lg:col-span-2 space-y-4">
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <CardContent className="p-4 h-full grid grid-cols-1 xl:grid-cols-3 gap-6">
+                 <div className="xl:col-span-2 space-y-6">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                        <div className="space-y-4">
                          <div>
                            <label className="text-sm font-medium">
@@ -512,7 +512,7 @@ export default function ObjectsPage() {
                      </div>
                  </div>
  
-                 <div className="space-y-4">
+                 <div className="space-y-6">
                      <Card className="h-64">
                      <CardContent className="p-0 h-full">
                          <MapboxView 
@@ -599,5 +599,3 @@ export default function ObjectsPage() {
     </div>
   );
 }
-
-    
