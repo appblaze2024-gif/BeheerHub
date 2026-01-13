@@ -497,7 +497,7 @@ export default function NavigationModulePage() {
             zoom: 20, pitch: 60, bearing: 0,
         });
     }
-  }, [activeRouteHistoryId, objectsInWijk, origin]); // Dependencies that signal readiness
+  }, [activeRouteHistoryId, objectsInWijk, origin, historyRoutes, isNavigating]); // Dependencies that signal readiness
   
   const updateObjectStatus = async (objectId: string, status: 'completed' | 'skipped') => {
       if (!firestore || !user || !activeRouteHistoryId) return;
@@ -685,12 +685,12 @@ export default function NavigationModulePage() {
 
                             <div>
                                 <Label htmlFor="resume-route-select">Hervat een lopende route</Label>
-                                <Select onValueChange={setSelectedHistoryId} value={selectedHistoryId || ''}>
+                                <Select onValueChange={(v) => setSelectedHistoryId(v === "new" ? null : v)} value={selectedHistoryId || 'new'}>
                                 <SelectTrigger id="resume-route-select">
                                     <SelectValue placeholder="Selecteer een lopende route" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">-- Nieuwe Route --</SelectItem>
+                                    <SelectItem value="new">-- Nieuwe Route --</SelectItem>
                                     {inProgressRoutes.map(r => <SelectItem key={r.id} value={r.id}>{r.routeName}</SelectItem>)}
                                 </SelectContent>
                                 </Select>
@@ -868,12 +868,12 @@ export default function NavigationModulePage() {
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                  <AlertDialogFooter className="sm:justify-center gap-4">
-                  <Button onClick={() => handleNextObject('skipped')} variant='outline' size="icon" className='h-10 w-10 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600'>
-                      <XCircle className='h-6 w-6' />
-                  </Button>
-                   <Button onClick={() => handleNextObject('completed')} variant='outline' size="icon" className='h-10 w-10 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600 focus-visible:ring-0'>
-                      <CheckCircle className='h-6 w-6' />
-                  </Button>
+                    <Button onClick={() => handleNextObject('skipped')} variant='outline' size="icon" className='h-10 w-10 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600'>
+                        <XCircle className='h-6 w-6' />
+                    </Button>
+                    <Button onClick={() => handleNextObject('completed')} variant='outline' size="icon" className='h-10 w-10 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600'>
+                        <CheckCircle className='h-6 w-6' />
+                    </Button>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
