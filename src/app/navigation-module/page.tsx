@@ -130,6 +130,7 @@ export default function NavigationModulePage() {
   const [origin, setOrigin] = React.useState<[number, number] | null>(null);
   const [locationError, setLocationError] = React.useState<string | null>(null);
   const [route, setRoute] = React.useState<any>(null);
+  const [displayedRoute, setDisplayedRoute] = React.useState<any>(null);
   const [routeInfo, setRouteInfo] = React.useState<RouteInfo | null>(null);
   const [routeInstructions, setRouteInstructions] = React.useState<RouteInstruction[]>([]);
   const [isCalculating, setIsCalculating] = React.useState(false);
@@ -152,7 +153,6 @@ export default function NavigationModulePage() {
   const [currentTime, setCurrentTime] = React.useState('');
   const [activeRouteHistoryId, setActiveRouteHistoryId] = React.useState<string | null>(null);
   
-  // State for the new completion dialog
   const [activeCompletionTab, setActiveCompletionTab] = React.useState('dag');
   const [completionDay, setCompletionDay] = React.useState<string>('maandag');
   const [completionVulgraad, setCompletionVulgraad] = React.useState<string>('25-50');
@@ -302,6 +302,7 @@ export default function NavigationModulePage() {
     if (validPoints.length < 2) {
       console.error("Not enough valid points to calculate a route.");
       setRoute(null);
+      setDisplayedRoute(null);
       setRouteInfo(null);
       setRouteInstructions([]);
       return;
@@ -309,6 +310,7 @@ export default function NavigationModulePage() {
   
     setIsCalculating(true);
     setRoute(null);
+    setDisplayedRoute(null);
     setRouteInfo(null);
     setRouteInstructions([]);
   
@@ -329,11 +331,14 @@ export default function NavigationModulePage() {
       
       if (data.routes && data.routes.length > 0) {
         const currentRoute = data.routes[0];
-        setRoute({
+        const routeGeoJSON = {
           type: 'Feature',
           properties: {},
           geometry: currentRoute.geometry,
-        });
+        };
+        setRoute(routeGeoJSON);
+        setDisplayedRoute(routeGeoJSON);
+
         setRouteInfo({
           distance: currentRoute.distance,
           duration: currentRoute.duration,
@@ -371,7 +376,7 @@ export default function NavigationModulePage() {
             bearing: heading ?? map.getBearing(),
             zoom: 20,
             pitch: 60,
-            duration: 1, // Using 1ms for near-instant updates
+            duration: 1000, 
             easing(t: any) {
               return t;
             }
@@ -400,29 +405,30 @@ export default function NavigationModulePage() {
     setIsSimulating(prev => {
       const nextState = !prev;
       if (nextState) {
-        // Start simulation
-        stopTracking(); // Stop real GPS
-        simulationStateRef.current.distance = 0; // Reset distance
+        stopTracking(); 
+        simulationStateRef.current.distance = 0; 
         simulationIntervalRef.current = setInterval(() => {
-          if (!route) return;
+          if (!route || !origin) return;
 
           const routeLine = route.geometry;
           const totalDistance = turf.length(routeLine, { units: 'meters' });
-
-          simulationStateRef.current.distance += simulationStateRef.current.speed; // Add distance for 1 second
+          simulationStateRef.current.distance += simulationStateRef.current.speed; 
 
           if (simulationStateRef.current.distance >= totalDistance) {
-            // End of route
-            handleToggleSimulation(); // Stop simulation
+            handleToggleSimulation();
             return;
           }
 
           const newPoint = turf.along(routeLine, simulationStateRef.current.distance, { units: 'meters' });
           const newCoords = newPoint.geometry.coordinates as [number, number];
           setOrigin(newCoords);
+
+          const startPoint = turf.point(origin);
+          const endPoint = turf.point(newCoords);
+          const remainingRoute = turf.lineSlice(startPoint, turf.point(routeLine.coordinates[routeLine.coordinates.length - 1]), route);
+          setDisplayedRoute(remainingRoute);
           
-           // Calculate bearing for camera rotation
-          const nextPointDistance = simulationStateRef.current.distance + 10; // look 10m ahead
+          const nextPointDistance = simulationStateRef.current.distance + 10;
           if (nextPointDistance <= totalDistance) {
             const nextPoint = turf.along(routeLine, nextPointDistance, { units: 'meters' });
             const bearing = turf.bearing(newPoint, nextPoint);
@@ -433,12 +439,11 @@ export default function NavigationModulePage() {
 
         }, 1000);
       } else {
-        // Stop simulation
         if (simulationIntervalRef.current) {
           clearInterval(simulationIntervalRef.current);
           simulationIntervalRef.current = null;
         }
-        startTracking(); // Resume real GPS
+        startTracking(); 
       }
       return nextState;
     });
@@ -636,6 +641,7 @@ export default function NavigationModulePage() {
       // All objects are done
       setDestination(null);
       setRoute(null);
+      setDisplayedRoute(null);
       setRouteInfo(null);
       setRouteInstructions([]);
       handleStopNavigation(); // Also stop navigation fully
@@ -651,16 +657,15 @@ export default function NavigationModulePage() {
       });
     }
 
-    if (isSimulating) {
-      if (simulationIntervalRef.current) {
-        clearInterval(simulationIntervalRef.current);
-        simulationIntervalRef.current = null;
-      }
-      setIsSimulating(false);
+    if (simulationIntervalRef.current) {
+      clearInterval(simulationIntervalRef.current);
+      simulationIntervalRef.current = null;
     }
+    setIsSimulating(false);
 
     setIsNavigating(false);
     setRoute(null);
+    setDisplayedRoute(null);
     setRouteInfo(null);
     setRouteInstructions([]);
     setDestination(null);
@@ -1031,8 +1036,8 @@ export default function NavigationModulePage() {
               </Popup>
           )}
 
-          {route && (
-            <Source id="route" type="geojson" data={route}>
+          {displayedRoute && (
+            <Source id="route" type="geojson" data={displayedRoute}>
               <Layer {...routeLayer} />
             </Source>
           )}
