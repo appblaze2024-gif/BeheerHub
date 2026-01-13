@@ -24,7 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import * as turf from '@turf/turf';
 import { useCollection, useFirestore, useUser, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, doc, serverTimestamp, getDocs } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
@@ -41,6 +41,8 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
+import { Route } from 'docs/backend';
+import { Separator } from '@/components/ui/separator';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -143,6 +145,20 @@ export default function NavigationModulePage() {
   const [currentTime, setCurrentTime] = React.useState('');
   const [activeRouteHistoryId, setActiveRouteHistoryId] = React.useState<string | null>(null);
 
+  const userHistoryCollection = React.useMemo(() => {
+    if (!firestore || !user) return null;
+    return collection(firestore, `users/${user.uid}/routes`);
+  }, [firestore, user]);
+
+  const { data: historyRoutes, isLoading: isLoadingHistory } = useCollection<Route>(userHistoryCollection);
+  
+  const inProgressRoutes = React.useMemo(() => {
+    if (!historyRoutes || !selectedProjectId) return [];
+    return historyRoutes.filter(
+      (r) => r.projectId === selectedProjectId && !r.endTime
+    );
+  }, [historyRoutes, selectedProjectId]);
+
 
   const selectedProject = React.useMemo(() => {
     return projects?.find(p => p.id === selectedProjectId) ?? null;
@@ -161,8 +177,13 @@ export default function NavigationModulePage() {
 
   const selectedRoute = React.useMemo(() => {
     if (!selectedRouteId) return null;
-    return availableRoutes.find(r => r.id === selectedRouteId) ?? null;
-  }, [availableRoutes, selectedRouteId]);
+    // Search in all route types because we might be resuming a route
+    const allRoutes = [
+        ...(selectedProject?.veegroutes || []),
+        ...(selectedProject?.prullenbakkenroutes || [])
+    ];
+    return allRoutes.find(r => r.id === selectedRouteId) ?? null;
+  }, [selectedProject, selectedRouteId]);
   
   
   const objectsInWijk = React.useMemo(() => {
@@ -403,6 +424,73 @@ export default function NavigationModulePage() {
         bearing: 0,
     });
   };
+
+  const handleResumeRoute = (historyId: string) => {
+    if (!historyRoutes || !origin || !objects) return;
+
+    const routeToResume = historyRoutes.find(r => r.id === historyId);
+    if (!routeToResume) return;
+
+    // Find the original project and route definitions
+    const project = projects?.find(p => p.id === routeToResume.projectId);
+    const allProjectRoutes = [
+        ...(project?.veegroutes || []),
+        ...(project?.prullenbakkenroutes || [])
+    ];
+    const originalRoute = allProjectRoutes.find(r => r.id === routeToResume.originalRouteId);
+
+    if (!originalRoute) {
+        console.error("Original route definition not found for this history item.");
+        setLocationError("Kon de oorspronkelijke route niet vinden.");
+        return;
+    }
+
+    // Set state to match the resumed route
+    setSelectedProjectId(routeToResume.projectId);
+    setSelectedRouteId(routeToResume.originalRouteId);
+    setActiveRouteHistoryId(routeToResume.id);
+    
+    // Determine route type based on where it was found
+    if(project?.veegroutes?.some(r => r.id === routeToResume.originalRouteId)) {
+        setSelectedRouteType('veeg');
+    } else if (project?.prullenbakkenroutes?.some(r => r.id === routeToResume.originalRouteId)) {
+        setSelectedRouteType('prullenbak');
+    }
+
+    // Must wait for objectsInWijk to be recalculated based on new selectedRouteId
+    // We'll use a useEffect to continue setup once objectsInWijk is ready.
+  };
+
+  // This effect continues the resume process after state updates trigger recalculation of objectsInWijk
+  React.useEffect(() => {
+    if (activeRouteHistoryId && isNavigating === false && objectsInWijk && origin) {
+        const routeToResume = historyRoutes?.find(r => r.id === activeRouteHistoryId);
+        if (!routeToResume || !objectsInWijk) return;
+
+        const completed = routeToResume.completedObjects || [];
+        const skipped = routeToResume.skippedObjects || [];
+        const doneObjectIds = new Set([...completed, ...skipped]);
+        
+        const newPending = objectsInWijk.filter(obj => !doneObjectIds.has(obj.id));
+        
+        setCompletedObjects(completed);
+        setSkippedObjects(skipped);
+        setPendingObjects(newPending);
+        setIsNavigating(true);
+
+        const nextObject = findNextObject(origin, newPending);
+        if (nextObject) {
+            setDestination(nextObject);
+            calculateRoute([origin, [nextObject.longitude, nextObject.latitude]]);
+        }
+
+        startTracking();
+        mapRef.current?.getMap().flyTo({
+            center: origin,
+            zoom: 20, pitch: 60, bearing: 0,
+        });
+    }
+  }, [activeRouteHistoryId, objectsInWijk, origin]); // Dependencies that signal readiness
   
   const updateObjectStatus = async (objectId: string, status: 'completed' | 'skipped') => {
       if (!firestore || !user || !activeRouteHistoryId) return;
@@ -465,6 +553,8 @@ export default function NavigationModulePage() {
     setCompletedObjects([]);
     setSkippedObjects([]);
     setActiveRouteHistoryId(null);
+    setSelectedRouteId(null);
+    setSelectedRouteType(null);
     stopTracking();
     
     setViewState(prev => ({ ...prev, pitch: 0, bearing: 0, zoom: 14 }));
@@ -520,7 +610,7 @@ export default function NavigationModulePage() {
       <div className="flex-1 relative bg-gray-800">
         {!isNavigating && (
             <div className="absolute top-4 left-4 z-10 bg-card/90 backdrop-blur-sm p-4 rounded-lg shadow-lg w-full max-w-sm text-card-foreground">
-                <h2 className="text-lg font-bold mb-2">Navigatie per Route</h2>
+                <h2 className="text-lg font-bold mb-2">Start een nieuwe route</h2>
                 <div className="space-y-4">
                     <div>
                         <Label htmlFor="project-select">Project</Label>
@@ -581,6 +671,28 @@ export default function NavigationModulePage() {
                             <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Bezig...</>
                         ) : 'Start Route'}
                     </Button>
+                    
+                    {inProgressRoutes.length > 0 && (
+                        <>
+                            <div className="relative my-4">
+                                <Separator />
+                                <span className="absolute left-1/2 -translate-x-1/2 -top-2.5 bg-card px-2 text-xs text-muted-foreground">OF</span>
+                            </div>
+
+                            <div>
+                                <Label htmlFor="resume-route-select">Of hervat een lopende route</Label>
+                                <Select onValueChange={handleResumeRoute}>
+                                <SelectTrigger id="resume-route-select">
+                                    <SelectValue placeholder="Selecteer een lopende route" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {inProgressRoutes.map(r => <SelectItem key={r.id} value={r.id}>{r.routeName}</SelectItem>)}
+                                </SelectContent>
+                                </Select>
+                            </div>
+                        </>
+                    )}
+
                 </div>
             </div>
         )}
@@ -744,14 +856,14 @@ export default function NavigationModulePage() {
                         Markeer dit object als voltooid en ga verder naar de volgende.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter className="sm:justify-center gap-4">
+                 <AlertDialogFooter className="sm:justify-center gap-4">
                   <AlertDialogAction asChild>
-                    <Button onClick={() => handleNextObject('skipped')} variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600 focus-visible:ring-red-500'>
+                    <Button onClick={() => handleNextObject('skipped')} variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600'>
                         <XCircle className='h-10 w-10' />
                     </Button>
                    </AlertDialogAction>
                    <AlertDialogAction asChild>
-                     <Button onClick={() => handleNextObject('completed')} variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600 focus-visible:ring-green-500 focus-visible:ring-offset-0 focus:ring-0 focus-visible:ring-0 ring-offset-0 ring-0'>
+                     <Button onClick={() => handleNextObject('completed')} variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600 focus-visible:ring-0'>
                         <CheckCircle className='h-10 w-10' />
                     </Button>
                   </AlertDialogAction>
@@ -762,5 +874,3 @@ export default function NavigationModulePage() {
     </div>
   );
 }
-
-    
