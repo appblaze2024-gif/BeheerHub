@@ -40,7 +40,7 @@ import { Progress } from '@/components/ui/progress';
 import type { Route } from 'docs/backend';
 import { Separator } from '@/components/ui/separator';
 import { Slider } from '@/components/ui/slider';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -958,14 +958,14 @@ export default function NavigationModulePage() {
             </Source>
           )}
         </MapGL>
-        <Sheet open={isCompletionSheetOpen} onOpenChange={setIsCompletionSheetOpen}>
-            <SheetContent side="bottom" className="w-full h-1/3 rounded-t-lg">
-                <SheetHeader className="text-center">
-                    <SheetTitle>OBJECT-ID: {destination?.id}</SheetTitle>
-                    <SheetDescription>
+        <Dialog open={isCompletionSheetOpen} onOpenChange={setIsCompletionSheetOpen}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>OBJECT-ID: {destination?.id}</DialogTitle>
+                    <DialogDescription>
                         Markeer dit object als voltooid en ga verder naar de volgende.
-                    </SheetDescription>
-                </SheetHeader>
+                    </DialogDescription>
+                </DialogHeader>
                 <div className='py-6 space-y-4'>
                     <Label>Vulgraad: {vulgraad[0]}%</Label>
                     <Slider 
@@ -975,16 +975,16 @@ export default function NavigationModulePage() {
                         step={25}
                     />
                 </div>
-                <SheetFooter className="flex-row justify-center gap-4">
+                <DialogFooter className="flex-row justify-center gap-4">
                     <Button onClick={() => handleNextObject('skipped')} variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600'>
                         <XCircle className='h-8 w-8' />
                     </Button>
                     <Button onClick={() => handleNextObject('completed')} variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600'>
                         <CheckCircle className='h-8 w-8' />
                     </Button>
-                </SheetFooter>
-            </SheetContent>
-        </Sheet>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
