@@ -364,7 +364,7 @@ export default function NavigationModulePage() {
             bearing: heading ?? map.getBearing(),
             zoom: 20,
             pitch: 60,
-            duration: 1000,
+            duration: 1,
             easing(t: any) {
               return t;
             }
