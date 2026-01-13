@@ -40,7 +40,7 @@ import { Progress } from '@/components/ui/progress';
 import type { Route } from 'docs/backend';
 import { Separator } from '@/components/ui/separator';
 import { Slider } from '@/components/ui/slider';
-import { DraggableSheet, DraggableSheetContent, DraggableSheetHeader, DraggableSheetTitle, DraggableSheetDescription, DraggableSheetFooter } from '@/components/ui/draggable-sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -824,7 +824,7 @@ export default function NavigationModulePage() {
                 </div>
                 
                 <div className="flex justify-center">
-                    <div className="bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-lg flex items-center justify-between gap-4 text-card-foreground w-96">
+                    <div className="bg-card/90 backdrop-blur-sm p-3 rounded-xl shadow-lg flex items-center justify-between gap-4 text-card-foreground w-96">
                         <div className="flex items-center gap-2">
                             <Clock className="h-5 w-5" />
                             <span className="font-bold text-lg">{currentTime}</span>
@@ -951,14 +951,14 @@ export default function NavigationModulePage() {
             </Source>
           )}
         </MapGL>
-        <DraggableSheet open={isCompletionSheetOpen} onOpenChange={setIsCompletionSheetOpen}>
-            <DraggableSheetContent side="bottom" className="w-full h-1/3 rounded-t-lg">
-                <DraggableSheetHeader className="text-center">
-                    <DraggableSheetTitle>OBJECT-ID: {destination?.id}</DraggableSheetTitle>
-                    <DraggableSheetDescription>
+        <Sheet open={isCompletionSheetOpen} onOpenChange={setIsCompletionSheetOpen}>
+            <SheetContent side="bottom" className="w-full h-1/3 rounded-t-lg">
+                <SheetHeader className="text-center">
+                    <SheetTitle>OBJECT-ID: {destination?.id}</SheetTitle>
+                    <SheetDescription>
                         Markeer dit object als voltooid en ga verder naar de volgende.
-                    </DraggableSheetDescription>
-                </DraggableSheetHeader>
+                    </SheetDescription>
+                </SheetHeader>
                 <div className='py-6 space-y-4'>
                     <Label>Vulgraad: {vulgraad[0]}%</Label>
                     <Slider 
@@ -968,16 +968,16 @@ export default function NavigationModulePage() {
                         step={25}
                     />
                 </div>
-                <DraggableSheetFooter className="flex-row justify-center gap-4">
+                <SheetFooter className="flex-row justify-center gap-4">
                     <Button onClick={() => handleNextObject('skipped')} variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600'>
                         <XCircle className='h-8 w-8' />
                     </Button>
                     <Button onClick={() => handleNextObject('completed')} variant='outline' size="icon" className='h-16 w-16 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600'>
                         <CheckCircle className='h-8 w-8' />
                     </Button>
-                </DraggableSheetFooter>
-            </DraggableSheetContent>
-        </DraggableSheet>
+                </SheetFooter>
+            </SheetContent>
+        </Sheet>
       </div>
     </div>
   );
