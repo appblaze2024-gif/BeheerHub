@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import Map, { Marker, Popup, Source, Layer } from 'react-map-gl';
+import MapGL, { Marker, Popup, Source, Layer } from 'react-map-gl';
 import type { FillLayer, LineLayer } from 'react-map-gl';
 import * as turf from '@turf/turf';
 
@@ -127,7 +127,7 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
   }, [objects, longitude, latitude, selectedObjects, onObjectSelect]);
 
   return (
-    <Map
+    <MapGL
       ref={mapRef}
       initialViewState={initialViewState}
       style={{ width: '100%', height: '100%' }}
@@ -158,6 +158,6 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
           </div>
         </Popup>
       )}
-    </Map>
+    </MapGL>
   );
 }

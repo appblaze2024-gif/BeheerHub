@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import Map, { Marker, Popup, Source, Layer, FillLayer, LineLayer } from 'react-map-gl';
+import MapGL, { Marker, Popup, Source, Layer, FillLayer, LineLayer } from 'react-map-gl';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { Calendar as CalendarIcon, Plus, Search, List, Map as MapIcon, Bell } from 'lucide-react';
@@ -508,7 +508,7 @@ export default function IssuesPage() {
       </header>
 
       {viewMode === 'map' ? (
-        <Map
+        <MapGL
             ref={mapRef}
             initialViewState={initialViewState}
             style={{ width: '100%', height: '100%' }}
@@ -566,7 +566,7 @@ export default function IssuesPage() {
                     </div>
                 </Popup>
             )}
-        </Map>
+        </MapGL>
       ) : (
         <div className="pt-48 px-4 pb-4 h-full">
             <Card className='h-full flex flex-col'>

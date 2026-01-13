@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import Map, { Marker, Source, Layer, Popup } from 'react-map-gl';
+import MapGL, { Marker, Source, Layer, Popup } from 'react-map-gl';
 import {
   Search,
   Navigation,
@@ -407,34 +407,53 @@ export default function NavigationModulePage() {
     if (!origin || !user || !firestore || !selectedProjectId || !selectedRoute || !objectsInWijk) return;
 
     setIsCalculating(true);
-    const routesCollection = collection(firestore, `users/${user.uid}/routes`);
-    
-    const routeHistoryRef = doc(routesCollection);
 
     const allObjectIds = objectsInWijk.map(obj => obj.id);
 
-    const routeHistoryData = {
-      id: routeHistoryRef.id,
-      userId: user.uid,
-      projectId: selectedProjectId,
-      originalRouteId: selectedRoute.id,
-      routeName: selectedRoute.naam,
-      date: new Date().toISOString().split('T')[0],
-      startTime: serverTimestamp(),
-      endTime: null,
-      allObjectIds: allObjectIds,
-      completedObjects: [],
-      skippedObjects: [],
-      totalObjects: allObjectIds.length,
-    };
-    
-    await setDoc(routeHistoryRef, routeHistoryData, { merge: true });
-    setActiveRouteHistoryId(routeHistoryRef.id);
-    
-    setCompletedObjects([]);
-    setSkippedObjects([]);
+    // Check if an identical, unfinished route already exists
+    const q = query(
+      collection(firestore, `users/${user.uid}/routes`),
+      where('originalRouteId', '==', selectedRoute.id),
+      where('endTime', '==', null)
+    );
+    const existingRoutesSnapshot = await getDocs(q);
 
-    const remainingObjects = objectsInWijk;
+    let routeHistoryRef;
+    let routeHistoryData: any;
+
+    if (!existingRoutesSnapshot.empty) {
+      // Resume the existing, unfinished route
+      routeHistoryRef = existingRoutesSnapshot.docs[0].ref;
+      setActiveRouteHistoryId(routeHistoryRef.id);
+      routeHistoryData = existingRoutesSnapshot.docs[0].data();
+    } else {
+      // Create a new route history document
+      const routesCollection = collection(firestore, `users/${user.uid}/routes`);
+      routeHistoryRef = doc(routesCollection);
+      setActiveRouteHistoryId(routeHistoryRef.id);
+      routeHistoryData = {
+        id: routeHistoryRef.id,
+        userId: user.uid,
+        projectId: selectedProjectId,
+        originalRouteId: selectedRoute.id,
+        routeName: selectedRoute.naam,
+        date: new Date().toISOString().split('T')[0],
+        startTime: serverTimestamp(),
+        endTime: null,
+        allObjectIds: allObjectIds,
+        completedObjects: [],
+        skippedObjects: [],
+        totalObjects: allObjectIds.length,
+      };
+      await setDoc(routeHistoryRef, routeHistoryData, { merge: true });
+    }
+    
+    setCompletedObjects(routeHistoryData.completedObjects || []);
+    setSkippedObjects(routeHistoryData.skippedObjects || []);
+
+    const remainingObjects = objectsInWijk.filter(
+        obj => !routeHistoryData.completedObjects.includes(obj.id) && !routeHistoryData.skippedObjects.includes(obj.id)
+    );
     setPendingObjects(remainingObjects);
     setIsNavigating(true);
 
@@ -841,7 +860,7 @@ export default function NavigationModulePage() {
         )}
 
 
-        <Map
+        <MapGL
           ref={mapRef}
           {...viewState}
           onMove={(evt) => setViewState(evt.viewState)}
@@ -902,7 +921,7 @@ export default function NavigationModulePage() {
               <Layer {...routeLayer} />
             </Source>
           )}
-        </Map>
+        </MapGL>
          <AlertDialog open={isCompletionDialogOpen} onOpenChange={setIsCompletionDialogOpen}>
             <AlertDialogContent className='max-w-xs'>
                 <AlertDialogHeader>
