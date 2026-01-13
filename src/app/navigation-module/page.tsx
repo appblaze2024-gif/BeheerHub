@@ -133,6 +133,7 @@ export default function NavigationModulePage() {
   const [isNavigating, setIsNavigating] = React.useState(false);
   const [destination, setDestination] = React.useState<MapObject | null>(null);
   const [hoveredObject, setHoveredObject] = React.useState<MapObject | null>(null);
+  const [selectedObjectForInfo, setSelectedObjectForInfo] = React.useState<MapObject | null>(null);
   
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
   const [selectedRouteType, setSelectedRouteType] = React.useState<'veeg' | 'prullenbak' | null>(null);
@@ -665,6 +666,15 @@ export default function NavigationModulePage() {
     }
     return 'bg-blue-600';
   }
+  
+  const handleMarkerClick = (obj: MapObject) => {
+    if (isNavigating && destination?.id === obj.id) {
+        setIsCompletionDialogOpen(true);
+    } else {
+        setSelectedObjectForInfo(obj);
+    }
+  }
+
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
@@ -880,7 +890,7 @@ export default function NavigationModulePage() {
                     longitude={obj.longitude}
                     latitude={obj.latitude}
                     anchor="bottom"
-                    onClick={() => setIsCompletionDialogOpen(true)}
+                    onClick={() => handleMarkerClick(obj)}
                     className="cursor-pointer"
                     onMouseEnter={() => setHoveredObject(obj)}
                     onMouseLeave={() => setHoveredObject(null)}
@@ -896,10 +906,11 @@ export default function NavigationModulePage() {
                     longitude={obj.longitude}
                     latitude={obj.latitude}
                     anchor="center"
+                    onClick={() => handleMarkerClick(obj)}
                     onMouseEnter={() => setHoveredObject(obj)}
                     onMouseLeave={() => setHoveredObject(null)}
                  >
-                  <div className={cn("w-3 h-3 rounded-full border-2 border-white", getMarkerColor(obj.id))} />
+                  <div className={cn("w-3 h-3 rounded-full border-2 border-white cursor-pointer", getMarkerColor(obj.id))} />
                 </Marker>
               )
           })}
@@ -909,10 +920,11 @@ export default function NavigationModulePage() {
                 key={obj.id}
                 longitude={obj.longitude}
                 latitude={obj.latitude}
+                onClick={() => handleMarkerClick(obj)}
                 onMouseEnter={() => setHoveredObject(obj)}
                 onMouseLeave={() => setHoveredObject(null)}
              >
-              <div className={cn("w-2.5 h-2.5 rounded-full border-2 border-white", getMarkerColor(obj.id) )} />
+              <div className={cn("w-2.5 h-2.5 rounded-full border-2 border-white cursor-pointer", getMarkerColor(obj.id) )} />
             </Marker>
           ))}
           
@@ -924,9 +936,26 @@ export default function NavigationModulePage() {
                 closeOnClick={false}
                 anchor="bottom"
                 offset={10}
+                onClose={() => setHoveredObject(null)}
               >
                 <div className="bg-gray-800 text-white text-xs font-semibold px-2 py-1 rounded-md">
                     ID: {hoveredObject.id}
+                </div>
+              </Popup>
+          )}
+          
+          {selectedObjectForInfo && (
+              <Popup
+                longitude={selectedObjectForInfo.longitude}
+                latitude={selectedObjectForInfo.latitude}
+                closeButton={true}
+                closeOnClick={true}
+                anchor="bottom"
+                offset={10}
+                onClose={() => setSelectedObjectForInfo(null)}
+              >
+                <div className="bg-gray-800 text-white font-semibold p-2 rounded-md">
+                    ID: {selectedObjectForInfo.id}
                 </div>
               </Popup>
           )}
