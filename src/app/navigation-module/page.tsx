@@ -297,11 +297,12 @@ export default function NavigationModulePage() {
     setRouteInstructions([]);
   
     const limitedPoints = validPoints.slice(0, 25);
+    const coordinates = limitedPoints.map(p => p.join(',')).join(';');
+    const radiuses = limitedPoints.map((_, index) => index === 0 ? 'unlimited' : '20').join(';');
   
     try {
-      const coordinates = limitedPoints.map(p => p.join(',')).join(';');
       const response = await fetch(
-        `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${coordinates}?geometries=geojson&overview=full&steps=true&language=nl&access_token=${MAPBOX_TOKEN}`
+        `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${coordinates}?geometries=geojson&overview=full&steps=true&language=nl&radiuses=${radiuses}&access_token=${MAPBOX_TOKEN}`
       );
   
       if (!response.ok) {
@@ -348,13 +349,17 @@ export default function NavigationModulePage() {
         setOrigin([longitude, latitude]);
 
         const map = mapRef.current?.getMap();
-        if (map && isNavigating) { // Only easeTo when navigating
-          map.easeTo({
+        if (map && isNavigating) {
+          map.flyTo({
             center: [longitude, latitude],
             bearing: heading ?? map.getBearing(),
             zoom: 20,
             pitch: 60,
-            duration: 500
+            speed: 1.2,
+            curve: 1,
+            easing(t) {
+              return t;
+            }
           });
         }
       },
@@ -452,6 +457,7 @@ export default function NavigationModulePage() {
         zoom: 20,
         pitch: 60,
         bearing: 0,
+        duration: 2000
     });
   }
 
@@ -516,6 +522,7 @@ export default function NavigationModulePage() {
         zoom: 20,
         pitch: 60,
         bearing: 0,
+        duration: 2000
     });
     
   }, [objects, selectedHistoryId, historyRoutes, isNavigating, origin]); 
