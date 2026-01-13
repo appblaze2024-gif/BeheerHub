@@ -41,11 +41,15 @@ import { getStorage, ref, deleteObject } from 'firebase/storage';
 import { AddVehicleDialog } from '@/components/add-vehicle-dialog';
 import { VehicleImageUploader } from '@/components/vehicle-image-uploader';
 import { AddDocumentDialog } from '@/components/add-document-dialog';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
+import { ArrowLeft } from 'lucide-react';
 
 export default function VehiclesPage() {
   const firestore = useFirestore();
   const [isImporting, setIsImporting] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');
+  const isTablet = useIsMobile(1024);
 
   const vehiclesCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -114,17 +118,20 @@ export default function VehiclesPage() {
     if (!selectedVehicle && filteredVehicles && filteredVehicles.length > 0) {
       setSelectedVehicle(filteredVehicles[0]);
     } else if (selectedVehicle && filteredVehicles) {
-      // If the selected vehicle is no longer in the list (e.g., deleted or filtered out),
-      // select the first one in the filtered list, or null if the list is empty.
       if (!filteredVehicles.find((v) => v.id === selectedVehicle.id)) {
         setSelectedVehicle(filteredVehicles.length > 0 ? filteredVehicles[0] : null);
       }
     }
   }, [filteredVehicles, selectedVehicle]);
+  
+  React.useEffect(() => {
+    if (isTablet) {
+        setSelectedVehicle(null);
+    }
+  }, [isTablet]);
 
   const handleImportSuccess = () => {
     setIsImporting(false);
-    // Data will refresh automatically due to useCollection hook
   };
   
   const [editingDamage, setEditingDamage] = React.useState<any | null>(null);
@@ -190,8 +197,8 @@ export default function VehiclesPage() {
         </Button>
       </PageHeader>
 
-      <div className="grid grid-cols-[300px_1fr] gap-6 px-6 pb-6 min-h-0">
-        <Card className="flex flex-col h-full min-h-0">
+      <div className="grid lg:grid-cols-[300px_1fr] gap-6 px-6 pb-6 min-h-0">
+        <Card className={cn("flex-col h-full min-h-0", isTablet && !selectedVehicle ? "flex" : "hidden lg:flex")}>
           <CardContent className="p-2 flex-1 min-h-0 overflow-y-auto">
             <div className="flex flex-col space-y-1 pr-2">
               {isLoading ? (
@@ -204,7 +211,7 @@ export default function VehiclesPage() {
                     key={vehicle.id}
                     onClick={() => setSelectedVehicle(vehicle)}
                     className={`flex items-start justify-between p-3 rounded-md text-left cursor-pointer ${
-                      selectedVehicle?.id === vehicle.id
+                      selectedVehicle?.id === vehicle.id && !isTablet
                         ? 'bg-secondary'
                         : 'hover:bg-gray-100 dark:hover:bg-gray-800'
                     }`}
@@ -238,19 +245,21 @@ export default function VehiclesPage() {
           </CardContent>
         </Card>
 
-        <div className="flex flex-col gap-6 min-h-0">
+        <div className={cn("flex-col gap-6 min-h-0", selectedVehicle ? "flex" : "hidden lg:flex")}>
           {selectedVehicle ? (
             <>
               <Card>
                 <CardHeader>
                   <div className="flex items-start justify-between">
-                    <div>
-                      <h2 className="text-2xl font-bold">
-                        {selectedVehicle?.id}
-                      </h2>
-                      <p className="text-muted-foreground">
-                        {selectedVehicle?.merk} {selectedVehicle?.model}
-                      </p>
+                    <div className='flex items-center gap-2'>
+                       {isTablet && (
+                          <Button variant="ghost" size="icon" onClick={() => setSelectedVehicle(null)}>
+                            <ArrowLeft className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <h2 className="text-2xl font-bold">
+                          {selectedVehicle?.id}
+                        </h2>
                     </div>
                     <Badge
                       variant={
@@ -269,7 +278,7 @@ export default function VehiclesPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex gap-6">
+                  <div className="flex flex-col lg:flex-row gap-6">
                     <VehicleImageUploader
                       vehicleId={selectedVehicle.id}
                       imageUrl={selectedVehicle.imageUrl ?? mainImage?.imageUrl}
@@ -290,7 +299,7 @@ export default function VehiclesPage() {
                           </Button>
                         </AddVehicleDialog>
                       </div>
-                      <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                         <div className="flex justify-between border-b pb-2">
                           <span className="text-muted-foreground">
                             Kenteken

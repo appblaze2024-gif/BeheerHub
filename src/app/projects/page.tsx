@@ -1075,7 +1075,7 @@ export default function ProjectsPage() {
                 <CardTitle className="text-lg">Project</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                     <div>
                         <Label htmlFor="projectnummer" className="text-xs font-semibold">Projectnummer</Label>
                         <Input id="projectnummer" value={currentProject.projectnummer} onChange={(e) => handleInputChange('projectnummer', e.target.value)} disabled />
@@ -1113,7 +1113,7 @@ export default function ProjectsPage() {
                 <CardTitle className="text-lg">Bestek</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                    <div>
                         <Label htmlFor="bestek" className="text-xs font-semibold">Bestek</Label>
                         <Input id="bestek" value={currentProject.bestek} onChange={(e) => handleInputChange('bestek', e.target.value)} />

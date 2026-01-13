@@ -554,7 +554,7 @@ export default function EmployeeDetailPage() {
                   <CardHeader>
                     <CardTitle>Persoonsgegevens</CardTitle>
                   </CardHeader>
-                  <CardContent className="grid grid-cols-1 gap-x-12 md:grid-cols-3">
+                  <CardContent className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-12 gap-y-4">
                     <div>
                       <DetailField label="Voornaam" value={medewerker.voornaam} fieldName="voornaam" medewerkerId={id} />
                       <DetailField label="Tussenvoegsel" value={medewerker.tussenvoegsel} fieldName="tussenvoegsel" medewerkerId={id} />
