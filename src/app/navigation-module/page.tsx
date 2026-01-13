@@ -132,6 +132,7 @@ export default function NavigationModulePage() {
   const [isCalculating, setIsCalculating] = React.useState(false);
   const [isNavigating, setIsNavigating] = React.useState(false);
   const [destination, setDestination] = React.useState<MapObject | null>(null);
+  const [hoveredObject, setHoveredObject] = React.useState<MapObject | null>(null);
   
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
   const [selectedRouteType, setSelectedRouteType] = React.useState<'veeg' | 'prullenbak' | null>(null);
@@ -396,68 +397,70 @@ export default function NavigationModulePage() {
   }
 
   const handleStartOrResume = () => {
-    if (selectedHistoryId) {
-      handleResumeRoute(selectedHistoryId);
-    } else {
-      handleStartNavigation();
+    const routeToResume = historyRoutes?.find(r => r.id === selectedHistoryId);
+
+    if (routeToResume) {
+        if (routeToResume.endTime) {
+            // It's a completed route, so we treat it as starting a new one based on it
+            handleStartNavigation(routeToResume);
+        } else {
+            // It's an unfinished route, so we resume it
+            handleResumeRoute(selectedHistoryId);
+        }
+    } else if (selectedRouteId) {
+        // No history selected, but a new route type is, so start a fresh one.
+        handleStartNavigation();
     }
   };
   
-  const handleStartNavigation = async () => {
-    if (!origin || !user || !firestore || !selectedProjectId || !selectedRoute || !objectsInWijk) return;
+  const handleStartNavigation = async (routeToCopy?: Route) => {
+    if (!origin || !user || !firestore || !selectedProjectId) return;
 
-    setIsCalculating(true);
-
-    const allObjectIds = objectsInWijk.map(obj => obj.id);
-
-    // Check if an identical, unfinished route already exists
-    const q = query(
-      collection(firestore, `users/${user.uid}/routes`),
-      where('originalRouteId', '==', selectedRoute.id),
-      where('endTime', '==', null)
-    );
-    const existingRoutesSnapshot = await getDocs(q);
-
-    let routeHistoryRef;
-    let routeHistoryData: any;
-
-    if (!existingRoutesSnapshot.empty) {
-      // Resume the existing, unfinished route
-      routeHistoryRef = existingRoutesSnapshot.docs[0].ref;
-      setActiveRouteHistoryId(routeHistoryRef.id);
-      routeHistoryData = existingRoutesSnapshot.docs[0].data();
-    } else {
-      // Create a new route history document
-      const routesCollection = collection(firestore, `users/${user.uid}/routes`);
-      routeHistoryRef = doc(routesCollection);
-      setActiveRouteHistoryId(routeHistoryRef.id);
-      routeHistoryData = {
-        id: routeHistoryRef.id,
-        userId: user.uid,
-        projectId: selectedProjectId,
-        originalRouteId: selectedRoute.id,
-        routeName: selectedRoute.naam,
-        date: new Date().toISOString().split('T')[0],
-        startTime: serverTimestamp(),
-        endTime: null,
-        allObjectIds: allObjectIds,
-        completedObjects: [],
-        skippedObjects: [],
-        totalObjects: allObjectIds.length,
-      };
-      await setDoc(routeHistoryRef, routeHistoryData, { merge: true });
+    let currentRouteId = selectedRouteId;
+    let currentRouteName = selectedRoute?.naam;
+    let allObjects = objectsInWijk;
+    
+    if (routeToCopy) {
+      currentRouteId = routeToCopy.originalRouteId;
+      currentRouteName = routeToCopy.routeName;
+      allObjects = (routeToCopy.allObjectIds || [])
+        .map(id => objects?.find(o => o.id === id))
+        .filter((o): o is MapObject => !!o);
     }
     
-    setCompletedObjects(routeHistoryData.completedObjects || []);
-    setSkippedObjects(routeHistoryData.skippedObjects || []);
+    if (!currentRouteId || !currentRouteName || !allObjects) return;
 
-    const remainingObjects = objectsInWijk.filter(
-        obj => !routeHistoryData.completedObjects.includes(obj.id) && !routeHistoryData.skippedObjects.includes(obj.id)
-    );
-    setPendingObjects(remainingObjects);
+    setIsCalculating(true);
+    
+    const allObjectIds = allObjects.map(obj => obj.id);
+
+    const routesCollection = collection(firestore, `users/${user.uid}/routes`);
+    const routeHistoryRef = doc(routesCollection);
+    setActiveRouteHistoryId(routeHistoryRef.id);
+    
+    const routeHistoryData: Partial<Route> = {
+      id: routeHistoryRef.id,
+      userId: user.uid,
+      projectId: selectedProjectId,
+      originalRouteId: currentRouteId,
+      routeName: currentRouteName,
+      date: new Date().toISOString().split('T')[0],
+      startTime: serverTimestamp(),
+      endTime: null,
+      allObjectIds: allObjectIds,
+      completedObjects: [],
+      skippedObjects: [],
+      totalObjects: allObjectIds.length,
+    };
+    
+    await setDoc(routeHistoryRef, routeHistoryData, { merge: true });
+    
+    setCompletedObjects([]);
+    setSkippedObjects([]);
+    setPendingObjects(allObjects);
     setIsNavigating(true);
 
-    const firstObject = findNextObject(origin, remainingObjects);
+    const firstObject = findNextObject(origin, allObjects);
     
     if (firstObject) {
       setDestination(firstObject);
@@ -488,7 +491,6 @@ export default function NavigationModulePage() {
         return;
       }
 
-      // We need to set the project and route definition so objectsInWijk can be calculated correctly.
       setSelectedProjectId(project.id);
       setSelectedRouteId(routeToResume.originalRouteId);
       if (project.veegroutes?.some(r => r.id === routeToResume.originalRouteId)) {
@@ -496,27 +498,21 @@ export default function NavigationModulePage() {
       } else if (project.prullenbakkenroutes?.some(r => r.id === routeToResume.originalRouteId)) {
         setSelectedRouteType('prullenbak');
       }
-      
-      // We will now wait for the useEffect that watches for `objectsInWijk`
   };
 
 
   React.useEffect(() => {
-    // This effect runs when we want to resume a route.
-    // It waits until all object data is populated.
     if (isNavigating || !selectedHistoryId || !objects || !origin) return;
 
     const routeToResume = historyRoutes?.find(r => r.id === selectedHistoryId);
-    if (!routeToResume) return;
-
+    if (!routeToResume || routeToResume.endTime) return;
+    
     const routeObjects = (routeToResume.allObjectIds || []).map(id => objects.find(o => o.id === id)).filter((o): o is MapObject => !!o);
     
-    if(routeObjects.length !== routeToResume.allObjectIds.length){
-      // not all objects are loaded yet, wait.
+    if(routeObjects.length === 0 && (routeToResume.allObjectIds || []).length > 0){
       return;
     }
-
-    // Now that all objects are available, set up the navigation state
+    
     setActiveRouteHistoryId(routeToResume.id);
     const completed = routeToResume.completedObjects || [];
     const skipped = routeToResume.skippedObjects || [];
@@ -543,8 +539,6 @@ export default function NavigationModulePage() {
         bearing: 0,
     });
     
-    // We've resumed, clear selectedHistoryId so this effect doesn't re-run
-    // without explicit user action. Keep activeRouteHistoryId to track the session.
     setSelectedHistoryId(null); 
 
   }, [objects, selectedHistoryId, historyRoutes, isNavigating, origin]); 
@@ -888,6 +882,8 @@ export default function NavigationModulePage() {
                     anchor="bottom"
                     onClick={() => setIsCompletionDialogOpen(true)}
                     className="cursor-pointer"
+                    onMouseEnter={() => setHoveredObject(obj)}
+                    onMouseLeave={() => setHoveredObject(null)}
                   >
                     <MapPin className="w-8 h-8 text-blue-600 animate-pulse" />
                   </Marker>
@@ -900,6 +896,8 @@ export default function NavigationModulePage() {
                     longitude={obj.longitude}
                     latitude={obj.latitude}
                     anchor="center"
+                    onMouseEnter={() => setHoveredObject(obj)}
+                    onMouseLeave={() => setHoveredObject(null)}
                  >
                   <div className={cn("w-3 h-3 rounded-full border-2 border-white", getMarkerColor(obj.id))} />
                 </Marker>
@@ -911,10 +909,27 @@ export default function NavigationModulePage() {
                 key={obj.id}
                 longitude={obj.longitude}
                 latitude={obj.latitude}
+                onMouseEnter={() => setHoveredObject(obj)}
+                onMouseLeave={() => setHoveredObject(null)}
              >
               <div className={cn("w-2.5 h-2.5 rounded-full border-2 border-white", getMarkerColor(obj.id) )} />
             </Marker>
           ))}
+          
+          {hoveredObject && (
+              <Popup
+                longitude={hoveredObject.longitude}
+                latitude={hoveredObject.latitude}
+                closeButton={false}
+                closeOnClick={false}
+                anchor="bottom"
+                offset={10}
+              >
+                <div className="bg-gray-800 text-white text-xs font-semibold px-2 py-1 rounded-md">
+                    ID: {hoveredObject.id}
+                </div>
+              </Popup>
+          )}
 
           {route && (
             <Source id="route" type="geojson" data={route}>
