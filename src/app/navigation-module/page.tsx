@@ -427,7 +427,7 @@ export default function NavigationModulePage() {
       originalRouteId: selectedRouteId,
       routeName: selectedRoute.naam,
       date: new Date().toISOString().split('T')[0],
-      startTime: serverTimestamp(),
+      startTime: serverTimestamp() as any,
       endTime: null,
       allObjectIds: allObjectIds,
       completedObjects: [],
@@ -961,7 +961,7 @@ export default function NavigationModulePage() {
         <Sheet open={isCompletionSheetOpen} onOpenChange={setIsCompletionSheetOpen}>
             <SheetContent side="bottom" className="w-full h-1/3 rounded-t-lg">
                 <SheetHeader className="text-center">
-                    <SheetTitle>Object Voltooien?</SheetTitle>
+                    <SheetTitle>Object Voltooien? - ID: {destination?.id}</SheetTitle>
                     <SheetDescription>
                         Markeer dit object als voltooid en ga verder naar de volgende.
                     </SheetDescription>
@@ -989,4 +989,3 @@ export default function NavigationModulePage() {
     </div>
   );
 }
-
