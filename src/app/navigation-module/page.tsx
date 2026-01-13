@@ -18,6 +18,8 @@ import {
   Clock,
   Route as RouteIcon,
   ArrowUp,
+  Play,
+  Pause,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -156,6 +158,11 @@ export default function NavigationModulePage() {
   const [completionVulgraad, setCompletionVulgraad] = React.useState<string>('25-50');
   const [hasBijzonderheden, setHasBijzonderheden] = React.useState<string>('nee');
   const [bijzonderhedenText, setBijzonderhedenText] = React.useState<string>('');
+
+  // Simulation state
+  const [isSimulating, setIsSimulating] = React.useState(false);
+  const simulationIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
+  const simulationStateRef = React.useRef({ distance: 0, speed: 50 / 3.6 }); // 50 km/h in m/s
 
   const userHistoryCollection = React.useMemo(() => {
     if (!firestore || !user) return null;
@@ -343,8 +350,8 @@ export default function NavigationModulePage() {
   };
 
   const startTracking = () => {
-    if (!navigator.geolocation) {
-      console.log("Geolocation is not supported by this browser.");
+    if (!navigator.geolocation || isSimulating) {
+      console.log("Geolocation is not supported or simulation is active.");
       return;
     }
     
@@ -387,6 +394,54 @@ export default function NavigationModulePage() {
         navigator.geolocation.clearWatch(watchIdRef.current);
         watchIdRef.current = null;
     }
+  };
+
+  const handleToggleSimulation = () => {
+    setIsSimulating(prev => {
+      const nextState = !prev;
+      if (nextState) {
+        // Start simulation
+        stopTracking(); // Stop real GPS
+        simulationStateRef.current.distance = 0; // Reset distance
+        simulationIntervalRef.current = setInterval(() => {
+          if (!route) return;
+
+          const routeLine = route.geometry;
+          const totalDistance = turf.length(routeLine, { units: 'meters' });
+
+          simulationStateRef.current.distance += simulationStateRef.current.speed; // Add distance for 1 second
+
+          if (simulationStateRef.current.distance >= totalDistance) {
+            // End of route
+            handleToggleSimulation(); // Stop simulation
+            return;
+          }
+
+          const newPoint = turf.along(routeLine, simulationStateRef.current.distance, { units: 'meters' });
+          const newCoords = newPoint.geometry.coordinates as [number, number];
+          setOrigin(newCoords);
+          
+           // Calculate bearing for camera rotation
+          const nextPointDistance = simulationStateRef.current.distance + 10; // look 10m ahead
+          if (nextPointDistance <= totalDistance) {
+            const nextPoint = turf.along(routeLine, nextPointDistance, { units: 'meters' });
+            const bearing = turf.bearing(newPoint, nextPoint);
+            mapRef.current?.getMap().easeTo({ center: newCoords, zoom: 20, bearing: bearing, pitch: 60, duration: 1000 });
+          } else {
+            mapRef.current?.getMap().easeTo({ center: newCoords, zoom: 20, pitch: 60, duration: 1000 });
+          }
+
+        }, 1000);
+      } else {
+        // Stop simulation
+        if (simulationIntervalRef.current) {
+          clearInterval(simulationIntervalRef.current);
+          simulationIntervalRef.current = null;
+        }
+        startTracking(); // Resume real GPS
+      }
+      return nextState;
+    });
   };
   
   const findNextObject = (currentOrigin: [number, number], availableObjects: MapObject[]): MapObject | null => {
@@ -611,6 +666,9 @@ export default function NavigationModulePage() {
     setSelectedRouteType(null);
     setSelectedHistoryId(null);
     stopTracking();
+    if (isSimulating) {
+      handleToggleSimulation();
+    }
     
     setViewState(prev => ({ ...prev, pitch: 0, bearing: 0, zoom: 14 }));
      if(origin) {
@@ -812,6 +870,9 @@ export default function NavigationModulePage() {
             </Button>
             {isNavigating && (
                 <>
+                 <Button variant="secondary" size="icon" className="bg-card/80 border-stone-300 text-card-foreground hover:bg-muted shadow-lg" onClick={handleToggleSimulation}>
+                    {isSimulating ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                </Button>
                  <Button variant="secondary" size="icon" className="bg-card/80 border-stone-300 text-card-foreground hover:bg-muted shadow-lg">
                     <Volume2 className="h-5 w-5" />
                 </Button>
