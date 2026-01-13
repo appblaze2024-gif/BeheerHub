@@ -359,13 +359,12 @@ export default function NavigationModulePage() {
 
         const map = mapRef.current?.getMap();
         if (map && isNavigating) {
-          map.flyTo({
+          map.easeTo({
             center: [longitude, latitude],
             bearing: heading ?? map.getBearing(),
             zoom: 20,
             pitch: 60,
-            speed: 1.2,
-            curve: 1,
+            duration: 1000,
             easing(t: any) {
               return t;
             }
@@ -1065,6 +1064,11 @@ export default function NavigationModulePage() {
                     </div>
                   </TabsContent>
                 </Tabs>
+                 <DialogFooter>
+                  <DialogClose asChild>
+                    <Button variant="ghost">Close</Button>
+                  </DialogClose>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
       </div>
