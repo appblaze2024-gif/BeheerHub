@@ -542,7 +542,7 @@ export default function Page() {
               pitch: 70, 
               duration: 1000, 
               easing: (t:any) => t,
-              padding: {top: map.getCanvas().height * 0.6}
+              padding: {top: map.getCanvas().height * 0.45}
             });
         } else {
           map.easeTo({ 
@@ -551,7 +551,7 @@ export default function Page() {
               pitch: 70, 
               duration: 1000, 
               easing: (t:any) => t,
-              padding: {top: map.getCanvas().height * 0.6}
+              padding: {top: map.getCanvas().height * 0.45}
             });
         }
       }, 1000);
@@ -666,7 +666,7 @@ export default function Page() {
             pitch: 70,
             bearing: 0,
             duration: 2000,
-            padding: {top: map.getCanvas().height * 0.6}
+            padding: {top: map.getCanvas().height * 0.45}
         });
     }
   }
@@ -735,7 +735,7 @@ export default function Page() {
             pitch: 70,
             bearing: 0,
             duration: 2000,
-            padding: {top: map.getCanvas().height * 0.6}
+            padding: {top: map.getCanvas().height * 0.45}
         });
     }
     
@@ -852,7 +852,7 @@ export default function Page() {
 
         if (isNavigating) {
           options.pitch = 70;
-          options.padding = {top: map.getCanvas().height * 0.6}
+          options.padding = {top: map.getCanvas().height * 0.45}
         } else {
           options.pitch = 0;
         }
