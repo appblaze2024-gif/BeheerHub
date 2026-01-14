@@ -79,7 +79,7 @@ type Project = {
   projectnaam: string;
   wijken?: Wijk[];
   veegroutes?: Wijk[];
-  prullenbakkenroutes?: Wijk[];
+  prullenbakkenroutes?: Prullenbakkenroute[];
 };
 
 interface RouteInfo {
@@ -430,7 +430,6 @@ export default function Page() {
                     pitch: 70,
                     duration: 1000,
                     easing(t: any) { return t; },
-                    padding: { bottom: map.getCanvas().height * 0.1 }
                 });
             }
         }
@@ -543,7 +542,6 @@ export default function Page() {
               pitch: 70, 
               duration: 1000, 
               easing: (t:any) => t,
-              padding: { bottom: map.getCanvas().height * 0.1 } 
             });
         } else {
           map.easeTo({ 
@@ -552,7 +550,6 @@ export default function Page() {
               pitch: 70, 
               duration: 1000, 
               easing: (t:any) => t,
-              padding: { bottom: map.getCanvas().height * 0.1 } 
             });
         }
       }, 1000);
@@ -667,7 +664,6 @@ export default function Page() {
             pitch: 70,
             bearing: 0,
             duration: 2000,
-            padding: { bottom: map.getCanvas().height * 0.1 }
         });
     }
   }
@@ -736,7 +732,6 @@ export default function Page() {
             pitch: 70,
             bearing: 0,
             duration: 2000,
-            padding: { bottom: map.getCanvas().height * 0.1 }
         });
     }
     
@@ -853,10 +848,8 @@ export default function Page() {
 
         if (isNavigating) {
           options.pitch = 70;
-          options.padding = { bottom: map.getCanvas().height * 0.1 };
         } else {
           options.pitch = 0;
-          options.padding = { bottom: 0, left: 0, right: 0, top: 0 };
         }
         
         map.easeTo(options);
