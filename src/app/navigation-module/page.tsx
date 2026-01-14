@@ -429,7 +429,7 @@ export default function Page() {
                     pitch: 70,
                     duration: 1000,
                     easing(t: any) { return t; },
-                    padding: { bottom: map.getCanvas().height * 0.6 }
+                    padding: { bottom: map.getCanvas().height * 0.8 }
                 });
             }
         }
@@ -535,9 +535,9 @@ export default function Page() {
         if (nextPointDistance <= totalDistance) {
           const nextPoint = turf.along(routeLine, nextPointDistance, { units: 'meters' });
           const bearing = turf.bearing(newPoint, nextPoint);
-          map.easeTo({ center: newCoords, zoom: 20, bearing: bearing, pitch: 70, duration: 1000, easing: (t:any) => t, padding: {bottom: map.getCanvas().height * 0.6} });
+          map.easeTo({ center: newCoords, zoom: 20, bearing: bearing, pitch: 70, duration: 1000, easing: (t:any) => t, padding: {bottom: map.getCanvas().height * 0.8} });
         } else {
-          map.easeTo({ center: newCoords, zoom: 20, pitch: 70, duration: 1000, easing: (t:any) => t, padding: {bottom: map.getCanvas().height * 0.6} });
+          map.easeTo({ center: newCoords, zoom: 20, pitch: 70, duration: 1000, easing: (t:any) => t, padding: {bottom: map.getCanvas().height * 0.8} });
         }
       }, 1000);
     } else {
@@ -651,7 +651,7 @@ export default function Page() {
             pitch: 70,
             bearing: 0,
             duration: 2000,
-            padding: {bottom: map.getCanvas().height * 0.6}
+            padding: {bottom: map.getCanvas().height * 0.8}
         });
     }
   }
@@ -720,7 +720,7 @@ export default function Page() {
             pitch: 70,
             bearing: 0,
             duration: 2000,
-            padding: {bottom: map.getCanvas().height * 0.6}
+            padding: {bottom: map.getCanvas().height * 0.8}
         });
     }
     
@@ -828,18 +828,23 @@ export default function Page() {
 
   const centerOnLocation = () => {
     if (origin) {
-        const map = mapRef.current?.getMap();
-        if(map) {
-            const options: any = {
-                center: origin,
-                zoom: 20,
-                pitch: isNavigating ? 70 : 0,
-            };
-            if (isNavigating) {
-                options.padding = { bottom: map.getCanvas().height * 0.6 };
-            }
-            map.easeTo(options);
+      const map = mapRef.current?.getMap();
+      if (map) {
+        const options: any = {
+          center: origin,
+          zoom: 20,
+        };
+
+        if (isNavigating) {
+          options.pitch = 70;
+          options.padding = { bottom: map.getCanvas().height * 0.8 };
+        } else {
+          options.pitch = 0;
+          options.padding = { bottom: 0, left: 0, right: 0, top: 0 };
         }
+        
+        map.easeTo(options);
+      }
     }
   };
   
