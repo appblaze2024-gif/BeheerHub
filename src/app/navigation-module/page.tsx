@@ -108,7 +108,7 @@ const routeLayer: any = {
   },
   paint: {
     'line-color': '#3b82f6',
-    'line-width': 8,
+    'line-width': 10,
     'line-opacity': 0.9,
   },
 };
@@ -1123,8 +1123,7 @@ export default function Page() {
         >
           {origin && (
             <Marker longitude={origin[0]} latitude={origin[1]}>
-              <div className="p-4 bg-blue-500 rounded-full border-4 border-white shadow-md">
-              </div>
+               <div className="p-4 bg-blue-500 rounded-full border-4 border-white shadow-md" />
             </Marker>
           )}
           
