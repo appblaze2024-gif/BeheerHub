@@ -150,6 +150,8 @@ export default function Page() {
     longitude: 5.2913, // Default center of NL
     latitude: 52.1326,
     zoom: 7,
+    pitch: 0,
+    bearing: 0,
   });
   
   const objectsCollection = useMemo(() => {
@@ -400,6 +402,23 @@ export default function Page() {
           setCurrentInstruction(instructions[0]);
           setCurrentInstructionIndex(0);
           setDistanceToManeuver(instructions[0].distance);
+
+          // Immediately orient the map
+          const map = mapRef.current?.getMap();
+          if (map && isNavigating) {
+            const firstPoint = turf.point(routeGeoJSON.geometry.coordinates[0]);
+            const secondPoint = turf.point(routeGeoJSON.geometry.coordinates[1]);
+            const initialBearing = turf.bearing(firstPoint, secondPoint);
+            setBearing(initialBearing);
+            map.easeTo({
+              center: snappedOrigin,
+              zoom: 20,
+              bearing: initialBearing,
+              pitch: 70,
+              duration: 1500,
+              padding: { top: map.getCanvas().height * 0.35 },
+            });
+          }
         }
       }
     } catch (error) {
@@ -424,7 +443,8 @@ export default function Page() {
         const { longitude, latitude, speed: gpsSpeed } = position.coords;
         const newOrigin: [number, number] = [longitude, latitude];
         setOrigin(newOrigin);
-        setCurrentSpeed((gpsSpeed || 0) * 3.6); // Convert m/s to km/h
+        const newSpeed = (gpsSpeed || 0) * 3.6;
+        setCurrentSpeed(newSpeed); // Convert m/s to km/h
   
         if (isNavigating && route && route.geometry) {
           const map = mapRef.current?.getMap();
@@ -432,7 +452,10 @@ export default function Page() {
   
           const routeLine = route.geometry;
           const newPoint = turf.point(newOrigin);
+          
           const snapped = turf.nearestPointOnLine(routeLine, newPoint, { units: 'meters' });
+          if (!snapped) return;
+
           const distanceTraveled = turf.length(
             turf.lineSlice(turf.point(routeLine.coordinates[0]), snapped.geometry.coordinates, routeLine),
             { units: 'meters' }
@@ -689,17 +712,11 @@ export default function Page() {
     if (firstObject) {
       setDestination(firstObject);
       await calculateRoute([origin, [firstObject.longitude, firstObject.latitude]]);
+    } else {
+      setIsCalculating(false);
     }
 
     startTracking();
-    map.easeTo({
-        center: origin,
-        zoom: 20,
-        pitch: 70,
-        bearing: 0,
-        duration: 2000,
-        padding: {top: map.getCanvas().height * 0.35}
-    });
   }
 
   const handleResumeRoute = (historyId: string) => {
@@ -762,14 +779,6 @@ export default function Page() {
     }
 
     startTracking();
-    map.easeTo({
-        center: origin,
-        zoom: 20,
-        pitch: 70,
-        bearing: 0,
-        duration: 2000,
-        padding: {top: map.getCanvas().height * 0.35}
-    });
     
   }, [objects, selectedHistoryId, historyRoutes, isNavigating, origin]); 
   
@@ -1153,11 +1162,11 @@ export default function Page() {
             <Marker longitude={origin[0]} latitude={origin[1]}>
                <div
                 className="flex items-center justify-center filter drop-shadow-md"
-                style={{ transform: `rotate(${bearing}deg)` }}
+                style={{ transform: `rotate(${bearing - 45}deg)` }}
               >
-                <svg width="32" height="32" viewBox="0 0 50 50" style={{transform: "rotate(-45deg)"}}>
+                <svg width="32" height="32" viewBox="0 0 50 50">
                     <path
-                        d="M25 0 L50 50 L0 50 Z"
+                        d="M25 0 L50 50 L25 40 L0 50 Z"
                         fill="#3b82f6"
                         stroke="#FFFFFF"
                         strokeWidth="3"
