@@ -196,7 +196,7 @@ export function DienstToevoegenSheet({
   };
 
   const handleDelete = async () => {
-    if (!firestore || !dienst || !project?.id) return;
+    if (!firestore || !dienst || !project?.id || !dienst.id) return;
     setIsSubmitting(true);
     try {
       const dienstRef = doc(firestore, 'projects', project.id, 'diensten', dienst.id);
@@ -249,7 +249,7 @@ export function DienstToevoegenSheet({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {sortedBoekingregels.map((regel) => (
+                        {sortedBoekingregels?.map((regel) => (
                           <SelectItem key={regel.id} value={regel.id}>
                             {regel.naam}
                           </SelectItem>

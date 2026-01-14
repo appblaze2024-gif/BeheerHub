@@ -271,7 +271,7 @@ export default function WorkPlanningPage() {
   };
 
   const handleDienstDelete = async (dienst: Dienst) => {
-      if (!firestore || !selectedProjectId) return;
+      if (!firestore || !selectedProjectId || !dienst.id) return;
       const dienstRef = doc(firestore, 'projects', selectedProjectId, 'diensten', dienst.id);
       await deleteDocumentNonBlocking(dienstRef);
       fetchDiensten();
