@@ -429,17 +429,17 @@ export default function Page() {
           const newPoint = turf.point(newOrigin);
           const routeLine = route.geometry;
           
-          const snapped = turf.nearestPointOnLine(routeLine, newPoint);
+          const snapped = turf.nearestPointOnLine(routeLine, newPoint, { units: 'meters' });
           const distanceTraveled = turf.length(
-            turf.lineSlice(turf.point(routeLine.coordinates[0]), snapped, routeLine),
+            turf.lineSlice(turf.point(routeLine.coordinates[0]), snapped.geometry.coordinates, routeLine),
             { units: 'meters' }
           );
   
           setRemainingDistance((routeInfo?.distance || 0) - distanceTraveled);
           setDisplayedRoute(
             turf.lineSlice(
-              snapped,
-              turf.point(routeLine.coordinates[routeLine.coordinates.length - 1]),
+              snapped.geometry.coordinates,
+              turf.point(routeLine.coordinates[routeLine.coordinates.length - 1]).geometry.coordinates,
               routeLine
             )
           );
@@ -513,10 +513,7 @@ export default function Page() {
       }
       stopTracking();
       simulationStateRef.current = { distance: 0 };
-      let simulatedSpeed = 0;
-      const maxSpeed = 50 / 3.6; // 50 km/h in m/s
-      const acceleration = 2; // m/s^2
-
+      
       simulationIntervalRef.current = setInterval(() => {
         if (!route || !origin || !routeInstructions.length) return;
         const map = mapRef.current?.getMap();
@@ -526,16 +523,12 @@ export default function Page() {
         const routeLine = route.geometry;
         const totalDistance = turf.length(routeLine, { units: 'meters' });
         
-        const remainingDist = totalDistance - simulationStateRef.current.distance;
-
-        if (remainingDist < 50) {
-          simulatedSpeed = Math.max(3, simulatedSpeed - acceleration);
-        } else {
-          simulatedSpeed = Math.min(maxSpeed, simulatedSpeed + acceleration);
-        }
+        // Use a fixed speed for simulation to be consistent
+        const simulatedSpeed = 50 / 3.6; // 50 km/h in m/s
 
         simulationStateRef.current.distance += simulatedSpeed;
         setCurrentSpeed(simulatedSpeed * 3.6);
+        const remainingDist = totalDistance - simulationStateRef.current.distance;
         setRemainingDistance(remainingDist);
 
         if (simulationStateRef.current.distance >= totalDistance) {
