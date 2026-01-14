@@ -168,6 +168,7 @@ export default function Page() {
   const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsCollection);
 
   const [origin, setOrigin] = React.useState<[number, number] | null>(null);
+  const [snappedOrigin, setSnappedOrigin] = React.useState<[number, number] | null>(null);
   const [bearing, setBearing] = React.useState<number>(0);
   const [locationError, setLocationError] = React.useState<string | null>(null);
   const [route, setRoute] = React.useState<any>(null);
@@ -307,17 +308,20 @@ export default function Page() {
         (position) => {
           const { longitude, latitude } = position.coords;
           setOrigin([longitude, latitude]);
+          setSnappedOrigin([longitude, latitude]);
           setViewState(prev => ({...prev, longitude, latitude, zoom: 14}));
           setLocationError(null);
         },
         () => {
           setLocationError("Kon uw locatie niet ophalen. Zorg ervoor dat u locatietoestemming heeft gegeven.");
-          setOrigin([5.4697, 51.4416]); 
+          setOrigin([5.4697, 51.4416]);
+          setSnappedOrigin([5.4697, 51.4416]);
         }
       );
     } else {
       setLocationError("Geolocatie wordt niet ondersteund door deze browser.");
-      setOrigin([5.4697, 51.4416]); 
+      setOrigin([5.4697, 51.4416]);
+      setSnappedOrigin([5.4697, 51.4416]);
     }
   }, []);
 
@@ -384,8 +388,7 @@ export default function Page() {
           geometry: currentRoute.geometry,
         };
 
-        const snappedOrigin = data.waypoints[0].location;
-        setOrigin(snappedOrigin);
+        const snappedStart = data.waypoints[0].location;
         
         setRoute(routeGeoJSON);
         setDisplayedRoute(routeGeoJSON);
@@ -409,7 +412,7 @@ export default function Page() {
             const initialBearing = turf.bearing(firstPoint, secondPoint);
             setBearing(initialBearing);
             map.easeTo({
-              center: snappedOrigin,
+              center: snappedStart,
               zoom: 20,
               bearing: initialBearing,
               pitch: 70,
@@ -454,6 +457,9 @@ export default function Page() {
           const snapped = turf.nearestPointOnLine(routeLine, newPoint, { units: 'meters' });
           if (!snapped) return;
 
+          const snappedCoords = snapped.geometry.coordinates as [number, number];
+          setSnappedOrigin(snappedCoords);
+
           const distanceTraveled = turf.length(
             turf.lineSlice(turf.point(routeLine.coordinates[0]), snapped.geometry.coordinates, routeLine),
             { units: 'meters' }
@@ -497,7 +503,7 @@ export default function Page() {
           setBearing(newBearing);
           
           map.easeTo({
-            center: newOrigin,
+            center: snappedCoords,
             zoom: 20,
             bearing: newBearing,
             pitch: 70,
@@ -562,6 +568,7 @@ export default function Page() {
         const newPoint = turf.along(routeLine, simulationStateRef.current.distance, { units: 'meters' });
         const newCoords = newPoint.geometry.coordinates as [number, number];
         setOrigin(newCoords);
+        setSnappedOrigin(newCoords);
 
         let distanceTraveledOnInstructions = 0;
         let upcomingInstructionIndex = -1;
@@ -673,8 +680,8 @@ export default function Page() {
   const handleStartNavigation = async () => {
     if (!origin || !user || !firestore || !selectedProjectId || !selectedRouteId || !selectedRoute) return;
 
+    setIsNavigating(true);
     setIsCalculating(true);
-    setIsNavigating(true); // Set immediately
 
     const map = mapRef.current?.getMap();
     if (!map) return;
@@ -751,8 +758,8 @@ export default function Page() {
             const map = mapRef.current?.getMap();
             if (!map) return;
 
-            setIsCalculating(true);
             setIsNavigating(true);
+            setIsCalculating(true);
 
             const routeObjects = (routeToResume.allObjectIds || [])
                 .map(id => objects.find(o => o.id === id))
@@ -892,19 +899,22 @@ export default function Page() {
   }
 
   const centerOnLocation = () => {
-    if (origin) {
+    const centerPoint = snappedOrigin || origin;
+    if (centerPoint) {
       const map = mapRef.current?.getMap();
       if (map) {
         const options: any = {
-          center: origin,
+          center: centerPoint,
           zoom: 20,
         };
 
         if (isNavigating) {
           options.pitch = 70;
+          options.bearing = bearing;
           options.padding = {top: map.getCanvas().height * 0.35}
         } else {
           options.pitch = 0;
+          options.bearing = 0;
         }
         
         map.easeTo(options);
@@ -1167,8 +1177,8 @@ export default function Page() {
           mapStyle="mapbox://styles/mapbox/streets-v12"
           mapboxAccessToken={MAPBOX_TOKEN}
         >
-          {origin && (
-            <Marker longitude={origin[0]} latitude={origin[1]}>
+          {snappedOrigin && (
+            <Marker longitude={snappedOrigin[0]} latitude={snappedOrigin[1]}>
                <div
                 className="flex items-center justify-center filter drop-shadow-md"
                 style={{ transform: `rotate(${bearing - 45}deg)` }}
