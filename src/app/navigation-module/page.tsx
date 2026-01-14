@@ -356,7 +356,6 @@ export default function Page() {
       return;
     }
   
-    setIsCalculating(true);
     setRoute(null);
     setDisplayedRoute(null);
     setRouteInfo(null);
@@ -403,9 +402,8 @@ export default function Page() {
           setCurrentInstructionIndex(0);
           setDistanceToManeuver(instructions[0].distance);
 
-          // Immediately orient the map
           const map = mapRef.current?.getMap();
-          if (map && isNavigating) {
+          if (map) {
             const firstPoint = turf.point(routeGeoJSON.geometry.coordinates[0]);
             const secondPoint = turf.point(routeGeoJSON.geometry.coordinates[1]);
             const initialBearing = turf.bearing(firstPoint, secondPoint);
@@ -424,7 +422,7 @@ export default function Page() {
     } catch (error) {
       console.error('Error calculating route:', error);
     } finally {
-      setIsCalculating(false);
+        setIsCalculating(false);
     }
   };
 
@@ -676,48 +674,50 @@ export default function Page() {
     if (!origin || !user || !firestore || !selectedProjectId || !selectedRouteId || !selectedRoute) return;
 
     setIsCalculating(true);
+    setIsNavigating(true); // Set immediately
+
     const map = mapRef.current?.getMap();
-    if(!map) return;
-    
+    if (!map) return;
+
     const allObjects = objectsInWijk;
     const allObjectIds = allObjects.map(obj => obj.id);
 
     const routesCollection = collection(firestore, `users/${user.uid}/routes`);
-    
+
     const routeHistoryData: Partial<Route> = {
-      userId: user.uid,
-      projectId: selectedProjectId,
-      originalRouteId: selectedRouteId,
-      routeName: selectedRoute.naam,
-      date: new Date().toISOString().split('T')[0],
-      startTime: serverTimestamp() as any,
-      endTime: null,
-      allObjectIds: allObjectIds,
-      completedObjects: [],
-      skippedObjects: [],
-      totalObjects: allObjectIds.length,
+        userId: user.uid,
+        projectId: selectedProjectId,
+        originalRouteId: selectedRouteId,
+        routeName: selectedRoute.naam,
+        date: new Date().toISOString().split('T')[0],
+        startTime: serverTimestamp() as any,
+        endTime: null,
+        allObjectIds: allObjectIds,
+        completedObjects: [],
+        skippedObjects: [],
+        totalObjects: allObjectIds.length,
     };
-    
+
     const docRef = doc(routesCollection);
     await setDoc(docRef, routeHistoryData);
     setActiveRouteHistoryId(docRef.id);
-    
+
     setCompletedObjects([]);
     setSkippedObjects([]);
     setPendingObjects(allObjects);
-    setIsNavigating(true);
 
     const firstObject = findNextObject(origin, allObjects);
-    
+
     if (firstObject) {
-      setDestination(firstObject);
-      await calculateRoute([origin, [firstObject.longitude, firstObject.latitude]]);
+        setDestination(firstObject);
+        await calculateRoute([origin, [firstObject.longitude, firstObject.latitude]]);
     } else {
-      setIsCalculating(false);
+        setIsCalculating(false);
     }
 
     startTracking();
-  }
+};
+
 
   const handleResumeRoute = (historyId: string) => {
       const routeToResume = historyRoutes?.find(r => r.id === historyId);
@@ -743,44 +743,53 @@ export default function Page() {
 
 
   React.useEffect(() => {
-    if (isNavigating || !selectedHistoryId || !objects || !origin) return;
+    if (selectedHistoryId && !isNavigating && objects && origin) {
+        const startResume = async () => {
+            const routeToResume = historyRoutes?.find(r => r.id === selectedHistoryId);
+            if (!routeToResume) return;
 
-    const routeToResume = historyRoutes?.find(r => r.id === selectedHistoryId);
-    if (!routeToResume) return;
+            const map = mapRef.current?.getMap();
+            if (!map) return;
 
-    const map = mapRef.current?.getMap();
-    if(!map) return;
+            setIsCalculating(true);
+            setIsNavigating(true);
 
+            const routeObjects = (routeToResume.allObjectIds || [])
+                .map(id => objects.find(o => o.id === id))
+                .filter((o): o is MapObject => !!o);
 
-    const routeObjects = (routeToResume.allObjectIds || [])
-        .map(id => objects.find(o => o.id === id))
-        .filter((o): o is MapObject => !!o);
-    
-    if(routeObjects.length === 0 && (routeToResume.allObjectIds || []).length > 0){
-      return;
+            if (routeObjects.length === 0 && (routeToResume.allObjectIds || []).length > 0) {
+                // objects not loaded yet, wait.
+                setIsCalculating(false);
+                setIsNavigating(false);
+                return;
+            }
+
+            setActiveRouteHistoryId(routeToResume.id);
+            const completed = routeToResume.completedObjects || [];
+            const skipped = routeToResume.skippedObjects || [];
+            setCompletedObjects(completed);
+            setSkippedObjects(skipped);
+
+            const remainingObjects = routeObjects.filter(
+                obj => !completed.includes(obj.id) && !skipped.includes(obj.id)
+            );
+            setPendingObjects(remainingObjects);
+
+            const nextObject = findNextObject(origin, remainingObjects);
+            if (nextObject) {
+                setDestination(nextObject);
+                await calculateRoute([origin, [nextObject.longitude, nextObject.latitude]]);
+            } else {
+                setIsCalculating(false);
+            }
+
+            startTracking();
+        };
+
+        startResume();
     }
-    
-    setActiveRouteHistoryId(routeToResume.id);
-    const completed = routeToResume.completedObjects || [];
-    const skipped = routeToResume.skippedObjects || [];
-    setCompletedObjects(completed);
-    setSkippedObjects(skipped);
-    
-    const remainingObjects = routeObjects.filter(
-        obj => !completed.includes(obj.id) && !skipped.includes(obj.id)
-    );
-    setPendingObjects(remainingObjects);
-    setIsNavigating(true);
-
-    const nextObject = findNextObject(origin, remainingObjects);
-    if (nextObject) {
-        setDestination(nextObject);
-        calculateRoute([origin, [nextObject.longitude, nextObject.latitude]]);
-    }
-
-    startTracking();
-    
-  }, [objects, selectedHistoryId, historyRoutes, isNavigating, origin]); 
+}, [selectedHistoryId, isNavigating, objects, origin, historyRoutes]);
   
   const updateObjectStatus = async (objectId: string, status: 'completed' | 'skipped'): Promise<MapObject[]> => {
       if (!firestore || !user || !activeRouteHistoryId) return pendingObjects;
