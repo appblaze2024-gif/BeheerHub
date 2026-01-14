@@ -42,8 +42,7 @@ import { Progress } from '@/components/ui/progress';
 import type { Route } from 'docs/backend';
 import { Separator } from '@/components/ui/separator';
 import { Slider } from '@/components/ui/slider';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
@@ -901,10 +900,10 @@ export default function NavigationModulePage() {
                         </p>
                     </div>
                     <Progress value={progressValue} className="h-2" />
-                    <div className="flex items-center justify-center gap-2 mt-2 text-muted-foreground">
-                        <Gauge className="h-4 w-4" />
-                        <span className="font-bold text-lg">{currentSpeed.toFixed(0)}</span>
-                        <span className="text-sm">km/h</span>
+                    <div className="flex items-center justify-center gap-2 mt-2 text-card-foreground">
+                        <Gauge className="h-6 w-6" />
+                        <span className="font-bold text-3xl">{currentSpeed.toFixed(0)}</span>
+                        <span className="text-base">km/h</span>
                     </div>
                 </div>
              </div>
