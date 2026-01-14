@@ -10,7 +10,8 @@ import {
   List,
   LocateFixed,
   X,
-  Mic,
+  Play,
+  Pause,
   Settings,
   Volume2,
   CheckCircle,
@@ -18,8 +19,6 @@ import {
   Clock,
   Route as RouteIcon,
   ArrowUp,
-  Play,
-  Pause,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -381,7 +380,7 @@ export default function NavigationModulePage() {
             bearing: heading ?? map.getBearing(),
             zoom: 20,
             pitch: 60,
-            duration: 1, 
+            duration: 1000, 
             easing(t: any) {
               return t;
             }
@@ -437,7 +436,12 @@ export default function NavigationModulePage() {
           simulationStateRef.current.distance += newSpeed;
   
           if (simulationStateRef.current.distance >= totalDistance) {
-            handleToggleSimulation();
+            if (simulationIntervalRef.current) {
+              clearInterval(simulationIntervalRef.current);
+              simulationIntervalRef.current = null;
+            }
+            setIsSimulating(false);
+            startTracking();
             return;
           }
   
