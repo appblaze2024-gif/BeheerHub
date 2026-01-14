@@ -103,7 +103,7 @@ const routeLayer: any = {
   },
 };
 
-export default function NavigationModulePage() {
+export default function Page() {
   const mapRef = React.useRef<any>();
   const firestore = useFirestore();
   const { user } = useUser();
@@ -382,7 +382,7 @@ export default function NavigationModulePage() {
             center: [longitude, latitude],
             bearing: heading ?? map.getBearing(),
             zoom: 20,
-            pitch: 60,
+            pitch: 65,
             duration: 1000, 
             easing(t: any) {
               return t;
@@ -461,9 +461,9 @@ export default function NavigationModulePage() {
         if (nextPointDistance <= totalDistance) {
           const nextPoint = turf.along(routeLine, nextPointDistance, { units: 'meters' });
           const bearing = turf.bearing(newPoint, nextPoint);
-          mapRef.current?.getMap().easeTo({ center: newCoords, zoom: 20, bearing: bearing, pitch: 60, duration: 1000, easing: (t:any) => t });
+          mapRef.current?.getMap().easeTo({ center: newCoords, zoom: 20, bearing: bearing, pitch: 65, duration: 1000, easing: (t:any) => t });
         } else {
-          mapRef.current?.getMap().easeTo({ center: newCoords, zoom: 20, pitch: 60, duration: 1000, easing: (t:any) => t });
+          mapRef.current?.getMap().easeTo({ center: newCoords, zoom: 20, pitch: 65, duration: 1000, easing: (t:any) => t });
         }
       }, 1000);
     } else {
@@ -572,7 +572,7 @@ export default function NavigationModulePage() {
     mapRef.current?.getMap().easeTo({
         center: origin,
         zoom: 20,
-        pitch: 60,
+        pitch: 65,
         bearing: 0,
         duration: 2000
     });
@@ -637,7 +637,7 @@ export default function NavigationModulePage() {
     mapRef.current?.getMap().easeTo({
         center: origin,
         zoom: 20,
-        pitch: 60,
+        pitch: 65,
         bearing: 0,
         duration: 2000
     });
@@ -746,7 +746,7 @@ export default function NavigationModulePage() {
         mapRef.current?.getMap().easeTo({
             center: origin,
             zoom: isNavigating ? 20 : 15,
-            pitch: isNavigating ? 60 : 0,
+            pitch: isNavigating ? 65 : 0,
         });
     }
   };
