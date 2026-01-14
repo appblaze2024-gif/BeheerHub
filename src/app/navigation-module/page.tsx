@@ -409,44 +409,41 @@ export default function NavigationModulePage() {
   };
 
   const handleToggleSimulation = () => {
-    setIsSimulating(prev => {
-      const nextState = !prev;
-      if (nextState) {
-        stopTracking();
+    setIsSimulating(prevIsSimulating => {
+      const isStarting = !prevIsSimulating;
+  
+      if (isStarting) {
+        // --- STARTING SIMULATION ---
+        stopTracking(); // Ensure no real GPS is running
         simulationStateRef.current = {
-          ...simulationStateRef.current,
           distance: 0,
-          speed: 0,
+          speed: 0, // Start speed at 0
+          acceleration: 2, // m/s^2
+          maxSpeed: 50 / 3.6,
         };
+  
         simulationIntervalRef.current = setInterval(() => {
           if (!route || !origin) return;
   
           const routeLine = route.geometry;
           const totalDistance = turf.length(routeLine, { units: 'meters' });
-  
           const { speed, maxSpeed, acceleration, distance } = simulationStateRef.current;
           const remainingDistance = totalDistance - distance;
   
+          // --- ACCELERATION & DECELERATION LOGIC ---
           let newSpeed = speed;
-          if (remainingDistance < 50) {
+          if (remainingDistance < 50) { // Start decelerating near the end
             newSpeed = Math.max(3, speed - acceleration);
           } else {
-            newSpeed = Math.min(maxSpeed, speed + acceleration);
+            newSpeed = Math.min(maxSpeed, speed + acceleration); // Accelerate to max speed
           }
   
           simulationStateRef.current.speed = newSpeed;
-          simulationStateRef.current.distance += newSpeed;
-
+          simulationStateRef.current.distance += newSpeed; // distance for this tick
           setCurrentSpeed(newSpeed * 3.6);
   
           if (simulationStateRef.current.distance >= totalDistance) {
-            if (simulationIntervalRef.current) {
-              clearInterval(simulationIntervalRef.current);
-              simulationIntervalRef.current = null;
-            }
-            setIsSimulating(false);
-            setCurrentSpeed(0);
-            startTracking();
+            handleToggleSimulation(); // Stop simulation
             return;
           }
   
@@ -462,18 +459,21 @@ export default function NavigationModulePage() {
           if (nextPointDistance <= totalDistance) {
             const nextPoint = turf.along(routeLine, nextPointDistance, { units: 'meters' });
             const bearing = turf.bearing(newPoint, nextPoint);
-            mapRef.current?.getMap().easeTo({ center: newCoords, zoom: 20, bearing: bearing, pitch: 60, duration: 1000, easing: (t: any) => t });
+            mapRef.current?.getMap().easeTo({ center: newCoords, zoom: 20, bearing: bearing, pitch: 60, duration: 1000, easing: (t:any) => t });
           } else {
-            mapRef.current?.getMap().easeTo({ center: newCoords, zoom: 20, pitch: 60, duration: 1000, easing: (t: any) => t });
+            mapRef.current?.getMap().easeTo({ center: newCoords, zoom: 20, pitch: 60, duration: 1000, easing: (t:any) => t });
           }
         }, 1000);
+  
       } else {
+        // --- PAUSING SIMULATION ---
         if (simulationIntervalRef.current) {
           clearInterval(simulationIntervalRef.current);
           simulationIntervalRef.current = null;
         }
         setCurrentSpeed(0);
         
+        // Get real location once to reset view
         navigator.geolocation.getCurrentPosition(
           (position) => {
             const { longitude, latitude } = position.coords;
@@ -485,8 +485,8 @@ export default function NavigationModulePage() {
                 bearing: 0,
             });
           },
-          () => {
-            if (origin) { // Fallback to last known origin if current location fails
+          () => { // Error case
+            if (origin) {
                mapRef.current?.getMap().easeTo({
                   center: origin,
                   zoom: 14,
@@ -497,9 +497,10 @@ export default function NavigationModulePage() {
           }
         );
       }
-      return nextState;
+      return isStarting; // Return new state
     });
   };
+  
   
   const findNextObject = (currentOrigin: [number, number], availableObjects: MapObject[]): MapObject | null => {
       if (!currentOrigin || availableObjects.length === 0) return null;
