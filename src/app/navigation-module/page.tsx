@@ -19,6 +19,7 @@ import {
   Clock,
   Route as RouteIcon,
   ArrowUp,
+  Gauge,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,7 +42,8 @@ import { Progress } from '@/components/ui/progress';
 import type { Route } from 'docs/backend';
 import { Separator } from '@/components/ui/separator';
 import { Slider } from '@/components/ui/slider';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { DialogClose } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
@@ -163,10 +165,11 @@ export default function NavigationModulePage() {
   const simulationIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
     const simulationStateRef = React.useRef({
     distance: 0,
-    speed: 0, // Start at 0 km/h
+    speed: 0, // m/s
     acceleration: 2, // m/s^2
     maxSpeed: 50 / 3.6, // 50 km/h in m/s
   });
+  const [currentSpeed, setCurrentSpeed] = React.useState(0); // in km/h
 
   const userHistoryCollection = React.useMemo(() => {
     if (!firestore || !user) return null;
@@ -370,8 +373,9 @@ export default function NavigationModulePage() {
 
     watchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
-        const { longitude, latitude, heading } = position.coords;
+        const { longitude, latitude, heading, speed } = position.coords;
         setOrigin([longitude, latitude]);
+        setCurrentSpeed((speed || 0) * 3.6); // Convert m/s to km/h
 
         const map = mapRef.current?.getMap();
         if (map && isNavigating) {
@@ -434,6 +438,8 @@ export default function NavigationModulePage() {
   
           simulationStateRef.current.speed = newSpeed;
           simulationStateRef.current.distance += newSpeed;
+
+          setCurrentSpeed(newSpeed * 3.6); // Update UI speed
   
           if (simulationStateRef.current.distance >= totalDistance) {
             if (simulationIntervalRef.current) {
@@ -441,6 +447,7 @@ export default function NavigationModulePage() {
               simulationIntervalRef.current = null;
             }
             setIsSimulating(false);
+            setCurrentSpeed(0);
             startTracking();
             return;
           }
@@ -467,6 +474,7 @@ export default function NavigationModulePage() {
           clearInterval(simulationIntervalRef.current);
           simulationIntervalRef.current = null;
         }
+        setCurrentSpeed(0);
         startTracking();
       }
       return nextState;
@@ -686,6 +694,7 @@ export default function NavigationModulePage() {
       simulationIntervalRef.current = null;
     }
     setIsSimulating(false);
+    setCurrentSpeed(0);
 
     setIsNavigating(false);
     setRoute(null);
@@ -892,6 +901,11 @@ export default function NavigationModulePage() {
                         </p>
                     </div>
                     <Progress value={progressValue} className="h-2" />
+                    <div className="flex items-center justify-center gap-2 mt-2 text-muted-foreground">
+                        <Gauge className="h-4 w-4" />
+                        <span className="font-bold text-lg">{currentSpeed.toFixed(0)}</span>
+                        <span className="text-sm">km/h</span>
+                    </div>
                 </div>
              </div>
         )}
