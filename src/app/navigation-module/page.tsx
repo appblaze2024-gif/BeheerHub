@@ -463,13 +463,13 @@ export default function Page() {
             }
           }
   
-          const nextPointDistance = distanceTraveled + 10;
-          let newBearing = bearing;
+          let newBearing = 0;
+          const nextPointDistance = distanceTraveled + 10; // Check 10 meters ahead
           if (nextPointDistance <= (routeInfo?.distance || 0)) {
             const nextPointOnRoute = turf.along(routeLine, nextPointDistance, { units: 'meters' });
-            newBearing = turf.bearing(snapped, nextPointOnRoute);
-            setBearing(newBearing);
+            newBearing = turf.bearing(snapped.geometry.coordinates, nextPointOnRoute.geometry.coordinates);
           }
+          setBearing(newBearing);
           
           map.easeTo({
             center: newOrigin,
