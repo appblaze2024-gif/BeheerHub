@@ -169,6 +169,7 @@ export default function Page() {
   const [routeInfo, setRouteInfo] = React.useState<RouteInfo | null>(null);
   const [routeInstructions, setRouteInstructions] = React.useState<RouteInstruction[]>([]);
   const [currentInstruction, setCurrentInstruction] = React.useState<RouteInstruction | null>(null);
+  const [currentInstructionIndex, setCurrentInstructionIndex] = React.useState(0);
   const [distanceToManeuver, setDistanceToManeuver] = React.useState<number | null>(null);
   const [isCalculating, setIsCalculating] = React.useState(false);
   const [isNavigating, setIsNavigating] = React.useState(false);
@@ -195,6 +196,7 @@ export default function Page() {
   const [completionVulgraad, setCompletionVulgraad] = React.useState<string>('25-50');
   const [hasBijzonderheden, setHasBijzonderheden] = React.useState<string>('nee');
   const [bijzonderhedenText, setBijzonderhedenText] = React.useState<string>('');
+  const [remainingDistance, setRemainingDistance] = React.useState<number | null>(null);
 
   // Simulation state
   const [isSimulating, setIsSimulating] = React.useState(false);
@@ -381,6 +383,7 @@ export default function Page() {
         };
         setRoute(routeGeoJSON);
         setDisplayedRoute(routeGeoJSON);
+        setRemainingDistance(currentRoute.distance);
 
         setRouteInfo({
           distance: currentRoute.distance,
@@ -390,6 +393,7 @@ export default function Page() {
           const instructions = currentRoute.legs[0].steps;
           setRouteInstructions(instructions);
           setCurrentInstruction(instructions[0]);
+          setCurrentInstructionIndex(0);
           setDistanceToManeuver(instructions[0].distance);
         }
       }
@@ -423,9 +427,10 @@ export default function Page() {
                     center: [longitude, latitude],
                     bearing: heading ?? map.getBearing(),
                     zoom: 20,
-                    pitch: 75,
+                    pitch: 70,
                     duration: 1000,
-                    easing(t: any) { return t; }
+                    easing(t: any) { return t; },
+                    padding: { bottom: map.getCanvas().height * 0.4 }
                 });
             }
         }
@@ -471,10 +476,11 @@ export default function Page() {
         const routeLine = route.geometry;
         const totalDistance = turf.length(routeLine, { units: 'meters' });
         const { speed, maxSpeed, acceleration, distance } = simulationStateRef.current;
-        const remainingDistance = totalDistance - distance;
+        let remainingDist = totalDistance - distance;
+        setRemainingDistance(remainingDist);
 
         let newSpeed = speed;
-        if (remainingDistance < 50) {
+        if (remainingDist < 50) {
           newSpeed = Math.max(3, speed - acceleration);
         } else {
           newSpeed = Math.min(maxSpeed, speed + acceleration);
@@ -493,41 +499,31 @@ export default function Page() {
         const newCoords = newPoint.geometry.coordinates as [number, number];
         setOrigin(newCoords);
 
-        // Find current instruction and distance to it
-        const userPoint = turf.point(newCoords);
-        let closestInstructionIndex = -1;
-        let minDistance = Infinity;
-
-        routeInstructions.forEach((instr, index) => {
-            const instrPoint = turf.point(instr.maneuver.location);
-            const dist = turf.distance(userPoint, instrPoint, { units: 'meters'});
-            
-            // A simple way to check if we passed the maneuver
-            const along = turf.lineSlice(userPoint, instrPoint, routeLine);
-            const lengthAlong = turf.length(along, {units: 'meters'});
-
-            if (lengthAlong < 100 && dist < minDistance) {
-                minDistance = dist;
-                closestInstructionIndex = index;
-            }
-        });
-        
-        let currentStepIndex = 0;
-        let distToNextStep = simulationStateRef.current.distance;
+        // --- Find current instruction and distance to it ---
+        let distanceTraveledOnRoute = 0;
+        let upcomingInstructionIndex = -1;
 
         for (let i = 0; i < routeInstructions.length; i++) {
-            distToNextStep -= routeInstructions[i].distance;
-            if (distToNextStep < 0) {
-                currentStepIndex = i;
-                setDistanceToManeuver(Math.abs(distToNextStep));
-                break;
-            }
+          distanceTraveledOnRoute += routeInstructions[i].distance;
+          if (distanceTraveledOnRoute > simulationStateRef.current.distance) {
+            upcomingInstructionIndex = i;
+            break;
+          }
         }
         
-        if (currentInstruction?.maneuver.instruction !== routeInstructions[currentStepIndex].maneuver.instruction) {
-             setCurrentInstruction(routeInstructions[currentStepIndex]);
-        }
+        if (upcomingInstructionIndex !== -1) {
+            const distanceToNextManeuver = distanceTraveledOnRoute - simulationStateRef.current.distance;
+            setDistanceToManeuver(distanceToNextManeuver);
 
+            if (currentInstructionIndex !== upcomingInstructionIndex) {
+                setCurrentInstructionIndex(upcomingInstructionIndex);
+                setCurrentInstruction(routeInstructions[upcomingInstructionIndex]);
+            }
+        } else if (routeInstructions.length > 0) {
+            // We are on the last leg
+            setCurrentInstruction(routeInstructions[routeInstructions.length - 1]);
+            setDistanceToManeuver(remainingDist);
+        }
 
         const startPoint = turf.point(newCoords);
         const endPoint = turf.point(routeLine.coordinates[routeLine.coordinates.length - 1]);
@@ -540,9 +536,9 @@ export default function Page() {
         if (nextPointDistance <= totalDistance) {
           const nextPoint = turf.along(routeLine, nextPointDistance, { units: 'meters' });
           const bearing = turf.bearing(newPoint, nextPoint);
-          map.easeTo({ center: newCoords, zoom: 20, bearing: bearing, pitch: 75, duration: 1000, easing: (t:any) => t, padding: {bottom: map.getCanvas().height * 0.4} });
+          map.easeTo({ center: newCoords, zoom: 20, bearing: bearing, pitch: 70, duration: 1000, easing: (t:any) => t, padding: {bottom: map.getCanvas().height * 0.4} });
         } else {
-          map.easeTo({ center: newCoords, zoom: 20, pitch: 75, duration: 1000, easing: (t:any) => t, padding: {bottom: map.getCanvas().height * 0.4} });
+          map.easeTo({ center: newCoords, zoom: 20, pitch: 70, duration: 1000, easing: (t:any) => t, padding: {bottom: map.getCanvas().height * 0.4} });
         }
       }, 1000);
     } else {
@@ -653,7 +649,7 @@ export default function Page() {
         map.easeTo({
             center: origin,
             zoom: 20,
-            pitch: 75,
+            pitch: 70,
             bearing: 0,
             duration: 2000,
             padding: {bottom: map.getCanvas().height * 0.4}
@@ -722,7 +718,7 @@ export default function Page() {
         map.easeTo({
             center: origin,
             zoom: 20,
-            pitch: 75,
+            pitch: 70,
             bearing: 0,
             duration: 2000,
             padding: {bottom: map.getCanvas().height * 0.4}
@@ -806,6 +802,7 @@ export default function Page() {
     setRoute(null);
     setDisplayedRoute(null);
     setRouteInfo(null);
+    setRemainingDistance(null);
     setRouteInstructions([]);
     setCurrentInstruction(null);
     setDistanceToManeuver(null);
@@ -837,7 +834,7 @@ export default function Page() {
             const options: any = {
                 center: origin,
                 zoom: isNavigating ? 20 : 15,
-                pitch: isNavigating ? 75 : 0,
+                pitch: isNavigating ? 70 : 0,
             };
             if (isNavigating) {
                 options.padding = { bottom: map.getCanvas().height * 0.4 };
@@ -1077,7 +1074,7 @@ export default function Page() {
                         <div className="flex items-center gap-2 text-muted-foreground">
                             <RouteIcon className="h-5 w-5" />
                             <span>
-                            {routeInfo ? formatDistance(routeInfo.distance) : '-'}
+                                {remainingDistance !== null ? formatDistance(remainingDistance) : routeInfo ? formatDistance(routeInfo.distance) : '-'}
                             </span>
                         </div>
                         <div className="text-muted-foreground text-sm">
