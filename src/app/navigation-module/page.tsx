@@ -418,9 +418,9 @@ export default function Page() {
 
     watchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
-        const { longitude, latitude, speed } = position.coords;
+        const { longitude, latitude, speed: gpsSpeed } = position.coords;
         setOrigin([longitude, latitude]);
-        setCurrentSpeed((speed || 0) * 3.6); // Convert m/s to km/h
+        setCurrentSpeed((gpsSpeed || 0) * 3.6); // Convert m/s to km/h
 
         if (isNavigating) {
             const map = mapRef.current?.getMap();
@@ -488,15 +488,14 @@ export default function Page() {
 
         const routeLine = route.geometry;
         const totalDistance = turf.length(routeLine, { units: 'meters' });
-        const { speed, maxSpeed, acceleration, distance } = simulationStateRef.current;
-        let remainingDist = totalDistance - distance;
+        let remainingDist = totalDistance - simulationStateRef.current.distance;
         setRemainingDistance(remainingDist);
 
-        let newSpeed = speed;
-        if (remainingDist < 50) {
-          newSpeed = Math.max(3, speed - acceleration);
+        let newSpeed = simulationStateRef.current.speed;
+        if (remainingDist < 50) { // Start decelerating when close to destination
+          newSpeed = Math.max(3, newSpeed - simulationStateRef.current.acceleration);
         } else {
-          newSpeed = Math.min(maxSpeed, speed + acceleration);
+          newSpeed = Math.min(simulationStateRef.current.maxSpeed, newSpeed + simulationStateRef.current.acceleration);
         }
 
         simulationStateRef.current.speed = newSpeed;
@@ -504,7 +503,7 @@ export default function Page() {
         setCurrentSpeed(newSpeed * 3.6);
 
         if (simulationStateRef.current.distance >= totalDistance) {
-          handleToggleSimulation();
+          handleToggleSimulation(); // Stop simulation
           return;
         }
 
