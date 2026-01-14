@@ -418,7 +418,7 @@ export default function Page() {
 
     watchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
-        const { longitude, latitude, heading, speed } = position.coords;
+        const { longitude, latitude, speed } = position.coords;
         setOrigin([longitude, latitude]);
         setCurrentSpeed((speed || 0) * 3.6); // Convert m/s to km/h
 
