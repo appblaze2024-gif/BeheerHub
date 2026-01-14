@@ -20,6 +20,14 @@ import {
   Route as RouteIcon,
   ArrowUp,
   Gauge,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUpLeft,
+  ArrowUpRight,
+  ArrowDownLeft,
+  ArrowDownRight,
+  Undo2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -84,6 +92,7 @@ interface RouteInstruction {
     instruction: string;
     type: string;
     modifier?: string;
+    location: [number, number];
   }
 }
 
@@ -102,6 +111,32 @@ const routeLayer: any = {
     'line-opacity': 0.9,
   },
 };
+
+const getManeuverIcon = (type: string, modifier?: string) => {
+    switch (type) {
+        case 'turn':
+        case 'fork':
+        case 'off ramp':
+        case 'rotary':
+            if (modifier?.includes('left')) return ArrowUpLeft;
+            if (modifier?.includes('right')) return ArrowUpRight;
+            if (modifier?.includes('slight left')) return ArrowUpLeft;
+            if (modifier?.includes('slight right')) return ArrowUpRight;
+            if (modifier?.includes('straight')) return ArrowUp;
+            return ArrowUp;
+        case 'depart':
+            return ArrowUp;
+        case 'arrive':
+            return MapPin;
+        case 'roundabout':
+            if (modifier?.includes('left')) return ArrowUpLeft;
+            if (modifier?.includes('right')) return ArrowUpRight;
+            return Undo2;
+        default:
+            return ArrowUp;
+    }
+}
+
 
 export default function Page() {
   const mapRef = React.useRef<any>();
@@ -133,6 +168,8 @@ export default function Page() {
   const [displayedRoute, setDisplayedRoute] = React.useState<any>(null);
   const [routeInfo, setRouteInfo] = React.useState<RouteInfo | null>(null);
   const [routeInstructions, setRouteInstructions] = React.useState<RouteInstruction[]>([]);
+  const [currentInstruction, setCurrentInstruction] = React.useState<RouteInstruction | null>(null);
+  const [distanceToManeuver, setDistanceToManeuver] = React.useState<number | null>(null);
   const [isCalculating, setIsCalculating] = React.useState(false);
   const [isNavigating, setIsNavigating] = React.useState(false);
   const [destination, setDestination] = React.useState<MapObject | null>(null);
@@ -172,7 +209,7 @@ export default function Page() {
 
   const userHistoryCollection = React.useMemo(() => {
     if (!firestore || !user) return null;
-    return collection(firestore, `users/${user.uid}/routes`);
+    return query(collection(firestore, `users/${user.uid}/routes`));
   }, [firestore, user]);
 
   const { data: historyRoutes, isLoading: isLoadingHistory } = useCollection<Route>(userHistoryCollection);
@@ -350,7 +387,10 @@ export default function Page() {
           duration: currentRoute.duration,
         });
         if (currentRoute.legs[0]?.steps) {
-          setRouteInstructions(currentRoute.legs[0].steps);
+          const instructions = currentRoute.legs[0].steps;
+          setRouteInstructions(instructions);
+          setCurrentInstruction(instructions[0]);
+          setDistanceToManeuver(instructions[0].distance);
         }
       }
     } catch (error) {
@@ -383,7 +423,7 @@ export default function Page() {
                     center: [longitude, latitude],
                     bearing: heading ?? map.getBearing(),
                     zoom: 20,
-                    pitch: 70,
+                    pitch: 75,
                     duration: 1000,
                     easing(t: any) { return t; }
                 });
@@ -426,7 +466,7 @@ export default function Page() {
       };
 
       simulationIntervalRef.current = setInterval(() => {
-        if (!route || !origin) return;
+        if (!route || !origin || !routeInstructions.length) return;
 
         const routeLine = route.geometry;
         const totalDistance = turf.length(routeLine, { units: 'meters' });
@@ -453,6 +493,42 @@ export default function Page() {
         const newCoords = newPoint.geometry.coordinates as [number, number];
         setOrigin(newCoords);
 
+        // Find current instruction and distance to it
+        const userPoint = turf.point(newCoords);
+        let closestInstructionIndex = -1;
+        let minDistance = Infinity;
+
+        routeInstructions.forEach((instr, index) => {
+            const instrPoint = turf.point(instr.maneuver.location);
+            const dist = turf.distance(userPoint, instrPoint, { units: 'meters'});
+            
+            // A simple way to check if we passed the maneuver
+            const along = turf.lineSlice(userPoint, instrPoint, routeLine);
+            const lengthAlong = turf.length(along, {units: 'meters'});
+
+            if (lengthAlong < 100 && dist < minDistance) {
+                minDistance = dist;
+                closestInstructionIndex = index;
+            }
+        });
+        
+        let currentStepIndex = 0;
+        let distToNextStep = simulationStateRef.current.distance;
+
+        for (let i = 0; i < routeInstructions.length; i++) {
+            distToNextStep -= routeInstructions[i].distance;
+            if (distToNextStep < 0) {
+                currentStepIndex = i;
+                setDistanceToManeuver(Math.abs(distToNextStep));
+                break;
+            }
+        }
+        
+        if (currentInstruction?.maneuver.instruction !== routeInstructions[currentStepIndex].maneuver.instruction) {
+             setCurrentInstruction(routeInstructions[currentStepIndex]);
+        }
+
+
         const startPoint = turf.point(newCoords);
         const endPoint = turf.point(routeLine.coordinates[routeLine.coordinates.length - 1]);
         setDisplayedRoute(turf.lineSlice(startPoint, endPoint, route));
@@ -464,9 +540,9 @@ export default function Page() {
         if (nextPointDistance <= totalDistance) {
           const nextPoint = turf.along(routeLine, nextPointDistance, { units: 'meters' });
           const bearing = turf.bearing(newPoint, nextPoint);
-          map.easeTo({ center: newCoords, zoom: 20, bearing: bearing, pitch: 70, duration: 1000, easing: (t:any) => t });
+          map.easeTo({ center: newCoords, zoom: 20, bearing: bearing, pitch: 75, duration: 1000, easing: (t:any) => t, padding: {bottom: map.getCanvas().height * 0.4} });
         } else {
-          map.easeTo({ center: newCoords, zoom: 20, pitch: 70, duration: 1000, easing: (t:any) => t });
+          map.easeTo({ center: newCoords, zoom: 20, pitch: 75, duration: 1000, easing: (t:any) => t, padding: {bottom: map.getCanvas().height * 0.4} });
         }
       }, 1000);
     } else {
@@ -577,9 +653,10 @@ export default function Page() {
         map.easeTo({
             center: origin,
             zoom: 20,
-            pitch: 70,
+            pitch: 75,
             bearing: 0,
             duration: 2000,
+            padding: {bottom: map.getCanvas().height * 0.4}
         });
     }
   }
@@ -645,9 +722,10 @@ export default function Page() {
         map.easeTo({
             center: origin,
             zoom: 20,
-            pitch: 70,
+            pitch: 75,
             bearing: 0,
             duration: 2000,
+            padding: {bottom: map.getCanvas().height * 0.4}
         });
     }
     
@@ -729,6 +807,8 @@ export default function Page() {
     setDisplayedRoute(null);
     setRouteInfo(null);
     setRouteInstructions([]);
+    setCurrentInstruction(null);
+    setDistanceToManeuver(null);
     setDestination(null);
     setPendingObjects([]);
     setCompletedObjects([]);
@@ -757,7 +837,7 @@ export default function Page() {
             const options: any = {
                 center: origin,
                 zoom: isNavigating ? 20 : 15,
-                pitch: isNavigating ? 70 : 0,
+                pitch: isNavigating ? 75 : 0,
             };
             if (isNavigating) {
                 options.padding = { bottom: map.getCanvas().height * 0.4 };
@@ -791,7 +871,8 @@ export default function Page() {
     return arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
   
-  const firstInstruction = routeInstructions[0];
+  const ManeuverIcon = currentInstruction ? getManeuverIcon(currentInstruction.maneuver.type, currentInstruction.maneuver.modifier) : ArrowUp;
+
 
   const getMarkerColor = (objectId: string): string => {
     if (completedObjects.includes(objectId)) {
@@ -916,14 +997,14 @@ export default function Page() {
             </div>
         )}
         
-        {isNavigating && firstInstruction && (
+        {isNavigating && currentInstruction && (
              <div className="absolute top-4 left-4 z-10 w-80">
                 <div className="bg-blue-600 text-white p-4 rounded-xl shadow-lg">
                     <div className="flex items-center gap-4">
-                        <ArrowUp className="h-10 w-10" />
+                        <ManeuverIcon className="h-10 w-10" />
                         <div>
-                            <p className="text-3xl font-bold">{formatDistance(firstInstruction.distance)}</p>
-                            <p className="text-lg font-medium leading-tight">{firstInstruction.maneuver.instruction}</p>
+                            <p className="text-3xl font-bold">{distanceToManeuver ? formatDistance(distanceToManeuver) : '...'}</p>
+                            <p className="text-lg font-medium leading-tight">{currentInstruction.maneuver.instruction}</p>
                         </div>
                     </div>
                 </div>
