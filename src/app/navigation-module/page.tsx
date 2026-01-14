@@ -1123,8 +1123,7 @@ export default function Page() {
         >
           {origin && (
             <Marker longitude={origin[0]} latitude={origin[1]}>
-              <div className="p-1 bg-blue-500 rounded-full border-4 border-white shadow-md flex items-center justify-center" style={{ transform: `rotate(${heading || 0}deg)` }}>
-                <Navigation className="w-5 h-5 text-white" />
+              <div className="p-2 bg-blue-500 rounded-full border-4 border-white shadow-md">
               </div>
             </Marker>
           )}
