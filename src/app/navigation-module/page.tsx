@@ -28,6 +28,7 @@ import {
   ArrowDownLeft,
   ArrowDownRight,
   Undo2,
+  Car,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -1123,7 +1124,12 @@ export default function Page() {
         >
           {origin && (
             <Marker longitude={origin[0]} latitude={origin[1]}>
-               <div className="p-4 bg-blue-500 rounded-full border-4 border-white shadow-md" />
+               <div
+                className="bg-blue-600 p-2 rounded-full shadow-lg border-2 border-white flex items-center justify-center"
+                style={{ transform: `rotate(${heading || 0}deg)` }}
+              >
+                <Car className="w-6 h-6 text-white" />
+              </div>
             </Marker>
           )}
           
