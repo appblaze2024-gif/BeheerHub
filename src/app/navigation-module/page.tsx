@@ -530,7 +530,7 @@ export default function Page() {
 
         const map = mapRef.current?.getMap();
         if (!map) return;
-
+        
         const nextPointDistance = simulationStateRef.current.distance + 10;
         if (nextPointDistance <= totalDistance) {
           const nextPoint = turf.along(routeLine, nextPointDistance, { units: 'meters' });
@@ -542,6 +542,7 @@ export default function Page() {
               pitch: 70, 
               duration: 1000, 
               easing: (t:any) => t,
+              padding: {bottom: map.getCanvas().height * 0.9}
             });
         } else {
           map.easeTo({ 
@@ -550,6 +551,7 @@ export default function Page() {
               pitch: 70, 
               duration: 1000, 
               easing: (t:any) => t,
+              padding: {bottom: map.getCanvas().height * 0.9}
             });
         }
       }, 1000);
@@ -664,6 +666,7 @@ export default function Page() {
             pitch: 70,
             bearing: 0,
             duration: 2000,
+            padding: {bottom: map.getCanvas().height * 0.9}
         });
     }
   }
@@ -732,6 +735,7 @@ export default function Page() {
             pitch: 70,
             bearing: 0,
             duration: 2000,
+            padding: {bottom: map.getCanvas().height * 0.9}
         });
     }
     
@@ -848,6 +852,7 @@ export default function Page() {
 
         if (isNavigating) {
           options.pitch = 70;
+          options.padding = {bottom: map.getCanvas().height * 0.9}
         } else {
           options.pitch = 0;
         }
