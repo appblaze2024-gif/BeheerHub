@@ -166,7 +166,7 @@ export default function Page() {
   const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsCollection);
 
   const [origin, setOrigin] = React.useState<[number, number] | null>(null);
-  const [heading, setHeading] = React.useState<number | null>(null);
+  const [bearing, setBearing] = React.useState<number>(0);
   const [locationError, setLocationError] = React.useState<string | null>(null);
   const [route, setRoute] = React.useState<any>(null);
   const [displayedRoute, setDisplayedRoute] = React.useState<any>(null);
@@ -406,93 +406,92 @@ export default function Page() {
   };
 
  const startTracking = () => {
-  if (!navigator.geolocation || isSimulating) {
-    console.log("Geolocation is not supported or simulation is active.");
-    return;
-  }
-
-  if (watchIdRef.current) {
-    navigator.geolocation.clearWatch(watchIdRef.current);
-  }
-
-  watchIdRef.current = navigator.geolocation.watchPosition(
-    (position) => {
-      const { longitude, latitude, speed: gpsSpeed } = position.coords;
-      const newOrigin: [number, number] = [longitude, latitude];
-      setOrigin(newOrigin);
-      setCurrentSpeed((gpsSpeed || 0) * 3.6); // Convert m/s to km/h
-
-      if (isNavigating && route) {
-        const map = mapRef.current?.getMap();
-        if (!map) return;
-
-        const newPoint = turf.point(newOrigin);
-        const routeLine = route.geometry;
-        
-        const snapped = turf.nearestPointOnLine(routeLine, newPoint, { units: 'meters' });
-        const distanceTraveled = turf.length(
-          turf.lineSlice(turf.point(routeLine.coordinates[0]), snapped.geometry.coordinates, routeLine),
-          { units: 'meters' }
-        );
-
-        setRemainingDistance((routeInfo?.distance || 0) - distanceTraveled);
-        
-        setDisplayedRoute(
-          turf.lineSlice(
-            snapped.geometry.coordinates,
-            turf.point(routeLine.coordinates[routeLine.coordinates.length - 1]).geometry.coordinates,
-            routeLine
-          )
-        );
-
-        let distanceTraveledOnInstructions = 0;
-        let upcomingInstructionIndex = -1;
-        for (let i = 0; i < routeInstructions.length; i++) {
-          distanceTraveledOnInstructions += routeInstructions[i].distance;
-          if (distanceTraveledOnInstructions > distanceTraveled) {
-            upcomingInstructionIndex = i;
-            break;
-          }
-        }
-
-        if (upcomingInstructionIndex !== -1) {
-          const distanceToNextManeuver = distanceTraveledOnInstructions - distanceTraveled;
-          setDistanceToManeuver(distanceToNextManeuver);
-          if (currentInstructionIndex !== upcomingInstructionIndex) {
-            setCurrentInstructionIndex(upcomingInstructionIndex);
-            setCurrentInstruction(routeInstructions[upcomingInstructionIndex]);
-          }
-        }
-
-        const nextPointDistance = distanceTraveled + 10;
-        let bearing = heading || 0;
-        if (nextPointDistance <= (routeInfo?.distance || 0)) {
-          const nextPointOnRoute = turf.along(routeLine, nextPointDistance, { units: 'meters' });
-          bearing = turf.bearing(snapped, nextPointOnRoute);
-          setHeading(bearing);
-        }
-        
-        map.easeTo({
-          center: newOrigin,
-          zoom: 20,
-          bearing: bearing,
-          pitch: 70,
-          duration: 1000,
-          easing: (t: number) => t,
-          padding: { top: map.getCanvas().height * 0.35 },
-        });
-      }
-    },
-    (error) => {
-      console.error("Error watching position:", error);
-    },
-    {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 0,
+    if (!navigator.geolocation || isSimulating) {
+      console.log("Geolocation is not supported or simulation is active.");
+      return;
     }
-  );
-};
+  
+    if (watchIdRef.current) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+    }
+  
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (position) => {
+        const { longitude, latitude, speed: gpsSpeed } = position.coords;
+        const newOrigin: [number, number] = [longitude, latitude];
+        setOrigin(newOrigin);
+        setCurrentSpeed((gpsSpeed || 0) * 3.6); // Convert m/s to km/h
+  
+        if (isNavigating && route && route.geometry) {
+          const map = mapRef.current?.getMap();
+          if (!map) return;
+  
+          const routeLine = route.geometry;
+          const newPoint = turf.point(newOrigin);
+          const snapped = turf.nearestPointOnLine(routeLine, newPoint, { units: 'meters' });
+          const distanceTraveled = turf.length(
+            turf.lineSlice(turf.point(routeLine.coordinates[0]), snapped.geometry.coordinates, routeLine),
+            { units: 'meters' }
+          );
+  
+          setRemainingDistance((routeInfo?.distance || 0) - distanceTraveled);
+          
+          setDisplayedRoute(
+            turf.lineSlice(
+              snapped.geometry.coordinates,
+              turf.point(routeLine.coordinates[routeLine.coordinates.length - 1]).geometry.coordinates,
+              routeLine
+            )
+          );
+  
+          let distanceTraveledOnInstructions = 0;
+          let upcomingInstructionIndex = -1;
+          for (let i = 0; i < routeInstructions.length; i++) {
+            distanceTraveledOnInstructions += routeInstructions[i].distance;
+            if (distanceTraveledOnInstructions > distanceTraveled) {
+              upcomingInstructionIndex = i;
+              break;
+            }
+          }
+  
+          if (upcomingInstructionIndex !== -1) {
+            const distanceToNextManeuver = distanceTraveledOnInstructions - distanceTraveled;
+            setDistanceToManeuver(distanceToNextManeuver);
+            if (currentInstructionIndex !== upcomingInstructionIndex) {
+              setCurrentInstructionIndex(upcomingInstructionIndex);
+              setCurrentInstruction(routeInstructions[upcomingInstructionIndex]);
+            }
+          }
+  
+          const nextPointDistance = distanceTraveled + 10;
+          let newBearing = bearing;
+          if (nextPointDistance <= (routeInfo?.distance || 0)) {
+            const nextPointOnRoute = turf.along(routeLine, nextPointDistance, { units: 'meters' });
+            newBearing = turf.bearing(snapped, nextPointOnRoute);
+            setBearing(newBearing);
+          }
+          
+          map.easeTo({
+            center: newOrigin,
+            zoom: 20,
+            bearing: newBearing,
+            pitch: 70,
+            duration: 1000,
+            easing: (t: number) => t,
+            padding: { top: map.getCanvas().height * 0.35 },
+          });
+        }
+      },
+      (error) => {
+        console.error("Error watching position:", error);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
+  };
   
 
   const stopTracking = () => {
@@ -568,17 +567,17 @@ export default function Page() {
         setDisplayedRoute(turf.lineSlice(startPoint, endPoint, route));
         
         const nextPointDistance = simulationStateRef.current.distance + 10;
-        let bearing = heading || 0;
+        let newBearing = bearing;
         if (nextPointDistance <= totalDistance) {
           const nextPointOnRoute = turf.along(routeLine, nextPointDistance, { units: 'meters' });
-          bearing = turf.bearing(newPoint, nextPointOnRoute);
-          setHeading(bearing);
+          newBearing = turf.bearing(newPoint, nextPointOnRoute);
+          setBearing(newBearing);
         }
 
         map.easeTo({ 
           center: newCoords, 
           zoom: 20, 
-          bearing: bearing, 
+          bearing: newBearing, 
           pitch: 70, 
           duration: 1000, 
           easing: (t: number) => t,
@@ -1150,7 +1149,7 @@ export default function Page() {
             <Marker longitude={origin[0]} latitude={origin[1]}>
                <div
                 className="flex items-center justify-center filter drop-shadow-md"
-                style={{ transform: `rotate(${heading || 0}deg)` }}
+                style={{ transform: `rotate(${bearing}deg)` }}
               >
                 <svg width="32" height="32" viewBox="0 0 50 50" style={{transform: "rotate(-45deg)"}}>
                     <path
