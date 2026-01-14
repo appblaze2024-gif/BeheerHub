@@ -429,6 +429,7 @@ export default function Page() {
                     pitch: 70,
                     duration: 1000,
                     easing(t: any) { return t; },
+                    padding: { bottom: map.getCanvas().height * 0.8 }
                 });
             }
         }
@@ -534,9 +535,24 @@ export default function Page() {
         if (nextPointDistance <= totalDistance) {
           const nextPoint = turf.along(routeLine, nextPointDistance, { units: 'meters' });
           const bearing = turf.bearing(newPoint, nextPoint);
-          map.easeTo({ center: newCoords, zoom: 20, bearing: bearing, pitch: 70, duration: 1000, easing: (t:any) => t });
+          map.easeTo({ 
+              center: newCoords, 
+              zoom: 20, 
+              bearing: bearing, 
+              pitch: 70, 
+              duration: 1000, 
+              easing: (t:any) => t,
+              padding: { bottom: map.getCanvas().height * 0.8 } 
+            });
         } else {
-          map.easeTo({ center: newCoords, zoom: 20, pitch: 70, duration: 1000, easing: (t:any) => t });
+          map.easeTo({ 
+              center: newCoords, 
+              zoom: 20, 
+              pitch: 70, 
+              duration: 1000, 
+              easing: (t:any) => t,
+              padding: { bottom: map.getCanvas().height * 0.8 } 
+            });
         }
       }, 1000);
     } else {
@@ -650,7 +666,7 @@ export default function Page() {
             pitch: 70,
             bearing: 0,
             duration: 2000,
-            padding: {bottom: map.getCanvas().height * 0.8}
+            padding: { bottom: map.getCanvas().height * 0.8 }
         });
     }
   }
@@ -719,7 +735,7 @@ export default function Page() {
             pitch: 70,
             bearing: 0,
             duration: 2000,
-            padding: {bottom: map.getCanvas().height * 0.8}
+            padding: { bottom: map.getCanvas().height * 0.8 }
         });
     }
     
