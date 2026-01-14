@@ -1173,8 +1173,7 @@ export default function NavigationModulePage() {
                  <DialogFooter>
                   <DialogClose asChild>
                     <Button variant="ghost">Close</Button>
-                  </DialogClose>
-                </DialogFooter>
+                  </DialogFooter>
             </DialogContent>
         </Dialog>
       </div>
