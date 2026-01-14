@@ -411,38 +411,73 @@ export default function Page() {
       console.log("Geolocation is not supported or simulation is active.");
       return;
     }
-    
+
     if (watchIdRef.current) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
+      navigator.geolocation.clearWatch(watchIdRef.current);
     }
 
     watchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
         const { longitude, latitude, speed: gpsSpeed } = position.coords;
-        setOrigin([longitude, latitude]);
+        const newOrigin: [number, number] = [longitude, latitude];
+        setOrigin(newOrigin);
         setCurrentSpeed((gpsSpeed || 0) * 3.6); // Convert m/s to km/h
 
-        if (isNavigating) {
-            const map = mapRef.current?.getMap();
-             if (map && route) {
-                const newPoint = turf.point([longitude, latitude]);
-                const snapped = turf.nearestPointOnLine(route.geometry, newPoint);
-                const bearing = turf.bearing(
-                  snapped,
-                  turf.along(route.geometry, turf.length(turf.lineSlice(turf.point(route.geometry.coordinates[0]), snapped, route.geometry)) + 0.01)
-                );
-                setHeading(bearing);
+        if (isNavigating && route) {
+          const map = mapRef.current?.getMap();
+          if (!map) return;
 
-                map.easeTo({
-                    center: [longitude, latitude],
-                    bearing: bearing,
-                    zoom: 20,
-                    pitch: 70,
-                    duration: 1000,
-                    easing: (t: any) => t,
-                    padding: {top: map.getCanvas().height * 0.35}
-                });
-            }
+          const newPoint = turf.point(newOrigin);
+          const routeLine = route.geometry;
+          const snapped = turf.nearestPointOnLine(routeLine, newPoint);
+          const distanceTraveled = turf.length(turf.lineSlice(turf.point(routeLine.coordinates[0]), snapped, routeLine));
+          
+          setRemainingDistance((routeInfo?.distance || 0) - distanceTraveled);
+          setDisplayedRoute(turf.lineSlice(snapped, turf.point(routeLine.coordinates[routeLine.coordinates.length - 1]), routeLine));
+
+          let distanceTraveledOnInstructions = 0;
+          let upcomingInstructionIndex = -1;
+          for (let i = 0; i < routeInstructions.length; i++) {
+              distanceTraveledOnInstructions += routeInstructions[i].distance;
+              if (distanceTraveledOnInstructions > distanceTraveled) {
+                  upcomingInstructionIndex = i;
+                  break;
+              }
+          }
+          
+          if (upcomingInstructionIndex !== -1) {
+              const distanceToNextManeuver = distanceTraveledOnInstructions - distanceTraveled;
+              setDistanceToManeuver(distanceToNextManeuver);
+              if (currentInstructionIndex !== upcomingInstructionIndex) {
+                  setCurrentInstructionIndex(upcomingInstructionIndex);
+                  setCurrentInstruction(routeInstructions[upcomingInstructionIndex]);
+              }
+          }
+
+          const nextPointDistance = distanceTraveled + 10;
+          if (nextPointDistance <= (routeInfo?.distance || 0)) {
+            const nextPoint = turf.along(routeLine, nextPointDistance, { units: 'meters' });
+            const bearing = turf.bearing(newPoint, nextPoint);
+            setHeading(bearing);
+            map.easeTo({ 
+                center: newOrigin, 
+                zoom: 20, 
+                bearing: bearing, 
+                pitch: 70, 
+                duration: 1000, 
+                easing: (t:any) => t,
+                padding: {top: map.getCanvas().height * 0.35}
+            });
+          } else {
+            map.easeTo({ 
+                center: newOrigin, 
+                zoom: 20, 
+                pitch: 70, 
+                duration: 1000, 
+                easing: (t:any) => t,
+                padding: {top: map.getCanvas().height * 0.35}
+            });
+          }
         }
       },
       (error) => {
