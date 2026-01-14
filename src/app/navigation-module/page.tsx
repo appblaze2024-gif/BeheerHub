@@ -475,6 +475,14 @@ export default function NavigationModulePage() {
         }
         setCurrentSpeed(0);
         startTracking();
+        if (origin) {
+            mapRef.current?.getMap().easeTo({
+                center: origin,
+                zoom: 14,
+                pitch: 0,
+                bearing: 0,
+            });
+        }
       }
       return nextState;
     });
@@ -1172,8 +1180,9 @@ export default function NavigationModulePage() {
                 </Tabs>
                  <DialogFooter>
                   <DialogClose asChild>
-                    <Button variant="ghost">Close</Button>
-                  </DialogFooter>
+                    <Button variant="ghost">Sluiten</Button>
+                  </DialogClose>
+                 </DialogFooter>
             </DialogContent>
         </Dialog>
       </div>
