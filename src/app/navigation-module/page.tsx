@@ -409,96 +409,94 @@ export default function NavigationModulePage() {
   };
 
   const handleToggleSimulation = () => {
-    setIsSimulating(prevIsSimulating => {
-      const isStarting = !prevIsSimulating;
-  
-      if (isStarting) {
-        // --- STARTING SIMULATION ---
-        stopTracking(); // Ensure no real GPS is running
-        simulationStateRef.current = {
-          distance: 0,
-          speed: 0, // Start speed at 0
-          acceleration: 2, // m/s^2
-          maxSpeed: 50 / 3.6,
-        };
-  
-        simulationIntervalRef.current = setInterval(() => {
-          if (!route || !origin) return;
-  
-          const routeLine = route.geometry;
-          const totalDistance = turf.length(routeLine, { units: 'meters' });
-          const { speed, maxSpeed, acceleration, distance } = simulationStateRef.current;
-          const remainingDistance = totalDistance - distance;
-  
-          // --- ACCELERATION & DECELERATION LOGIC ---
-          let newSpeed = speed;
-          if (remainingDistance < 50) { // Start decelerating near the end
-            newSpeed = Math.max(3, speed - acceleration);
-          } else {
-            newSpeed = Math.min(maxSpeed, speed + acceleration); // Accelerate to max speed
-          }
-  
-          simulationStateRef.current.speed = newSpeed;
-          simulationStateRef.current.distance += newSpeed; // distance for this tick
-          setCurrentSpeed(newSpeed * 3.6);
-  
-          if (simulationStateRef.current.distance >= totalDistance) {
-            handleToggleSimulation(); // Stop simulation
-            return;
-          }
-  
-          const newPoint = turf.along(routeLine, simulationStateRef.current.distance, { units: 'meters' });
-          const newCoords = newPoint.geometry.coordinates as [number, number];
-          setOrigin(newCoords);
-  
-          const startPoint = turf.point(newCoords);
-          const endPoint = turf.point(routeLine.coordinates[routeLine.coordinates.length - 1]);
-          setDisplayedRoute(turf.lineSlice(startPoint, endPoint, route));
-  
-          const nextPointDistance = simulationStateRef.current.distance + 10;
-          if (nextPointDistance <= totalDistance) {
-            const nextPoint = turf.along(routeLine, nextPointDistance, { units: 'meters' });
-            const bearing = turf.bearing(newPoint, nextPoint);
-            mapRef.current?.getMap().easeTo({ center: newCoords, zoom: 20, bearing: bearing, pitch: 60, duration: 1000, easing: (t:any) => t });
-          } else {
-            mapRef.current?.getMap().easeTo({ center: newCoords, zoom: 20, pitch: 60, duration: 1000, easing: (t:any) => t });
-          }
-        }, 1000);
-  
-      } else {
-        // --- PAUSING SIMULATION ---
-        if (simulationIntervalRef.current) {
-          clearInterval(simulationIntervalRef.current);
-          simulationIntervalRef.current = null;
-        }
-        setCurrentSpeed(0);
-        
-        // Get real location once to reset view
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const { longitude, latitude } = position.coords;
-            setOrigin([longitude, latitude]);
-            mapRef.current?.getMap().easeTo({
-                center: [longitude, latitude],
-                zoom: 14,
-                pitch: 0,
-                bearing: 0,
-            });
-          },
-          () => { // Error case
-            if (origin) {
-               mapRef.current?.getMap().easeTo({
-                  center: origin,
-                  zoom: 14,
-                  pitch: 0,
-                  bearing: 0,
-              });
-            }
-          }
-        );
+    const isStarting = !isSimulating;
+    setIsSimulating(isStarting);
+
+    if (isStarting) {
+      // --- STARTING SIMULATION ---
+      if (simulationIntervalRef.current) {
+        clearInterval(simulationIntervalRef.current);
       }
-      return isStarting; // Return new state
-    });
+      stopTracking();
+      simulationStateRef.current = {
+        distance: 0,
+        speed: 0,
+        acceleration: 2,
+        maxSpeed: 50 / 3.6,
+      };
+
+      simulationIntervalRef.current = setInterval(() => {
+        if (!route || !origin) return;
+
+        const routeLine = route.geometry;
+        const totalDistance = turf.length(routeLine, { units: 'meters' });
+        const { speed, maxSpeed, acceleration, distance } = simulationStateRef.current;
+        const remainingDistance = totalDistance - distance;
+
+        let newSpeed = speed;
+        if (remainingDistance < 50) {
+          newSpeed = Math.max(3, speed - acceleration);
+        } else {
+          newSpeed = Math.min(maxSpeed, speed + acceleration);
+        }
+
+        simulationStateRef.current.speed = newSpeed;
+        simulationStateRef.current.distance += newSpeed;
+        setCurrentSpeed(newSpeed * 3.6);
+
+        if (simulationStateRef.current.distance >= totalDistance) {
+          handleToggleSimulation();
+          return;
+        }
+
+        const newPoint = turf.along(routeLine, simulationStateRef.current.distance, { units: 'meters' });
+        const newCoords = newPoint.geometry.coordinates as [number, number];
+        setOrigin(newCoords);
+
+        const startPoint = turf.point(newCoords);
+        const endPoint = turf.point(routeLine.coordinates[routeLine.coordinates.length - 1]);
+        setDisplayedRoute(turf.lineSlice(startPoint, endPoint, route));
+
+        const nextPointDistance = simulationStateRef.current.distance + 10;
+        if (nextPointDistance <= totalDistance) {
+          const nextPoint = turf.along(routeLine, nextPointDistance, { units: 'meters' });
+          const bearing = turf.bearing(newPoint, nextPoint);
+          mapRef.current?.getMap().easeTo({ center: newCoords, zoom: 20, bearing: bearing, pitch: 60, duration: 1000, easing: (t:any) => t });
+        } else {
+          mapRef.current?.getMap().easeTo({ center: newCoords, zoom: 20, pitch: 60, duration: 1000, easing: (t:any) => t });
+        }
+      }, 1000);
+    } else {
+      // --- PAUSING SIMULATION ---
+      if (simulationIntervalRef.current) {
+        clearInterval(simulationIntervalRef.current);
+        simulationIntervalRef.current = null;
+      }
+      setCurrentSpeed(0);
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { longitude, latitude } = position.coords;
+          setOrigin([longitude, latitude]);
+          mapRef.current?.getMap().easeTo({
+            center: [longitude, latitude],
+            zoom: 14,
+            pitch: 0,
+            bearing: 0,
+          });
+        },
+        () => {
+          if (origin) {
+            mapRef.current?.getMap().easeTo({
+              center: origin,
+              zoom: 14,
+              pitch: 0,
+              bearing: 0,
+            });
+          }
+        }
+      );
+    }
   };
   
   
@@ -709,10 +707,10 @@ export default function NavigationModulePage() {
         endTime: serverTimestamp()
       });
     }
-
+    
     if (simulationIntervalRef.current) {
-      clearInterval(simulationIntervalRef.current);
-      simulationIntervalRef.current = null;
+        clearInterval(simulationIntervalRef.current);
+        simulationIntervalRef.current = null;
     }
     setIsSimulating(false);
     setCurrentSpeed(0);
