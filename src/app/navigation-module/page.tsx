@@ -572,7 +572,7 @@ export default function Page() {
         if (distanceToNextManeuver < 5 && upcomingInstructionIndex > currentInstructionIndex) {
             simulationStateRef.current.isPausedAtManeuver = true;
             setCurrentSpeed(0);
-            setCurrentInstructionIndex(upcomingInstructionIndex); // Update index BEFORE pausing
+            setCurrentInstructionIndex(upcomingInstructionIndex);
             setTimeout(() => {
                 simulationStateRef.current.isPausedAtManeuver = false;
             }, 2000); // Pause for 2 seconds
