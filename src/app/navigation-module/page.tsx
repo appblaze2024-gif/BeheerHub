@@ -411,7 +411,7 @@ export default function Page() {
             const firstPoint = turf.point(routeGeoJSON.geometry.coordinates[0]);
             const secondPoint = turf.point(routeGeoJSON.geometry.coordinates[1]);
             const initialBearing = turf.bearing(firstPoint, secondPoint);
-            setViewState(prev => ({...prev, bearing: initialBearing}));
+            
             map.easeTo({
               center: snappedStart,
               zoom: 20,
@@ -444,7 +444,6 @@ export default function Page() {
       (position) => {
         const { longitude, latitude, speed: gpsSpeed } = position.coords;
         const newOrigin: [number, number] = [longitude, latitude];
-        setOrigin(newOrigin); // Keep track of raw GPS
         const newSpeed = (gpsSpeed || 0) * 3.6;
         setCurrentSpeed(newSpeed);
   
@@ -460,7 +459,7 @@ export default function Page() {
         if (!snapped) return;
 
         const snappedCoords = snapped.geometry.coordinates as [number, number];
-        setSnappedOrigin(snappedCoords); // This is the single source of truth for the marker/camera
+        setSnappedOrigin(snappedCoords);
 
         const distanceTraveled = turf.length(
           turf.lineSlice(turf.point(routeLine.coordinates[0]), snappedCoords, routeLine),
@@ -502,7 +501,6 @@ export default function Page() {
           const nextPointOnRoute = turf.along(routeLine, nextPointDistance, { units: 'meters' });
           newBearing = turf.bearing(snappedCoords, nextPointOnRoute.geometry.coordinates);
         }
-        setViewState(prev => ({...prev, bearing: newBearing}));
         
         map.easeTo({
           center: snappedCoords,
@@ -568,22 +566,21 @@ export default function Page() {
         
         const distanceToNextManeuver = distanceTraveledOnInstructions - simulationStateRef.current.distance;
         
-        // Pause logic
         if (distanceToNextManeuver < 5 && upcomingInstructionIndex > currentInstructionIndex) {
+            setCurrentInstructionIndex(upcomingInstructionIndex);
             simulationStateRef.current.isPausedAtManeuver = true;
             setCurrentSpeed(0);
-            setCurrentInstructionIndex(upcomingInstructionIndex);
             setTimeout(() => {
                 simulationStateRef.current.isPausedAtManeuver = false;
-            }, 2000); // Pause for 2 seconds
+            }, 2000);
             return;
         }
 
         let speedInMps;
         if (distanceToNextManeuver < 100) {
-            speedInMps = 30 / 3.6; // Slow down to 30km/h
+            speedInMps = 30 / 3.6;
         } else {
-            speedInMps = 70 / 3.6; // Normal speed 70km/h
+            speedInMps = 70 / 3.6;
         }
 
         simulationStateRef.current.distance += speedInMps;
@@ -619,7 +616,6 @@ export default function Page() {
         if (nextPointDistance <= totalDistance) {
           const nextPointOnRoute = turf.along(routeLine, nextPointDistance, { units: 'meters' });
           newBearing = turf.bearing(newPoint, nextPointOnRoute);
-          setViewState(prev => ({...prev, bearing: newBearing}));
         }
 
         map.easeTo({ 
@@ -774,8 +770,8 @@ export default function Page() {
   }, [historyRoutes, objects, origin, projects]);
 
   const handleStartOrResume = useCallback(() => {
-    setIsCalculating(true);
     setIsNavigating(true);
+    setIsCalculating(true);
     if (selectedHistoryId) {
         handleResumeRoute(selectedHistoryId);
     } else if (selectedRouteId) {
@@ -873,15 +869,15 @@ export default function Page() {
     setSelectedHistoryId(null);
     stopTracking();
     
-    setViewState(prev => ({ ...prev, pitch: 0, bearing: 0, zoom: 14 }));
-     if(origin) {
-        mapRef.current?.getMap().easeTo({
-            center: origin,
-            zoom: 14,
-            pitch: 0,
-            bearing: 0,
-        });
-     }
+    if(origin) {
+      setViewState(prev => ({ ...prev, pitch: 0, bearing: 0, zoom: 14, longitude: origin[0], latitude: origin[1] }));
+      mapRef.current?.getMap().easeTo({
+          center: origin,
+          zoom: 14,
+          pitch: 0,
+          bearing: 0,
+      });
+    }
   }
 
   const centerOnLocation = () => {
@@ -1166,7 +1162,7 @@ export default function Page() {
           {snappedOrigin && (
             <Marker longitude={snappedOrigin[0]} latitude={snappedOrigin[1]} rotationAlignment="map" rotation={viewState.bearing}>
               <div className="flex items-center justify-center">
-                 <svg width={isNavigating ? "32" : "16"} height={isNavigating ? "32" : "16"} viewBox="0 0 50 50">
+                <svg width={isNavigating ? "32" : "16"} height={isNavigating ? "32" : "16"} viewBox="0 0 50 50" style={{ transform: `rotate(${viewState.bearing}deg)` }}>
                     <circle cx="25" cy="25" r="25" fill="#3b82f6" stroke="#ffffff" strokeWidth="4" />
                 </svg>
               </div>
