@@ -669,23 +669,10 @@ export default function Page() {
       return closestObject;
   }
 
-  const handleStartOrResume = () => {
-    setIsNavigating(true);
-    if (selectedHistoryId) {
-        handleResumeRoute(selectedHistoryId);
-    } else if (selectedRouteId) {
-        handleStartNavigation();
-    }
-  };
-  
-  const handleStartNavigation = async () => {
+  const handleStartNavigation = React.useCallback(async () => {
     if (!origin || !user || !firestore || !selectedProjectId || !selectedRouteId || !selectedRoute) return;
 
-    setIsNavigating(true);
     setIsCalculating(true);
-
-    const map = mapRef.current?.getMap();
-    if (!map) return;
 
     const allObjects = objectsInWijk;
     const allObjectIds = allObjects.map(obj => obj.id);
@@ -724,80 +711,68 @@ export default function Page() {
     }
 
     startTracking();
-};
+  }, [origin, user, firestore, selectedProjectId, selectedRouteId, selectedRoute, objectsInWijk]);
 
+  const handleResumeRoute = React.useCallback(async (historyId: string) => {
+    const routeToResume = historyRoutes?.find(r => r.id === historyId);
+    if (!routeToResume || !objects || !origin) {
+        console.error("Route to resume not found or objects/origin not ready.");
+        return;
+    }
 
-  const handleResumeRoute = (historyId: string) => {
-      const routeToResume = historyRoutes?.find(r => r.id === historyId);
-      if (!routeToResume) {
-          console.error("Route to resume not found in history.");
-          return;
-      }
-      
-      const project = projects?.find(p => p.id === routeToResume.projectId);
-      if (!project) {
+    const project = projects?.find(p => p.id === routeToResume.projectId);
+    if (!project) {
         console.error("Project for the route not found.");
         return;
-      }
-
-      setSelectedProjectId(project.id);
-      setSelectedRouteId(routeToResume.originalRouteId);
-      if (project.veegroutes?.some(r => r.id === routeToResume.originalRouteId)) {
-        setSelectedRouteType('veeg');
-      } else if (project.prullenbakkenroutes?.some(r => r.id === routeToResume.originalRouteId)) {
-        setSelectedRouteType('prullenbak');
-      }
-  };
-
-
-  React.useEffect(() => {
-    if (selectedHistoryId && isNavigating && objects && origin) {
-        const startResume = async () => {
-            setIsNavigating(true);
-            const routeToResume = historyRoutes?.find(r => r.id === selectedHistoryId);
-            if (!routeToResume) return;
-
-            const map = mapRef.current?.getMap();
-            if (!map) return;
-
-            setIsCalculating(true);
-
-            const routeObjects = (routeToResume.allObjectIds || [])
-                .map(id => objects.find(o => o.id === id))
-                .filter((o): o is MapObject => !!o);
-
-            if (routeObjects.length === 0 && (routeToResume.allObjectIds || []).length > 0) {
-                // objects not loaded yet, wait.
-                setIsCalculating(false);
-                setIsNavigating(false);
-                return;
-            }
-
-            setActiveRouteHistoryId(routeToResume.id);
-            const completed = routeToResume.completedObjects || [];
-            const skipped = routeToResume.skippedObjects || [];
-            setCompletedObjects(completed);
-            setSkippedObjects(skipped);
-
-            const remainingObjects = routeObjects.filter(
-                obj => !completed.includes(obj.id) && !skipped.includes(obj.id)
-            );
-            setPendingObjects(remainingObjects);
-
-            const nextObject = findNextObject(origin, remainingObjects);
-            if (nextObject) {
-                setDestination(nextObject);
-                await calculateRoute([origin, [nextObject.longitude, nextObject.latitude]]);
-            } else {
-                setIsCalculating(false);
-            }
-
-            startTracking();
-        };
-
-        startResume();
     }
-}, [selectedHistoryId, isNavigating, objects, origin, historyRoutes]);
+
+    setIsCalculating(true);
+    setSelectedProjectId(project.id);
+    setSelectedRouteId(routeToResume.originalRouteId);
+    if (project.veegroutes?.some(r => r.id === routeToResume.originalRouteId)) {
+        setSelectedRouteType('veeg');
+    } else if (project.prullenbakkenroutes?.some(r => r.id === routeToResume.originalRouteId)) {
+        setSelectedRouteType('prullenbak');
+    }
+
+    const routeObjects = (routeToResume.allObjectIds || [])
+        .map(id => objects.find(o => o.id === id))
+        .filter((o): o is MapObject => !!o);
+
+    if (routeObjects.length === 0 && (routeToResume.allObjectIds || []).length > 0) {
+        setIsCalculating(false);
+        return;
+    }
+
+    setActiveRouteHistoryId(routeToResume.id);
+    const completed = routeToResume.completedObjects || [];
+    const skipped = routeToResume.skippedObjects || [];
+    setCompletedObjects(completed);
+    setSkippedObjects(skipped);
+
+    const remainingObjects = routeObjects.filter(
+        obj => !completed.includes(obj.id) && !skipped.includes(obj.id)
+    );
+    setPendingObjects(remainingObjects);
+
+    const nextObject = findNextObject(origin, remainingObjects);
+    if (nextObject) {
+        setDestination(nextObject);
+        await calculateRoute([origin, [nextObject.longitude, nextObject.latitude]]);
+    } else {
+        setIsCalculating(false);
+    }
+    startTracking();
+  }, [historyRoutes, objects, origin, projects]);
+
+  const handleStartOrResume = () => {
+    setIsNavigating(true);
+    if (selectedHistoryId) {
+        handleResumeRoute(selectedHistoryId);
+    } else if (selectedRouteId) {
+        handleStartNavigation();
+    }
+  };
   
   const updateObjectStatus = async (objectId: string, status: 'completed' | 'skipped'): Promise<MapObject[]> => {
       if (!firestore || !user || !activeRouteHistoryId) return pendingObjects;
