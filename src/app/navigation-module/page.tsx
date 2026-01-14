@@ -567,20 +567,23 @@ export default function Page() {
         }
         
         const distanceToNextManeuver = distanceTraveledOnInstructions - simulationStateRef.current.distance;
+        
+        // Pause logic
+        if (distanceToNextManeuver < 5 && upcomingInstructionIndex > currentInstructionIndex) {
+            simulationStateRef.current.isPausedAtManeuver = true;
+            setCurrentSpeed(0);
+            setCurrentInstructionIndex(upcomingInstructionIndex); // Update index BEFORE pausing
+            setTimeout(() => {
+                simulationStateRef.current.isPausedAtManeuver = false;
+            }, 2000); // Pause for 2 seconds
+            return;
+        }
+
         let speedInMps;
         if (distanceToNextManeuver < 100) {
             speedInMps = 30 / 3.6; // Slow down to 30km/h
         } else {
             speedInMps = 70 / 3.6; // Normal speed 70km/h
-        }
-
-        if (distanceToNextManeuver < 5 && upcomingInstructionIndex > currentInstructionIndex) {
-            simulationStateRef.current.isPausedAtManeuver = true;
-            setCurrentSpeed(0);
-            setTimeout(() => {
-                simulationStateRef.current.isPausedAtManeuver = false;
-            }, 2000); // Pause for 2 seconds
-            return;
         }
 
         simulationStateRef.current.distance += speedInMps;
@@ -599,9 +602,7 @@ export default function Page() {
 
         if (upcomingInstructionIndex !== -1) {
             setDistanceToManeuver(distanceToNextManeuver);
-
             if (currentInstructionIndex !== upcomingInstructionIndex) {
-                setCurrentInstructionIndex(upcomingInstructionIndex);
                 setCurrentInstruction(routeInstructions[upcomingInstructionIndex]);
             }
         } else if (routeInstructions.length > 0) {
