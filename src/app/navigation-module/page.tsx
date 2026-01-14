@@ -474,6 +474,9 @@ export default function Page() {
 
       simulationIntervalRef.current = setInterval(() => {
         if (!route || !origin || !routeInstructions.length) return;
+        const map = mapRef.current?.getMap();
+        if (!map) return;
+
 
         const routeLine = route.geometry;
         const totalDistance = turf.length(routeLine, { units: 'meters' });
@@ -530,9 +533,6 @@ export default function Page() {
         const startPoint = turf.point(newCoords);
         const endPoint = turf.point(routeLine.coordinates[routeLine.coordinates.length - 1]);
         setDisplayedRoute(turf.lineSlice(startPoint, endPoint, route));
-
-        const map = mapRef.current?.getMap();
-        if (!map) return;
         
         const nextPointDistance = simulationStateRef.current.distance + 10;
         if (nextPointDistance <= totalDistance) {
@@ -625,6 +625,8 @@ export default function Page() {
     if (!origin || !user || !firestore || !selectedProjectId || !selectedRouteId || !selectedRoute) return;
 
     setIsCalculating(true);
+    const map = mapRef.current?.getMap();
+    if(!map) return;
     
     const allObjects = objectsInWijk;
     const allObjectIds = allObjects.map(obj => obj.id);
@@ -662,17 +664,14 @@ export default function Page() {
     }
 
     startTracking();
-    const map = mapRef.current?.getMap();
-    if(map) {
-        map.easeTo({
-            center: origin,
-            zoom: 20,
-            pitch: 70,
-            bearing: 0,
-            duration: 2000,
-            padding: {top: map.getCanvas().height * 0.35}
-        });
-    }
+    map.easeTo({
+        center: origin,
+        zoom: 20,
+        pitch: 70,
+        bearing: 0,
+        duration: 2000,
+        padding: {top: map.getCanvas().height * 0.35}
+    });
   }
 
   const handleResumeRoute = (historyId: string) => {
@@ -704,6 +703,10 @@ export default function Page() {
     const routeToResume = historyRoutes?.find(r => r.id === selectedHistoryId);
     if (!routeToResume) return;
 
+    const map = mapRef.current?.getMap();
+    if(!map) return;
+
+
     const routeObjects = (routeToResume.allObjectIds || [])
         .map(id => objects.find(o => o.id === id))
         .filter((o): o is MapObject => !!o);
@@ -731,17 +734,14 @@ export default function Page() {
     }
 
     startTracking();
-    const map = mapRef.current?.getMap();
-    if(map) {
-        map.easeTo({
-            center: origin,
-            zoom: 20,
-            pitch: 70,
-            bearing: 0,
-            duration: 2000,
-            padding: {top: map.getCanvas().height * 0.35}
-        });
-    }
+    map.easeTo({
+        center: origin,
+        zoom: 20,
+        pitch: 70,
+        bearing: 0,
+        duration: 2000,
+        padding: {top: map.getCanvas().height * 0.35}
+    });
     
   }, [objects, selectedHistoryId, historyRoutes, isNavigating, origin]); 
   
@@ -1123,7 +1123,7 @@ export default function Page() {
         >
           {origin && (
             <Marker longitude={origin[0]} latitude={origin[1]}>
-              <div className="p-2 bg-blue-500 rounded-full border-4 border-white shadow-md">
+              <div className="p-4 bg-blue-500 rounded-full border-4 border-white shadow-md">
               </div>
             </Marker>
           )}
