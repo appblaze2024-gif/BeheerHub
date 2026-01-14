@@ -205,9 +205,6 @@ export default function Page() {
   const simulationIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
     const simulationStateRef = React.useRef({
     distance: 0,
-    speed: 0, // m/s
-    acceleration: 2, // m/s^2
-    maxSpeed: 50 / 3.6, // 50 km/h in m/s
   });
   const [currentSpeed, setCurrentSpeed] = React.useState(0); // in km/h
 
@@ -424,51 +421,51 @@ export default function Page() {
         setCurrentSpeed((gpsSpeed || 0) * 3.6); // Convert m/s to km/h
 
         if (isNavigating && route) {
-          const map = mapRef.current?.getMap();
-          if (!map) return;
+            const map = mapRef.current?.getMap();
+            if (!map) return;
 
-          const newPoint = turf.point(newOrigin);
-          const routeLine = route.geometry;
-          const snapped = turf.nearestPointOnLine(routeLine, newPoint);
-          const distanceTraveled = turf.length(turf.lineSlice(turf.point(routeLine.coordinates[0]), snapped, routeLine));
-          
-          setRemainingDistance((routeInfo?.distance || 0) - distanceTraveled);
-          setDisplayedRoute(turf.lineSlice(snapped, turf.point(routeLine.coordinates[routeLine.coordinates.length - 1]), routeLine));
+            const newPoint = turf.point(newOrigin);
+            const routeLine = route.geometry;
+            const snapped = turf.nearestPointOnLine(routeLine, newPoint);
+            const distanceTraveled = turf.length(turf.lineSlice(turf.point(routeLine.coordinates[0]), snapped, routeLine));
 
-          let distanceTraveledOnInstructions = 0;
-          let upcomingInstructionIndex = -1;
-          for (let i = 0; i < routeInstructions.length; i++) {
-              distanceTraveledOnInstructions += routeInstructions[i].distance;
-              if (distanceTraveledOnInstructions > distanceTraveled) {
-                  upcomingInstructionIndex = i;
-                  break;
-              }
-          }
-          
-          if (upcomingInstructionIndex !== -1) {
-              const distanceToNextManeuver = distanceTraveledOnInstructions - distanceTraveled;
-              setDistanceToManeuver(distanceToNextManeuver);
-              if (currentInstructionIndex !== upcomingInstructionIndex) {
-                  setCurrentInstructionIndex(upcomingInstructionIndex);
-                  setCurrentInstruction(routeInstructions[upcomingInstructionIndex]);
-              }
-          }
+            setRemainingDistance((routeInfo?.distance || 0) - distanceTraveled);
+            setDisplayedRoute(turf.lineSlice(snapped, turf.point(routeLine.coordinates[routeLine.coordinates.length - 1]), routeLine));
 
-          const nextPointDistance = distanceTraveled + 10;
-          let bearing = heading || 0;
-          if (nextPointDistance <= (routeInfo?.distance || 0)) {
-            const nextPoint = turf.along(routeLine, nextPointDistance, { units: 'meters' });
-            bearing = turf.bearing(newPoint, nextPoint);
-            setHeading(bearing);
-          }
-          
-            map.easeTo({ 
-                center: newOrigin, 
-                zoom: 20, 
-                bearing: bearing, 
-                pitch: 70, 
-                duration: 1000, 
-                easing: (t:any) => t,
+            let distanceTraveledOnInstructions = 0;
+            let upcomingInstructionIndex = -1;
+            for (let i = 0; i < routeInstructions.length; i++) {
+                distanceTraveledOnInstructions += routeInstructions[i].distance;
+                if (distanceTraveledOnInstructions > distanceTraveled) {
+                    upcomingInstructionIndex = i;
+                    break;
+                }
+            }
+
+            if (upcomingInstructionIndex !== -1) {
+                const distanceToNextManeuver = distanceTraveledOnInstructions - distanceTraveled;
+                setDistanceToManeuver(distanceToNextManeuver);
+                if (currentInstructionIndex !== upcomingInstructionIndex) {
+                    setCurrentInstructionIndex(upcomingInstructionIndex);
+                    setCurrentInstruction(routeInstructions[upcomingInstructionIndex]);
+                }
+            }
+
+            const nextPointDistance = distanceTraveled + 10;
+            let bearing = heading || 0;
+            if (nextPointDistance <= (routeInfo?.distance || 0)) {
+                const nextPoint = turf.along(routeLine, nextPointDistance, { units: 'meters' });
+                bearing = turf.bearing(newPoint, nextPoint);
+                setHeading(bearing);
+            }
+
+            map.easeTo({
+                center: newOrigin,
+                zoom: 20,
+                bearing: bearing,
+                pitch: 70,
+                duration: 1000,
+                easing: (t: number) => t,
                 padding: {top: map.getCanvas().height * 0.35}
             });
         }
@@ -496,17 +493,14 @@ export default function Page() {
     setIsSimulating(isStarting);
 
     if (isStarting) {
-      // --- STARTING SIMULATION ---
       if (simulationIntervalRef.current) {
         clearInterval(simulationIntervalRef.current);
       }
       stopTracking();
-      simulationStateRef.current = {
-        distance: 0,
-        speed: 0,
-        acceleration: 2,
-        maxSpeed: 50 / 3.6,
-      };
+      simulationStateRef.current = { distance: 0 };
+      let simulatedSpeed = 0;
+      const maxSpeed = 50 / 3.6; // 50 km/h in m/s
+      const acceleration = 2; // m/s^2
 
       simulationIntervalRef.current = setInterval(() => {
         if (!route || !origin || !routeInstructions.length) return;
@@ -517,22 +511,20 @@ export default function Page() {
         const routeLine = route.geometry;
         const totalDistance = turf.length(routeLine, { units: 'meters' });
         
-        let newSpeed = simulationStateRef.current.speed;
         const remainingDist = totalDistance - simulationStateRef.current.distance;
 
-        if (remainingDist < 50) { // Start decelerating when close to destination
-          newSpeed = Math.max(3, newSpeed - simulationStateRef.current.acceleration);
+        if (remainingDist < 50) {
+          simulatedSpeed = Math.max(3, simulatedSpeed - acceleration);
         } else {
-          newSpeed = Math.min(simulationStateRef.current.maxSpeed, newSpeed + simulationStateRef.current.acceleration);
+          simulatedSpeed = Math.min(maxSpeed, simulatedSpeed + acceleration);
         }
 
-        simulationStateRef.current.speed = newSpeed;
-        simulationStateRef.current.distance += newSpeed;
-        setCurrentSpeed(newSpeed * 3.6);
+        simulationStateRef.current.distance += simulatedSpeed;
+        setCurrentSpeed(simulatedSpeed * 3.6);
         setRemainingDistance(remainingDist);
 
         if (simulationStateRef.current.distance >= totalDistance) {
-          handleToggleSimulation(); // Stop simulation
+          handleToggleSimulation();
           return;
         }
 
@@ -540,20 +532,19 @@ export default function Page() {
         const newCoords = newPoint.geometry.coordinates as [number, number];
         setOrigin(newCoords);
 
-        // --- Find current instruction and distance to it ---
-        let distanceTraveledOnRoute = 0;
+        let distanceTraveledOnInstructions = 0;
         let upcomingInstructionIndex = -1;
 
         for (let i = 0; i < routeInstructions.length; i++) {
-          distanceTraveledOnRoute += routeInstructions[i].distance;
-          if (distanceTraveledOnRoute > simulationStateRef.current.distance) {
+          distanceTraveledOnInstructions += routeInstructions[i].distance;
+          if (distanceTraveledOnInstructions > simulationStateRef.current.distance) {
             upcomingInstructionIndex = i;
             break;
           }
         }
         
         if (upcomingInstructionIndex !== -1) {
-            const distanceToNextManeuver = distanceTraveledOnRoute - simulationStateRef.current.distance;
+            const distanceToNextManeuver = distanceTraveledOnInstructions - simulationStateRef.current.distance;
             setDistanceToManeuver(distanceToNextManeuver);
 
             if (currentInstructionIndex !== upcomingInstructionIndex) {
@@ -561,7 +552,6 @@ export default function Page() {
                 setCurrentInstruction(routeInstructions[upcomingInstructionIndex]);
             }
         } else if (routeInstructions.length > 0) {
-            // We are on the last leg
             setCurrentInstruction(routeInstructions[routeInstructions.length - 1]);
             setDistanceToManeuver(remainingDist);
         }
@@ -584,12 +574,11 @@ export default function Page() {
           bearing: bearing, 
           pitch: 70, 
           duration: 1000, 
-          easing: (t:any) => t,
+          easing: (t: number) => t,
           padding: {top: map.getCanvas().height * 0.35}
         });
       }, 1000);
     } else {
-      // --- PAUSING SIMULATION ---
       if (simulationIntervalRef.current) {
         clearInterval(simulationIntervalRef.current);
         simulationIntervalRef.current = null;
