@@ -376,19 +376,18 @@ export default function Page() {
         setOrigin([longitude, latitude]);
         setCurrentSpeed((speed || 0) * 3.6); // Convert m/s to km/h
 
-        const map = mapRef.current?.getMap();
-        if (map && isNavigating) {
-          map.easeTo({
-            center: [longitude, latitude],
-            bearing: heading ?? map.getBearing(),
-            zoom: 20,
-            pitch: 70, 
-            duration: 1000, 
-            padding: { bottom: map.getCanvas().height * 0.4 },
-            easing(t: any) {
-              return t;
+        if (isNavigating) {
+            const map = mapRef.current?.getMap();
+             if (map) {
+                map.easeTo({
+                    center: [longitude, latitude],
+                    bearing: heading ?? map.getBearing(),
+                    zoom: 20,
+                    pitch: 70,
+                    duration: 1000,
+                    easing(t: any) { return t; }
+                });
             }
-          });
         }
       },
       (error) => {
@@ -465,9 +464,9 @@ export default function Page() {
         if (nextPointDistance <= totalDistance) {
           const nextPoint = turf.along(routeLine, nextPointDistance, { units: 'meters' });
           const bearing = turf.bearing(newPoint, nextPoint);
-          map.easeTo({ center: newCoords, zoom: 20, bearing: bearing, pitch: 70, duration: 1000, padding: { bottom: map.getCanvas().height * 0.4 }, easing: (t:any) => t });
+          map.easeTo({ center: newCoords, zoom: 20, bearing: bearing, pitch: 70, duration: 1000, easing: (t:any) => t });
         } else {
-          map.easeTo({ center: newCoords, zoom: 20, pitch: 70, duration: 1000, padding: { bottom: map.getCanvas().height * 0.4 }, easing: (t:any) => t });
+          map.easeTo({ center: newCoords, zoom: 20, pitch: 70, duration: 1000, easing: (t:any) => t });
         }
       }, 1000);
     } else {
@@ -581,7 +580,6 @@ export default function Page() {
             pitch: 70,
             bearing: 0,
             duration: 2000,
-            padding: { bottom: map.getCanvas().height * 0.4 }
         });
     }
   }
@@ -650,7 +648,6 @@ export default function Page() {
             pitch: 70,
             bearing: 0,
             duration: 2000,
-            padding: { bottom: map.getCanvas().height * 0.4 }
         });
     }
     
@@ -757,12 +754,15 @@ export default function Page() {
     if (origin) {
         const map = mapRef.current?.getMap();
         if(map) {
-            map.easeTo({
+            const options: any = {
                 center: origin,
                 zoom: isNavigating ? 20 : 15,
                 pitch: isNavigating ? 70 : 0,
-                padding: isNavigating ? { bottom: map.getCanvas().height * 0.4 } : { bottom: 0 }
-            });
+            };
+            if (isNavigating) {
+                options.padding = { bottom: map.getCanvas().height * 0.4 };
+            }
+            map.easeTo(options);
         }
     }
   };
