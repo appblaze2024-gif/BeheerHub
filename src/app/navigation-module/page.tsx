@@ -54,6 +54,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
+import { useMemo } from 'react';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -148,12 +149,12 @@ export default function Page() {
     zoom: 7,
   });
   
-  const objectsCollection = React.useMemo(() => {
+  const objectsCollection = useMemo(() => {
     if (!firestore || !user) return null;
     return collection(firestore, 'objects');
   }, [firestore, user]);
   
-  const projectsCollection = React.useMemo(() => {
+  const projectsCollection = useMemo(() => {
       if (!firestore) return null;
       return collection(firestore, 'projects');
   }, [firestore]);
@@ -208,7 +209,7 @@ export default function Page() {
   });
   const [currentSpeed, setCurrentSpeed] = React.useState(0); // in km/h
 
-  const userHistoryCollection = React.useMemo(() => {
+  const userHistoryCollection = useMemo(() => {
     if (!firestore || !user) return null;
     return query(collection(firestore, `users/${user.uid}/routes`));
   }, [firestore, user]);
@@ -429,7 +430,7 @@ export default function Page() {
                     pitch: 70,
                     duration: 1000,
                     easing(t: any) { return t; },
-                    padding: { bottom: map.getCanvas().height * 0.8 }
+                    padding: { bottom: map.getCanvas().height * 0.1 }
                 });
             }
         }
@@ -542,7 +543,7 @@ export default function Page() {
               pitch: 70, 
               duration: 1000, 
               easing: (t:any) => t,
-              padding: { bottom: map.getCanvas().height * 0.8 } 
+              padding: { bottom: map.getCanvas().height * 0.1 } 
             });
         } else {
           map.easeTo({ 
@@ -551,7 +552,7 @@ export default function Page() {
               pitch: 70, 
               duration: 1000, 
               easing: (t:any) => t,
-              padding: { bottom: map.getCanvas().height * 0.8 } 
+              padding: { bottom: map.getCanvas().height * 0.1 } 
             });
         }
       }, 1000);
@@ -666,7 +667,7 @@ export default function Page() {
             pitch: 70,
             bearing: 0,
             duration: 2000,
-            padding: { bottom: map.getCanvas().height * 0.8 }
+            padding: { bottom: map.getCanvas().height * 0.1 }
         });
     }
   }
@@ -735,7 +736,7 @@ export default function Page() {
             pitch: 70,
             bearing: 0,
             duration: 2000,
-            padding: { bottom: map.getCanvas().height * 0.8 }
+            padding: { bottom: map.getCanvas().height * 0.1 }
         });
     }
     
@@ -852,7 +853,7 @@ export default function Page() {
 
         if (isNavigating) {
           options.pitch = 70;
-          options.padding = { bottom: map.getCanvas().height * 0.8 };
+          options.padding = { bottom: map.getCanvas().height * 0.1 };
         } else {
           options.pitch = 0;
           options.padding = { bottom: 0, left: 0, right: 0, top: 0 };
