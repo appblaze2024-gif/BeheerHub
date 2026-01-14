@@ -55,7 +55,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -169,7 +169,6 @@ export default function Page() {
 
   const [origin, setOrigin] = React.useState<[number, number] | null>(null);
   const [snappedOrigin, setSnappedOrigin] = React.useState<[number, number] | null>(null);
-  const [bearing, setBearing] = React.useState<number>(0);
   const [locationError, setLocationError] = React.useState<string | null>(null);
   const [route, setRoute] = React.useState<any>(null);
   const [displayedRoute, setDisplayedRoute] = React.useState<any>(null);
@@ -210,6 +209,7 @@ export default function Page() {
   const simulationIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
     const simulationStateRef = React.useRef({
     distance: 0,
+    isPausedAtManeuver: false,
   });
   const [currentSpeed, setCurrentSpeed] = React.useState(0); // in km/h
 
@@ -411,7 +411,7 @@ export default function Page() {
             const firstPoint = turf.point(routeGeoJSON.geometry.coordinates[0]);
             const secondPoint = turf.point(routeGeoJSON.geometry.coordinates[1]);
             const initialBearing = turf.bearing(firstPoint, secondPoint);
-            setBearing(initialBearing);
+            setViewState(prev => ({...prev, bearing: initialBearing}));
             map.easeTo({
               center: snappedStart,
               zoom: 20,
@@ -502,7 +502,7 @@ export default function Page() {
           const nextPointOnRoute = turf.along(routeLine, nextPointDistance, { units: 'meters' });
           newBearing = turf.bearing(snappedCoords, nextPointOnRoute.geometry.coordinates);
         }
-        setBearing(newBearing);
+        setViewState(prev => ({...prev, bearing: newBearing}));
         
         map.easeTo({
           center: snappedCoords,
@@ -542,22 +542,49 @@ export default function Page() {
         clearInterval(simulationIntervalRef.current);
       }
       stopTracking();
-      simulationStateRef.current = { distance: 0 };
+      simulationStateRef.current = { distance: 0, isPausedAtManeuver: false };
       
       simulationIntervalRef.current = setInterval(() => {
         if (!route || !origin || !routeInstructions.length) return;
         const map = mapRef.current?.getMap();
         if (!map) return;
 
+        if (simulationStateRef.current.isPausedAtManeuver) return;
 
         const routeLine = route.geometry;
         const totalDistance = turf.length(routeLine, { units: 'meters' });
         
-        // Use a fixed speed for simulation to be consistent
-        const simulatedSpeed = 50 / 3.6; // 50 km/h in m/s
+        let distanceTraveledOnInstructions = 0;
+        let upcomingInstructionIndex = -1;
+        let currentTotalDistance = 0;
+        for (let i = 0; i < routeInstructions.length; i++) {
+          currentTotalDistance += routeInstructions[i].distance;
+          if (currentTotalDistance > simulationStateRef.current.distance) {
+            upcomingInstructionIndex = i;
+            distanceTraveledOnInstructions = currentTotalDistance;
+            break;
+          }
+        }
+        
+        const distanceToNextManeuver = distanceTraveledOnInstructions - simulationStateRef.current.distance;
+        let speedInMps;
+        if (distanceToNextManeuver < 100) {
+            speedInMps = 30 / 3.6; // Slow down to 30km/h
+        } else {
+            speedInMps = 70 / 3.6; // Normal speed 70km/h
+        }
 
-        simulationStateRef.current.distance += simulatedSpeed;
-        setCurrentSpeed(simulatedSpeed * 3.6);
+        if (distanceToNextManeuver < 5 && upcomingInstructionIndex > currentInstructionIndex) {
+            simulationStateRef.current.isPausedAtManeuver = true;
+            setCurrentSpeed(0);
+            setTimeout(() => {
+                simulationStateRef.current.isPausedAtManeuver = false;
+            }, 2000); // Pause for 2 seconds
+            return;
+        }
+
+        simulationStateRef.current.distance += speedInMps;
+        setCurrentSpeed(speedInMps * 3.6);
         const remainingDist = totalDistance - simulationStateRef.current.distance;
         setRemainingDistance(remainingDist);
 
@@ -570,19 +597,7 @@ export default function Page() {
         const newCoords = newPoint.geometry.coordinates as [number, number];
         setSnappedOrigin(newCoords);
 
-        let distanceTraveledOnInstructions = 0;
-        let upcomingInstructionIndex = -1;
-
-        for (let i = 0; i < routeInstructions.length; i++) {
-          distanceTraveledOnInstructions += routeInstructions[i].distance;
-          if (distanceTraveledOnInstructions > simulationStateRef.current.distance) {
-            upcomingInstructionIndex = i;
-            break;
-          }
-        }
-        
         if (upcomingInstructionIndex !== -1) {
-            const distanceToNextManeuver = distanceTraveledOnInstructions - simulationStateRef.current.distance;
             setDistanceToManeuver(distanceToNextManeuver);
 
             if (currentInstructionIndex !== upcomingInstructionIndex) {
@@ -599,11 +614,11 @@ export default function Page() {
         setDisplayedRoute(turf.lineSlice(startPoint, endPoint, route));
         
         const nextPointDistance = simulationStateRef.current.distance + 10;
-        let newBearing = bearing;
+        let newBearing = viewState.bearing;
         if (nextPointDistance <= totalDistance) {
           const nextPointOnRoute = turf.along(routeLine, nextPointDistance, { units: 'meters' });
           newBearing = turf.bearing(newPoint, nextPointOnRoute);
-          setBearing(newBearing);
+          setViewState(prev => ({...prev, bearing: newBearing}));
         }
 
         map.easeTo({ 
@@ -672,8 +687,6 @@ export default function Page() {
   const handleStartNavigation = React.useCallback(async () => {
     if (!origin || !user || !firestore || !selectedProjectId || !selectedRouteId || !selectedRoute) return;
 
-    setIsCalculating(true);
-
     const allObjects = objectsInWijk;
     const allObjectIds = allObjects.map(obj => obj.id);
 
@@ -706,8 +719,6 @@ export default function Page() {
     if (firstObject) {
         setDestination(firstObject);
         await calculateRoute([origin, [firstObject.longitude, firstObject.latitude]]);
-    } else {
-        setIsCalculating(false);
     }
 
     startTracking();
@@ -726,7 +737,6 @@ export default function Page() {
         return;
     }
 
-    setIsCalculating(true);
     setSelectedProjectId(project.id);
     setSelectedRouteId(routeToResume.originalRouteId);
     if (project.veegroutes?.some(r => r.id === routeToResume.originalRouteId)) {
@@ -740,7 +750,6 @@ export default function Page() {
         .filter((o): o is MapObject => !!o);
 
     if (routeObjects.length === 0 && (routeToResume.allObjectIds || []).length > 0) {
-        setIsCalculating(false);
         return;
     }
 
@@ -759,20 +768,19 @@ export default function Page() {
     if (nextObject) {
         setDestination(nextObject);
         await calculateRoute([origin, [nextObject.longitude, nextObject.latitude]]);
-    } else {
-        setIsCalculating(false);
-    }
+    } 
     startTracking();
   }, [historyRoutes, objects, origin, projects]);
 
-  const handleStartOrResume = () => {
+  const handleStartOrResume = useCallback(() => {
+    setIsCalculating(true);
     setIsNavigating(true);
     if (selectedHistoryId) {
         handleResumeRoute(selectedHistoryId);
     } else if (selectedRouteId) {
         handleStartNavigation();
     }
-  };
+  }, [selectedHistoryId, selectedRouteId, handleResumeRoute, handleStartNavigation]);
   
   const updateObjectStatus = async (objectId: string, status: 'completed' | 'skipped'): Promise<MapObject[]> => {
       if (!firestore || !user || !activeRouteHistoryId) return pendingObjects;
@@ -808,15 +816,15 @@ export default function Page() {
 
 
   const handleNextObject = async (status: 'completed' | 'skipped') => {
-    if (!origin || !destination) return;
+    if (!snappedOrigin || !destination) return;
     
     const newPendingObjects = await updateObjectStatus(destination.id, status);
 
-    const nextObject = findNextObject(origin, newPendingObjects);
+    const nextObject = findNextObject(snappedOrigin, newPendingObjects);
 
     if (nextObject) {
       setDestination(nextObject);
-      const routePoints: ([number, number] | null)[] = [origin, [nextObject.longitude, nextObject.latitude]];
+      const routePoints: ([number, number] | null)[] = [snappedOrigin, [nextObject.longitude, nextObject.latitude]];
       await calculateRoute(routePoints);
     } else {
       // All objects are done
@@ -846,6 +854,7 @@ export default function Page() {
     setCurrentSpeed(0);
 
     setIsNavigating(false);
+    setIsCalculating(false);
     setRoute(null);
     setDisplayedRoute(null);
     setRouteInfo(null);
@@ -886,7 +895,7 @@ export default function Page() {
 
         if (isNavigating) {
           options.pitch = 70;
-          options.bearing = bearing;
+          options.bearing = viewState.bearing;
           options.padding = {top: map.getCanvas().height * 0.35}
         } else {
           options.pitch = 0;
@@ -1154,17 +1163,10 @@ export default function Page() {
           mapboxAccessToken={MAPBOX_TOKEN}
         >
           {snappedOrigin && (
-            <Marker longitude={snappedOrigin[0]} latitude={snappedOrigin[1]}>
+            <Marker longitude={snappedOrigin[0]} latitude={snappedOrigin[1]} rotationAlignment="map" rotation={viewState.bearing}>
               <div className="flex items-center justify-center">
-                <svg width={isNavigating ? "30" : "15"} height={isNavigating ? "30" : "15"} viewBox="0 0 50 50">
-                  <circle
-                    cx="25"
-                    cy="25"
-                    r="25"
-                    fill="#3b82f6"
-                    stroke="#ffffff"
-                    strokeWidth="4"
-                  />
+                 <svg width={isNavigating ? "32" : "16"} height={isNavigating ? "32" : "16"} viewBox="0 0 50 50">
+                    <circle cx="25" cy="25" r="25" fill="#3b82f6" stroke="#ffffff" strokeWidth="4" />
                 </svg>
               </div>
             </Marker>
