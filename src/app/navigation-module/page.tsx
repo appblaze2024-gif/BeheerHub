@@ -75,6 +75,8 @@ interface Wijk {
   subGebieden: string;
 };
 
+type Prullenbakkenroute = Wijk;
+
 type Project = {
   id: string;
   projectnaam: string;
@@ -426,9 +428,11 @@ export default function Page() {
   
           const newPoint = turf.point(newOrigin);
           const routeLine = route.geometry;
+          
           const snapped = turf.nearestPointOnLine(routeLine, newPoint);
           const distanceTraveled = turf.length(
-            turf.lineSlice(turf.point(routeLine.coordinates[0]), snapped, routeLine)
+            turf.lineSlice(turf.point(routeLine.coordinates[0]), snapped, routeLine),
+            { units: 'meters' }
           );
   
           setRemainingDistance((routeInfo?.distance || 0) - distanceTraveled);
@@ -451,8 +455,7 @@ export default function Page() {
           }
   
           if (upcomingInstructionIndex !== -1) {
-            const distanceToNextManeuver =
-              distanceTraveledOnInstructions - distanceTraveled;
+            const distanceToNextManeuver = distanceTraveledOnInstructions - distanceTraveled;
             setDistanceToManeuver(distanceToNextManeuver);
             if (currentInstructionIndex !== upcomingInstructionIndex) {
               setCurrentInstructionIndex(upcomingInstructionIndex);
@@ -463,10 +466,10 @@ export default function Page() {
           const nextPointDistance = distanceTraveled + 10;
           let bearing = heading || 0;
           if (nextPointDistance <= (routeInfo?.distance || 0)) {
-            const nextPoint = turf.along(routeLine, nextPointDistance, {
+            const nextPointOnRoute = turf.along(routeLine, nextPointDistance, {
               units: 'meters',
             });
-            bearing = turf.bearing(newPoint, nextPoint);
+            bearing = turf.bearing(snapped, nextPointOnRoute);
             setHeading(bearing);
           }
   
@@ -575,8 +578,8 @@ export default function Page() {
         const nextPointDistance = simulationStateRef.current.distance + 10;
         let bearing = heading || 0;
         if (nextPointDistance <= totalDistance) {
-          const nextPoint = turf.along(routeLine, nextPointDistance, { units: 'meters' });
-          bearing = turf.bearing(newPoint, nextPoint);
+          const nextPointOnRoute = turf.along(routeLine, nextPointDistance, { units: 'meters' });
+          bearing = turf.bearing(newPoint, nextPointOnRoute);
           setHeading(bearing);
         }
 
