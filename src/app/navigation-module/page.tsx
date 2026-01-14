@@ -420,15 +420,22 @@ export default function Page() {
       (position) => {
         const { longitude, latitude, heading, speed } = position.coords;
         setOrigin([longitude, latitude]);
-        setHeading(heading);
         setCurrentSpeed((speed || 0) * 3.6); // Convert m/s to km/h
 
         if (isNavigating) {
             const map = mapRef.current?.getMap();
-             if (map) {
+             if (map && route) {
+                const newPoint = turf.point([longitude, latitude]);
+                const snapped = turf.nearestPointOnLine(route.geometry, newPoint);
+                const bearing = turf.bearing(
+                  snapped,
+                  turf.along(route.geometry, turf.length(turf.lineSlice(turf.point(route.geometry.coordinates[0]), snapped, route.geometry)) + 0.01)
+                );
+                setHeading(bearing);
+
                 map.easeTo({
                     center: [longitude, latitude],
-                    bearing: heading ?? map.getBearing(),
+                    bearing: bearing,
                     zoom: 20,
                     pitch: 70,
                     duration: 1000,
@@ -1128,7 +1135,7 @@ export default function Page() {
                 className="flex items-center justify-center filter drop-shadow-md"
                 style={{ transform: `rotate(${heading || 0}deg)` }}
               >
-                <svg width="32" height="32" viewBox="0 0 50 50" style={{transform: "rotate(45deg)"}}>
+                <svg width="32" height="32" viewBox="0 0 50 50" style={{transform: "rotate(-45deg)"}}>
                     <path
                         d="M25 0 L50 50 L0 50 Z"
                         fill="#3b82f6"
