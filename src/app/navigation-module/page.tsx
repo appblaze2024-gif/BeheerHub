@@ -455,10 +455,13 @@ export default function Page() {
           }
 
           const nextPointDistance = distanceTraveled + 10;
+          let bearing = heading || 0;
           if (nextPointDistance <= (routeInfo?.distance || 0)) {
             const nextPoint = turf.along(routeLine, nextPointDistance, { units: 'meters' });
-            const bearing = turf.bearing(newPoint, nextPoint);
+            bearing = turf.bearing(newPoint, nextPoint);
             setHeading(bearing);
+          }
+          
             map.easeTo({ 
                 center: newOrigin, 
                 zoom: 20, 
@@ -468,16 +471,6 @@ export default function Page() {
                 easing: (t:any) => t,
                 padding: {top: map.getCanvas().height * 0.35}
             });
-          } else {
-            map.easeTo({ 
-                center: newOrigin, 
-                zoom: 20, 
-                pitch: 70, 
-                duration: 1000, 
-                easing: (t:any) => t,
-                padding: {top: map.getCanvas().height * 0.35}
-            });
-          }
         }
       },
       (error) => {
@@ -523,10 +516,10 @@ export default function Page() {
 
         const routeLine = route.geometry;
         const totalDistance = turf.length(routeLine, { units: 'meters' });
-        let remainingDist = totalDistance - simulationStateRef.current.distance;
-        setRemainingDistance(remainingDist);
-
+        
         let newSpeed = simulationStateRef.current.speed;
+        const remainingDist = totalDistance - simulationStateRef.current.distance;
+
         if (remainingDist < 50) { // Start decelerating when close to destination
           newSpeed = Math.max(3, newSpeed - simulationStateRef.current.acceleration);
         } else {
@@ -536,6 +529,7 @@ export default function Page() {
         simulationStateRef.current.speed = newSpeed;
         simulationStateRef.current.distance += newSpeed;
         setCurrentSpeed(newSpeed * 3.6);
+        setRemainingDistance(remainingDist);
 
         if (simulationStateRef.current.distance >= totalDistance) {
           handleToggleSimulation(); // Stop simulation
@@ -577,29 +571,22 @@ export default function Page() {
         setDisplayedRoute(turf.lineSlice(startPoint, endPoint, route));
         
         const nextPointDistance = simulationStateRef.current.distance + 10;
+        let bearing = heading || 0;
         if (nextPointDistance <= totalDistance) {
           const nextPoint = turf.along(routeLine, nextPointDistance, { units: 'meters' });
-          const bearing = turf.bearing(newPoint, nextPoint);
+          bearing = turf.bearing(newPoint, nextPoint);
           setHeading(bearing);
-          map.easeTo({ 
-              center: newCoords, 
-              zoom: 20, 
-              bearing: bearing, 
-              pitch: 70, 
-              duration: 1000, 
-              easing: (t:any) => t,
-              padding: {top: map.getCanvas().height * 0.35}
-            });
-        } else {
-          map.easeTo({ 
-              center: newCoords, 
-              zoom: 20, 
-              pitch: 70, 
-              duration: 1000, 
-              easing: (t:any) => t,
-              padding: {top: map.getCanvas().height * 0.35}
-            });
         }
+
+        map.easeTo({ 
+          center: newCoords, 
+          zoom: 20, 
+          bearing: bearing, 
+          pitch: 70, 
+          duration: 1000, 
+          easing: (t:any) => t,
+          padding: {top: map.getCanvas().height * 0.35}
+        });
       }, 1000);
     } else {
       // --- PAUSING SIMULATION ---
