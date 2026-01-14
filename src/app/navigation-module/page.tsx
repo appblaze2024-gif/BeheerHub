@@ -1125,10 +1125,17 @@ export default function Page() {
           {origin && (
             <Marker longitude={origin[0]} latitude={origin[1]}>
                <div
-                className="bg-blue-600 p-2 rounded-full shadow-lg border-2 border-white flex items-center justify-center"
+                className="flex items-center justify-center filter drop-shadow-md"
                 style={{ transform: `rotate(${heading || 0}deg)` }}
               >
-                <Car className="w-6 h-6 text-white" />
+                <svg width="32" height="32" viewBox="0 0 50 50" style={{transform: "rotate(45deg)"}}>
+                    <path
+                        d="M25 0 L50 50 L0 50 Z"
+                        fill="#3b82f6"
+                        stroke="#FFFFFF"
+                        strokeWidth="3"
+                    />
+                </svg>
               </div>
             </Marker>
           )}
