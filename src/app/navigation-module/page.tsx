@@ -362,7 +362,7 @@ export default function Page() {
   
     const limitedPoints = validPoints.slice(0, 25);
     const coordinates = limitedPoints.map(p => p.join(',')).join(';');
-    const radiuses = limitedPoints.map((_, index) => index === 0 ? 'unlimited' : '100').join(';');
+    const radiuses = limitedPoints.map(() => 'unlimited').join(';');
   
     try {
       const response = await fetch(
@@ -382,6 +382,10 @@ export default function Page() {
           properties: {},
           geometry: currentRoute.geometry,
         };
+
+        const snappedOrigin = data.waypoints[0].location;
+        setOrigin(snappedOrigin);
+        
         setRoute(routeGeoJSON);
         setDisplayedRoute(routeGeoJSON);
         setRemainingDistance(currentRoute.distance);
