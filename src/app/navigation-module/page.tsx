@@ -536,151 +536,128 @@ export default function Page() {
     setIsSimulating(isStarting);
 
     if (isStarting) {
-      if (simulationIntervalRef.current) {
-        clearInterval(simulationIntervalRef.current);
-      }
-      stopTracking();
-      simulationStateRef.current = { distance: 0, isPausedAtManeuver: false };
-      
-      simulationIntervalRef.current = setInterval(() => {
-        if (!route || !origin || !routeInstructions.length) return;
-        const map = mapRef.current?.getMap();
-        if (!map) return;
-
-        if (simulationStateRef.current.isPausedAtManeuver) return;
-
-        const routeLine = route.geometry;
-        const totalDistance = turf.length(routeLine, { units: 'meters' });
-        
-        let distanceTraveledOnInstructions = 0;
-        let upcomingInstructionIndex = -1;
-        let currentTotalDistance = 0;
-        for (let i = 0; i < routeInstructions.length; i++) {
-          currentTotalDistance += routeInstructions[i].distance;
-          if (currentTotalDistance > simulationStateRef.current.distance) {
-            upcomingInstructionIndex = i;
-            distanceTraveledOnInstructions = currentTotalDistance;
-            break;
-          }
+        if (simulationIntervalRef.current) {
+            clearInterval(simulationIntervalRef.current);
         }
-        
-        const distanceToNextManeuver = distanceTraveledOnInstructions - simulationStateRef.current.distance;
-        
-        if (distanceToNextManeuver < 5 && upcomingInstructionIndex > currentInstructionIndex) {
-            setCurrentInstructionIndex(upcomingInstructionIndex);
-            simulationStateRef.current.isPausedAtManeuver = true;
-            setCurrentSpeed(0);
-            setTimeout(() => {
-                simulationStateRef.current.isPausedAtManeuver = false;
-            }, 2000);
-            return;
-        }
-
-        let speedInMps;
-        if (distanceToNextManeuver < 100) {
-            speedInMps = 30 / 3.6;
-        } else {
-            speedInMps = 70 / 3.6;
-        }
-
-        simulationStateRef.current.distance += speedInMps;
-        setCurrentSpeed(speedInMps * 3.6);
-        const remainingDist = totalDistance - simulationStateRef.current.distance;
-        setRemainingDistance(remainingDist);
-
-        if (simulationStateRef.current.distance >= totalDistance) {
-          handleToggleSimulation();
-          return;
-        }
-
-        const newPoint = turf.along(routeLine, simulationStateRef.current.distance, { units: 'meters' });
-        const newCoords = newPoint.geometry.coordinates as [number, number];
-        setSnappedOrigin(newCoords);
-
-        if (upcomingInstructionIndex !== -1) {
-            setDistanceToManeuver(distanceToNextManeuver);
-            if (currentInstructionIndex !== upcomingInstructionIndex) {
-                setCurrentInstruction(routeInstructions[upcomingInstructionIndex]);
-            }
-        } else if (routeInstructions.length > 0) {
-            setCurrentInstruction(routeInstructions[routeInstructions.length - 1]);
-            setDistanceToManeuver(remainingDist);
-        }
-
-        const startPoint = turf.point(newCoords);
-        const endPoint = turf.point(routeLine.coordinates[routeLine.coordinates.length - 1]);
-        setDisplayedRoute(turf.lineSlice(startPoint, endPoint, route));
-        
-        const nextPointDistance = simulationStateRef.current.distance + 10;
-        let newBearing = viewState.bearing;
-        if (nextPointDistance <= totalDistance) {
-          const nextPointOnRoute = turf.along(routeLine, nextPointDistance, { units: 'meters' });
-          newBearing = turf.bearing(newPoint, nextPointOnRoute);
-        }
-
-        map.easeTo({ 
-          center: newCoords, 
-          zoom: 20, 
-          bearing: newBearing, 
-          pitch: 70, 
-          duration: 1000, 
-          easing: (t: number) => t,
-          padding: {top: map.getCanvas().height * 0.35}
-        });
-      }, 1000);
-    } else {
-      if (simulationIntervalRef.current) {
-        clearInterval(simulationIntervalRef.current);
-        simulationIntervalRef.current = null;
-      }
-      setCurrentSpeed(0);
-
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { longitude, latitude } = position.coords;
-          setSnappedOrigin([longitude, latitude]);
-          mapRef.current?.getMap().easeTo({
-            center: [longitude, latitude],
-            zoom: 14,
-            pitch: 0,
-            bearing: 0,
-          });
-        },
-        () => {
-          if (snappedOrigin) {
-            mapRef.current?.getMap().easeTo({
-              center: snappedOrigin,
-              zoom: 14,
-              pitch: 0,
-              bearing: 0,
+        stopTracking();
+        simulationStateRef.current = { distance: 0, isPausedAtManeuver: false };
+        // Reset view to the start of the route
+        if (route && route.geometry.coordinates.length > 0) {
+          const startCoords = route.geometry.coordinates[0];
+          setSnappedOrigin(startCoords);
+          const map = mapRef.current?.getMap();
+          if (map) {
+            map.easeTo({ 
+              center: startCoords, 
+              zoom: 20, 
+              bearing: 0, 
+              pitch: 70,
+              padding: {top: map.getCanvas().height * 0.35}
             });
           }
         }
-      );
+
+        simulationIntervalRef.current = setInterval(() => {
+            if (!route || !routeInstructions.length || simulationStateRef.current.isPausedAtManeuver) {
+                return;
+            }
+            const map = mapRef.current?.getMap();
+            if (!map) return;
+
+            const routeLine = route.geometry;
+            const totalDistance = routeInfo?.distance || 0;
+
+            let cumulativeDistance = 0;
+            let upcomingInstructionIndex = -1;
+
+            for (let i = 0; i < routeInstructions.length; i++) {
+                cumulativeDistance += routeInstructions[i].distance;
+                if (cumulativeDistance > simulationStateRef.current.distance) {
+                    upcomingInstructionIndex = i;
+                    break;
+                }
+            }
+
+            if (upcomingInstructionIndex === -1 && simulationStateRef.current.distance < totalDistance) {
+                upcomingInstructionIndex = routeInstructions.length - 1;
+            }
+            
+            const distanceToNextManeuver = (upcomingInstructionIndex !== -1 ? (routeInstructions.slice(0, upcomingInstructionIndex).reduce((acc, i) => acc + i.distance, 0) + routeInstructions[upcomingInstructionIndex].distance) : totalDistance) - simulationStateRef.current.distance;
+
+            if (distanceToNextManeuver < 5 && upcomingInstructionIndex !== -1 && upcomingInstructionIndex > simulationStateRef.current.instructionIndex) {
+                simulationStateRef.current.instructionIndex = upcomingInstructionIndex;
+                setCurrentInstructionIndex(upcomingInstructionIndex);
+                setCurrentInstruction(routeInstructions[upcomingInstructionIndex]);
+
+                simulationStateRef.current.isPausedAtManeuver = true;
+                setCurrentSpeed(0);
+
+                setTimeout(() => {
+                    simulationStateRef.current.isPausedAtManeuver = false;
+                }, 2000);
+                return; 
+            }
+            
+            let speedInMps;
+            if (distanceToNextManeuver < 100) {
+                speedInMps = 30 / 3.6;
+            } else {
+                speedInMps = 70 / 3.6;
+            }
+
+            simulationStateRef.current.distance += speedInMps; // Move 1 second worth of distance
+            
+            if (simulationStateRef.current.distance >= totalDistance) {
+                simulationStateRef.current.distance = totalDistance;
+                handleToggleSimulation(); // Stop simulation
+            }
+
+            setCurrentSpeed(speedInMps * 3.6);
+            setRemainingDistance(totalDistance - simulationStateRef.current.distance);
+
+            const newPoint = turf.along(routeLine, simulationStateRef.current.distance, { units: 'meters' });
+            const newCoords = newPoint.geometry.coordinates as [number, number];
+            setSnappedOrigin(newCoords);
+            
+            if (upcomingInstructionIndex !== -1) {
+                setDistanceToManeuver(distanceToNextManeuver);
+                if (currentInstructionIndex !== upcomingInstructionIndex) {
+                    setCurrentInstruction(routeInstructions[upcomingInstructionIndex]);
+                    setCurrentInstructionIndex(upcomingInstructionIndex);
+                }
+            }
+
+            const startPoint = turf.point(newCoords);
+            const endPoint = turf.point(routeLine.coordinates[routeLine.coordinates.length - 1]);
+            setDisplayedRoute(turf.lineSlice(startPoint, endPoint, route));
+            
+            const nextPointDistance = simulationStateRef.current.distance + 10;
+            let newBearing = viewState.bearing;
+            if (nextPointDistance <= totalDistance) {
+                const nextPointOnRoute = turf.along(routeLine, nextPointDistance, { units: 'meters' });
+                newBearing = turf.bearing(newPoint, nextPointOnRoute);
+            }
+
+            map.easeTo({
+                center: newCoords,
+                zoom: 20,
+                bearing: newBearing,
+                pitch: 70,
+                duration: 1000,
+                easing: (t: number) => t,
+                padding: { top: map.getCanvas().height * 0.35 }
+            });
+
+        }, 1000);
+    } else {
+        if (simulationIntervalRef.current) {
+            clearInterval(simulationIntervalRef.current);
+            simulationIntervalRef.current = null;
+        }
+        setCurrentSpeed(0);
     }
   };
   
-  
-  const findNextObject = (currentOrigin: [number, number], availableObjects: MapObject[]): MapObject | null => {
-      if (!currentOrigin || availableObjects.length === 0) return null;
-      
-      const from = turf.point(currentOrigin);
-      let closestObject: MapObject | null = null;
-      let minDistance = Infinity;
-
-      availableObjects.forEach(obj => {
-          if (obj.latitude != null && obj.longitude != null) {
-              const to = turf.point([obj.longitude, obj.latitude]);
-              const distance = turf.distance(from, to, { units: 'kilometers' });
-              if (distance < minDistance) {
-                  minDistance = distance;
-                  closestObject = obj;
-              }
-          }
-      });
-      return closestObject;
-  }
-
   const handleStartNavigation = React.useCallback(async () => {
     if (!origin || !user || !firestore || !selectedProjectId || !selectedRouteId || !selectedRoute) return;
 
@@ -779,6 +756,26 @@ export default function Page() {
     }
   }, [selectedHistoryId, selectedRouteId, handleResumeRoute, handleStartNavigation]);
   
+  const findNextObject = (currentOrigin: [number, number], availableObjects: MapObject[]): MapObject | null => {
+      if (!currentOrigin || availableObjects.length === 0) return null;
+      
+      const from = turf.point(currentOrigin);
+      let closestObject: MapObject | null = null;
+      let minDistance = Infinity;
+
+      availableObjects.forEach(obj => {
+          if (obj.latitude != null && obj.longitude != null) {
+              const to = turf.point([obj.longitude, obj.latitude]);
+              const distance = turf.distance(from, to, { units: 'kilometers' });
+              if (distance < minDistance) {
+                  minDistance = distance;
+                  closestObject = obj;
+              }
+          }
+      });
+      return closestObject;
+  }
+
   const updateObjectStatus = async (objectId: string, status: 'completed' | 'skipped'): Promise<MapObject[]> => {
       if (!firestore || !user || !activeRouteHistoryId) return pendingObjects;
 
@@ -1162,7 +1159,7 @@ export default function Page() {
           {snappedOrigin && (
             <Marker longitude={snappedOrigin[0]} latitude={snappedOrigin[1]} rotationAlignment="map" rotation={viewState.bearing}>
               <div className="flex items-center justify-center">
-                <svg width={isNavigating ? "32" : "16"} height={isNavigating ? "32" : "16"} viewBox="0 0 50 50" style={{ transform: `rotate(${viewState.bearing}deg)` }}>
+                <svg width={isNavigating ? "32" : "16"} height={isNavigating ? "32" : "16"} viewBox="0 0 50 50">
                     <circle cx="25" cy="25" r="25" fill="#3b82f6" stroke="#ffffff" strokeWidth="4" />
                 </svg>
               </div>
