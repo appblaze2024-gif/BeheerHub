@@ -414,10 +414,9 @@ export default function NavigationModulePage() {
       if (nextState) {
         stopTracking();
         simulationStateRef.current = {
+          ...simulationStateRef.current,
           distance: 0,
           speed: 0,
-          acceleration: 2,
-          maxSpeed: 50 / 3.6,
         };
         simulationIntervalRef.current = setInterval(() => {
           if (!route || !origin) return;
@@ -438,7 +437,7 @@ export default function NavigationModulePage() {
           simulationStateRef.current.speed = newSpeed;
           simulationStateRef.current.distance += newSpeed;
 
-          setCurrentSpeed(newSpeed * 3.6); // Update UI speed
+          setCurrentSpeed(newSpeed * 3.6);
   
           if (simulationStateRef.current.distance >= totalDistance) {
             if (simulationIntervalRef.current) {
@@ -459,7 +458,7 @@ export default function NavigationModulePage() {
           const endPoint = turf.point(routeLine.coordinates[routeLine.coordinates.length - 1]);
           setDisplayedRoute(turf.lineSlice(startPoint, endPoint, route));
   
-          const nextPointDistance = simulationStateRef.current.distance + 10; // Look 10 meters ahead for bearing
+          const nextPointDistance = simulationStateRef.current.distance + 10;
           if (nextPointDistance <= totalDistance) {
             const nextPoint = turf.along(routeLine, nextPointDistance, { units: 'meters' });
             const bearing = turf.bearing(newPoint, nextPoint);
@@ -474,15 +473,29 @@ export default function NavigationModulePage() {
           simulationIntervalRef.current = null;
         }
         setCurrentSpeed(0);
-        startTracking();
-        if (origin) {
+        
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { longitude, latitude } = position.coords;
+            setOrigin([longitude, latitude]);
             mapRef.current?.getMap().easeTo({
-                center: origin,
+                center: [longitude, latitude],
                 zoom: 14,
                 pitch: 0,
                 bearing: 0,
             });
-        }
+          },
+          () => {
+            if (origin) { // Fallback to last known origin if current location fails
+               mapRef.current?.getMap().easeTo({
+                  center: origin,
+                  zoom: 14,
+                  pitch: 0,
+                  bearing: 0,
+              });
+            }
+          }
+        );
       }
       return nextState;
     });
