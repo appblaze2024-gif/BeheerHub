@@ -1155,10 +1155,17 @@ export default function Page() {
         >
           {snappedOrigin && (
             <Marker longitude={snappedOrigin[0]} latitude={snappedOrigin[1]}>
-               <div
-                className="flex items-center justify-center"
-              >
-                <div className="w-4 h-4 rounded-full bg-blue-600 border-2 border-white shadow-md" />
+              <div className="flex items-center justify-center">
+                <svg width={isNavigating ? "30" : "15"} height={isNavigating ? "30" : "15"} viewBox="0 0 50 50">
+                  <circle
+                    cx="25"
+                    cy="25"
+                    r="25"
+                    fill="#3b82f6"
+                    stroke="#ffffff"
+                    strokeWidth="4"
+                  />
+                </svg>
               </div>
             </Marker>
           )}
