@@ -137,13 +137,6 @@ const getManeuverIcon = (type: string, modifier?: string) => {
     }
 }
 
-const calculateZoom = (speed: number) => {
-  if (speed < 5) return 20; // Zeer ingezoomd bij stilstaan of wandelen
-  if (speed > 100) return 16; // Verder uitgezoomd op de snelweg
-  // Lineaire interpolatie tussen 5 km/u en 100 km/u
-  return 20 - 4 * ((speed - 5) / 95);
-};
-
 export default function Page() {
   const mapRef = React.useRef<any>();
   const firestore = useFirestore();
@@ -432,7 +425,7 @@ export default function Page() {
                 map.easeTo({
                     center: [longitude, latitude],
                     bearing: heading ?? map.getBearing(),
-                    zoom: calculateZoom((speed || 0) * 3.6),
+                    zoom: 20,
                     pitch: 70,
                     duration: 1000,
                     easing(t: any) { return t; },
@@ -542,9 +535,9 @@ export default function Page() {
         if (nextPointDistance <= totalDistance) {
           const nextPoint = turf.along(routeLine, nextPointDistance, { units: 'meters' });
           const bearing = turf.bearing(newPoint, nextPoint);
-          map.easeTo({ center: newCoords, zoom: calculateZoom(newSpeed * 3.6), bearing: bearing, pitch: 70, duration: 1000, easing: (t:any) => t, padding: {bottom: map.getCanvas().height * 0.6} });
+          map.easeTo({ center: newCoords, zoom: 20, bearing: bearing, pitch: 70, duration: 1000, easing: (t:any) => t, padding: {bottom: map.getCanvas().height * 0.6} });
         } else {
-          map.easeTo({ center: newCoords, zoom: calculateZoom(newSpeed * 3.6), pitch: 70, duration: 1000, easing: (t:any) => t, padding: {bottom: map.getCanvas().height * 0.6} });
+          map.easeTo({ center: newCoords, zoom: 20, pitch: 70, duration: 1000, easing: (t:any) => t, padding: {bottom: map.getCanvas().height * 0.6} });
         }
       }, 1000);
     } else {
@@ -654,7 +647,7 @@ export default function Page() {
     if(map) {
         map.easeTo({
             center: origin,
-            zoom: calculateZoom(0),
+            zoom: 20,
             pitch: 70,
             bearing: 0,
             duration: 2000,
@@ -723,7 +716,7 @@ export default function Page() {
     if(map) {
         map.easeTo({
             center: origin,
-            zoom: calculateZoom(0),
+            zoom: 20,
             pitch: 70,
             bearing: 0,
             duration: 2000,
@@ -839,7 +832,7 @@ export default function Page() {
         if(map) {
             const options: any = {
                 center: origin,
-                zoom: isNavigating ? calculateZoom(currentSpeed) : 15,
+                zoom: 20,
                 pitch: isNavigating ? 70 : 0,
             };
             if (isNavigating) {
