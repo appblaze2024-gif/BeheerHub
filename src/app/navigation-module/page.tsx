@@ -382,7 +382,7 @@ export default function Page() {
             center: [longitude, latitude],
             bearing: heading ?? map.getBearing(),
             zoom: 20,
-            pitch: 65,
+            pitch: 75, 
             duration: 1000, 
             easing(t: any) {
               return t;
@@ -461,9 +461,9 @@ export default function Page() {
         if (nextPointDistance <= totalDistance) {
           const nextPoint = turf.along(routeLine, nextPointDistance, { units: 'meters' });
           const bearing = turf.bearing(newPoint, nextPoint);
-          mapRef.current?.getMap().easeTo({ center: newCoords, zoom: 20, bearing: bearing, pitch: 65, duration: 1000, easing: (t:any) => t });
+          mapRef.current?.getMap().easeTo({ center: newCoords, zoom: 20, bearing: bearing, pitch: 75, duration: 1000, easing: (t:any) => t });
         } else {
-          mapRef.current?.getMap().easeTo({ center: newCoords, zoom: 20, pitch: 65, duration: 1000, easing: (t:any) => t });
+          mapRef.current?.getMap().easeTo({ center: newCoords, zoom: 20, pitch: 75, duration: 1000, easing: (t:any) => t });
         }
       }, 1000);
     } else {
@@ -572,7 +572,7 @@ export default function Page() {
     mapRef.current?.getMap().easeTo({
         center: origin,
         zoom: 20,
-        pitch: 65,
+        pitch: 75,
         bearing: 0,
         duration: 2000
     });
@@ -637,7 +637,7 @@ export default function Page() {
     mapRef.current?.getMap().easeTo({
         center: origin,
         zoom: 20,
-        pitch: 65,
+        pitch: 75,
         bearing: 0,
         duration: 2000
     });
@@ -746,7 +746,7 @@ export default function Page() {
         mapRef.current?.getMap().easeTo({
             center: origin,
             zoom: isNavigating ? 20 : 15,
-            pitch: isNavigating ? 65 : 0,
+            pitch: isNavigating ? 75 : 0,
         });
     }
   };
@@ -1201,3 +1201,5 @@ export default function Page() {
     </div>
   );
 }
+
+    
