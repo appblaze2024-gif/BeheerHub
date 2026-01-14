@@ -389,6 +389,7 @@ export default function Page() {
         };
 
         const snappedStart = data.waypoints[0].location;
+        setSnappedOrigin(snappedStart);
         
         setRoute(routeGeoJSON);
         setDisplayedRoute(routeGeoJSON);
@@ -447,71 +448,71 @@ export default function Page() {
         const newSpeed = (gpsSpeed || 0) * 3.6;
         setCurrentSpeed(newSpeed); // Convert m/s to km/h
   
-        if (isNavigating && route && route.geometry) {
-          const map = mapRef.current?.getMap();
-          if (!map) return;
-  
-          const routeLine = route.geometry;
-          const newPoint = turf.point(newOrigin);
-          
-          const snapped = turf.nearestPointOnLine(routeLine, newPoint, { units: 'meters' });
-          if (!snapped) return;
+        if (!isNavigating || !route || !route.geometry) return;
+        
+        const map = mapRef.current?.getMap();
+        if (!map) return;
 
-          const snappedCoords = snapped.geometry.coordinates as [number, number];
-          setSnappedOrigin(snappedCoords);
+        const routeLine = route.geometry;
+        const newPoint = turf.point(newOrigin);
+        
+        const snapped = turf.nearestPointOnLine(routeLine, newPoint, { units: 'meters' });
+        if (!snapped) return;
 
-          const distanceTraveled = turf.length(
-            turf.lineSlice(turf.point(routeLine.coordinates[0]), snapped.geometry.coordinates, routeLine),
-            { units: 'meters' }
-          );
-  
-          setRemainingDistance((routeInfo?.distance || 0) - distanceTraveled);
-          
-          setDisplayedRoute(
-            turf.lineSlice(
-              snapped.geometry.coordinates,
-              turf.point(routeLine.coordinates[routeLine.coordinates.length - 1]).geometry.coordinates,
-              routeLine
-            )
-          );
-  
-          let distanceTraveledOnInstructions = 0;
-          let upcomingInstructionIndex = -1;
-          for (let i = 0; i < routeInstructions.length; i++) {
-            distanceTraveledOnInstructions += routeInstructions[i].distance;
-            if (distanceTraveledOnInstructions > distanceTraveled) {
-              upcomingInstructionIndex = i;
-              break;
-            }
+        const snappedCoords = snapped.geometry.coordinates as [number, number];
+        setSnappedOrigin(snappedCoords);
+
+        const distanceTraveled = turf.length(
+          turf.lineSlice(turf.point(routeLine.coordinates[0]), snapped.geometry.coordinates, routeLine),
+          { units: 'meters' }
+        );
+
+        setRemainingDistance((routeInfo?.distance || 0) - distanceTraveled);
+        
+        setDisplayedRoute(
+          turf.lineSlice(
+            snapped.geometry.coordinates,
+            turf.point(routeLine.coordinates[routeLine.coordinates.length - 1]).geometry.coordinates,
+            routeLine
+          )
+        );
+
+        let distanceTraveledOnInstructions = 0;
+        let upcomingInstructionIndex = -1;
+        for (let i = 0; i < routeInstructions.length; i++) {
+          distanceTraveledOnInstructions += routeInstructions[i].distance;
+          if (distanceTraveledOnInstructions > distanceTraveled) {
+            upcomingInstructionIndex = i;
+            break;
           }
-  
-          if (upcomingInstructionIndex !== -1) {
-            const distanceToNextManeuver = distanceTraveledOnInstructions - distanceTraveled;
-            setDistanceToManeuver(distanceToNextManeuver);
-            if (currentInstructionIndex !== upcomingInstructionIndex) {
-              setCurrentInstructionIndex(upcomingInstructionIndex);
-              setCurrentInstruction(routeInstructions[upcomingInstructionIndex]);
-            }
-          }
-  
-          let newBearing = 0;
-          const nextPointDistance = distanceTraveled + 10; // Check 10 meters ahead
-          if (nextPointDistance <= (routeInfo?.distance || 0)) {
-            const nextPointOnRoute = turf.along(routeLine, nextPointDistance, { units: 'meters' });
-            newBearing = turf.bearing(snapped.geometry.coordinates, nextPointOnRoute.geometry.coordinates);
-          }
-          setBearing(newBearing);
-          
-          map.easeTo({
-            center: snappedCoords,
-            zoom: 20,
-            bearing: newBearing,
-            pitch: 70,
-            duration: 1000,
-            easing: (t: number) => t,
-            padding: { top: map.getCanvas().height * 0.35 },
-          });
         }
+
+        if (upcomingInstructionIndex !== -1) {
+          const distanceToNextManeuver = distanceTraveledOnInstructions - distanceTraveled;
+          setDistanceToManeuver(distanceToNextManeuver);
+          if (currentInstructionIndex !== upcomingInstructionIndex) {
+            setCurrentInstructionIndex(upcomingInstructionIndex);
+            setCurrentInstruction(routeInstructions[upcomingInstructionIndex]);
+          }
+        }
+
+        let newBearing = 0;
+        const nextPointDistance = distanceTraveled + 10; // Check 10 meters ahead
+        if (nextPointDistance <= (routeInfo?.distance || 0)) {
+          const nextPointOnRoute = turf.along(routeLine, nextPointDistance, { units: 'meters' });
+          newBearing = turf.bearing(snapped.geometry.coordinates, nextPointOnRoute.geometry.coordinates);
+        }
+        setBearing(newBearing);
+        
+        map.easeTo({
+          center: snappedCoords,
+          zoom: 20,
+          bearing: newBearing,
+          pitch: 70,
+          duration: 1000,
+          easing: (t: number) => t,
+          padding: { top: map.getCanvas().height * 0.35 },
+        });
       },
       (error) => {
         console.error("Error watching position:", error);
@@ -670,6 +671,7 @@ export default function Page() {
   }
 
   const handleStartOrResume = () => {
+    setIsNavigating(true);
     if (selectedHistoryId) {
         handleResumeRoute(selectedHistoryId);
     } else if (selectedRouteId) {
@@ -680,7 +682,6 @@ export default function Page() {
   const handleStartNavigation = async () => {
     if (!origin || !user || !firestore || !selectedProjectId || !selectedRouteId || !selectedRoute) return;
 
-    setIsNavigating(true);
     setIsCalculating(true);
 
     const map = mapRef.current?.getMap();
@@ -750,7 +751,7 @@ export default function Page() {
 
 
   React.useEffect(() => {
-    if (selectedHistoryId && !isNavigating && objects && origin) {
+    if (selectedHistoryId && isNavigating && objects && origin) {
         const startResume = async () => {
             const routeToResume = historyRoutes?.find(r => r.id === selectedHistoryId);
             if (!routeToResume) return;
@@ -758,7 +759,6 @@ export default function Page() {
             const map = mapRef.current?.getMap();
             if (!map) return;
 
-            setIsNavigating(true);
             setIsCalculating(true);
 
             const routeObjects = (routeToResume.allObjectIds || [])
