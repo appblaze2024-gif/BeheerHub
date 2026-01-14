@@ -444,26 +444,26 @@ export default function Page() {
       (position) => {
         const { longitude, latitude, speed: gpsSpeed } = position.coords;
         const newOrigin: [number, number] = [longitude, latitude];
-        setOrigin(newOrigin);
+        setOrigin(newOrigin); // Keep track of raw GPS
         const newSpeed = (gpsSpeed || 0) * 3.6;
-        setCurrentSpeed(newSpeed); // Convert m/s to km/h
+        setCurrentSpeed(newSpeed);
   
-        if (!isNavigating || !route || !route.geometry) return;
+        if (!route || !route.geometry) return;
         
         const map = mapRef.current?.getMap();
         if (!map) return;
 
         const routeLine = route.geometry;
-        const newPoint = turf.point(newOrigin);
+        const currentPoint = turf.point(newOrigin);
         
-        const snapped = turf.nearestPointOnLine(routeLine, newPoint, { units: 'meters' });
+        const snapped = turf.nearestPointOnLine(routeLine, currentPoint, { units: 'meters' });
         if (!snapped) return;
 
         const snappedCoords = snapped.geometry.coordinates as [number, number];
-        setSnappedOrigin(snappedCoords);
+        setSnappedOrigin(snappedCoords); // This is the single source of truth for the marker/camera
 
         const distanceTraveled = turf.length(
-          turf.lineSlice(turf.point(routeLine.coordinates[0]), snapped.geometry.coordinates, routeLine),
+          turf.lineSlice(turf.point(routeLine.coordinates[0]), snappedCoords, routeLine),
           { units: 'meters' }
         );
 
@@ -471,7 +471,7 @@ export default function Page() {
         
         setDisplayedRoute(
           turf.lineSlice(
-            snapped.geometry.coordinates,
+            snappedCoords,
             turf.point(routeLine.coordinates[routeLine.coordinates.length - 1]).geometry.coordinates,
             routeLine
           )
@@ -500,7 +500,7 @@ export default function Page() {
         const nextPointDistance = distanceTraveled + 10; // Check 10 meters ahead
         if (nextPointDistance <= (routeInfo?.distance || 0)) {
           const nextPointOnRoute = turf.along(routeLine, nextPointDistance, { units: 'meters' });
-          newBearing = turf.bearing(snapped.geometry.coordinates, nextPointOnRoute.geometry.coordinates);
+          newBearing = turf.bearing(snappedCoords, nextPointOnRoute.geometry.coordinates);
         }
         setBearing(newBearing);
         
@@ -568,7 +568,6 @@ export default function Page() {
 
         const newPoint = turf.along(routeLine, simulationStateRef.current.distance, { units: 'meters' });
         const newCoords = newPoint.geometry.coordinates as [number, number];
-        setOrigin(newCoords);
         setSnappedOrigin(newCoords);
 
         let distanceTraveledOnInstructions = 0;
@@ -627,7 +626,7 @@ export default function Page() {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { longitude, latitude } = position.coords;
-          setOrigin([longitude, latitude]);
+          setSnappedOrigin([longitude, latitude]);
           mapRef.current?.getMap().easeTo({
             center: [longitude, latitude],
             zoom: 14,
@@ -636,9 +635,9 @@ export default function Page() {
           });
         },
         () => {
-          if (origin) {
+          if (snappedOrigin) {
             mapRef.current?.getMap().easeTo({
-              center: origin,
+              center: snappedOrigin,
               zoom: 14,
               pitch: 0,
               bearing: 0,
@@ -682,6 +681,7 @@ export default function Page() {
   const handleStartNavigation = async () => {
     if (!origin || !user || !firestore || !selectedProjectId || !selectedRouteId || !selectedRoute) return;
 
+    setIsNavigating(true);
     setIsCalculating(true);
 
     const map = mapRef.current?.getMap();
@@ -753,6 +753,7 @@ export default function Page() {
   React.useEffect(() => {
     if (selectedHistoryId && isNavigating && objects && origin) {
         const startResume = async () => {
+            setIsNavigating(true);
             const routeToResume = historyRoutes?.find(r => r.id === selectedHistoryId);
             if (!routeToResume) return;
 
