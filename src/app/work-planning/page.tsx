@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { ChevronLeft, ChevronRight, Clock, MoreHorizontal, Plus, Printer, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, MoreHorizontal, Plus, Printer, Trash2, Copy } from 'lucide-react';
 import {
   startOfWeek,
   endOfWeek,
@@ -14,7 +14,7 @@ import {
   isToday,
 } from 'date-fns';
 import { nl } from 'date-fns/locale';
-import { collection, query, where, doc, getDocs, updateDoc, addDoc } from 'firebase/firestore';
+import { collection, query, where, doc, getDocs, updateDoc, addDoc, writeBatch } from 'firebase/firestore';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
@@ -185,9 +185,9 @@ export default function WorkPlanningPage() {
     x: number;
     y: number;
     dienst?: Dienst;
-    targetCell?: { medewerkerId: string; datum: Date };
   } | null>(null);
   const [copiedDienst, setCopiedDienst] = React.useState<Dienst | null>(null);
+  const [selectedCells, setSelectedCells] = React.useState<{ medewerkerId: string; datum: string }[]>([]);
 
 
   const firestore = useFirestore();
@@ -453,42 +453,51 @@ export default function WorkPlanningPage() {
     return buttons;
   }
 
-  const handleContextMenu = (
-    e: React.MouseEvent,
-    item?: Dienst,
-    targetCell?: { medewerkerId: string; datum: Date }
-  ) => {
+  const handleContextMenu = (e: React.MouseEvent, dienst?: Dienst) => {
     e.preventDefault();
-    setContextMenu({ x: e.pageX, y: e.pageY, dienst: item, targetCell });
+    setContextMenu({ x: e.clientX, y: e.clientY, dienst });
   };
   
   const handlePaste = async () => {
-    if (!copiedDienst || !contextMenu?.targetCell || !firestore || !selectedProjectId) return;
+    if (!copiedDienst || selectedCells.length === 0 || !firestore || !selectedProjectId) return;
   
-    const { medewerkerId, datum } = contextMenu.targetCell;
     const { id, ...dienstToCopy } = copiedDienst;
+    const batch = writeBatch(firestore);
+    const dienstenColRef = collection(firestore, 'projects', selectedProjectId, 'diensten');
   
-    const newDienstData = {
-      ...dienstToCopy,
-      medewerkerId: medewerkerId,
-      datum: format(datum, 'yyyy-MM-dd'),
-    };
+    selectedCells.forEach(cell => {
+        const newDienstData = {
+          ...dienstToCopy,
+          medewerkerId: cell.medewerkerId,
+          datum: cell.datum,
+        };
+        const newDocRef = doc(dienstenColRef);
+        batch.set(newDocRef, newDienstData);
+    });
   
     try {
-      const dienstenColRef = collection(firestore, 'projects', selectedProjectId, 'diensten');
-      await addDoc(dienstenColRef, newDienstData);
+      await batch.commit();
       fetchDiensten();
+      setSelectedCells([]); // Clear selection after pasting
     } catch (error) {
-      console.error('Error pasting dienst:', error);
+      console.error('Error pasting diensten:', error);
     }
-    setContextMenu(null);
   };
   
-  React.useEffect(() => {
-    const handleClickOutside = () => setContextMenu(null);
-    window.addEventListener('click', handleClickOutside);
-    return () => window.removeEventListener('click', handleClickOutside);
-  }, []);
+  const handleCellClick = (e: React.MouseEvent, medewerkerId: string, datum: string) => {
+    const cell = { medewerkerId, datum };
+    const isSelected = selectedCells.some(c => c.medewerkerId === medewerkerId && c.datum === datum);
+    
+    if (e.ctrlKey || e.metaKey) { // For multi-select
+        if (isSelected) {
+            setSelectedCells(prev => prev.filter(c => !(c.medewerkerId === medewerkerId && c.datum === datum)));
+        } else {
+            setSelectedCells(prev => [...prev, cell]);
+        }
+    } else { // For single select
+        setSelectedCells(isSelected && selectedCells.length === 1 ? [] : [cell]);
+    }
+  };
 
 
   return (
@@ -590,30 +599,56 @@ export default function WorkPlanningPage() {
                   </div>
                 </div>
                 {weekDays.map((day) => {
+                  const datumString = format(day, 'yyyy-MM-dd');
                   const dienstenForDay = diensten?.filter(d => 
                       d.medewerkerId === medewerker.id && 
                       isSameDay(new Date(d.datum), day)
                   );
-                  const isDragOver = dragOverCell?.medewerkerId === medewerker.id && dragOverCell?.day === format(day, 'yyyy-MM-dd');
+                  const isDragOver = dragOverCell?.medewerkerId === medewerker.id && dragOverCell?.day === datumString;
+                  const isSelected = selectedCells.some(c => c.medewerkerId === medewerker.id && c.datum === datumString);
+
                   return (
                     <div
                         key={day.toISOString()}
                         onDrop={(e) => handleDrop(e, medewerker.id, day)}
                         onDragOver={(e) => handleDragOver(e, medewerker.id, day)}
                         onDragLeave={() => setDragOverCell(null)}
-                        onContextMenu={(e) => handleContextMenu(e, undefined, { medewerkerId: medewerker.id, datum: day })}
+                        onContextMenu={handleContextMenu}
+                        onClick={(e) => handleCellClick(e, medewerker.id, datumString)}
                         className={cn(
-                            "group relative p-2 border-b border-r min-h-[80px] flex flex-col gap-1 transition-colors day-column",
+                            "group relative p-2 border-b border-r min-h-[80px] flex flex-col gap-1 transition-colors day-column cursor-pointer",
                              isToday(day) && "bg-muted/50",
-                            isDragOver && "bg-blue-100 dark:bg-blue-900/30"
+                             isDragOver && "bg-blue-100 dark:bg-blue-900/30",
+                             isSelected && "bg-primary/10",
                         )}
                     >
-                        <div className="flex-1 space-y-1">
+                      <DropdownMenu>
+                         <DropdownMenuTrigger asChild>
+                            <div className="absolute inset-0 z-0" />
+                         </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          {copiedDienst && (
+                             <DropdownMenuItem onClick={handlePaste}>
+                              <Copy className="mr-2 h-4 w-4" />
+                              Plakken
+                            </DropdownMenuItem>
+                          )}
+                           <DropdownMenuItem onClick={() => selectedProjectId && handleOpenSheetForNew(medewerker, day)}>
+                              <Plus className="mr-2 h-4 w-4" />
+                              Nieuwe dienst
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
+                        <div className="flex-1 space-y-1 relative z-10">
                           {isLoadingDiensten ? (
                               <Skeleton className="h-10 w-full" />
                           ) : (
                             dienstenForDay?.map(dienst => (
-                                <DienstItem key={dienst.id} dienst={dienst} onEdit={handleOpenSheetForEdit} onDelete={handleDienstDelete} onContextMenu={(e, d) => handleContextMenu(e, d)} />
+                                <DienstItem key={dienst.id} dienst={dienst} onEdit={handleOpenSheetForEdit} onDelete={handleDienstDelete} onContextMenu={(e, d) => {
+                                    e.stopPropagation(); // Prevent grid cell context menu
+                                    handleContextMenu(e, d);
+                                }} />
                             ))
                           )}
                         </div>
@@ -621,7 +656,7 @@ export default function WorkPlanningPage() {
                             variant="ghost" 
                             size="icon" 
                             className={cn(
-                                "h-7 w-7 self-center opacity-0 group-hover:opacity-100 transition-opacity add-button",
+                                "h-7 w-7 self-center opacity-0 group-hover:opacity-100 transition-opacity add-button relative z-10",
                                 !selectedProjectId && 'hidden'
                             )}
                             onClick={() => selectedProjectId && handleOpenSheetForNew(medewerker, day)}
@@ -636,32 +671,28 @@ export default function WorkPlanningPage() {
           )}
         </div>
       </div>
-      {contextMenu && (
-        <div
-          style={{ top: contextMenu.y, left: contextMenu.x }}
-          className="fixed z-50 bg-card border rounded-md shadow-lg p-1 text-sm"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {contextMenu.dienst ? (
-            <button
-              onClick={() => {
-                setCopiedDienst(contextMenu.dienst!);
-                setContextMenu(null);
-              }}
-              className="block w-full text-left px-3 py-1.5 rounded-sm hover:bg-accent"
-            >
-              Kopiëren
-            </button>
-          ) : copiedDienst ? (
-            <button
-              onClick={handlePaste}
-              className="block w-full text-left px-3 py-1.5 rounded-sm hover:bg-accent"
-            >
-              Plakken
-            </button>
-          ) : null}
-        </div>
-      )}
+      <DropdownMenu open={!!contextMenu} onOpenChange={(isOpen) => !isOpen && setContextMenu(null)}>
+          <DropdownMenuTrigger
+            style={contextMenu ? { position: 'fixed', left: contextMenu.x, top: contextMenu.y } : {}}
+          />
+          <DropdownMenuContent onContextMenu={(e) => e.preventDefault()}>
+            {contextMenu?.dienst && (
+              <DropdownMenuItem onClick={() => {
+                  setCopiedDienst(contextMenu.dienst!);
+                  setContextMenu(null);
+                }}>
+                <Copy className="mr-2 h-4 w-4" />
+                Kopiëren
+              </DropdownMenuItem>
+            )}
+             {copiedDienst && (
+              <DropdownMenuItem onClick={handlePaste}>
+                <Copy className="mr-2 h-4 w-4" />
+                Plakken
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       <DienstToevoegenDialog
             open={isSheetOpen}
             onOpenChange={setIsSheetOpen}
