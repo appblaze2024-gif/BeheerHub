@@ -194,13 +194,13 @@ export default function Page() {
 
   // Refs for state management inside callbacks
   const positionRef = React.useRef<[number, number] | null>(null);
+  const snappedOriginRef = React.useRef<[number, number] | null>(null);
   const routeRef = React.useRef<any>(null);
   const routeInfoRef = React.useRef<RouteInfo | null>(null);
   const routeInstructionsRef = React.useRef<RouteInstruction[]>([]);
   const currentInstructionIndexRef = React.useRef(0);
   
   const [displayedRoute, setDisplayedRoute] = React.useState<any>(null);
-  const [snappedOrigin, setSnappedOrigin] = React.useState<[number, number] | null>(null);
 
 
   const objectsCollection = useMemo(() => {
@@ -312,7 +312,7 @@ export default function Page() {
         (position) => {
           const { longitude, latitude } = position.coords;
           positionRef.current = [longitude, latitude];
-          setSnappedOrigin([longitude, latitude]);
+          snappedOriginRef.current = [longitude, latitude];
           setViewState(prev => ({...prev, longitude, latitude, zoom: 14}));
           setLocationError(null);
         },
@@ -320,14 +320,14 @@ export default function Page() {
           setLocationError("Kon uw locatie niet ophalen. Zorg ervoor dat u locatietoestemming heeft gegeven.");
           const fallbackLocation: [number, number] = [5.4697, 51.4416];
           positionRef.current = fallbackLocation;
-          setSnappedOrigin(fallbackLocation);
+          snappedOriginRef.current = fallbackLocation;
         }
       );
     } else {
       setLocationError("Geolocatie wordt niet ondersteund door deze browser.");
       const fallbackLocation: [number, number] = [5.4697, 51.4416];
       positionRef.current = fallbackLocation;
-      setSnappedOrigin(fallbackLocation);
+      snappedOriginRef.current = fallbackLocation;
     }
   }, []);
 
@@ -395,7 +395,7 @@ export default function Page() {
         };
 
         const snappedStart = data.waypoints[0].location;
-        setSnappedOrigin(snappedStart);
+        snappedOriginRef.current = snappedStart;
         
         routeRef.current = routeGeoJSON;
         setDisplayedRoute(routeGeoJSON);
@@ -449,12 +449,7 @@ export default function Page() {
     if (!snapped) return;
 
     const snappedCoords = snapped.geometry.coordinates as [number, number];
-    setSnappedOrigin(coords => {
-        if (!coords || coords[0] !== snappedCoords[0] || coords[1] !== snappedCoords[1]) {
-            return snappedCoords;
-        }
-        return coords;
-    });
+    snappedOriginRef.current = snappedCoords;
 
     const distanceTraveled = turf.length(
         turf.lineSlice(turf.point(routeLine.coordinates[0]), snapped, routeLine),
@@ -468,12 +463,7 @@ export default function Page() {
         turf.point(routeLine.coordinates[routeLine.coordinates.length - 1]),
         routeLine
     );
-    setDisplayedRoute((current: any) => {
-        if (!current || !turf.booleanEqual(turf.feature(current.geometry), turf.feature(remainingLine.geometry))) {
-            return remainingLine;
-        }
-        return current;
-    });
+    setDisplayedRoute(remainingLine);
     
     let distanceTraveledOnInstructions = 0;
     let upcomingInstructionIndex = -1;
@@ -557,6 +547,56 @@ export default function Page() {
     pauseTimeout: null as NodeJS.Timeout | null,
   });
 
+  const handleStopNavigation = useCallback(() => {
+    if (firestore && user && activeRouteHistoryId) {
+      const routeHistoryRef = doc(firestore, `users/${user.uid}/routes`, activeRouteHistoryId);
+      updateDocumentNonBlocking(routeHistoryRef, {
+        endTime: serverTimestamp()
+      });
+    }
+    
+    if (simulationIntervalRef.current) {
+        clearInterval(simulationIntervalRef.current);
+        simulationIntervalRef.current = null;
+    }
+     if (simulationStateRef.current.pauseTimeout) {
+      clearTimeout(simulationStateRef.current.pauseTimeout);
+    }
+    setIsSimulating(false);
+    setCurrentSpeed(0);
+
+    setIsNavigating(false);
+    setIsCalculating(false);
+    
+    routeRef.current = null;
+    setDisplayedRoute(null);
+    routeInfoRef.current = null;
+    setRemainingDistance(null);
+    routeInstructionsRef.current = [];
+    setCurrentInstruction(null);
+    setDistanceToManeuver(null);
+    setDestination(null);
+    setPendingObjects([]);
+    setCompletedObjects([]);
+    setSkippedObjects([]);
+    setActiveRouteHistoryId(null);
+    setSelectedRouteId(null);
+    setSelectedRouteType(null);
+    setSelectedHistoryId(null);
+    stopTracking();
+    
+    const currentGpsLocation = positionRef.current;
+    if (currentGpsLocation) {
+        snappedOriginRef.current = currentGpsLocation;
+        mapRef.current?.getMap().easeTo({
+            center: currentGpsLocation,
+            zoom: 14,
+            pitch: 0,
+            bearing: 0,
+        });
+    }
+  }, [firestore, user, activeRouteHistoryId]);
+
   const handleToggleSimulation = () => {
     const isStarting = !isSimulating;
     setIsSimulating(isStarting);
@@ -599,13 +639,22 @@ export default function Page() {
 
                 if(simulationStateRef.current.pauseTimeout) clearTimeout(simulationStateRef.current.pauseTimeout);
                 
-                currentInstructionIndexRef.current += 1;
-                const nextInstruction = routeInstructionsRef.current[currentInstructionIndexRef.current];
+                const nextInstructionIndex = currentInstructionIndexRef.current + 1;
 
-                simulationStateRef.current.pauseTimeout = setTimeout(() => {
-                    setCurrentInstruction(nextInstruction);
-                    simulationStateRef.current.isPausedAtManeuver = false;
-                }, 2000);
+                if (nextInstructionIndex < routeInstructionsRef.current.length) {
+                    currentInstructionIndexRef.current = nextInstructionIndex;
+                    const nextInstruction = routeInstructionsRef.current[nextInstructionIndex];
+                    
+                    simulationStateRef.current.pauseTimeout = setTimeout(() => {
+                        setCurrentInstruction(nextInstruction);
+                        simulationStateRef.current.isPausedAtManeuver = false;
+                    }, 2000);
+                } else {
+                    // This is the last maneuver, stop after the pause
+                     simulationStateRef.current.pauseTimeout = setTimeout(() => {
+                        handleStopNavigation();
+                    }, 2000);
+                }
                 return;
             }
             
@@ -817,58 +866,8 @@ export default function Page() {
     setIsCompletionSheetOpen(false);
   };
 
-  const handleStopNavigation = () => {
-    if (firestore && user && activeRouteHistoryId) {
-      const routeHistoryRef = doc(firestore, `users/${user.uid}/routes`, activeRouteHistoryId);
-      updateDocumentNonBlocking(routeHistoryRef, {
-        endTime: serverTimestamp()
-      });
-    }
-    
-    if (simulationIntervalRef.current) {
-        clearInterval(simulationIntervalRef.current);
-        simulationIntervalRef.current = null;
-    }
-     if (simulationStateRef.current.pauseTimeout) {
-      clearTimeout(simulationStateRef.current.pauseTimeout);
-    }
-    setIsSimulating(false);
-    setCurrentSpeed(0);
-
-    setIsNavigating(false);
-    setIsCalculating(false);
-    
-    routeRef.current = null;
-    setDisplayedRoute(null);
-    routeInfoRef.current = null;
-    setRemainingDistance(null);
-    routeInstructionsRef.current = [];
-    setCurrentInstruction(null);
-    setDistanceToManeuver(null);
-    setDestination(null);
-    setPendingObjects([]);
-    setCompletedObjects([]);
-    setSkippedObjects([]);
-    setActiveRouteHistoryId(null);
-    setSelectedRouteId(null);
-    setSelectedRouteType(null);
-    setSelectedHistoryId(null);
-    stopTracking();
-    
-    const currentOrigin = positionRef.current;
-    if(currentOrigin) {
-      setViewState(prev => ({ ...prev, pitch: 0, bearing: 0, zoom: 14, longitude: currentOrigin[0], latitude: currentOrigin[1] }));
-      mapRef.current?.getMap().easeTo({
-          center: currentOrigin,
-          zoom: 14,
-          pitch: 0,
-          bearing: 0,
-      });
-    }
-  }
-
   const centerOnLocation = () => {
-    const centerPoint = snappedOrigin;
+    const centerPoint = snappedOriginRef.current;
     if (centerPoint) {
       const map = mapRef.current?.getMap();
       if (map) {
@@ -1146,8 +1145,8 @@ export default function Page() {
           mapStyle="mapbox://styles/mapbox/streets-v12"
           mapboxAccessToken={MAPBOX_TOKEN}
         >
-          {snappedOrigin && (
-            <Marker longitude={snappedOrigin[0]} latitude={snappedOrigin[1]} rotationAlignment="map" rotation={viewState.bearing}>
+          {snappedOriginRef.current && (
+            <Marker longitude={snappedOriginRef.current[0]} latitude={snappedOriginRef.current[1]} rotationAlignment="map" rotation={viewState.bearing}>
                <div className="flex items-center justify-center">
                  <svg width={isNavigating ? "32" : "16"} height={isNavigating ? "32" : "16"} viewBox="0 0 50 50">
                     <circle cx="25" cy="25" r="25" fill="#3b82f6" stroke="#ffffff" strokeWidth="4" />
