@@ -461,6 +461,7 @@ export default function WorkPlanningPage() {
   const handlePaste = async () => {
     if (!copiedDienst || selectedCells.length === 0 || !firestore || !selectedProjectId) return;
   
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id, ...dienstToCopy } = copiedDienst;
     const batch = writeBatch(firestore);
     const dienstenColRef = collection(firestore, 'projects', selectedProjectId, 'diensten');
@@ -613,13 +614,14 @@ export default function WorkPlanningPage() {
                         onDrop={(e) => handleDrop(e, medewerker.id, day)}
                         onDragOver={(e) => handleDragOver(e, medewerker.id, day)}
                         onDragLeave={() => setDragOverCell(null)}
-                        onContextMenu={handleContextMenu}
+                        onContextMenu={(e) => handleContextMenu(e)}
                         onClick={(e) => handleCellClick(e, medewerker.id, datumString)}
                         className={cn(
-                            "group relative p-2 border-b border-r min-h-[80px] flex flex-col gap-1 transition-colors day-column cursor-pointer",
+                            "group relative p-2 border-b border-r min-h-[80px] flex flex-col gap-1 transition-colors day-column",
                              isToday(day) && "bg-muted/50",
                              isDragOver && "bg-blue-100 dark:bg-blue-900/30",
                              isSelected && "bg-primary/10",
+                             !dienstenForDay?.length && "cursor-pointer"
                         )}
                     >
                       <DropdownMenu>
