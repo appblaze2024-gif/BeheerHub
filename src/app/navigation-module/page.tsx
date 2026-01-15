@@ -1205,7 +1205,7 @@ export default function Page() {
           {snappedOriginRef.current && (
             <Marker longitude={snappedOriginRef.current[0]} latitude={snappedOriginRef.current[1]} rotationAlignment="map" rotation={viewState.bearing}>
                <div className="flex items-center justify-center">
-                 <svg width={isNavigating ? "32" : "16"} height={isNavigating ? "32" : "16"} viewBox="0 0 50 50">
+                 <svg width={isNavigating ? "32" : "16"} height={isNavigating ? "32" : "16"} viewBox="0 0 50 50" className={cn(isNavigating && 'animate-pulse')}>
                     <circle cx="25" cy="25" r="25" fill="#3b82f6" stroke="#ffffff" strokeWidth="4" />
                 </svg>
               </div>
