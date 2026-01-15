@@ -490,7 +490,7 @@ export default function IssuesPage() {
                                 onSelect={setSelectedDate}
                                 initialFocus
                                 locale={nl}
-                                className="rounded-md border bg-card w-full"
+                                className="rounded-md border bg-card w-auto"
                             />
                         </div>
                     </div>
