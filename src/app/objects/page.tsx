@@ -16,6 +16,7 @@ import {
   Upload,
   RefreshCw,
   List,
+  Palette,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -120,22 +121,13 @@ function PlanningAccordionContent({ selectedObject, handleUpdateField, projects,
   );
 }
 
-const getHeatmapColor = (vulgraad: number | undefined): string => {
-    if (vulgraad === undefined || vulgraad === null || vulgraad <= 0) {
-      return 'bg-blue-600'; // Default to blue if no vulgraad
-    }
-    // Hue: 120 is green, 0 is red.
-    // We want green (120) at 0% and red (0) at 100%.
-    const hue = 120 * (1 - vulgraad / 100);
-    return `hsl(${hue}, 80%, 50%)`;
-  };
-
 export default function ObjectsPage() {
   const firestore = useFirestore();
   const [isImporting, setIsImporting] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');
   const [selectedObject, setSelectedObject] = React.useState<any | null>(null);
   const [viewMode, setViewMode] = React.useState<'list' | 'map'>('list');
+  const [showHeatmap, setShowHeatmap] = React.useState(true);
 
   // State for map view filtering
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
@@ -298,6 +290,12 @@ export default function ObjectsPage() {
             {viewMode === 'list' ? <Map className="mr-2 h-4 w-4" /> : <List className="mr-2 h-4 w-4" />}
             {viewMode === 'list' ? 'Kaartweergave' : 'Lijstweergave'}
           </Button>
+          {viewMode === 'map' && (
+            <Button variant={showHeatmap ? 'secondary' : 'outline'} onClick={() => setShowHeatmap(!showHeatmap)}>
+                <Palette className="mr-2 h-4 w-4" />
+                Vulgraden
+            </Button>
+          )}
           <Button variant="outline">
             <QrCode className="mr-2 h-4 w-4" /> QR Scan
           </Button>
@@ -602,7 +600,7 @@ export default function ObjectsPage() {
               )}
             </div>
           </aside>
-          <MapboxView objects={objectsOnMap} wijkPolygons={areaPolygons} />
+          <MapboxView objects={objectsOnMap} wijkPolygons={areaPolygons} showHeatmap={showHeatmap} />
         </div>
       )}
     </div>

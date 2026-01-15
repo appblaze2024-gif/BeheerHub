@@ -23,6 +23,7 @@ interface MapboxViewProps {
   selectedObjects?: MapObject[];
   onObjectSelect?: (object: MapObject, selected: boolean) => void;
   wijkPolygons?: turf.Feature<turf.Polygon | turf.MultiPolygon>[];
+  showHeatmap?: boolean;
 }
 
 const polygonFillLayer: FillLayer = {
@@ -53,7 +54,7 @@ const getHeatmapColor = (vulgraad: number | undefined): string => {
     return `hsl(${hue}, 80%, 50%)`;
 };
 
-export function MapboxView({ longitude, latitude, objects, selectedObjects = [], onObjectSelect, wijkPolygons = [] }: MapboxViewProps) {
+export function MapboxView({ longitude, latitude, objects, selectedObjects = [], onObjectSelect, wijkPolygons = [], showHeatmap = true }: MapboxViewProps) {
   const [selectedPin, setSelectedPin] = React.useState<MapObject | null>(null);
   const [hoveredPin, setHoveredPin] = React.useState<MapObject | null>(null);
 
@@ -109,7 +110,7 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
     if (objects) {
       return objects.map(obj => {
         const isSelected = selectedObjects.some(so => so.id === obj.id);
-        const color = getHeatmapColor(obj.vulgraad);
+        const color = showHeatmap ? getHeatmapColor(obj.vulgraad) : 'bg-blue-600';
         return (
             <Marker
               key={obj.id}
@@ -142,7 +143,7 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
       );
     }
     return null;
-  }, [objects, longitude, latitude, selectedObjects, onObjectSelect]);
+  }, [objects, longitude, latitude, selectedObjects, onObjectSelect, showHeatmap]);
 
   const pinToShow = hoveredPin || selectedPin;
 
