@@ -440,7 +440,22 @@ export default function Page() {
 
  const updateMapAndPosition = React.useCallback(() => {
     const userLocation = positionRef.current;
-    if (!userLocation || !routeRef.current?.geometry) return;
+    if (!userLocation || !isNavigating) return;
+
+    // Check distance to destination
+    if (destination) {
+        const distanceToDestination = turf.distance(
+            userLocation,
+            [destination.longitude, destination.latitude],
+            { units: 'meters' }
+        );
+        if (distanceToDestination < 15 && !isCompletionSheetOpen) {
+            handleMarkerClick(destination);
+            return;
+        }
+    }
+
+    if (!routeRef.current?.geometry) return;
 
     const map = mapRef.current?.getMap();
     if (!map) return;
@@ -515,7 +530,7 @@ export default function Page() {
         easing: (t: number) => t,
         padding: { top: map.getCanvas().height * 0.35 },
     });
-}, [pendingObjects]);
+}, [pendingObjects, isNavigating, destination, isCompletionSheetOpen]);
 
 
   const startTracking = React.useCallback(() => {
@@ -646,17 +661,19 @@ export default function Page() {
             const routeLine = routeRef.current.geometry;
             const totalDistance = routeInfoRef.current?.distance || 0;
             
-            const distanceToDestination = turf.distance(
-                positionRef.current!,
-                turf.point(destination!.longitude, destination!.latitude),
-                { units: 'meters' }
-            );
-            
-            if (distanceToDestination < 5 && !simulationStateRef.current.isPaused) {
-                simulationStateRef.current.isPaused = true;
-                setCurrentSpeed(0);
-                setIsCompletionSheetOpen(true);
-                return;
+            if (destination) {
+              const distanceToDestination = turf.distance(
+                  positionRef.current!,
+                  [destination.longitude, destination.latitude],
+                  { units: 'meters' }
+              );
+              
+              if (distanceToDestination < 15 && !simulationStateRef.current.isPaused) {
+                  simulationStateRef.current.isPaused = true;
+                  setCurrentSpeed(0);
+                  handleMarkerClick(destination);
+                  return;
+              }
             }
 
             if (simulationStateRef.current.distance >= totalDistance) {
