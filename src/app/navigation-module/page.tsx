@@ -443,13 +443,13 @@ export default function Page() {
     if (!userLocation || !isNavigating) return;
 
     // Check distance to destination
-    if (destination) {
+    if (destination && !isCompletionSheetOpen) {
         const distanceToDestination = turf.distance(
             userLocation,
             [destination.longitude, destination.latitude],
             { units: 'meters' }
         );
-        if (distanceToDestination < 15 && !isCompletionSheetOpen) {
+        if (distanceToDestination < 15) {
             handleMarkerClick(destination);
             return;
         }
@@ -672,7 +672,7 @@ export default function Page() {
                   { units: 'meters' }
               );
               
-              if (distanceToDestination < 15 && !simulationStateRef.current.isPaused) {
+              if (distanceToDestination < 15 && !simulationStateRef.current.isPaused && !isCompletionSheetOpen) {
                   simulationStateRef.current.isPaused = true;
                   setCurrentSpeed(0);
                   handleMarkerClick(destination);
