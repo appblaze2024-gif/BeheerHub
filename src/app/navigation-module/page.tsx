@@ -1274,17 +1274,17 @@ export default function Page() {
           )}
         </MapGL>
         <Dialog open={isCompletionSheetOpen} onOpenChange={setIsCompletionSheetOpen}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                     <DialogTitle>OBJECT-ID: {destination?.id}</DialogTitle>
                     <DialogDescription>
                         Markeer dit object als voltooid en ga verder naar de volgende.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-6 py-4">
+                <div className="space-y-4 py-4">
                   <div className="space-y-4">
                       <Label className="text-center block">Selecteer vulgraad</Label>
-                      <div className="h-48 -mb-4">
+                      <div className="h-36 -mb-4">
                           <ResponsiveContainer width="100%" height="100%">
                               <RadialBarChart 
                                   cx="50%"
@@ -1335,16 +1335,16 @@ export default function Page() {
                      <Image 
                         src="https://i.ibb.co/pjqtgDZj/Chat-GPT-Image-15-jan-2026-21-25-58-removebg-preview.png"
                         alt="Gereed"
-                        width={128}
-                        height={128}
+                        width={100}
+                        height={100}
                         onClick={() => handleNextObject('completed')}
                         className="cursor-pointer hover:scale-105 transition-transform"
                      />
                       <Image 
                         src="https://i.ibb.co/qLKX0VYH/Chat-GPT-Image-15-jan-2026-21-28-53-removebg-preview.png"
                         alt="Niet Gereed"
-                        width={128}
-                        height={128}
+                        width={100}
+                        height={100}
                         onClick={() => handleNextObject('skipped')}
                         className="cursor-pointer hover:scale-105 transition-transform"
                      />
