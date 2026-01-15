@@ -1284,17 +1284,17 @@ export default function Page() {
                 <div className="space-y-6 py-4">
                   <div className="space-y-4">
                       <Label className="text-center block">Selecteer vulgraad</Label>
-                      <div className="h-32 -mb-4">
+                      <div className="h-48 -mb-4">
                           <ResponsiveContainer width="100%" height="100%">
                               <RadialBarChart 
                                   cx="50%"
                                   cy="100%"
-                                  innerRadius="80%" 
-                                  outerRadius="110%" 
+                                  innerRadius="100%" 
+                                  outerRadius="140%" 
                                   data={[{ name: 'vulgraad', value: completionVulgraadPercentage }]} 
                                   startAngle={180} 
                                   endAngle={0}
-                                  barSize={25}
+                                  barSize={30}
                               >
                                   <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
                                   <RadialBar 
@@ -1353,5 +1353,3 @@ export default function Page() {
     </div>
   );
 }
-
-    
