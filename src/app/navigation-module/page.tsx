@@ -173,7 +173,7 @@ export default function Page() {
   const [selectedHistoryId, setSelectedHistoryId] = React.useState<string | null>(null);
   const [isCompletionSheetOpen, setIsCompletionSheetOpen] = React.useState(false);
   
-  const watchIdRef = React.useRef<number | null>(null);
+  const trackIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
   
   const [pendingObjects, setPendingObjects] = React.useState<MapObject[]>([]);
   const [completedObjects, setCompletedObjects] = React.useState<string[]>([]);
@@ -535,43 +535,39 @@ export default function Page() {
 
   const startTracking = React.useCallback(() => {
     if (isSimulating) {
-        console.log("Simulation is active, not starting GPS tracking.");
-        return;
+      console.log("Simulation is active, not starting GPS tracking.");
+      return;
     }
     if (!navigator.geolocation) {
-        console.log("Geolocation is not supported.");
-        return;
+      console.log("Geolocation is not supported.");
+      return;
     }
   
-    if (watchIdRef.current) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
+    if (trackIntervalRef.current) {
+      clearInterval(trackIntervalRef.current);
     }
   
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      (position) => {
-        const { longitude, latitude, speed: gpsSpeed } = position.coords;
-        positionRef.current = [longitude, latitude];
-        
-        const newSpeed = (gpsSpeed || 0) * 3.6; // m/s to km/h
-        setCurrentSpeed(newSpeed);
-  
-        updateMapAndPosition();
-      },
-      (error) => {
-        console.error("Error watching position:", error);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 5000,
-        maximumAge: 0,
-      }
-    );
+    trackIntervalRef.current = setInterval(() => {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { longitude, latitude, speed: gpsSpeed } = position.coords;
+          positionRef.current = [longitude, latitude];
+          const newSpeed = (gpsSpeed || 0) * 3.6; // m/s to km/h
+          setCurrentSpeed(newSpeed);
+          updateMapAndPosition();
+        },
+        (error) => {
+          console.error("Error getting current position:", error);
+        },
+        { enableHighAccuracy: true, timeout: 1000, maximumAge: 0 }
+      );
+    }, 400); // Poll every 400ms
   }, [isSimulating, updateMapAndPosition]);
 
   const stopTracking = () => {
-    if (watchIdRef.current) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-        watchIdRef.current = null;
+    if (trackIntervalRef.current) {
+      clearInterval(trackIntervalRef.current);
+      trackIntervalRef.current = null;
     }
   };
   
