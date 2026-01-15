@@ -154,7 +154,6 @@ export default function Page() {
     bearing: 0,
   });
   
-  const [origin, setOrigin] = React.useState<[number, number] | null>(null);
   const [snappedOrigin, setSnappedOrigin] = React.useState<[number, number] | null>(null);
   const [locationError, setLocationError] = React.useState<string | null>(null);
   const [route, setRoute] = React.useState<any>(null);
@@ -309,20 +308,17 @@ export default function Page() {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { longitude, latitude } = position.coords;
-          setOrigin([longitude, latitude]);
           setSnappedOrigin([longitude, latitude]);
           setViewState(prev => ({...prev, longitude, latitude, zoom: 14}));
           setLocationError(null);
         },
         () => {
           setLocationError("Kon uw locatie niet ophalen. Zorg ervoor dat u locatietoestemming heeft gegeven.");
-          setOrigin([5.4697, 51.4416]);
           setSnappedOrigin([5.4697, 51.4416]);
         }
       );
     } else {
       setLocationError("Geolocatie wordt niet ondersteund door deze browser.");
-      setOrigin([5.4697, 51.4416]);
       setSnappedOrigin([5.4697, 51.4416]);
     }
   }, []);
@@ -445,8 +441,8 @@ export default function Page() {
     watchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
         const { longitude, latitude, speed: gpsSpeed } = position.coords;
-        const newOrigin: [number, number] = [longitude, latitude];
-        const newSpeed = (gpsSpeed || 0) * 3.6;
+        const userLocation: [number, number] = [longitude, latitude];
+        const newSpeed = (gpsSpeed || 0) * 3.6; // m/s to km/h
         setCurrentSpeed(newSpeed);
   
         if (!route || !route.geometry) return;
@@ -455,7 +451,7 @@ export default function Page() {
         if (!map) return;
 
         const routeLine = route.geometry;
-        const currentPoint = turf.point(newOrigin);
+        const currentPoint = turf.point(userLocation);
         
         const snapped = turf.nearestPointOnLine(routeLine, currentPoint, { units: 'meters' });
         if (!snapped) return;
@@ -468,7 +464,7 @@ export default function Page() {
           { units: 'meters' }
         );
 
-        setRemainingDistance((routeInfo?.distance || 0) - distanceTraveled);
+        setRemainingDistance(Math.max(0, (routeInfo?.distance || 0) - distanceTraveled));
         
         setDisplayedRoute(
           turf.lineSlice(
@@ -653,7 +649,7 @@ export default function Page() {
   };
   
   const handleStartNavigation = React.useCallback(async () => {
-    if (!origin || !user || !firestore || !selectedProjectId || !selectedRouteId || !selectedRoute) return;
+    if (!snappedOrigin || !user || !firestore || !selectedProjectId || !selectedRouteId || !selectedRoute) return;
 
     const allObjects = objectsInWijk;
     const allObjectIds = allObjects.map(obj => obj.id);
@@ -682,19 +678,19 @@ export default function Page() {
     setSkippedObjects([]);
     setPendingObjects(allObjects);
 
-    const firstObject = findNextObject(origin, allObjects);
+    const firstObject = findNextObject(snappedOrigin, allObjects);
 
     if (firstObject) {
         setDestination(firstObject);
-        await calculateRoute([origin, [firstObject.longitude, firstObject.latitude]]);
+        await calculateRoute([snappedOrigin, [firstObject.longitude, firstObject.latitude]]);
     }
 
     startTracking();
-  }, [origin, user, firestore, selectedProjectId, selectedRouteId, selectedRoute, objectsInWijk]);
+  }, [snappedOrigin, user, firestore, selectedProjectId, selectedRouteId, selectedRoute, objectsInWijk]);
 
   const handleResumeRoute = React.useCallback(async (historyId: string) => {
     const routeToResume = historyRoutes?.find(r => r.id === historyId);
-    if (!routeToResume || !objects || !origin) {
+    if (!routeToResume || !objects || !snappedOrigin) {
         console.error("Route to resume not found or objects/origin not ready.");
         return;
     }
@@ -732,13 +728,13 @@ export default function Page() {
     );
     setPendingObjects(remainingObjects);
 
-    const nextObject = findNextObject(origin, remainingObjects);
+    const nextObject = findNextObject(snappedOrigin, remainingObjects);
     if (nextObject) {
         setDestination(nextObject);
-        await calculateRoute([origin, [nextObject.longitude, nextObject.latitude]]);
+        await calculateRoute([snappedOrigin, [nextObject.longitude, nextObject.latitude]]);
     } 
     startTracking();
-  }, [historyRoutes, objects, origin, projects]);
+  }, [historyRoutes, objects, snappedOrigin, projects]);
 
   const handleStartOrResume = useCallback(() => {
     setIsNavigating(true);
@@ -860,10 +856,10 @@ export default function Page() {
     setSelectedHistoryId(null);
     stopTracking();
     
-    if(origin) {
-      setViewState(prev => ({ ...prev, pitch: 0, bearing: 0, zoom: 14, longitude: origin[0], latitude: origin[1] }));
+    if(snappedOrigin) {
+      setViewState(prev => ({ ...prev, pitch: 0, bearing: 0, zoom: 14, longitude: snappedOrigin[0], latitude: snappedOrigin[1] }));
       mapRef.current?.getMap().easeTo({
-          center: origin,
+          center: snappedOrigin,
           zoom: 14,
           pitch: 0,
           bearing: 0,
@@ -872,7 +868,7 @@ export default function Page() {
   }
 
   const centerOnLocation = () => {
-    const centerPoint = snappedOrigin || origin;
+    const centerPoint = snappedOrigin;
     if (centerPoint) {
       const map = mapRef.current?.getMap();
       if (map) {
@@ -1152,7 +1148,7 @@ export default function Page() {
         >
           {snappedOrigin && (
             <Marker longitude={snappedOrigin[0]} latitude={snappedOrigin[1]} rotationAlignment="map" rotation={viewState.bearing}>
-              <div className="flex items-center justify-center">
+               <div className="flex items-center justify-center">
                 <svg width={isNavigating ? "32" : "16"} height={isNavigating ? "32" : "16"} viewBox="0 0 50 50">
                     <circle cx="25" cy="25" r="25" fill="#3b82f6" stroke="#ffffff" strokeWidth="4" />
                 </svg>
