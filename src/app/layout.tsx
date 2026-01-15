@@ -52,7 +52,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
         <SidebarHeader isCollapsed={isCollapsed}>
           <Link href="/">
             <Image
-              src="https://i.ibb.co/pFvkdLH/Chat-GPT-Image-8-jan-2026-20-56-49-removebg-preview.png"
+              src="https://i.ibb.co/Fk1pVzqw/IMG-1314.png"
               alt="Logo"
               width={300}
               height={100}
@@ -63,7 +63,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
             />
              <div className={cn(isCollapsed ? 'block' : 'hidden')}>
                  <Image
-                    src="https://i.ibb.co/pFvkdLH/Chat-GPT-Image-8-jan-2026-20-56-49-removebg-preview.png"
+                    src="https://i.ibb.co/Fk1pVzqw/IMG-1314.png"
                     alt="Logo Icon"
                     width={48}
                     height={48}
