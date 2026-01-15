@@ -56,6 +56,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { useMemo, useCallback } from 'react';
+import { Checkbox } from '@/components/ui/checkbox';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -186,6 +187,8 @@ export default function Page() {
   const [hasBijzonderheden, setHasBijzonderheden] = React.useState('nee');
   const [bijzonderhedenText, setBijzonderhedenText] = React.useState<string>('');
   const [remainingDistance, setRemainingDistance] = React.useState<number | null>(null);
+  const [nearbyObjectsForCompletion, setNearbyObjectsForCompletion] = React.useState<MapObject[]>([]);
+  const [completeCluster, setCompleteCluster] = React.useState(false);
 
   // Simulation state
   const [isSimulating, setIsSimulating] = React.useState(false);
@@ -448,6 +451,18 @@ export default function Page() {
     const snapped = turf.nearestPointOnLine(routeLine, currentPoint, { units: 'meters' });
     if (!snapped) return;
 
+    // Check for deviation
+    const deviation = turf.distance(currentPoint, snapped, { units: 'meters' });
+    if (deviation > 50) {
+        console.log("Deviation detected. Rerouting...");
+        const nextObject = findNextObject(userLocation, pendingObjects);
+        if (nextObject) {
+            setDestination(nextObject);
+            calculateRoute([userLocation, [nextObject.longitude, nextObject.latitude]]);
+        }
+        return; // Stop further processing for this update
+    }
+
     const snappedCoords = snapped.geometry.coordinates as [number, number];
     snappedOriginRef.current = snappedCoords;
 
@@ -500,7 +515,7 @@ export default function Page() {
         easing: (t: number) => t,
         padding: { top: map.getCanvas().height * 0.35 },
     });
-}, []);
+}, [pendingObjects]);
 
 
   const startTracking = React.useCallback(() => {
@@ -593,6 +608,7 @@ export default function Page() {
             zoom: 14,
             pitch: 0,
             bearing: 0,
+            padding: { top: 0 },
         });
     }
   }, [firestore, user, activeRouteHistoryId]);
@@ -809,11 +825,11 @@ export default function Page() {
       return closestObject;
   }
 
-  const updateObjectStatus = async (objectId: string, status: 'completed' | 'skipped'): Promise<MapObject[]> => {
+  const updateObjectStatus = async (objectIds: string[], status: 'completed' | 'skipped'): Promise<MapObject[]> => {
       if (!firestore || !user || !activeRouteHistoryId) return pendingObjects;
 
-      const newCompleted = status === 'completed' ? [...completedObjects, objectId] : completedObjects;
-      const newSkipped = status === 'skipped' ? [...skippedObjects, objectId] : skippedObjects;
+      const newCompleted = status === 'completed' ? [...completedObjects, ...objectIds] : completedObjects;
+      const newSkipped = status === 'skipped' ? [...skippedObjects, ...objectIds] : skippedObjects;
 
       setCompletedObjects(newCompleted);
       setSkippedObjects(newSkipped);
@@ -836,7 +852,7 @@ export default function Page() {
             bijzonderheden: hasBijzonderheden === 'ja' ? bijzonderhedenText : null,
         });
       }
-      const newPending = pendingObjects.filter(obj => obj.id !== objectId);
+      const newPending = pendingObjects.filter(obj => !objectIds.includes(obj.id));
       setPendingObjects(newPending);
       return newPending;
   }
@@ -845,7 +861,12 @@ export default function Page() {
   const handleNextObject = async (status: 'completed' | 'skipped') => {
     if (!positionRef.current || !destination) return;
     
-    const newPendingObjects = await updateObjectStatus(destination.id, status);
+    let objectsToUpdate = [destination.id];
+    if (status === 'completed' && completeCluster) {
+        objectsToUpdate = [...objectsToUpdate, ...nearbyObjectsForCompletion.map(o => o.id)];
+    }
+
+    const newPendingObjects = await updateObjectStatus(objectsToUpdate, status);
 
     const nextObject = findNextObject(positionRef.current, newPendingObjects);
 
@@ -929,6 +950,17 @@ export default function Page() {
   
   const handleMarkerClick = (obj: MapObject) => {
     if (isNavigating && destination?.id === obj.id) {
+        // Find nearby objects
+        const from = turf.point([obj.longitude, obj.latitude]);
+        const nearby = pendingObjects.filter(p => {
+            if (p.id === obj.id) return false; // Exclude the destination itself
+            const to = turf.point([p.longitude, p.latitude]);
+            const distance = turf.distance(from, to, { units: 'meters' });
+            return distance <= 100;
+        });
+        setNearbyObjectsForCompletion(nearby);
+        setCompleteCluster(false); // Reset cluster checkbox
+
         setActiveCompletionTab('dag');
         setCompletionDay('maandag');
         setCompletionVulgraad('25-50');
@@ -1323,7 +1355,15 @@ export default function Page() {
                         />
                       )}
                   </TabsContent>
-                  <TabsContent value="actie" className="pt-8 flex items-center justify-center">
+                  <TabsContent value="actie" className="pt-8 flex flex-col items-center justify-center gap-6">
+                    {nearbyObjectsForCompletion.length > 0 && (
+                        <div className="flex items-center space-x-2 border rounded-md p-3">
+                            <Checkbox id="cluster-completion" checked={completeCluster} onCheckedChange={(checked) => setCompleteCluster(!!checked)} />
+                            <Label htmlFor="cluster-completion">
+                                Voltooi {nearbyObjectsForCompletion.length} objecten in de buurt als cluster
+                            </Label>
+                        </div>
+                    )}
                     <div className="flex-row justify-center gap-4 flex">
                         <Button onClick={() => handleNextObject('skipped')} variant='outline' size="icon" className='h-32 w-32 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600'>
                             <XCircle className='h-16 w-16' />
