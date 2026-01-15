@@ -46,8 +46,8 @@ export default function LoginPage() {
          <Image
           src="https://i.ibb.co/Fk1pVzqw/IMG-1314.png"
           alt="Logo"
-          width={120}
-          height={40}
+          width={160}
+          height={52}
           priority
         />
       </div>
