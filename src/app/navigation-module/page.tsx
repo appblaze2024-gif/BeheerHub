@@ -155,9 +155,7 @@ export default function Page() {
     bearing: 0,
   });
   
-  const [snappedOrigin, setSnappedOrigin] = React.useState<[number, number] | null>(null);
   const [locationError, setLocationError] = React.useState<string | null>(null);
-  const [displayedRoute, setDisplayedRoute] = React.useState<any>(null);
   
   const [currentInstruction, setCurrentInstruction] = React.useState<RouteInstruction | null>(null);
   
@@ -200,6 +198,9 @@ export default function Page() {
   const routeInfoRef = React.useRef<RouteInfo | null>(null);
   const routeInstructionsRef = React.useRef<RouteInstruction[]>([]);
   const currentInstructionIndexRef = React.useRef(0);
+  
+  const [displayedRoute, setDisplayedRoute] = React.useState<any>(null);
+  const [snappedOrigin, setSnappedOrigin] = React.useState<[number, number] | null>(null);
 
 
   const objectsCollection = useMemo(() => {
@@ -448,7 +449,12 @@ export default function Page() {
     if (!snapped) return;
 
     const snappedCoords = snapped.geometry.coordinates as [number, number];
-    setSnappedOrigin(coords => coords ? (coords[0] !== snappedCoords[0] || coords[1] !== snappedCoords[1] ? snappedCoords : coords) : snappedCoords);
+    setSnappedOrigin(coords => {
+        if (!coords || coords[0] !== snappedCoords[0] || coords[1] !== snappedCoords[1]) {
+            return snappedCoords;
+        }
+        return coords;
+    });
 
     const distanceTraveled = turf.length(
         turf.lineSlice(turf.point(routeLine.coordinates[0]), snapped, routeLine),
@@ -575,6 +581,11 @@ export default function Page() {
             const routeLine = routeRef.current.geometry;
             const totalDistance = routeInfoRef.current?.distance || 0;
             
+            if (simulationStateRef.current.distance >= totalDistance) {
+              handleStopNavigation();
+              return;
+            }
+
             const cumulativeDistanceToNextManeuver = routeInstructionsRef.current
               .slice(0, currentInstructionIndexRef.current + 1)
               .reduce((acc, i) => acc + i.distance, 0);
@@ -609,7 +620,6 @@ export default function Page() {
             
             if (simulationStateRef.current.distance >= totalDistance) {
                 simulationStateRef.current.distance = totalDistance;
-                handleToggleSimulation();
             }
 
             setCurrentSpeed(speedInMps * 3.6);
@@ -1336,4 +1346,3 @@ export default function Page() {
     </div>
   );
 }
-
