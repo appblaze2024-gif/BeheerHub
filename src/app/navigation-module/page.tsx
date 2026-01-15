@@ -182,7 +182,7 @@ export default function Page() {
   const [currentTime, setCurrentTime] = React.useState('');
   const [activeRouteHistoryId, setActiveRouteHistoryId] = React.useState<string | null>(null);
   
-  const [completionVulgraad, setCompletionVulgraad] = React.useState<string>('25-50');
+  const [completionVulgraadPercentage, setCompletionVulgraadPercentage] = React.useState<number>(38);
   const [remainingDistance, setRemainingDistance] = React.useState<number | null>(null);
 
   // Simulation state
@@ -861,12 +861,9 @@ export default function Page() {
 
       if (status === 'completed' && destination) {
         const objectRef = doc(firestore, 'objects', destination.id);
-        const [min, max] = completionVulgraad.split('-').map(Number);
-        const vulgraadValue = (min + max) / 2;
-
         updateDocumentNonBlocking(objectRef, {
             lastCleaned: serverTimestamp(),
-            vulgraad: vulgraadValue,
+            vulgraad: completionVulgraadPercentage,
         });
       }
       const newPending = pendingObjects.filter(obj => obj.id !== objectId);
@@ -965,7 +962,7 @@ export default function Page() {
   
   const handleMarkerClick = (obj: MapObject) => {
     if (isNavigating && destination?.id === obj.id) {
-        setCompletionVulgraad('25-50');
+        setCompletionVulgraadPercentage(38);
         setIsCompletionSheetOpen(true);
     } else {
         setSelectedObjectForInfo(obj);
@@ -1284,6 +1281,15 @@ export default function Page() {
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-6 py-4">
+                  <div className="space-y-4">
+                    <Label className="text-center block">Selecteer vulgraad: {completionVulgraadPercentage}%</Label>
+                    <Slider
+                      defaultValue={[completionVulgraadPercentage]}
+                      max={100}
+                      step={1}
+                      onValueChange={(value) => setCompletionVulgraadPercentage(value[0])}
+                    />
+                  </div>
                   <div className="flex items-center justify-center gap-4">
                       <Button onClick={() => handleNextObject('completed')} variant='outline' size="icon" className='h-32 w-32 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600 flex-col gap-2'>
                           <CheckCircle className='h-12 w-12' />
@@ -1293,24 +1299,6 @@ export default function Page() {
                           <XCircle className='h-12 w-12' />
                           <span className='font-semibold'>Niet Gereed</span>
                       </Button>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-center block">Selecteer vulgraad</Label>
-                    <div className="relative">
-                      <Image 
-                        src="https://i.ibb.co/DHXvMWPz/Chat-GPT-Image-15-jan-2026-21-07-38.png" 
-                        alt="Vulgraad selectie" 
-                        width={400} 
-                        height={100} 
-                        className="w-full h-auto"
-                      />
-                      <div className="absolute inset-0 grid grid-cols-4">
-                        <div onClick={() => setCompletionVulgraad('0-25')} className={cn("cursor-pointer border-4", completionVulgraad === '0-25' ? 'border-primary' : 'border-transparent')}></div>
-                        <div onClick={() => setCompletionVulgraad('25-50')} className={cn("cursor-pointer border-4", completionVulgraad === '25-50' ? 'border-primary' : 'border-transparent')}></div>
-                        <div onClick={() => setCompletionVulgraad('50-75')} className={cn("cursor-pointer border-4", completionVulgraad === '50-75' ? 'border-primary' : 'border-transparent')}></div>
-                        <div onClick={() => setCompletionVulgraad('75-100')} className={cn("cursor-pointer border-4", completionVulgraad === '75-100' ? 'border-primary' : 'border-transparent')}></div>
-                      </div>
-                    </div>
                   </div>
                 </div>
                  <DialogFooter>
