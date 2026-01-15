@@ -29,7 +29,7 @@ export default function LoginPage() {
     }
   };
   
-  const sunnyCloudsImage = "https://images.unsplash.com/photo-1663517768994-a65e6ab3a40a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxibGFja3xlbnwwfHx8fDE3Njg1MDUzNjV8MA&ixlib=rb-4.1.0&q=80&w=1080";
+  const sunnyCloudsImage = "https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxkYXJrfGVufDB8fHx8MTc2ODUwNTY5Mnww&ixlib=rb-4.1.0&q=80&w=1080";
 
 
   return (
@@ -46,8 +46,8 @@ export default function LoginPage() {
          <Image
           src="https://i.ibb.co/Fk1pVzqw/IMG-1314.png"
           alt="Logo"
-          width={160}
-          height={52}
+          width={320}
+          height={104}
           priority
         />
       </div>
