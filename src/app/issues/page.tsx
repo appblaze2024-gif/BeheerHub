@@ -484,7 +484,7 @@ export default function IssuesPage() {
                         </div>
                         <div className='space-y-2'>
                             <Label className='text-sm font-medium'>Datum</Label>
-                            <Calendar
+                             <Calendar
                                 mode="single"
                                 selected={selectedDate}
                                 onSelect={setSelectedDate}
