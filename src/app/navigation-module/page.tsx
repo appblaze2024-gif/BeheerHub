@@ -65,6 +65,7 @@ interface MapObject {
     latitude: number;
     longitude: number;
     locatieWerkgebieden?: string[];
+    vulgraad?: number;
     [key: string]: any;
 }
 
@@ -141,6 +142,17 @@ const getManeuverIcon = (type: string, modifier?: string) => {
     }
 }
 
+const getHeatmapColor = (vulgraad: number | undefined): string => {
+    if (vulgraad === undefined || vulgraad === null || vulgraad <= 0) {
+      return 'bg-blue-600'; // Default to blue if no vulgraad
+    }
+    // Hue: 120 is green, 0 is red.
+    // We want green (120) at 0% and red (0) at 100%.
+    const hue = 120 * (1 - vulgraad / 100);
+    return `hsl(${hue}, 80%, 50%)`;
+};
+
+
 export default function Page() {
   const mapRef = React.useRef<any>();
   const firestore = useFirestore();
@@ -194,11 +206,11 @@ export default function Page() {
   const [currentSpeed, setCurrentSpeed] = React.useState(0); // in km/h
 
   // Refs for state management inside callbacks
+  const positionRef = React.useRef<[number, number] | null>(null);
   const routeRef = React.useRef<any>(null);
   const routeInfoRef = React.useRef<RouteInfo | null>(null);
   const routeInstructionsRef = React.useRef<RouteInstruction[]>([]);
   const currentInstructionIndexRef = React.useRef(0);
-  const positionRef = React.useRef<[number, number] | null>(null);
 
 
   const objectsCollection = useMemo(() => {
@@ -447,7 +459,7 @@ export default function Page() {
     if (!snapped) return;
 
     const snappedCoords = snapped.geometry.coordinates as [number, number];
-    setSnappedOrigin(snappedCoords);
+    setSnappedOrigin(coords => coords ? (coords[0] !== snappedCoords[0] || coords[1] !== snappedCoords[1] ? snappedCoords : coords) : snappedCoords);
 
     const distanceTraveled = turf.length(
         turf.lineSlice(turf.point(routeLine.coordinates[0]), snapped, routeLine),
@@ -461,7 +473,12 @@ export default function Page() {
         turf.point(routeLine.coordinates[routeLine.coordinates.length - 1]),
         routeLine
     );
-    setDisplayedRoute(remainingLine);
+    setDisplayedRoute((current: any) => {
+        if (!current || !turf.booleanEqual(turf.feature(current.geometry), turf.feature(remainingLine.geometry))) {
+            return remainingLine;
+        }
+        return current;
+    });
     
     let distanceTraveledOnInstructions = 0;
     let upcomingInstructionIndex = -1;
@@ -900,15 +917,15 @@ export default function Page() {
   const ManeuverIcon = currentInstruction ? getManeuverIcon(currentInstruction.maneuver.type, currentInstruction.maneuver.modifier) : ArrowUp;
 
 
-  const getMarkerColor = (objectId: string): string => {
+  const getMarkerColor = (objectId: string, vulgraad?: number): string => {
     if (completedObjects.includes(objectId)) {
-      return 'bg-green-500';
+        return 'bg-green-500';
     }
     if (skippedObjects.includes(objectId)) {
-      return 'bg-gray-500';
+        return 'bg-gray-500';
     }
-    return 'bg-blue-600';
-  }
+    return getHeatmapColor(vulgraad);
+}
   
   const handleMarkerClick = (obj: MapObject) => {
     if (isNavigating && destination?.id === obj.id) {
@@ -1140,6 +1157,7 @@ export default function Page() {
           
           {isNavigating && objectsForCurrentRoute?.map(obj => {
               const isCurrentDestination = destination?.id === obj.id;
+              const color = getMarkerColor(obj.id, obj.vulgraad);
               
               if (isCurrentDestination) {
                 return (
@@ -1168,12 +1186,14 @@ export default function Page() {
                     onMouseEnter={() => setHoveredObject(obj)}
                     onMouseLeave={() => setHoveredObject(null)}
                  >
-                  <div className={cn("w-3 h-3 rounded-full border-2 border-white cursor-pointer", getMarkerColor(obj.id))} />
+                  <div className={`w-3 h-3 rounded-full border-2 border-white cursor-pointer`} style={{backgroundColor: color.startsWith('hsl') ? color : undefined}}/>
                 </Marker>
               )
           })}
 
-          {!isNavigating && objectsInWijk?.map(obj => (
+          {!isNavigating && objectsInWijk?.map(obj => {
+            const color = getHeatmapColor(obj.vulgraad);
+            return (
              <Marker
                 key={obj.id}
                 longitude={obj.longitude}
@@ -1182,9 +1202,9 @@ export default function Page() {
                 onMouseEnter={() => setHoveredObject(obj)}
                 onMouseLeave={() => setHoveredObject(null)}
              >
-              <div className={cn("w-2.5 h-2.5 rounded-full border-2 border-white cursor-pointer", getMarkerColor(obj.id) )} />
+              <div className={`w-2.5 h-2.5 rounded-full border-2 border-white cursor-pointer`} style={{backgroundColor: color.startsWith('hsl') ? color : undefined}} />
             </Marker>
-          ))}
+          )})}
           
           {hoveredObject && !selectedObjectForInfo && (
               <Popup

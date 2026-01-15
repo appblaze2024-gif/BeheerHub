@@ -12,6 +12,7 @@ interface MapObject {
   id: string;
   latitude: number;
   longitude: number;
+  vulgraad?: number;
   [key: string]: any;
 }
 
@@ -40,6 +41,16 @@ const polygonOutlineLayer: LineLayer = {
         'line-color': '#000000',
         'line-width': 2,
     },
+};
+
+const getHeatmapColor = (vulgraad: number | undefined): string => {
+    if (vulgraad === undefined || vulgraad === null || vulgraad <= 0) {
+      return 'bg-blue-600'; // Default to blue if no vulgraad
+    }
+    // Hue: 120 is green, 0 is red.
+    // We want green (120) at 0% and red (0) at 100%.
+    const hue = 120 * (1 - vulgraad / 100);
+    return `hsl(${hue}, 80%, 50%)`;
 };
 
 export function MapboxView({ longitude, latitude, objects, selectedObjects = [], onObjectSelect, wijkPolygons = [] }: MapboxViewProps) {
@@ -98,6 +109,7 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
     if (objects) {
       return objects.map(obj => {
         const isSelected = selectedObjects.some(so => so.id === obj.id);
+        const color = getHeatmapColor(obj.vulgraad);
         return (
             <Marker
               key={obj.id}
@@ -115,7 +127,10 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
               onMouseEnter={() => setHoveredPin(obj)}
               onMouseLeave={() => setHoveredPin(null)}
             >
-              <div className={`h-3 w-3 rounded-full border-2 border-white cursor-pointer ${isSelected ? 'bg-primary' : 'bg-blue-500'}`} />
+              <div 
+                className={`h-3 w-3 rounded-full border-2 border-white cursor-pointer`} 
+                style={{backgroundColor: color.startsWith('hsl') ? color : undefined}}
+              />
             </Marker>
         )
       });

@@ -120,6 +120,15 @@ function PlanningAccordionContent({ selectedObject, handleUpdateField, projects,
   );
 }
 
+const getHeatmapColor = (vulgraad: number | undefined): string => {
+    if (vulgraad === undefined || vulgraad === null || vulgraad <= 0) {
+      return 'bg-blue-600'; // Default to blue if no vulgraad
+    }
+    // Hue: 120 is green, 0 is red.
+    // We want green (120) at 0% and red (0) at 100%.
+    const hue = 120 * (1 - vulgraad / 100);
+    return `hsl(${hue}, 80%, 50%)`;
+  };
 
 export default function ObjectsPage() {
   const firestore = useFirestore();
