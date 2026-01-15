@@ -406,94 +406,12 @@ export default function IssuesPage() {
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
-      <header className="absolute top-0 left-0 z-10 p-4 flex flex-col gap-2 items-start w-full">
-        <div className="flex flex-col md:flex-row items-start md:items-end justify-between w-full gap-4">
-            <div className="flex flex-col gap-2 items-start pointer-events-auto">
-                <div className="bg-card p-2 rounded-lg shadow-md">
-                    <h1 className="text-xl font-bold">Meldingen Portaal</h1>
-                </div>
-                 <div className='flex flex-col sm:flex-row gap-2'>
-                    <div>
-                        <Label htmlFor='project-select' className='text-sm font-medium sr-only'>Project</Label>
-                         <Select
-                          value={selectedProjectId || ''}
-                          onValueChange={(value) => {
-                            setSelectedProjectId(value);
-                            setSelectedWijkId('all');
-                          }}
-                          disabled={isLoadingProjects}
-                        >
-                          <SelectTrigger id="project-select" className="w-full sm:w-[200px] bg-card">
-                            <SelectValue placeholder="Selecteer een project" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {projects?.map(p => <SelectItem key={p.id} value={p.id}>{p.projectnaam}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                    </div>
-                    <div>
-                        <Label htmlFor='wijk-select' className='text-sm font-medium sr-only'>Wijk</Label>
-                        <Select
-                            value={selectedWijkId || 'all'}
-                            onValueChange={setSelectedWijkId}
-                            disabled={!selectedProject}
-                        >
-                             <SelectTrigger id="wijk-select" className="w-full sm:w-[200px] bg-card">
-                                <SelectValue placeholder="Selecteer een wijk" />
-                             </SelectTrigger>
-                             <SelectContent>
-                                <SelectItem value="all">Alle wijken</SelectItem>
-                                {sortedWijken.map(w => (
-                                  <SelectItem key={w.id} value={w.id}>
-                                    <div className='flex justify-between items-center w-full'>
-                                      <span>{w.naam}</span>
-                                      {(openMeldingenCountPerWijk[w.id] || 0) > 0 && (
-                                        <Badge variant="destructive" className="ml-2 px-2 py-0.5 h-5">{openMeldingenCountPerWijk[w.id]}</Badge>
-                                      )}
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                             </SelectContent>
-                        </Select>
-                    </div>
-                    <div>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                variant={"outline"}
-                                className={cn(
-                                    "w-full sm:w-[200px] justify-start text-left font-normal bg-card",
-                                    !selectedDate && "text-muted-foreground"
-                                )}
-                                >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {selectedDate ? format(selectedDate, "PPP", { locale: nl }) : <span>Kies een datum</span>}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                                <Calendar
-                                mode="single"
-                                selected={selectedDate}
-                                onSelect={setSelectedDate}
-                                initialFocus
-                                locale={nl}
-                                />
-                            </PopoverContent>
-                        </Popover>
-                    </div>
-                </div>
-                <div className='flex gap-2 items-center'>
-                    <Button onClick={handleNewMelding} disabled={!selectedProjectId}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Nieuwe Melding
-                    </Button>
-                    <Button variant="outline" onClick={() => setViewMode(viewMode === 'map' ? 'list' : 'map')} className="bg-card">
-                      {viewMode === 'map' ? <List className="mr-2 h-4 w-4" /> : <MapIcon className="mr-2 h-4 w-4" />}
-                      {viewMode === 'map' ? 'Lijst' : 'Kaart'}
-                    </Button>
-                </div>
+      <header className="absolute top-0 left-0 z-10 p-4 flex flex-col gap-2 w-full pointer-events-none">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between w-full gap-4 pointer-events-auto">
+            <div className="bg-card p-2 rounded-lg shadow-md">
+                <h1 className="text-xl font-bold">Meldingen Portaal</h1>
             </div>
-            <div className="w-full md:max-w-sm pointer-events-auto">
+            <div className="w-full md:max-w-sm">
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
@@ -503,6 +421,86 @@ export default function IssuesPage() {
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
+            </div>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2 pointer-events-auto w-full md:w-auto">
+            <div>
+                <Label htmlFor='project-select' className='text-sm font-medium sr-only'>Project</Label>
+                    <Select
+                    value={selectedProjectId || ''}
+                    onValueChange={(value) => {
+                        setSelectedProjectId(value);
+                        setSelectedWijkId('all');
+                    }}
+                    disabled={isLoadingProjects}
+                    >
+                    <SelectTrigger id="project-select" className="w-full sm:w-[200px] bg-card">
+                        <SelectValue placeholder="Selecteer een project" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {projects?.map(p => <SelectItem key={p.id} value={p.id}>{p.projectnaam}</SelectItem>)}
+                    </SelectContent>
+                    </Select>
+            </div>
+            <div>
+                <Label htmlFor='wijk-select' className='text-sm font-medium sr-only'>Wijk</Label>
+                <Select
+                    value={selectedWijkId || 'all'}
+                    onValueChange={setSelectedWijkId}
+                    disabled={!selectedProject}
+                >
+                        <SelectTrigger id="wijk-select" className="w-full sm:w-[200px] bg-card">
+                        <SelectValue placeholder="Selecteer een wijk" />
+                        </SelectTrigger>
+                        <SelectContent>
+                        <SelectItem value="all">Alle wijken</SelectItem>
+                        {sortedWijken.map(w => (
+                            <SelectItem key={w.id} value={w.id}>
+                            <div className='flex justify-between items-center w-full'>
+                                <span>{w.naam}</span>
+                                {(openMeldingenCountPerWijk[w.id] || 0) > 0 && (
+                                <Badge variant="destructive" className="ml-2 px-2 py-0.5 h-5">{openMeldingenCountPerWijk[w.id]}</Badge>
+                                )}
+                            </div>
+                            </SelectItem>
+                        ))}
+                        </SelectContent>
+                </Select>
+            </div>
+            <div>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                        variant={"outline"}
+                        className={cn(
+                            "w-full sm:w-[200px] justify-start text-left font-normal bg-card",
+                            !selectedDate && "text-muted-foreground"
+                        )}
+                        >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {selectedDate ? format(selectedDate, "PPP", { locale: nl }) : <span>Kies een datum</span>}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                        <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={setSelectedDate}
+                        initialFocus
+                        locale={nl}
+                        />
+                    </PopoverContent>
+                </Popover>
+            </div>
+            <div className='flex gap-2 items-center'>
+                    <Button onClick={handleNewMelding} disabled={!selectedProjectId}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Nieuwe Melding
+                    </Button>
+                    <Button variant="outline" onClick={() => setViewMode(viewMode === 'map' ? 'list' : 'map')} className="bg-card">
+                      {viewMode === 'map' ? <List className="mr-2 h-4 w-4" /> : <MapIcon className="mr-2 h-4 w-4" />}
+                      {viewMode === 'map' ? 'Lijst' : 'Kaart'}
+                    </Button>
             </div>
         </div>
       </header>
