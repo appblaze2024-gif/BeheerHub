@@ -127,7 +127,7 @@ export default function ObjectsPage() {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [selectedObject, setSelectedObject] = React.useState<any | null>(null);
   const [viewMode, setViewMode] = React.useState<'list' | 'map'>('list');
-  const [showHeatmap, setShowHeatmap] = React.useState(true);
+  const [showHeatmap, setShowHeatmap] = React.useState(false);
 
   // State for map view filtering
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
