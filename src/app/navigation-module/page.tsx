@@ -50,7 +50,6 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import type { Route } from 'docs/backend';
 import { Separator } from '@/components/ui/separator';
-import { Slider } from '@/components/ui/slider';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -58,6 +57,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useMemo, useCallback } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import Image from 'next/image';
+import { ResponsiveContainer, RadialBarChart, PolarAngleAxis, RadialBar } from 'recharts';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -962,13 +962,14 @@ export default function Page() {
   
   const handleMarkerClick = (obj: MapObject) => {
     if (isNavigating && destination?.id === obj.id) {
-        setCompletionVulgraadPercentage(38);
+        setCompletionVulgraadPercentage(obj.vulgraad || 38);
         setIsCompletionSheetOpen(true);
     } else {
         setSelectedObjectForInfo(obj);
     }
   }
 
+  const hue = 120 * (1 - (completionVulgraadPercentage || 0) / 100);
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
@@ -1282,13 +1283,53 @@ export default function Page() {
                 </DialogHeader>
                 <div className="space-y-6 py-4">
                   <div className="space-y-4">
-                    <Label className="text-center block">Selecteer vulgraad: {completionVulgraadPercentage}%</Label>
-                    <Slider
-                      defaultValue={[completionVulgraadPercentage]}
-                      max={100}
-                      step={1}
-                      onValueChange={(value) => setCompletionVulgraadPercentage(value[0])}
-                    />
+                      <Label className="text-center block">Selecteer vulgraad</Label>
+                      <div className="h-32 -mb-4">
+                          <ResponsiveContainer width="100%" height="100%">
+                              <RadialBarChart 
+                                  cx="50%"
+                                  cy="100%"
+                                  innerRadius="80%" 
+                                  outerRadius="110%" 
+                                  data={[{ name: 'vulgraad', value: completionVulgraadPercentage }]} 
+                                  startAngle={180} 
+                                  endAngle={0}
+                                  barSize={25}
+                              >
+                                  <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
+                                  <RadialBar 
+                                      background={{ fill: 'hsl(var(--muted))' }}
+                                      dataKey='value' 
+                                      cornerRadius={12}
+                                      fill={`hsl(${hue}, 80%, 50%)`}
+                                  />
+                                  <text x="50%" y="85%" textAnchor="middle" dominantBaseline="middle" className="text-3xl font-bold fill-foreground">
+                                      {completionVulgraadPercentage}%
+                                  </text>
+                              </RadialBarChart>
+                          </ResponsiveContainer>
+                      </div>
+                      <div className="flex items-center justify-center gap-4 pt-4">
+                          <Button variant="outline" size="icon" className="h-12 w-12 rounded-full" onClick={() => setCompletionVulgraadPercentage(v => Math.max(0, v - 5))}>
+                              <span className="text-2xl">-</span>
+                          </Button>
+                          <Input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={completionVulgraadPercentage}
+                              onChange={(e) => {
+                                  const val = Number(e.target.value);
+                                  if (val >= 0 && val <= 100) {
+                                      setCompletionVulgraadPercentage(val);
+                                  }
+                              }}
+                              className="w-24 text-center text-2xl font-bold h-12"
+                          />
+                          <Button variant="outline" size="icon" className="h-12 w-12 rounded-full" onClick={() => setCompletionVulgraadPercentage(v => Math.min(100, v + 5))}>
+                              <span className="text-2xl">+</span>
+                          </Button>
+                      </div>
                   </div>
                   <div className="flex items-center justify-center gap-4">
                       <Button onClick={() => handleNextObject('completed')} variant='outline' size="icon" className='h-32 w-32 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600 flex-col gap-2'>
