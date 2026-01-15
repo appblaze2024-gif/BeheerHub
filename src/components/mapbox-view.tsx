@@ -128,7 +128,7 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
               onMouseLeave={() => setHoveredPin(null)}
             >
               <div 
-                className={`h-3 w-3 rounded-full border-2 border-white cursor-pointer`} 
+                className={`h-3 w-3 rounded-full border-2 border-white cursor-pointer ${color}`} 
                 style={{backgroundColor: color.startsWith('hsl') ? color : undefined}}
               />
             </Marker>
