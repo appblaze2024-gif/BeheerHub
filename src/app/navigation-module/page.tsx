@@ -1303,7 +1303,7 @@ export default function Page() {
                                       cornerRadius={12}
                                       fill={`hsl(${hue}, 80%, 50%)`}
                                   />
-                                  <text x="50%" y="85%" textAnchor="middle" dominantBaseline="middle" className="text-3xl font-bold fill-foreground">
+                                  <text x="50%" y="80%" textAnchor="middle" dominantBaseline="middle" className="text-5xl font-bold fill-foreground">
                                       {completionVulgraadPercentage}%
                                   </text>
                               </RadialBarChart>
@@ -1353,3 +1353,5 @@ export default function Page() {
     </div>
   );
 }
+
+    
