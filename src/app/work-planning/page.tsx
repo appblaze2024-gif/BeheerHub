@@ -48,6 +48,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useIsMobile } from '@/hooks/use-mobile';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
@@ -522,7 +523,7 @@ export default function WorkPlanningPage() {
             setSelectedCells(prev => [...prev, cell]);
         }
     } else { // For single select
-        setSelectedCells(isSelected && selectedCells.length === 1 ? [] : [cell]);
+        setSelectedCells(isSelected ? [] : [cell]);
     }
   };
 
@@ -655,21 +656,24 @@ export default function WorkPlanningPage() {
                             <div className="absolute inset-0 z-0" />
                          </DropdownMenuTrigger>
                         <DropdownMenuContent onContextMenu={(e) => e.preventDefault()}>
-                          {copiedDienst && (
-                             <DropdownMenuItem onClick={handlePaste} disabled={selectedCells.length === 0}>
+                          {copiedDienst && selectedCells.length > 0 && (
+                             <DropdownMenuItem onClick={handlePaste}>
                               <Copy className="mr-2 h-4 w-4" />
                               Plakken
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuSeparator />
+                          {(copiedDienst && selectedCells.length > 0) && <DropdownMenuSeparator />}
                            <DropdownMenuItem onClick={() => selectedProjectId && handleOpenSheetForNew(medewerker, day)}>
                               <Plus className="mr-2 h-4 w-4" />
                               Nieuwe dienst
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={handleDeleteSelected} disabled={selectedCells.length === 0}>
-                                <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-                                <span className='text-destructive'>Verwijder selectie</span>
+                          {selectedCells.length > 0 && <DropdownMenuSeparator />}
+                          {selectedCells.length > 0 && (
+                            <DropdownMenuItem onClick={handleDeleteSelected} className="text-destructive focus:text-destructive">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Verwijder selectie
                             </DropdownMenuItem>
+                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>
 
@@ -724,7 +728,7 @@ export default function WorkPlanningPage() {
                 Plakken
               </DropdownMenuItem>
             )}
-            {selectedCells.length > 0 && <DropdownMenuSeparator/>}
+            {selectedCells.length > 0 && (copiedDienst || contextMenu?.dienst) && <DropdownMenuSeparator/>}
             {selectedCells.length > 0 && (
                 <DropdownMenuItem onClick={handleDeleteSelected} className="text-destructive focus:text-destructive">
                     <Trash2 className="mr-2 h-4 w-4" />
