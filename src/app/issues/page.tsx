@@ -4,7 +4,7 @@ import * as React from 'react';
 import MapGL, { Marker, Popup, Source, Layer, FillLayer, LineLayer } from 'react-map-gl';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection } from 'firebase/firestore';
-import { Calendar as CalendarIcon, Plus, Search, List, Map as MapIcon, Bell } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Search, List, Map as MapIcon, Bell, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MeldingDialog } from '@/components/melding-dialog';
@@ -19,6 +19,7 @@ import { nl } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -159,6 +160,8 @@ export default function IssuesPage() {
   const firestore = useFirestore();
   const [selectedMelding, setSelectedMelding] = React.useState<Melding | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
   const [selectedWijkId, setSelectedWijkId] = React.useState<string | null>(null);
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(new Date());
@@ -424,74 +427,79 @@ export default function IssuesPage() {
             </div>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 pointer-events-auto w-full md:w-auto">
-            <div>
-                <Label htmlFor='project-select' className='text-sm font-medium sr-only'>Project</Label>
-                    <Select
-                    value={selectedProjectId || ''}
-                    onValueChange={(value) => {
-                        setSelectedProjectId(value);
-                        setSelectedWijkId('all');
-                    }}
-                    disabled={isLoadingProjects}
-                    >
-                    <SelectTrigger id="project-select" className="w-full sm:w-[200px] bg-card">
-                        <SelectValue placeholder="Selecteer een project" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {projects?.map(p => <SelectItem key={p.id} value={p.id}>{p.projectnaam}</SelectItem>)}
-                    </SelectContent>
-                    </Select>
-            </div>
-            <div>
-                <Label htmlFor='wijk-select' className='text-sm font-medium sr-only'>Wijk</Label>
-                <Select
-                    value={selectedWijkId || 'all'}
-                    onValueChange={setSelectedWijkId}
-                    disabled={!selectedProject}
-                >
-                        <SelectTrigger id="wijk-select" className="w-full sm:w-[200px] bg-card">
-                        <SelectValue placeholder="Selecteer een wijk" />
-                        </SelectTrigger>
-                        <SelectContent>
-                        <SelectItem value="all">Alle wijken</SelectItem>
-                        {sortedWijken.map(w => (
-                            <SelectItem key={w.id} value={w.id}>
-                            <div className='flex justify-between items-center w-full'>
-                                <span>{w.naam}</span>
-                                {(openMeldingenCountPerWijk[w.id] || 0) > 0 && (
-                                <Badge variant="destructive" className="ml-2 px-2 py-0.5 h-5">{openMeldingenCountPerWijk[w.id]}</Badge>
-                                )}
-                            </div>
-                            </SelectItem>
-                        ))}
-                        </SelectContent>
-                </Select>
-            </div>
-            <div>
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button
-                        variant={"outline"}
-                        className={cn(
-                            "w-full sm:w-[200px] justify-start text-left font-normal bg-card",
-                            !selectedDate && "text-muted-foreground"
-                        )}
-                        >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {selectedDate ? format(selectedDate, "PPP", { locale: nl }) : <span>Kies een datum</span>}
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                        <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={setSelectedDate}
-                        initialFocus
-                        locale={nl}
-                        />
-                    </PopoverContent>
-                </Popover>
-            </div>
+            <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                <DialogTrigger asChild>
+                    <Button variant="outline" className="bg-card"><Filter className="mr-2 h-4 w-4" /> Filters</Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Filters</DialogTitle>
+                        <DialogDescription>
+                            Selecteer een project, wijk en datum om de meldingen te filteren.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className='space-y-2'>
+                            <Label htmlFor='project-select' className='text-sm font-medium'>Project</Label>
+                                <Select
+                                value={selectedProjectId || ''}
+                                onValueChange={(value) => {
+                                    setSelectedProjectId(value);
+                                    setSelectedWijkId('all');
+                                }}
+                                disabled={isLoadingProjects}
+                                >
+                                <SelectTrigger id="project-select" className="w-full bg-card">
+                                    <SelectValue placeholder="Selecteer een project" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {projects?.map(p => <SelectItem key={p.id} value={p.id}>{p.projectnaam}</SelectItem>)}
+                                </SelectContent>
+                                </Select>
+                        </div>
+                        <div className='space-y-2'>
+                            <Label htmlFor='wijk-select' className='text-sm font-medium'>Wijk</Label>
+                            <Select
+                                value={selectedWijkId || 'all'}
+                                onValueChange={setSelectedWijkId}
+                                disabled={!selectedProject}
+                            >
+                                    <SelectTrigger id="wijk-select" className="w-full bg-card">
+                                    <SelectValue placeholder="Selecteer een wijk" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                    <SelectItem value="all">Alle wijken</SelectItem>
+                                    {sortedWijken.map(w => (
+                                        <SelectItem key={w.id} value={w.id}>
+                                        <div className='flex justify-between items-center w-full'>
+                                            <span>{w.naam}</span>
+                                            {(openMeldingenCountPerWijk[w.id] || 0) > 0 && (
+                                            <Badge variant="destructive" className="ml-2 px-2 py-0.5 h-5">{openMeldingenCountPerWijk[w.id]}</Badge>
+                                            )}
+                                        </div>
+                                        </SelectItem>
+                                    ))}
+                                    </SelectContent>
+                            </Select>
+                        </div>
+                        <div className='space-y-2'>
+                            <Label className='text-sm font-medium'>Datum</Label>
+                            <Calendar
+                                mode="single"
+                                selected={selectedDate}
+                                onSelect={setSelectedDate}
+                                initialFocus
+                                locale={nl}
+                                className="rounded-md border bg-card w-full"
+                            />
+                        </div>
+                    </div>
+                     <DialogFooter>
+                        <Button onClick={() => setIsFilterOpen(false)}>Toepassen</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             <div className='flex gap-2 items-center'>
                     <Button onClick={handleNewMelding} disabled={!selectedProjectId}>
                         <Plus className="mr-2 h-4 w-4" />
