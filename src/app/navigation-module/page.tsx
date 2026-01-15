@@ -57,6 +57,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { useMemo, useCallback } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
+import Image from 'next/image';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -181,14 +182,8 @@ export default function Page() {
   const [currentTime, setCurrentTime] = React.useState('');
   const [activeRouteHistoryId, setActiveRouteHistoryId] = React.useState<string | null>(null);
   
-  const [activeCompletionTab, setActiveCompletionTab] = React.useState('dag');
-  const [completionDay, setCompletionDay] = React.useState<string>('maandag');
   const [completionVulgraad, setCompletionVulgraad] = React.useState<string>('25-50');
-  const [hasBijzonderheden, setHasBijzonderheden] = React.useState('nee');
-  const [bijzonderhedenText, setBijzonderhedenText] = React.useState<string>('');
   const [remainingDistance, setRemainingDistance] = React.useState<number | null>(null);
-  const [nearbyObjectsForCompletion, setNearbyObjectsForCompletion] = React.useState<MapObject[]>([]);
-  const [completeCluster, setCompleteCluster] = React.useState(false);
 
   // Simulation state
   const [isSimulating, setIsSimulating] = React.useState(false);
@@ -849,11 +844,11 @@ export default function Page() {
       return closestObject;
   }
 
-  const updateObjectStatus = async (objectIds: string[], status: 'completed' | 'skipped'): Promise<MapObject[]> => {
+  const updateObjectStatus = async (objectId: string, status: 'completed' | 'skipped'): Promise<MapObject[]> => {
       if (!firestore || !user || !activeRouteHistoryId) return pendingObjects;
 
-      const newCompleted = status === 'completed' ? [...completedObjects, ...objectIds] : completedObjects;
-      const newSkipped = status === 'skipped' ? [...skippedObjects, ...objectIds] : skippedObjects;
+      const newCompleted = status === 'completed' ? [...completedObjects, objectId] : completedObjects;
+      const newSkipped = status === 'skipped' ? [...skippedObjects, objectId] : skippedObjects;
 
       setCompletedObjects(newCompleted);
       setSkippedObjects(newSkipped);
@@ -871,12 +866,10 @@ export default function Page() {
 
         updateDocumentNonBlocking(objectRef, {
             lastCleaned: serverTimestamp(),
-            lastCleanedDay: completionDay,
             vulgraad: vulgraadValue,
-            bijzonderheden: hasBijzonderheden === 'ja' ? bijzonderhedenText : null,
         });
       }
-      const newPending = pendingObjects.filter(obj => !objectIds.includes(obj.id));
+      const newPending = pendingObjects.filter(obj => obj.id !== objectId);
       setPendingObjects(newPending);
       return newPending;
   }
@@ -885,12 +878,7 @@ export default function Page() {
   const handleNextObject = async (status: 'completed' | 'skipped') => {
     if (!positionRef.current || !destination) return;
     
-    let objectsToUpdate = [destination.id];
-    if (status === 'completed' && completeCluster) {
-        objectsToUpdate = [...objectsToUpdate, ...nearbyObjectsForCompletion.map(o => o.id)];
-    }
-
-    const newPendingObjects = await updateObjectStatus(objectsToUpdate, status);
+    const newPendingObjects = await updateObjectStatus(destination.id, status);
 
     const nextObject = findNextObject(positionRef.current, newPendingObjects);
 
@@ -977,23 +965,7 @@ export default function Page() {
   
   const handleMarkerClick = (obj: MapObject) => {
     if (isNavigating && destination?.id === obj.id) {
-        // Find nearby objects
-        const from = turf.point([obj.longitude, obj.latitude]);
-        const nearby = pendingObjects.filter(p => {
-            if (p.id === obj.id) return false; // Exclude the destination itself
-            if (typeof p.latitude !== 'number' || typeof p.longitude !== 'number') return false;
-            const to = turf.point([p.longitude, p.latitude]);
-            const distance = turf.distance(from, to, { units: 'meters' });
-            return distance <= 100;
-        });
-        setNearbyObjectsForCompletion(nearby);
-        setCompleteCluster(false); // Reset cluster checkbox
-
-        setActiveCompletionTab('dag');
-        setCompletionDay('maandag');
         setCompletionVulgraad('25-50');
-        setHasBijzonderheden('nee');
-        setBijzonderhedenText('');
         setIsCompletionSheetOpen(true);
     } else {
         setSelectedObjectForInfo(obj);
@@ -1304,104 +1276,43 @@ export default function Page() {
           )}
         </MapGL>
         <Dialog open={isCompletionSheetOpen} onOpenChange={setIsCompletionSheetOpen}>
-            <DialogContent className="sm:max-w-2xl">
+            <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>OBJECT-ID: {destination?.id}</DialogTitle>
                     <DialogDescription>
                         Markeer dit object als voltooid en ga verder naar de volgende.
                     </DialogDescription>
                 </DialogHeader>
-                <Tabs value={activeCompletionTab} onValueChange={setActiveCompletionTab} className="w-full">
-                  <TabsList className="grid w-full grid-cols-4">
-                    <TabsTrigger value="dag">Dag</TabsTrigger>
-                    <TabsTrigger value="vulgraad">Vulgraad</TabsTrigger>
-                    <TabsTrigger value="bijzonderheden">Bijzonderheden</TabsTrigger>
-                    <TabsTrigger value="actie">Actie</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="dag" className="pt-4">
-                    <RadioGroup
-                      value={completionDay}
-                      onValueChange={(value) => {
-                        setCompletionDay(value);
-                        setActiveCompletionTab('vulgraad');
-                      }}
-                    >
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                          {['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag'].map(day => (
-                            <div key={day} className="flex items-center space-x-2">
-                               <RadioGroupItem value={day} id={`day-${day}`} />
-                               <Label htmlFor={`day-${day}`} className='capitalize'>{day}</Label>
-                            </div>
-                          ))}
+                <div className="space-y-6 py-4">
+                  <div className="flex items-center justify-center gap-4">
+                      <Button onClick={() => handleNextObject('completed')} variant='outline' size="icon" className='h-32 w-32 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600 flex-col gap-2'>
+                          <CheckCircle className='h-12 w-12' />
+                          <span className='font-semibold'>Gereed</span>
+                      </Button>
+                      <Button onClick={() => handleNextObject('skipped')} variant='outline' size="icon" className='h-32 w-32 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600 flex-col gap-2'>
+                          <XCircle className='h-12 w-12' />
+                          <span className='font-semibold'>Niet Gereed</span>
+                      </Button>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-center block">Selecteer vulgraad</Label>
+                    <div className="relative">
+                      <Image 
+                        src="https://i.ibb.co/DHXvMWPz/Chat-GPT-Image-15-jan-2026-21-07-38.png" 
+                        alt="Vulgraad selectie" 
+                        width={400} 
+                        height={100} 
+                        className="w-full h-auto"
+                      />
+                      <div className="absolute inset-0 grid grid-cols-4">
+                        <div onClick={() => setCompletionVulgraad('0-25')} className={cn("cursor-pointer border-4", completionVulgraad === '0-25' ? 'border-primary' : 'border-transparent')}></div>
+                        <div onClick={() => setCompletionVulgraad('25-50')} className={cn("cursor-pointer border-4", completionVulgraad === '25-50' ? 'border-primary' : 'border-transparent')}></div>
+                        <div onClick={() => setCompletionVulgraad('50-75')} className={cn("cursor-pointer border-4", completionVulgraad === '50-75' ? 'border-primary' : 'border-transparent')}></div>
+                        <div onClick={() => setCompletionVulgraad('75-100')} className={cn("cursor-pointer border-4", completionVulgraad === '75-100' ? 'border-primary' : 'border-transparent')}></div>
                       </div>
-                    </RadioGroup>
-                  </TabsContent>
-                  <TabsContent value="vulgraad" className="pt-4">
-                      <RadioGroup
-                        value={completionVulgraad}
-                        onValueChange={(value) => {
-                          setCompletionVulgraad(value);
-                          setActiveCompletionTab('bijzonderheden');
-                        }}
-                      >
-                        <div className="grid grid-cols-2 gap-4">
-                            {['0-25', '25-50', '50-75', '75-100'].map(range => (
-                                <div key={range} className="flex items-center space-x-2">
-                                  <RadioGroupItem value={range} id={`vulgraad-${range}`} />
-                                  <Label htmlFor={`vulgraad-${range}`}>{range}%</Label>
-                                </div>
-                            ))}
-                        </div>
-                      </RadioGroup>
-                  </TabsContent>
-                  <TabsContent value="bijzonderheden" className="pt-4 space-y-4">
-                      <RadioGroup
-                        value={hasBijzonderheden}
-                        onValueChange={(value) => {
-                          setHasBijzonderheden(value);
-                          if (value === 'nee') {
-                            setActiveCompletionTab('actie');
-                          }
-                        }}
-                      >
-                        <div className="flex items-center space-x-4">
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="ja" id="bijzonderheden-ja" />
-                              <Label htmlFor="bijzonderheden-ja">Ja</Label>
-                            </div>
-                             <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="nee" id="bijzonderheden-nee" />
-                              <Label htmlFor="bijzonderheden-nee">Nee</Label>
-                            </div>
-                        </div>
-                      </RadioGroup>
-                      {hasBijzonderheden === 'ja' && (
-                        <Textarea 
-                            placeholder="Voer bijzonderheden in..."
-                            value={bijzonderhedenText}
-                            onChange={(e) => setBijzonderhedenText(e.target.value)}
-                        />
-                      )}
-                  </TabsContent>
-                  <TabsContent value="actie" className="pt-8 flex flex-col items-center justify-center gap-6">
-                    {nearbyObjectsForCompletion.length > 0 && (
-                        <div className="flex items-center space-x-2 border rounded-md p-3">
-                            <Checkbox id="cluster-completion" checked={completeCluster} onCheckedChange={(checked) => setCompleteCluster(!!checked)} />
-                            <Label htmlFor="cluster-completion">
-                                Voltooi {nearbyObjectsForCompletion.length} objecten in de buurt als cluster
-                            </Label>
-                        </div>
-                    )}
-                    <div className="flex-row justify-center gap-4 flex">
-                        <Button onClick={() => handleNextObject('skipped')} variant='outline' size="icon" className='h-32 w-32 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600'>
-                            <XCircle className='h-16 w-16' />
-                        </Button>
-                        <Button onClick={() => handleNextObject('completed')} variant='outline' size="icon" className='h-32 w-32 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600'>
-                            <CheckCircle className='h-16 w-16' />
-                        </Button>
                     </div>
-                  </TabsContent>
-                </Tabs>
+                  </div>
+                </div>
                  <DialogFooter>
                   <DialogClose asChild>
                     <Button variant="ghost" onClick={() => { if(isSimulating) { resumeSimulation() } }}>Sluiten</Button>
