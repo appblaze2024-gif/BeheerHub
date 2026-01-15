@@ -34,7 +34,7 @@ import {
   useCollection,
   deleteDocumentNonBlocking,
 } from '@/firebase';
-import type { Medewerker, Dienst } from '@/lib/types';
+import type { Medewerker, Dienst, Voertuig } from '@/lib/types';
 import { DienstToevoegenDialog } from '@/components/dienst-toevoegen-dialog';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -198,6 +198,14 @@ export default function WorkPlanningPage() {
 
   const { data: projects, isLoading: isLoadingProjects } =
     useCollection<Project>(projectsCollection);
+
+  const voertuigenCollection = React.useMemo(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'voertuigen');
+  }, [firestore]);
+
+  const { data: voertuigen, isLoading: isLoadingVoertuigen } = useCollection<Voertuig>(voertuigenCollection);
+
 
   const start = React.useMemo(() => startOfWeek(currentDate, { weekStartsOn: 1 }), [currentDate]);
   const end = React.useMemo(() => endOfWeek(currentDate, { weekStartsOn: 1 }), [currentDate]);
@@ -589,6 +597,7 @@ export default function WorkPlanningPage() {
             project={selectedProject}
             dienst={selectedDienst}
             onSuccess={handleSheetSuccess}
+            voertuigen={voertuigen || []}
         />
         <PrintDayDialog 
             open={isPrintDayDialogOpen}

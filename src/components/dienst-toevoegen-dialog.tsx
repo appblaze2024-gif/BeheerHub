@@ -41,13 +41,14 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import type { Medewerker, Dienst } from '@/lib/types';
+import type { Medewerker, Dienst, Voertuig } from '@/lib/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 const dienstFormSchema = z.object({
   werksoort: z.string().min(1, 'Omschrijving is verplicht.'),
   starttijd: z.string().min(1, 'Starttijd is verplicht.'),
   eindtijd: z.string().min(1, 'Eindtijd is verplicht.'),
-  voertuignummer: z.string().optional(),
+  voertuignummer: z.string().optional().nullable(),
 });
 
 type DienstFormValues = z.infer<typeof dienstFormSchema>;
@@ -63,6 +64,7 @@ interface DienstToevoegenDialogProps {
   };
   dienst?: Dienst;
   onSuccess: () => void;
+  voertuigen: Voertuig[];
 }
 
 export function DienstToevoegenDialog({
@@ -73,6 +75,7 @@ export function DienstToevoegenDialog({
   project,
   dienst,
   onSuccess,
+  voertuigen,
 }: DienstToevoegenDialogProps) {
   const firestore = useFirestore();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -224,9 +227,21 @@ export function DienstToevoegenDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Voertuignummer</FormLabel>
-                    <FormControl>
-                        <Input placeholder="Bijv. V-01" {...field} />
-                    </FormControl>
+                     <Select onValueChange={field.onChange} value={field.value || ''}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecteer een voertuig" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">Geen voertuig</SelectItem>
+                          {voertuigen.map((v) => (
+                            <SelectItem key={v.id} value={v.voertuignummer || v.id}>
+                              {v.voertuignummer || v.id} ({v.merk} {v.model})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     <FormMessage />
                   </FormItem>
                 )}
