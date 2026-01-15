@@ -558,7 +558,7 @@ export default function Page() {
   
  const simulationStateRef = React.useRef({
     distance: 0,
-    isPausedAtManeuver: false,
+    isPaused: false,
     pauseTimeout: null as NodeJS.Timeout | null,
   });
 
@@ -601,18 +601,27 @@ export default function Page() {
     stopTracking();
     
     const currentGpsLocation = positionRef.current;
-    if (currentGpsLocation) {
+    if (currentGpsLocation && mapRef.current) {
         snappedOriginRef.current = currentGpsLocation;
-        mapRef.current?.getMap().easeTo({
+        mapRef.current.getMap().easeTo({
             center: currentGpsLocation,
             zoom: 14,
             pitch: 0,
             bearing: 0,
-            padding: { top: 0 },
+            duration: 1000,
+            padding: { top: 0, bottom: 0, left: 0, right: 0 },
         });
     }
   }, [firestore, user, activeRouteHistoryId]);
 
+  const resumeSimulation = useCallback(() => {
+    simulationStateRef.current.isPaused = false;
+    if(simulationStateRef.current.pauseTimeout) {
+      clearTimeout(simulationStateRef.current.pauseTimeout);
+      simulationStateRef.current.pauseTimeout = null;
+    }
+  }, []);
+  
   const handleToggleSimulation = () => {
     const isStarting = !isSimulating;
     setIsSimulating(isStarting);
@@ -622,7 +631,7 @@ export default function Page() {
             clearInterval(simulationIntervalRef.current);
         }
         stopTracking();
-        simulationStateRef.current = { distance: 0, isPausedAtManeuver: false, pauseTimeout: null };
+        simulationStateRef.current = { distance: 0, isPaused: false, pauseTimeout: null };
         currentInstructionIndexRef.current = 0;
         
         if (routeRef.current && routeRef.current.geometry.coordinates.length > 0) {
@@ -632,11 +641,24 @@ export default function Page() {
         }
 
         simulationIntervalRef.current = setInterval(() => {
-            if (!routeRef.current || !routeInstructionsRef.current.length || simulationStateRef.current.isPausedAtManeuver) return;
+            if (!routeRef.current || !routeInstructionsRef.current.length || simulationStateRef.current.isPaused) return;
             
             const routeLine = routeRef.current.geometry;
             const totalDistance = routeInfoRef.current?.distance || 0;
             
+            const distanceToDestination = turf.distance(
+                positionRef.current!,
+                turf.point(destination!.longitude, destination!.latitude),
+                { units: 'meters' }
+            );
+            
+            if (distanceToDestination < 5 && !simulationStateRef.current.isPaused) {
+                simulationStateRef.current.isPaused = true;
+                setCurrentSpeed(0);
+                setIsCompletionSheetOpen(true);
+                return;
+            }
+
             if (simulationStateRef.current.distance >= totalDistance) {
               handleStopNavigation();
               return;
@@ -649,29 +671,12 @@ export default function Page() {
             const distanceToNextManeuver = cumulativeDistanceToNextManeuver - simulationStateRef.current.distance;
             setDistanceToManeuver(distanceToNextManeuver);
 
-            if (distanceToNextManeuver < 5 && !simulationStateRef.current.isPausedAtManeuver) {
-                simulationStateRef.current.isPausedAtManeuver = true;
-                setCurrentSpeed(0);
-
-                if(simulationStateRef.current.pauseTimeout) clearTimeout(simulationStateRef.current.pauseTimeout);
-                
+            if (distanceToNextManeuver < 5) {
                 const nextInstructionIndex = currentInstructionIndexRef.current + 1;
-
                 if (nextInstructionIndex < routeInstructionsRef.current.length) {
                     currentInstructionIndexRef.current = nextInstructionIndex;
-                    const nextInstruction = routeInstructionsRef.current[nextInstructionIndex];
-                    
-                    simulationStateRef.current.pauseTimeout = setTimeout(() => {
-                        setCurrentInstruction(nextInstruction);
-                        simulationStateRef.current.isPausedAtManeuver = false;
-                    }, 2000);
-                } else {
-                    // This is the last maneuver, stop after the pause
-                     simulationStateRef.current.pauseTimeout = setTimeout(() => {
-                        handleStopNavigation();
-                    }, 2000);
+                    setCurrentInstruction(routeInstructionsRef.current[nextInstructionIndex]);
                 }
-                return;
             }
             
             let speedInMps;
@@ -885,6 +890,9 @@ export default function Page() {
       handleStopNavigation(); // Also stop navigation fully
     }
     setIsCompletionSheetOpen(false);
+    if(isSimulating) {
+        resumeSimulation();
+    }
   };
 
   const centerOnLocation = () => {
@@ -954,6 +962,7 @@ export default function Page() {
         const from = turf.point([obj.longitude, obj.latitude]);
         const nearby = pendingObjects.filter(p => {
             if (p.id === obj.id) return false; // Exclude the destination itself
+            if (typeof p.latitude !== 'number' || typeof p.longitude !== 'number') return false;
             const to = turf.point([p.longitude, p.latitude]);
             const distance = turf.distance(from, to, { units: 'meters' });
             return distance <= 100;
@@ -1376,7 +1385,7 @@ export default function Page() {
                 </Tabs>
                  <DialogFooter>
                   <DialogClose asChild>
-                    <Button variant="ghost">Sluiten</Button>
+                    <Button variant="ghost" onClick={() => { if(isSimulating) { resumeSimulation() } }}>Sluiten</Button>
                   </DialogClose>
                  </DialogFooter>
             </DialogContent>
