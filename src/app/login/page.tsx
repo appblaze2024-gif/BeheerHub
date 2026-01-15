@@ -29,7 +29,7 @@ export default function LoginPage() {
     }
   };
   
-  const sunnyCloudsImage = "https://images.unsplash.com/photo-1638132035918-90a22beaab3b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxM3x8d2hpdGV8ZW58MHx8fHwxNzY4NDk1NjM4fDA&ixlib=rb-4.1.0&q=80&w=1080";
+  const sunnyCloudsImage = "https://images.unsplash.com/photo-1523961131990-5ea7c61b2107?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyMHx8YWl8ZW58MHx8fHwxNzY4NDg5MzUyfDA&ixlib=rb-4.1.0&q=80&w=1080";
 
 
   return (
