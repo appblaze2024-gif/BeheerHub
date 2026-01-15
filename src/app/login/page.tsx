@@ -32,11 +32,11 @@ export default function LoginPage() {
   return (
     <div className="relative flex h-screen w-screen flex-col items-center justify-center">
       <Image
-        src="https://picsum.photos/seed/sky/1920/1080"
+        src="https://images.unsplash.com/photo-1534088568595-a066f410bcda"
         alt="Sky background"
         fill
         className="object-cover z-0"
-        data-ai-hint="sky background"
+        data-ai-hint="clouds sky"
       />
       <div className="absolute top-8 left-8 z-10">
          <Image
