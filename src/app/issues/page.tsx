@@ -482,8 +482,8 @@ export default function IssuesPage() {
                                     </SelectContent>
                             </Select>
                         </div>
-                        <div className='space-y-2'>
-                            <Label className='text-sm font-medium'>Datum</Label>
+                        <div className='space-y-2 flex flex-col items-center'>
+                            <Label className='text-sm font-medium self-start'>Datum</Label>
                              <Calendar
                                 mode="single"
                                 selected={selectedDate}
