@@ -52,8 +52,8 @@ export default function LoginPage() {
         />
       </div>
 
-      <Card className="w-full max-w-md z-10 bg-white/30 backdrop-blur-lg border border-white/20 shadow-2xl">
-        <CardHeader className="items-center text-center text-white">
+      <Card className="w-full max-w-xl z-10 bg-white/50 backdrop-blur-xl border border-white/20 shadow-2xl rounded-xl">
+        <CardHeader className="items-center text-center text-white py-6">
             <div className='p-3 bg-white/20 rounded-lg border border-white/30'>
                  <Image
                     src="https://i.ibb.co/Fk1pVzqw/IMG-1314.png"
@@ -68,7 +68,7 @@ export default function LoginPage() {
             Voer uw gegevens in om toegang te krijgen tot uw account.
           </p>
         </CardHeader>
-        <CardContent className="grid gap-4">
+        <CardContent className="grid gap-4 px-8 pb-8 pt-4">
           <div className="grid gap-2">
             <Label htmlFor="email" className="text-gray-700 dark:text-gray-200">Email</Label>
             <div className='relative'>
