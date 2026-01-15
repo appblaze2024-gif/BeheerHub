@@ -1274,7 +1274,7 @@ export default function Page() {
           )}
         </MapGL>
         <Dialog open={isCompletionSheetOpen} onOpenChange={setIsCompletionSheetOpen}>
-            <DialogContent className="sm:max-w-lg">
+            <DialogContent className="sm:max-w-[40vw]">
                 <DialogHeader>
                     <DialogTitle>OBJECT-ID: {destination?.id}</DialogTitle>
                     <DialogDescription>
@@ -1284,17 +1284,17 @@ export default function Page() {
                 <div className="space-y-4 py-4">
                   <div className="space-y-4">
                       <Label className="text-center block">Selecteer vulgraad</Label>
-                      <div className="h-36 -mb-4">
+                      <div className="h-48 -mb-4">
                           <ResponsiveContainer width="100%" height="100%">
                               <RadialBarChart 
                                   cx="50%"
                                   cy="100%"
-                                  innerRadius="100%" 
-                                  outerRadius="140%" 
+                                  innerRadius="120%" 
+                                  outerRadius="160%" 
                                   data={[{ name: 'vulgraad', value: completionVulgraadPercentage }]} 
                                   startAngle={180} 
                                   endAngle={0}
-                                  barSize={30}
+                                  barSize={40}
                               >
                                   <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
                                   <RadialBar 
