@@ -562,7 +562,7 @@ export default function Page() {
             },
             { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
         );
-    }, 400);
+    }, 200);
 
   }, [isSimulating, updateMapAndPosition]);
 
