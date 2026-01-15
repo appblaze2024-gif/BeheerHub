@@ -39,18 +39,37 @@ const objectFields = [
     'waarschuwing', 'vulgraad'
 ];
 
-// Simple but effective CSV parser
+// Robust CSV parser
 const parseCSV = (csv: string): { headers: string[], data: string[][] } => {
-    const lines = csv.split('\n').filter(line => line.trim() !== '');
+    const lines = csv.split(/[\r\n]+/).filter(line => line.trim() !== '');
     if (lines.length === 0) {
         return { headers: [], data: [] };
     }
 
-    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-    const data = lines.slice(1).map(line => {
-        // This is a simplified parser; for complex CSVs, a library might be better
-        return line.split(',').map(v => v.trim().replace(/"/g, ''));
-    });
+    const delimiter = lines[0].includes(';') ? ';' : ',';
+    
+    const parseLine = (line: string) => {
+        const result: string[] = [];
+        let current = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            if (char === '"') {
+                inQuotes = !inQuotes;
+            } else if (char === delimiter && !inQuotes) {
+                result.push(current.trim());
+                current = '';
+            } else {
+                current += char;
+            }
+        }
+        result.push(current.trim());
+        return result;
+    };
+
+    const headers = parseLine(lines[0]).map(h => h.replace(/"/g, ''));
+    const data = lines.slice(1).map(parseLine);
+    
     return { headers, data };
 };
 
