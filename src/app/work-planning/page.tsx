@@ -656,7 +656,7 @@ export default function WorkPlanningPage() {
                          </DropdownMenuTrigger>
                         <DropdownMenuContent onContextMenu={(e) => e.preventDefault()}>
                           {copiedDienst && (
-                             <DropdownMenuItem onClick={handlePaste}>
+                             <DropdownMenuItem onClick={handlePaste} disabled={selectedCells.length === 0}>
                               <Copy className="mr-2 h-4 w-4" />
                               Plakken
                             </DropdownMenuItem>
@@ -718,11 +718,18 @@ export default function WorkPlanningPage() {
                 Kopiëren
               </DropdownMenuItem>
             )}
-             {copiedDienst && (
-              <DropdownMenuItem onClick={handlePaste}>
+            {copiedDienst && (
+              <DropdownMenuItem onClick={handlePaste} disabled={selectedCells.length === 0}>
                 <Copy className="mr-2 h-4 w-4" />
                 Plakken
               </DropdownMenuItem>
+            )}
+            {selectedCells.length > 0 && <DropdownMenuSeparator/>}
+            {selectedCells.length > 0 && (
+                <DropdownMenuItem onClick={handleDeleteSelected} className="text-destructive focus:text-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Verwijder selectie
+                </DropdownMenuItem>
             )}
           </DropdownMenuContent>
         </DropdownMenu>
