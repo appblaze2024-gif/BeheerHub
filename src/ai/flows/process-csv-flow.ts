@@ -150,7 +150,7 @@ export function ObjectImportDialog({
     reader.onerror = () => {
         setError("Fout bij het lezen van het bestand.");
     }
-    reader.readAsText(selectedFile, 'ISO-8859-1'); // Common encoding for CSV
+    reader.readAsText(selectedFile, 'UTF-8');
   };
 
   const handleImport = async () => {
