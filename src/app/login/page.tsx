@@ -35,6 +35,13 @@ export default function LoginPage() {
 
   return (
     <div className="flex h-screen w-screen flex-col items-center justify-start pt-24 gap-8 bg-gradient-to-br from-stone-50 to-stone-200 dark:from-stone-800 dark:to-stone-950">
+       <Image
+          src="https://i.ibb.co/Fk1pVzqw/IMG-1314.png"
+          alt="Logo"
+          width={400}
+          height={150}
+          priority
+        />
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle className="text-2xl">Login</CardTitle>
