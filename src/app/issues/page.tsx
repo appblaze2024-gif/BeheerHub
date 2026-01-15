@@ -439,59 +439,63 @@ export default function IssuesPage() {
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
-                        <div className='space-y-2'>
-                            <Label htmlFor='project-select' className='text-sm font-medium'>Project</Label>
-                                <Select
-                                value={selectedProjectId || ''}
-                                onValueChange={(value) => {
-                                    setSelectedProjectId(value);
-                                    setSelectedWijkId('all');
-                                }}
-                                disabled={isLoadingProjects}
-                                >
-                                <SelectTrigger id="project-select" className="w-full bg-card">
-                                    <SelectValue placeholder="Selecteer een project" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {projects?.map(p => <SelectItem key={p.id} value={p.id}>{p.projectnaam}</SelectItem>)}
-                                </SelectContent>
-                                </Select>
-                        </div>
-                        <div className='space-y-2'>
-                            <Label htmlFor='wijk-select' className='text-sm font-medium'>Wijk</Label>
-                            <Select
-                                value={selectedWijkId || 'all'}
-                                onValueChange={setSelectedWijkId}
-                                disabled={!selectedProject}
-                            >
-                                    <SelectTrigger id="wijk-select" className="w-full bg-card">
-                                    <SelectValue placeholder="Selecteer een wijk" />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className='space-y-2'>
+                                <Label htmlFor='project-select' className='text-sm font-medium'>Project</Label>
+                                    <Select
+                                    value={selectedProjectId || ''}
+                                    onValueChange={(value) => {
+                                        setSelectedProjectId(value);
+                                        setSelectedWijkId('all');
+                                    }}
+                                    disabled={isLoadingProjects}
+                                    >
+                                    <SelectTrigger id="project-select" className="w-full bg-card">
+                                        <SelectValue placeholder="Selecteer een project" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                    <SelectItem value="all">Alle wijken</SelectItem>
-                                    {sortedWijken.map(w => (
-                                        <SelectItem key={w.id} value={w.id}>
-                                        <div className='flex justify-between items-center w-full'>
-                                            <span>{w.naam}</span>
-                                            {(openMeldingenCountPerWijk[w.id] || 0) > 0 && (
-                                            <Badge variant="destructive" className="ml-2 px-2 py-0.5 h-5">{openMeldingenCountPerWijk[w.id]}</Badge>
-                                            )}
-                                        </div>
-                                        </SelectItem>
-                                    ))}
+                                        {projects?.map(p => <SelectItem key={p.id} value={p.id}>{p.projectnaam}</SelectItem>)}
                                     </SelectContent>
-                            </Select>
+                                    </Select>
+                            </div>
+                            <div className='space-y-2'>
+                                <Label htmlFor='wijk-select' className='text-sm font-medium'>Wijk</Label>
+                                <Select
+                                    value={selectedWijkId || 'all'}
+                                    onValueChange={setSelectedWijkId}
+                                    disabled={!selectedProject}
+                                >
+                                        <SelectTrigger id="wijk-select" className="w-full bg-card">
+                                        <SelectValue placeholder="Selecteer een wijk" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                        <SelectItem value="all">Alle wijken</SelectItem>
+                                        {sortedWijken.map(w => (
+                                            <SelectItem key={w.id} value={w.id}>
+                                            <div className='flex justify-between items-center w-full'>
+                                                <span>{w.naam}</span>
+                                                {(openMeldingenCountPerWijk[w.id] || 0) > 0 && (
+                                                <Badge variant="destructive" className="ml-2 px-2 py-0.5 h-5">{openMeldingenCountPerWijk[w.id]}</Badge>
+                                                )}
+                                            </div>
+                                            </SelectItem>
+                                        ))}
+                                        </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                         <div className='space-y-2 flex flex-col items-center'>
                             <Label className='text-sm font-medium self-start'>Datum</Label>
-                             <Calendar
-                                mode="single"
-                                selected={selectedDate}
-                                onSelect={setSelectedDate}
-                                initialFocus
-                                locale={nl}
-                                className="rounded-md border bg-card w-auto"
-                            />
+                            <div className="flex justify-center">
+                                 <Calendar
+                                    mode="single"
+                                    selected={selectedDate}
+                                    onSelect={setSelectedDate}
+                                    initialFocus
+                                    locale={nl}
+                                    className="rounded-md border bg-card w-auto"
+                                />
+                            </div>
                         </div>
                     </div>
                      <DialogFooter>
