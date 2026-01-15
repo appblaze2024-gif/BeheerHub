@@ -142,17 +142,6 @@ const getManeuverIcon = (type: string, modifier?: string) => {
     }
 }
 
-const getHeatmapColor = (vulgraad: number | undefined): string => {
-    if (vulgraad === undefined || vulgraad === null || vulgraad <= 0) {
-      return 'bg-blue-600'; // Default to blue if no vulgraad
-    }
-    // Hue: 120 is green, 0 is red.
-    // We want green (120) at 0% and red (0) at 100%.
-    const hue = 120 * (1 - vulgraad / 100);
-    return `hsl(${hue}, 80%, 50%)`;
-};
-
-
 export default function Page() {
   const mapRef = React.useRef<any>();
   const firestore = useFirestore();
@@ -598,9 +587,11 @@ export default function Page() {
                 setCurrentSpeed(0);
 
                 if(simulationStateRef.current.pauseTimeout) clearTimeout(simulationStateRef.current.pauseTimeout);
+                
+                currentInstructionIndexRef.current += 1;
+                const nextInstruction = routeInstructionsRef.current[currentInstructionIndexRef.current];
+
                 simulationStateRef.current.pauseTimeout = setTimeout(() => {
-                    currentInstructionIndexRef.current += 1;
-                    const nextInstruction = routeInstructionsRef.current[currentInstructionIndexRef.current];
                     setCurrentInstruction(nextInstruction);
                     simulationStateRef.current.isPausedAtManeuver = false;
                 }, 2000);
@@ -917,14 +908,14 @@ export default function Page() {
   const ManeuverIcon = currentInstruction ? getManeuverIcon(currentInstruction.maneuver.type, currentInstruction.maneuver.modifier) : ArrowUp;
 
 
-  const getMarkerColor = (objectId: string, vulgraad?: number): string => {
+  const getMarkerColor = (objectId: string): string => {
     if (completedObjects.includes(objectId)) {
         return 'bg-green-500';
     }
     if (skippedObjects.includes(objectId)) {
         return 'bg-gray-500';
     }
-    return getHeatmapColor(vulgraad);
+    return 'bg-blue-600';
 }
   
   const handleMarkerClick = (obj: MapObject) => {
@@ -1157,7 +1148,7 @@ export default function Page() {
           
           {isNavigating && objectsForCurrentRoute?.map(obj => {
               const isCurrentDestination = destination?.id === obj.id;
-              const color = getMarkerColor(obj.id, obj.vulgraad);
+              const color = getMarkerColor(obj.id);
               
               if (isCurrentDestination) {
                 return (
@@ -1186,13 +1177,12 @@ export default function Page() {
                     onMouseEnter={() => setHoveredObject(obj)}
                     onMouseLeave={() => setHoveredObject(null)}
                  >
-                  <div className={`w-3 h-3 rounded-full border-2 border-white cursor-pointer`} style={{backgroundColor: color.startsWith('hsl') ? color : undefined}}/>
+                  <div className={cn(`w-3 h-3 rounded-full border-2 border-white cursor-pointer`, color)}/>
                 </Marker>
               )
           })}
 
           {!isNavigating && objectsInWijk?.map(obj => {
-            const color = getHeatmapColor(obj.vulgraad);
             return (
              <Marker
                 key={obj.id}
@@ -1202,7 +1192,7 @@ export default function Page() {
                 onMouseEnter={() => setHoveredObject(obj)}
                 onMouseLeave={() => setHoveredObject(null)}
              >
-              <div className={`w-2.5 h-2.5 rounded-full border-2 border-white cursor-pointer`} style={{backgroundColor: color.startsWith('hsl') ? color : undefined}} />
+              <div className={`w-2.5 h-2.5 bg-blue-600 rounded-full border-2 border-white cursor-pointer`} />
             </Marker>
           )})}
           
@@ -1346,3 +1336,4 @@ export default function Page() {
     </div>
   );
 }
+
