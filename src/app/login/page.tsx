@@ -53,7 +53,7 @@ export default function LoginPage() {
       </div>
 
       <Card className="w-full max-w-xl z-10 bg-white/50 backdrop-blur-xl border border-white/20 shadow-2xl rounded-xl">
-        <CardHeader className="items-center text-center text-white py-6">
+        <CardHeader className="items-center text-center py-6">
             <div className='p-3 bg-white/20 rounded-lg border border-white/30'>
                  <Image
                     src="https://i.ibb.co/Fk1pVzqw/IMG-1314.png"
@@ -63,14 +63,14 @@ export default function LoginPage() {
                     priority
                 />
             </div>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Inloggen met e-mail</h1>
-          <p className="text-gray-600 dark:text-gray-200 text-sm">
+          <h1 className="text-2xl font-bold text-white">Inloggen met e-mail</h1>
+          <p className="text-white/80 text-sm">
             Voer uw gegevens in om toegang te krijgen tot uw account.
           </p>
         </CardHeader>
         <CardContent className="grid gap-4 px-8 pb-8 pt-4">
           <div className="grid gap-2">
-            <Label htmlFor="email" className="text-gray-700 dark:text-gray-200">Email</Label>
+            <Label htmlFor="email" className="text-white">Email</Label>
             <div className='relative'>
               <Mail className='absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400' />
               <Input
@@ -85,7 +85,7 @@ export default function LoginPage() {
             </div>
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="password" className="text-gray-700 dark:text-gray-200">Wachtwoord</Label>
+            <Label htmlFor="password" className="text-white">Wachtwoord</Label>
              <div className='relative'>
                 <Lock className='absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400' />
                 <Input
@@ -97,7 +97,7 @@ export default function LoginPage() {
                 className="pl-10 bg-white/50 border-white/30 placeholder:text-gray-500"
                 />
             </div>
-             <a href="#" className="text-right text-xs text-gray-600 dark:text-gray-300 hover:underline">
+             <a href="#" className="text-right text-xs text-white/80 hover:underline">
               Wachtwoord vergeten?
             </a>
           </div>
