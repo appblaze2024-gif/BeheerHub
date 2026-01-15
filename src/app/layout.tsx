@@ -50,25 +50,14 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     <div className={cn('font-body antialiased flex h-svh overflow-hidden')}>
       <Sidebar isCollapsed={isCollapsed}>
         <SidebarHeader isCollapsed={isCollapsed}>
-          <Link href="/">
+          <Link href="/" className={cn(isCollapsed ? 'hidden' : 'block')}>
             <Image
               src="https://i.ibb.co/Fk1pVzqw/IMG-1314.png"
               alt="Logo"
               width={300}
               height={100}
-              className={cn(
-                'w-auto h-auto transition-all',
-                isCollapsed ? 'h-0 w-0' : 'h-auto w-auto'
-              )}
+              className='w-auto h-auto'
             />
-             <div className={cn(isCollapsed ? 'block' : 'hidden')}>
-                 <Image
-                    src="https://i.ibb.co/Fk1pVzqw/IMG-1314.png"
-                    alt="Logo Icon"
-                    width={48}
-                    height={48}
-                    />
-            </div>
           </Link>
         </SidebarHeader>
         <SidebarNav isCollapsed={isCollapsed} />
