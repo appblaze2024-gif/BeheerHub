@@ -25,6 +25,7 @@ import { collection, doc, writeBatch } from 'firebase/firestore';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 interface ObjectImportDialogProps {
   children: React.ReactNode;
@@ -73,6 +74,21 @@ const parseCSV = (csv: string): { headers: string[], data: string[][] } => {
     return { headers, data };
 };
 
+const parseXLSX = (arrayBuffer: ArrayBuffer): { headers: string[], data: string[][] } => {
+  const workbook = XLSX.read(arrayBuffer, { type: 'buffer' });
+  const sheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[sheetName];
+  const json: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+  if (json.length === 0) {
+    return { headers: [], data: [] };
+  }
+
+  const headers = json[0].map(String);
+  const data = json.slice(1).map(row => row.map(String));
+
+  return { headers, data };
+}
 
 export function ObjectImportDialog({
   children,
@@ -118,39 +134,62 @@ export function ObjectImportDialog({
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      const text = e.target?.result as string;
-      const { headers: fileHeaders, data: fileData } = parseCSV(text);
-      
-      if(fileHeaders.length === 0) {
-          setError("Kon geen headers vinden in het CSV-bestand.");
-          return;
-      }
+        try {
+            const fileContent = e.target?.result;
+            if (!fileContent) {
+                setError("Kon het bestand niet lezen.");
+                return;
+            }
 
-      setHeaders(fileHeaders);
-      setData(fileData);
+            let parsedData: { headers: string[], data: string[][] };
+            if (selectedFile.name.endsWith('.xlsx')) {
+                parsedData = parseXLSX(fileContent as ArrayBuffer);
+            } else {
+                parsedData = parseCSV(fileContent as string);
+            }
+            
+            const { headers: fileHeaders, data: fileData } = parsedData;
+            
+            if(fileHeaders.length === 0) {
+                setError("Kon geen headers vinden in het bestand.");
+                return;
+            }
 
-      // Auto-map based on header name similarity
-      const newMapping: Record<string, string> = {};
-      objectFields.forEach(field => {
-        const lowerField = field.toLowerCase();
-        const foundHeader = fileHeaders.find(header => {
-            const lowerHeader = header.toLowerCase();
-            if(lowerHeader === lowerField) return true;
-            if(lowerField === 'latitude' && (lowerHeader === 'lat' || lowerHeader === 'latitude')) return true;
-            if(lowerField === 'longitude' && (lowerHeader === 'lon' || lowerHeader === 'longitude')) return true;
-            return false;
-        });
-        if (foundHeader) {
-          newMapping[field] = foundHeader;
+            setHeaders(fileHeaders);
+            setData(fileData);
+
+            // Auto-map based on header name similarity
+            const newMapping: Record<string, string> = {};
+            objectFields.forEach(field => {
+                const lowerField = field.toLowerCase();
+                const foundHeader = fileHeaders.find(header => {
+                    const lowerHeader = header.toLowerCase();
+                    if(lowerHeader === lowerField) return true;
+                    if(lowerField === 'latitude' && (lowerHeader === 'lat' || lowerHeader === 'latitude')) return true;
+                    if(lowerField === 'longitude' && (lowerHeader === 'lon' || lowerHeader === 'longitude')) return true;
+                    return false;
+                });
+                if (foundHeader) {
+                newMapping[field] = foundHeader;
+                }
+            });
+            setMapping(newMapping);
+            setStep(2);
+        } catch (err) {
+            console.error("Fout bij het parsen van bestand:", err);
+            setError("Fout bij het verwerken van het bestand. Controleer het formaat.");
         }
-      });
-      setMapping(newMapping);
-      setStep(2);
     };
+
     reader.onerror = () => {
         setError("Fout bij het lezen van het bestand.");
     }
-    reader.readAsText(selectedFile, 'UTF-8');
+    
+    if (selectedFile.name.endsWith('.xlsx')) {
+        reader.readAsArrayBuffer(selectedFile);
+    } else {
+        reader.readAsText(selectedFile, 'UTF-8');
+    }
   };
 
   const handleImport = async () => {
@@ -247,11 +286,11 @@ export function ObjectImportDialog({
           case 1:
               return (
                 <div className="py-8">
-                    <Label htmlFor="csv-file" className="sr-only">CSV Bestand</Label>
+                    <Label htmlFor="csv-file" className="sr-only">CSV/XLSX Bestand</Label>
                     <Input
                     id="csv-file"
                     type="file"
-                    accept=".csv"
+                    accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
                     onChange={handleFileChange}
                     ref={fileInputRef}
                     className="w-full h-12 text-base"
@@ -318,9 +357,9 @@ export function ObjectImportDialog({
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-[650px]">
         <DialogHeader>
-          <DialogTitle>Objecten Importeren (CSV)</DialogTitle>
+          <DialogTitle>Objecten Importeren (CSV/XLSX)</DialogTitle>
           <DialogDescription>
-            {step === 1 && 'Selecteer een CSV-bestand om te importeren.'}
+            {step === 1 && 'Selecteer een CSV of XLSX bestand om te importeren.'}
             {step === 2 && 'Koppel uw CSV-kolommen aan de databasevelden.'}
             {step === 3 && 'De import is succesvol afgerond.'}
           </DialogDescription>
