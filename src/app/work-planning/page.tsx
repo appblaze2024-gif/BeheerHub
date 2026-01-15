@@ -79,7 +79,7 @@ type Project = {
   projectnummer: string;
 };
 
-const DienstItem = ({ dienst, onEdit, onDelete }: { dienst: Dienst, onEdit: (dienst: Dienst) => void, onDelete: (dienst: Dienst) => void}) => {
+const DienstItem = ({ dienst, onEdit, onDelete, onContextMenu }: { dienst: Dienst, onEdit: (dienst: Dienst) => void, onDelete: (dienst: Dienst) => void, onContextMenu: (e: React.MouseEvent, dienst: Dienst) => void }) => {
     const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
 
     const handleEdit = (e: React.MouseEvent) => {
@@ -114,6 +114,7 @@ const DienstItem = ({ dienst, onEdit, onDelete }: { dienst: Dienst, onEdit: (die
             <div 
                 onClick={handleEdit}
                 onKeyDown={handleKeyDown}
+                onContextMenu={(e) => onContextMenu(e, dienst)}
                 tabIndex={0}
                 draggable
                 onDragStart={handleDragStart}
@@ -179,6 +180,14 @@ export default function WorkPlanningPage() {
   const [isLoadingDiensten, setIsLoadingDiensten] = React.useState(false);
   const [dragOverCell, setDragOverCell] = React.useState<{medewerkerId: string, day: string} | null>(null);
   const isTablet = useIsMobile(1024);
+
+  const [contextMenu, setContextMenu] = React.useState<{
+    x: number;
+    y: number;
+    dienst?: Dienst;
+    targetCell?: { medewerkerId: string; datum: Date };
+  } | null>(null);
+  const [copiedDienst, setCopiedDienst] = React.useState<Dienst | null>(null);
 
 
   const firestore = useFirestore();
@@ -444,6 +453,43 @@ export default function WorkPlanningPage() {
     return buttons;
   }
 
+  const handleContextMenu = (
+    e: React.MouseEvent,
+    item?: Dienst,
+    targetCell?: { medewerkerId: string; datum: Date }
+  ) => {
+    e.preventDefault();
+    setContextMenu({ x: e.pageX, y: e.pageY, dienst: item, targetCell });
+  };
+  
+  const handlePaste = async () => {
+    if (!copiedDienst || !contextMenu?.targetCell || !firestore || !selectedProjectId) return;
+  
+    const { medewerkerId, datum } = contextMenu.targetCell;
+    const { id, ...dienstToCopy } = copiedDienst;
+  
+    const newDienstData = {
+      ...dienstToCopy,
+      medewerkerId: medewerkerId,
+      datum: format(datum, 'yyyy-MM-dd'),
+    };
+  
+    try {
+      const dienstenColRef = collection(firestore, 'projects', selectedProjectId, 'diensten');
+      await addDoc(dienstenColRef, newDienstData);
+      fetchDiensten();
+    } catch (error) {
+      console.error('Error pasting dienst:', error);
+    }
+    setContextMenu(null);
+  };
+  
+  React.useEffect(() => {
+    const handleClickOutside = () => setContextMenu(null);
+    window.addEventListener('click', handleClickOutside);
+    return () => window.removeEventListener('click', handleClickOutside);
+  }, []);
+
 
   return (
     <div className="flex flex-col flex-1 h-full min-h-0" id="planning-container">
@@ -555,6 +601,7 @@ export default function WorkPlanningPage() {
                         onDrop={(e) => handleDrop(e, medewerker.id, day)}
                         onDragOver={(e) => handleDragOver(e, medewerker.id, day)}
                         onDragLeave={() => setDragOverCell(null)}
+                        onContextMenu={(e) => handleContextMenu(e, undefined, { medewerkerId: medewerker.id, datum: day })}
                         className={cn(
                             "group relative p-2 border-b border-r min-h-[80px] flex flex-col gap-1 transition-colors day-column",
                              isToday(day) && "bg-muted/50",
@@ -566,7 +613,7 @@ export default function WorkPlanningPage() {
                               <Skeleton className="h-10 w-full" />
                           ) : (
                             dienstenForDay?.map(dienst => (
-                                <DienstItem key={dienst.id} dienst={dienst} onEdit={handleOpenSheetForEdit} onDelete={handleDienstDelete} />
+                                <DienstItem key={dienst.id} dienst={dienst} onEdit={handleOpenSheetForEdit} onDelete={handleDienstDelete} onContextMenu={(e, d) => handleContextMenu(e, d)} />
                             ))
                           )}
                         </div>
@@ -589,6 +636,32 @@ export default function WorkPlanningPage() {
           )}
         </div>
       </div>
+      {contextMenu && (
+        <div
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          className="fixed z-50 bg-card border rounded-md shadow-lg p-1 text-sm"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {contextMenu.dienst ? (
+            <button
+              onClick={() => {
+                setCopiedDienst(contextMenu.dienst!);
+                setContextMenu(null);
+              }}
+              className="block w-full text-left px-3 py-1.5 rounded-sm hover:bg-accent"
+            >
+              Kopiëren
+            </button>
+          ) : copiedDienst ? (
+            <button
+              onClick={handlePaste}
+              className="block w-full text-left px-3 py-1.5 rounded-sm hover:bg-accent"
+            >
+              Plakken
+            </button>
+          ) : null}
+        </div>
+      )}
       <DienstToevoegenDialog
             open={isSheetOpen}
             onOpenChange={setIsSheetOpen}
