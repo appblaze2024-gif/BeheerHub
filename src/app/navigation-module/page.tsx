@@ -433,7 +433,7 @@ export default function Page() {
     }
   };
 
- const updateMapAndPosition = React.useCallback(() => {
+ const updateMapAndPosition = useCallback(() => {
     const userLocation = positionRef.current;
     if (!userLocation || !isNavigating) return;
 
@@ -1274,7 +1274,7 @@ export default function Page() {
           )}
         </MapGL>
         <Dialog open={isCompletionSheetOpen} onOpenChange={setIsCompletionSheetOpen}>
-            <DialogContent className="sm:max-w-[40vw]">
+            <DialogContent className="sm:max-w-[40vw] rounded-xl">
                 <DialogHeader>
                     <DialogTitle>OBJECT-ID: {destination?.id}</DialogTitle>
                     <DialogDescription>
