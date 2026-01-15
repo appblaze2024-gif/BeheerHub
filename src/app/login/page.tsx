@@ -53,7 +53,7 @@ export default function LoginPage() {
       </div>
 
       <Card className="w-full max-w-xl z-10 bg-white/50 backdrop-blur-xl border border-white/20 shadow-2xl rounded-xl">
-        <CardHeader className="items-center text-center py-6">
+        <CardHeader className="items-center text-center py-4">
             <Image
                 src="https://i.ibb.co/Fk1pVzqw/IMG-1314.png"
                 alt="Logo"
@@ -66,7 +66,7 @@ export default function LoginPage() {
             Voer uw gegevens in om toegang te krijgen tot uw account.
           </p>
         </CardHeader>
-        <CardContent className="grid gap-4 px-8 pb-8 pt-4">
+        <CardContent className="grid gap-3 px-8 pb-6 pt-2">
           <div className="grid gap-2">
             <Label htmlFor="email" className="text-white">Email</Label>
             <div className='relative'>
@@ -100,7 +100,7 @@ export default function LoginPage() {
             </a>
           </div>
           {error && <p className="text-sm text-red-500 bg-red-100/50 p-2 rounded-md border border-red-500/50">{error}</p>}
-           <Button className="w-full mt-4 bg-gray-800 text-white hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-800 text-base py-6" onClick={handleSignIn}>
+           <Button className="w-full mt-2 bg-gray-800 text-white hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-800 text-base py-6" onClick={handleSignIn}>
             Inloggen
           </Button>
         </CardContent>
