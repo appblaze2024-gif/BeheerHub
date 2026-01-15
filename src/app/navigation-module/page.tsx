@@ -1340,10 +1340,14 @@ export default function Page() {
                         onClick={() => handleNextObject('completed')}
                         className="cursor-pointer hover:scale-105 transition-transform"
                      />
-                      <Button onClick={() => handleNextObject('skipped')} variant='outline' size="icon" className='h-32 w-32 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600 flex-col gap-2'>
-                          <XCircle className='h-12 w-12' />
-                          <span className='font-semibold'>Niet Gereed</span>
-                      </Button>
+                      <Image 
+                        src="https://i.ibb.co/qLKX0VYH/Chat-GPT-Image-15-jan-2026-21-28-53-removebg-preview.png"
+                        alt="Niet Gereed"
+                        width={128}
+                        height={128}
+                        onClick={() => handleNextObject('skipped')}
+                        className="cursor-pointer hover:scale-105 transition-transform"
+                     />
                   </div>
                 </div>
                  <DialogFooter>
