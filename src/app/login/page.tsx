@@ -54,15 +54,13 @@ export default function LoginPage() {
 
       <Card className="w-full max-w-xl z-10 bg-white/50 backdrop-blur-xl border border-white/20 shadow-2xl rounded-xl">
         <CardHeader className="items-center text-center py-6">
-            <div className='p-3 bg-white/20 rounded-lg border border-white/30'>
-                 <Image
-                    src="https://i.ibb.co/Fk1pVzqw/IMG-1314.png"
-                    alt="Logo"
-                    width={160}
-                    height={52}
-                    priority
-                />
-            </div>
+            <Image
+                src="https://i.ibb.co/Fk1pVzqw/IMG-1314.png"
+                alt="Logo"
+                width={320}
+                height={104}
+                priority
+            />
           <h1 className="text-2xl font-bold text-white">Inloggen met e-mail</h1>
           <p className="text-white/80 text-sm">
             Voer uw gegevens in om toegang te krijgen tot uw account.
