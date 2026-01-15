@@ -534,9 +534,13 @@ export default function Page() {
 
 
   const startTracking = React.useCallback(() => {
-    if (!navigator.geolocation || isSimulating) {
-      console.log("Geolocation is not supported or simulation is active.");
-      return;
+    if (isSimulating) {
+        console.log("Simulation is active, not starting GPS tracking.");
+        return;
+    }
+    if (!navigator.geolocation) {
+        console.log("Geolocation is not supported.");
+        return;
     }
   
     if (watchIdRef.current) {
