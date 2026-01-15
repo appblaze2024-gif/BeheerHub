@@ -45,17 +45,18 @@ export type Dienst = {
     medewerkerId: string;
     projectId: string;
     werksoort: string; 
-    boekingregelId: string;
     starttijd: string;
     eindtijd: string;
     datum: string; 
-    onbetaaldePauze: number;
-    verbergEindtijd: boolean;
-    herhaalDienst: boolean;
-    goedkeuringVereist: boolean;
-    informeerMedewerkers: boolean;
-    voertuigId: string | null;
     voertuignummer?: string | null;
+    // Deprecated fields
+    boekingregelId?: string;
+    onbetaaldePauze?: number;
+    verbergEindtijd?: boolean;
+    herhaalDienst?: boolean;
+    goedkeuringVereist?: boolean;
+    informeerMedewerkers?: boolean;
+    voertuigId?: string | null;
 }
 
 export type Voertuig = {

@@ -220,20 +220,7 @@ export default function WorkPlanningPage() {
     try {
       const querySnapshot = await getDocs(dienstenQuery);
       const dienstenData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Dienst));
-      
-      const voertuigenQuery = query(collection(firestore, 'voertuigen'));
-      const voertuigenSnapshot = await getDocs(voertuigenQuery);
-      const voertuigenMap = new Map(voertuigenSnapshot.docs.map(doc => [doc.id, doc.data()]));
-
-      const dienstenWithVoertuig = dienstenData.map(dienst => {
-        if(dienst.voertuigId) {
-            const voertuig = voertuigenMap.get(dienst.voertuigId);
-            return {...dienst, voertuignummer: voertuig?.voertuignummer}
-        }
-        return dienst;
-      });
-
-      setDiensten(dienstenWithVoertuig);
+      setDiensten(dienstenData);
     } catch (error) {
       console.error("Error fetching diensten: ", error);
       setDiensten([]);
@@ -313,7 +300,7 @@ export default function WorkPlanningPage() {
       if (isCopy) {
         // Copy action: create a new document
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { id, voertuignummer, ...newDienstData } = droppedDienst;
+        const { id, ...newDienstData } = droppedDienst;
         await addDoc(dienstenColRef, {
           ...newDienstData,
           medewerkerId: newMedewerkerId,
