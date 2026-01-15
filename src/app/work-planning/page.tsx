@@ -35,7 +35,7 @@ import {
   deleteDocumentNonBlocking,
 } from '@/firebase';
 import type { Medewerker, Dienst } from '@/lib/types';
-import { DienstToevoegenSheet } from '@/components/dienst-toevoegen-sheet';
+import { DienstToevoegenDialog } from '@/components/dienst-toevoegen-dialog';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PrintDayDialog } from '@/components/print-day-dialog';
@@ -581,7 +581,7 @@ export default function WorkPlanningPage() {
           )}
         </div>
       </div>
-      <DienstToevoegenSheet
+      <DienstToevoegenDialog
             open={isSheetOpen}
             onOpenChange={setIsSheetOpen}
             medewerker={selectedMedewerker}

@@ -7,22 +7,20 @@ import { z } from 'zod';
 import { Loader2, Trash2 } from 'lucide-react';
 import {
   useFirestore,
-  useCollection,
-  addDocumentNonBlocking,
-  updateDocumentNonBlocking,
   deleteDocumentNonBlocking,
 } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetFooter,
-} from '@/components/ui/sheet';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,7 +30,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import {
@@ -44,36 +41,19 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import type { Medewerker, Dienst, Voertuig } from '@/lib/types';
+import type { Medewerker, Dienst } from '@/lib/types';
 
 const dienstFormSchema = z.object({
-  boekingregelId: z.string().min(1, 'Boekingregel is verplicht.'),
+  werksoort: z.string().min(1, 'Omschrijving is verplicht.'),
   starttijd: z.string().min(1, 'Starttijd is verplicht.'),
   eindtijd: z.string().min(1, 'Eindtijd is verplicht.'),
-  onbetaaldePauze: z.coerce.number().min(0).default(0),
-  verbergEindtijd: z.boolean().default(false),
-  herhaalDienst: z.boolean().default(false),
-  goedkeuringVereist: z.boolean().default(false),
-  informeerMedewerkers: z.boolean().default(false),
-  voertuigId: z.string().optional(),
+  voertuignummer: z.string().optional(),
 });
 
 type DienstFormValues = z.infer<typeof dienstFormSchema>;
 
-type Boekingregel = {
-    id: string;
-    naam: string;
-};
 
-interface DienstToevoegenSheetProps {
+interface DienstToevoegenDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   medewerker?: Medewerker;
@@ -82,62 +62,39 @@ interface DienstToevoegenSheetProps {
     id: string;
   };
   dienst?: Dienst;
+  onSuccess: () => void;
 }
 
-export function DienstToevoegenSheet({
+export function DienstToevoegenDialog({
   open,
   onOpenChange,
   medewerker,
   datum,
   project,
   dienst,
-}: DienstToevoegenSheetProps) {
+  onSuccess,
+}: DienstToevoegenDialogProps) {
   const firestore = useFirestore();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-
-  const voertuigenCollection = React.useMemo(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'voertuigen');
-  }, [firestore]);
-
-  const { data: voertuigen, isLoading: isLoadingVoertuigen } =
-    useCollection<Voertuig>(voertuigenCollection);
-    
-  const boekingregelsCollection = React.useMemo(() => {
-    if (!firestore || !project?.id) return null;
-    return collection(firestore, 'projects', project.id, 'boekingregels');
-  }, [firestore, project?.id]);
-
-  const { data: boekingregels, isLoading: isLoadingBoekingregels } = useCollection<Boekingregel>(boekingregelsCollection);
-
+  
   const form = useForm<DienstFormValues>({
     resolver: zodResolver(dienstFormSchema),
   });
+
 
   React.useEffect(() => {
     if (open) {
       if (dienst) {
         form.reset({
           ...dienst,
-          boekingregelId: dienst.boekingregelId,
-          onbetaaldePauze: dienst.onbetaaldePauze || 0,
-          verbergEindtijd: dienst.verbergEindtijd || false,
-          herhaalDienst: dienst.herhaalDienst || false,
-          goedkeuringVereist: dienst.goedkeuringVereist || false,
-          informeerMedewerkers: dienst.informeerMedewerkers || false,
-          voertuigId: dienst.voertuigId || undefined,
+          voertuignummer: dienst.voertuignummer || undefined,
         });
       } else {
         form.reset({
-          boekingregelId: '',
+          werksoort: '',
           starttijd: '07:00',
           eindtijd: '15:30',
-          onbetaaldePauze: 0,
-          verbergEindtijd: false,
-          herhaalDienst: false,
-          goedkeuringVereist: false,
-          informeerMedewerkers: false,
-          voertuigId: undefined,
+          voertuignummer: undefined,
         });
       }
     }
@@ -147,21 +104,17 @@ export function DienstToevoegenSheet({
     if (!firestore || !project?.id || (!datum && !dienst)) return;
     setIsSubmitting(true);
     
-    const selectedBoekingregel = boekingregels?.find(b => b.id === data.boekingregelId);
-
     const dienstData = {
       ...data,
       medewerkerId: medewerker?.id || dienst?.medewerkerId,
       projectId: project.id,
       datum: format(datum || new Date(dienst!.datum), 'yyyy-MM-dd'),
-      voertuigId: data.voertuigId === 'geen' ? null : data.voertuigId,
-      werksoort: selectedBoekingregel?.naam || 'Onbekend',
     };
 
     try {
       if (dienst) {
         const dienstRef = doc(firestore, 'projects', project.id, 'diensten', dienst.id);
-        await updateDocumentNonBlocking(dienstRef, dienstData);
+        await updateDoc(dienstRef, dienstData);
       } else {
         const dienstenColRef = collection(
           firestore,
@@ -169,9 +122,9 @@ export function DienstToevoegenSheet({
           project.id,
           'diensten'
         );
-        await addDocumentNonBlocking(dienstenColRef, dienstData);
+        await addDoc(dienstenColRef, dienstData);
       }
-      onOpenChange(false);
+      onSuccess();
     } catch (error) {
       console.error('Fout bij opslaan dienst:', error);
     } finally {
@@ -180,15 +133,23 @@ export function DienstToevoegenSheet({
   };
 
   const handleDelete = async () => {
-    if (!firestore || !dienst || !project?.id) return;
+    if (!firestore || !dienst || !project?.id || !dienst.id) return;
+    setIsSubmitting(true);
     try {
-      await deleteDocumentNonBlocking(doc(firestore, 'projects', project.id, 'diensten', dienst.id));
-      onOpenChange(false);
+      const dienstRef = doc(firestore, 'projects', project.id, 'diensten', dienst.id);
+      await deleteDocumentNonBlocking(dienstRef);
+      onSuccess();
     } catch (error) {
         console.error("Fout bij verwijderen dienst:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   }
-
+  
+  if (!medewerker && !dienst) {
+    return null;
+  }
+  
   const medewerkerNaam = medewerker ? `${medewerker.voornaam || ''} ${
     medewerker.tussenvoegsel || ''
   } ${medewerker.achternaam || ''}`.trim() : 'Laden...';
@@ -197,50 +158,36 @@ export function DienstToevoegenSheet({
 
   const formattedDate = format(displayDate, 'eeee d MMMM yyyy', { locale: nl });
 
-  if (!medewerker && !dienst) {
-    return null;
-  }
-  
   const effectiveMedewerkerName = medewerker ? medewerkerNaam : dienst?.medewerkerId;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-md">
-        <SheetHeader>
-          <SheetTitle>{dienst ? 'Dienst Bewerken' : 'Dienst Toevoegen'}: {formattedDate}</SheetTitle>
-        </SheetHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{dienst ? 'Dienst Bewerken' : 'Dienst Toevoegen'}: {formattedDate}</DialogTitle>
+           <DialogDescription>
+            Voer de details voor de dienst in en klik op opslaan.
+          </DialogDescription>
+        </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <FormItem>
+          <form id="dienst-toevoegen-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+            <FormItem>
                 <FormLabel>Medewerker</FormLabel>
                 <Input value={effectiveMedewerkerName} disabled />
-              </FormItem>
-              <FormField
-                control={form.control}
-                name="boekingregelId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Dienst</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingBoekingregels}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecteer een boekingregel" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {boekingregels?.map((regel) => (
-                          <SelectItem key={regel.id} value={regel.id}>
-                            {regel.naam}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            </FormItem>
+            <FormField
+              control={form.control}
+              name="werksoort"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Dienst omschrijving</FormLabel>
+                  <FormControl>
+                    <Input placeholder='Bijv. Schoffelen' {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
@@ -270,109 +217,16 @@ export function DienstToevoegenSheet({
                 )}
               />
             </div>
-
-            <div className="flex items-center justify-between">
-              <FormField
-                control={form.control}
-                name="verbergEindtijd"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormLabel>Verberg eindtijd voor medewerkers</FormLabel>
-                  </FormItem>
-                )}
-              />
-              <div className="flex items-center gap-2">
-                <FormLabel>Onbetaalde pauze</FormLabel>
-                <FormField
-                  control={form.control}
-                  name="onbetaaldePauze"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input type="number" className="w-20" {...field} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                <span>min</span>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              <FormField
-                control={form.control}
-                name="herhaalDienst"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormLabel>Herhaal dienst</FormLabel>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="goedkeuringVereist"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormLabel>Goedkeuring vereist</FormLabel>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="informeerMedewerkers"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormLabel>Informeer medewerkers</FormLabel>
-                  </FormItem>
-                )}
-              />
-            </div>
             
              <FormField
                 control={form.control}
-                name="voertuigId"
+                name="voertuignummer"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Voertuigen</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || 'geen'}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Geen" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="geen">Geen</SelectItem>
-                        {voertuigen?.map((v) => (
-                          <SelectItem key={v.id} value={v.id}>
-                            {v.voertuignummer ? `${v.voertuignummer} - ` : ''}{v.merk} {v.model} [{v.id}]
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Voertuignummer</FormLabel>
+                    <FormControl>
+                        <Input placeholder="Bijv. V-01" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -380,7 +234,7 @@ export function DienstToevoegenSheet({
 
           </form>
         </Form>
-        <SheetFooter className="pt-4 sm:justify-between absolute bottom-0 right-0 left-0 p-6 bg-background border-t">
+        <DialogFooter className="pt-4 sm:justify-between">
               <div>
                 {dienst && (
                   <AlertDialog>
@@ -414,7 +268,7 @@ export function DienstToevoegenSheet({
                   >
                     Annuleren
                   </Button>
-                <Button type="submit" form="dienst-toevoegen-form" disabled={isSubmitting} onClick={form.handleSubmit(onSubmit)}>
+                <Button type="submit" form="dienst-toevoegen-form" disabled={isSubmitting}>
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -425,8 +279,8 @@ export function DienstToevoegenSheet({
                   )}
                 </Button>
               </div>
-            </SheetFooter>
-      </SheetContent>
-    </Sheet>
+            </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
