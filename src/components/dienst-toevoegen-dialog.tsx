@@ -112,6 +112,7 @@ export function DienstToevoegenDialog({
       medewerkerId: medewerker?.id || dienst?.medewerkerId,
       projectId: project.id,
       datum: format(datum || new Date(dienst!.datum), 'yyyy-MM-dd'),
+      voertuignummer: data.voertuignummer === " " ? null : data.voertuignummer,
     };
 
     try {
@@ -234,7 +235,7 @@ export function DienstToevoegenDialog({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Geen voertuig</SelectItem>
+                          <SelectItem value=" ">Geen voertuig</SelectItem>
                           {voertuigen.map((v) => (
                             <SelectItem key={v.id} value={v.voertuignummer || v.id}>
                               {v.voertuignummer || v.id} ({v.merk} {v.model})
