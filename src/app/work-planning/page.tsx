@@ -50,7 +50,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useIsMobile } from '@/hooks/use-mobile';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 
 
 const getInitials = (firstName?: string, lastName?: string) => {
@@ -484,6 +484,32 @@ export default function WorkPlanningPage() {
       console.error('Error pasting diensten:', error);
     }
   };
+
+   const handleDeleteSelected = async () => {
+    if (selectedCells.length === 0 || !firestore || !selectedProjectId || !diensten) return;
+
+    const dienstenToDelete = diensten.filter(d => 
+      selectedCells.some(cell => cell.medewerkerId === d.medewerkerId && cell.datum === d.datum)
+    );
+
+    if (dienstenToDelete.length === 0) return;
+
+    const batch = writeBatch(firestore);
+    const dienstenColRef = collection(firestore, 'projects', selectedProjectId, 'diensten');
+
+    dienstenToDelete.forEach(dienst => {
+      const docRef = doc(dienstenColRef, dienst.id);
+      batch.delete(docRef);
+    });
+
+    try {
+      await batch.commit();
+      fetchDiensten();
+      setSelectedCells([]);
+    } catch (error) {
+      console.error('Error deleting selected diensten:', error);
+    }
+  };
   
   const handleCellClick = (e: React.MouseEvent, medewerkerId: string, datum: string) => {
     const cell = { medewerkerId, datum };
@@ -628,16 +654,21 @@ export default function WorkPlanningPage() {
                          <DropdownMenuTrigger asChild>
                             <div className="absolute inset-0 z-0" />
                          </DropdownMenuTrigger>
-                        <DropdownMenuContent>
+                        <DropdownMenuContent onContextMenu={(e) => e.preventDefault()}>
                           {copiedDienst && (
                              <DropdownMenuItem onClick={handlePaste}>
                               <Copy className="mr-2 h-4 w-4" />
                               Plakken
                             </DropdownMenuItem>
                           )}
+                          <DropdownMenuSeparator />
                            <DropdownMenuItem onClick={() => selectedProjectId && handleOpenSheetForNew(medewerker, day)}>
                               <Plus className="mr-2 h-4 w-4" />
                               Nieuwe dienst
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={handleDeleteSelected} disabled={selectedCells.length === 0}>
+                                <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+                                <span className='text-destructive'>Verwijder selectie</span>
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
