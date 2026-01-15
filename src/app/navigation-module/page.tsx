@@ -1332,10 +1332,14 @@ export default function Page() {
                       </div>
                   </div>
                   <div className="flex items-center justify-center gap-4">
-                      <Button onClick={() => handleNextObject('completed')} variant='outline' size="icon" className='h-32 w-32 rounded-full border-4 border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600 flex-col gap-2'>
-                          <CheckCircle className='h-12 w-12' />
-                          <span className='font-semibold'>Gereed</span>
-                      </Button>
+                     <Image 
+                        src="https://i.ibb.co/pjqtgDZj/Chat-GPT-Image-15-jan-2026-21-25-58-removebg-preview.png"
+                        alt="Gereed"
+                        width={128}
+                        height={128}
+                        onClick={() => handleNextObject('completed')}
+                        className="cursor-pointer hover:scale-105 transition-transform"
+                     />
                       <Button onClick={() => handleNextObject('skipped')} variant='outline' size="icon" className='h-32 w-32 rounded-full border-4 border-red-500 text-red-500 hover:bg-red-50 hover:text-red-600 flex-col gap-2'>
                           <XCircle className='h-12 w-12' />
                           <span className='font-semibold'>Niet Gereed</span>
