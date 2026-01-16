@@ -15,14 +15,16 @@ import { Progress } from './ui/progress';
 import { UploadCloud, Loader2 } from 'lucide-react';
 
 interface VehicleImageUploaderProps {
-  vehicleId: string;
+  materieelId: string;
+  materieelType: 'voertuigen' | 'machines';
   imageUrl: string | null;
   imageHint?: string;
   className?: string;
 }
 
 export function VehicleImageUploader({
-  vehicleId,
+  materieelId,
+  materieelType,
   imageUrl,
   imageHint,
   className,
@@ -47,7 +49,7 @@ export function VehicleImageUploader({
     setUploadProgress(0);
 
     const storage = getStorage(app);
-    const storagePath = `vehicles/${vehicleId}/main_image/${file.name}`;
+    const storagePath = `${materieelType}/${materieelId}/main_image/${file.name}`;
     const storageRef = ref(storage, storagePath);
     const uploadTask = uploadBytesResumable(storageRef, file);
 
@@ -65,7 +67,7 @@ export function VehicleImageUploader({
       },
       () => {
         getDownloadURL(uploadTask.snapshot.ref).then(async (downloadURL) => {
-          const vehicleRef = doc(firestore, 'voertuigen', vehicleId);
+          const vehicleRef = doc(firestore, materieelType, materieelId);
           await updateDoc(vehicleRef, {
             imageUrl: downloadURL,
           });
@@ -98,7 +100,7 @@ export function VehicleImageUploader({
       {imageUrl && (
         <Image
           src={imageUrl}
-          alt={imageHint || 'Voertuig afbeelding'}
+          alt={imageHint || 'Materieel afbeelding'}
           fill
           className={cn('object-cover transition-opacity', isUploadingState && 'opacity-30')}
           data-ai-hint={imageHint}

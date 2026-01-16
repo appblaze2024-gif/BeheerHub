@@ -18,7 +18,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogDescription,
   DialogTrigger,
   DialogClose,
 } from '@/components/ui/dialog';
@@ -52,12 +51,14 @@ type MaintenanceFormValues = z.infer<typeof maintenanceFormSchema>;
 
 interface AddMaintenanceDialogProps {
   children: React.ReactNode;
-  vehicleId: string;
+  materieelId: string;
+  materieelType: 'voertuigen' | 'machines';
 }
 
 export function AddMaintenanceDialog({
   children,
-  vehicleId,
+  materieelId,
+  materieelType,
 }: AddMaintenanceDialogProps) {
   const firestore = useFirestore();
   const [open, setOpen] = React.useState(false);
@@ -74,7 +75,7 @@ export function AddMaintenanceDialog({
   });
 
   const onSubmit = async (data: MaintenanceFormValues) => {
-    if (!firestore || !vehicleId) {
+    if (!firestore || !materieelId) {
       console.error('Firestore not available');
       return;
     }
@@ -82,8 +83,8 @@ export function AddMaintenanceDialog({
     try {
       const maintenanceColRef = collection(
         firestore,
-        'voertuigen',
-        vehicleId,
+        materieelType,
+        materieelId,
         'maintenance'
       );
       

@@ -51,12 +51,14 @@ type ActionFormValues = z.infer<typeof actionFormSchema>;
 
 interface AddActionDialogProps {
   children: React.ReactNode;
-  vehicleId: string;
+  materieelId: string;
+  materieelType: 'voertuigen' | 'machines';
 }
 
 export function AddActionDialog({
   children,
-  vehicleId,
+  materieelId,
+  materieelType,
 }: AddActionDialogProps) {
   const firestore = useFirestore();
   const [open, setOpen] = React.useState(false);
@@ -70,7 +72,7 @@ export function AddActionDialog({
   });
 
   const onSubmit = async (data: ActionFormValues) => {
-    if (!firestore || !vehicleId) {
+    if (!firestore || !materieelId) {
       console.error('Firestore not available');
       return;
     }
@@ -78,8 +80,8 @@ export function AddActionDialog({
     try {
       const actionsColRef = collection(
         firestore,
-        'voertuigen',
-        vehicleId,
+        materieelType,
+        materieelId,
         'actions'
       );
       

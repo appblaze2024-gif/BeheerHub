@@ -82,14 +82,16 @@ type UploadedFile = {
 interface AddDamageDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  vehicleId: string;
+  materieelId: string;
+  materieelType: 'voertuigen' | 'machines';
   damage?: any | null;
 }
 
 export function AddDamageDialog({
   open,
   onOpenChange,
-  vehicleId,
+  materieelId,
+  materieelType,
   damage = null,
 }: AddDamageDialogProps) {
   const firestore = useFirestore();
@@ -142,7 +144,7 @@ export function AddDamageDialog({
         }
         const storage = getStorage(app);
         const uniqueFileName = `${new Date().getTime()}-${file.name}`;
-        const storagePath = `damages/${vehicleId}/${damageId}/${uniqueFileName}`;
+        const storagePath = `damages/${materieelId}/${damageId}/${uniqueFileName}`;
         const storageRef = ref(storage, storagePath);
         const uploadTask = uploadBytesResumable(storageRef, file);
 
@@ -241,7 +243,7 @@ export function AddDamageDialog({
         }
       }
 
-      const damageDocRef = doc(firestore, 'voertuigen', vehicleId, 'damages', damage.id);
+      const damageDocRef = doc(firestore, materieelType, materieelId, 'damages', damage.id);
       await deleteDoc(damageDocRef);
 
       onOpenChange(false);
@@ -254,14 +256,14 @@ export function AddDamageDialog({
 
 
   const onSubmit = async (data: DamageFormValues) => {
-    if (!firestore || !vehicleId || !damageIdRef.current) return;
+    if (!firestore || !materieelId || !damageIdRef.current) return;
 
     setIsSubmitting(true);
     const damageId = damageIdRef.current;
     const damageDocRef = doc(
       firestore,
-      'voertuigen',
-      vehicleId,
+      materieelType,
+      materieelId,
       'damages',
       damageId
     );

@@ -75,14 +75,16 @@ type UploadedFile = {
 interface AddDocumentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  vehicleId: string;
+  materieelId: string;
+  materieelType: 'voertuigen' | 'machines';
   document?: any | null;
 }
 
 export function AddDocumentDialog({
   open,
   onOpenChange,
-  vehicleId,
+  materieelId,
+  materieelType,
   document: docToEdit = null,
 }: AddDocumentDialogProps) {
   const firestore = useFirestore();
@@ -135,7 +137,7 @@ export function AddDocumentDialog({
         }
         const storage = getStorage(app);
         const uniqueFileName = `${new Date().getTime()}-${file.name}`;
-        const storagePath = `documents/${vehicleId}/${documentId}/${uniqueFileName}`;
+        const storagePath = `documents/${materieelId}/${documentId}/${uniqueFileName}`;
         const storageRef = ref(storage, storagePath);
         const uploadTask = uploadBytesResumable(storageRef, file);
 
@@ -234,7 +236,7 @@ export function AddDocumentDialog({
         }
       }
 
-      const documentDocRef = doc(firestore, 'voertuigen', vehicleId, 'documents', docToEdit.id);
+      const documentDocRef = doc(firestore, materieelType, materieelId, 'documents', docToEdit.id);
       await deleteDoc(documentDocRef);
 
       onOpenChange(false);
@@ -247,14 +249,14 @@ export function AddDocumentDialog({
 
 
   const onSubmit = async (data: DocumentFormValues) => {
-    if (!firestore || !vehicleId || !documentIdRef.current) return;
+    if (!firestore || !materieelId || !documentIdRef.current) return;
 
     setIsSubmitting(true);
     const documentId = documentIdRef.current;
     const documentDocRef = doc(
       firestore,
-      'voertuigen',
-      vehicleId,
+      materieelType,
+      materieelId,
       'documents',
       documentId
     );

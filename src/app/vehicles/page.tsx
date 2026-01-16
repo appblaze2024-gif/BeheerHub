@@ -245,10 +245,10 @@ function MaterielView({ materieelType }: { materieelType: MaterieelType }) {
                 <CardContent>
                   <div className="flex flex-col lg:flex-row gap-6">
                     <VehicleImageUploader
-                      vehicleId={selectedItem.id}
+                      materieelId={selectedItem.id}
+                      materieelType={materieelType}
                       imageUrl={selectedItem.imageUrl ?? mainImage?.imageUrl}
                       imageHint={selectedItem.imageUrl ? `${selectedItem.merk} ${selectedItem.model}` : mainImage?.imageHint}
-                      materieelType={materieelType}
                     />
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-4">

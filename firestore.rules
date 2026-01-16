@@ -185,7 +185,25 @@ service cloud.firestore {
     match /voertuigen/{vehicleId}/{subcollection}/{docId} {
       allow read, write: if isSignedIn();
     }
+
+    /**
+     * @description Manages shared machine data. All authenticated users can read
+     *   the list of machines and their details. Writing is restricted.
+     */
+    match /machines/{machineId} {
+      allow get, list: if isSignedIn();
+      // Allow creation/updates only if the user is signed in.
+      allow create, update: if isSignedIn();
+      allow delete: if false; // Deleting machines is disallowed for now.
+    }
+    
+    /**
+     * @description Secures machine-related subcollections like actions, maintenance, and damages.
+     *   Any authenticated user can read and write to these collections for
+     *   collaborative management of machine data.
+     */
+    match /machines/{machineId}/{subcollection}/{docId} {
+      allow read, write: if isSignedIn();
+    }
   }
 }
-
-    
