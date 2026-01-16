@@ -97,6 +97,9 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const [isFillMode, setIsFillMode] = React.useState(false);
   
+  const isFillModeRef = React.useRef(isFillMode);
+  isFillModeRef.current = isFillMode;
+  
   const initialFeaturesRef = React.useRef<any[]>([]);
 
   const geojson = React.useMemo(() => {
@@ -131,43 +134,42 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     setIsFillMode(false);
   }, []);
 
-   const onDrawCreate = React.useCallback((e: { features: turf.Feature[] }) => {
-    if (!isFillMode) return;
+  const onDrawCreate = React.useCallback((e: { features: turf.Feature[] }) => {
+    if (!isFillModeRef.current) return;
 
     const newBoundary = e.features[0] as turf.Feature<turf.Polygon | turf.MultiPolygon>;
     if (!newBoundary) return;
-    
+
     if (drawRef.current) {
-        drawRef.current.delete(newBoundary.id as string);
+      drawRef.current.delete(newBoundary.id as string);
     }
-    
+
     const existingFeatures = drawRef.current?.getAll().features || [];
     const existingPolygons = existingFeatures.filter(f => f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon') as turf.Feature<turf.Polygon | turf.MultiPolygon>[];
 
     let filledArea: turf.Feature<turf.Polygon | turf.MultiPolygon> | null = newBoundary;
 
     for (const existing of existingPolygons) {
-        if (filledArea) {
-            try {
-              filledArea = turf.difference(filledArea, existing);
-            } catch (err) {
-              console.error("Error during turf.difference:", err);
-            }
+      if (filledArea) {
+        try {
+          filledArea = turf.difference(filledArea, existing);
+        } catch (err) {
+          console.error("Error during turf.difference:", err);
         }
+      }
     }
 
-    if (filledArea) {
-        if (filledArea.geometry) {
-            drawRef.current?.add(filledArea as any);
-        }
+    if (filledArea && filledArea.geometry) {
+      drawRef.current?.add(filledArea as any);
     }
-    
+
     // Deactivate fill mode and switch back to simple select after drawing
     setIsFillMode(false);
-    if(drawRef.current){
-        drawRef.current.changeMode('simple_select');
+    if (drawRef.current) {
+      drawRef.current.changeMode('simple_select');
     }
-  }, [isFillMode]);
+  }, []);
+
 
   const onMapLoad = React.useCallback(() => {
     if (mapRef.current && !drawRef.current && !readOnly) {
