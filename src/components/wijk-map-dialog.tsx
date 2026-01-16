@@ -15,7 +15,7 @@ import {
 import { Button } from './ui/button';
 import { Wijk } from '@/app/projects/page';
 import { Input } from './ui/input';
-import { Loader2, BoxSelect } from 'lucide-react';
+import { Loader2, BoxSelect, Trash2 } from 'lucide-react';
 import * as turf from '@turf/turf';
 import type { FillLayer, LineLayer, SymbolLayer, MapLayerMouseEvent } from 'react-map-gl';
 import { Layer, Source } from 'react-map-gl';
@@ -96,7 +96,8 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   const [clickPopupInfo, setClickPopupInfo] = React.useState<ClickPopupInfo | null>(null);
   const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const [isFillMode, setIsFillMode] = React.useState(false);
-  
+  const [hasVertexSelection, setHasVertexSelection] = React.useState(false);
+
   const isFillModeRef = React.useRef(isFillMode);
   isFillModeRef.current = isFillMode;
   
@@ -132,6 +133,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     setClickPopupInfo(null);
     initialFeaturesRef.current = [];
     setIsFillMode(false);
+    setHasVertexSelection(false);
   }, []);
 
   const onDrawCreate = React.useCallback((e: { features: turf.Feature[] }) => {
@@ -304,6 +306,30 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
       setIsDrawReady(true);
       
       map.on('draw.create', onDrawCreate);
+
+      const onSelectionChange = (e: { features: turf.Feature[] }) => {
+        if (readOnly) return;
+        const draw = drawRef.current;
+        if (!draw) return;
+        
+        const selectedFeatures = e.features;
+        const isDirectSelect = draw.getMode() === 'direct_select';
+        
+        const verticesSelected = isDirectSelect && selectedFeatures.length > 0 && selectedFeatures.every(f => f.geometry.type === 'Point');
+        setHasVertexSelection(verticesSelected);
+    
+        if (selectedFeatures.length === 1 && selectedFeatures[0].geometry.type.includes('Polygon')) {
+            const featureId = selectedFeatures[0].id as string;
+            if (!isDirectSelect || (draw.getModeOptions() as any)?.featureId !== featureId) {
+                draw.changeMode('direct_select', { featureId });
+            }
+        } else if (selectedFeatures.length === 0 && isDirectSelect) {
+            draw.changeMode('simple_select');
+        }
+      };
+
+      map.on('draw.selectionchange', onSelectionChange);
+
 
       if (geojson && geojson.features.length > 0) {
         initialFeaturesRef.current = geojson.features; // Store initial features
@@ -507,15 +533,26 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                       )}
                   </div>
               </div>
-              <Button 
-                variant={isFillMode ? 'secondary' : 'outline'}
-                onClick={toggleFillMode}
-                disabled={!isDrawReady}
-                title="Vul de vrije ruimte binnen een getekend gebied"
-              >
-                  <BoxSelect className="mr-2 h-4 w-4"/>
-                  Vul vrije ruimte
-              </Button>
+              <div className="flex items-center gap-2">
+                 <Button 
+                    variant={isFillMode ? 'secondary' : 'outline'}
+                    onClick={toggleFillMode}
+                    disabled={!isDrawReady}
+                    title="Vul de vrije ruimte binnen een getekend gebied"
+                  >
+                      <BoxSelect className="mr-2 h-4 w-4"/>
+                      Vul vrije ruimte
+                  </Button>
+                  <Button
+                      variant="outline"
+                      onClick={() => drawRef.current?.trash()}
+                      disabled={!hasVertexSelection}
+                      title="Verwijder geselecteerde punten"
+                  >
+                      <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+                      Verwijder punt(en)
+                  </Button>
+              </div>
               {!isDrawReady && <p className='text-xs text-muted-foreground mt-1'>Kaart laden...</p>}
           </div>
         )}
