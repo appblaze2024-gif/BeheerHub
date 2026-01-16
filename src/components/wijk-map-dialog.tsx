@@ -148,7 +148,11 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
 
     for (const existing of existingPolygons) {
         if (filledArea) {
-            filledArea = turf.difference(filledArea, existing);
+            try {
+              filledArea = turf.difference(filledArea, existing);
+            } catch (err) {
+              console.error("Error during turf.difference:", err);
+            }
         }
     }
 
