@@ -211,8 +211,8 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
               'type': 'fill',
               'filter': ['all', ['==', 'active', 'true'], ['==', '$type', 'Polygon']],
               'paint': {
-                'fill-color': '#fbb03b',
-                'fill-outline-color': '#fbb03b',
+                'fill-color': '#ef4444',
+                'fill-outline-color': '#ef4444',
                 'fill-opacity': 0.1
               }
             },
@@ -225,7 +225,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                 'line-join': 'round'
               },
               'paint': {
-                'line-color': '#fbb03b',
+                'line-color': '#ef4444',
                 'line-dasharray': [0.2, 2],
                 'line-width': 2
               }
@@ -246,7 +246,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
               'filter': ['all', ['==', 'meta', 'vertex'], ['==', '$type', 'Point'], ['!=', 'mode', 'static']],
               'paint': {
                 'circle-radius': 3,
-                'circle-color': '#fbb03b'
+                'circle-color': '#ef4444'
               }
             },
             // Point
@@ -284,7 +284,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
               'filter': ['all', ['==', '$type', 'Point'], ['!=', 'meta', 'midpoint'], ['==', 'active', 'true']],
               'paint': {
                 'circle-radius': 5,
-                'circle-color': '#fbb03b'
+                'circle-color': '#ef4444'
               }
             },
              {
@@ -293,7 +293,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
               'filter': ['all', ['==', '$type', 'Point'], ['==', 'meta', 'midpoint']],
               'paint': {
                 'circle-radius': 3,
-                'circle-color': '#fbb03b'
+                'circle-color': '#ef4444'
               }
             }
         ]
