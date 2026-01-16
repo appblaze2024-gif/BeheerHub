@@ -112,6 +112,7 @@ export function OrganisatieContactDialog({
       ...data,
       id: contactId,
       updatedAt: serverTimestamp(),
+      wijk: data.wijk === 'geen_wijk' ? '' : data.wijk,
     };
 
     try {
@@ -191,14 +192,14 @@ export function OrganisatieContactDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Wijk</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value || 'geen_wijk'}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Koppel aan een wijk (optioneel)" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">-- Geen --</SelectItem>
+                      <SelectItem value="geen_wijk">-- Geen --</SelectItem>
                       {wijken?.map((wijk) => (
                         <SelectItem key={wijk.id} value={wijk.naam}>
                           {wijk.naam}
@@ -265,5 +266,3 @@ export function OrganisatieContactDialog({
     </Dialog>
   );
 }
-
-    
