@@ -441,7 +441,7 @@ export default function MaterieelBeheerPage() {
   
   return (
     <div className="grid grid-rows-[auto_1fr] flex-1 min-h-0">
-      <PageHeader title="Materieel">
+      <PageHeader title="Wagenpark">
         <AddVehicleDialog materieelType={activeTab}>
           <Button>
             <Plus className="mr-2 h-4 w-4" /> Nieuw
