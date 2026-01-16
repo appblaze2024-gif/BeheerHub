@@ -119,10 +119,18 @@ function AppLayout({ children }: { children: React.ReactNode }) {
           <Link href="/" className={cn(isCollapsed ? 'hidden' : 'block')}>
             <Image
               src="https://i.ibb.co/Fk1pVzqw/IMG-1314.png"
-              alt="Logo"
+              alt="BeheerHub Logo"
               width={300}
               height={100}
               className="w-auto h-auto"
+            />
+          </Link>
+          <Link href="/" className={cn(!isCollapsed ? 'hidden' : 'block')}>
+            <Image
+              src="https://i.ibb.co/fVxCTj33/Whats-App-Image-2026-01-16-at-12-09-08-1-removebg-preview.png"
+              alt="BeheerHub Ingevouwen Logo"
+              width={40}
+              height={40}
             />
           </Link>
         </SidebarHeader>
