@@ -7,6 +7,7 @@ const mailSchema = z.object({
   to: z.string().email(),
   subject: z.string(),
   body: z.string(),
+  fromName: z.string().optional(),
 });
 
 const mailWithAttachmentSchema = mailSchema.extend({
@@ -33,9 +34,14 @@ const transporter = nodemailer.createTransport({
 export async function sendEmail(data: z.infer<typeof mailSchema>) {
   const parsedData = mailSchema.parse(data);
 
+  const fromDisplayName = parsedData.fromName
+    ? `${parsedData.fromName} namens BeheerHub`
+    : 'BeheerHub';
+
   if (!process.env.SMTP_HOST) {
     console.error('SMTP settings not configured. Email will not be sent.');
     console.log('--- SIMULATING Email ---');
+    console.log(`From: "${fromDisplayName}" <${process.env.SMTP_FROM_EMAIL || 'not-configured'}>`);
     console.log(`To: ${parsedData.to}`);
     console.log(`Subject: ${parsedData.subject}`);
     console.log('--- Body ---');
@@ -46,7 +52,7 @@ export async function sendEmail(data: z.infer<typeof mailSchema>) {
   }
 
   const mailOptions = {
-    from: `"BeheerHub" <${process.env.SMTP_FROM_EMAIL}>`, // sender address
+    from: `"${fromDisplayName}" <${process.env.SMTP_FROM_EMAIL}>`, // sender address
     to: parsedData.to, // list of receivers
     subject: parsedData.subject, // Subject line
     text: parsedData.body, // plain text body
@@ -67,9 +73,14 @@ export async function sendEmail(data: z.infer<typeof mailSchema>) {
 export async function sendEmailWithAttachment(data: z.infer<typeof mailWithAttachmentSchema>) {
   const parsedData = mailWithAttachmentSchema.parse(data);
 
+  const fromDisplayName = parsedData.fromName
+    ? `${parsedData.fromName} namens BeheerHub`
+    : 'BeheerHub';
+
   if (!process.env.SMTP_HOST) {
     console.error('SMTP settings not configured. Email will not be sent.');
     console.log('--- SIMULATING Email with Attachment ---');
+    console.log(`From: "${fromDisplayName}" <${process.env.SMTP_FROM_EMAIL || 'not-configured'}>`);
     console.log(`To: ${parsedData.to}`);
     console.log(`Subject: ${parsedData.subject}`);
     console.log('--- Body ---');
@@ -83,7 +94,7 @@ export async function sendEmailWithAttachment(data: z.infer<typeof mailWithAttac
   }
 
   const mailOptions = {
-    from: `"BeheerHub" <${process.env.SMTP_FROM_EMAIL}>`,
+    from: `"${fromDisplayName}" <${process.env.SMTP_FROM_EMAIL}>`,
     to: parsedData.to,
     subject: parsedData.subject,
     text: parsedData.body,

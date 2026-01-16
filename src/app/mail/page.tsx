@@ -26,7 +26,7 @@ import { formatDistanceToNow, format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 
 import { cn } from '@/lib/utils';
-import { useCollection, useFirestore } from '@/firebase';
+import { useCollection, useFirestore, useUser } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { Medewerker } from '@/lib/types';
 import { useToast } from '@/components/ui/use-toast';
@@ -158,6 +158,7 @@ type MailFormValues = z.infer<typeof mailSchema>;
 function ComposeMailDialog({ children }: { children: React.ReactNode }) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { user } = useUser();
   const [open, setOpen] = React.useState(false);
   const [isSending, setIsSending] = React.useState(false);
 
@@ -176,7 +177,10 @@ function ComposeMailDialog({ children }: { children: React.ReactNode }) {
   async function onSubmit(data: MailFormValues) {
     setIsSending(true);
     try {
-      await sendEmail(data);
+      await sendEmail({
+        ...data,
+        fromName: user?.displayName || user?.email || 'BeheerHub Gebruiker',
+      });
       toast({
         title: 'E-mail verzonden!',
         description: `Uw e-mail aan ${data.to} is succesvol in de wachtrij geplaatst.`,

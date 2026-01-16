@@ -30,6 +30,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { sendEmailWithAttachment } from '@/app/mail/actions';
+import { useUser } from '@/firebase';
 
 // Define Melding type here or import it
 type Melding = {
@@ -116,6 +117,7 @@ export function MailMeldingDialog({
   melding,
 }: MailMeldingDialogProps) {
   const { toast } = useToast();
+  const { user } = useUser();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const form = useForm<MailFormValues>({
@@ -147,6 +149,7 @@ export function MailMeldingDialog({
           filename: `melding_${melding.intakenummer}.pdf`,
           type: 'application/pdf',
         },
+        fromName: user?.displayName || user?.email || 'BeheerHub Gebruiker',
       });
 
       toast({
