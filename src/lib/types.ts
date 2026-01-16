@@ -66,3 +66,11 @@ export type Voertuig = {
   voertuignummer?: string;
   [key: string]: any;
 }
+
+export type Machine = {
+  id: string; // Unique ID
+  merk?: string;
+  model?: string;
+  machinenummer?: string;
+  [key: string]: any;
+};
