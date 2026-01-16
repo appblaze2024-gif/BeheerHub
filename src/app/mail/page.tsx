@@ -149,6 +149,7 @@ const folders = [
 // --- COMPOSE DIALOG COMPONENT ---
 const mailSchema = z.object({
   to: z.string().email({ message: 'Selecteer een geldige ontvanger.' }),
+  cc: z.string().optional(),
   subject: z.string().min(1, { message: 'Onderwerp is verplicht.' }),
   body: z.string().min(1, { message: 'Bericht mag niet leeg zijn.' }),
 });
@@ -171,7 +172,7 @@ function ComposeMailDialog({ children }: { children: React.ReactNode }) {
 
   const form = useForm<MailFormValues>({
     resolver: zodResolver(mailSchema),
-    defaultValues: { to: '', subject: '', body: '' },
+    defaultValues: { to: '', cc: '', subject: '', body: '' },
   });
 
   async function onSubmit(data: MailFormValues) {
@@ -237,6 +238,19 @@ function ComposeMailDialog({ children }: { children: React.ReactNode }) {
                       )}
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="cc"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cc</FormLabel>
+                  <FormControl>
+                    <Input placeholder="adres1@example.com, adres2@example.com" {...field} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

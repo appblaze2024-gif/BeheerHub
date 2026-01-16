@@ -58,6 +58,7 @@ type Melding = {
 
 const mailFormSchema = z.object({
   email: z.string().email('Voer een geldig e-mailadres in.'),
+  cc: z.string().optional(),
 });
 
 type MailFormValues = z.infer<typeof mailFormSchema>;
@@ -122,7 +123,7 @@ export function MailMeldingDialog({
 
   const form = useForm<MailFormValues>({
     resolver: zodResolver(mailFormSchema),
-    defaultValues: { email: '' },
+    defaultValues: { email: '', cc: '' },
   });
 
   React.useEffect(() => {
@@ -142,6 +143,7 @@ export function MailMeldingDialog({
 
       await sendEmailWithAttachment({
         to: data.email,
+        cc: data.cc,
         subject: `Melding Details: ${melding.intakenummer}`,
         body: `Geachte lezer,\n\nIn de bijlage vindt u de details van melding ${melding.intakenummer}.\n\nMet vriendelijke groet,\nBeheerHub`,
         attachment: {
@@ -190,6 +192,23 @@ export function MailMeldingDialog({
                     <Input
                       type="email"
                       placeholder="ontvanger@example.com"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="cc"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>CC</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="text"
+                      placeholder="adres1@example.com, adres2@example.com"
                       {...field}
                     />
                   </FormControl>

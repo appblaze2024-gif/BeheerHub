@@ -5,6 +5,7 @@ import nodemailer from 'nodemailer';
 
 const mailSchema = z.object({
   to: z.string().email(),
+  cc: z.string().optional(),
   subject: z.string(),
   body: z.string(),
   fromName: z.string().optional(),
@@ -43,6 +44,9 @@ export async function sendEmail(data: z.infer<typeof mailSchema>) {
     console.log('--- SIMULATING Email ---');
     console.log(`From: "${fromDisplayName}" <${process.env.SMTP_FROM_EMAIL || 'not-configured'}>`);
     console.log(`To: ${parsedData.to}`);
+    if (parsedData.cc) {
+      console.log(`CC: ${parsedData.cc}`);
+    }
     console.log(`Subject: ${parsedData.subject}`);
     console.log('--- Body ---');
     console.log(parsedData.body);
@@ -54,6 +58,7 @@ export async function sendEmail(data: z.infer<typeof mailSchema>) {
   const mailOptions = {
     from: `"${fromDisplayName}" <${process.env.SMTP_FROM_EMAIL}>`, // sender address
     to: parsedData.to, // list of receivers
+    cc: parsedData.cc,
     subject: parsedData.subject, // Subject line
     text: parsedData.body, // plain text body
     html: `<p>${parsedData.body.replace(/\n/g, '<br>')}</p>`, // html body
@@ -82,6 +87,9 @@ export async function sendEmailWithAttachment(data: z.infer<typeof mailWithAttac
     console.log('--- SIMULATING Email with Attachment ---');
     console.log(`From: "${fromDisplayName}" <${process.env.SMTP_FROM_EMAIL || 'not-configured'}>`);
     console.log(`To: ${parsedData.to}`);
+    if (parsedData.cc) {
+      console.log(`CC: ${parsedData.cc}`);
+    }
     console.log(`Subject: ${parsedData.subject}`);
     console.log('--- Body ---');
     console.log(parsedData.body);
@@ -96,6 +104,7 @@ export async function sendEmailWithAttachment(data: z.infer<typeof mailWithAttac
   const mailOptions = {
     from: `"${fromDisplayName}" <${process.env.SMTP_FROM_EMAIL}>`,
     to: parsedData.to,
+    cc: parsedData.cc,
     subject: parsedData.subject,
     text: parsedData.body,
     html: `<p>${parsedData.body.replace(/\n/g, '<br>')}</p>`,
