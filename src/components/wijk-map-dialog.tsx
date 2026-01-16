@@ -15,13 +15,20 @@ import {
 import { Button } from './ui/button';
 import { Wijk } from '@/app/projects/page';
 import { Input } from './ui/input';
-import { Loader2, BoxSelect, Trash2 } from 'lucide-react';
+import { Loader2, BoxSelect, Trash2, ChevronDown } from 'lucide-react';
 import * as turf from '@turf/turf';
 import type { FillLayer, LineLayer, SymbolLayer, MapLayerMouseEvent } from 'react-map-gl';
 import { Layer, Source } from 'react-map-gl';
 import { cn } from '@/lib/utils';
 import { Label } from './ui/label';
-import { Checkbox } from './ui/checkbox';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -655,30 +662,42 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                       </div>
                        <div className="flex-1 min-w-0">
                           <Label className="text-xs font-semibold">Referentie Wijken (voor opvullen)</Label>
-                          <div className="mt-1 border rounded-md p-2 max-h-32 overflow-y-auto space-y-2">
-                              {allAreas.filter(a => a.id !== wijk?.id && a.type === 'wijk').length > 0 ? (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" className="w-full justify-between mt-1">
+                                    <span>
+                                        {referenceAreaIds.length > 0
+                                        ? `${referenceAreaIds.length} geselecteerd`
+                                        : 'Selecteer referentiegebieden'}
+                                    </span>
+                                    <ChevronDown className="h-4 w-4 opacity-50" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]" align="start">
+                                <DropdownMenuLabel>Selecteer wijken</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                {allAreas.filter(a => a.id !== wijk?.id && a.type === 'wijk').length > 0 ? (
                                 allAreas
-                                  .filter(a => a.id !== wijk?.id && a.type === 'wijk')
-                                  .map(a => (
-                                      <div key={a.id} className="flex items-center space-x-2">
-                                          <Checkbox
-                                              id={`ref-area-${a.id}`}
-                                              checked={referenceAreaIds.includes(a.id)}
-                                              onCheckedChange={(checked) => {
-                                                setReferenceAreaIds(prev =>
-                                                    checked ? [...prev, a.id] : prev.filter(id => id !== a.id)
-                                                )
-                                              }}
-                                          />
-                                          <Label htmlFor={`ref-area-${a.id}`} className="font-normal text-sm cursor-pointer">
-                                              {a.projectName} - {a.naam}
-                                          </Label>
-                                      </div>
-                                  ))
-                              ) : (
-                                <p className="text-xs text-muted-foreground text-center p-2">Geen andere wijken beschikbaar.</p>
-                              )}
-                          </div>
+                                    .filter(a => a.id !== wijk?.id && a.type === 'wijk')
+                                    .map(a => (
+                                    <DropdownMenuCheckboxItem
+                                        key={a.id}
+                                        checked={referenceAreaIds.includes(a.id)}
+                                        onCheckedChange={(checked) => {
+                                        setReferenceAreaIds(prev =>
+                                            checked ? [...prev, a.id] : prev.filter(id => id !== a.id)
+                                        );
+                                        }}
+                                        onSelect={(e) => e.preventDefault()}
+                                    >
+                                        {a.projectName} - {a.naam}
+                                    </DropdownMenuCheckboxItem>
+                                    ))
+                                ) : (
+                                <div className="px-2 py-1.5 text-sm text-muted-foreground">Geen andere wijken beschikbaar.</div>
+                                )}
+                            </DropdownMenuContent>
+                            </DropdownMenu>
                       </div>
                   </div>
                   
