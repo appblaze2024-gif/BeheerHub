@@ -384,7 +384,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
             for (const obstacle of allObstacles) {
                 if (filledArea) {
                     try {
-                        if (obstacle?.geometry && turf.booleanValid(obstacle) && turf.booleanIntersects(filledArea, obstacle)) {
+                        if (obstacle?.geometry && turf.booleanIntersects(filledArea, obstacle)) {
                             filledArea = turf.difference(filledArea, obstacle);
                         }
                     } catch (err) {
