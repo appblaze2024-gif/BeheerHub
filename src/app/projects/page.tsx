@@ -306,7 +306,7 @@ function BoekingregelsTab({ projectId }: { projectId: string | undefined }) {
                             onBlur={(e) => handleUpdateRegel(regel.id, e.target.value)}
                             className="flex-1"
                        />
-                       <Button variant='ghost' size='icon' onClick={()={() => handleDeleteRegel(regel.id)}>
+                       <Button variant='ghost' size='icon' onClick={() => handleDeleteRegel(regel.id)}>
                             <Trash2 className='h-4 w-4 text-destructive' />
                        </Button>
                     </div>
@@ -878,7 +878,7 @@ function PrullenbakkenroutesTab({
             value={route.locatie}
             onChange={(e) => handleInputChange(route.id, 'locatie', e.target.value)}
           />
-          <Button variant="outline" onClick={()={() => setMapRoute(route)}>
+          <Button variant="outline" onClick={() => setMapRoute(route)}>
             <MapPin className="mr-2 h-4 w-4" />
             Gebied tekenen/bewerken
           </Button>
