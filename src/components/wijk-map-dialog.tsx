@@ -187,9 +187,9 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
               'type': 'fill',
               'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon'], ['!=', 'mode', 'static']],
               'paint': {
-                'fill-color': '#3b82f6',
-                'fill-outline-color': '#3b82f6',
-                'fill-opacity': 0.1
+                'fill-color': '#000000',
+                'fill-outline-color': '#000000',
+                'fill-opacity': 0.3
               }
             },
             {
@@ -201,7 +201,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                 'line-join': 'round'
               },
               'paint': {
-                'line-color': '#3b82f6',
+                'line-color': '#000000',
                 'line-width': 2
               }
             },
