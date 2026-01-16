@@ -306,7 +306,7 @@ function BoekingregelsTab({ projectId }: { projectId: string | undefined }) {
                             onBlur={(e) => handleUpdateRegel(regel.id, e.target.value)}
                             className="flex-1"
                        />
-                       <Button variant='ghost' size='icon' onClick={() => handleDeleteRegel(regel.id)}>
+                       <Button variant='ghost' size='icon' onClick={()={() => handleDeleteRegel(regel.id)}>
                             <Trash2 className='h-4 w-4 text-destructive' />
                        </Button>
                     </div>
@@ -449,9 +449,10 @@ function OrganisatieTab({ projectId, wijken }: { projectId: string | undefined, 
       </CardHeader>
       <CardContent>
         <div className="border rounded-md">
-          <div className="grid grid-cols-[2fr_2fr_2fr_1fr_1fr_auto] gap-x-4 p-4 font-semibold bg-muted">
+          <div className="grid grid-cols-[2fr_2fr_2fr_2fr_1fr_1fr_auto] gap-x-4 p-4 font-semibold bg-muted">
             <div>Naam</div>
             <div>Rol</div>
+            <div>Bedrijf</div>
             <div>Wijk</div>
             <div>Telefoon</div>
             <div>Email</div>
@@ -461,9 +462,10 @@ function OrganisatieTab({ projectId, wijken }: { projectId: string | undefined, 
             <div className='p-4 text-center text-muted-foreground'>Contacten laden...</div>
           ) : contacten && contacten.length > 0 ? (
             contacten.map(contact => (
-              <div key={contact.id} className="grid grid-cols-[2fr_2fr_2fr_1fr_1fr_auto] items-center gap-x-4 p-4 border-t">
+              <div key={contact.id} className="grid grid-cols-[2fr_2fr_2fr_2fr_1fr_1fr_auto] items-center gap-x-4 p-4 border-t">
                 <div className='truncate'>{contact.naam}</div>
                 <div className='truncate'>{contact.rol}</div>
+                <div className='truncate'>{contact.bedrijf || '-'}</div>
                 <div className='truncate'>{contact.wijk || '-'}</div>
                 <div className='truncate'>{contact.telefoon}</div>
                 <div className='truncate'>{contact.email}</div>
@@ -876,7 +878,7 @@ function PrullenbakkenroutesTab({
             value={route.locatie}
             onChange={(e) => handleInputChange(route.id, 'locatie', e.target.value)}
           />
-          <Button variant="outline" onClick={() => setMapRoute(route)}>
+          <Button variant="outline" onClick={()={() => setMapRoute(route)}>
             <MapPin className="mr-2 h-4 w-4" />
             Gebied tekenen/bewerken
           </Button>
@@ -1238,5 +1240,3 @@ export default function ProjectsPage() {
     </div>
   );
 }
-
-    
