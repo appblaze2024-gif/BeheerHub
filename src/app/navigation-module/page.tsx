@@ -479,6 +479,10 @@ export default function Page() {
             { units: 'meters' }
         );
         if (distanceToDestination < 15) {
+            if (isSimulating) {
+                simulationStateRef.current.isPaused = true;
+                setCurrentSpeed(0);
+            }
             handleMarkerClick(destination);
             return;
         }
@@ -559,7 +563,7 @@ export default function Page() {
         easing: (t: number) => t,
         padding: { top: map.getCanvas().height * 0.35 },
     });
-}, [pendingObjects, isNavigating, destination, isCompletionSheetOpen, calculateRoute, handleMarkerClick, justCompletedObjectId]);
+}, [pendingObjects, isNavigating, destination, isCompletionSheetOpen, calculateRoute, handleMarkerClick, justCompletedObjectId, isSimulating]);
 
 
  React.useEffect(() => {
@@ -692,21 +696,6 @@ export default function Page() {
             const routeLine = routeRef.current.geometry;
             const totalDistance = routeInfoRef.current?.distance || 0;
             
-            if (destination) {
-              const distanceToDestination = turf.distance(
-                  positionRef.current!,
-                  [destination.longitude, destination.latitude],
-                  { units: 'meters' }
-              );
-              
-              if (distanceToDestination < 15 && !simulationStateRef.current.isPaused && !isCompletionSheetOpen) {
-                  simulationStateRef.current.isPaused = true;
-                  setCurrentSpeed(0);
-                  handleMarkerClick(destination);
-                  return;
-              }
-            }
-
             if (simulationStateRef.current.distance >= totalDistance) {
               handleStopNavigation();
               return;
