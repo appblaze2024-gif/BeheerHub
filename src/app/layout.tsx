@@ -23,12 +23,14 @@ import { Button } from '@/components/ui/button';
 import { PanelLeftClose, PanelRightClose } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
 import { doc } from 'firebase/firestore';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const pathname = usePathname();
   const router = useRouter();
+  const isTablet = useIsMobile(1024);
 
   const userProfileRef = useMemo(() => {
     if (!user || !firestore) return null;
@@ -39,28 +41,36 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     sidebarCollapsed?: boolean;
   }>(userProfileRef);
 
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
-  // Set initial collapsed state from user profile
+  // Set initial collapsed state from user profile or device size
   useEffect(() => {
     if (userProfile?.sidebarCollapsed !== undefined) {
       setIsCollapsed(userProfile.sidebarCollapsed);
+    } else if (isTablet !== undefined) {
+      setIsCollapsed(isTablet);
     }
-  }, [userProfile]);
+  }, [userProfile, isTablet]);
 
   // Create user profile document if it doesn't exist
   useEffect(() => {
-    if (user && !isProfileLoading && !userProfile && userProfileRef) {
+    if (
+      user &&
+      !isProfileLoading &&
+      !userProfile &&
+      userProfileRef &&
+      isTablet !== undefined
+    ) {
       const initialProfile = {
         id: user.uid,
         email: user.email,
         displayName: user.displayName,
-        sidebarCollapsed: false, // Default value
+        sidebarCollapsed: isTablet,
       };
       // Use setDoc with merge to avoid overwriting if it's created between check and set
       setDocumentNonBlocking(userProfileRef, initialProfile, { merge: true });
     }
-  }, [user, userProfile, isProfileLoading, userProfileRef]);
+  }, [user, userProfile, isProfileLoading, userProfileRef, isTablet]);
 
   useEffect(() => {
     if (isUserLoading) return; // Wacht tot de gebruikerstatus bekend is
@@ -84,7 +94,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     }
   };
 
-  if (isUserLoading || (user && isProfileLoading)) {
+  if (isUserLoading || (user && isProfileLoading) || isTablet === undefined) {
     return (
       <div className="flex h-screen items-center justify-center">
         Laden...
