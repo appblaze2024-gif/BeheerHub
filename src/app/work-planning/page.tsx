@@ -639,36 +639,39 @@ export default function WorkPlanningPage() {
                   const isSelected = selectedCells.some(c => c.medewerkerId === medewerker.id && c.datum === datumString);
                   
                   const dayName = format(day, 'eeee', { locale: nl }).toLowerCase() as keyof NonNullable<Medewerker['urenPerDag']>;
+                  const isWeekend = dayName === 'zaterdag' || dayName === 'zondag';
                   const defaultUren = { maandag: 8, dinsdag: 8, woensdag: 8, donderdag: 8, vrijdag: 8, zaterdag: 0, zondag: 0 };
                   const urenPerDag = medewerker.urenPerDag || defaultUren;
-                  const contractHours = urenPerDag.hasOwnProperty(dayName) ? urenPerDag[dayName] : (['zaterdag', 'zondag'].includes(dayName) ? 0 : 8);
+                  const contractHours = urenPerDag.hasOwnProperty(dayName) ? urenPerDag[dayName] : (isWeekend ? 0 : 8);
                   const isNonWorkingDay = (contractHours ?? 0) === 0;
+                  const isVisuallyNonWorkingDay = isNonWorkingDay && !isWeekend;
+
 
                   return (
                     <div
                         key={day.toISOString()}
-                        onDrop={(e) => !isNonWorkingDay && handleDrop(e, medewerker.id, day)}
-                        onDragOver={(e) => !isNonWorkingDay && handleDragOver(e, medewerker.id, day)}
+                        onDrop={(e) => !isVisuallyNonWorkingDay && handleDrop(e, medewerker.id, day)}
+                        onDragOver={(e) => !isVisuallyNonWorkingDay && handleDragOver(e, medewerker.id, day)}
                         onDragLeave={() => setDragOverCell(null)}
                         onContextMenu={(e) => {
-                          if (isNonWorkingDay) return;
+                          if (isVisuallyNonWorkingDay) return;
                           if (!(e.target as HTMLElement).closest('.group\\/dienst')) {
                             handleContextMenu(e, { cellContext: { medewerker, datum: day } });
                           }
                         }}
                         onClick={(e) => {
-                            if (isNonWorkingDay) return;
+                            if (isVisuallyNonWorkingDay) return;
                             if ((e.target as HTMLElement).closest('.group\\/dienst')) return;
                             handleCellClick(e, medewerker.id, datumString);
                         }}
                         className={cn(
                             "group relative p-2 border-b border-r min-h-[80px] flex flex-col gap-1 transition-colors day-column",
-                            isNonWorkingDay 
+                            isVisuallyNonWorkingDay
                                 ? 'bg-black' 
                                 : isToday(day) ? "bg-muted/50" : "",
-                            isDragOver && !isNonWorkingDay && "bg-blue-100 dark:bg-blue-900/30",
-                            isSelected && !isNonWorkingDay && "bg-primary/10",
-                            !isNonWorkingDay && "cursor-pointer"
+                            isDragOver && !isVisuallyNonWorkingDay && "bg-blue-100 dark:bg-blue-900/30",
+                            isSelected && !isVisuallyNonWorkingDay && "bg-primary/10",
+                            !isVisuallyNonWorkingDay && "cursor-pointer"
                         )}
                     >
                         <div className="flex-1 space-y-1 relative z-10">
@@ -679,7 +682,7 @@ export default function WorkPlanningPage() {
                                 <DienstItem key={dienst.id} dienst={dienst} onEdit={handleOpenSheetForEdit} onDelete={handleDienstDelete} onContextMenu={(e, d) => {
                                     e.stopPropagation(); // Prevent grid cell context menu
                                     handleContextMenu(e, { dienst: d });
-                                }} isNonWorkingDay={isNonWorkingDay} />
+                                }} isNonWorkingDay={isVisuallyNonWorkingDay} />
                             ))
                           )}
                         </div>
