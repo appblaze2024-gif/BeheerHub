@@ -375,24 +375,26 @@ function RoosterTab({ medewerker }: { medewerker: Medewerker }) {
                     const dayDiensten = diensten[dateKey] || [];
                     
                     const dayName = format(day, 'eeee', { locale: nl }).toLowerCase() as keyof NonNullable<Medewerker['urenPerDag']>;
+                    const isWeekend = dayName === 'zaterdag' || dayName === 'zondag';
                     const defaultUren = { maandag: 8, dinsdag: 8, woensdag: 8, donderdag: 8, vrijdag: 8, zaterdag: 0, zondag: 0 };
                     const urenPerDag = medewerker.urenPerDag || defaultUren;
-                    const contractHours = urenPerDag.hasOwnProperty(dayName) ? urenPerDag[dayName] : (['zaterdag', 'zondag'].includes(dayName) ? 0 : 8);
+                    const contractHours = urenPerDag.hasOwnProperty(dayName) ? urenPerDag[dayName] : (isWeekend ? 0 : 8);
                     const isNonWorkingDay = (contractHours ?? 0) === 0;
+                    const isVisuallyNonWorkingDay = isNonWorkingDay && !isWeekend;
 
                     return (
                         <div key={day.toISOString()} className={cn(
                           "p-1 border-r min-h-[100px]",
-                          isNonWorkingDay 
+                          isVisuallyNonWorkingDay
                             ? 'bg-black' 
                             : !isSameMonth(day, currentDate) && 'bg-muted/30'
                         )}>
                             <span className={cn(
                               'text-xs font-semibold',
-                              isNonWorkingDay ? 'text-white' : (!isSameMonth(day, currentDate) && 'text-muted-foreground/50'),
+                              isVisuallyNonWorkingDay ? 'text-white' : (!isSameMonth(day, currentDate) && 'text-muted-foreground/50'),
                               isToday(day) && 'flex items-center justify-center h-5 w-5 rounded-full',
                               isToday(day) && !isNonWorkingDay && 'bg-blue-600 text-white',
-                              isToday(day) && isNonWorkingDay && 'ring-2 ring-offset-2 ring-offset-black ring-white'
+                              isToday(day) && isVisuallyNonWorkingDay && 'ring-2 ring-offset-2 ring-offset-black ring-white'
                             )}>
                               {format(day, 'd')}
                             </span>
@@ -407,8 +409,8 @@ function RoosterTab({ medewerker }: { medewerker: Medewerker }) {
                                                 ? "bg-red-200 text-red-900 dark:bg-red-900/50 dark:text-white"
                                             : isVerlof
                                                 ? "bg-orange-200 text-orange-900 dark:bg-orange-900/50 dark:text-white"
-                                            : isNonWorkingDay
-                                                ? 'border border-gray-600 text-gray-200'
+                                            : isVisuallyNonWorkingDay
+                                                ? 'border border-gray-600 text-gray-200 bg-transparent'
                                                 : "bg-blue-100 text-blue-900 dark:bg-blue-900/50 dark:text-white"
                                         )}>
                                             <p className="font-semibold">{dienst.werksoort}</p>
