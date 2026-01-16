@@ -158,7 +158,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   
   const referenceAreas = React.useMemo(() => {
     if (referenceAreaIds.length === 0) return [];
-    return allAreas.filter(a => referenceAreaIds.includes(a.id));
+    return allAreas.filter(a => referenceAreaIds.includes(a.id) && a.type === 'wijk');
   }, [referenceAreaIds, allAreas]);
 
   const referenceGeojson = React.useMemo(() => {
@@ -382,7 +382,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
 
             let referencePolygons: turf.Feature<turf.Polygon | turf.MultiPolygon>[] = [];
             const refAreaIds = referenceAreaIdsRef.current;
-            const refAreas = allAreas.filter(a => refAreaIds.includes(a.id));
+            const refAreas = allAreas.filter(a => refAreaIds.includes(a.id) && a.type === 'wijk');
 
             refAreas.forEach(refArea => {
               if (refArea?.subGebieden) {
@@ -427,13 +427,15 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         const selectedFeatures = e.features;
         const mode = drawInstance.getMode();
 
-        const verticesSelected = mode === 'direct_select' && selectedFeatures.length > 0;
+        const verticesSelected = mode === 'direct_select' && selectedFeatures.some(
+          (f) => f.geometry.type === 'Point' && f.properties?.meta === 'vertex'
+        );
         setHasVertexSelection(verticesSelected);
 
-        const polygonSelected = selectedFeatures.length === 1 && selectedFeatures[0].geometry.type.includes('Polygon');
+        const polygonSelected = selectedFeatures.length > 0 && selectedFeatures.every(f => f.geometry.type.includes('Polygon'));
         setHasPolygonSelection(polygonSelected);
-    
-        if (polygonSelected && mode !== 'direct_select') {
+
+        if (polygonSelected && selectedFeatures.length === 1 && mode === 'simple_select') {
           drawInstance.changeMode('direct_select', { featureId: selectedFeatures[0].id as string });
         }
       };
@@ -661,7 +663,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                           </div>
                       </div>
                        <div className="flex-1 min-w-0">
-                          <Label className="text-xs font-semibold">Referentie Wijken (voor opvullen)</Label>
+                          <Label className="text-xs font-semibold">Referentiewijken (voor opvullen)</Label>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="outline" className="w-full justify-between mt-1">
@@ -719,6 +721,15 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                       >
                           <Trash2 className="mr-2 h-4 w-4" />
                           Verwijder met vlak
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => drawRef.current?.trash()}
+                        disabled={!hasPolygonSelection || hasVertexSelection}
+                        title="Verwijder de geselecteerde polygoon"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+                        Verwijder Polygoon
                       </Button>
                       <Button
                           variant="outline"
