@@ -21,7 +21,7 @@ import type { FillLayer, LineLayer, SymbolLayer, MapLayerMouseEvent } from 'reac
 import { Layer, Source } from 'react-map-gl';
 import { cn } from '@/lib/utils';
 import { Label } from './ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Checkbox } from './ui/checkbox';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -123,7 +123,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   const [hasPolygonSelection, setHasPolygonSelection] = React.useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = React.useState(false);
   const [editingFeatureId, setEditingFeatureId] = React.useState<string | null>(null);
-  const [referenceAreaId, setReferenceAreaId] = React.useState<string | null>(null);
+  const [referenceAreaIds, setReferenceAreaIds] = React.useState<string[]>([]);
 
   const isFillModeRef = React.useRef(isFillMode);
   isFillModeRef.current = isFillMode;
@@ -131,8 +131,8 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   isBulkDeletingRef.current = isBulkDeleting;
   const editingFeatureIdRef = React.useRef(editingFeatureId);
   editingFeatureIdRef.current = editingFeatureId;
-  const referenceAreaIdRef = React.useRef(referenceAreaId);
-  referenceAreaIdRef.current = referenceAreaId;
+  const referenceAreaIdsRef = React.useRef(referenceAreaIds);
+  referenceAreaIdsRef.current = referenceAreaIds;
   
   const initialFeaturesRef = React.useRef<any[]>([]);
 
@@ -149,23 +149,29 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     }
   }, [wijk?.subGebieden]);
   
-  const referenceArea = React.useMemo(() => {
-    if (!referenceAreaId) return null;
-    return allAreas.find(a => a.id === referenceAreaId) ?? null;
-  }, [referenceAreaId, allAreas]);
+  const referenceAreas = React.useMemo(() => {
+    if (referenceAreaIds.length === 0) return [];
+    return allAreas.filter(a => referenceAreaIds.includes(a.id));
+  }, [referenceAreaIds, allAreas]);
 
   const referenceGeojson = React.useMemo(() => {
-      if (!referenceArea?.subGebieden) return null;
-      try {
-          const features = JSON.parse(referenceArea.subGebieden);
-          return {
-              type: 'FeatureCollection',
-              features: Array.isArray(features) ? features : [],
-          };
-      } catch {
-          return null;
-      }
-  }, [referenceArea]);
+      if (referenceAreas.length === 0) return null;
+      
+      const allFeatures = referenceAreas.flatMap(area => {
+        if (!area.subGebieden) return [];
+        try {
+          const features = JSON.parse(area.subGebieden);
+          return Array.isArray(features) ? features : [];
+        } catch {
+          return [];
+        }
+      });
+      
+      return {
+          type: 'FeatureCollection',
+          features: allFeatures,
+      };
+  }, [referenceAreas]);
 
 
   const cleanup = React.useCallback(() => {
@@ -189,7 +195,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     setHasPolygonSelection(false);
     setIsBulkDeleting(false);
     setEditingFeatureId(null);
-    setReferenceAreaId(null);
+    setReferenceAreaIds([]);
   }, []);
 
   const onMapLoad = React.useCallback(() => {
@@ -368,15 +374,20 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
             const editingPolygons = drawInstance.getAll().features.filter(f => f.geometry.type.includes('Polygon')) as turf.Feature<turf.Polygon | turf.MultiPolygon>[];
 
             let referencePolygons: turf.Feature<turf.Polygon | turf.MultiPolygon>[] = [];
-            const refArea = allAreas.find(a => a.id === referenceAreaIdRef.current);
-            if (refArea?.subGebieden) {
-                try {
-                    const refFeatures = JSON.parse(refArea.subGebieden);
-                    if (Array.isArray(refFeatures)) {
-                        referencePolygons = refFeatures.filter(f => f.geometry.type.includes('Polygon'));
-                    }
-                } catch (err) { console.error("Could not parse reference area GeoJSON", err); }
-            }
+            const refAreaIds = referenceAreaIdsRef.current;
+            const refAreas = allAreas.filter(a => refAreaIds.includes(a.id));
+
+            refAreas.forEach(refArea => {
+              if (refArea?.subGebieden) {
+                  try {
+                      const refFeatures = JSON.parse(refArea.subGebieden);
+                      if (Array.isArray(refFeatures)) {
+                          referencePolygons.push(...refFeatures.filter(f => f.geometry.type.includes('Polygon')));
+                      }
+                  } catch (err) { console.error("Could not parse reference area GeoJSON", err); }
+              }
+            });
+
 
             const allObstacles = [...editingPolygons, ...referencePolygons];
             let filledArea: turf.Feature<turf.Polygon | turf.MultiPolygon> | null = newBoundary;
@@ -642,27 +653,32 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                               )}
                           </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                          <Label htmlFor="reference-wijk-select" className="text-xs font-semibold">Referentie Wijk (voor opvullen)</Label>
-                           <Select
-                              value={referenceAreaId || '__NONE__'}
-                              onValueChange={(value) => setReferenceAreaId(value === '__NONE__' ? null : value)}
-                              disabled={readOnly}
-                          >
-                              <SelectTrigger id="reference-wijk-select" className="mt-1">
-                                  <SelectValue placeholder="Kies een andere wijk als grens..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                  <SelectItem value="__NONE__">-- Geen --</SelectItem>
-                                  {allAreas
-                                      .filter(a => a.id !== wijk?.id && a.type === 'wijk')
-                                      .map(a => (
-                                          <SelectItem key={a.id} value={a.id}>
+                       <div className="flex-1 min-w-0">
+                          <Label className="text-xs font-semibold">Referentie Wijken (voor opvullen)</Label>
+                          <div className="mt-1 border rounded-md p-2 max-h-32 overflow-y-auto space-y-2">
+                              {allAreas.filter(a => a.id !== wijk?.id && a.type === 'wijk').length > 0 ? (
+                                allAreas
+                                  .filter(a => a.id !== wijk?.id && a.type === 'wijk')
+                                  .map(a => (
+                                      <div key={a.id} className="flex items-center space-x-2">
+                                          <Checkbox
+                                              id={`ref-area-${a.id}`}
+                                              checked={referenceAreaIds.includes(a.id)}
+                                              onCheckedChange={(checked) => {
+                                                setReferenceAreaIds(prev =>
+                                                    checked ? [...prev, a.id] : prev.filter(id => id !== a.id)
+                                                )
+                                              }}
+                                          />
+                                          <Label htmlFor={`ref-area-${a.id}`} className="font-normal text-sm cursor-pointer">
                                               {a.projectName} - {a.naam}
-                                          </SelectItem>
-                                      ))}
-                              </SelectContent>
-                          </Select>
+                                          </Label>
+                                      </div>
+                                  ))
+                              ) : (
+                                <p className="text-xs text-muted-foreground text-center p-2">Geen andere wijken beschikbaar.</p>
+                              )}
+                          </div>
                       </div>
                   </div>
                   
