@@ -188,6 +188,7 @@ export default function WorkPlanningPage() {
     x: number;
     y: number;
     dienst?: Dienst;
+    cellContext?: { medewerker: Medewerker; datum: Date };
   } | null>(null);
   const [copiedDienst, setCopiedDienst] = React.useState<Dienst | null>(null);
   const [selectedCells, setSelectedCells] = React.useState<{ medewerkerId: string; datum: string }[]>([]);
@@ -456,9 +457,9 @@ export default function WorkPlanningPage() {
     return buttons;
   }
 
-  const handleContextMenu = (e: React.MouseEvent, dienst?: Dienst) => {
+  const handleContextMenu = (e: React.MouseEvent, context: { dienst?: Dienst; cellContext?: { medewerker: Medewerker; datum: Date } }) => {
     e.preventDefault();
-    setContextMenu({ x: e.clientX, y: e.clientY, dienst });
+    setContextMenu({ x: e.clientX, y: e.clientY, ...context });
   };
   
   const handlePaste = async () => {
@@ -649,8 +650,17 @@ export default function WorkPlanningPage() {
                         onDrop={(e) => !isNonWorkingDay && handleDrop(e, medewerker.id, day)}
                         onDragOver={(e) => !isNonWorkingDay && handleDragOver(e, medewerker.id, day)}
                         onDragLeave={() => setDragOverCell(null)}
-                        onContextMenu={(e) => !isNonWorkingDay && handleContextMenu(e)}
-                        onClick={(e) => !isNonWorkingDay && handleCellClick(e, medewerker.id, datumString)}
+                        onContextMenu={(e) => {
+                          if (isNonWorkingDay) return;
+                          if (!(e.target as HTMLElement).closest('.group\\/dienst')) {
+                            handleContextMenu(e, { cellContext: { medewerker, datum: day } });
+                          }
+                        }}
+                        onClick={(e) => {
+                            if (isNonWorkingDay) return;
+                            if ((e.target as HTMLElement).closest('.group\\/dienst')) return;
+                            handleCellClick(e, medewerker.id, datumString);
+                        }}
                         className={cn(
                             "group relative p-2 border-b border-r min-h-[80px] flex flex-col gap-1 transition-colors day-column",
                             isNonWorkingDay 
@@ -658,35 +668,9 @@ export default function WorkPlanningPage() {
                                 : isToday(day) ? "bg-muted/50" : "",
                             isDragOver && !isNonWorkingDay && "bg-blue-100 dark:bg-blue-900/30",
                             isSelected && !isNonWorkingDay && "bg-primary/10",
-                            !isNonWorkingDay && !dienstenForDay?.length && "cursor-pointer"
+                            !isNonWorkingDay && "cursor-pointer"
                         )}
                     >
-                      <DropdownMenu>
-                         <DropdownMenuTrigger asChild disabled={isNonWorkingDay}>
-                            <div className="absolute inset-0 z-0" />
-                         </DropdownMenuTrigger>
-                        <DropdownMenuContent onContextMenu={(e) => e.preventDefault()}>
-                          {copiedDienst && selectedCells.length > 0 && (
-                             <DropdownMenuItem onClick={handlePaste}>
-                              <Copy className="mr-2 h-4 w-4" />
-                              Plakken
-                            </DropdownMenuItem>
-                          )}
-                          {(copiedDienst && selectedCells.length > 0) && <DropdownMenuSeparator />}
-                           <DropdownMenuItem onClick={() => selectedProjectId && handleOpenSheetForNew(medewerker, day)}>
-                              <Plus className="mr-2 h-4 w-4" />
-                              Nieuwe dienst
-                            </DropdownMenuItem>
-                          {selectedCells.length > 0 && <DropdownMenuSeparator />}
-                          {selectedCells.length > 0 && (
-                            <DropdownMenuItem onClick={handleDeleteSelected} className="text-destructive focus:text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Verwijder selectie
-                            </DropdownMenuItem>
-                           )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-
                         <div className="flex-1 space-y-1 relative z-10">
                           {isLoadingDiensten ? (
                               <Skeleton className="h-10 w-full" />
@@ -694,25 +678,11 @@ export default function WorkPlanningPage() {
                             dienstenForDay?.map(dienst => (
                                 <DienstItem key={dienst.id} dienst={dienst} onEdit={handleOpenSheetForEdit} onDelete={handleDienstDelete} onContextMenu={(e, d) => {
                                     e.stopPropagation(); // Prevent grid cell context menu
-                                    handleContextMenu(e, d);
+                                    handleContextMenu(e, { dienst: d });
                                 }} isNonWorkingDay={isNonWorkingDay} />
                             ))
                           )}
                         </div>
-                        {!isNonWorkingDay && (
-                            <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className={cn(
-                                    "h-7 w-7 self-center opacity-0 group-hover:opacity-100 transition-opacity add-button relative z-10",
-                                    !selectedProjectId && 'hidden'
-                                )}
-                                onClick={() => selectedProjectId && handleOpenSheetForNew(medewerker, day)}
-                                disabled={!selectedProjectId}
-                            >
-                              <Plus className="h-4 w-4 text-muted-foreground" />
-                            </Button>
-                        )}
                     </div>
                 )})}
               </React.Fragment>
@@ -725,6 +695,15 @@ export default function WorkPlanningPage() {
             style={contextMenu ? { position: 'fixed', left: contextMenu.x, top: contextMenu.y } : {}}
           />
           <DropdownMenuContent onContextMenu={(e) => e.preventDefault()}>
+            {contextMenu?.cellContext && (
+                <DropdownMenuItem onClick={() => {
+                    handleOpenSheetForNew(contextMenu.cellContext!.medewerker, contextMenu.cellContext!.datum);
+                    setContextMenu(null);
+                }}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Nieuwe dienst
+                </DropdownMenuItem>
+            )}
             {contextMenu?.dienst && (
               <DropdownMenuItem onClick={() => {
                   setCopiedDienst(contextMenu.dienst!);
@@ -734,13 +713,15 @@ export default function WorkPlanningPage() {
                 Kopiëren
               </DropdownMenuItem>
             )}
+
+            {(contextMenu?.cellContext || contextMenu?.dienst) && (copiedDienst || selectedCells.length > 0) && <DropdownMenuSeparator />}
+
             {copiedDienst && (
               <DropdownMenuItem onClick={handlePaste} disabled={selectedCells.length === 0}>
                 <Copy className="mr-2 h-4 w-4" />
                 Plakken
               </DropdownMenuItem>
             )}
-            {selectedCells.length > 0 && (copiedDienst || contextMenu?.dienst) && <DropdownMenuSeparator/>}
             {selectedCells.length > 0 && (
                 <DropdownMenuItem onClick={handleDeleteSelected} className="text-destructive focus:text-destructive">
                     <Trash2 className="mr-2 h-4 w-4" />
