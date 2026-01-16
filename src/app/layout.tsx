@@ -47,7 +47,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
   // Set initial collapsed state from user profile or device size
   useEffect(() => {
-    if (isUserLoading || isProfileLoading || isTablet === undefined) {
+    if (isUserLoading || isProfileLoading) {
       return; // Wait for all data to be loaded
     }
 
@@ -55,9 +55,9 @@ function AppLayout({ children }: { children: React.ReactNode }) {
       setIsCollapsed(userProfile.sidebarCollapsed);
     } else {
       // Fallback for new users or users without the setting
-      setIsCollapsed(isTablet);
+      setIsCollapsed(true); // Default to collapsed
     }
-  }, [userProfile, isUserLoading, isProfileLoading, isTablet]);
+  }, [userProfile, isUserLoading, isProfileLoading]);
 
   // Create user profile document if it doesn't exist
   useEffect(() => {
@@ -65,18 +65,17 @@ function AppLayout({ children }: { children: React.ReactNode }) {
       user &&
       !isProfileLoading &&
       !userProfile &&
-      userProfileRef &&
-      isTablet !== undefined
+      userProfileRef
     ) {
       const initialProfile = {
         id: user.uid,
         email: user.email,
         displayName: user.displayName,
-        sidebarCollapsed: isTablet,
+        sidebarCollapsed: true, // Default to collapsed
       };
       setDocumentNonBlocking(userProfileRef, initialProfile, { merge: true });
     }
-  }, [user, userProfile, isProfileLoading, userProfileRef, isTablet]);
+  }, [user, userProfile, isProfileLoading, userProfileRef]);
 
   useEffect(() => {
     if (isUserLoading) return; // Wacht tot de gebruikerstatus bekend is
