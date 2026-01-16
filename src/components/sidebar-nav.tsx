@@ -24,7 +24,6 @@ import {
   User,
   Settings,
   LogOut,
-  Mail,
 } from 'lucide-react';
 import { useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
@@ -43,7 +42,6 @@ const menuItems = [
   { href: '/inventory', label: 'Voorraadbeheer', icon: Package },
   { href: '/issues', label: 'Meldingen', icon: Bell },
   { href: '/navigation-module', label: 'Navigatiemodule', icon: Map },
-  { href: '/mail', label: 'Mail', icon: Mail },
 ];
 
 export function SidebarNav({ isCollapsed }: { isCollapsed: boolean }) {
