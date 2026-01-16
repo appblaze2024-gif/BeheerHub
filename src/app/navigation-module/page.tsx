@@ -419,7 +419,7 @@ export default function Page() {
               center: snappedStart,
               zoom: 20,
               bearing: initialBearing,
-              pitch: 70,
+              pitch: 60,
               duration: 1500,
               padding: { top: map.getCanvas().height * 0.35 },
             });
@@ -520,7 +520,7 @@ export default function Page() {
         center: snappedCoords,
         zoom: 20,
         bearing: newBearing,
-        pitch: 70,
+        pitch: 60,
         duration: 1000,
         easing: (t: number) => t,
         padding: { top: map.getCanvas().height * 0.35 },
@@ -908,7 +908,7 @@ export default function Page() {
         };
 
         if (isNavigating) {
-          options.pitch = 70;
+          options.pitch = 60;
           options.bearing = viewState.bearing;
           options.padding = {top: map.getCanvas().height * 0.35}
         } else {
