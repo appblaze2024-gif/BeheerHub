@@ -599,9 +599,11 @@ function BestandenTab({ projectId }: { projectId: string | undefined }) {
 function WijkenTab({
   wijken,
   setCurrentProject,
+  allAreas,
 }: {
   wijken: Wijk[];
   setCurrentProject: React.Dispatch<React.SetStateAction<Project>>;
+  allAreas: any[];
 }) {
   const [mapWijk, setMapWijk] = React.useState<Wijk | null>(null);
 
@@ -689,6 +691,7 @@ function WijkenTab({
           onOpenChange={(open) => !open && setMapWijk(null)}
           wijk={mapWijk}
           onSave={handleSaveCoordinates}
+          allAreas={allAreas}
         />
       )}
     </div>
@@ -698,9 +701,11 @@ function WijkenTab({
 function VeegroutesTab({
   veegroutes,
   setCurrentProject,
+  allAreas,
 }: {
   veegroutes: Veegroute[];
   setCurrentProject: React.Dispatch<React.SetStateAction<Project>>;
+  allAreas: any[];
 }) {
   const [mapRoute, setMapRoute] = React.useState<Veegroute | null>(null);
 
@@ -788,6 +793,7 @@ function VeegroutesTab({
           onOpenChange={(open) => !open && setMapRoute(null)}
           wijk={mapRoute}
           onSave={handleSaveCoordinates}
+          allAreas={allAreas}
         />
       )}
     </div>
@@ -797,9 +803,11 @@ function VeegroutesTab({
 function PrullenbakkenroutesTab({
   prullenbakkenroutes,
   setCurrentProject,
+  allAreas,
 }: {
   prullenbakkenroutes: Prullenbakkenroute[];
   setCurrentProject: React.Dispatch<React.SetStateAction<Project>>;
+  allAreas: any[],
 }) {
   const [mapRoute, setMapRoute] = React.useState<Prullenbakkenroute | null>(null);
 
@@ -887,6 +895,7 @@ function PrullenbakkenroutesTab({
           onOpenChange={(open) => !open && setMapRoute(null)}
           wijk={mapRoute}
           onSave={handleSaveCoordinates}
+          allAreas={allAreas}
         />
       )}
     </div>
@@ -912,15 +921,22 @@ export default function ProjectsPage() {
     projectsCollection
   );
   
-  const allWijken = React.useMemo(() => {
+  const allAreas = React.useMemo(() => {
     if (!projects) return [];
-    return projects.flatMap(p => 
-      (p.wijken || []).map(w => ({ ...w, projectName: p.projectnaam }))
+    const wijken = projects.flatMap(p => 
+      (p.wijken || []).map(w => ({ ...w, projectName: p.projectnaam, type: 'wijk' }))
     );
+    const veegroutes = projects.flatMap(p => 
+      (p.veegroutes || []).map(r => ({ ...r, projectName: p.projectnaam, type: 'veegroute' }))
+    );
+    const prullenbakkenroutes = projects.flatMap(p => 
+      (p.prullenbakkenroutes || []).map(r => ({ ...r, projectName: p.projectnaam, type: 'prullenbakkenroute' }))
+    );
+    return [...wijken, ...veegroutes, ...prullenbakkenroutes];
   }, [projects]);
   
   const allWijkenFeatures = React.useMemo(() => {
-    return allWijken.flatMap(wijk => {
+    return allAreas.filter(a => a.type === 'wijk').flatMap(wijk => {
       try {
         const features = JSON.parse(wijk.subGebieden);
         return features.map((feature: any) => ({
@@ -931,7 +947,7 @@ export default function ProjectsPage() {
         return [];
       }
     });
-  }, [allWijken]);
+  }, [allAreas]);
 
 
   React.useEffect(() => {
@@ -1189,18 +1205,21 @@ export default function ProjectsPage() {
           <WijkenTab
             wijken={currentProject.wijken || []}
             setCurrentProject={setCurrentProject}
+            allAreas={allAreas}
           />
         </TabsContent>
         <TabsContent value="veegroutes" className="flex-1 overflow-y-auto p-6">
           <VeegroutesTab
             veegroutes={currentProject.veegroutes || []}
             setCurrentProject={setCurrentProject}
+            allAreas={allAreas}
           />
         </TabsContent>
         <TabsContent value="prullenbakkenroutes" className="flex-1 overflow-y-auto p-6">
           <PrullenbakkenroutesTab
             prullenbakkenroutes={currentProject.prullenbakkenroutes || []}
             setCurrentProject={setCurrentProject}
+            allAreas={allAreas}
           />
         </TabsContent>
       </Tabs>

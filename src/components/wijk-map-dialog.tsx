@@ -20,6 +20,8 @@ import * as turf from '@turf/turf';
 import type { FillLayer, LineLayer, SymbolLayer, MapLayerMouseEvent } from 'react-map-gl';
 import { Layer, Source } from 'react-map-gl';
 import { cn } from '@/lib/utils';
+import { Label } from './ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -30,6 +32,7 @@ interface WijkMapDialogProps {
   wijk: Wijk | null;
   onSave: (wijkId: string, coordinates: string) => void;
   readOnly?: boolean;
+  allAreas?: any[];
 }
 
 interface Suggestion {
@@ -66,6 +69,26 @@ const polygonOutlineLayer: LineLayer = {
     },
 };
 
+const referencePolygonFillLayer: FillLayer = {
+    id: 'reference-polygon-fill',
+    type: 'fill',
+    paint: {
+        'fill-color': '#fde047', // yellow-300
+        'fill-opacity': 0.2,
+    },
+};
+
+const referencePolygonOutlineLayer: LineLayer = {
+    id: 'reference-polygon-outline',
+    type: 'line',
+    paint: {
+        'line-color': '#facc15', // yellow-400
+        'line-width': 2,
+        'line-dasharray': [2, 2],
+    },
+};
+
+
 const polygonLabelLayer: SymbolLayer = {
   id: 'wijk-polygon-labels',
   type: 'symbol',
@@ -86,7 +109,7 @@ const polygonLabelLayer: SymbolLayer = {
   }
 };
 
-export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = false }: WijkMapDialogProps) {
+export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = false, allAreas = [] }: WijkMapDialogProps) {
   const drawRef = React.useRef<MapboxDraw | null>(null);
   const mapRef = React.useRef<any>(null);
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -100,6 +123,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   const [hasPolygonSelection, setHasPolygonSelection] = React.useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = React.useState(false);
   const [editingFeatureId, setEditingFeatureId] = React.useState<string | null>(null);
+  const [referenceAreaId, setReferenceAreaId] = React.useState<string | null>(null);
 
   const isFillModeRef = React.useRef(isFillMode);
   isFillModeRef.current = isFillMode;
@@ -107,6 +131,8 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   isBulkDeletingRef.current = isBulkDeleting;
   const editingFeatureIdRef = React.useRef(editingFeatureId);
   editingFeatureIdRef.current = editingFeatureId;
+  const referenceAreaIdRef = React.useRef(referenceAreaId);
+  referenceAreaIdRef.current = referenceAreaId;
   
   const initialFeaturesRef = React.useRef<any[]>([]);
 
@@ -122,6 +148,25 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
       return null;
     }
   }, [wijk?.subGebieden]);
+  
+  const referenceArea = React.useMemo(() => {
+    if (!referenceAreaId) return null;
+    return allAreas.find(a => a.id === referenceAreaId) ?? null;
+  }, [referenceAreaId, allAreas]);
+
+  const referenceGeojson = React.useMemo(() => {
+      if (!referenceArea?.subGebieden) return null;
+      try {
+          const features = JSON.parse(referenceArea.subGebieden);
+          return {
+              type: 'FeatureCollection',
+              features: Array.isArray(features) ? features : [],
+          };
+      } catch {
+          return null;
+      }
+  }, [referenceArea]);
+
 
   const cleanup = React.useCallback(() => {
     if (drawRef.current && mapRef.current?.getMap()?.isStyleLoaded()) {
@@ -144,6 +189,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     setHasPolygonSelection(false);
     setIsBulkDeleting(false);
     setEditingFeatureId(null);
+    setReferenceAreaId(null);
   }, []);
 
   const onMapLoad = React.useCallback(() => {
@@ -319,21 +365,35 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
             if (!newBoundary) return;
             drawInstance.delete(newBoundary.id as string);
 
-            const existingFeatures = drawInstance.getAll().features;
-            const existingPolygons = existingFeatures.filter(f => f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon') as turf.Feature<turf.Polygon | turf.MultiPolygon>[];
+            const editingPolygons = drawInstance.getAll().features.filter(f => f.geometry.type.includes('Polygon')) as turf.Feature<turf.Polygon | turf.MultiPolygon>[];
 
-            let filledArea: turf.Feature<turf.Polygon | turf.MultiPolygon> | null = newBoundary;
-            for (const existing of existingPolygons) {
-              if (filledArea) {
+            let referencePolygons: turf.Feature<turf.Polygon | turf.MultiPolygon>[] = [];
+            const refArea = allAreas.find(a => a.id === referenceAreaIdRef.current);
+            if (refArea?.subGebieden) {
                 try {
-                  filledArea = turf.difference(filledArea, existing);
-                } catch (err) {
-                  console.error("Error during turf.difference:", err);
-                }
-              }
+                    const refFeatures = JSON.parse(refArea.subGebieden);
+                    if (Array.isArray(refFeatures)) {
+                        referencePolygons = refFeatures.filter(f => f.geometry.type.includes('Polygon'));
+                    }
+                } catch (err) { console.error("Could not parse reference area GeoJSON", err); }
             }
 
-            if (filledArea && filledArea.geometry) {
+            const allObstacles = [...editingPolygons, ...referencePolygons];
+            let filledArea: turf.Feature<turf.Polygon | turf.MultiPolygon> | null = newBoundary;
+            
+            for (const obstacle of allObstacles) {
+                if (filledArea) {
+                    try {
+                        if (obstacle?.geometry && turf.booleanValid(obstacle) && turf.booleanIntersects(filledArea, obstacle)) {
+                            filledArea = turf.difference(filledArea, obstacle);
+                        }
+                    } catch (err) {
+                        console.error("Error during turf.difference:", err);
+                    }
+                }
+            }
+
+            if (filledArea?.geometry) {
               drawInstance.add(filledArea as any);
             }
             setIsFillMode(false);
@@ -355,13 +415,8 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         const polygonSelected = selectedFeatures.length === 1 && selectedFeatures[0].geometry.type.includes('Polygon');
         setHasPolygonSelection(polygonSelected);
     
-        if (polygonSelected) {
-            const featureId = selectedFeatures[0].id as string;
-            if (mode !== 'direct_select') {
-                drawInstance.changeMode('direct_select', { featureId });
-            }
-        } else if (selectedFeatures.length === 0 && mode === 'direct_select') {
-            drawInstance.changeMode('simple_select');
+        if (polygonSelected && mode !== 'direct_select') {
+          drawInstance.changeMode('direct_select', { featureId: selectedFeatures[0].id as string });
         }
       };
 
@@ -386,7 +441,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
            }
        }
     }
-  }, [geojson, readOnly]);
+  }, [geojson, readOnly, allAreas]);
   
   const handleMapClick = React.useCallback(async (event: MapLayerMouseEvent) => {
     // In edit mode, don't trigger reverse geocode if user is drawing or clicking a drawn feature.
@@ -557,63 +612,87 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         </DialogHeader>
 
         {!readOnly && (
-          <div className="px-6 pb-4 flex justify-between items-center">
-              <div className="flex w-full max-w-md items-center space-x-2 relative">
-                  <div className='relative w-full'>
-                      <Input
-                          type="text"
-                          placeholder="Zoek een plaatsnaam, wijk of buurt..."
-                          value={searchQuery}
-                          onChange={handleSearchQueryChange}
-                          disabled={!isDrawReady}
-                      />
-                      {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
-                      {suggestions.length > 0 && (
-                          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                              {suggestions.map((suggestion) => (
-                              <div
-                                  key={suggestion.place_id}
-                                  onClick={() => handleSuggestionClick(suggestion)}
-                                  className="px-4 py-2 text-sm cursor-pointer hover:bg-gray-100"
-                              >
-                                  {suggestion.display_name}
-                              </div>
-                              ))}
-                          </div>
-                      )}
-                  </div>
-              </div>
-              <div className="flex items-center gap-2">
-                 <Button 
-                    variant={isFillMode ? 'secondary' : 'outline'}
-                    onClick={toggleFillMode}
-                    disabled={!isDrawReady || isBulkDeleting}
-                    title="Vul de vrije ruimte binnen een getekend gebied"
-                  >
-                      <BoxSelect className="mr-2 h-4 w-4"/>
-                      Vul vrije ruimte
-                  </Button>
-                  <Button
-                      variant="outline"
-                      onClick={handleBulkDeleteClick}
-                      disabled={!hasPolygonSelection || isBulkDeleting}
-                      title="Verwijder punten binnen een getekend gebied"
-                  >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Verwijder met vlak
-                  </Button>
-                  <Button
-                      variant="outline"
-                      onClick={() => drawRef.current?.trash()}
-                      disabled={!hasVertexSelection}
-                      title="Verwijder geselecteerde punten"
-                  >
-                      <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-                      Verwijder punt(en)
-                  </Button>
-              </div>
-              {!isDrawReady && <p className='text-xs text-muted-foreground mt-1'>Kaart laden...</p>}
-          </div>
+          <>
+            <div className="px-6 pb-4 flex flex-wrap gap-4 justify-between items-center">
+                <div className="flex w-full md:w-auto md:max-w-md items-center space-x-2 relative">
+                    <div className='relative w-full'>
+                        <Input
+                            type="text"
+                            placeholder="Zoek een plaatsnaam, wijk of buurt..."
+                            value={searchQuery}
+                            onChange={handleSearchQueryChange}
+                            disabled={!isDrawReady}
+                        />
+                        {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
+                        {suggestions.length > 0 && (
+                            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                {suggestions.map((suggestion) => (
+                                <div
+                                    key={suggestion.place_id}
+                                    onClick={() => handleSuggestionClick(suggestion)}
+                                    className="px-4 py-2 text-sm cursor-pointer hover:bg-gray-100"
+                                >
+                                    {suggestion.display_name}
+                                </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                   <Button 
+                      variant={isFillMode ? 'secondary' : 'outline'}
+                      onClick={toggleFillMode}
+                      disabled={!isDrawReady || isBulkDeleting}
+                      title="Vul de vrije ruimte binnen een getekend gebied"
+                    >
+                        <BoxSelect className="mr-2 h-4 w-4"/>
+                        Vul vrije ruimte
+                    </Button>
+                    <Button
+                        variant="outline"
+                        onClick={handleBulkDeleteClick}
+                        disabled={!hasPolygonSelection || isBulkDeleting}
+                        title="Verwijder punten binnen een getekend gebied"
+                    >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Verwijder met vlak
+                    </Button>
+                    <Button
+                        variant="outline"
+                        onClick={() => drawRef.current?.trash()}
+                        disabled={!hasVertexSelection}
+                        title="Verwijder geselecteerde punten"
+                    >
+                        <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+                        Verwijder punt(en)
+                    </Button>
+                </div>
+                {!isDrawReady && <p className='text-xs text-muted-foreground mt-1'>Kaart laden...</p>}
+            </div>
+            <div className="px-6 pb-4">
+              <Label htmlFor="reference-wijk-select" className="text-xs font-semibold">Referentiegebied (voor opvullen)</Label>
+              <Select
+                  value={referenceAreaId || ''}
+                  onValueChange={(value) => setReferenceAreaId(value || null)}
+                  disabled={readOnly}
+              >
+                  <SelectTrigger id="reference-wijk-select" className="mt-1">
+                      <SelectValue placeholder="Kies een ander gebied als grens..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                      <SelectItem value="">-- Geen --</SelectItem>
+                      {allAreas
+                          .filter(a => a.id !== wijk?.id) // Don't show current area
+                          .map(a => (
+                              <SelectItem key={a.id} value={a.id}>
+                                  {a.projectName} - {a.naam}
+                              </SelectItem>
+                          ))}
+                  </SelectContent>
+              </Select>
+            </div>
+          </>
         )}
 
         <div className="flex-1 min-h-0">
@@ -633,6 +712,12 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                 <Layer {...polygonFillLayer} />
                 <Layer {...polygonOutlineLayer} />
                 <Layer {...polygonLabelLayer} />
+              </Source>
+            )}
+             {referenceGeojson && !readOnly && (
+              <Source id="reference-wijk-polygons" type="geojson" data={referenceGeojson}>
+                <Layer {...referencePolygonFillLayer} />
+                <Layer {...referencePolygonOutlineLayer} />
               </Source>
             )}
              {clickPopupInfo && (
