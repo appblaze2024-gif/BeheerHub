@@ -41,7 +41,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     sidebarCollapsed?: boolean;
   }>(userProfileRef);
 
-  const [isCollapsed, setIsCollapsed] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Set initial collapsed state from user profile or device size
   useEffect(() => {
@@ -148,6 +148,7 @@ export default function RootLayout({
   return (
     <html lang="nl" suppressHydrationWarning>
       <head>
+        <title>BeheerHub</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"

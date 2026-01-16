@@ -426,7 +426,7 @@ export default function IssuesPage() {
       <header className="absolute top-0 left-0 z-10 p-4 flex flex-col gap-2 w-full pointer-events-none">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between w-full gap-4 pointer-events-auto">
             <div className="bg-card p-2 rounded-lg shadow-md">
-                <h1 className="text-xl font-bold">Meldingen Portaal</h1>
+                <h1 className="text-xl font-bold">BeheerHub</h1>
             </div>
             <div className="w-full md:max-w-sm">
                 <div className="relative flex-1">
