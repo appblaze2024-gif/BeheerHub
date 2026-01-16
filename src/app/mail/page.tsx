@@ -71,70 +71,19 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
 // --- MOCK DATA ---
-const mockMails = [
-  {
-    id: '1',
-    from: 'no-reply@vercel.com',
-    fromName: 'Vercel',
-    subject: 'Deployment Succesvol: BeheerHub',
-    body: '<p>Beste team,</p><p>Goed nieuws! Uw project <strong>BeheerHub</strong> is succesvol gedeployed. De live-omgeving is nu beschikbaar en alle recente wijzigingen zijn doorgevoerd.</p><p>U kunt de live-versie bekijken via de standaard project URL.</p><p>Met vriendelijke groet,<br>Het Vercel Team</p>',
-    date: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-    read: true,
-    folder: 'inbox',
-  },
-  {
-    id: '2',
-    from: 'piet@projectleider.nl',
-    fromName: 'Piet Projectleider',
-    subject: 'Vraag over project X',
-    body: '<p>Hoi, ik had een vraag over de voortgang van project X. Kun je me een update geven? We moeten de deadline van volgende week halen.</p><p>Groet,<br>Piet</p>',
-    date: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
-    read: false,
-    folder: 'inbox',
-  },
-  {
-    id: '3',
-    fromName: 'U',
-    to: 'piet@projectleider.nl',
-    subject: 'Re: Vraag over project X',
-    body: '<p>Hoi Piet, de voortgang is goed. We lopen op schema. Ik stuur je vanmiddag een uitgebreide update met de laatste testresultaten.</p><p>Mvg,</p>',
-    date: new Date(Date.now() - 23 * 60 * 60 * 1000), // 23 hours ago
-    read: true,
-    folder: 'sent',
-  },
-  {
-    id: '4',
-    from: 'facturatie@software.com',
-    fromName: 'Software Inc.',
-    subject: 'Uw factuur #12345',
-    body: '<p>Geachte klant, hierbij ontvangt u de factuur voor uw abonnement.</p>',
-    date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
-    read: true,
-    folder: 'inbox',
-  },
-  {
-    id: '5',
-    fromName: 'U',
-    to: 'team@beheerhub.nl',
-    subject: 'Concept: Nieuwe feature',
-    body: '<p>Hierbij een concept voor de nieuwe rapportage functionaliteit. Graag jullie feedback.</p>',
-    date: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-    read: true,
-    folder: 'drafts',
-  },
-  {
-    id: '6',
-    from: 'spam@example.com',
-    fromName: 'Spam King',
-    subject: 'WIN EEN GRATIS AUTO!',
-    body: '<p>Klik hier en win!</p>',
-    date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-    read: true,
-    folder: 'junk',
-  }
-];
+type Mail = {
+  id: string;
+  from?: string;
+  fromName: string;
+  to?: string;
+  subject: string;
+  body: string;
+  date: Date;
+  read: boolean;
+  folder: string;
+};
 
-type Mail = typeof mockMails[0];
+const mockMails: Mail[] = [];
 
 const folders = [
   { name: 'inbox', label: 'Postvak IN', icon: Inbox },
