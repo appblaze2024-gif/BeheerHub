@@ -223,7 +223,7 @@ function ComposeMailDialog({ children }: { children: React.ReactNode }) {
                   <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingMedewerkers}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecteer een ontvanger" />
+                        <SelectValue />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -249,7 +249,7 @@ function ComposeMailDialog({ children }: { children: React.ReactNode }) {
                 <FormItem>
                   <FormLabel>Cc</FormLabel>
                   <FormControl>
-                    <Input placeholder="adres1@example.com, adres2@example.com" {...field} />
+                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -262,7 +262,7 @@ function ComposeMailDialog({ children }: { children: React.ReactNode }) {
                 <FormItem>
                   <FormLabel>Onderwerp</FormLabel>
                   <FormControl>
-                    <Input placeholder="Onderwerp van uw bericht" {...field} />
+                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -275,7 +275,7 @@ function ComposeMailDialog({ children }: { children: React.ReactNode }) {
                 <FormItem>
                   <FormLabel>Bericht</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Typ hier uw bericht..." className="min-h-[200px]" {...field} />
+                    <Textarea className="min-h-[200px]" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

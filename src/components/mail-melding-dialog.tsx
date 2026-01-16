@@ -191,7 +191,6 @@ export function MailMeldingDialog({
                   <FormControl>
                     <Input
                       type="email"
-                      placeholder="ontvanger@example.com"
                       {...field}
                     />
                   </FormControl>
@@ -208,7 +207,6 @@ export function MailMeldingDialog({
                   <FormControl>
                     <Input
                       type="text"
-                      placeholder="adres1@example.com, adres2@example.com"
                       {...field}
                     />
                   </FormControl>
