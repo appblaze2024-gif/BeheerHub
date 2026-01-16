@@ -434,7 +434,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
 
         const polygonSelected = selectedFeatures.length > 0 && selectedFeatures.every(f => f.geometry.type.includes('Polygon'));
         setHasPolygonSelection(polygonSelected);
-
+        
         if (polygonSelected && selectedFeatures.length === 1 && mode === 'simple_select') {
           drawInstance.changeMode('direct_select', { featureId: selectedFeatures[0].id as string });
         }
@@ -442,11 +442,16 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
 
       map.on('draw.selectionchange', onSelectionChange);
       
-      map.on('draw.delete', () => {
-        setHasPolygonSelection(false);
-        setHasVertexSelection(false);
-      });
-
+      const onUpdateOrDelete = () => {
+         const draw = drawRef.current;
+         if (!draw) return;
+         const selected = draw.getSelected();
+         const selectedIsPolygon = selected.features.length > 0 && selected.features.every(f => f.geometry.type.includes('Polygon'));
+         setHasPolygonSelection(selectedIsPolygon);
+      };
+      
+      map.on('draw.delete', onUpdateOrDelete);
+      map.on('draw.update', onUpdateOrDelete);
 
       if (geojson && geojson.features.length > 0) {
         initialFeaturesRef.current = geojson.features; // Store initial features
@@ -543,6 +548,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
 
     if (polygonIdsToDelete.length > 0) {
         draw.delete(polygonIdsToDelete);
+        setHasPolygonSelection(false);
     }
   };
 
@@ -684,22 +690,37 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                       </div>
                        <div className="flex-1 min-w-0">
                           <Label className="text-xs font-semibold">Referentiegebied (voor opvullen)</Label>
-                          <Select
-                            value={referenceAreaIds[0] || '__NONE__'}
-                            onValueChange={(value) => setReferenceAreaIds(value === '__NONE__' ? [] : [value])}
-                          >
-                            <SelectTrigger id="reference-wijk-select" className="mt-1">
-                                <SelectValue placeholder="-- Geen --" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="__NONE__">-- Geen --</SelectItem>
-                                {allAreas.filter(a => a.id !== wijk?.id && a.type === 'wijk').map(a => (
-                                    <SelectItem key={a.id} value={a.id}>
-                                        {a.projectName} - {a.naam}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                          </Select>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" className="w-full justify-between mt-1">
+                                <span>
+                                  {referenceAreaIds.length === 0
+                                    ? 'Selecteer gebieden...'
+                                    : referenceAreaIds.length === 1
+                                    ? '1 gebied geselecteerd'
+                                    : `${referenceAreaIds.length} gebieden geselecteerd`}
+                                </span>
+                                <ChevronDown className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
+                              <DropdownMenuLabel>Selecteer referentiegebieden</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              {allAreas.filter(a => a.id !== wijk?.id && a.type === 'wijk').map(a => (
+                                <DropdownMenuCheckboxItem
+                                  key={a.id}
+                                  checked={referenceAreaIds.includes(a.id)}
+                                  onCheckedChange={(checked) => {
+                                    setReferenceAreaIds(prev => 
+                                      checked ? [...prev, a.id] : prev.filter(id => id !== a.id)
+                                    );
+                                  }}
+                                >
+                                  {a.projectName} - {a.naam}
+                                </DropdownMenuCheckboxItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                       </div>
                   </div>
                   
@@ -716,7 +737,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                       <Button
                           variant="outline"
                           onClick={handleBulkDeleteClick}
-                          disabled={!hasPolygonSelection || isBulkDeleting}
+                          disabled={!hasPolygonSelection || hasVertexSelection || isBulkDeleting}
                           title="Verwijder punten binnen een getekend gebied"
                       >
                           <Trash2 className="mr-2 h-4 w-4" />
