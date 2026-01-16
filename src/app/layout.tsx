@@ -41,16 +41,23 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     sidebarCollapsed?: boolean;
   }>(userProfileRef);
 
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState<boolean | undefined>(
+    undefined
+  );
 
   // Set initial collapsed state from user profile or device size
   useEffect(() => {
+    if (isUserLoading || isProfileLoading || isTablet === undefined) {
+      return; // Wait for all data to be loaded
+    }
+
     if (userProfile?.sidebarCollapsed !== undefined) {
       setIsCollapsed(userProfile.sidebarCollapsed);
-    } else if (isTablet !== undefined) {
+    } else {
+      // Fallback for new users or users without the setting
       setIsCollapsed(isTablet);
     }
-  }, [userProfile, isTablet]);
+  }, [userProfile, isUserLoading, isProfileLoading, isTablet]);
 
   // Create user profile document if it doesn't exist
   useEffect(() => {
@@ -67,7 +74,6 @@ function AppLayout({ children }: { children: React.ReactNode }) {
         displayName: user.displayName,
         sidebarCollapsed: isTablet,
       };
-      // Use setDoc with merge to avoid overwriting if it's created between check and set
       setDocumentNonBlocking(userProfileRef, initialProfile, { merge: true });
     }
   }, [user, userProfile, isProfileLoading, userProfileRef, isTablet]);
@@ -85,6 +91,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   }, [user, isUserLoading, pathname, router]);
 
   const handleToggleCollapse = () => {
+    if (isCollapsed === undefined) return; // Don't allow toggle while loading
     const newCollapsedState = !isCollapsed;
     setIsCollapsed(newCollapsedState);
     if (userProfileRef) {
@@ -94,7 +101,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     }
   };
 
-  if (isUserLoading || (user && isProfileLoading) || isTablet === undefined) {
+  if (isUserLoading || isCollapsed === undefined) {
     return (
       <div className="flex h-screen items-center justify-center">
         Laden...
