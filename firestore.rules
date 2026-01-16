@@ -98,13 +98,13 @@ service cloud.firestore {
     
     /**
      * @description Manages the root user document. A user can create their own document
-     *   but cannot modify or delete it once created. Listing all users is forbidden.
+     *   and update it, but cannot delete it once created. Listing all users is forbidden.
      */
     match /users/{userId} {
       allow get: if isOwner(userId);
       allow list: if false;
       allow create: if isOwner(userId);
-      allow update: if false;
+      allow update: if isOwner(userId);
       allow delete: if false;
 
       /**

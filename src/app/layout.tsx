@@ -8,19 +8,59 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { Sidebar, SidebarProps } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/sidebar-nav';
 import { SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
-import { FirebaseClientProvider, useUser } from '@/firebase';
+import {
+  FirebaseClientProvider,
+  useUser,
+  useFirestore,
+  useDoc,
+  setDocumentNonBlocking,
+  updateDocumentNonBlocking,
+} from '@/firebase';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { PanelLeftClose, PanelRightClose } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
+import { doc } from 'firebase/firestore';
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
   const pathname = usePathname();
   const router = useRouter();
+
+  const userProfileRef = useMemo(() => {
+    if (!user || !firestore) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [user, firestore]);
+
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<{
+    sidebarCollapsed?: boolean;
+  }>(userProfileRef);
+
   const [isCollapsed, setIsCollapsed] = useState(true);
+
+  // Set initial collapsed state from user profile
+  useEffect(() => {
+    if (userProfile?.sidebarCollapsed !== undefined) {
+      setIsCollapsed(userProfile.sidebarCollapsed);
+    }
+  }, [userProfile]);
+
+  // Create user profile document if it doesn't exist
+  useEffect(() => {
+    if (user && !isProfileLoading && !userProfile && userProfileRef) {
+      const initialProfile = {
+        id: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        sidebarCollapsed: true, // Default value
+      };
+      // Use setDoc with merge to avoid overwriting if it's created between check and set
+      setDocumentNonBlocking(userProfileRef, initialProfile, { merge: true });
+    }
+  }, [user, userProfile, isProfileLoading, userProfileRef]);
 
   useEffect(() => {
     if (isUserLoading) return; // Wacht tot de gebruikerstatus bekend is
@@ -34,7 +74,17 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [user, isUserLoading, pathname, router]);
 
-  if (isUserLoading) {
+  const handleToggleCollapse = () => {
+    const newCollapsedState = !isCollapsed;
+    setIsCollapsed(newCollapsedState);
+    if (userProfileRef) {
+      updateDocumentNonBlocking(userProfileRef, {
+        sidebarCollapsed: newCollapsedState,
+      });
+    }
+  };
+
+  if (isUserLoading || (user && isProfileLoading)) {
     return (
       <div className="flex h-screen items-center justify-center">
         Laden...
@@ -56,21 +106,21 @@ function AppLayout({ children }: { children: React.ReactNode }) {
               alt="Logo"
               width={300}
               height={100}
-              className='w-auto h-auto'
+              className="w-auto h-auto"
             />
           </Link>
         </SidebarHeader>
         <SidebarNav isCollapsed={isCollapsed} />
-         <SidebarFooter isCollapsed={isCollapsed}>
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-2"
-              onClick={() => setIsCollapsed(!isCollapsed)}
-            >
-              {isCollapsed ? <PanelRightClose /> : <PanelLeftClose />}
-              <span className={cn(isCollapsed && 'hidden')}>Inklappen</span>
-            </Button>
-          </SidebarFooter>
+        <SidebarFooter isCollapsed={isCollapsed}>
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2"
+            onClick={handleToggleCollapse}
+          >
+            {isCollapsed ? <PanelRightClose /> : <PanelLeftClose />}
+            <span className={cn(isCollapsed && 'hidden')}>Inklappen</span>
+          </Button>
+        </SidebarFooter>
       </Sidebar>
       <main className="flex-1 flex flex-col overflow-auto bg-background">
         {children}
@@ -79,7 +129,6 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-
 
 export default function RootLayout({
   children,
