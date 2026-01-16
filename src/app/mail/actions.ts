@@ -1,6 +1,7 @@
 'use server';
 
 import { z } from 'zod';
+import nodemailer from 'nodemailer';
 
 const mailSchema = z.object({
   to: z.string().email(),
@@ -16,43 +17,92 @@ const mailWithAttachmentSchema = mailSchema.extend({
   }),
 });
 
+// Create a transporter object using SMTP transport
+// The user needs to configure these in their environment variables
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: Number(process.env.SMTP_PORT),
+  secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
+
 
 export async function sendEmail(data: z.infer<typeof mailSchema>) {
   const parsedData = mailSchema.parse(data);
 
-  // In a real application, you would integrate with an email sending service
-  // like SendGrid, Resend, or use Nodemailer with an SMTP server.
-  // For this demonstration, we'll just log the email to the console.
+  if (!process.env.SMTP_HOST) {
+    console.error('SMTP settings not configured. Email will not be sent.');
+    console.log('--- SIMULATING Email ---');
+    console.log(`To: ${parsedData.to}`);
+    console.log(`Subject: ${parsedData.subject}`);
+    console.log('--- Body ---');
+    console.log(parsedData.body);
+    console.log('--- Email "Sent" ---');
+    // Simulate success for the user
+    return { success: true, message: 'Email "sent" (simulation).' };
+  }
+
+  const mailOptions = {
+    from: `"BeheerHub" <${process.env.SMTP_FROM_EMAIL}>`, // sender address
+    to: parsedData.to, // list of receivers
+    subject: parsedData.subject, // Subject line
+    text: parsedData.body, // plain text body
+    html: `<p>${parsedData.body.replace(/\n/g, '<br>')}</p>`, // html body
+  };
   
-  console.log('--- Sending Email ---');
-  console.log(`To: ${parsedData.to}`);
-  console.log(`Subject: ${parsedData.subject}`);
-  console.log('--- Body ---');
-  console.log(parsedData.body);
-  console.log('--- Email "Sent" ---');
-
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-
-  // In a real scenario, you might return data from the email service
-  return { success: true, message: 'Email sent successfully' };
+  try {
+    await transporter.sendMail(mailOptions);
+    return { success: true, message: 'Email sent successfully' };
+  } catch (error) {
+    console.error('Error sending email:', error);
+    // In a real app, you might want to throw a more specific error
+    // or return a more detailed error message.
+    throw new Error('Failed to send email.');
+  }
 }
 
 export async function sendEmailWithAttachment(data: z.infer<typeof mailWithAttachmentSchema>) {
   const parsedData = mailWithAttachmentSchema.parse(data);
 
-  console.log('--- Sending Email with Attachment ---');
-  console.log(`To: ${parsedData.to}`);
-  console.log(`Subject: ${parsedData.subject}`);
-  console.log('--- Body ---');
-  console.log(parsedData.body);
-  console.log('--- Attachment ---');
-  console.log(`Filename: ${parsedData.attachment.filename}`);
-  console.log(`Type: ${parsedData.attachment.type}`);
-  console.log(`Content size (base64): ${parsedData.attachment.content.length} characters`);
-  console.log('--- Email "Sent" ---');
+  if (!process.env.SMTP_HOST) {
+    console.error('SMTP settings not configured. Email will not be sent.');
+    console.log('--- SIMULATING Email with Attachment ---');
+    console.log(`To: ${parsedData.to}`);
+    console.log(`Subject: ${parsedData.subject}`);
+    console.log('--- Body ---');
+    console.log(parsedData.body);
+    console.log('--- Attachment ---');
+    console.log(`Filename: ${parsedData.attachment.filename}`);
+    console.log(`Type: ${parsedData.attachment.type}`);
+    console.log('--- Email "Sent" ---');
+    // Simulate success for the user
+    return { success: true, message: 'Email with attachment "sent" (simulation).' };
+  }
 
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  const mailOptions = {
+    from: `"BeheerHub" <${process.env.SMTP_FROM_EMAIL}>`,
+    to: parsedData.to,
+    subject: parsedData.subject,
+    text: parsedData.body,
+    html: `<p>${parsedData.body.replace(/\n/g, '<br>')}</p>`,
+    attachments: [
+      {
+        filename: parsedData.attachment.filename,
+        content: parsedData.attachment.content,
+        encoding: 'base64' as const,
+        contentType: parsedData.attachment.type,
+      },
+    ],
+  };
 
-  return { success: true, message: 'Email with attachment sent successfully' };
+  try {
+    await transporter.sendMail(mailOptions);
+    return { success: true, message: 'Email with attachment sent successfully' };
+  } catch (error) {
+    console.error('Error sending email with attachment:', error);
+    throw new Error('Failed to send email with attachment.');
+  }
 }
