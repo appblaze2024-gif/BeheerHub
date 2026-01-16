@@ -697,7 +697,7 @@ export default function Page() {
             const totalDistance = routeInfoRef.current?.distance || 0;
             
             if (simulationStateRef.current.distance >= totalDistance) {
-              handleStopNavigation();
+              handleNextObject('completed');
               return;
             }
 
@@ -905,6 +905,9 @@ export default function Page() {
       setDestination(nextObject);
       const routePoints: ([number, number] | null)[] = [positionRef.current, [nextObject.longitude, nextObject.latitude]];
       await calculateRoute(routePoints);
+      if (isSimulating) {
+        simulationStateRef.current.distance = 0;
+      }
     } else {
       // All objects are done
       setDestination(null);
