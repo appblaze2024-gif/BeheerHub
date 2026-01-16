@@ -185,6 +185,7 @@ export default function Page() {
   
   const [completionVulgraadPercentage, setCompletionVulgraadPercentage] = React.useState<number>(38);
   const [remainingDistance, setRemainingDistance] = React.useState<number | null>(null);
+  const [justCompletedObjectId, setJustCompletedObjectId] = React.useState<string | null>(null);
 
   // Simulation state
   const [isSimulating, setIsSimulating] = React.useState(false);
@@ -471,7 +472,7 @@ export default function Page() {
     if (!userLocation || !isNavigating) return;
 
     // Check distance to destination
-    if (destination && !isCompletionSheetOpen) {
+    if (destination && !isCompletionSheetOpen && destination.id !== justCompletedObjectId) {
         const distanceToDestination = turf.distance(
             userLocation,
             [destination.longitude, destination.latitude],
@@ -558,7 +559,7 @@ export default function Page() {
         easing: (t: number) => t,
         padding: { top: map.getCanvas().height * 0.35 },
     });
-}, [pendingObjects, isNavigating, destination, isCompletionSheetOpen, calculateRoute, handleMarkerClick]);
+}, [pendingObjects, isNavigating, destination, isCompletionSheetOpen, calculateRoute, handleMarkerClick, justCompletedObjectId]);
 
 
  React.useEffect(() => {
@@ -567,11 +568,6 @@ export default function Page() {
         navigator.geolocation.clearWatch(trackWatchIdRef.current);
         trackWatchIdRef.current = null;
       }
-      return;
-    }
-
-    if (!navigator.geolocation) {
-      setLocationError("Geolocatie wordt niet ondersteund door deze browser.");
       return;
     }
 
@@ -599,8 +595,10 @@ export default function Page() {
 
     return () => {
       isMounted = false;
-      navigator.geolocation.clearWatch(watchId);
-      trackWatchIdRef.current = null;
+      if (trackWatchIdRef.current) {
+        navigator.geolocation.clearWatch(trackWatchIdRef.current);
+        trackWatchIdRef.current = null;
+      }
     };
   }, [isNavigating, isSimulating, updateMapAndPosition]);
 
@@ -631,6 +629,7 @@ export default function Page() {
 
     setIsNavigating(false);
     setIsCalculating(false);
+    setJustCompletedObjectId(null);
     
     routeRef.current = null;
     setDisplayedRoute(null);
@@ -847,6 +846,7 @@ export default function Page() {
   }, [historyRoutes, objects, projects, calculateRoute]);
 
   const handleStartOrResume = useCallback(() => {
+    setJustCompletedObjectId(null);
     setIsNavigating(true);
     setIsCalculating(true);
     if (selectedHistoryId) {
@@ -907,6 +907,7 @@ export default function Page() {
   const handleNextObject = async (status: 'completed' | 'skipped') => {
     if (!positionRef.current || !destination) return;
     
+    setJustCompletedObjectId(destination.id);
     const newPendingObjects = await updateObjectStatus(destination.id, status);
 
     const nextObject = findNextObject(positionRef.current, newPendingObjects);
