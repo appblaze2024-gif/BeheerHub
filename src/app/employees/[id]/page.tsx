@@ -259,7 +259,7 @@ function AfwezigheidTab() {
   );
 }
 
-function RoosterTab({ medewerkerId }: { medewerkerId: string }) {
+function RoosterTab({ medewerker }: { medewerker: Medewerker }) {
   const firestore = useFirestore();
   const [currentDate, setCurrentDate] = React.useState(new Date());
   const [diensten, setDiensten] = React.useState<Record<string, Dienst[]>>({});
@@ -281,7 +281,7 @@ function RoosterTab({ medewerkerId }: { medewerkerId: string }) {
       for (const projectDoc of projectsSnapshot.docs) {
         const dienstenCol = collection(firestore, 'projects', projectDoc.id, 'diensten');
         // Simplified query to avoid composite index
-        const q = query(dienstenCol, where('medewerkerId', '==', medewerkerId));
+        const q = query(dienstenCol, where('medewerkerId', '==', medewerker.id));
         const dienstenSnapshot = await getDocs(q);
         
         dienstenSnapshot.forEach(dienstDoc => {
@@ -308,7 +308,7 @@ function RoosterTab({ medewerkerId }: { medewerkerId: string }) {
     };
 
     fetchDiensten();
-  }, [firestore, currentDate, medewerkerId]);
+  }, [firestore, currentDate, medewerker.id]);
 
   const firstDayOfMonth = startOfMonth(currentDate);
   const lastDayOfMonth = endOfMonth(currentDate);
@@ -370,20 +370,51 @@ function RoosterTab({ medewerkerId }: { medewerkerId: string }) {
               const daysInWeek = eachDayOfInterval({start: weekStart, end: endOfWeek(weekStart, {weekStartsOn: 1})})
               return (
                 <div key={weekIndex} className="grid grid-cols-7 border-t first:border-t-0 bg-white">
-                  {daysInWeek.map((day, dayIndex) => {
+                  {daysInWeek.map((day) => {
                     const dateKey = format(day, 'yyyy-MM-dd');
                     const dayDiensten = diensten[dateKey] || [];
                     
+                    const dayName = format(day, 'eeee', { locale: nl }).toLowerCase() as keyof NonNullable<Medewerker['urenPerDag']>;
+                    const defaultUren = { maandag: 8, dinsdag: 8, woensdag: 8, donderdag: 8, vrijdag: 8, zaterdag: 0, zondag: 0 };
+                    const urenPerDag = medewerker.urenPerDag || defaultUren;
+                    const contractHours = urenPerDag.hasOwnProperty(dayName) ? urenPerDag[dayName] : (['zaterdag', 'zondag'].includes(dayName) ? 0 : 8);
+                    const isNonWorkingDay = (contractHours ?? 0) === 0;
+
                     return (
-                        <div key={day.toISOString()} className={cn("p-1 border-r min-h-[100px]", !isSameMonth(day, currentDate) && 'bg-muted/30')}>
-                            <span className={cn('text-xs font-semibold', !isSameMonth(day, currentDate) && 'text-muted-foreground/50', isToday(day) && 'flex items-center justify-center h-5 w-5 rounded-full bg-blue-600 text-white')}>{format(day, 'd')}</span>
+                        <div key={day.toISOString()} className={cn(
+                          "p-1 border-r min-h-[100px]",
+                          isNonWorkingDay 
+                            ? 'bg-black' 
+                            : !isSameMonth(day, currentDate) && 'bg-muted/30'
+                        )}>
+                            <span className={cn(
+                              'text-xs font-semibold',
+                              isNonWorkingDay ? 'text-white' : (!isSameMonth(day, currentDate) && 'text-muted-foreground/50'),
+                              isToday(day) && 'flex items-center justify-center h-5 w-5 rounded-full',
+                              isToday(day) && !isNonWorkingDay && 'bg-blue-600 text-white',
+                              isToday(day) && isNonWorkingDay && 'ring-2 ring-offset-2 ring-offset-black ring-white'
+                            )}>
+                              {format(day, 'd')}
+                            </span>
                             <div className="mt-1 space-y-1">
-                                {dayDiensten.map(dienst => (
-                                    <div key={dienst.id} className="bg-blue-100 dark:bg-blue-900/50 rounded-md p-1.5 text-sm leading-snug">
-                                        <p className="font-semibold">{dienst.werksoort}</p>
-                                        <p>{dienst.starttijd}-{dienst.eindtijd}</p>
-                                    </div>
-                                ))}
+                                {dayDiensten.map(dienst => {
+                                    const isZiek = dienst.werksoort === 'Ziek';
+                                    const isVerlof = dienst.werksoort === 'Verlof' || dienst.werksoort === 'ATV';
+                                    return (
+                                        <div key={dienst.id} className={cn(
+                                            "rounded-md p-1.5 text-sm leading-snug",
+                                            isNonWorkingDay ? 'bg-gray-800 text-gray-200' :
+                                            isZiek 
+                                                ? "bg-red-200 text-red-900 dark:bg-red-900/50 dark:text-white"
+                                            : isVerlof
+                                                ? "bg-orange-200 text-orange-900 dark:bg-orange-900/50 dark:text-white"
+                                                : "bg-blue-100 text-blue-900 dark:bg-blue-900/50 dark:text-white"
+                                        )}>
+                                            <p className="font-semibold">{dienst.werksoort}</p>
+                                            <p>{dienst.starttijd}-{dienst.eindtijd}</p>
+                                        </div>
+                                    )
+                                })}
                             </div>
                         </div>
                     )
@@ -618,7 +649,7 @@ export default function EmployeeDetailPage() {
             <AfwezigheidTab />
           </TabsContent>
           <TabsContent value="rooster" className="flex-1 overflow-y-auto">
-            <RoosterTab medewerkerId={id} />
+            <RoosterTab medewerker={medewerker} />
           </TabsContent>
           <TabsContent value="contracten" className="flex-1 overflow-y-auto">
              <ContractenTab />
