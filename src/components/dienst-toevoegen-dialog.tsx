@@ -44,6 +44,7 @@ import {
 import { Input } from '@/components/ui/input';
 import type { Medewerker, Dienst, Voertuig } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Separator } from './ui/separator';
 
 const dienstFormSchema = z.object({
   werksoort: z.string().min(1, 'Omschrijving is verplicht.'),
@@ -103,6 +104,30 @@ export function DienstToevoegenDialog({
       }
     }
   }, [open, dienst, form]);
+
+  const handleVerlofSubmit = async () => {
+    if (!firestore || !project?.id || !datum || !medewerker) return;
+    setIsSubmitting(true);
+    const dienstData = {
+        werksoort: 'Verlof',
+        starttijd: '00:00',
+        eindtijd: '23:59',
+        medewerkerId: medewerker.id,
+        projectId: project.id,
+        datum: format(datum, 'yyyy-MM-dd'),
+        voertuignummer: null,
+    };
+
+    try {
+        const dienstenColRef = collection(firestore, 'projects', project.id, 'diensten');
+        await addDoc(dienstenColRef, dienstData);
+        onSuccess();
+    } catch (error) {
+        console.error('Fout bij opslaan verlof:', error);
+    } finally {
+        setIsSubmitting(false);
+    }
+  };
 
   const onSubmit = async (data: DienstFormValues) => {
     if (!firestore || !project?.id || (!datum && !dienst)) return;
@@ -174,83 +199,99 @@ export function DienstToevoegenDialog({
             Voer de details voor de dienst in en klik op opslaan.
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form id="dienst-toevoegen-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-            <FormItem>
-                <FormLabel>Medewerker</FormLabel>
-                <Input value={effectiveMedewerkerName} disabled />
-            </FormItem>
-            <FormField
-              control={form.control}
-              name="werksoort"
-              render={({ field }) => (
+        
+        <div className="py-4 space-y-4">
+            {!dienst && (
+                <>
+                    <Button type="button" variant="outline" className="w-full" onClick={handleVerlofSubmit} disabled={isSubmitting}>
+                        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        Hele dag als verlof plannen
+                    </Button>
+                    <div className="relative">
+                        <Separator />
+                        <span className="absolute left-1/2 -translate-x-1/2 -top-2.5 bg-background px-2 text-xs text-muted-foreground">OF</span>
+                    </div>
+                </>
+            )}
+            <Form {...form}>
+            <form id="dienst-toevoegen-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormItem>
-                  <FormLabel>Dienst omschrijving</FormLabel>
-                  <FormControl>
-                    <Input placeholder='Bijv. Schoffelen' {...field} />
-                  </FormControl>
-                  <FormMessage />
+                    <FormLabel>Medewerker</FormLabel>
+                    <Input value={effectiveMedewerkerName} disabled />
                 </FormItem>
-              )}
-            />
+                <FormField
+                control={form.control}
+                name="werksoort"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Dienst omschrijving</FormLabel>
+                    <FormControl>
+                        <Input placeholder='Bijv. Schoffelen' {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="starttijd"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Starttijd</FormLabel>
-                    <FormControl>
-                      <Input type="time" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="eindtijd"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Eindtijd</FormLabel>
-                    <FormControl>
-                      <Input type="time" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
-             <FormField
-                control={form.control}
-                name="voertuignummer"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Voertuignummer</FormLabel>
-                     <Select onValueChange={field.onChange} value={field.value || ''}>
+                <div className="grid grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="starttijd"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Starttijd</FormLabel>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecteer een voertuig" />
-                          </SelectTrigger>
+                        <Input type="time" {...field} />
                         </FormControl>
-                        <SelectContent>
-                          <SelectItem value=" ">Geen voertuig</SelectItem>
-                          {voertuigen.map((v) => (
-                            <SelectItem key={v.id} value={v.voertuignummer || v.id}>
-                              {v.voertuignummer || v.id} ({v.merk} {v.model})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="eindtijd"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Eindtijd</FormLabel>
+                        <FormControl>
+                        <Input type="time" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                </div>
+                
+                <FormField
+                    control={form.control}
+                    name="voertuignummer"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Voertuignummer</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Selecteer een voertuig" />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            <SelectItem value=" ">Geen voertuig</SelectItem>
+                            {voertuigen.map((v) => (
+                                <SelectItem key={v.id} value={v.voertuignummer || v.id}>
+                                {v.voertuignummer || v.id} ({v.merk} {v.model})
+                                </SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
 
-          </form>
-        </Form>
+            </form>
+            </Form>
+        </div>
+
         <DialogFooter className="pt-4 sm:justify-between">
               <div>
                 {dienst && (
