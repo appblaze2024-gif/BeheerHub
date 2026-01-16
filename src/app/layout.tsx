@@ -39,7 +39,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     sidebarCollapsed?: boolean;
   }>(userProfileRef);
 
-  const [isCollapsed, setIsCollapsed] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Set initial collapsed state from user profile
   useEffect(() => {
@@ -55,7 +55,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
         id: user.uid,
         email: user.email,
         displayName: user.displayName,
-        sidebarCollapsed: true, // Default value
+        sidebarCollapsed: false, // Default value
       };
       // Use setDoc with merge to avoid overwriting if it's created between check and set
       setDocumentNonBlocking(userProfileRef, initialProfile, { merge: true });
