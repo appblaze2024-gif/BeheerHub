@@ -39,7 +39,7 @@ const contactFormSchema = z.object({
   rol: z.string().min(1, 'Rol is verplicht.'),
   bedrijf: z.string().optional(),
   telefoon: z.string().optional(),
-  email: z.string().email('Voer een geldig e-mailadres in.').optional(),
+  email: z.string().email('Voer een geldig e-mailadres in.').optional().or(z.literal('')),
 });
 
 type ContactFormValues = z.infer<typeof contactFormSchema>;
