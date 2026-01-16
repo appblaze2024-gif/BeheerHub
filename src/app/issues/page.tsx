@@ -4,10 +4,11 @@ import * as React from 'react';
 import MapGL, { Marker, Popup, Source, Layer, FillLayer, LineLayer } from 'react-map-gl';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection } from 'firebase/firestore';
-import { Calendar as CalendarIcon, Plus, Search, List, Map as MapIcon, Bell, Filter } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Search, List, Map as MapIcon, Bell, Filter, Mail as MailIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MeldingDialog } from '@/components/melding-dialog';
+import { MailMeldingDialog } from '@/components/mail-melding-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import * as turf from '@turf/turf';
 import type { Wijk } from '@/app/projects/page';
@@ -91,7 +92,7 @@ const polygonOutlineLayer: LineLayer = {
     },
 };
 
-function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], onMeldingClick: (melding: Melding) => void }) {
+function MeldingenList({ meldingen, onMeldingClick, onMailMelding }: { meldingen: Melding[], onMeldingClick: (melding: Melding) => void, onMailMelding: (melding: Melding) => void }) {
   if (meldingen.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center text-muted-foreground p-8">
@@ -109,7 +110,7 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
 
   return (
     <div className="overflow-y-auto">
-      <div className="grid grid-cols-[1fr_auto_1fr_1fr_1fr_1fr_2fr_1fr_1fr_1fr_120px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
+      <div className="grid grid-cols-[1fr_auto_1fr_1fr_1fr_1fr_2fr_1fr_1fr_1fr_120px_auto] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
         <span>Datum</span>
         <span>Tijd</span>
         <span>Intakenummer</span>
@@ -121,12 +122,13 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
         <span>Melder</span>
         <span>Afgehandeld door</span>
         <span>Status</span>
+        <span />
       </div>
       {meldingen.map((melding) => (
         <div
           key={melding.id}
           onClick={() => onMeldingClick(melding)}
-          className="grid grid-cols-[1fr_auto_1fr_1fr_1fr_1fr_2fr_1fr_1fr_1fr_120px] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
+          className="grid grid-cols-[1fr_auto_1fr_1fr_1fr_1fr_2fr_1fr_1fr_1fr_120px_auto] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
         >
           <span className="truncate">{melding.datum ? format(new Date(melding.datum), 'dd-MM-yyyy') : '-'}</span>
           <span className="truncate">{melding.tijdstip || '-'}</span>
@@ -149,6 +151,11 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
           >
             {melding.status}
           </Badge>
+          <div className="flex justify-end">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); onMailMelding(melding); }}>
+                <MailIcon className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       ))}
     </div>
@@ -161,6 +168,8 @@ export default function IssuesPage() {
   const [selectedMelding, setSelectedMelding] = React.useState<Melding | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [meldingToMail, setMeldingToMail] = React.useState<Melding | null>(null);
+  const [isMailDialogOpen, setIsMailDialogOpen] = React.useState(false);
 
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
   const [selectedWijkId, setSelectedWijkId] = React.useState<string | null>(null);
@@ -413,6 +422,11 @@ export default function IssuesPage() {
     setSelectedMelding(melding);
     setIsDialogOpen(true);
   };
+  
+  const handleMailMelding = (melding: Melding) => {
+    setMeldingToMail(melding);
+    setIsMailDialogOpen(true);
+  };
 
 
   React.useEffect(() => {
@@ -426,7 +440,7 @@ export default function IssuesPage() {
       <header className="absolute top-0 left-0 z-10 p-4 flex flex-col gap-2 w-full pointer-events-none">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between w-full gap-4 pointer-events-auto">
             <div className="bg-card p-2 rounded-lg shadow-md">
-                <h1 className="text-xl font-bold">Meldingen Portaal</h1>
+                <h1 className="text-xl font-bold">BeheerHub</h1>
             </div>
             <div className="w-full md:max-w-sm">
                 <div className="relative flex-1">
@@ -598,7 +612,7 @@ export default function IssuesPage() {
                     <CardTitle>Overzicht Meldingen ({filteredMeldingen.length})</CardTitle>
                 </CardHeader>
                 <CardContent className='p-0 flex-1 min-h-0'>
-                    <MeldingenList meldingen={filteredMeldingen} onMeldingClick={handleMeldingClickFromList} />
+                    <MeldingenList meldingen={filteredMeldingen} onMeldingClick={handleMeldingClickFromList} onMailMelding={handleMailMelding} />
                 </CardContent>
             </Card>
         </div>
@@ -607,6 +621,11 @@ export default function IssuesPage() {
             open={isDialogOpen}
             onOpenChange={handleDialogClose}
             melding={selectedMelding}
+        />
+        <MailMeldingDialog 
+          open={isMailDialogOpen}
+          onOpenChange={setIsMailDialogOpen}
+          melding={meldingToMail}
         />
     </div>
   );
