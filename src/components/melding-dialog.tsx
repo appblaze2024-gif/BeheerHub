@@ -50,7 +50,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Separator } from './ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from './ui/progress';
 import type { Wijk } from '@/app/projects/page';
@@ -610,124 +609,126 @@ export function MeldingDialog({
               </TabsList>
               
               {/* Melding Tab */}
-              <TabsContent value="melding" className="space-y-6 pt-4">
-                <div className="space-y-4">
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+              <TabsContent value="melding" className="space-y-4 pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">
+                  {/* Column 1 */}
+                  <div className="space-y-4">
+                    <FormItem>
+                      <FormLabel>Intakenummer</FormLabel>
+                      <div className="flex items-center gap-2">
+                        <Input value={intakePrefix} disabled className="w-28" />
+                        <Input
+                          value={autoGenerateIntake ? '' : manualIntakeSuffix}
+                          onChange={(e) => setManualIntakeSuffix(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
+                          placeholder="...."
+                          maxLength={4}
+                          disabled={autoGenerateIntake}
+                          className="flex-1"
+                        />
+                      </div>
+                      <div className="flex items-center space-x-2 pt-2">
+                          <Checkbox id="auto-generate" checked={autoGenerateIntake} onCheckedChange={(checked) => setAutoGenerateIntake(!!checked)} />
+                          <label htmlFor="auto-generate" className="text-sm font-medium">Genereer laatste 4 cijfers</label>
+                      </div>
+                    </FormItem>
+                     <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Intakenummer</FormLabel>
-                        <div className="flex items-center gap-2">
-                          <Input value={intakePrefix} disabled className="w-28" />
-                          <Input
-                            value={autoGenerateIntake ? '' : manualIntakeSuffix}
-                            onChange={(e) => setManualIntakeSuffix(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
-                            placeholder="...."
-                            maxLength={4}
-                            disabled={autoGenerateIntake}
-                            className="flex-1"
-                          />
-                        </div>
-                         <div className="flex items-center space-x-2 pt-2">
-                            <Checkbox id="auto-generate" checked={autoGenerateIntake} onCheckedChange={(checked) => setAutoGenerateIntake(!!checked)} />
-                            <label htmlFor="auto-generate" className="text-sm font-medium">Genereer laatste 4 cijfers</label>
-                        </div>
+                        <FormLabel>Hoofdcategorie</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecteer..." /></SelectTrigger></FormControl>
+                          <SelectContent>{hoofdcategorieOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                        </Select>
+                        <FormMessage />
                       </FormItem>
-                       <FormField control={form.control} name="extern_meldingsnummer" render={({ field }) => (
-                          <FormItem><FormLabel>Extern meldingsnummer</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
-                      )} />
-                      <FormField control={form.control} name="tijdstip" render={({ field }) => (
-                          <FormItem><FormLabel>Tijdstip</FormLabel><FormControl><Input {...field} disabled /></FormControl></FormItem>
-                      )} />
-                      <FormField control={form.control} name="melder" render={({ field }) => (
-                          <FormItem><FormLabel>Melder</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                      )} />
-                      <FormField control={form.control} name="aangenomen_door" render={({ field }) => (
-                          <FormItem><FormLabel>Aangenomen door</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                      )} />
-                  </div>
-                </div>
-                <Separator />
-                 <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Inhoud</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Hoofdcategorie</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Selecteer een hoofdcategorie" /></SelectTrigger></FormControl>
-                            <SelectContent>{hoofdcategorieOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-                      <FormField control={form.control} name="subcategorie" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Subcategorie</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value} disabled={!hoofdcategorie}><FormControl><SelectTrigger><SelectValue placeholder="Selecteer een subcategorie" /></SelectTrigger></FormControl>
-                            <SelectContent>{(subcategorieOptions[hoofdcategorie] || []).map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-                    </div>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField control={form.control} name="adres" render={({ field }) => (
-                          <FormItem>
-                              <FormLabel>Adres</FormLabel>
-                              <div className="relative w-full">
-                                  <FormControl>
-                                      <Input {...field} placeholder="Straatnaam, postcode, plaats" autoComplete="off" />
-                                  </FormControl>
-                                  {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
-                              </div>
-                               {suggestions.length > 0 && (
-                                  <div className="absolute z-10 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
-                                      {suggestions.map((suggestion) => (
-                                      <div
-                                          key={suggestion.place_id}
-                                          onClick={() => handleSuggestionClick(suggestion)}
-                                          className="px-4 py-2 text-sm cursor-pointer hover:bg-muted"
-                                      >
-                                          {suggestion.display_name}
-                                      </div>
-                                      ))}
+                    )} />
+                     <FormField control={form.control} name="adres" render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Adres</FormLabel>
+                          <div className="relative w-full">
+                              <FormControl>
+                                  <Input {...field} placeholder="Straatnaam, postcode, plaats" autoComplete="off" />
+                              </FormControl>
+                              {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
+                          </div>
+                          {suggestions.length > 0 && (
+                              <div className="absolute z-10 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                  {suggestions.map((suggestion) => (
+                                  <div
+                                      key={suggestion.place_id}
+                                      onClick={() => handleSuggestionClick(suggestion)}
+                                      className="px-4 py-2 text-sm cursor-pointer hover:bg-muted"
+                                  >
+                                      {suggestion.display_name}
                                   </div>
-                              )}
-                              <FormMessage />
-                          </FormItem>
-                        )} />
-                          <FormField
-                            control={form.control}
-                            name="wijk"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Wijk</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Selecteer een wijk" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    {allWijken.map((wijk) => (
-                                      <SelectItem key={wijk.id} value={wijk.naam}>
-                                        {wijk.naam}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                    </div>
-                    <FormField control={form.control} name="extra_informatie" render={({ field }) => (
-                        <FormItem><FormLabel>Extra informatie melding</FormLabel><FormControl><Textarea rows={4} {...field} /></FormControl><FormMessage /></FormItem>
+                                  ))}
+                              </div>
+                          )}
+                          <FormMessage />
+                      </FormItem>
                     )} />
                   </div>
+
+                  {/* Column 2 */}
+                  <div className="space-y-4">
+                     <FormField control={form.control} name="extern_meldingsnummer" render={({ field }) => (
+                        <FormItem><FormLabel>Extern meldingsnummer</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                    )} />
+                     <FormField control={form.control} name="subcategorie" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Subcategorie</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={!hoofdcategorie}><FormControl><SelectTrigger><SelectValue placeholder="Selecteer..." /></SelectTrigger></FormControl>
+                          <SelectContent>{(subcategorieOptions[hoofdcategorie] || []).map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField
+                      control={form.control}
+                      name="wijk"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Wijk</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecteer een wijk" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {allWijken.map((wijk) => (
+                                <SelectItem key={wijk.id} value={wijk.naam}>
+                                  {wijk.naam}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Column 3 */}
+                  <div className="space-y-4">
+                     <FormField control={form.control} name="tijdstip" render={({ field }) => (
+                        <FormItem><FormLabel>Tijdstip</FormLabel><FormControl><Input {...field} disabled /></FormControl></FormItem>
+                    )} />
+                    <FormField control={form.control} name="melder" render={({ field }) => (
+                        <FormItem><FormLabel>Melder</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="aangenomen_door" render={({ field }) => (
+                        <FormItem><FormLabel>Aangenomen door</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                  </div>
+                </div>
+                <FormField control={form.control} name="extra_informatie" render={({ field }) => (
+                    <FormItem><FormLabel>Extra informatie melding</FormLabel><FormControl><Textarea rows={4} {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
               </TabsContent>
+
 
               {/* Afhandeling Tab */}
               <TabsContent value="afhandeling" className="space-y-6 pt-4">
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                      <FormField control={form.control} name="status" render={({ field }) => (
                         <FormItem><FormLabel>Status</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
