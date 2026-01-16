@@ -403,11 +403,12 @@ function RoosterTab({ medewerker }: { medewerker: Medewerker }) {
                                     return (
                                         <div key={dienst.id} className={cn(
                                             "rounded-md p-1.5 text-sm leading-snug",
-                                            isNonWorkingDay ? 'bg-gray-800 text-gray-200' :
                                             isZiek 
                                                 ? "bg-red-200 text-red-900 dark:bg-red-900/50 dark:text-white"
                                             : isVerlof
                                                 ? "bg-orange-200 text-orange-900 dark:bg-orange-900/50 dark:text-white"
+                                            : isNonWorkingDay
+                                                ? 'border border-gray-600 text-gray-200'
                                                 : "bg-blue-100 text-blue-900 dark:bg-blue-900/50 dark:text-white"
                                         )}>
                                             <p className="font-semibold">{dienst.werksoort}</p>
