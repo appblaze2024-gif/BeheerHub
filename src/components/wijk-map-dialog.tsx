@@ -97,9 +97,16 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const [isFillMode, setIsFillMode] = React.useState(false);
   const [hasVertexSelection, setHasVertexSelection] = React.useState(false);
+  const [hasPolygonSelection, setHasPolygonSelection] = React.useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = React.useState(false);
+  const [editingFeatureId, setEditingFeatureId] = React.useState<string | null>(null);
 
   const isFillModeRef = React.useRef(isFillMode);
   isFillModeRef.current = isFillMode;
+  const isBulkDeletingRef = React.useRef(isBulkDeleting);
+  isBulkDeletingRef.current = isBulkDeleting;
+  const editingFeatureIdRef = React.useRef(editingFeatureId);
+  editingFeatureIdRef.current = editingFeatureId;
   
   const initialFeaturesRef = React.useRef<any[]>([]);
 
@@ -134,44 +141,10 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     initialFeaturesRef.current = [];
     setIsFillMode(false);
     setHasVertexSelection(false);
+    setHasPolygonSelection(false);
+    setIsBulkDeleting(false);
+    setEditingFeatureId(null);
   }, []);
-
-  const onDrawCreate = React.useCallback((e: { features: turf.Feature[] }) => {
-    if (!isFillModeRef.current) return;
-
-    const newBoundary = e.features[0] as turf.Feature<turf.Polygon | turf.MultiPolygon>;
-    if (!newBoundary) return;
-
-    if (drawRef.current) {
-      drawRef.current.delete(newBoundary.id as string);
-    }
-
-    const existingFeatures = drawRef.current?.getAll().features || [];
-    const existingPolygons = existingFeatures.filter(f => f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon') as turf.Feature<turf.Polygon | turf.MultiPolygon>[];
-
-    let filledArea: turf.Feature<turf.Polygon | turf.MultiPolygon> | null = newBoundary;
-
-    for (const existing of existingPolygons) {
-      if (filledArea) {
-        try {
-          filledArea = turf.difference(filledArea, existing);
-        } catch (err) {
-          console.error("Error during turf.difference:", err);
-        }
-      }
-    }
-
-    if (filledArea && filledArea.geometry) {
-      drawRef.current?.add(filledArea as any);
-    }
-
-    // Deactivate fill mode and switch back to simple select after drawing
-    setIsFillMode(false);
-    if (drawRef.current) {
-      drawRef.current.changeMode('simple_select');
-    }
-  }, []);
-
 
   const onMapLoad = React.useCallback(() => {
     if (mapRef.current && !drawRef.current && !readOnly) {
@@ -268,7 +241,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
               'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Point'], ['==', 'meta', 'feature'], ['!=', 'mode', 'static']],
               'paint': {
                 'circle-radius': 3,
-                'circle-color': '#3b82f6'
+                'circle-color': '#ef4444'
               }
             },
             {
@@ -305,26 +278,90 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
       drawRef.current = draw;
       setIsDrawReady(true);
       
-      map.on('draw.create', onDrawCreate);
+      map.on('draw.create', (e: { features: turf.Feature[] }) => {
+        const drawInstance = drawRef.current;
+        if (!drawInstance) return;
+
+        if (isBulkDeletingRef.current) {
+            const editId = editingFeatureIdRef.current;
+            if (!editId) return;
+
+            const deletionArea = e.features[0];
+            drawInstance.delete(deletionArea.id as string);
+
+            const targetFeature = drawInstance.get(editId);
+            if (targetFeature && targetFeature.geometry.type === 'Polygon') {
+                const newCoordinates = targetFeature.geometry.coordinates.map(ring => {
+                    const filteredRing = ring.filter(point => !turf.booleanPointInPolygon(point, deletionArea.geometry as any));
+                    if (filteredRing.length < 3) return ring; // Revert if ring becomes invalid
+                    
+                    const firstPointStr = JSON.stringify(filteredRing[0]);
+                    const lastPointStr = JSON.stringify(filteredRing[filteredRing.length - 1]);
+                    if (firstPointStr !== lastPointStr) {
+                        filteredRing.push(filteredRing[0]);
+                    }
+                    if (filteredRing.length < 4) return ring; // Revert if final ring is invalid
+                    return filteredRing;
+                });
+                
+                targetFeature.geometry.coordinates = newCoordinates;
+                drawInstance.add(targetFeature as any);
+            }
+            
+            setIsBulkDeleting(false);
+            setEditingFeatureId(null);
+            drawInstance.changeMode('direct_select', { featureId: editId });
+            return;
+        }
+
+        if (isFillModeRef.current) {
+            const newBoundary = e.features[0] as turf.Feature<turf.Polygon | turf.MultiPolygon>;
+            if (!newBoundary) return;
+            drawInstance.delete(newBoundary.id as string);
+
+            const existingFeatures = drawInstance.getAll().features;
+            const existingPolygons = existingFeatures.filter(f => f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon') as turf.Feature<turf.Polygon | turf.MultiPolygon>[];
+
+            let filledArea: turf.Feature<turf.Polygon | turf.MultiPolygon> | null = newBoundary;
+            for (const existing of existingPolygons) {
+              if (filledArea) {
+                try {
+                  filledArea = turf.difference(filledArea, existing);
+                } catch (err) {
+                  console.error("Error during turf.difference:", err);
+                }
+              }
+            }
+
+            if (filledArea && filledArea.geometry) {
+              drawInstance.add(filledArea as any);
+            }
+            setIsFillMode(false);
+            drawInstance.changeMode('simple_select');
+        }
+      });
 
       const onSelectionChange = (e: { features: turf.Feature[] }) => {
         if (readOnly) return;
-        const draw = drawRef.current;
-        if (!draw) return;
+        const drawInstance = drawRef.current;
+        if (!drawInstance) return;
         
         const selectedFeatures = e.features;
-        const isDirectSelect = draw.getMode() === 'direct_select';
-        
-        const verticesSelected = isDirectSelect && selectedFeatures.length > 0 && selectedFeatures.every(f => f.geometry.type === 'Point');
+        const mode = drawInstance.getMode();
+
+        const verticesSelected = mode === 'direct_select' && selectedFeatures.length > 0 && selectedFeatures.every(f => f.geometry.type === 'Point');
         setHasVertexSelection(verticesSelected);
+
+        const polygonSelected = selectedFeatures.length === 1 && selectedFeatures[0].geometry.type.includes('Polygon');
+        setHasPolygonSelection(polygonSelected);
     
-        if (selectedFeatures.length === 1 && selectedFeatures[0].geometry.type.includes('Polygon')) {
+        if (polygonSelected) {
             const featureId = selectedFeatures[0].id as string;
-            if (!isDirectSelect || (draw.getModeOptions() as any)?.featureId !== featureId) {
-                draw.changeMode('direct_select', { featureId });
+            if (mode !== 'direct_select') {
+                drawInstance.changeMode('direct_select', { featureId });
             }
-        } else if (selectedFeatures.length === 0 && isDirectSelect) {
-            draw.changeMode('simple_select');
+        } else if (selectedFeatures.length === 0 && mode === 'direct_select') {
+            drawInstance.changeMode('simple_select');
         }
       };
 
@@ -349,7 +386,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
            }
        }
     }
-  }, [geojson, readOnly, onDrawCreate]);
+  }, [geojson, readOnly]);
   
   const handleMapClick = React.useCallback(async (event: MapLayerMouseEvent) => {
     // In edit mode, don't trigger reverse geocode if user is drawing or clicking a drawn feature.
@@ -474,6 +511,19 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     }
   };
   
+  const handleBulkDeleteClick = () => {
+    if (!drawRef.current) return;
+    const selectedIds = drawRef.current.getSelectedIds();
+    if (selectedIds.length !== 1) return;
+
+    const feature = drawRef.current.get(selectedIds[0]);
+    if (!feature || !feature.geometry.type.includes('Polygon')) return;
+
+    setEditingFeatureId(selectedIds[0]);
+    setIsBulkDeleting(true);
+    drawRef.current.changeMode('draw_polygon');
+  };
+  
   React.useEffect(() => {
     return () => {
       if (searchTimeoutRef.current) {
@@ -537,11 +587,20 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                  <Button 
                     variant={isFillMode ? 'secondary' : 'outline'}
                     onClick={toggleFillMode}
-                    disabled={!isDrawReady}
+                    disabled={!isDrawReady || isBulkDeleting}
                     title="Vul de vrije ruimte binnen een getekend gebied"
                   >
                       <BoxSelect className="mr-2 h-4 w-4"/>
                       Vul vrije ruimte
+                  </Button>
+                  <Button
+                      variant="outline"
+                      onClick={handleBulkDeleteClick}
+                      disabled={!hasPolygonSelection || isBulkDeleting}
+                      title="Verwijder punten binnen een getekend gebied"
+                  >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Verwijder met vlak
                   </Button>
                   <Button
                       variant="outline"
