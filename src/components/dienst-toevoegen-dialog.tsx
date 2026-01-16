@@ -91,14 +91,14 @@ export function DienstToevoegenDialog({
       if (dienst) {
         form.reset({
           ...dienst,
-          voertuignummer: dienst.voertuignummer || undefined,
+          voertuignummer: dienst.voertuignummer || null,
         });
       } else {
         form.reset({
           werksoort: '',
           starttijd: '07:00',
           eindtijd: '15:30',
-          voertuignummer: undefined,
+          voertuignummer: null,
         });
       }
     }
