@@ -107,6 +107,7 @@ export type OrganisatieContact = {
   bedrijf: string;
   telefoon: string;
   email: string;
+  wijk?: string;
 }
 
 export type Bestand = {
@@ -404,7 +405,7 @@ function AfsprakenTab({ projectId }: { projectId: string | undefined }) {
   );
 }
 
-function OrganisatieTab({ projectId }: { projectId: string | undefined }) {
+function OrganisatieTab({ projectId, wijken }: { projectId: string | undefined, wijken?: Wijk[] }) {
   const firestore = useFirestore();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedContact, setSelectedContact] = React.useState<OrganisatieContact | undefined>();
@@ -451,7 +452,7 @@ function OrganisatieTab({ projectId }: { projectId: string | undefined }) {
           <div className="grid grid-cols-[2fr_2fr_2fr_1fr_1fr_auto] gap-x-4 p-4 font-semibold bg-muted">
             <div>Naam</div>
             <div>Rol</div>
-            <div>Bedrijf</div>
+            <div>Wijk</div>
             <div>Telefoon</div>
             <div>Email</div>
             <div />
@@ -463,7 +464,7 @@ function OrganisatieTab({ projectId }: { projectId: string | undefined }) {
               <div key={contact.id} className="grid grid-cols-[2fr_2fr_2fr_1fr_1fr_auto] items-center gap-x-4 p-4 border-t">
                 <div className='truncate'>{contact.naam}</div>
                 <div className='truncate'>{contact.rol}</div>
-                <div className='truncate'>{contact.bedrijf}</div>
+                <div className='truncate'>{contact.wijk || '-'}</div>
                 <div className='truncate'>{contact.telefoon}</div>
                 <div className='truncate'>{contact.email}</div>
                 <div className='flex items-center gap-2'>
@@ -486,6 +487,7 @@ function OrganisatieTab({ projectId }: { projectId: string | undefined }) {
         onOpenChange={setIsDialogOpen}
         projectId={projectId}
         contact={selectedContact}
+        wijken={wijken}
       />
     </Card>
   );
@@ -1190,7 +1192,7 @@ export default function ProjectsPage() {
           value="organisatie"
           className="flex-1 overflow-y-auto pt-6 pb-2 px-6"
         >
-          <OrganisatieTab projectId={selectedProjectId} />
+          <OrganisatieTab projectId={selectedProjectId} wijken={currentProject.wijken} />
         </TabsContent>
          <TabsContent
           value="bestanden"
@@ -1236,3 +1238,5 @@ export default function ProjectsPage() {
     </div>
   );
 }
+
+    

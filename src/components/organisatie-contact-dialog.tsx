@@ -32,7 +32,14 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import type { OrganisatieContact } from '@/app/projects/page';
+import type { OrganisatieContact, Wijk } from '@/app/projects/page';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const contactFormSchema = z.object({
   naam: z.string().min(1, 'Naam is verplicht.'),
@@ -40,6 +47,7 @@ const contactFormSchema = z.object({
   bedrijf: z.string().optional(),
   telefoon: z.string().optional(),
   email: z.string().email('Voer een geldig e-mailadres in.').optional().or(z.literal('')),
+  wijk: z.string().optional(),
 });
 
 type ContactFormValues = z.infer<typeof contactFormSchema>;
@@ -49,6 +57,7 @@ interface OrganisatieContactDialogProps {
   onOpenChange: (open: boolean) => void;
   projectId: string;
   contact?: OrganisatieContact;
+  wijken?: Wijk[];
 }
 
 export function OrganisatieContactDialog({
@@ -56,6 +65,7 @@ export function OrganisatieContactDialog({
   onOpenChange,
   projectId,
   contact,
+  wijken,
 }: OrganisatieContactDialogProps) {
   const firestore = useFirestore();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -74,6 +84,7 @@ export function OrganisatieContactDialog({
               bedrijf: contact.bedrijf || '',
               telefoon: contact.telefoon || '',
               email: contact.email || '',
+              wijk: contact.wijk || '',
             }
           : {
               naam: '',
@@ -81,6 +92,7 @@ export function OrganisatieContactDialog({
               bedrijf: '',
               telefoon: '',
               email: '',
+              wijk: '',
             }
       );
     } else {
@@ -173,6 +185,31 @@ export function OrganisatieContactDialog({
                   </FormItem>
                 )}
               />
+            <FormField
+              control={form.control}
+              name="wijk"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Wijk</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Koppel aan een wijk (optioneel)" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="">-- Geen --</SelectItem>
+                      {wijken?.map((wijk) => (
+                        <SelectItem key={wijk.id} value={wijk.naam}>
+                          {wijk.naam}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -228,3 +265,5 @@ export function OrganisatieContactDialog({
     </Dialog>
   );
 }
+
+    
