@@ -409,7 +409,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         const selectedFeatures = e.features;
         const mode = drawInstance.getMode();
 
-        const verticesSelected = mode === 'direct_select' && selectedFeatures.length > 0 && selectedFeatures.every(f => f.geometry.type === 'Point');
+        const verticesSelected = mode === 'direct_select' && selectedFeatures.length > 0;
         setHasVertexSelection(verticesSelected);
 
         const polygonSelected = selectedFeatures.length === 1 && selectedFeatures[0].geometry.type.includes('Polygon');
@@ -612,87 +612,92 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         </DialogHeader>
 
         {!readOnly && (
-          <>
-            <div className="px-6 pb-4 flex flex-wrap gap-4 justify-between items-center">
-                <div className="flex w-full md:w-auto md:max-w-md items-center space-x-2 relative">
-                    <div className='relative w-full'>
-                        <Input
-                            type="text"
-                            placeholder="Zoek een plaatsnaam, wijk of buurt..."
-                            value={searchQuery}
-                            onChange={handleSearchQueryChange}
-                            disabled={!isDrawReady}
-                        />
-                        {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
-                        {suggestions.length > 0 && (
-                            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                                {suggestions.map((suggestion) => (
-                                <div
-                                    key={suggestion.place_id}
-                                    onClick={() => handleSuggestionClick(suggestion)}
-                                    className="px-4 py-2 text-sm cursor-pointer hover:bg-gray-100"
-                                >
-                                    {suggestion.display_name}
-                                </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                   <Button 
-                      variant={isFillMode ? 'secondary' : 'outline'}
-                      onClick={toggleFillMode}
-                      disabled={!isDrawReady || isBulkDeleting}
-                      title="Vul de vrije ruimte binnen een getekend gebied"
-                    >
-                        <BoxSelect className="mr-2 h-4 w-4"/>
-                        Vul vrije ruimte
-                    </Button>
-                    <Button
-                        variant="outline"
-                        onClick={handleBulkDeleteClick}
-                        disabled={!hasPolygonSelection || isBulkDeleting}
-                        title="Verwijder punten binnen een getekend gebied"
-                    >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Verwijder met vlak
-                    </Button>
-                    <Button
-                        variant="outline"
-                        onClick={() => drawRef.current?.trash()}
-                        disabled={!hasVertexSelection}
-                        title="Verwijder geselecteerde punten"
-                    >
-                        <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-                        Verwijder punt(en)
-                    </Button>
-                </div>
-                {!isDrawReady && <p className='text-xs text-muted-foreground mt-1'>Kaart laden...</p>}
+            <div className="px-6 pb-4 flex flex-col gap-4">
+              <div className="flex flex-col md:flex-row gap-4 justify-between md:items-end">
+                  <div className="flex flex-col sm:flex-row gap-4 flex-1">
+                      <div className="flex-1 min-w-0">
+                          <Label htmlFor="search-input" className="text-xs font-semibold">Zoek gebied op naam</Label>
+                          <div className='relative mt-1'>
+                              <Input
+                                  id="search-input"
+                                  type="text"
+                                  placeholder="Plaatsnaam, wijk of buurt..."
+                                  value={searchQuery}
+                                  onChange={handleSearchQueryChange}
+                                  disabled={!isDrawReady}
+                              />
+                              {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
+                              {suggestions.length > 0 && (
+                                  <div className="absolute z-10 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                      {suggestions.map((suggestion) => (
+                                      <div
+                                          key={suggestion.place_id}
+                                          onClick={() => handleSuggestionClick(suggestion)}
+                                          className="px-4 py-2 text-sm cursor-pointer hover:bg-muted"
+                                      >
+                                          {suggestion.display_name}
+                                      </div>
+                                      ))}
+                                  </div>
+                              )}
+                          </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                          <Label htmlFor="reference-wijk-select" className="text-xs font-semibold">Referentie Wijk (voor opvullen)</Label>
+                           <Select
+                              value={referenceAreaId || '__NONE__'}
+                              onValueChange={(value) => setReferenceAreaId(value === '__NONE__' ? null : value)}
+                              disabled={readOnly}
+                          >
+                              <SelectTrigger id="reference-wijk-select" className="mt-1">
+                                  <SelectValue placeholder="Kies een andere wijk als grens..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  <SelectItem value="__NONE__">-- Geen --</SelectItem>
+                                  {allAreas
+                                      .filter(a => a.id !== wijk?.id && a.type === 'wijk')
+                                      .map(a => (
+                                          <SelectItem key={a.id} value={a.id}>
+                                              {a.projectName} - {a.naam}
+                                          </SelectItem>
+                                      ))}
+                              </SelectContent>
+                          </Select>
+                      </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 flex-wrap">
+                     <Button 
+                        variant={isFillMode ? 'secondary' : 'outline'}
+                        onClick={toggleFillMode}
+                        disabled={!isDrawReady || isBulkDeleting}
+                        title="Vul de vrije ruimte binnen een getekend gebied"
+                      >
+                          <BoxSelect className="mr-2 h-4 w-4"/>
+                          Vul vrije ruimte
+                      </Button>
+                      <Button
+                          variant="outline"
+                          onClick={handleBulkDeleteClick}
+                          disabled={!hasPolygonSelection || isBulkDeleting}
+                          title="Verwijder punten binnen een getekend gebied"
+                      >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Verwijder met vlak
+                      </Button>
+                      <Button
+                          variant="outline"
+                          onClick={() => drawRef.current?.trash()}
+                          disabled={!hasVertexSelection}
+                          title="Verwijder geselecteerde punten"
+                      >
+                          <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+                          Verwijder punt(en)
+                      </Button>
+                  </div>
+              </div>
+              {!isDrawReady && <p className='text-xs text-muted-foreground'>Kaart laden...</p>}
             </div>
-            <div className="px-6 pb-4">
-              <Label htmlFor="reference-wijk-select" className="text-xs font-semibold">Referentiegebied (voor opvullen)</Label>
-              <Select
-                  value={referenceAreaId || '__NONE__'}
-                  onValueChange={(value) => setReferenceAreaId(value === '__NONE__' ? null : value)}
-                  disabled={readOnly}
-              >
-                  <SelectTrigger id="reference-wijk-select" className="mt-1">
-                      <SelectValue placeholder="Kies een ander gebied als grens..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                      <SelectItem value="__NONE__">-- Geen --</SelectItem>
-                      {allAreas
-                          .filter(a => a.id !== wijk?.id) // Don't show current area
-                          .map(a => (
-                              <SelectItem key={a.id} value={a.id}>
-                                  {a.projectName} - {a.naam}
-                              </SelectItem>
-                          ))}
-                  </SelectContent>
-              </Select>
-            </div>
-          </>
         )}
 
         <div className="flex-1 min-h-0">
