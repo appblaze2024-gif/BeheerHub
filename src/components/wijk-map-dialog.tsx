@@ -673,15 +673,15 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
             <div className="px-6 pb-4">
               <Label htmlFor="reference-wijk-select" className="text-xs font-semibold">Referentiegebied (voor opvullen)</Label>
               <Select
-                  value={referenceAreaId || ''}
-                  onValueChange={(value) => setReferenceAreaId(value || null)}
+                  value={referenceAreaId || '__NONE__'}
+                  onValueChange={(value) => setReferenceAreaId(value === '__NONE__' ? null : value)}
                   disabled={readOnly}
               >
                   <SelectTrigger id="reference-wijk-select" className="mt-1">
                       <SelectValue placeholder="Kies een ander gebied als grens..." />
                   </SelectTrigger>
                   <SelectContent>
-                      <SelectItem value="">-- Geen --</SelectItem>
+                      <SelectItem value="__NONE__">-- Geen --</SelectItem>
                       {allAreas
                           .filter(a => a.id !== wijk?.id) // Don't show current area
                           .map(a => (
