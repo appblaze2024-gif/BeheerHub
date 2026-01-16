@@ -364,7 +364,7 @@ export default function Page() {
     }
   }, [selectedRoute]);
 
-  const calculateRoute = async (points: (number[] | null)[]) => {
+  const calculateRoute = useCallback(async (points: (number[] | null)[]) => {
     const validPoints = points.filter((p): p is [number, number] =>
       p != null && Array.isArray(p) && p.length === 2 && !isNaN(p[0]) && !isNaN(p[1])
     );
@@ -445,7 +445,26 @@ export default function Page() {
     } finally {
         setIsCalculating(false);
     }
-  };
+  }, []);
+
+  const getMarkerColor = (objectId: string): string => {
+    if (completedObjects.includes(objectId)) {
+        return 'bg-green-500';
+    }
+    if (skippedObjects.includes(objectId)) {
+        return 'bg-gray-500';
+    }
+    return 'bg-blue-600';
+  }
+  
+  const handleMarkerClick = useCallback((obj: MapObject) => {
+    if (isNavigating && destination?.id === obj.id) {
+        setCompletionVulgraadPercentage(obj.vulgraad || 38);
+        setIsCompletionSheetOpen(true);
+    } else {
+        setSelectedObjectForInfo(obj);
+    }
+  }, [isNavigating, destination]);
 
  const updateMapAndPosition = useCallback(() => {
     const userLocation = positionRef.current;
@@ -539,46 +558,52 @@ export default function Page() {
         easing: (t: number) => t,
         padding: { top: map.getCanvas().height * 0.35 },
     });
-}, [pendingObjects, isNavigating, destination, isCompletionSheetOpen]);
+}, [pendingObjects, isNavigating, destination, isCompletionSheetOpen, calculateRoute, handleMarkerClick]);
 
 
- const startTracking = React.useCallback(() => {
-    if (isSimulating) {
-      console.log("Simulation is active, not starting GPS tracking.");
+ React.useEffect(() => {
+    if (!isNavigating || isSimulating) {
+      if (trackWatchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(trackWatchIdRef.current);
+        trackWatchIdRef.current = null;
+      }
       return;
     }
+
     if (!navigator.geolocation) {
       setLocationError("Geolocatie wordt niet ondersteund door deze browser.");
       return;
     }
 
-    if (trackWatchIdRef.current !== null) {
-      navigator.geolocation.clearWatch(trackWatchIdRef.current);
-    }
+    let isMounted = true;
 
-    trackWatchIdRef.current = navigator.geolocation.watchPosition(
+    const watchId = navigator.geolocation.watchPosition(
       (position) => {
+        if (!isMounted) return;
         const { longitude, latitude, speed: gpsSpeed } = position.coords;
         positionRef.current = [longitude, latitude];
         const newSpeed = (gpsSpeed || 0) * 3.6; // m/s to km/h
         setCurrentSpeed(newSpeed);
         updateMapAndPosition();
-        setLocationError(null); // Clear previous errors on successful update
+        setLocationError(null);
       },
       (error) => {
+        if (!isMounted) return;
         console.error("Error watching position:", error);
         setLocationError(`Locatiefout: ${error.message}`);
       },
       { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
     );
-  }, [isSimulating, updateMapAndPosition]);
 
-  const stopTracking = () => {
-    if (trackWatchIdRef.current !== null) {
-      navigator.geolocation.clearWatch(trackWatchIdRef.current);
+    trackWatchIdRef.current = watchId;
+
+    return () => {
+      isMounted = false;
+      navigator.geolocation.clearWatch(watchId);
       trackWatchIdRef.current = null;
-    }
-  };
+    };
+  }, [isNavigating, isSimulating, updateMapAndPosition]);
+
   
  const simulationStateRef = React.useRef({
     distance: 0,
@@ -622,7 +647,6 @@ export default function Page() {
     setSelectedRouteId(null);
     setSelectedRouteType(null);
     setSelectedHistoryId(null);
-    stopTracking();
     
     const currentGpsLocation = positionRef.current;
     if (currentGpsLocation && mapRef.current) {
@@ -654,7 +678,6 @@ export default function Page() {
         if (simulationIntervalRef.current) {
             clearInterval(simulationIntervalRef.current);
         }
-        stopTracking();
         simulationStateRef.current = { distance: 0, isPaused: false, pauseTimeout: null };
         currentInstructionIndexRef.current = 0;
         
@@ -774,9 +797,7 @@ export default function Page() {
         setDestination(firstObject);
         await calculateRoute([positionRef.current, [firstObject.longitude, firstObject.latitude]]);
     }
-
-    startTracking();
-  }, [user, firestore, selectedProjectId, selectedRouteId, selectedRoute, objectsInWijk, startTracking]);
+  }, [user, firestore, selectedProjectId, selectedRouteId, selectedRoute, objectsInWijk, calculateRoute]);
 
   const handleResumeRoute = React.useCallback(async (historyId: string) => {
     const routeToResume = historyRoutes?.find(r => r.id === historyId);
@@ -823,8 +844,7 @@ export default function Page() {
         setDestination(nextObject);
         await calculateRoute([positionRef.current, [nextObject.longitude, nextObject.latitude]]);
     } 
-    startTracking();
-  }, [historyRoutes, objects, projects, startTracking]);
+  }, [historyRoutes, objects, projects, calculateRoute]);
 
   const handleStartOrResume = useCallback(() => {
     setIsNavigating(true);
@@ -960,26 +980,6 @@ export default function Page() {
   };
   
   const ManeuverIcon = currentInstruction ? getManeuverIcon(currentInstruction.maneuver.type, currentInstruction.maneuver.modifier) : ArrowUp;
-
-
-  const getMarkerColor = (objectId: string): string => {
-    if (completedObjects.includes(objectId)) {
-        return 'bg-green-500';
-    }
-    if (skippedObjects.includes(objectId)) {
-        return 'bg-gray-500';
-    }
-    return 'bg-blue-600';
-}
-  
-  const handleMarkerClick = (obj: MapObject) => {
-    if (isNavigating && destination?.id === obj.id) {
-        setCompletionVulgraadPercentage(obj.vulgraad || 38);
-        setIsCompletionSheetOpen(true);
-    } else {
-        setSelectedObjectForInfo(obj);
-    }
-  }
 
   const hue = 120 * (1 - (completionVulgraadPercentage || 0) / 100);
 
