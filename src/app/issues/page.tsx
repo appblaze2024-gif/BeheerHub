@@ -352,6 +352,20 @@ export default function IssuesPage() {
   }, [meldingen, selectedProject?.wijken]);
 
   const mapRef = React.useRef<any>(null);
+  const mapContainerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!mapContainerRef.current) return;
+    const resizeObserver = new ResizeObserver(() => {
+      if (mapRef.current) {
+        mapRef.current.getMap().resize();
+      }
+    });
+    resizeObserver.observe(mapContainerRef.current);
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   React.useEffect(() => {
     const map = mapRef.current?.getMap();
@@ -408,7 +422,7 @@ export default function IssuesPage() {
   }, [selectedMelding, isDialogOpen]);
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 relative">
+    <div ref={mapContainerRef} className="flex-1 flex flex-col min-h-0 relative">
       <header className="absolute top-0 left-0 z-10 p-4 flex flex-col gap-2 w-full pointer-events-none">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between w-full gap-4 pointer-events-auto">
             <div className="bg-card p-2 rounded-lg shadow-md">

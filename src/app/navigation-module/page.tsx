@@ -146,6 +146,7 @@ const getManeuverIcon = (type: string, modifier?: string) => {
 
 export default function Page() {
   const mapRef = React.useRef<any>();
+  const mapContainerRef = React.useRef<HTMLDivElement>(null);
   const firestore = useFirestore();
   const { user } = useUser();
   
@@ -295,6 +296,19 @@ export default function Page() {
     
     return uniqueObjects;
   }, [objects, selectedRoute]);
+
+  React.useEffect(() => {
+    if (!mapContainerRef.current) return;
+    const resizeObserver = new ResizeObserver(() => {
+      if (mapRef.current) {
+        mapRef.current.getMap().resize();
+      }
+    });
+    resizeObserver.observe(mapContainerRef.current);
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   React.useEffect(() => {
     const timer = setInterval(() => {
@@ -971,7 +985,7 @@ export default function Page() {
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="flex-1 relative bg-gray-800">
+      <div ref={mapContainerRef} className="flex-1 relative bg-gray-800">
         {!isNavigating && (
             <div className="absolute top-4 left-4 z-10 bg-card/90 backdrop-blur-sm p-4 rounded-lg shadow-lg w-full max-w-sm text-card-foreground">
                 <h2 className="text-lg font-bold mb-2">Start een nieuwe route</h2>

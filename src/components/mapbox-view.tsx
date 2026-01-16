@@ -66,6 +66,16 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
   }, [wijkPolygons]);
 
   const mapRef = React.useRef<any>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver(() => {
+      mapRef.current?.getMap().resize();
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   const initialViewState = {
     longitude: longitude || 5.2913,
@@ -148,45 +158,47 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
   const pinToShow = hoveredPin || selectedPin;
 
   return (
-    <MapGL
-      ref={mapRef}
-      initialViewState={initialViewState}
-      style={{ width: '100%', height: '100%' }}
-      mapStyle="mapbox://styles/mapbox/streets-v12"
-      mapboxAccessToken={MAPBOX_TOKEN}
-    >
-      {wijkPolygons.length > 0 && (
-          <Source id="wijk-polygons" type="geojson" data={geojson}>
-              <Layer {...polygonFillLayer} />
-              <Layer {...polygonOutlineLayer} />
-          </Source>
-      )}
+    <div ref={containerRef} className="w-full h-full">
+      <MapGL
+        ref={mapRef}
+        initialViewState={initialViewState}
+        style={{ width: '100%', height: '100%' }}
+        mapStyle="mapbox://styles/mapbox/streets-v12"
+        mapboxAccessToken={MAPBOX_TOKEN}
+      >
+        {wijkPolygons.length > 0 && (
+            <Source id="wijk-polygons" type="geojson" data={geojson}>
+                <Layer {...polygonFillLayer} />
+                <Layer {...polygonOutlineLayer} />
+            </Source>
+        )}
 
-      {markers}
+        {markers}
 
-      {pinToShow && (
-        <Popup
-          anchor="top"
-          longitude={Number(pinToShow.longitude)}
-          latitude={Number(pinToShow.latitude)}
-          onClose={() => {
-            if (pinToShow === selectedPin) setSelectedPin(null);
-            if (pinToShow === hoveredPin) setHoveredPin(null);
-          }}
-          closeOnClick={false}
-          closeButton={!hoveredPin}
-        >
-          <div>
-            <h3 className="font-bold">{pinToShow.id}</h3>
-            {hoveredPin ? null : (
-                <>
-                    <p>{pinToShow.locatieSubType}</p>
-                    <p>{pinToShow.straatnaam} {pinToShow.huisnummer}</p>
-                </>
-            )}
-          </div>
-        </Popup>
-      )}
-    </MapGL>
+        {pinToShow && (
+          <Popup
+            anchor="top"
+            longitude={Number(pinToShow.longitude)}
+            latitude={Number(pinToShow.latitude)}
+            onClose={() => {
+              if (pinToShow === selectedPin) setSelectedPin(null);
+              if (pinToShow === hoveredPin) setHoveredPin(null);
+            }}
+            closeOnClick={false}
+            closeButton={!hoveredPin}
+          >
+            <div>
+              <h3 className="font-bold">{pinToShow.id}</h3>
+              {hoveredPin ? null : (
+                  <>
+                      <p>{pinToShow.locatieSubType}</p>
+                      <p>{pinToShow.straatnaam} {pinToShow.huisnummer}</p>
+                  </>
+              )}
+            </div>
+          </Popup>
+        )}
+      </MapGL>
+    </div>
   );
 }
