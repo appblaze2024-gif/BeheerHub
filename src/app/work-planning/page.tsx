@@ -80,7 +80,7 @@ type Project = {
   projectnummer: string;
 };
 
-const DienstItem = ({ dienst, onEdit, onDelete, onContextMenu }: { dienst: Dienst, onEdit: (dienst: Dienst) => void, onDelete: (dienst: Dienst) => void, onContextMenu: (e: React.MouseEvent, dienst: Dienst) => void }) => {
+const DienstItem = ({ dienst, onEdit, onDelete, onContextMenu, isNonWorkingDay }: { dienst: Dienst, onEdit: (dienst: Dienst) => void, onDelete: (dienst: Dienst) => void, onContextMenu: (e: React.MouseEvent, dienst: Dienst) => void, isNonWorkingDay: boolean }) => {
     const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
 
     const handleEdit = (e: React.MouseEvent) => {
@@ -126,7 +126,9 @@ const DienstItem = ({ dienst, onEdit, onDelete, onContextMenu }: { dienst: Diens
                         ? "bg-red-200 text-red-900 hover:bg-red-300 dark:bg-red-900/50 dark:text-white dark:hover:bg-red-900/70"
                      : isVerlof
                         ? "bg-orange-200 text-orange-900 hover:bg-orange-300 dark:bg-orange-900/50 dark:text-white dark:hover:bg-orange-900/70"
-                        : "bg-blue-100 text-blue-900 hover:bg-blue-200 dark:bg-blue-900/50 dark:text-white dark:hover:bg-blue-900/70"
+                        : isNonWorkingDay
+                            ? 'border border-gray-600 text-gray-200 bg-transparent'
+                            : "bg-blue-100 text-blue-900 hover:bg-blue-200 dark:bg-blue-900/50 dark:text-white dark:hover:bg-blue-900/70"
                 )}
             >
                 <p className="font-semibold truncate">{dienst.werksoort}</p>
@@ -634,25 +636,33 @@ export default function WorkPlanningPage() {
                   );
                   const isDragOver = dragOverCell?.medewerkerId === medewerker.id && dragOverCell?.day === datumString;
                   const isSelected = selectedCells.some(c => c.medewerkerId === medewerker.id && c.datum === datumString);
+                  
+                  const dayName = format(day, 'eeee', { locale: nl }).toLowerCase() as keyof NonNullable<Medewerker['urenPerDag']>;
+                  const defaultUren = { maandag: 8, dinsdag: 8, woensdag: 8, donderdag: 8, vrijdag: 8, zaterdag: 0, zondag: 0 };
+                  const urenPerDag = medewerker.urenPerDag || defaultUren;
+                  const contractHours = urenPerDag.hasOwnProperty(dayName) ? urenPerDag[dayName] : (['zaterdag', 'zondag'].includes(dayName) ? 0 : 8);
+                  const isNonWorkingDay = (contractHours ?? 0) === 0;
 
                   return (
                     <div
                         key={day.toISOString()}
-                        onDrop={(e) => handleDrop(e, medewerker.id, day)}
-                        onDragOver={(e) => handleDragOver(e, medewerker.id, day)}
+                        onDrop={(e) => !isNonWorkingDay && handleDrop(e, medewerker.id, day)}
+                        onDragOver={(e) => !isNonWorkingDay && handleDragOver(e, medewerker.id, day)}
                         onDragLeave={() => setDragOverCell(null)}
-                        onContextMenu={(e) => handleContextMenu(e)}
-                        onClick={(e) => handleCellClick(e, medewerker.id, datumString)}
+                        onContextMenu={(e) => !isNonWorkingDay && handleContextMenu(e)}
+                        onClick={(e) => !isNonWorkingDay && handleCellClick(e, medewerker.id, datumString)}
                         className={cn(
                             "group relative p-2 border-b border-r min-h-[80px] flex flex-col gap-1 transition-colors day-column",
-                             isToday(day) && "bg-muted/50",
-                             isDragOver && "bg-blue-100 dark:bg-blue-900/30",
-                             isSelected && "bg-primary/10",
-                             !dienstenForDay?.length && "cursor-pointer"
+                            isNonWorkingDay 
+                                ? 'bg-black' 
+                                : isToday(day) ? "bg-muted/50" : "",
+                            isDragOver && !isNonWorkingDay && "bg-blue-100 dark:bg-blue-900/30",
+                            isSelected && !isNonWorkingDay && "bg-primary/10",
+                            !isNonWorkingDay && !dienstenForDay?.length && "cursor-pointer"
                         )}
                     >
                       <DropdownMenu>
-                         <DropdownMenuTrigger asChild>
+                         <DropdownMenuTrigger asChild disabled={isNonWorkingDay}>
                             <div className="absolute inset-0 z-0" />
                          </DropdownMenuTrigger>
                         <DropdownMenuContent onContextMenu={(e) => e.preventDefault()}>
@@ -685,22 +695,24 @@ export default function WorkPlanningPage() {
                                 <DienstItem key={dienst.id} dienst={dienst} onEdit={handleOpenSheetForEdit} onDelete={handleDienstDelete} onContextMenu={(e, d) => {
                                     e.stopPropagation(); // Prevent grid cell context menu
                                     handleContextMenu(e, d);
-                                }} />
+                                }} isNonWorkingDay={isNonWorkingDay} />
                             ))
                           )}
                         </div>
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className={cn(
-                                "h-7 w-7 self-center opacity-0 group-hover:opacity-100 transition-opacity add-button relative z-10",
-                                !selectedProjectId && 'hidden'
-                            )}
-                            onClick={() => selectedProjectId && handleOpenSheetForNew(medewerker, day)}
-                            disabled={!selectedProjectId}
-                        >
-                          <Plus className="h-4 w-4 text-muted-foreground" />
-                        </Button>
+                        {!isNonWorkingDay && (
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className={cn(
+                                    "h-7 w-7 self-center opacity-0 group-hover:opacity-100 transition-opacity add-button relative z-10",
+                                    !selectedProjectId && 'hidden'
+                                )}
+                                onClick={() => selectedProjectId && handleOpenSheetForNew(medewerker, day)}
+                                disabled={!selectedProjectId}
+                            >
+                              <Plus className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                        )}
                     </div>
                 )})}
               </React.Fragment>
