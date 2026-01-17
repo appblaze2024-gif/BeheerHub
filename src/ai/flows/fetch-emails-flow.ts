@@ -18,7 +18,7 @@ const EmailSchema = z.object({
 const FetchEmailsOutputSchema = z.array(EmailSchema);
 export type FetchEmailsOutput = z.infer<typeof FetchEmailsOutputSchema>;
 
-async function fetchEmails(): Promise<FetchEmailsOutput> {
+async function fetchEmails(mailbox: string): Promise<FetchEmailsOutput> {
   const config = {
     imap: {
       user: process.env.IMAP_USER || '',
@@ -31,26 +31,25 @@ async function fetchEmails(): Promise<FetchEmailsOutput> {
   };
   
   if (!config.imap.user || !config.imap.password || !config.imap.host) {
-    console.warn('IMAP credentials not configured. Skipping email fetch.');
-    return [];
+    throw new Error('IMAP-inloggegevens zijn niet geconfigureerd in het .env-bestand.');
   }
 
   let connection;
   try {
     connection = await imaps.connect(config);
-    await connection.openBox('INBOX');
+    await connection.openBox(mailbox);
 
-    // Fetch the last 25 emails
     const searchCriteria = ['ALL'];
     const fetchOptions = {
       bodies: [''],
       markSeen: false,
     };
     
-    // get UIDs of all messages
     const results = await connection.search(searchCriteria, fetchOptions);
     const uids = results.map(res => res.attributes.uid);
-    const recentUids = uids.slice(-25);
+    // Sort UIDs descending to get the most recent ones
+    const sortedUids = uids.sort((a, b) => b - a);
+    const recentUids = sortedUids.slice(0, 100);
 
     if (recentUids.length === 0) {
         connection.end();
@@ -82,24 +81,25 @@ async function fetchEmails(): Promise<FetchEmailsOutput> {
     );
 
     connection.end();
-    return emails.reverse();
-  } catch (err) {
+    // Sort emails by date descending (newest first)
+    return emails.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  } catch (err: any) {
     console.error('Failed to fetch emails:', err);
     if (connection) {
       connection.end();
     }
-    // In case of error, return an empty array to prevent app crash
-    return [];
+    // Re-throw the error to be caught by the client
+    throw err;
   }
 }
 
 export const fetchEmailsFlow = ai.defineFlow(
   {
     name: 'fetchEmailsFlow',
-    inputSchema: z.void(),
+    inputSchema: z.string(),
     outputSchema: FetchEmailsOutputSchema,
   },
-  async () => {
-    return await fetchEmails();
+  async (mailbox) => {
+    return await fetchEmails(mailbox);
   }
 );

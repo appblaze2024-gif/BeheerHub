@@ -16,6 +16,7 @@ import {
   Settings,
   RefreshCw,
   Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -34,6 +35,7 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ComposeMailDialog } from '@/components/compose-mail-dialog';
 import { fetchEmailsFlow } from '@/ai/flows/fetch-emails-flow';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 // --- UPDATED TYPE ---
 type Mail = {
@@ -47,8 +49,8 @@ type Mail = {
 };
 
 const folders = [
-  { name: 'inbox', label: 'Postvak IN', icon: Inbox },
-  // { name: 'sent', label: 'Verzonden', icon: Send }, // Future feature
+  { name: 'inbox', label: 'Postvak IN', icon: Inbox, boxName: 'INBOX' },
+  { name: 'sent', label: 'Verzonden', icon: Send, boxName: 'INBOX.Sent' },
   // { name: 'drafts', label: 'Concepten', icon: File }, // Future feature
   // { name: 'junk', label: 'Ongewenst', icon: MailWarning }, // Future feature
   // { name: 'trash', label: 'Prullenbak', icon: Trash2 }, // Future feature
@@ -61,19 +63,25 @@ export default function MailPage() {
   const [selectedMail, setSelectedMail] = React.useState<Mail | null>(null);
   const [mails, setMails] = React.useState<Mail[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
   const fetchAndSetEmails = React.useCallback(async () => {
     setIsLoading(true);
+    setError(null);
     try {
-      const fetchedMails = await fetchEmailsFlow();
+      const folder = folders.find(f => f.name === selectedFolder);
+      if (!folder) {
+          throw new Error('Geselecteerde map niet gevonden.');
+      }
+      const fetchedMails = await fetchEmailsFlow(folder.boxName);
       setMails(fetchedMails);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to fetch emails:", error);
-      // Maybe show a toast to the user
+      setError(error.message || 'Kon e-mails niet ophalen.');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [selectedFolder]);
 
   React.useEffect(() => {
     fetchAndSetEmails();
@@ -107,9 +115,11 @@ export default function MailPage() {
                 >
                   <folder.icon className="h-4 w-4" />
                   {folder.label}
-                  <span className="ml-auto text-xs text-muted-foreground">
-                    {mails.length}
-                  </span>
+                  {!isLoading && !error && selectedFolder === folder.name && (
+                    <span className="ml-auto text-xs text-muted-foreground">
+                        {mails.length}
+                    </span>
+                  )}
                 </Button>
               ))}
             </nav>
@@ -139,6 +149,16 @@ export default function MailPage() {
                     <Loader2 className="h-8 w-8 animate-spin mb-4" />
                     <p>E-mails ophalen...</p>
                 </div>
+              ) : error ? (
+                <div className="p-4">
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Fout bij ophalen van e-mail</AlertTitle>
+                      <AlertDescription>
+                        {error}
+                      </AlertDescription>
+                    </Alert>
+                </div>
               ) : mails.length > 0 ? (
                 mails.map(mail => (
                   <button
@@ -167,7 +187,7 @@ export default function MailPage() {
               ) : (
                 <div className="p-8 text-center text-muted-foreground flex flex-col items-center justify-center h-full">
                   <Inbox className="mx-auto h-12 w-12 mb-4" />
-                  <p>Geen berichten in Postvak IN</p>
+                  <p>Geen berichten in {folders.find(f => f.name === selectedFolder)?.label || 'deze map'}</p>
                 </div>
               )}
             </div>
