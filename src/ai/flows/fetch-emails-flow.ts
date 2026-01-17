@@ -26,7 +26,7 @@ async function fetchEmails(mailbox: string): Promise<FetchEmailsOutput> {
       host: process.env.IMAP_HOST || '',
       port: parseInt(process.env.IMAP_PORT || '993', 10),
       tls: process.env.IMAP_TLS === 'true',
-      authTimeout: 3000,
+      authTimeout: 10000,
     },
   };
   
