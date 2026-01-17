@@ -35,9 +35,7 @@ const transporter = nodemailer.createTransport({
 export async function sendEmail(data: z.infer<typeof mailSchema>) {
   const parsedData = mailSchema.parse(data);
 
-  const fromDisplayName = parsedData.fromName
-    ? `${parsedData.fromName} namens BeheerHub`
-    : 'BeheerHub';
+  const fromDisplayName = parsedData.fromName || 'BeheerHub';
 
   if (!process.env.SMTP_HOST) {
     console.error('SMTP settings not configured. Email will not be sent.');
@@ -78,9 +76,7 @@ export async function sendEmail(data: z.infer<typeof mailSchema>) {
 export async function sendEmailWithAttachment(data: z.infer<typeof mailWithAttachmentSchema>) {
   const parsedData = mailWithAttachmentSchema.parse(data);
 
-  const fromDisplayName = parsedData.fromName
-    ? `${parsedData.fromName} namens BeheerHub`
-    : 'BeheerHub';
+  const fromDisplayName = parsedData.fromName || 'BeheerHub';
 
   if (!process.env.SMTP_HOST) {
     console.error('SMTP settings not configured. Email will not be sent.');
