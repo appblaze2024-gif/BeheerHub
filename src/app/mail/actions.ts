@@ -65,11 +65,9 @@ export async function sendEmail(data: z.infer<typeof mailSchema>) {
   try {
     await transporter.sendMail(mailOptions);
     return { success: true, message: 'Email sent successfully' };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error sending email:', error);
-    // In a real app, you might want to throw a more specific error
-    // or return a more detailed error message.
-    throw new Error('Failed to send email.');
+    return { success: false, message: `Verzenden van e-mail mislukt: ${error.message || 'Onbekende fout'}` };
   }
 }
 
@@ -117,8 +115,8 @@ export async function sendEmailWithAttachment(data: z.infer<typeof mailWithAttac
   try {
     await transporter.sendMail(mailOptions);
     return { success: true, message: 'Email with attachment sent successfully' };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error sending email with attachment:', error);
-    throw new Error('Failed to send email with attachment.');
+    return { success: false, message: `Verzenden van e-mail met bijlage mislukt: ${error.message || 'Onbekende fout'}` };
   }
 }

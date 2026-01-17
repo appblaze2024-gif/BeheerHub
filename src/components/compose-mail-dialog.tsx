@@ -54,27 +54,26 @@ export function ComposeMailDialog({ children }: { children: React.ReactNode }) {
 
   async function onSubmit(data: MailFormValues) {
     setIsSending(true);
-    try {
-      await sendEmail({
-        ...data,
-        fromName: user?.displayName || user?.email || 'BeheerHub Gebruiker',
-      });
+    const result = await sendEmail({
+      ...data,
+      fromName: user?.displayName || user?.email || undefined,
+    });
+
+    if (result.success) {
       toast({
         title: 'E-mail verzonden!',
         description: `Uw e-mail aan ${data.to} is succesvol in de wachtrij geplaatst.`,
       });
       form.reset();
       setOpen(false);
-    } catch (error) {
-      console.error(error);
+    } else {
       toast({
         variant: 'destructive',
         title: 'Fout bij verzenden',
-        description: 'Er is een fout opgetreden bij het verzenden van de e-mail.',
+        description: result.message || 'Er is een fout opgetreden bij het verzenden van de e-mail.',
       });
-    } finally {
-      setIsSending(false);
     }
+    setIsSending(false);
   }
 
   return (
@@ -94,7 +93,7 @@ export function ComposeMailDialog({ children }: { children: React.ReactNode }) {
                 <FormItem>
                   <FormLabel>Aan</FormLabel>
                   <FormControl>
-                    <Input placeholder="voorbeeld@email.com" {...field} />
+                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -137,38 +137,37 @@ export function MailMeldingDialog({
     if (!melding) return;
     setIsSubmitting(true);
 
-    try {
-      const pdfDataUri = generateMeldingPDF(melding);
-      const pdfBase64 = pdfDataUri.substring(pdfDataUri.indexOf(',') + 1);
+    const pdfDataUri = generateMeldingPDF(melding);
+    const pdfBase64 = pdfDataUri.substring(pdfDataUri.indexOf(',') + 1);
 
-      await sendEmailWithAttachment({
-        to: data.email,
-        cc: data.cc,
-        subject: `Melding Details: ${melding.intakenummer}`,
-        body: `Geachte lezer,\n\nIn de bijlage vindt u de details van melding ${melding.intakenummer}.\n\nMet vriendelijke groet,\nBeheerHub`,
-        attachment: {
-          content: pdfBase64,
-          filename: `melding_${melding.intakenummer}.pdf`,
-          type: 'application/pdf',
-        },
-        fromName: user?.displayName || user?.email || 'BeheerHub Gebruiker',
-      });
+    const result = await sendEmailWithAttachment({
+      to: data.email,
+      cc: data.cc,
+      subject: `Melding Details: ${melding.intakenummer}`,
+      body: `Geachte lezer,\n\nIn de bijlage vindt u de details van melding ${melding.intakenummer}.\n\nMet vriendelijke groet,\n${user?.displayName || 'BeheerHub'}`,
+      attachment: {
+        content: pdfBase64,
+        filename: `melding_${melding.intakenummer}.pdf`,
+        type: 'application/pdf',
+      },
+      fromName: user?.displayName || user?.email || undefined,
+    });
 
+    if (result.success) {
       toast({
         title: 'E-mail verzonden!',
         description: `De melding is succesvol verstuurd naar ${data.email}.`,
       });
       onOpenChange(false);
-    } catch (error) {
-      console.error('Fout bij versturen e-mail:', error);
+    } else {
       toast({
         variant: 'destructive',
         title: 'Fout bij verzenden',
-        description: 'Er is een onverwachte fout opgetreden.',
+        description: result.message || 'Er is een onverwachte fout opgetreden.',
       });
-    } finally {
-      setIsSubmitting(false);
     }
+    
+    setIsSubmitting(false);
   };
 
   return (
