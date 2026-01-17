@@ -6,12 +6,8 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Loader2, Send } from 'lucide-react';
 import {
-  useFirestore,
   useUser,
-  useCollection,
 } from '@/firebase';
-import { collection } from 'firebase/firestore';
-import type { Medewerker } from '@/lib/types';
 import { sendEmail } from '@/app/mail/actions';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -34,17 +30,10 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Textarea } from './ui/textarea';
 
 const mailSchema = z.object({
-  to: z.string().email({ message: 'Selecteer een geldige ontvanger.' }),
+  to: z.string().email({ message: 'Voer een geldig e-mailadres in.' }),
   cc: z.string().optional(),
   subject: z.string().min(1, { message: 'Onderwerp is verplicht.' }),
   body: z.string().min(1, { message: 'Bericht mag niet leeg zijn.' }),
@@ -53,18 +42,10 @@ const mailSchema = z.object({
 type MailFormValues = z.infer<typeof mailSchema>;
 
 export function ComposeMailDialog({ children }: { children: React.ReactNode }) {
-  const firestore = useFirestore();
   const { toast } = useToast();
   const { user } = useUser();
   const [open, setOpen] = React.useState(false);
   const [isSending, setIsSending] = React.useState(false);
-
-  const medewerkersCollection = React.useMemo(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'medewerkers');
-  }, [firestore]);
-
-  const { data: medewerkers, isLoading: isLoadingMedewerkers } = useCollection<Medewerker>(medewerkersCollection);
 
   const form = useForm<MailFormValues>({
     resolver: zodResolver(mailSchema),
@@ -96,10 +77,6 @@ export function ComposeMailDialog({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const validMedewerkers = React.useMemo(() => {
-    return medewerkers?.filter(m => m.email && m.status === 'Actief') || [];
-  }, [medewerkers]);
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
@@ -116,24 +93,9 @@ export function ComposeMailDialog({ children }: { children: React.ReactNode }) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Aan</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingMedewerkers}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecteer een ontvanger" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {isLoadingMedewerkers ? (
-                        <SelectItem value="loading" disabled>Medewerkers laden...</SelectItem>
-                      ) : (
-                        validMedewerkers.map(m => (
-                          <SelectItem key={m.id} value={m.email!}>
-                            {m.voornaam} {m.achternaam} ({m.email})
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <Input placeholder="voorbeeld@email.com" {...field} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
