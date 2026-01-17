@@ -45,24 +45,19 @@ async function fetchEmails(mailbox: string): Promise<FetchEmailsOutput> {
       markSeen: false,
     };
     
-    const results = await connection.search(searchCriteria, fetchOptions);
-    const uids = results.map(res => res.attributes.uid);
-    // Sort UIDs descending to get the most recent ones
-    const sortedUids = uids.sort((a, b) => b - a);
-    const recentUids = sortedUids.slice(0, 100);
+    const allMessages = await connection.search(searchCriteria, fetchOptions);
+    
+    const sortedMessages = allMessages.sort((a, b) => b.attributes.uid - a.attributes.uid);
+    
+    const recentMessages = sortedMessages.slice(0, 100);
 
-    if (recentUids.length === 0) {
+    if (recentMessages.length === 0) {
         connection.end();
         return [];
     }
     
-    const messages = await connection.fetch(recentUids, {
-        bodies: [''],
-        markSeen: false,
-    });
-
     const emails = await Promise.all(
-      messages.map(async (item) => {
+      recentMessages.map(async (item) => {
         const all = item.parts.find((part) => part.which === '');
         const id = item.attributes.uid;
         const body = all ? all.body : '';
