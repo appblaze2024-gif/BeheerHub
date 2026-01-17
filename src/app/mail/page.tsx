@@ -50,7 +50,7 @@ type Mail = {
 
 const folders = [
   { name: 'inbox', label: 'Postvak IN', icon: Inbox, boxName: 'INBOX' },
-  { name: 'sent', label: 'Verzonden', icon: Send, boxName: 'INBOX/Sent' },
+  { name: 'sent', label: 'Verzonden', icon: Send, boxName: 'Sent' },
   // { name: 'drafts', label: 'Concepten', icon: File }, // Future feature
   // { name: 'junk', label: 'Ongewenst', icon: MailWarning }, // Future feature
   // { name: 'trash', label: 'Prullenbak', icon: Trash2 }, // Future feature
