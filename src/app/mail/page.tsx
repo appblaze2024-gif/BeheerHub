@@ -35,11 +35,15 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ComposeMailDialog } from '@/components/compose-mail-dialog';
 import { fetchEmailsFlow } from '@/ai/flows/fetch-emails-flow';
+import { deleteEmailFlow } from '@/ai/flows/delete-email-flow';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useToast } from '@/components/ui/use-toast';
+
 
 // --- UPDATED TYPE ---
 type Mail = {
   id: string;
+  uid: number;
   from: string;
   fromName: string;
   subject: string;
@@ -64,6 +68,8 @@ export default function MailPage() {
   const [mails, setMails] = React.useState<Mail[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const { toast } = useToast();
 
   const fetchAndSetEmails = React.useCallback(async () => {
     setIsLoading(true);
@@ -86,6 +92,42 @@ export default function MailPage() {
   React.useEffect(() => {
     fetchAndSetEmails();
   }, [fetchAndSetEmails]);
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!selectedMail) return;
+
+    const folder = folders.find(f => f.name === selectedFolder);
+    if (!folder) return;
+    
+    setIsDeleting(true);
+
+    try {
+      await deleteEmailFlow({
+        mailbox: folder.boxName,
+        uid: selectedMail.uid,
+      });
+
+      toast({
+        title: 'E-mail verwijderd',
+        description: 'De e-mail is succesvol verwijderd.',
+      });
+      
+      // Refresh list
+      setMails(currentMails => currentMails.filter(m => m.uid !== selectedMail.uid));
+      setSelectedMail(null);
+
+    } catch (error: any) {
+      console.error("Failed to delete email:", error);
+      toast({
+        variant: "destructive",
+        title: 'Fout bij verwijderen',
+        description: error.message || 'Kon de e-mail niet verwijderen.',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
 
   return (
@@ -221,7 +263,16 @@ export default function MailPage() {
                       </TooltipProvider>
                    </div>
                    <Separator orientation="vertical" className="mx-2 h-6" />
-                   <Button variant="ghost" size="icon" disabled={!selectedMail}><Trash2 className="h-4 w-4" /></Button>
+                   <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" disabled={!selectedMail || isDeleting} onClick={handleDelete}>
+                            {isDeleting ? <Loader2 className='h-4 w-4 animate-spin' /> : <Trash2 className="h-4 w-4" />}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Verwijderen</p></TooltipContent>
+                      </Tooltip>
+                   </TooltipProvider>
                 </div>
                 <div className="p-4 space-y-4">
                   <div className="flex items-start gap-4">

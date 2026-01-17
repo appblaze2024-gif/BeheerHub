@@ -7,6 +7,7 @@ import { simpleParser } from 'mailparser';
 
 const EmailSchema = z.object({
   id: z.string(),
+  uid: z.number(),
   from: z.string(),
   fromName: z.string(),
   subject: z.string(),
@@ -59,12 +60,13 @@ async function fetchEmails(mailbox: string): Promise<FetchEmailsOutput> {
     const emails = await Promise.all(
       recentMessages.map(async (item) => {
         const all = item.parts.find((part) => part.which === '');
-        const id = item.attributes.uid;
+        const uid = item.attributes.uid;
         const body = all ? all.body : '';
         const parsed = await simpleParser(body);
 
         return {
-          id: parsed.messageId || id.toString(),
+          id: parsed.messageId || uid.toString(),
+          uid: uid,
           from: parsed.from?.value[0]?.address || 'Unknown Sender',
           fromName: parsed.from?.value[0]?.name || 'Unknown Sender',
           subject: parsed.subject || '(No Subject)',
