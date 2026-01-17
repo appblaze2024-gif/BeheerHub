@@ -19,104 +19,70 @@ const mailWithAttachmentSchema = mailSchema.extend({
   }),
 });
 
-// Create a transporter object using SMTP transport
-// The user needs to configure these in their environment variables
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT),
-  secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+async function sendMail(isAttachment: boolean, data: any) {
+  const {
+    SMTP_HOST,
+    SMTP_PORT,
+    SMTP_USER,
+    SMTP_PASS
+  } = process.env;
 
-
-export async function sendEmail(data: z.infer<typeof mailSchema>) {
-  const parsedData = mailSchema.parse(data);
-
-  const fromDisplayName = parsedData.fromName || 'BeheerHub';
-
-  if (!process.env.SMTP_HOST) {
-    console.error('SMTP settings not configured. Email will not be sent.');
-    console.log('--- SIMULATING Email ---');
-    console.log(`From: "${fromDisplayName}" <${process.env.SMTP_FROM_EMAIL || 'not-configured'}>`);
-    console.log(`To: ${parsedData.to}`);
-    if (parsedData.cc) {
-      console.log(`CC: ${parsedData.cc}`);
-    }
-    console.log(`Subject: ${parsedData.subject}`);
-    console.log('--- Body ---');
-    console.log(parsedData.body);
-    console.log('--- Email "Sent" ---');
-    // Simulate success for the user
-    return { success: true, message: 'Email "sent" (simulation).' };
+  if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS) {
+    const errorMessage = 'SMTP-instellingen zijn niet volledig geconfigureerd in het .env-bestand.';
+    console.error(errorMessage);
+    return { success: false, message: errorMessage };
   }
 
-  const mailOptions = {
-    from: `"${fromDisplayName}" <${process.env.SMTP_FROM_EMAIL}>`, // sender address
-    to: parsedData.to, // list of receivers
-    cc: parsedData.cc,
-    subject: parsedData.subject, // Subject line
-    text: parsedData.body, // plain text body
-    html: `<p>${parsedData.body.replace(/\n/g, '<br>')}</p>`, // html body
+  const transporter = nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: Number(SMTP_PORT),
+    secure: SMTP_PORT === '465',
+    auth: {
+      user: SMTP_USER,
+      pass: SMTP_PASS,
+    },
+  });
+
+  const fromDisplayName = data.fromName || SMTP_USER;
+
+  const mailOptions: nodemailer.SendMailOptions = {
+    from: {
+      name: fromDisplayName,
+      address: SMTP_USER,
+    },
+    to: data.to,
+    cc: data.cc,
+    subject: data.subject,
+    text: data.body,
+    html: `<p>${data.body.replace(/\n/g, '<br>')}</p>`,
   };
-  
+
+  if (isAttachment) {
+    mailOptions.attachments = [
+      {
+        filename: data.attachment.filename,
+        content: data.attachment.content,
+        encoding: 'base64',
+        contentType: data.attachment.type,
+      },
+    ];
+  }
+
   try {
     await transporter.sendMail(mailOptions);
-    return { success: true, message: 'Email sent successfully' };
+    return { success: true, message: `E-mail ${isAttachment ? 'met bijlage ' : ''}succesvol verzonden` };
   } catch (error: any) {
-    console.error('Error sending email:', error);
+    console.error('Fout bij verzenden e-mail:', error);
     return { success: false, message: `Verzenden van e-mail mislukt: ${error.message || 'Onbekende fout'}` };
   }
 }
 
+export async function sendEmail(data: z.infer<typeof mailSchema>) {
+  const parsedData = mailSchema.parse(data);
+  return sendMail(false, parsedData);
+}
+
 export async function sendEmailWithAttachment(data: z.infer<typeof mailWithAttachmentSchema>) {
   const parsedData = mailWithAttachmentSchema.parse(data);
-
-  const fromDisplayName = parsedData.fromName || 'BeheerHub';
-
-  if (!process.env.SMTP_HOST) {
-    console.error('SMTP settings not configured. Email will not be sent.');
-    console.log('--- SIMULATING Email with Attachment ---');
-    console.log(`From: "${fromDisplayName}" <${process.env.SMTP_FROM_EMAIL || 'not-configured'}>`);
-    console.log(`To: ${parsedData.to}`);
-    if (parsedData.cc) {
-      console.log(`CC: ${parsedData.cc}`);
-    }
-    console.log(`Subject: ${parsedData.subject}`);
-    console.log('--- Body ---');
-    console.log(parsedData.body);
-    console.log('--- Attachment ---');
-    console.log(`Filename: ${parsedData.attachment.filename}`);
-    console.log(`Type: ${parsedData.attachment.type}`);
-    console.log('--- Email "Sent" ---');
-    // Simulate success for the user
-    return { success: true, message: 'Email with attachment "sent" (simulation).' };
-  }
-
-  const mailOptions = {
-    from: `"${fromDisplayName}" <${process.env.SMTP_FROM_EMAIL}>`,
-    to: parsedData.to,
-    cc: parsedData.cc,
-    subject: parsedData.subject,
-    text: parsedData.body,
-    html: `<p>${parsedData.body.replace(/\n/g, '<br>')}</p>`,
-    attachments: [
-      {
-        filename: parsedData.attachment.filename,
-        content: parsedData.attachment.content,
-        encoding: 'base64' as const,
-        contentType: parsedData.attachment.type,
-      },
-    ],
-  };
-
-  try {
-    await transporter.sendMail(mailOptions);
-    return { success: true, message: 'Email with attachment sent successfully' };
-  } catch (error: any) {
-    console.error('Error sending email with attachment:', error);
-    return { success: false, message: `Verzenden van e-mail met bijlage mislukt: ${error.message || 'Onbekende fout'}` };
-  }
+  return sendMail(true, parsedData);
 }
