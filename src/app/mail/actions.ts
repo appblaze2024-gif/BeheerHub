@@ -9,6 +9,7 @@ const mailSchema = z.object({
   subject: z.string(),
   body: z.string(),
   fromName: z.string().optional(),
+  fromEmail: z.string().email().optional(),
 });
 
 const mailWithAttachmentSchema = mailSchema.extend({
@@ -55,6 +56,7 @@ async function sendMail(isAttachment: boolean, data: any) {
     subject: data.subject,
     text: data.body,
     html: `<p>${data.body.replace(/\n/g, '<br>')}</p>`,
+    replyTo: data.fromEmail || undefined,
   };
 
   if (isAttachment) {

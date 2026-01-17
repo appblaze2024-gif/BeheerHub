@@ -57,6 +57,7 @@ export function ComposeMailDialog({ children }: { children: React.ReactNode }) {
     const result = await sendEmail({
       ...data,
       fromName: user?.displayName || user?.email || undefined,
+      fromEmail: user?.email || undefined,
     });
 
     if (result.success) {
