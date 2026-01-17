@@ -13,6 +13,9 @@ import {
   Reply,
   ReplyAll,
   Forward,
+  Settings,
+  RefreshCw,
+  Loader2,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -30,42 +33,52 @@ import {
 } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ComposeMailDialog } from '@/components/compose-mail-dialog';
+import { fetchEmailsFlow } from '@/ai/flows/fetch-emails-flow';
 
-
-// --- MOCK DATA ---
+// --- UPDATED TYPE ---
 type Mail = {
   id: string;
-  from?: string;
+  from: string;
   fromName: string;
-  to?: string;
   subject: string;
   body: string;
-  date: Date;
+  date: string; // ISO string
   read: boolean;
-  folder: string;
 };
-
-const mockMails: Mail[] = [];
 
 const folders = [
   { name: 'inbox', label: 'Postvak IN', icon: Inbox },
-  { name: 'sent', label: 'Verzonden', icon: Send },
-  { name: 'drafts', label: 'Concepten', icon: File },
-  { name: 'junk', label: 'Ongewenst', icon: MailWarning },
-  { name: 'trash', label: 'Prullenbak', icon: Trash2 },
-  { name: 'archive', label: 'Archief', icon: Archive },
+  // { name: 'sent', label: 'Verzonden', icon: Send }, // Future feature
+  // { name: 'drafts', label: 'Concepten', icon: File }, // Future feature
+  // { name: 'junk', label: 'Ongewenst', icon: MailWarning }, // Future feature
+  // { name: 'trash', label: 'Prullenbak', icon: Trash2 }, // Future feature
+  // { name: 'archive', label: 'Archief', icon: Archive }, // Future feature
 ];
 
 
 export default function MailPage() {
   const [selectedFolder, setSelectedFolder] = React.useState('inbox');
   const [selectedMail, setSelectedMail] = React.useState<Mail | null>(null);
+  const [mails, setMails] = React.useState<Mail[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
 
-  const mailsInFolder = React.useMemo(() => {
-    return mockMails
-      .filter(m => m.folder === selectedFolder)
-      .sort((a, b) => b.date.getTime() - a.date.getTime());
-  }, [selectedFolder]);
+  const fetchAndSetEmails = React.useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const fetchedMails = await fetchEmailsFlow();
+      setMails(fetchedMails);
+    } catch (error) {
+      console.error("Failed to fetch emails:", error);
+      // Maybe show a toast to the user
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    fetchAndSetEmails();
+  }, [fetchAndSetEmails]);
+
 
   return (
     <div className="flex flex-col flex-1 min-h-0 h-full">
@@ -95,7 +108,7 @@ export default function MailPage() {
                   <folder.icon className="h-4 w-4" />
                   {folder.label}
                   <span className="ml-auto text-xs text-muted-foreground">
-                    {mockMails.filter(m => m.folder === folder.name).length}
+                    {mails.length}
                   </span>
                 </Button>
               ))}
@@ -109,10 +122,25 @@ export default function MailPage() {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input placeholder="Zoeken..." className="pl-9" />
               </div>
+              <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={fetchAndSetEmails} disabled={isLoading}>
+                          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>E-mails vernieuwen</p></TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
             <div className="flex-1 overflow-y-auto">
-              {mailsInFolder.length > 0 ? (
-                mailsInFolder.map(mail => (
+              {isLoading ? (
+                <div className="p-8 text-center text-muted-foreground flex flex-col items-center justify-center h-full">
+                    <Loader2 className="h-8 w-8 animate-spin mb-4" />
+                    <p>E-mails ophalen...</p>
+                </div>
+              ) : mails.length > 0 ? (
+                mails.map(mail => (
                   <button
                     key={mail.id}
                     className={cn(
@@ -127,7 +155,7 @@ export default function MailPage() {
                         <div className="font-semibold">{mail.fromName}</div>
                       </div>
                       <div className="ml-auto text-xs text-muted-foreground">
-                        {formatDistanceToNow(mail.date, { addSuffix: true, locale: nl })}
+                        {formatDistanceToNow(new Date(mail.date), { addSuffix: true, locale: nl })}
                       </div>
                     </div>
                     <div className="text-xs font-medium">{mail.subject}</div>
@@ -137,9 +165,9 @@ export default function MailPage() {
                   </button>
                 ))
               ) : (
-                <div className="p-8 text-center text-muted-foreground">
-                  <Inbox className="mx-auto h-12 w-12" />
-                  <p className="mt-2">Geen berichten in deze map</p>
+                <div className="p-8 text-center text-muted-foreground flex flex-col items-center justify-center h-full">
+                  <Inbox className="mx-auto h-12 w-12 mb-4" />
+                  <p>Geen berichten in Postvak IN</p>
                 </div>
               )}
             </div>
@@ -183,11 +211,11 @@ export default function MailPage() {
                     <div className="grid gap-1">
                       <p className="font-semibold">{selectedMail.fromName}</p>
                       <p className="text-xs text-muted-foreground">
-                        Aan: {selectedMail.to || 'Mij'}
+                        Aan: Mij
                       </p>
                     </div>
                      <div className="ml-auto text-xs text-muted-foreground">
-                        {format(selectedMail.date, 'PPpp', { locale: nl })}
+                        {format(new Date(selectedMail.date), 'PPpp', { locale: nl })}
                       </div>
                   </div>
                    <h2 className="text-xl font-bold">{selectedMail.subject}</h2>
@@ -205,7 +233,6 @@ export default function MailPage() {
               </div>
             )}
           </div>
-
         </div>
       </div>
     </div>
