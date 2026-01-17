@@ -3,6 +3,12 @@
 import { z } from 'zod';
 import nodemailer from 'nodemailer';
 
+const attachmentSchema = z.object({
+  content: z.string(), // base64 encoded content
+  filename: z.string(),
+  type: z.string(),
+});
+
 const mailSchema = z.object({
   to: z.string().email(),
   cc: z.string().optional(),
@@ -10,17 +16,11 @@ const mailSchema = z.object({
   body: z.string(),
   fromName: z.string().optional(),
   fromEmail: z.string().email().optional(),
+  attachments: z.array(attachmentSchema).optional(),
 });
 
-const mailWithAttachmentSchema = mailSchema.extend({
-  attachment: z.object({
-    content: z.string(), // base64 encoded content
-    filename: z.string(),
-    type: z.string(),
-  }),
-});
-
-async function sendMail(isAttachment: boolean, data: any) {
+export async function sendEmail(data: z.infer<typeof mailSchema>) {
+  const parsedData = mailSchema.parse(data);
   const {
     SMTP_HOST,
     SMTP_PORT,
@@ -44,47 +44,35 @@ async function sendMail(isAttachment: boolean, data: any) {
     },
   });
 
-  const fromDisplayName = data.fromName || SMTP_USER;
+  const fromDisplayName = parsedData.fromName || SMTP_USER;
 
   const mailOptions: nodemailer.SendMailOptions = {
     from: {
       name: fromDisplayName,
       address: SMTP_USER,
     },
-    to: data.to,
-    cc: data.cc,
-    subject: data.subject,
-    text: data.body,
-    html: `<p>${data.body.replace(/\n/g, '<br>')}</p>`,
-    replyTo: data.fromEmail || undefined,
+    to: parsedData.to,
+    cc: parsedData.cc,
+    subject: parsedData.subject,
+    text: parsedData.body,
+    html: `<p>${parsedData.body.replace(/\n/g, '<br>')}</p>`,
+    replyTo: parsedData.fromEmail || undefined,
   };
 
-  if (isAttachment) {
-    mailOptions.attachments = [
-      {
-        filename: data.attachment.filename,
-        content: data.attachment.content,
+  if (parsedData.attachments && parsedData.attachments.length > 0) {
+    mailOptions.attachments = parsedData.attachments.map(att => ({
+        filename: att.filename,
+        content: att.content,
         encoding: 'base64',
-        contentType: data.attachment.type,
-      },
-    ];
+        contentType: att.type,
+      }));
   }
 
   try {
     await transporter.sendMail(mailOptions);
-    return { success: true, message: `E-mail ${isAttachment ? 'met bijlage ' : ''}succesvol verzonden` };
+    return { success: true, message: `E-mail succesvol verzonden` };
   } catch (error: any) {
     console.error('Fout bij verzenden e-mail:', error);
     return { success: false, message: `Verzenden van e-mail mislukt: ${error.message || 'Onbekende fout'}` };
   }
-}
-
-export async function sendEmail(data: z.infer<typeof mailSchema>) {
-  const parsedData = mailSchema.parse(data);
-  return sendMail(false, parsedData);
-}
-
-export async function sendEmailWithAttachment(data: z.infer<typeof mailWithAttachmentSchema>) {
-  const parsedData = mailWithAttachmentSchema.parse(data);
-  return sendMail(true, parsedData);
 }

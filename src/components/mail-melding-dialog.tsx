@@ -29,7 +29,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
-import { sendEmailWithAttachment } from '@/app/mail/actions';
+import { sendEmail } from '@/app/mail/actions';
 import { useUser } from '@/firebase';
 
 // Define Melding type here or import it
@@ -140,16 +140,16 @@ export function MailMeldingDialog({
     const pdfDataUri = generateMeldingPDF(melding);
     const pdfBase64 = pdfDataUri.substring(pdfDataUri.indexOf(',') + 1);
 
-    const result = await sendEmailWithAttachment({
+    const result = await sendEmail({
       to: data.email,
       cc: data.cc,
       subject: `Melding Details: ${melding.intakenummer}`,
       body: `Geachte lezer,\n\nIn de bijlage vindt u de details van melding ${melding.intakenummer}.\n\nMet vriendelijke groet,\n${user?.displayName || 'BeheerHub'}`,
-      attachment: {
+      attachments: [{
         content: pdfBase64,
         filename: `melding_${melding.intakenummer}.pdf`,
         type: 'application/pdf',
-      },
+      }],
       fromName: user?.displayName || user?.email || undefined,
       fromEmail: user?.email || undefined,
     });

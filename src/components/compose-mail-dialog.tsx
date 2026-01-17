@@ -4,7 +4,7 @@ import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Loader2, Send } from 'lucide-react';
+import { Loader2, Send, Paperclip, X } from 'lucide-react';
 import {
   useUser,
 } from '@/firebase';
@@ -41,40 +41,89 @@ const mailSchema = z.object({
 
 type MailFormValues = z.infer<typeof mailSchema>;
 
+// Helper to convert file to base64
+const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => {
+            const result = reader.result as string;
+            resolve(result.split(',')[1]);
+        };
+        reader.onerror = error => reject(error);
+    });
+};
+
 export function ComposeMailDialog({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
   const { user } = useUser();
   const [open, setOpen] = React.useState(false);
   const [isSending, setIsSending] = React.useState(false);
+  const [attachments, setAttachments] = React.useState<File[]>([]);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const form = useForm<MailFormValues>({
     resolver: zodResolver(mailSchema),
     defaultValues: { to: '', cc: '', subject: '', body: '' },
   });
 
+  React.useEffect(() => {
+    if (!open) {
+      form.reset();
+      setAttachments([]);
+      setIsSending(false);
+    }
+  }, [open, form]);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      setAttachments(prev => [...prev, ...Array.from(event.target.files!)]);
+      // Reset file input to allow selecting the same file again
+      event.target.value = '';
+    }
+  };
+
+  const removeAttachment = (fileToRemove: File) => {
+    setAttachments(prev => prev.filter(file => file !== fileToRemove));
+  };
+
   async function onSubmit(data: MailFormValues) {
     setIsSending(true);
-    const result = await sendEmail({
-      ...data,
-      fromName: user?.displayName || user?.email || undefined,
-      fromEmail: user?.email || undefined,
-    });
 
-    if (result.success) {
-      toast({
-        title: 'E-mail verzonden!',
-        description: `Uw e-mail aan ${data.to} is succesvol in de wachtrij geplaatst.`,
-      });
-      form.reset();
-      setOpen(false);
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Fout bij verzenden',
-        description: result.message || 'Er is een fout opgetreden bij het verzenden van de e-mail.',
-      });
+    try {
+        const attachmentPayloads = await Promise.all(
+            attachments.map(async (file) => ({
+                content: await fileToBase64(file),
+                filename: file.name,
+                type: file.type,
+            }))
+        );
+
+        const result = await sendEmail({
+            ...data,
+            fromName: user?.displayName || user?.email || undefined,
+            fromEmail: user?.email || undefined,
+            attachments: attachmentPayloads,
+        });
+
+        if (result.success) {
+            toast({
+                title: 'E-mail verzonden!',
+                description: `Uw e-mail aan ${data.to} is succesvol in de wachtrij geplaatst.`,
+            });
+            setOpen(false);
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error: any) {
+         toast({
+            variant: 'destructive',
+            title: 'Fout bij verzenden',
+            description: error.message || 'Er is een fout opgetreden bij het verzenden van de e-mail.',
+        });
+    } finally {
+        setIsSending(false);
     }
-    setIsSending(false);
   }
 
   return (
@@ -139,12 +188,44 @@ export function ComposeMailDialog({ children }: { children: React.ReactNode }) {
                 </FormItem>
               )}
             />
-            <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isSending}>Annuleren</Button>
-              <Button type="submit" disabled={isSending}>
-                {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                Verstuur
-              </Button>
+
+            {attachments.length > 0 && (
+              <div className="space-y-2">
+                <FormLabel>Bijlagen</FormLabel>
+                <div className="space-y-2 rounded-md border p-2 max-h-32 overflow-y-auto">
+                  {attachments.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between text-sm p-1 hover:bg-muted rounded">
+                      <span className="truncate">{file.name}</span>
+                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => removeAttachment(file)}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            <DialogFooter className="sm:justify-between">
+                <div>
+                     <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSending}>
+                        <Paperclip className="mr-2 h-4 w-4" />
+                        Bijlage
+                     </Button>
+                     <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        className="hidden"
+                        onChange={handleFileChange}
+                     />
+                </div>
+                <div className="flex gap-2">
+                    <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isSending}>Annuleren</Button>
+                    <Button type="submit" disabled={isSending}>
+                        {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                        Verstuur
+                    </Button>
+                </div>
             </DialogFooter>
           </form>
         </Form>
