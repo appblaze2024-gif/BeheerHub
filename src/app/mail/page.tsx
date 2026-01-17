@@ -172,7 +172,7 @@ function ComposeMailDialog({ children }: { children: React.ReactNode }) {
                   <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingMedewerkers}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Selecteer een ontvanger" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -198,7 +198,7 @@ function ComposeMailDialog({ children }: { children: React.ReactNode }) {
                 <FormItem>
                   <FormLabel>Cc</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input placeholder="" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -246,7 +246,7 @@ function ComposeMailDialog({ children }: { children: React.ReactNode }) {
 
 export default function MailPage() {
   const [selectedFolder, setSelectedFolder] = React.useState('inbox');
-  const [selectedMail, setSelectedMail] = React.useState<Mail | null>(mockMails.find(m => m.folder === 'inbox') || null);
+  const [selectedMail, setSelectedMail] = React.useState<Mail | null>(null);
 
   const mailsInFolder = React.useMemo(() => {
     return mockMails
@@ -256,8 +256,7 @@ export default function MailPage() {
 
   return (
     <div className="flex flex-col flex-1 min-h-0 h-full">
-      <PageHeader title="Interne Mail" />
-      <div className="flex-1 overflow-hidden px-6 pb-6 h-full">
+      <div className="flex-1 overflow-hidden p-6 h-full">
         <div className="grid grid-cols-[250px_400px_1fr] h-full border rounded-lg">
           
           {/* Panel 1: Folders */}
