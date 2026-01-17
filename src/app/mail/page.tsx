@@ -13,7 +13,6 @@ import {
   Reply,
   ReplyAll,
   Forward,
-  Settings,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -31,7 +30,6 @@ import {
 } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ComposeMailDialog } from '@/components/compose-mail-dialog';
-import { MailSettingsDialog } from '@/components/mail-settings-dialog';
 
 
 // --- MOCK DATA ---
@@ -111,11 +109,6 @@ export default function MailPage() {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input placeholder="Zoeken..." className="pl-9" />
               </div>
-              <MailSettingsDialog>
-                <Button variant="ghost" size="icon">
-                  <Settings className="h-4 w-4" />
-                </Button>
-              </MailSettingsDialog>
             </div>
             <div className="flex-1 overflow-y-auto">
               {mailsInFolder.length > 0 ? (
