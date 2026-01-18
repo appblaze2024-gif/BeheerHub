@@ -21,6 +21,13 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
+type UserProfile = {
+  displayName?: string;
+  firstName?: string;
+  lastName?: string;
+};
+
+
 export default function SettingsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
@@ -32,9 +39,7 @@ export default function SettingsPage() {
     return doc(firestore, 'users', user.uid);
   }, [user, firestore]);
 
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<{
-    displayName?: string;
-  }>(userProfileRef);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -45,12 +50,12 @@ export default function SettingsPage() {
   });
 
   React.useEffect(() => {
-    if (userProfile?.displayName) {
-      const nameParts = userProfile.displayName.split(' ');
-      const firstName = nameParts.shift() || '';
-      const lastName = nameParts.join(' ');
-      form.reset({ firstName, lastName });
-    } else if (user?.displayName) {
+    if (userProfile) {
+      form.reset({
+        firstName: userProfile.firstName || '',
+        lastName: userProfile.lastName || '',
+      });
+    } else if (user?.displayName) { // Fallback for first-time users
         const nameParts = user.displayName.split(' ');
         const firstName = nameParts.shift() || '';
         const lastName = nameParts.join(' ');
@@ -64,7 +69,11 @@ export default function SettingsPage() {
     setIsSaving(true);
     const displayName = `${data.firstName} ${data.lastName}`.trim();
     try {
-      await updateDocumentNonBlocking(userProfileRef, { displayName });
+      await updateDocumentNonBlocking(userProfileRef, { 
+        firstName: data.firstName,
+        lastName: data.lastName,
+        displayName: displayName 
+      });
       toast({
         title: 'Profiel opgeslagen',
         description: 'Uw weergavenaam is succesvol bijgewerkt.',

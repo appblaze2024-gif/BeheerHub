@@ -113,6 +113,12 @@ const generateMeldingPDF = (melding: Melding): string => {
   return doc.output('datauristring');
 };
 
+type UserProfileData = {
+  displayName?: string;
+  firstName?: string;
+  lastName?: string;
+};
+
 export function MailMeldingDialog({
   open,
   onOpenChange,
@@ -128,7 +134,7 @@ export function MailMeldingDialog({
     return doc(firestore, 'users', user.uid);
   }, [user, firestore]);
 
-  const { data: userProfile } = useDoc<{ displayName?: string }>(userProfileRef);
+  const { data: userProfile } = useDoc<UserProfileData>(userProfileRef);
 
   const form = useForm<MailFormValues>({
     resolver: zodResolver(mailFormSchema),
@@ -157,8 +163,18 @@ export function MailMeldingDialog({
     const pdfDataUri = generateMeldingPDF(melding);
     const pdfBase64 = pdfDataUri.substring(pdfDataUri.indexOf(',') + 1);
     
-    const senderName = userProfile?.displayName || user.email;
-    const emailBody = `Geachte lezer,\n\nIn de bijlage vindt u de details van melding ${melding.intakenummer}.\n\nMet vriendelijke groet,\n${senderName}`;
+    let senderName = user.email || 'Anoniem';
+    let signatureName = 'Het BeheerHub Team';
+
+    if (userProfile?.firstName && userProfile?.lastName) {
+      senderName = `${userProfile.firstName} ${userProfile.lastName}`;
+      signatureName = senderName;
+    } else if (userProfile?.displayName) {
+      senderName = userProfile.displayName;
+      signatureName = senderName;
+    }
+    
+    const emailBody = `Geachte lezer,\n\nIn de bijlage vindt u de details van melding ${melding.intakenummer}.\n\nMet vriendelijke groet,\n${signatureName}`;
 
     const result = await sendEmail({
       to: data.email,

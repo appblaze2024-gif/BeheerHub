@@ -67,11 +67,20 @@ function AppLayout({ children }: { children: React.ReactNode }) {
       !userProfile &&
       userProfileRef
     ) {
+      let firstName = '';
+      let lastName = '';
+      if (user.displayName) {
+        const nameParts = user.displayName.split(' ');
+        firstName = nameParts.shift() || '';
+        lastName = nameParts.join(' ');
+      }
       const initialProfile = {
         id: user.uid,
         email: user.email,
         displayName: user.displayName,
-        sidebarCollapsed: true, // Default to collapsed
+        firstName,
+        lastName,
+        sidebarCollapsed: true,
       };
       setDocumentNonBlocking(userProfileRef, initialProfile, { merge: true });
     }

@@ -61,6 +61,13 @@ interface ComposeMailDialogProps {
   initialData?: Partial<MailFormValues & { attachments: EmailAttachment[] }>;
 }
 
+type UserProfileData = {
+  displayName?: string;
+  firstName?: string;
+  lastName?: string;
+};
+
+
 export function ComposeMailDialog({ open, onOpenChange, initialData, children }: ComposeMailDialogProps) {
   const { toast } = useToast();
   const { user } = useUser();
@@ -75,7 +82,7 @@ export function ComposeMailDialog({ open, onOpenChange, initialData, children }:
     return doc(firestore, 'users', user.uid);
   }, [user, firestore]);
 
-  const { data: userProfile } = useDoc<{ displayName?: string }>(userProfileRef);
+  const { data: userProfile } = useDoc<UserProfileData>(userProfileRef);
 
   const form = useForm<MailFormValues>({
     resolver: zodResolver(mailSchema),
@@ -137,7 +144,13 @@ export function ComposeMailDialog({ open, onOpenChange, initialData, children }:
 
         const allAttachments = [...newAttachmentPayloads, ...forwardedAttachmentPayloads];
 
-        const senderName = userProfile?.displayName || user.email;
+        let senderName = user.email || 'Anoniem'; // Fallback to email
+        if (userProfile?.firstName && userProfile?.lastName) {
+          senderName = `${userProfile.firstName} ${userProfile.lastName}`;
+        } else if (userProfile?.displayName) {
+          senderName = userProfile.displayName;
+        }
+
 
         const result = await sendEmail({
             ...data,
