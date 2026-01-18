@@ -82,7 +82,7 @@ export function ComposeMailDialog({ open, onOpenChange, initialData, children }:
     return doc(firestore, 'users', user.uid);
   }, [user, firestore]);
 
-  const { data: userProfile } = useDoc<UserProfileData>(userProfileRef);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfileData>(userProfileRef);
 
   const form = useForm<MailFormValues>({
     resolver: zodResolver(mailSchema),
@@ -144,13 +144,20 @@ export function ComposeMailDialog({ open, onOpenChange, initialData, children }:
 
         const allAttachments = [...newAttachmentPayloads, ...forwardedAttachmentPayloads];
 
-        let senderName = user.email || 'Anoniem'; // Fallback to email
+        let senderName: string;
         if (userProfile?.firstName && userProfile?.lastName) {
           senderName = `${userProfile.firstName} ${userProfile.lastName}`;
-        } else if (userProfile?.displayName) {
-          senderName = userProfile.displayName;
+        } else if (user?.email) {
+          senderName = user.email;
+        } else {
+           toast({
+            variant: "destructive",
+            title: "Fout",
+            description: "Kon afzendernaam niet vinden. Stel uw naam in op de profielpagina.",
+          });
+          setIsSending(false);
+          return;
         }
-
 
         const result = await sendEmail({
             ...data,
@@ -281,8 +288,8 @@ export function ComposeMailDialog({ open, onOpenChange, initialData, children }:
                 </div>
                 <div className="flex gap-2">
                     <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSending}>Annuleren</Button>
-                    <Button type="submit" disabled={isSending}>
-                        {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                    <Button type="submit" disabled={isSending || isProfileLoading}>
+                        {isSending || isProfileLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                         Verstuur
                     </Button>
                 </div>

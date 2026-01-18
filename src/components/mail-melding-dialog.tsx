@@ -134,7 +134,7 @@ export function MailMeldingDialog({
     return doc(firestore, 'users', user.uid);
   }, [user, firestore]);
 
-  const { data: userProfile } = useDoc<UserProfileData>(userProfileRef);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfileData>(userProfileRef);
 
   const form = useForm<MailFormValues>({
     resolver: zodResolver(mailFormSchema),
@@ -163,15 +163,23 @@ export function MailMeldingDialog({
     const pdfDataUri = generateMeldingPDF(melding);
     const pdfBase64 = pdfDataUri.substring(pdfDataUri.indexOf(',') + 1);
     
-    let senderName = user.email || 'Anoniem';
-    let signatureName = 'Het BeheerHub Team';
+    let senderName: string;
+    let signatureName: string;
 
     if (userProfile?.firstName && userProfile?.lastName) {
       senderName = `${userProfile.firstName} ${userProfile.lastName}`;
       signatureName = senderName;
-    } else if (userProfile?.displayName) {
-      senderName = userProfile.displayName;
-      signatureName = senderName;
+    } else if (user?.email) {
+      senderName = user.email;
+      signatureName = user.email;
+    } else {
+       toast({
+        variant: "destructive",
+        title: "Fout",
+        description: "Kon afzendernaam niet vinden. Stel uw naam in op de profielpagina.",
+      });
+      setIsSubmitting(false);
+      return;
     }
     
     const emailBody = `Geachte lezer,\n\nIn de bijlage vindt u de details van melding ${melding.intakenummer}.\n\nMet vriendelijke groet,\n${signatureName}`;
@@ -258,8 +266,8 @@ export function MailMeldingDialog({
               >
                 Annuleren
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
+              <Button type="submit" disabled={isSubmitting || isProfileLoading}>
+                {isSubmitting || isProfileLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Versturen...
