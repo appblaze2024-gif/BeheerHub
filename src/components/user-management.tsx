@@ -13,6 +13,7 @@ import { firebaseConfig } from '@/firebase/config';
 import {
   useCollection,
   useFirestore,
+  useAuth,
 } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import type { UserProfile } from '@/lib/types';
@@ -312,6 +313,7 @@ function UserDialog({
 
 export function UserManagement() {
   const firestore = useFirestore();
+  const auth = useAuth();
   const { profile: currentAdminProfile, isLoading: isAdminLoading } = useProfile();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedUser, setSelectedUser] = React.useState<UserProfile | null>(null);
@@ -345,11 +347,8 @@ export function UserManagement() {
 
     toast({ description: `Uitnodiging wordt verstuurd naar ${user.email}...` });
     
-    const tempApp = initializeApp(firebaseConfig, `invite-${Date.now()}`);
-    const tempAuth = getAuth(tempApp);
-
     try {
-        await sendPasswordResetEmail(tempAuth, user.email);
+        await sendPasswordResetEmail(auth, user.email);
         
         const userRef = doc(firestore, 'users', user.id);
         await updateDoc(userRef, { status: 'Actief' });
@@ -358,10 +357,6 @@ export function UserManagement() {
     } catch (error: any) {
         console.error("Error sending invitation:", error);
         toast({ variant: 'destructive', title: 'Versturen mislukt', description: error.message || 'Kon de uitnodiging niet versturen.' });
-    } finally {
-        // It's crucial to sign out from the temporary app before deleting it if any auth state changed
-        await tempAuth.signOut().catch(() => {});
-        await deleteApp(tempApp);
     }
   };
 
