@@ -13,6 +13,7 @@ import { firebaseConfig } from '@/firebase/config';
 import {
   useCollection,
   useFirestore,
+  useFirebaseApp,
 } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import type { UserProfile } from '@/lib/types';
