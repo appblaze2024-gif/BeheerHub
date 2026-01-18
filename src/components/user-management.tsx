@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { initializeApp, deleteApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'firebase/auth';
 import { doc, setDoc, updateDoc, collection } from 'firebase/firestore';
 import { Loader2, Plus, MoreHorizontal, User as UserIcon } from 'lucide-react';
 import { firebaseConfig } from '@/firebase/config';
@@ -167,6 +167,9 @@ function UserDialog({
             
             const userCredential = await createUserWithEmailAndPassword(tempAuth, data.email, tempPassword);
             const newUser = userCredential.user;
+
+            // Immediately sign out the new user from the temporary auth instance
+            await signOut(tempAuth);
             
             const userProfileData: UserProfile = {
                 id: newUser.uid,
@@ -183,7 +186,7 @@ function UserDialog({
             // Send password reset email
             await sendPasswordResetEmail(tempAuth, data.email);
 
-            toast({ title: 'Gebruiker uitgenodigd', description: `Een e-mail is naar ${data.email} gestuurd om een wachtwoord in te stellen.`});
+            toast({ title: 'Gebruiker uitgenodigd', description: `Een e-mail is naar ${data.email} gestuurd om een wachtwoord in te stellen. Vraag hen de spamfolder te controleren.`});
         } finally {
             await deleteApp(tempApp);
         }
@@ -192,10 +195,18 @@ function UserDialog({
       onOpenChange(false);
     } catch (error: any) {
       console.error("Error saving user:", error);
+      let description = 'Er is een onbekende fout opgetreden. Probeer het later opnieuw.';
+      if (error.code === 'auth/email-already-in-use') {
+          description = 'Dit e-mailadres is al in gebruik.';
+      } else if (error.code === 'auth/invalid-email') {
+          description = 'Het ingevoerde e-mailadres is ongeldig.';
+      } else if (error.code) {
+          description = `Er is een fout opgetreden: ${error.code}`;
+      }
       toast({
         variant: 'destructive',
         title: 'Fout opgetreden',
-        description: error.code === 'auth/email-already-in-use' ? 'Dit e-mailadres is al in gebruik.' : error.message,
+        description: description,
       });
     } finally {
       setIsSubmitting(false);
