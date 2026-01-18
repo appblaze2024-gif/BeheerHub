@@ -13,6 +13,7 @@ import { firebaseConfig } from '@/firebase/config';
 import {
   useCollection,
   useFirestore,
+  useUser,
 } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import type { UserProfile } from '@/lib/types';
@@ -216,14 +217,18 @@ function UserDialog({
 
 export function UserManagement() {
   const firestore = useFirestore();
+  const { user: currentUser } = useUser();
   const { profile: currentAdminProfile, isLoading: isAdminLoading } = useProfile();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedUser, setSelectedUser] = React.useState<UserProfile | null>(null);
 
+  const isSuperUser = currentUser?.email === 'dstoutenburg@meerlanden.nl';
+  const isAdmin = currentAdminProfile?.role === 'admin' || isSuperUser;
+
   const usersCollection = React.useMemo(() => {
-    if (!firestore || currentAdminProfile?.role !== 'admin') return null;
+    if (!firestore || !isAdmin) return null;
     return collection(firestore, 'users');
-  }, [firestore, currentAdminProfile]);
+  }, [firestore, isAdmin]);
 
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersCollection);
 
@@ -236,8 +241,6 @@ export function UserManagement() {
     setSelectedUser(user);
     setIsDialogOpen(true);
   };
-  
-  const isAdmin = currentAdminProfile?.role === 'admin';
 
   if (isAdminLoading) {
     return (
