@@ -125,7 +125,7 @@ export function ComposeMailDialog({ open, onOpenChange, initialData, children }:
 
         const result = await sendEmail({
             ...data,
-            fromName: user?.displayName || 'BeheerHub',
+            fromName: user?.displayName || undefined,
             fromEmail: user?.email || undefined,
             attachments: allAttachments,
         });

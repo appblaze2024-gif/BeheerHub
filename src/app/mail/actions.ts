@@ -44,12 +44,13 @@ export async function sendEmail(data: z.infer<typeof mailSchema>) {
     },
   });
 
-  const fromDisplayName = parsedData.fromName || SMTP_USER;
+  const fromDisplayName = parsedData.fromName || parsedData.fromEmail;
+  const fromAddress = parsedData.fromEmail || SMTP_USER;
 
   const mailOptions: nodemailer.SendMailOptions = {
     from: {
-      name: fromDisplayName,
-      address: SMTP_USER,
+      name: fromDisplayName || fromAddress,
+      address: fromAddress,
     },
     to: parsedData.to,
     cc: parsedData.cc,
