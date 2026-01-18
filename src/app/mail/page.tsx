@@ -55,9 +55,9 @@ type Mail = {
 const folders = [
   { name: 'inbox', label: 'Postvak IN', icon: Inbox, boxName: 'INBOX' },
   { name: 'sent', label: 'Verzonden items', icon: Send, boxName: 'INBOX/Verzonden items' },
-  // { name: 'drafts', label: 'Concepten', icon: File }, // Future feature
-  // { name: 'junk', label: 'Ongewenst', icon: MailWarning }, // Future feature
-  // { name: 'trash', label: 'Prullenbak', icon: Trash2 }, // Future feature
+  { name: 'drafts', label: 'Concepten', icon: File, boxName: 'INBOX/Concepten' },
+  { name: 'spam', label: 'Spam', icon: MailWarning, boxName: 'INBOX/Spam' },
+  { name: 'trash', label: 'Prullenbak', icon: Trash2, boxName: 'INBOX/Prullenbak' },
   // { name: 'archive', label: 'Archief', icon: Archive }, // Future feature
 ];
 
