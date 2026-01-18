@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { initializeApp, deleteApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, setDoc, updateDoc, collection } from 'firebase/firestore';
 import { Loader2, Plus, MoreHorizontal, User as UserIcon } from 'lucide-react';
 import { firebaseConfig } from '@/firebase/config';
@@ -54,18 +54,18 @@ import { Avatar, AvatarFallback } from './ui/avatar';
 import { Checkbox } from './ui/checkbox';
 
 const permissionConfig = [
-    { module: 'projects', label: 'Projecten' },
-    { module: 'employees', label: 'Medewerkers' },
+    { module: 'projects', label: 'Projecten', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }] },
+    { module: 'employees', label: 'Medewerkers', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }] },
     { module: 'workPlanning', label: 'Werkplanning', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'edit', label: 'Bewerken' }] },
     { module: 'weeklyReports', label: 'Weekstaten', actions: [{ id: 'view', label: 'Bekijken' }] },
     { module: 'reports', label: 'Rapportages', actions: [{ id: 'view', label: 'Bekijken' }] },
-    { module: 'vehicles', label: 'Wagenpark' },
-    { module: 'objects', label: 'Objecten' },
+    { module: 'vehicles', label: 'Wagenpark', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }] },
+    { module: 'objects', label: 'Objecten', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }] },
     { module: 'inventory', label: 'Voorraadbeheer', actions: [{ id: 'view', label: 'Bekijken' }] },
-    { module: 'issues', label: 'Meldingen' },
+    { module: 'issues', label: 'Meldingen', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }] },
     { module: 'navigation', label: 'Navigatiemodule', actions: [{ id: 'use', label: 'Gebruiken' }] },
     { module: 'mail', label: 'Mail', actions: [{ id: 'use', label: 'Gebruiken' }] },
-    { module: 'users', label: 'Gebruikersbeheer' },
+    { module: 'users', label: 'Gebruikersbeheer', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }] },
 ];
 
 const standardActions = [
@@ -82,12 +82,8 @@ const allPermissions = permissionConfig.map(p => ({
 
 const userFormSchema = z.object({
   email: z.string().email('Voer een geldig e-mailadres in.'),
-  password: z.string().optional(),
   role: z.enum(['Super admin', 'toezichthouder', 'ondersteuner', 'medewerkers']),
   permissions: z.record(z.record(z.boolean())).optional(),
-}).refine(data => !data.password || data.password.length >= 6, {
-    message: 'Wachtwoord moet minimaal 6 tekens lang zijn.',
-    path: ['password'],
 });
 
 type UserFormValues = z.infer<typeof userFormSchema>;
@@ -126,13 +122,11 @@ function UserDialog({
         form.reset({
           email: user.email || '',
           role: user.role || 'medewerkers',
-          password: '',
           permissions: user.permissions || defaultPermissions,
         });
       } else {
         form.reset({
           email: '',
-          password: '',
           role: 'medewerkers',
           permissions: defaultPermissions,
         });
@@ -164,17 +158,14 @@ function UserDialog({
         });
         toast({ title: 'Gebruiker bijgewerkt', description: `De rol en rechten voor ${user.email} zijn bijgewerkt.` });
       } else { // Create new user
-        if (!data.password) {
-          form.setError('password', { message: 'Wachtwoord is verplicht voor nieuwe gebruikers.'});
-          setIsSubmitting(false);
-          return;
-        }
-
         const tempApp = initializeApp(firebaseConfig, `user-creation-${Date.now()}`);
         const tempAuth = getAuth(tempApp);
         
         try {
-            const userCredential = await createUserWithEmailAndPassword(tempAuth, data.email, data.password);
+            // Generate a random temporary password
+            const tempPassword = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+            
+            const userCredential = await createUserWithEmailAndPassword(tempAuth, data.email, tempPassword);
             const newUser = userCredential.user;
             
             const userProfileData: UserProfile = {
@@ -189,7 +180,10 @@ function UserDialog({
 
             await setDoc(doc(firestore, 'users', newUser.uid), userProfileData);
 
-            toast({ title: 'Gebruiker aangemaakt', description: `${data.email} is succesvol toegevoegd.`});
+            // Send password reset email
+            await sendPasswordResetEmail(tempAuth, data.email);
+
+            toast({ title: 'Gebruiker uitgenodigd', description: `Een e-mail is naar ${data.email} gestuurd om een wachtwoord in te stellen.`});
         } finally {
             await deleteApp(tempApp);
         }
@@ -228,18 +222,6 @@ function UserDialog({
                 </FormItem>
               )}
             />
-            {!user && (
-              <FormField control={form.control} name="password" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Wachtwoord</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
              <FormField control={form.control} name="role" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Rol</FormLabel>
@@ -295,7 +277,7 @@ function UserDialog({
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Annuleren</Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Opslaan
+                {user ? 'Opslaan' : 'Uitnodigen'}
               </Button>
             </DialogFooter>
           </form>
@@ -377,7 +359,7 @@ export function UserManagement() {
           </div>
           {canCreate && (
             <Button onClick={handleAddNew}>
-              <Plus className="mr-2 h-4 w-4" /> Gebruiker toevoegen
+              <Plus className="mr-2 h-4 w-4" /> Gebruiker uitnodigen
             </Button>
           )}
         </CardHeader>
