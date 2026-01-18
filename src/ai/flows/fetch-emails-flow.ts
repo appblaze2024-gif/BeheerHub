@@ -5,6 +5,14 @@ import { z } from 'zod';
 import imaps from 'imap-simple';
 import { simpleParser } from 'mailparser';
 
+const AttachmentSchema = z.object({
+  filename: z.string(),
+  contentType: z.string(),
+  size: z.number(),
+  content: z.string(), // base64 encoded content
+});
+export type EmailAttachment = z.infer<typeof AttachmentSchema>;
+
 const EmailSchema = z.object({
   id: z.string(),
   uid: z.number(),
@@ -14,6 +22,7 @@ const EmailSchema = z.object({
   body: z.string(),
   date: z.string(),
   read: z.boolean(),
+  attachments: z.array(AttachmentSchema).optional(),
 });
 
 const FetchEmailsOutputSchema = z.array(EmailSchema);
@@ -64,6 +73,13 @@ async function fetchEmails(mailbox: string): Promise<FetchEmailsOutput> {
         const body = all ? all.body : '';
         const parsed = await simpleParser(body);
 
+        const attachments = parsed.attachments.map(att => ({
+            filename: att.filename || 'untitled',
+            contentType: att.contentType || 'application/octet-stream',
+            size: att.size || 0,
+            content: att.content.toString('base64'),
+        }));
+
         return {
           id: parsed.messageId || uid.toString(),
           uid: uid,
@@ -73,6 +89,7 @@ async function fetchEmails(mailbox: string): Promise<FetchEmailsOutput> {
           body: parsed.html || parsed.textAsHtml || '',
           date: parsed.date?.toISOString() || new Date().toISOString(),
           read: item.attributes.flags.includes('\\Seen'),
+          attachments,
         };
       })
     );

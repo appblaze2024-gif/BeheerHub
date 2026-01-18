@@ -19,6 +19,7 @@ import {
   AlertCircle,
   FolderPlus,
   Folder,
+  Paperclip,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -36,7 +37,7 @@ import {
 } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ComposeMailDialog } from '@/components/compose-mail-dialog';
-import { fetchEmailsFlow } from '@/ai/flows/fetch-emails-flow';
+import { fetchEmailsFlow, type EmailAttachment } from '@/ai/flows/fetch-emails-flow';
 import { deleteEmailFlow } from '@/ai/flows/delete-email-flow';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/components/ui/use-toast';
@@ -55,6 +56,7 @@ type Mail = {
   body: string;
   date: string; // ISO string
   read: boolean;
+  attachments?: EmailAttachment[];
 };
 
 function CreateFolderDialog({ onFolderCreated }: { onFolderCreated: (folderName: string) => void }) {
@@ -218,6 +220,15 @@ export default function MailPage() {
     setFolders(currentFolders => [...currentFolders, newFolder]);
     setSelectedFolder(newFolder.name);
   };
+  
+  const formatBytes = (bytes: number, decimals = 2) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  }
 
 
   return (
@@ -308,8 +319,13 @@ export default function MailPage() {
                         <div className={cn("h-2 w-2 rounded-full", !mail.read && "bg-blue-500")} />
                         <div className="font-semibold">{mail.fromName}</div>
                       </div>
-                      <div className="ml-auto text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(mail.date), { addSuffix: true, locale: nl })}
+                      <div className="ml-auto flex items-center gap-2">
+                        {mail.attachments && mail.attachments.length > 0 && (
+                            <Paperclip className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <div className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(new Date(mail.date), { addSuffix: true, locale: nl })}
+                        </div>
                       </div>
                     </div>
                     <div className="text-xs font-medium">{mail.subject}</div>
@@ -387,6 +403,30 @@ export default function MailPage() {
                 <div className="flex-1 whitespace-pre-wrap p-4 text-sm overflow-y-auto"
                    dangerouslySetInnerHTML={{ __html: selectedMail.body }}
                 />
+                {selectedMail.attachments && selectedMail.attachments.length > 0 && (
+                  <>
+                    <Separator />
+                    <div className="p-4 bg-muted/50">
+                        <h3 className="text-sm font-medium mb-2">Bijlagen ({selectedMail.attachments.length})</h3>
+                        <div className="space-y-2">
+                            {selectedMail.attachments.map((att, index) => (
+                                <a
+                                    key={index}
+                                    href={`data:${att.contentType};base64,${att.content}`}
+                                    download={att.filename}
+                                    className="flex items-center gap-2 text-sm p-2 rounded-md bg-background hover:bg-accent"
+                                >
+                                    <File className="h-4 w-4 text-muted-foreground" />
+                                    <span className="truncate">{att.filename}</span>
+                                    <span className="ml-auto text-xs text-muted-foreground">
+                                        {formatBytes(att.size)}
+                                    </span>
+                                </a>
+                            ))}
+                        </div>
+                    </div>
+                  </>
+                )}
               </>
             ) : (
               <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
