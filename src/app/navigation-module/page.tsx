@@ -250,6 +250,46 @@ export default function Page() {
     return [];
   }, [selectedProject, selectedRouteType]);
 
+  const objectCountsForRoutes = React.useMemo(() => {
+    if (!objects || !availableRoutes.length) return {};
+    const counts: Record<string, number> = {};
+
+    for (const route of availableRoutes) {
+      // Geographic filtering
+      let geoObjects: MapObject[] = [];
+      try {
+        const wijkFeatures = JSON.parse(route.subGebieden);
+        if (Array.isArray(wijkFeatures) && wijkFeatures.length > 0) {
+          geoObjects = objects.filter(obj => {
+            if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') {
+              return false;
+            }
+            const point = turf.point([obj.longitude, obj.latitude]);
+            for (const feature of wijkFeatures) {
+              if (turf.booleanPointInPolygon(point, feature)) {
+                return true;
+              }
+            }
+            return false;
+          });
+        }
+      } catch (e) {
+        // console.error("Error filtering objects in wijk:", e);
+      }
+
+      // Manual assignment filtering
+      const manualObjects = objects.filter(obj =>
+        (obj.locatieWerkgebieden || []).includes(route.naam)
+      );
+
+      // Combine and remove duplicates
+      const combined = [...geoObjects, ...manualObjects];
+      const uniqueObjects = Array.from(new Map(combined.map(item => [item.id, item])).values());
+      counts[route.id] = uniqueObjects.length;
+    }
+    return counts;
+  }, [objects, availableRoutes]);
+
   const selectedRoute = React.useMemo(() => {
     if (!selectedRouteId) return null;
     // Search in all route types because we might be resuming a route
@@ -1031,7 +1071,12 @@ export default function Page() {
                               <SelectContent>
                                   {availableRoutes.map(w => (
                                   <SelectItem key={w.id} value={w.id}>
-                                      {w.naam}
+                                      <div className="flex justify-between w-full items-center">
+                                        <span>{w.naam}</span>
+                                        <span className="text-muted-foreground text-xs ml-2">
+                                            ({objectCountsForRoutes[w.id] || 0} objecten)
+                                        </span>
+                                      </div>
                                   </SelectItem>
                                   ))}
                               </SelectContent>
