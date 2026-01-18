@@ -144,14 +144,13 @@ export function MailMeldingDialog({
       to: data.email,
       cc: data.cc,
       subject: `Melding Details: ${melding.intakenummer}`,
-      body: `Geachte lezer,\n\nIn de bijlage vindt u de details van melding ${melding.intakenummer}.\n\nMet vriendelijke groet,\n${user?.displayName || user?.email || 'BeheerHub'}`,
+      body: `Geachte lezer,\n\nIn de bijlage vindt u de details van melding ${melding.intakenummer}.\n\nMet vriendelijke groet,\n${user?.email || ''}`,
       attachments: [{
         content: pdfBase64,
         filename: `melding_${melding.intakenummer}.pdf`,
         type: 'application/pdf',
       }],
-      fromName: user?.displayName || user?.email,
-      fromEmail: user?.email,
+      fromName: user?.email,
     });
 
     if (result.success) {

@@ -15,7 +15,6 @@ const mailSchema = z.object({
   subject: z.string(),
   body: z.string(),
   fromName: z.string().optional(),
-  fromEmail: z.string().email().optional(),
   attachments: z.array(attachmentSchema).optional(),
 });
 
@@ -54,7 +53,6 @@ export async function sendEmail(data: z.infer<typeof mailSchema>) {
     subject: parsedData.subject,
     text: parsedData.body,
     html: `<p>${parsedData.body.replace(/\n/g, '<br>')}</p>`,
-    replyTo: parsedData.fromEmail, // Set reply-to to the user's actual email
   };
 
   if (parsedData.attachments && parsedData.attachments.length > 0) {
