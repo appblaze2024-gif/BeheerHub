@@ -256,6 +256,7 @@ function UserDialog({
                         <SelectItem value="Actief">Actief</SelectItem>
                         <SelectItem value="Inactief">Inactief</SelectItem>
                         <SelectItem value="Niet uitgenodigd">Niet uitgenodigd</SelectItem>
+                        <SelectItem value="Uitgenodigd">Uitgenodigd</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -354,7 +355,7 @@ export function UserManagement() {
         });
         
         const userRef = doc(firestore, 'users', user.id);
-        await updateDoc(userRef, { status: 'Actief' });
+        await updateDoc(userRef, { status: 'Uitgenodigd' });
 
         toast({ title: 'Uitnodiging verstuurd!', description: `Een e-mail is naar ${user.email} gestuurd om een wachtwoord in te stellen. Vraag hen de spamfolder te controleren.` });
     } catch (error: any) {
@@ -446,12 +447,14 @@ export function UserManagement() {
                                         variant={
                                             user.status === 'Actief' ? 'outline'
                                             : user.status === 'Inactief' ? 'secondary'
+                                            : user.status === 'Uitgenodigd' ? 'outline'
                                             : 'destructive'
                                         }
                                         className={
                                             user.status === 'Actief' ? 'text-green-600 border-green-600 w-fit'
                                             : user.status === 'Inactief' ? 'w-fit'
-                                            : 'text-orange-600 border-orange-600 w-fit'
+                                            : user.status === 'Uitgenodigd' ? 'text-blue-600 border-blue-600 w-fit'
+                                            : 'w-fit'
                                         }
                                         >
                                         {user.status || 'Niet uitgenodigd'}
@@ -468,8 +471,10 @@ export function UserManagement() {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent>
                                         <DropdownMenuItem onClick={() => handleEdit(user)}>Bewerken</DropdownMenuItem>
-                                        {user.status === 'Niet uitgenodigd' && user.role !== 'Super admin' && (
-                                            <DropdownMenuItem onClick={() => handleSendInvitation(user)}>Verstuur uitnodiging</DropdownMenuItem>
+                                        {(user.status === 'Niet uitgenodigd' || user.status === 'Uitgenodigd') && user.role !== 'Super admin' && (
+                                            <DropdownMenuItem onClick={() => handleSendInvitation(user)}>
+                                                {user.status === 'Niet uitgenodigd' ? 'Verstuur uitnodiging' : 'Uitnodiging opnieuw versturen'}
+                                            </DropdownMenuItem>
                                         )}
                                     </DropdownMenuContent>
                                 </DropdownMenu>

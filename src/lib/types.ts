@@ -17,7 +17,7 @@ export type UserProfile = {
   sidebarCollapsed?: boolean;
   role?: 'Super admin' | 'toezichthouder' | 'ondersteuner' | 'medewerkers';
   permissions?: UserPermissions;
-  status?: 'Actief' | 'Inactief' | 'Niet uitgenodigd';
+  status?: 'Actief' | 'Inactief' | 'Niet uitgenodigd' | 'Uitgenodigd';
 };
 
 export interface Medewerker {

@@ -25,6 +25,7 @@ import { PanelLeftClose, PanelRightClose } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
 import { doc } from 'firebase/firestore';
 import { useIsMobile } from '@/hooks/use-mobile';
+import type { UserProfile } from '@/lib/types';
 
 
 function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
@@ -37,9 +38,7 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
     return doc(firestore, 'users', user.uid);
   }, [user, firestore]);
 
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<{
-    sidebarCollapsed?: boolean;
-  }>(userProfileRef);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   const [isCollapsed, setIsCollapsed] = useState<boolean | undefined>(
     undefined
@@ -78,6 +77,13 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
     };
     createProfile();
   }, [user, userProfile, isProfileLoading, userProfileRef]);
+
+  // Update status from 'Uitgenodigd' to 'Actief' on first login
+  useEffect(() => {
+    if (userProfileRef && userProfile?.status === 'Uitgenodigd') {
+      updateDocumentNonBlocking(userProfileRef, { status: 'Actief' });
+    }
+  }, [userProfile, userProfileRef]);
 
   const handleToggleCollapse = () => {
     if (isCollapsed === undefined) return; // Don't allow toggle while loading
@@ -175,16 +181,24 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (isPublicPage) {
-    return <>{children}</>;
-  }
-
-  if (isUserLoading || !user) {
-    return (
+  if (isUserLoading && !isPublicPage) {
+     return (
       <div className="flex h-screen items-center justify-center">
         Laden...
       </div>
     );
+  }
+  
+  if (!user && !isPublicPage) {
+    return (
+       <div className="flex h-screen items-center justify-center">
+        Laden...
+      </div>
+    )
+  }
+
+  if (isPublicPage) {
+    return <>{children}</>;
   }
 
   return <ProtectedAppLayout>{children}</ProtectedAppLayout>;
