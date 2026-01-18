@@ -82,5 +82,5 @@ export type UserProfile = {
   firstName?: string;
   lastName?: string;
   sidebarCollapsed?: boolean;
-  role?: 'admin' | 'user';
+  role?: 'Super admin' | 'toezichthouder' | 'ondersteuner' | 'medewerkers';
 };

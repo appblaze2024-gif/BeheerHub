@@ -63,7 +63,7 @@ export function SidebarNav({ isCollapsed }: { isCollapsed: boolean }) {
     
     const isSuperUser = user?.email === 'dstoutenburg@meerlanden.nl';
 
-    if (profile?.role === 'admin' || isSuperUser) {
+    if (profile?.role === 'Super admin' || isSuperUser) {
       return allMenuItems;
     }
     return allMenuItems.filter(item => !item.adminOnly);

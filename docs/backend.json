@@ -532,7 +532,7 @@
         "role": {
           "type": "string",
           "description": "User role for authorization.",
-          "enum": ["admin", "user"]
+          "enum": ["Super admin", "toezichthouder", "ondersteuner", "medewerkers"]
         }
       },
       "required": [

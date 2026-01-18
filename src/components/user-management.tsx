@@ -57,7 +57,7 @@ import { Avatar, AvatarFallback } from './ui/avatar';
 const userFormSchema = z.object({
   email: z.string().email('Voer een geldig e-mailadres in.'),
   password: z.string().optional(),
-  role: z.enum(['admin', 'user']),
+  role: z.enum(['Super admin', 'toezichthouder', 'ondersteuner', 'medewerkers']),
 }).refine(data => !data.password || data.password.length >= 6, {
     message: 'Wachtwoord moet minimaal 6 tekens lang zijn.',
     path: ['password'],
@@ -89,14 +89,14 @@ function UserDialog({
       if (user) {
         form.reset({
           email: user.email || '',
-          role: user.role || 'user',
+          role: user.role || 'medewerkers',
           password: '',
         });
       } else {
         form.reset({
           email: '',
           password: '',
-          role: 'user',
+          role: 'medewerkers',
         });
       }
     }
@@ -192,8 +192,10 @@ function UserDialog({
                             <SelectTrigger><SelectValue placeholder="Selecteer een rol" /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                            <SelectItem value="user">Gebruiker</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="Super admin">Super admin</SelectItem>
+                            <SelectItem value="toezichthouder">Toezichthouder</SelectItem>
+                            <SelectItem value="ondersteuner">Ondersteuner</SelectItem>
+                            <SelectItem value="medewerkers">Medewerkers</SelectItem>
                         </SelectContent>
                     </Select>
                     <FormMessage />
@@ -223,7 +225,7 @@ export function UserManagement() {
   const [selectedUser, setSelectedUser] = React.useState<UserProfile | null>(null);
 
   const isSuperUser = currentUser?.email === 'dstoutenburg@meerlanden.nl';
-  const isAdmin = currentAdminProfile?.role === 'admin' || isSuperUser;
+  const isAdmin = currentAdminProfile?.role === 'Super admin' || isSuperUser;
 
   const usersCollection = React.useMemo(() => {
     if (!firestore || !isAdmin) return null;
@@ -309,7 +311,7 @@ export function UserManagement() {
                                 <span>{user.firstName || user.lastName ? `${user.firstName} ${user.lastName}`.trim() : 'N.B.'}</span>
                             </div>
                             <span className="truncate">{user.email}</span>
-                            <Badge variant={user.role === 'admin' ? 'default' : 'secondary'} className="w-fit">{user.role}</Badge>
+                            <Badge variant={user.role === 'Super admin' ? 'default' : 'secondary'} className="w-fit">{user.role}</Badge>
                             <div>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>

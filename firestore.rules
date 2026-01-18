@@ -54,7 +54,7 @@ service cloud.firestore {
      * @returns {boolean} True if the user is an admin.
      */
     function isAdmin() {
-      let isRoleAdmin = isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      let isRoleAdmin = isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Super admin';
       let isSuperUser = request.auth.token.email == 'dstoutenburg@meerlanden.nl';
       return isRoleAdmin || isSuperUser;
     }
