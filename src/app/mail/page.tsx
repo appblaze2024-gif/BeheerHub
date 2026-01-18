@@ -279,6 +279,24 @@ export default function MailPage() {
     setIsComposeOpen(true);
   };
 
+  const handleForward = () => {
+    if (!selectedMail) return;
+
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = selectedMail.body;
+    const originalBodyText = tempDiv.textContent || tempDiv.innerText || "";
+
+    const forwardBody = `\n\n\n----- Doorgestuurd bericht -----\nVan: ${selectedMail.fromName} <${selectedMail.from}>\nDatum: ${format(new Date(selectedMail.date), 'd MMM yyyy, HH:mm', { locale: nl })}\nOnderwerp: ${selectedMail.subject}\nAan: ${selectedMail.to.join(', ')}\n${selectedMail.cc && selectedMail.cc.length > 0 ? `Cc: ${selectedMail.cc.join(', ')}\n` : ''}\n\n${originalBodyText}`;
+
+    setComposeInitialData({
+        to: '', // Empty as requested
+        subject: `Fwd: ${selectedMail.subject}`,
+        body: forwardBody,
+        attachments: selectedMail.attachments || [],
+    });
+    setIsComposeOpen(true);
+  };
+
   const formatBytes = (bytes: number, decimals = 2) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -434,7 +452,7 @@ export default function MailPage() {
                         <div className="flex items-center gap-2">
                             <Button variant="outline" size="sm" onClick={handleReply}><Reply className="mr-2 h-4 w-4" /> Beantwoorden</Button>
                             <Button variant="outline" size="sm" onClick={handleReplyAll}><ReplyAll className="mr-2 h-4 w-4" /> Allen beantwoorden</Button>
-                            <Button variant="outline" size="sm"><Forward className="mr-2 h-4 w-4" /> Doorsturen</Button>
+                            <Button variant="outline" size="sm" onClick={handleForward}><Forward className="mr-2 h-4 w-4" /> Doorsturen</Button>
                             <Button variant="outline" size="sm" onClick={handleDelete} disabled={isDeleting}>
                                 {isDeleting ? <Loader2 className='h-4 w-4 animate-spin mr-2' /> : <Trash2 className="h-4 w-4 mr-2" />}
                                 Verwijderen

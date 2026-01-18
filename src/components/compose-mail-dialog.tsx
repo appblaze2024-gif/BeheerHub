@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from './ui/textarea';
+import type { EmailAttachment } from '@/ai/flows/fetch-emails-flow';
 
 const mailSchema = z.object({
   to: z.string().email({ message: 'Voer een geldig e-mailadres in.' }),
@@ -58,14 +59,15 @@ interface ComposeMailDialogProps {
   children?: React.ReactNode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  initialData?: Partial<MailFormValues>;
+  initialData?: Partial<MailFormValues & { attachments: EmailAttachment[] }>;
 }
 
 export function ComposeMailDialog({ open, onOpenChange, initialData, children }: ComposeMailDialogProps) {
   const { toast } = useToast();
   const { user } = useUser();
   const [isSending, setIsSending] = React.useState(false);
-  const [attachments, setAttachments] = React.useState<File[]>([]);
+  const [newAttachments, setNewAttachments] = React.useState<File[]>([]);
+  const [forwardedAttachments, setForwardedAttachments] = React.useState<EmailAttachment[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const form = useForm<MailFormValues>({
@@ -75,41 +77,57 @@ export function ComposeMailDialog({ open, onOpenChange, initialData, children }:
 
   React.useEffect(() => {
     if (open) {
-      form.reset(initialData || { to: '', cc: '', subject: '', body: '' });
-      setAttachments([]);
+      const { attachments: initialAttachments, ...formData } = initialData || {};
+      form.reset(formData || { to: '', cc: '', subject: '', body: '' });
+      setNewAttachments([]);
+      setForwardedAttachments(initialAttachments || []);
       setIsSending(false);
     }
   }, [open, initialData, form]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
-      setAttachments(prev => [...prev, ...Array.from(event.target.files!)]);
+      setNewAttachments(prev => [...prev, ...Array.from(event.target.files!)]);
       // Reset file input to allow selecting the same file again
       event.target.value = '';
     }
   };
 
-  const removeAttachment = (fileToRemove: File) => {
-    setAttachments(prev => prev.filter(file => file !== fileToRemove));
+  const removeNewAttachment = (fileToRemove: File) => {
+    setNewAttachments(prev => prev.filter(file => file !== fileToRemove));
   };
+  
+  const removeForwardedAttachment = (fileToRemove: EmailAttachment) => {
+    setForwardedAttachments(prev => prev.filter(file => file !== fileToRemove));
+  };
+
 
   async function onSubmit(data: MailFormValues) {
     setIsSending(true);
 
     try {
-        const attachmentPayloads = await Promise.all(
-            attachments.map(async (file) => ({
+        const newAttachmentPayloads = await Promise.all(
+            newAttachments.map(async (file) => ({
                 content: await fileToBase64(file),
                 filename: file.name,
                 type: file.type,
             }))
         );
+        
+        const forwardedAttachmentPayloads = forwardedAttachments.map(att => ({
+            content: att.content,
+            filename: att.filename,
+            type: att.contentType,
+        }));
+
+        const allAttachments = [...newAttachmentPayloads, ...forwardedAttachmentPayloads];
+
 
         const result = await sendEmail({
             ...data,
             fromName: user?.displayName || user?.email || undefined,
             fromEmail: user?.email || undefined,
-            attachments: attachmentPayloads,
+            attachments: allAttachments,
         });
 
         if (result.success) {
@@ -195,14 +213,22 @@ export function ComposeMailDialog({ open, onOpenChange, initialData, children }:
               )}
             />
 
-            {attachments.length > 0 && (
+            {(newAttachments.length > 0 || forwardedAttachments.length > 0) && (
               <div className="space-y-2">
                 <FormLabel>Bijlagen</FormLabel>
                 <div className="space-y-2 rounded-md border p-2 max-h-32 overflow-y-auto">
-                  {attachments.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between text-sm p-1 hover:bg-muted rounded">
+                    {forwardedAttachments.map((file, index) => (
+                    <div key={`fwd-${index}-${file.filename}`} className="flex items-center justify-between text-sm p-1 hover:bg-muted rounded">
+                        <span className="truncate">{file.filename}</span>
+                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => removeForwardedAttachment(file)}>
+                        <X className="h-4 w-4" />
+                        </Button>
+                    </div>
+                    ))}
+                  {newAttachments.map((file, index) => (
+                    <div key={`new-${index}-${file.name}`} className="flex items-center justify-between text-sm p-1 hover:bg-muted rounded">
                       <span className="truncate">{file.name}</span>
-                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => removeAttachment(file)}>
+                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => removeNewAttachment(file)}>
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
