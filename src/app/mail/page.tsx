@@ -57,6 +57,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { LabelManagerDialog } from '@/components/label-manager-dialog';
 
 
 // --- UPDATED TYPE ---
@@ -156,18 +157,18 @@ const initialFolders = [
   // { name: 'archive', label: 'Archief', icon: Archive }, // Future feature
 ];
 
-const labels = [
-    { name: 'Geen', color: 'transparent', tailwind: 'border' },
-    { name: 'Rood', color: '#dc2626', tailwind: 'bg-red-600' },
-    { name: 'Blauw', color: '#2563eb', tailwind: 'bg-blue-600' },
-    { name: 'Groen', color: '#84cc16', tailwind: 'bg-lime-500' },
-    { name: 'Grijs', color: '#71717a', tailwind: 'bg-zinc-500' },
-    { name: 'Paars', color: '#7e22ce', tailwind: 'bg-purple-700' },
-    { name: 'Lichtgroen', color: '#bef264', tailwind: 'bg-lime-300' },
-    { name: 'Oranje', color: '#f97316', tailwind: 'bg-orange-500' },
-    { name: 'Roze', color: '#db2777', tailwind: 'bg-pink-600' },
-    { name: 'Lichtblauw', color: '#bae6fd', tailwind: 'bg-sky-200 border' },
-    { name: 'Geel', color: '#facc15', tailwind: 'bg-yellow-400' },
+const initialLabels = [
+    { name: 'Geen', color: 'transparent' },
+    { name: 'Rood', color: '#dc2626' },
+    { name: 'Blauw', color: '#2563eb' },
+    { name: 'Groen', color: '#84cc16' },
+    { name: 'Grijs', color: '#71717a' },
+    { name: 'Paars', color: '#7e22ce' },
+    { name: 'Lichtgroen', color: '#bef264' },
+    { name: 'Oranje', color: '#f97316' },
+    { name: 'Roze', color: '#db2777' },
+    { name: 'Lichtblauw', color: '#bae6fd' },
+    { name: 'Geel', color: '#facc15' },
 ];
 
 
@@ -184,6 +185,9 @@ export default function MailPage() {
 
   const [isComposeOpen, setIsComposeOpen] = React.useState(false);
   const [composeInitialData, setComposeInitialData] = React.useState<any>({});
+  
+  const [labels, setLabels] = React.useState(initialLabels);
+  const [isLabelManagerOpen, setIsLabelManagerOpen] = React.useState(false);
   const [mailLabels, setMailLabels] = React.useState<Record<string, string>>({});
 
 
@@ -405,35 +409,47 @@ export default function MailPage() {
                     </Alert>
                 </div>
               ) : mails.length > 0 ? (
-                mails.map(mail => (
-                  <button
-                    key={mail.id}
-                    className={cn(
-                      "flex flex-col items-start gap-2 rounded-lg border-b p-3 text-left text-sm transition-all w-full",
-                      selectedMail?.id === mail.id ? "bg-muted" : "hover:bg-accent"
-                    )}
-                    onClick={() => setSelectedMail(mail)}
-                  >
-                    <div className="flex w-full items-center">
-                      <div className="flex items-center gap-2">
-                        <div className={cn("h-2 w-2 rounded-full", !mail.read && "bg-blue-500")} />
-                        <div className="font-semibold">{mail.fromName}</div>
-                      </div>
-                      <div className="ml-auto flex items-center gap-2">
-                        {mail.attachments && mail.attachments.length > 0 && (
-                            <Paperclip className="h-4 w-4 text-muted-foreground" />
-                        )}
-                        <div className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(mail.date), { addSuffix: true, locale: nl })}
+                mails.map(mail => {
+                  const mailLabelName = mailLabels[mail.id] || 'Geen';
+                  const mailLabel = labels.find(l => l.name === mailLabelName);
+                  
+                  return (
+                    <button
+                      key={mail.id}
+                      className={cn(
+                        "relative flex flex-col items-start gap-2 rounded-lg border-b p-3 text-left text-sm transition-all w-full",
+                        selectedMail?.id === mail.id ? "bg-muted" : "hover:bg-accent"
+                      )}
+                      onClick={() => setSelectedMail(mail)}
+                    >
+                      <div className="flex w-full items-center">
+                        <div className="flex items-center gap-2">
+                          <div className={cn("h-2 w-2 rounded-full", !mail.read && "bg-blue-500")} />
+                          <div className="font-semibold">{mail.fromName}</div>
+                        </div>
+                        <div className="ml-auto flex items-center gap-2">
+                          {mail.attachments && mail.attachments.length > 0 && (
+                              <Paperclip className="h-4 w-4 text-muted-foreground" />
+                          )}
+                          <div className="text-xs text-muted-foreground">
+                              {formatDistanceToNow(new Date(mail.date), { addSuffix: true, locale: nl })}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="text-xs font-medium">{mail.subject}</div>
-                    <div className="line-clamp-2 text-xs text-muted-foreground">
-                      {mail.body.replace(/<[^>]*>?/gm, '')}
-                    </div>
-                  </button>
-                ))
+                      <div className="text-xs font-medium">{mail.subject}</div>
+                      <div className="line-clamp-2 text-xs text-muted-foreground">
+                        {mail.body.replace(/<[^>]*>?/gm, '')}
+                      </div>
+
+                      {mailLabel && mailLabel.name !== 'Geen' && (
+                          <div
+                              className="absolute right-0 top-0 bottom-0 w-1 rounded-r-lg"
+                              style={{ backgroundColor: mailLabel.color }}
+                          />
+                      )}
+                    </button>
+                  )
+                })
               ) : (
                 <div className="p-8 text-center text-muted-foreground flex flex-col items-center justify-center h-full">
                   <Inbox className="mx-auto h-12 w-12 mb-4" />
@@ -489,11 +505,16 @@ export default function MailPage() {
                                                 }}
                                             >
                                                 <div className="flex items-center gap-2">
-                                                    <div className={cn("h-4 w-4 rounded-sm", label.tailwind)} />
+                                                    <div
+                                                      className="h-4 w-4 rounded-sm border"
+                                                      style={{ backgroundColor: label.color !== 'transparent' ? label.color : undefined }}
+                                                    />
                                                     <span>{label.name}</span>
                                                 </div>
                                             </DropdownMenuItem>
                                         ))}
+                                         <DropdownMenuSeparator />
+                                        <DropdownMenuItem onSelect={() => setIsLabelManagerOpen(true)}>Labels beheren...</DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                                 <Avatar className="h-8 w-8 text-sm">
@@ -565,6 +586,12 @@ export default function MailPage() {
         open={isComposeOpen}
         onOpenChange={setIsComposeOpen}
         initialData={composeInitialData}
+      />
+       <LabelManagerDialog
+        open={isLabelManagerOpen}
+        onOpenChange={setIsLabelManagerOpen}
+        labels={labels}
+        onSave={(newLabels) => setLabels(newLabels)}
       />
     </div>
   );
