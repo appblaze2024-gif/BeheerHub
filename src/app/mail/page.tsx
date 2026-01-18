@@ -49,6 +49,14 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { createMailboxFlow } from '@/ai/flows/create-mailbox-flow';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 
 // --- UPDATED TYPE ---
@@ -148,6 +156,20 @@ const initialFolders = [
   // { name: 'archive', label: 'Archief', icon: Archive }, // Future feature
 ];
 
+const labels = [
+    { name: 'Geen', color: 'transparent', tailwind: 'border' },
+    { name: 'Rood', color: '#dc2626', tailwind: 'bg-red-600' },
+    { name: 'Blauw', color: '#2563eb', tailwind: 'bg-blue-600' },
+    { name: 'Groen', color: '#84cc16', tailwind: 'bg-lime-500' },
+    { name: 'Grijs', color: '#71717a', tailwind: 'bg-zinc-500' },
+    { name: 'Paars', color: '#7e22ce', tailwind: 'bg-purple-700' },
+    { name: 'Lichtgroen', color: '#bef264', tailwind: 'bg-lime-300' },
+    { name: 'Oranje', color: '#f97316', tailwind: 'bg-orange-500' },
+    { name: 'Roze', color: '#db2777', tailwind: 'bg-pink-600' },
+    { name: 'Lichtblauw', color: '#bae6fd', tailwind: 'bg-sky-200 border' },
+    { name: 'Geel', color: '#facc15', tailwind: 'bg-yellow-400' },
+];
+
 
 export default function MailPage() {
   const [folders, setFolders] = React.useState(initialFolders);
@@ -162,6 +184,7 @@ export default function MailPage() {
 
   const [isComposeOpen, setIsComposeOpen] = React.useState(false);
   const [composeInitialData, setComposeInitialData] = React.useState<any>({});
+  const [mailLabels, setMailLabels] = React.useState<Record<string, string>>({});
 
 
   const fetchAndSetEmails = React.useCallback(async () => {
@@ -305,6 +328,9 @@ export default function MailPage() {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
   }
+  
+  const currentLabelName = selectedMail ? mailLabels[selectedMail.id] || 'Geen' : 'Geen';
+  const currentLabel = labels.find(l => l.name === currentLabelName);
 
 
   return (
@@ -440,7 +466,36 @@ export default function MailPage() {
                             </div>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                 <span>{format(new Date(selectedMail.date), 'HH:mm')}</span>
-                                <Button variant="ghost" size="icon" className="h-8 w-8"><Bookmark className="h-4 w-4" /></Button>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                            <Bookmark 
+                                                className="h-4 w-4" 
+                                                fill={currentLabel && currentLabel.name !== 'Geen' ? currentLabel.color : 'none'}
+                                                stroke={currentLabel && currentLabel.name !== 'Geen' ? currentLabel.color : 'currentColor'}
+                                            />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent>
+                                        <DropdownMenuLabel>Label instellen</DropdownMenuLabel>
+                                        <DropdownMenuSeparator />
+                                        {labels.map(label => (
+                                            <DropdownMenuItem 
+                                                key={label.name}
+                                                onClick={() => {
+                                                    if (selectedMail) {
+                                                        setMailLabels(prev => ({...prev, [selectedMail.id]: label.name}));
+                                                    }
+                                                }}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <div className={cn("h-4 w-4 rounded-sm", label.tailwind)} />
+                                                    <span>{label.name}</span>
+                                                </div>
+                                            </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                                 <Avatar className="h-8 w-8 text-sm">
                                     <AvatarFallback>{user?.email?.substring(0,2).toUpperCase() || 'DS'}</AvatarFallback>
                                 </Avatar>
