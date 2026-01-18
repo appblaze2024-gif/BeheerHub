@@ -5,9 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import './globals.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { Sidebar, SidebarProps } from '@/components/ui/sidebar';
 import { SidebarNav } from '@/components/sidebar-nav';
-import { SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
 import {
   FirebaseClientProvider,
   useUser,
@@ -20,18 +18,14 @@ import { ProfileProvider } from '@/firebase/profile-provider';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { PanelLeftClose, PanelRightClose } from 'lucide-react';
 import { Toaster } from '@/components/ui/toaster';
 import { doc } from 'firebase/firestore';
-import { useIsMobile } from '@/hooks/use-mobile';
 import type { UserProfile } from '@/lib/types';
 
 
 function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
-  const isTablet = useIsMobile(1024);
 
   const userProfileRef = useMemo(() => {
     if (!user || !firestore) return null;
@@ -39,24 +33,6 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
   }, [user, firestore]);
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
-
-  const [isCollapsed, setIsCollapsed] = useState<boolean | undefined>(
-    undefined
-  );
-
-  // Set initial collapsed state from user profile or device size
-  useEffect(() => {
-    if (isUserLoading || isProfileLoading) {
-      return; // Wait for all data to be loaded
-    }
-
-    if (userProfile?.sidebarCollapsed !== undefined) {
-      setIsCollapsed(userProfile.sidebarCollapsed);
-    } else {
-      // Fallback for new users or users without the setting
-      setIsCollapsed(true); // Default to collapsed
-    }
-  }, [userProfile, isUserLoading, isProfileLoading]);
 
   // Create user profile document if it doesn't exist
   useEffect(() => {
@@ -70,7 +46,6 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
         const initialProfile = {
           id: user.uid,
           email: user.email,
-          sidebarCollapsed: true,
         };
         await setDocumentNonBlocking(userProfileRef, initialProfile, { merge: true });
       }
@@ -84,19 +59,8 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
       updateDocumentNonBlocking(userProfileRef, { status: 'Actief' });
     }
   }, [userProfile, userProfileRef]);
-
-  const handleToggleCollapse = () => {
-    if (isCollapsed === undefined) return; // Don't allow toggle while loading
-    const newCollapsedState = !isCollapsed;
-    setIsCollapsed(newCollapsedState);
-    if (userProfileRef) {
-      updateDocumentNonBlocking(userProfileRef, {
-        sidebarCollapsed: newCollapsedState,
-      });
-    }
-  };
   
-  if (isUserLoading || isProfileLoading || isCollapsed === undefined) {
+  if (isUserLoading || isProfileLoading) {
       return (
         <div className="flex h-screen items-center justify-center">
           Laden...
@@ -105,39 +69,19 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className={cn('font-body antialiased flex h-svh overflow-hidden')}>
-      <Sidebar isCollapsed={isCollapsed}>
-        <SidebarHeader isCollapsed={isCollapsed}>
-          <Link href="/" className={cn(isCollapsed ? 'hidden' : 'block')}>
-            <Image
-              src="https://i.ibb.co/Fk1pVzqw/IMG-1314.png"
-              alt="BeheerHub Logo"
-              width={300}
-              height={100}
-              className="w-auto h-auto"
-            />
-          </Link>
-          <Link href="/" className={cn(!isCollapsed ? 'hidden' : 'block')}>
+    <div className={cn('font-body antialiased flex flex-col h-svh overflow-hidden')}>
+      <header className="bg-sidebar text-sidebar-foreground flex h-16 shrink-0 items-center gap-4 border-b border-sidebar-border px-6 shadow-sm z-30">
+          <Link href="/" className="mr-4 flex items-center">
             <Image
               src="https://i.ibb.co/fVxCTj33/Whats-App-Image-2026-01-16-at-12-09-08-1-removebg-preview.png"
-              alt="BeheerHub Ingevouwen Logo"
+              alt="BeheerHub Logo"
               width={40}
               height={40}
             />
+             <span className="font-bold text-lg ml-2 hidden sm:inline">BeheerHub</span>
           </Link>
-        </SidebarHeader>
-        <SidebarNav isCollapsed={isCollapsed} />
-        <SidebarFooter isCollapsed={isCollapsed}>
-          <Button
-            variant="ghost"
-            className="w-full justify-start gap-2"
-            onClick={handleToggleCollapse}
-          >
-            {isCollapsed ? <PanelRightClose /> : <PanelLeftClose />}
-            <span className={cn(isCollapsed && 'hidden')}>Inklappen</span>
-          </Button>
-        </SidebarFooter>
-      </Sidebar>
+          <SidebarNav />
+      </header>
       <main className="flex-1 flex flex-col overflow-auto bg-background">
         {children}
       </main>
