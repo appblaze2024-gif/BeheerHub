@@ -16,6 +16,7 @@ import {
   setDocumentNonBlocking,
   updateDocumentNonBlocking,
 } from '@/firebase';
+import { ProfileProvider } from '@/firebase/profile-provider';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
@@ -178,7 +179,9 @@ export default function RootLayout({
       </head>
       <body>
         <FirebaseClientProvider>
-          <AppLayout>{children}</AppLayout>
+          <ProfileProvider>
+            <AppLayout>{children}</AppLayout>
+          </ProfileProvider>
         </FirebaseClientProvider>
       </body>
     </html>

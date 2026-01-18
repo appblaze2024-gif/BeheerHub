@@ -26,32 +26,43 @@ import {
   Mail,
 } from 'lucide-react';
 import { useAuth } from '@/firebase';
+import { useProfile } from '@/firebase/profile-provider';
 import { signOut } from 'firebase/auth';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
-const menuItems = [
-  { href: '/', label: 'Dashboard', icon: Home },
-  { href: '/projects', label: 'Projecten', icon: ClipboardList },
-  { href: '/employees', label: 'Medewerkers', icon: Users },
-  { href: '/work-planning', label: 'Werkplanning', icon: CalendarCheck },
-  { href: '/weekly-reports', label: 'Weekstaten', icon: Newspaper },
-  { href: '/reports', label: 'Rapportages', icon: FileText },
-  { href: '/vehicles', label: 'Wagenpark', icon: Truck },
-  { href: '/objects', label: 'Objecten', icon: Building2 },
-  { href: '/inventory', label: 'Voorraadbeheer', icon: Package },
-  { href: '/issues', label: 'Meldingen', icon: Bell },
-  { href: '/navigation-module', label: 'Navigatiemodule', icon: Map },
-  { href: '/mail', label: 'Mail', icon: Mail },
+const allMenuItems = [
+  { href: '/', label: 'Dashboard', icon: Home, adminOnly: false },
+  { href: '/projects', label: 'Projecten', icon: ClipboardList, adminOnly: true },
+  { href: '/employees', label: 'Medewerkers', icon: Users, adminOnly: true },
+  { href: '/work-planning', label: 'Werkplanning', icon: CalendarCheck, adminOnly: true },
+  { href: '/weekly-reports', label: 'Weekstaten', icon: Newspaper, adminOnly: true },
+  { href: '/reports', label: 'Rapportages', icon: FileText, adminOnly: true },
+  { href: '/vehicles', label: 'Wagenpark', icon: Truck, adminOnly: true },
+  { href: '/objects', label: 'Objecten', icon: Building2, adminOnly: false },
+  { href: '/inventory', label: 'Voorraadbeheer', icon: Package, adminOnly: false },
+  { href: '/issues', label: 'Meldingen', icon: Bell, adminOnly: false },
+  { href: '/navigation-module', label: 'Navigatiemodule', icon: Map, adminOnly: false },
+  { href: '/mail', label: 'Mail', icon: Mail, adminOnly: false },
 ];
 
 export function SidebarNav({ isCollapsed }: { isCollapsed: boolean }) {
   const pathname = usePathname();
   const auth = useAuth();
+  const { profile, isLoading } = useProfile();
 
   const handleLogout = async () => {
     await signOut(auth);
   };
+  
+  const menuItems = React.useMemo(() => {
+    if (isLoading) return [];
+    if (profile?.role === 'admin') {
+      return allMenuItems;
+    }
+    return allMenuItems.filter(item => !item.adminOnly);
+  }, [profile, isLoading]);
+
 
   const bottomMenuItems = [
     { href: '/profile', label: 'Profiel', icon: User },

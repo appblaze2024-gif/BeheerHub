@@ -528,6 +528,11 @@
         "sidebarCollapsed": {
           "type": "boolean",
           "description": "User's preference for the sidebar state."
+        },
+        "role": {
+          "type": "string",
+          "description": "User role for authorization.",
+          "enum": ["admin", "user"]
         }
       },
       "required": [

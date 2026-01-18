@@ -74,3 +74,13 @@ export type Machine = {
   machinenummer?: string;
   [key: string]: any;
 };
+
+export type UserProfile = {
+  id: string;
+  email?: string;
+  displayName?: string;
+  firstName?: string;
+  lastName?: string;
+  sidebarCollapsed?: boolean;
+  role?: 'admin' | 'user';
+};

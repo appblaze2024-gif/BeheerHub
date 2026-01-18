@@ -14,6 +14,8 @@ import { doc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/components/ui/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { UserManagement } from '@/components/user-management';
+import type { UserProfile } from '@/lib/types';
 
 const profileFormSchema = z.object({
   firstName: z.string().min(1, 'Voornaam is verplicht.'),
@@ -21,12 +23,6 @@ const profileFormSchema = z.object({
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
-
-type UserProfile = {
-  displayName?: string;
-  firstName?: string;
-  lastName?: string;
-};
 
 
 export default function ProfilePage() {
@@ -159,17 +155,7 @@ export default function ProfilePage() {
         </TabsContent>
         
         <TabsContent value="users">
-          <Card>
-             <CardHeader>
-              <CardTitle>Gebruikersbeheer</CardTitle>
-              <CardDescription>
-                Voeg gebruikers toe en beheer hun rollen en rechten.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p>Gebruikersbeheer functionaliteit komt hier.</p>
-            </CardContent>
-          </Card>
+          <UserManagement />
         </TabsContent>
       </Tabs>
     </div>

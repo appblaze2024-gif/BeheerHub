@@ -49,6 +49,16 @@ service cloud.firestore {
     }
 
     /**
+     * isAdmin
+     * @description Checks if the requesting user has the 'admin' role in their user profile.
+     * @returns {boolean} True if the user is an admin.
+     */
+    function isAdmin() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+
+    /**
      * @description Manages the root projects collection. Any authenticated user can manage projects.
      */
     match /projects/{projectId} {
@@ -97,15 +107,14 @@ service cloud.firestore {
     }
     
     /**
-     * @description Manages the root user document. A user can create and update their own document,
-     * but cannot delete it once created. Listing all users is forbidden.
+     * @description Manages the root user document. A user can manage their own document.
+     *   Admins can list and manage all user profiles.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-      allow delete: if false;
+      allow get, update: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) || isAdmin();
+      allow delete: if false; // Deleting users is a sensitive operation, disable for now.
 
       /**
        * @description Secures a user's route history.
