@@ -125,8 +125,8 @@ export function ComposeMailDialog({ open, onOpenChange, initialData, children }:
 
         const result = await sendEmail({
             ...data,
-            fromName: user?.email || undefined,
-            fromEmail: user?.email || undefined,
+            fromName: user?.displayName || user?.email,
+            fromEmail: user?.email,
             attachments: allAttachments,
         });
 

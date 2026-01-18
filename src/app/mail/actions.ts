@@ -73,6 +73,11 @@ export async function sendEmail(data: z.infer<typeof mailSchema>) {
     return { success: true, message: `E-mail succesvol verzonden` };
   } catch (error: any) {
     console.error('Fout bij verzenden e-mail:', error);
+    if (error.code === 'EENVELOPE') {
+        if (error.responseCode === 553) {
+            return { success: false, message: `Verzenden mislukt: U bent niet geautoriseerd om namens dit e-mailadres te verzenden.` };
+        }
+    }
     return { success: false, message: `Verzenden van e-mail mislukt: ${error.message || 'Onbekende fout'}` };
   }
 }

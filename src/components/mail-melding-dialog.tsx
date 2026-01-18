@@ -150,8 +150,8 @@ export function MailMeldingDialog({
         filename: `melding_${melding.intakenummer}.pdf`,
         type: 'application/pdf',
       }],
-      fromName: user?.email || undefined,
-      fromEmail: user?.email || undefined,
+      fromName: user?.displayName || user?.email,
+      fromEmail: user?.email,
     });
 
     if (result.success) {
