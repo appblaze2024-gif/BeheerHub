@@ -56,7 +56,6 @@ export async function sendEmail(data: z.infer<typeof mailSchema>) {
     subject: parsedData.subject,
     text: parsedData.body,
     html: `<p>${parsedData.body.replace(/\n/g, '<br>')}</p>`,
-    replyTo: parsedData.fromEmail || undefined,
   };
 
   if (parsedData.attachments && parsedData.attachments.length > 0) {
