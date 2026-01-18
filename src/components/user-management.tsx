@@ -72,6 +72,8 @@ const permissionConfig = [
 const allPermissions = permissionConfig;
 
 const userFormSchema = z.object({
+  firstName: z.string().min(1, 'Voornaam is verplicht.'),
+  lastName: z.string().min(1, 'Achternaam is verplicht.'),
   email: z.string().email('Voer een geldig e-mailadres in.'),
   role: z.enum(['Super admin', 'toezichthouder', 'ondersteuner', 'medewerkers']),
   permissions: z.record(z.record(z.boolean())).optional(),
@@ -116,6 +118,8 @@ function UserDialog({
           role: user.role || 'medewerkers',
           permissions: user.permissions || defaultPermissions,
           status: user.status || 'Niet uitgenodigd',
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
         });
       } else {
         form.reset({
@@ -123,6 +127,8 @@ function UserDialog({
           role: 'medewerkers',
           permissions: defaultPermissions,
           status: 'Niet uitgenodigd',
+          firstName: '',
+          lastName: '',
         });
       }
     }
@@ -144,9 +150,14 @@ function UserDialog({
   const onSubmit = async (data: UserFormValues) => {
     setIsSubmitting(true);
     try {
+      const displayName = `${data.firstName} ${data.lastName}`.trim();
+
       if (user) { // Edit existing user
         const userRef = doc(firestore, 'users', user.id);
         await updateDoc(userRef, { 
+            firstName: data.firstName,
+            lastName: data.lastName,
+            displayName,
             role: data.role,
             permissions: data.permissions,
             status: data.status,
@@ -164,10 +175,11 @@ function UserDialog({
             const userProfileData: UserProfile = {
                 id: newUser.uid,
                 email: newUser.email || '',
+                firstName: data.firstName,
+                lastName: data.lastName,
+                displayName,
                 role: data.role,
                 permissions: data.permissions || {},
-                firstName: '',
-                lastName: '',
                 sidebarCollapsed: true,
                 status: 'Niet uitgenodigd',
             };
@@ -211,34 +223,54 @@ function UserDialog({
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-4">
-            <FormField control={form.control} name="email" render={({ field }) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField control={form.control} name="firstName" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>E-mailadres</FormLabel>
-                  <FormControl>
-                    <Input type="email" placeholder="gebruiker@example.com" {...field} disabled={!!user} />
-                  </FormControl>
+                  <FormLabel>Voornaam</FormLabel>
+                  <FormControl><Input placeholder="Jan" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
-              )}
-            />
-             <FormField control={form.control} name="role" render={({ field }) => (
+              )} />
+              <FormField control={form.control} name="lastName" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Achternaam</FormLabel>
+                  <FormControl><Input placeholder="Janssen" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField control={form.control} name="email" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Rol</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                            <SelectTrigger><SelectValue placeholder="Selecteer een rol" /></SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                            <SelectItem value="Super admin">Super admin</SelectItem>
-                            <SelectItem value="toezichthouder">Toezichthouder</SelectItem>
-                            <SelectItem value="ondersteuner">Ondersteuner</SelectItem>
-                            <SelectItem value="medewerkers">Medewerkers</SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <FormLabel>E-mailadres</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="gebruiker@example.com" {...field} disabled={!!user} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+              <FormField control={form.control} name="role" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Rol</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                              <SelectTrigger><SelectValue placeholder="Selecteer een rol" /></SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                              <SelectItem value="Super admin">Super admin</SelectItem>
+                              <SelectItem value="toezichthouder">Toezichthouder</SelectItem>
+                              <SelectItem value="ondersteuner">Ondersteuner</SelectItem>
+                              <SelectItem value="medewerkers">Medewerkers</SelectItem>
+                          </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+            </div>
+            
             {user && (
               <FormField
                 control={form.control}
@@ -367,6 +399,11 @@ export function UserManagement() {
   const canCreate = isSuperUser || !!currentAdminProfile?.permissions?.users?.create;
   const canEdit = isSuperUser || !!currentAdminProfile?.permissions?.users?.edit;
 
+  const getInitials = (firstName?: string, lastName?: string) => {
+    const firstInitial = firstName?.[0] || '';
+    const lastInitial = lastName?.[0] || '';
+    return `${firstInitial}${lastInitial}`.toUpperCase();
+  };
 
   if (isAdminLoading) {
     return (
@@ -434,10 +471,10 @@ export function UserManagement() {
                             <div className="flex items-center gap-3">
                                 <Avatar className="h-8 w-8">
                                     <AvatarFallback>
-                                        {user.firstName?.[0] || '?'}{user.lastName?.[0] || ''}
+                                        {getInitials(user.firstName, user.lastName)}
                                     </AvatarFallback>
                                 </Avatar>
-                                <span>{user.firstName || user.lastName ? `${user.firstName} ${user.lastName}`.trim() : 'N.B.'}</span>
+                                <span>{user.displayName || 'N.B.'}</span>
                             </div>
                             <span className="truncate">{user.email}</span>
                             <Badge variant={user.role === 'Super admin' ? 'default' : 'secondary'} className="w-fit">{user.role}</Badge>
@@ -497,3 +534,5 @@ export function UserManagement() {
     </>
   );
 }
+
+    
