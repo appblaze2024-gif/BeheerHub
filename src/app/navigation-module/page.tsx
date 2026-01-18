@@ -59,6 +59,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import Image from 'next/image';
 import { ResponsiveContainer, RadialBarChart, PolarAngleAxis, RadialBar } from 'recharts';
 import { useProfile } from '@/firebase/profile-provider';
+import { useNavigationUI } from '@/context/navigation-ui-context';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -151,6 +152,7 @@ export default function Page() {
   const firestore = useFirestore();
   const { user } = useUser();
   const { profile } = useProfile();
+  const { setIsHeaderVisible } = useNavigationUI();
   
   const [viewState, setViewState] = React.useState({
     longitude: 5.2913, // Default center of NL
@@ -414,6 +416,14 @@ export default function Page() {
       }
     }
   }, [selectedRoute]);
+  
+  React.useEffect(() => {
+    // This effect runs once on mount
+    // It returns a cleanup function that runs on unmount
+    return () => {
+      setIsHeaderVisible(true);
+    };
+  }, [setIsHeaderVisible]);
 
   const calculateRoute = useCallback(async (points: (number[] | null)[]) => {
     const validPoints = points.filter((p): p is [number, number] =>
@@ -683,6 +693,7 @@ export default function Page() {
 
     setIsNavigating(false);
     setIsCalculating(false);
+    setIsHeaderVisible(true);
     setJustCompletedObjectId(null);
     
     routeRef.current = null;
@@ -713,7 +724,7 @@ export default function Page() {
             padding: { top: 0, bottom: 0, left: 0, right: 0 },
         });
     }
-  }, [firestore, user, activeRouteHistoryId]);
+  }, [firestore, user, activeRouteHistoryId, setIsHeaderVisible]);
 
   const resumeSimulation = useCallback(() => {
     simulationStateRef.current.isPaused = false;
@@ -888,12 +899,13 @@ export default function Page() {
     setJustCompletedObjectId(null);
     setIsNavigating(true);
     setIsCalculating(true);
+    setIsHeaderVisible(false);
     if (selectedHistoryId) {
         handleResumeRoute(selectedHistoryId);
     } else if (selectedRouteId) {
         handleStartNavigation();
     }
-  }, [selectedHistoryId, selectedRouteId, handleResumeRoute, handleStartNavigation]);
+  }, [selectedHistoryId, selectedRouteId, handleResumeRoute, handleStartNavigation, setIsHeaderVisible]);
   
   const findNextObject = (currentOrigin: [number, number], availableObjects: MapObject[]): MapObject | null => {
       if (!currentOrigin || availableObjects.length === 0) return null;

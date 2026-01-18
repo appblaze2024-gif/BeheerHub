@@ -21,11 +21,13 @@ import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import { doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
+import { NavigationUIProvider, useNavigationUI } from '@/context/navigation-ui-context';
 
 
 function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const { isHeaderVisible } = useNavigationUI();
 
   const userProfileRef = useMemo(() => {
     if (!user || !firestore) return null;
@@ -70,17 +72,19 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={cn('font-body antialiased flex flex-col h-svh overflow-hidden')}>
-      <header className="bg-background flex h-16 shrink-0 items-center gap-4 border-b border-border px-6 shadow-sm z-30">
-          <Link href="/" className="mr-4 flex items-center">
-            <Image
-              src="https://i.ibb.co/fVxCTj33/Whats-App-Image-2026-01-16-at-12-09-08-1-removebg-preview.png"
-              alt="BeheerHub Logo"
-              width={40}
-              height={40}
-            />
-          </Link>
-          <SidebarNav />
-      </header>
+      {isHeaderVisible && (
+        <header className="bg-background flex h-16 shrink-0 items-center gap-4 border-b border-border px-6 shadow-sm z-30">
+            <Link href="/" className="mr-4 flex items-center">
+              <Image
+                src="https://i.ibb.co/fVxCTj33/Whats-App-Image-2026-01-16-at-12-09-08-1-removebg-preview.png"
+                alt="BeheerHub Logo"
+                width={40}
+                height={40}
+              />
+            </Link>
+            <SidebarNav />
+        </header>
+      )}
       <main className="flex-1 flex flex-col overflow-auto bg-background">
         {children}
       </main>
@@ -170,7 +174,9 @@ export default function RootLayout({
       <body>
         <FirebaseClientProvider>
           <ProfileProvider>
-            <AppLayout>{children}</AppLayout>
+            <NavigationUIProvider>
+              <AppLayout>{children}</AppLayout>
+            </NavigationUIProvider>
           </ProfileProvider>
         </FirebaseClientProvider>
       </body>
