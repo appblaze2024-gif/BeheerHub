@@ -17,6 +17,8 @@ import {
   RefreshCw,
   Loader2,
   AlertCircle,
+  FolderPlus,
+  Folder,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -38,6 +40,9 @@ import { fetchEmailsFlow } from '@/ai/flows/fetch-emails-flow';
 import { deleteEmailFlow } from '@/ai/flows/delete-email-flow';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/components/ui/use-toast';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { createMailboxFlow } from '@/ai/flows/create-mailbox-flow';
 
 
 // --- UPDATED TYPE ---
@@ -52,7 +57,80 @@ type Mail = {
   read: boolean;
 };
 
-const folders = [
+function CreateFolderDialog({ onFolderCreated }: { onFolderCreated: (folderName: string) => void }) {
+  const [open, setOpen] = React.useState(false);
+  const [folderName, setFolderName] = React.useState('');
+  const [isCreating, setIsCreating] = React.useState(false);
+  const { toast } = useToast();
+
+  const handleCreate = async () => {
+    if (!folderName.trim()) {
+        toast({
+            variant: "destructive",
+            title: "Ongeldige mapnaam",
+            description: "De mapnaam mag niet leeg zijn.",
+        });
+        return;
+    }
+    setIsCreating(true);
+    try {
+        await createMailboxFlow({ mailboxName: folderName });
+        toast({
+            title: 'Map aangemaakt',
+            description: `De map '${folderName}' is succesvol aangemaakt.`,
+        });
+        onFolderCreated(folderName);
+        setOpen(false);
+        setFolderName('');
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: 'Fout bij aanmaken map',
+            description: error.message || 'Kon de map niet aanmaken.',
+        });
+    } finally {
+        setIsCreating(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!isCreating) setOpen(o)}}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" className="w-full justify-start gap-2">
+            <FolderPlus className="h-4 w-4" />
+            Nieuwe map
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Nieuwe map aanmaken</DialogTitle>
+          <DialogDescription>
+            Voer een naam in voor de nieuwe map in uw mailbox.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4">
+            <Label htmlFor="folder-name">Mapnaam</Label>
+            <Input 
+                id="folder-name" 
+                value={folderName} 
+                onChange={(e) => setFolderName(e.target.value)}
+                placeholder="Naam van de nieuwe map"
+            />
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)} disabled={isCreating}>Annuleren</Button>
+          <Button onClick={handleCreate} disabled={isCreating}>
+            {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Aanmaken
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
+const initialFolders = [
   { name: 'inbox', label: 'Postvak IN', icon: Inbox, boxName: 'INBOX' },
   { name: 'sent', label: 'Verzonden items', icon: Send, boxName: 'INBOX/Verzonden items' },
   { name: 'drafts', label: 'Concepten', icon: File, boxName: 'INBOX/Concepten' },
@@ -63,6 +141,7 @@ const folders = [
 
 
 export default function MailPage() {
+  const [folders, setFolders] = React.useState(initialFolders);
   const [selectedFolder, setSelectedFolder] = React.useState('inbox');
   const [selectedMail, setSelectedMail] = React.useState<Mail | null>(null);
   const [mails, setMails] = React.useState<Mail[]>([]);
@@ -87,7 +166,7 @@ export default function MailPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedFolder]);
+  }, [selectedFolder, folders]);
 
   React.useEffect(() => {
     fetchAndSetEmails();
@@ -128,6 +207,17 @@ export default function MailPage() {
       setIsDeleting(false);
     }
   };
+  
+  const handleFolderCreated = (folderName: string) => {
+    const newFolder = {
+      name: folderName.toLowerCase().replace(/\s/g, '-'),
+      label: folderName,
+      icon: Folder,
+      boxName: `INBOX/${folderName}`
+    };
+    setFolders(currentFolders => [...currentFolders, newFolder]);
+    setSelectedFolder(newFolder.name);
+  };
 
 
   return (
@@ -164,6 +254,8 @@ export default function MailPage() {
                   )}
                 </Button>
               ))}
+               <Separator className="my-1" />
+               <CreateFolderDialog onFolderCreated={handleFolderCreated} />
             </nav>
           </div>
 
