@@ -26,11 +26,10 @@ import { Toaster } from '@/components/ui/toaster';
 import { doc } from 'firebase/firestore';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-function AppLayout({ children }: { children: React.ReactNode }) {
+
+function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
-  const pathname = usePathname();
-  const router = useRouter();
   const isTablet = useIsMobile(1024);
 
   const userProfileRef = useMemo(() => {
@@ -80,19 +79,6 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     createProfile();
   }, [user, userProfile, isProfileLoading, userProfileRef]);
 
-  useEffect(() => {
-    if (isUserLoading) return; // Wait until user status is known
-
-    const publicPaths = ['/login', '/reset-password'];
-    const isPublicPage = publicPaths.includes(pathname);
-
-    if (!user && !isPublicPage) {
-      router.push('/login');
-    } else if (user && pathname === '/login') {
-      router.push('/');
-    }
-  }, [user, isUserLoading, pathname, router]);
-
   const handleToggleCollapse = () => {
     if (isCollapsed === undefined) return; // Don't allow toggle while loading
     const newCollapsedState = !isCollapsed;
@@ -103,18 +89,13 @@ function AppLayout({ children }: { children: React.ReactNode }) {
       });
     }
   };
-
-  if (isUserLoading || isCollapsed === undefined) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        Laden...
-      </div>
-    );
-  }
-
-  const publicPaths = ['/login', '/reset-password'];
-  if (publicPaths.includes(pathname)) {
-    return <>{children}</>;
+  
+  if (isUserLoading || isProfileLoading || isCollapsed === undefined) {
+      return (
+        <div className="flex h-screen items-center justify-center">
+          Laden...
+        </div>
+      );
   }
 
   return (
@@ -157,6 +138,41 @@ function AppLayout({ children }: { children: React.ReactNode }) {
       <Toaster />
     </div>
   );
+}
+
+function AppLayout({ children }: { children: React.ReactNode }) {
+  const { user, isUserLoading } = useUser();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const publicPaths = ['/login', '/reset-password'];
+  const isPublicPage = publicPaths.includes(pathname);
+
+  useEffect(() => {
+    if (isUserLoading) return; // Wait until user status is known
+
+    if (!user && !isPublicPage) {
+      router.push('/login');
+    } else if (user && pathname === '/login') {
+      router.push('/');
+    }
+  }, [user, isUserLoading, pathname, router, isPublicPage]);
+
+  if (isPublicPage) {
+    return <>{children}</>;
+  }
+
+  // For protected pages, show a loader while auth state is being confirmed
+  // If the user is not authenticated, the useEffect above will redirect them.
+  if (isUserLoading || !user) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        Laden...
+      </div>
+    );
+  }
+
+  return <ProtectedAppLayout>{children}</ProtectedAppLayout>;
 }
 
 export default function RootLayout({
