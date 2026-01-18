@@ -4,7 +4,7 @@ import * as React from 'react';
 import MapGL, { Marker, Popup, Source, Layer, FillLayer, LineLayer } from 'react-map-gl';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection } from 'firebase/firestore';
-import { Calendar as CalendarIcon, Plus, Search, List, Map as MapIcon, Bell, Filter, Mail as MailIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Search, List, Map as MapIcon, Bell, Filter, Mail as MailIcon, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MeldingDialog } from '@/components/melding-dialog';
@@ -22,6 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { useProfile } from '@/firebase/profile-provider';
+import { useRouter } from 'next/navigation';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -93,7 +94,7 @@ const polygonOutlineLayer: LineLayer = {
     },
 };
 
-function MeldingenList({ meldingen, onMeldingClick, onMailMelding }: { meldingen: Melding[], onMeldingClick: (melding: Melding) => void, onMailMelding: (melding: Melding) => void }) {
+function MeldingenList({ meldingen, onMeldingClick, onMailMelding, onNavigateToMelding }: { meldingen: Melding[], onMeldingClick: (melding: Melding) => void, onMailMelding: (melding: Melding) => void, onNavigateToMelding: (melding: Melding) => void }) {
   if (meldingen.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center text-muted-foreground p-8">
@@ -153,6 +154,9 @@ function MeldingenList({ meldingen, onMeldingClick, onMailMelding }: { meldingen
             {melding.status}
           </Badge>
           <div className="flex justify-end">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); onNavigateToMelding(melding); }}>
+                <Navigation className="h-4 w-4" />
+            </Button>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); onMailMelding(melding); }}>
                 <MailIcon className="h-4 w-4" />
             </Button>
@@ -166,6 +170,7 @@ function MeldingenList({ meldingen, onMeldingClick, onMailMelding }: { meldingen
 
 export default function IssuesPage() {
   const firestore = useFirestore();
+  const router = useRouter();
   const [selectedMelding, setSelectedMelding] = React.useState<Melding | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
@@ -440,6 +445,12 @@ export default function IssuesPage() {
     setMeldingToMail(melding);
     setIsMailDialogOpen(true);
   };
+  
+  const handleNavigateToMelding = (melding: Melding) => {
+    if (melding.latitude && melding.longitude) {
+        router.push(`/navigation-module?dest_lat=${melding.latitude}&dest_lon=${melding.longitude}&dest_id=${melding.id}`);
+    }
+  };
 
 
   React.useEffect(() => {
@@ -622,7 +633,7 @@ export default function IssuesPage() {
                     <CardTitle>Overzicht Meldingen ({filteredMeldingen.length})</CardTitle>
                 </CardHeader>
                 <CardContent className='p-0 flex-1 min-h-0'>
-                    <MeldingenList meldingen={filteredMeldingen} onMeldingClick={handleMeldingClickFromList} onMailMelding={handleMailMelding} />
+                    <MeldingenList meldingen={filteredMeldingen} onMeldingClick={handleMeldingClickFromList} onMailMelding={handleMailMelding} onNavigateToMelding={handleNavigateToMelding} />
                 </CardContent>
             </Card>
         </div>

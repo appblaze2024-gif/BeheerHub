@@ -60,6 +60,7 @@ import Image from 'next/image';
 import { ResponsiveContainer, RadialBarChart, PolarAngleAxis, RadialBar } from 'recharts';
 import { useProfile } from '@/firebase/profile-provider';
 import { useNavigationUI } from '@/context/navigation-ui-context';
+import { useSearchParams } from 'next/navigation';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -153,6 +154,7 @@ export default function Page() {
   const { user } = useUser();
   const { profile } = useProfile();
   const { setIsHeaderVisible } = useNavigationUI();
+  const searchParams = useSearchParams();
   
   const [viewState, setViewState] = React.useState({
     longitude: 5.2913, // Default center of NL
@@ -190,6 +192,10 @@ export default function Page() {
   const [completionVulgraadPercentage, setCompletionVulgraadPercentage] = React.useState<number>(38);
   const [remainingDistance, setRemainingDistance] = React.useState<number | null>(null);
   const [justCompletedObjectId, setJustCompletedObjectId] = React.useState<string | null>(null);
+  
+  const [userPosition, setUserPosition] = React.useState<[number, number] | null>(null);
+  const [isSinglePointNav, setIsSinglePointNav] = React.useState(false);
+
 
   // Simulation state
   const [isSimulating, setIsSimulating] = React.useState(false);
@@ -378,6 +384,7 @@ export default function Page() {
           const { longitude, latitude } = position.coords;
           positionRef.current = [longitude, latitude];
           snappedOriginRef.current = [longitude, latitude];
+          setUserPosition([longitude, latitude]);
           setViewState(prev => ({...prev, longitude, latitude, zoom: 14}));
           setLocationError(null);
         },
@@ -386,6 +393,7 @@ export default function Page() {
           const fallbackLocation: [number, number] = [5.4697, 51.4416];
           positionRef.current = fallbackLocation;
           snappedOriginRef.current = fallbackLocation;
+          setUserPosition(fallbackLocation);
         }
       );
     } else {
@@ -393,6 +401,7 @@ export default function Page() {
       const fallbackLocation: [number, number] = [5.4697, 51.4416];
       positionRef.current = fallbackLocation;
       snappedOriginRef.current = fallbackLocation;
+      setUserPosition(fallbackLocation);
     }
   }, []);
 
@@ -507,6 +516,33 @@ export default function Page() {
         setIsCalculating(false);
     }
   }, []);
+  
+  React.useEffect(() => {
+    const destLat = searchParams.get('dest_lat');
+    const destLon = searchParams.get('dest_lon');
+    const destId = searchParams.get('dest_id');
+
+    if (destLat && destLon && destId && userPosition) {
+        if (isNavigating) return;
+
+        const destinationObject: MapObject = {
+            id: destId,
+            latitude: parseFloat(destLat),
+            longitude: parseFloat(destLon),
+        };
+        
+        setIsSinglePointNav(true);
+        setDestination(destinationObject);
+        setIsNavigating(true);
+        setIsCalculating(true);
+        setIsHeaderVisible(false);
+        calculateRoute([userPosition, [destinationObject.longitude, destinationObject.latitude]]);
+        setPendingObjects([]);
+        setCompletedObjects([]);
+        setSkippedObjects([]);
+    }
+  }, [searchParams, userPosition, calculateRoute, setIsHeaderVisible, isNavigating]);
+
 
   const getMarkerColor = (objectId: string): string => {
     if (completedObjects.includes(objectId)) {
@@ -693,6 +729,7 @@ export default function Page() {
 
     setIsNavigating(false);
     setIsCalculating(false);
+    setIsSinglePointNav(false);
     setIsHeaderVisible(true);
     setJustCompletedObjectId(null);
     
@@ -959,6 +996,11 @@ export default function Page() {
     if (!positionRef.current || !destination) return;
     
     setJustCompletedObjectId(destination.id);
+    if(isSinglePointNav) {
+        handleStopNavigation();
+        return;
+    }
+    
     const newPendingObjects = await updateObjectStatus(destination.id, status);
 
     const nextObject = findNextObject(positionRef.current, newPendingObjects);
@@ -1041,7 +1083,7 @@ export default function Page() {
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       <div ref={mapContainerRef} className="flex-1 relative bg-gray-800">
-        {!isNavigating && (
+        {!isNavigating && !isSinglePointNav && (
             <div className="absolute top-4 left-4 z-10 bg-card/90 backdrop-blur-sm p-4 rounded-lg shadow-lg w-full max-w-sm text-card-foreground">
                 <h2 className="text-lg font-bold mb-2">Start een nieuwe route</h2>
                 <div className="space-y-4">
@@ -1153,21 +1195,23 @@ export default function Page() {
                         </div>
                     </div>
                 </div>
-                 <div className="bg-card/90 backdrop-blur-sm p-3 rounded-xl shadow-lg text-card-foreground mt-2">
-                    <div className="flex justify-between items-center mb-1 px-1">
-                        <p className="font-semibold text-sm">Voortgang</p>
-                        <p className="font-semibold text-sm">
-                        {completedObjects.length + skippedObjects.length} / {objectsForCurrentRoute.length}{' '}
-                        objecten
-                        </p>
+                 {!isSinglePointNav && (
+                    <div className="bg-card/90 backdrop-blur-sm p-3 rounded-xl shadow-lg text-card-foreground mt-2">
+                        <div className="flex justify-between items-center mb-1 px-1">
+                            <p className="font-semibold text-sm">Voortgang</p>
+                            <p className="font-semibold text-sm">
+                            {completedObjects.length + skippedObjects.length} / {objectsForCurrentRoute.length}{' '}
+                            objecten
+                            </p>
+                        </div>
+                        <Progress value={progressValue} className="h-2" />
+                        <div className="flex items-center justify-center gap-2 mt-2 text-card-foreground">
+                            <Gauge className="h-6 w-6" />
+                            <span className="font-bold text-3xl">{currentSpeed.toFixed(0)}</span>
+                            <span className="text-base">km/h</span>
+                        </div>
                     </div>
-                    <Progress value={progressValue} className="h-2" />
-                    <div className="flex items-center justify-center gap-2 mt-2 text-card-foreground">
-                        <Gauge className="h-6 w-6" />
-                        <span className="font-bold text-3xl">{currentSpeed.toFixed(0)}</span>
-                        <span className="text-base">km/h</span>
-                    </div>
-                </div>
+                 )}
              </div>
         )}
         
@@ -1348,80 +1392,91 @@ export default function Page() {
         <Dialog open={isCompletionSheetOpen} onOpenChange={setIsCompletionSheetOpen}>
             <DialogContent className="sm:max-w-[40vw] rounded-xl">
                 <DialogHeader>
-                    <DialogTitle>OBJECT-ID: {destination?.id}</DialogTitle>
+                    <DialogTitle>{isSinglePointNav ? 'Bestemming Bereikt' : `OBJECT-ID: ${destination?.id}`}</DialogTitle>
                     <DialogDescription>
-                        Markeer dit object als voltooid en ga verder naar de volgende.
+                        {isSinglePointNav
+                            ? 'U bent aangekomen op de bestemming.'
+                            : 'Markeer dit object als voltooid en ga verder naar de volgende.'}
                     </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-4">
-                      <Label className="text-center block">Selecteer vulgraad</Label>
-                      <div className="h-48 -mb-4">
-                          <ResponsiveContainer width="100%" height="100%">
-                              <RadialBarChart 
-                                  cx="50%"
-                                  cy="100%"
-                                  innerRadius="120%" 
-                                  outerRadius="160%" 
-                                  data={[{ name: 'vulgraad', value: completionVulgraadPercentage }]} 
-                                  startAngle={180} 
-                                  endAngle={0}
-                                  barSize={40}
-                              >
-                                  <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
-                                  <RadialBar 
-                                      background={{ fill: 'hsl(var(--muted))' }}
-                                      dataKey='value' 
-                                      cornerRadius={12}
-                                      fill={`hsl(${hue}, 80%, 50%)`}
-                                  />
-                                  <text x="50%" y="80%" textAnchor="middle" dominantBaseline="middle" className="text-5xl font-bold fill-foreground">
-                                      {completionVulgraadPercentage}%
-                                  </text>
-                              </RadialBarChart>
-                          </ResponsiveContainer>
+                {isSinglePointNav ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Button onClick={() => handleNextObject('completed')} size="lg">
+                        <CheckCircle className="mr-2 h-5 w-5" />
+                        Navigatie Voltooien
+                      </Button>
+                    </div>
+                ) : (
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-4">
+                          <Label className="text-center block">Selecteer vulgraad</Label>
+                          <div className="h-48 -mb-4">
+                              <ResponsiveContainer width="100%" height="100%">
+                                  <RadialBarChart 
+                                      cx="50%"
+                                      cy="100%"
+                                      innerRadius="120%" 
+                                      outerRadius="160%" 
+                                      data={[{ name: 'vulgraad', value: completionVulgraadPercentage }]} 
+                                      startAngle={180} 
+                                      endAngle={0}
+                                      barSize={40}
+                                  >
+                                      <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
+                                      <RadialBar 
+                                          background={{ fill: 'hsl(var(--muted))' }}
+                                          dataKey='value' 
+                                          cornerRadius={12}
+                                          fill={`hsl(${hue}, 80%, 50%)`}
+                                      />
+                                      <text x="50%" y="80%" textAnchor="middle" dominantBaseline="middle" className="text-5xl font-bold fill-foreground">
+                                          {completionVulgraadPercentage}%
+                                      </text>
+                                  </RadialBarChart>
+                              </ResponsiveContainer>
+                          </div>
+                          <div className="flex items-center justify-center gap-4 pt-4">
+                              <Button variant="outline" size="icon" className="h-12 w-12 rounded-full" onClick={() => setCompletionVulgraadPercentage(v => Math.max(0, v - 5))}>
+                                  <span className="text-2xl">-</span>
+                              </Button>
+                              <Input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  value={completionVulgraadPercentage}
+                                  onChange={(e) => {
+                                      const val = Number(e.target.value);
+                                      if (val >= 0 && val <= 100) {
+                                          setCompletionVulgraadPercentage(val);
+                                      }
+                                  }}
+                                  className="w-24 text-center text-2xl font-bold h-12"
+                              />
+                              <Button variant="outline" size="icon" className="h-12 w-12 rounded-full" onClick={() => setCompletionVulgraadPercentage(v => Math.min(100, v + 5))}>
+                                  <span className="text-2xl">+</span>
+                              </Button>
+                          </div>
                       </div>
-                      <div className="flex items-center justify-center gap-4 pt-4">
-                          <Button variant="outline" size="icon" className="h-12 w-12 rounded-full" onClick={() => setCompletionVulgraadPercentage(v => Math.max(0, v - 5))}>
-                              <span className="text-2xl">-</span>
-                          </Button>
-                          <Input
-                              type="number"
-                              min={0}
-                              max={100}
-                              value={completionVulgraadPercentage}
-                              onChange={(e) => {
-                                  const val = Number(e.target.value);
-                                  if (val >= 0 && val <= 100) {
-                                      setCompletionVulgraadPercentage(val);
-                                  }
-                              }}
-                              className="w-24 text-center text-2xl font-bold h-12"
-                          />
-                          <Button variant="outline" size="icon" className="h-12 w-12 rounded-full" onClick={() => setCompletionVulgraadPercentage(v => Math.min(100, v + 5))}>
-                              <span className="text-2xl">+</span>
-                          </Button>
+                      <div className="flex items-center justify-center gap-4">
+                        <Image 
+                            src="https://i.ibb.co/pjqtgDZj/Chat-GPT-Image-15-jan-2026-21-25-58-removebg-preview.png"
+                            alt="Gereed"
+                            width={200}
+                            height={200}
+                            onClick={() => handleNextObject('completed')}
+                            className="cursor-pointer hover:scale-105 transition-transform"
+                        />
+                          <Image 
+                            src="https://i.ibb.co/qLKX0VYH/Chat-GPT-Image-15-jan-2026-21-28-53-removebg-preview.png"
+                            alt="Niet Gereed"
+                            width={200}
+                            height={200}
+                            onClick={() => handleNextObject('skipped')}
+                            className="cursor-pointer hover:scale-105 transition-transform"
+                        />
                       </div>
-                  </div>
-                  <div className="flex items-center justify-center gap-4">
-                     <Image 
-                        src="https://i.ibb.co/pjqtgDZj/Chat-GPT-Image-15-jan-2026-21-25-58-removebg-preview.png"
-                        alt="Gereed"
-                        width={200}
-                        height={200}
-                        onClick={() => handleNextObject('completed')}
-                        className="cursor-pointer hover:scale-105 transition-transform"
-                     />
-                      <Image 
-                        src="https://i.ibb.co/qLKX0VYH/Chat-GPT-Image-15-jan-2026-21-28-53-removebg-preview.png"
-                        alt="Niet Gereed"
-                        width={200}
-                        height={200}
-                        onClick={() => handleNextObject('skipped')}
-                        className="cursor-pointer hover:scale-105 transition-transform"
-                     />
-                  </div>
-                </div>
+                    </div>
+                )}
                  <DialogFooter>
                   <DialogClose asChild>
                     <Button variant="ghost" onClick={() => { if(isSimulating) { resumeSimulation() } }}>Sluiten</Button>
