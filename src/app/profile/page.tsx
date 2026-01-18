@@ -4,7 +4,6 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -85,10 +84,8 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="flex flex-col flex-1 min-h-0">
-      <PageHeader title="Instellingen" description="Beheer uw account- en organisatie-instellingen." />
-      
-      <Tabs defaultValue="profile" className="flex flex-col flex-1 px-6 pb-6 space-y-6">
+    <div className="flex flex-col flex-1 min-h-0 p-6">
+      <Tabs defaultValue="profile" className="flex flex-col flex-1 space-y-6">
         <TabsList>
           <TabsTrigger value="profile">Mijn Profiel</TabsTrigger>
           <TabsTrigger value="users">Gebruikers</TabsTrigger>
