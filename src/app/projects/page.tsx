@@ -28,7 +28,7 @@ import {
   deleteDocumentNonBlocking,
   useFirebaseApp,
 } from '@/firebase';
-import { collection, doc, deleteDoc } from 'firebase/firestore';
+import { collection, doc } from 'firebase/firestore';
 import { getStorage, ref, deleteObject } from 'firebase/storage';
 import { AfspraakDialog } from '@/components/afspraak-dialog';
 import { OrganisatieContactDialog } from '@/components/organisatie-contact-dialog';
@@ -325,7 +325,7 @@ function AfsprakenTab({ projectId, canEdit }: { projectId: string | undefined, c
   const handleDeleteAfspraak = async (afspraakId: string) => {
     if (!firestore || !projectId) return;
     const afspraakRef = doc(firestore, 'projects', projectId, 'afspraken', afspraakId);
-    await deleteDoc(afspraakRef);
+    await deleteDocumentNonBlocking(afspraakRef);
   }
 
   if (!projectId) {
@@ -412,7 +412,7 @@ function OrganisatieTab({ projectId, wijken, canEdit }: { projectId: string | un
   const handleDeleteContact = async (contactId: string) => {
     if (!firestore || !projectId) return;
     const contactRef = doc(firestore, 'projects', projectId, 'organisatie', contactId);
-    await deleteDoc(contactRef);
+    await deleteDocumentNonBlocking(contactRef);
   };
 
   if (!projectId) {
@@ -510,7 +510,7 @@ function BestandenTab({ projectId, canEdit }: { projectId: string | undefined, c
     
     try {
       await deleteObject(storageRef);
-      await deleteDoc(bestandDocRef);
+      await deleteDocumentNonBlocking(bestandDocRef);
     } catch (error) {
       console.error("Fout bij het verwijderen van het bestand:", error);
     }

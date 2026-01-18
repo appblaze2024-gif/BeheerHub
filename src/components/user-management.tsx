@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-import { doc, setDoc, updateDoc, collection } from 'firebase/firestore';
+import { doc, collection } from 'firebase/firestore';
 import { Loader2, Plus, MoreHorizontal, User as UserIcon } from 'lucide-react';
 import { firebaseConfig } from '@/firebase/config';
 
@@ -14,6 +14,8 @@ import {
   useCollection,
   useFirestore,
   useFirebaseApp,
+  setDocumentNonBlocking,
+  updateDocumentNonBlocking,
 } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import type { UserProfile } from '@/lib/types';
@@ -154,7 +156,7 @@ function UserDialog({
 
       if (user) { // Edit existing user
         const userRef = doc(firestore, 'users', user.id);
-        await updateDoc(userRef, { 
+        await updateDocumentNonBlocking(userRef, { 
             firstName: data.firstName,
             lastName: data.lastName,
             displayName,
@@ -184,7 +186,7 @@ function UserDialog({
                 status: 'Niet uitgenodigd',
             };
 
-            await setDoc(doc(firestore, 'users', newUser.uid), userProfileData);
+            await setDocumentNonBlocking(doc(firestore, 'users', newUser.uid), userProfileData, {});
 
             toast({ title: 'Gebruiker aangemaakt', description: `Stuur ${data.email} een uitnodiging om het account te activeren.`});
         } finally {
@@ -387,7 +389,7 @@ export function UserManagement() {
         });
         
         const userRef = doc(firestore, 'users', user.id);
-        await updateDoc(userRef, { status: 'Uitgenodigd' });
+        await updateDocumentNonBlocking(userRef, { status: 'Uitgenodigd' });
 
         toast({ title: 'Uitnodiging verstuurd!', description: `Een e-mail is naar ${user.email} gestuurd om een wachtwoord in te stellen. Vraag hen de spamfolder te controleren.` });
     } catch (error: any) {
@@ -491,7 +493,7 @@ export function UserManagement() {
                                             user.status === 'Actief' ? 'text-green-600 border-green-600 w-fit'
                                             : user.status === 'Inactief' ? 'w-fit'
                                             : user.status === 'Uitgenodigd' ? 'text-blue-600 border-blue-600 w-fit'
-                                            : 'w-fit'
+                                            : user.status === 'Niet uitgenodigd' ? 'text-orange-600 border-orange-600 w-fit' : 'w-fit'
                                         }
                                         >
                                         {user.status || 'Niet uitgenodigd'}

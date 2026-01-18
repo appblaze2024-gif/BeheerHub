@@ -34,8 +34,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import * as turf from '@turf/turf';
-import { useCollection, useFirestore, useUser, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, doc, serverTimestamp, getDocs, setDoc } from 'firebase/firestore';
+import { useCollection, useFirestore, useUser, addDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { collection, query, where, doc, serverTimestamp, getDocs } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
@@ -812,7 +812,7 @@ export default function Page() {
     };
 
     const docRef = doc(routesCollection);
-    await setDoc(docRef, routeHistoryData);
+    await setDocumentNonBlocking(docRef, routeHistoryData, {});
     setActiveRouteHistoryId(docRef.id);
 
     setCompletedObjects([]);

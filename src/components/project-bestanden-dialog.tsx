@@ -7,9 +7,6 @@ import { format } from 'date-fns';
 import {
   collection,
   doc,
-  setDoc,
-  deleteDoc,
-  serverTimestamp,
 } from 'firebase/firestore';
 import {
   getStorage,
@@ -19,7 +16,7 @@ import {
   deleteObject,
 } from 'firebase/storage';
 
-import { useFirestore, useFirebaseApp, useCollection } from '@/firebase';
+import { useFirestore, useFirebaseApp, useCollection, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import type { Bestand } from '@/app/projects/page';
 
 import {
@@ -111,7 +108,7 @@ export function ProjectBestandenDialog({
                     storagePath: storagePath,
                 };
 
-                await setDoc(fileDocRef, newFile);
+                await setDocumentNonBlocking(fileDocRef, newFile, {});
 
                 setUploadProgress(prev => {
                     const newProgress = {...prev};
@@ -142,11 +139,11 @@ export function ProjectBestandenDialog({
 
     try {
       await deleteObject(storageRef);
-      await deleteDoc(fileDocRef);
+      await deleteDocumentNonBlocking(fileDocRef);
     } catch (error: any) {
       console.error('Kon bestand niet verwijderen:', error);
       if (error.code === 'storage/object-not-found') {
-        await deleteDoc(fileDocRef); // Remove from firestore even if not in storage
+        await deleteDocumentNonBlocking(fileDocRef); // Remove from firestore even if not in storage
       }
     }
   };

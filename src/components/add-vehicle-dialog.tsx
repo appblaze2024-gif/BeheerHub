@@ -7,10 +7,10 @@ import { z } from 'zod';
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
-import { doc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 
 import { cn } from '@/lib/utils';
-import { useFirestore } from '@/firebase';
+import { useFirestore, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { carData } from '@/lib/car-data';
 
 import {
@@ -169,9 +169,9 @@ export function AddVehicleDialog({ children, vehicle = null, open: controlledOpe
             setIsSubmitting(false);
             return
         }
-        await updateDoc(vehicleRef, vehicleData);
+        await updateDocumentNonBlocking(vehicleRef, vehicleData);
       } else {
-        await setDoc(vehicleRef, vehicleData, { merge: false });
+        await setDocumentNonBlocking(vehicleRef, vehicleData, { merge: false });
       }
 
       onOpenChange(false);

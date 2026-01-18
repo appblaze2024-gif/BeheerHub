@@ -10,10 +10,7 @@ import { nl } from 'date-fns/locale';
 import {
   collection,
   doc,
-  setDoc,
-  updateDoc,
   serverTimestamp,
-  deleteDoc,
 } from 'firebase/firestore';
 import {
   getStorage,
@@ -24,7 +21,7 @@ import {
 } from 'firebase/storage';
 
 import { cn } from '@/lib/utils';
-import { useFirestore, useFirebaseApp } from '@/firebase';
+import { useFirestore, useFirebaseApp, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 
 import {
   Dialog,
@@ -244,7 +241,7 @@ export function AddDamageDialog({
       }
 
       const damageDocRef = doc(firestore, materieelType, materieelId, 'damages', damage.id);
-      await deleteDoc(damageDocRef);
+      await deleteDocumentNonBlocking(damageDocRef);
 
       onOpenChange(false);
     } catch (error) {
@@ -278,9 +275,9 @@ export function AddDamageDialog({
 
     try {
       if (damage) {
-        await updateDoc(damageDocRef, damageData);
+        await updateDocumentNonBlocking(damageDocRef, damageData);
       } else {
-        await setDoc(damageDocRef, { ...damageData, createdAt: serverTimestamp(), status: 'Open' });
+        await setDocumentNonBlocking(damageDocRef, { ...damageData, createdAt: serverTimestamp(), status: 'Open' }, {});
       }
       onOpenChange(false);
     } catch (error) {

@@ -5,12 +5,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Loader2 } from 'lucide-react';
-import { useFirestore } from '@/firebase';
+import { useFirestore, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import {
   collection,
   doc,
-  setDoc,
-  updateDoc,
   serverTimestamp,
 } from 'firebase/firestore';
 
@@ -117,12 +115,12 @@ export function OrganisatieContactDialog({
 
     try {
       if (contact) {
-        await updateDoc(contactRef, contactData);
+        await updateDocumentNonBlocking(contactRef, contactData);
       } else {
-        await setDoc(contactRef, {
+        await setDocumentNonBlocking(contactRef, {
           ...contactData,
           createdAt: serverTimestamp(),
-        });
+        }, {});
       }
       onOpenChange(false);
     } catch (error) {

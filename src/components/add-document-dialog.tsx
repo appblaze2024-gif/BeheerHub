@@ -9,10 +9,7 @@ import { format } from 'date-fns';
 import {
   collection,
   doc,
-  setDoc,
-  updateDoc,
   serverTimestamp,
-  deleteDoc,
 } from 'firebase/firestore';
 import {
   getStorage,
@@ -22,7 +19,7 @@ import {
   deleteObject,
 } from 'firebase/storage';
 
-import { useFirestore, useFirebaseApp } from '@/firebase';
+import { useFirestore, useFirebaseApp, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 
 import {
   Dialog,
@@ -237,7 +234,7 @@ export function AddDocumentDialog({
       }
 
       const documentDocRef = doc(firestore, materieelType, materieelId, 'documents', docToEdit.id);
-      await deleteDoc(documentDocRef);
+      await deleteDocumentNonBlocking(documentDocRef);
 
       onOpenChange(false);
     } catch (error) {
@@ -270,9 +267,9 @@ export function AddDocumentDialog({
 
     try {
       if (docToEdit) {
-        await updateDoc(documentDocRef, documentData);
+        await updateDocumentNonBlocking(documentDocRef, documentData);
       } else {
-        await setDoc(documentDocRef, { ...documentData, createdAt: serverTimestamp() });
+        await setDocumentNonBlocking(documentDocRef, { ...documentData, createdAt: serverTimestamp() }, {});
       }
       onOpenChange(false);
     } catch (error) {
