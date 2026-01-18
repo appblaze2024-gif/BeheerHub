@@ -9,8 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useUser, useFirestore, useDoc, setDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useUser, useFirestore, useDoc } from '@/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/components/ui/use-toast';
 import { Loader2 } from 'lucide-react';
 
@@ -71,7 +71,7 @@ export default function SettingsPage() {
     setIsSaving(true);
     const displayName = `${data.firstName} ${data.lastName}`.trim();
     try {
-      await setDocumentNonBlocking(userProfileRef, { 
+      await setDoc(userProfileRef, { 
         firstName: data.firstName,
         lastName: data.lastName,
         displayName: displayName 
