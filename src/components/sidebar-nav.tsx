@@ -92,9 +92,7 @@ export function SidebarNav() {
                 <Link key={item.label} href={item.href} passHref>
                   <Button 
                     variant={pathname === item.href ? 'secondary' : 'ghost'} 
-                    size="sm" 
-                    className="text-sidebar-foreground hover:bg-sidebar-accent data-[state=active]:bg-sidebar-primary data-[state=active]:text-sidebar-primary-foreground"
-                    data-state={pathname === item.href ? 'active' : 'inactive'}
+                    size="sm"
                   >
                     {item.label}
                   </Button>
@@ -106,7 +104,7 @@ export function SidebarNav() {
            {/* User profile dropdown */}
            <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-2 text-sidebar-foreground hover:bg-sidebar-accent focus:bg-sidebar-accent">
+                <Button variant="ghost" className="flex items-center gap-2">
                     <Avatar className="h-8 w-8">
                        <AvatarImage src={user?.photoURL || undefined} />
                        <AvatarFallback>{getInitials(profile?.firstName, profile?.lastName)}</AvatarFallback>
