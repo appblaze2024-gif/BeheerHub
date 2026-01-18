@@ -1301,27 +1301,23 @@ export default function Page() {
             </Marker>
           )}
           
-          {isNavigating && objectsForCurrentRoute?.map(obj => {
-              const isCurrentDestination = destination?.id === obj.id;
+          {isNavigating && destination && (
+            <Marker
+              key={`destination-marker`}
+              longitude={destination.longitude}
+              latitude={destination.latitude}
+              anchor="bottom"
+              onClick={() => handleMarkerClick(destination)}
+            >
+              <MapPin className={cn("w-10 h-10 animate-pulse", isSinglePointNav ? "text-red-600" : "text-blue-600")} />
+            </Marker>
+          )}
+
+          {isNavigating && !isSinglePointNav && objectsForCurrentRoute?.map(obj => {
+              if (destination?.id === obj.id) return null; // Already rendered as destination
+
               const color = getMarkerColor(obj.id);
-              
-              if (isCurrentDestination) {
-                return (
-                  <Marker
-                    key={obj.id}
-                    longitude={obj.longitude}
-                    latitude={obj.latitude}
-                    anchor="bottom"
-                    onClick={() => handleMarkerClick(obj)}
-                    className="cursor-pointer"
-                    onMouseEnter={() => setHoveredObject(obj)}
-                    onMouseLeave={() => setHoveredObject(null)}
-                  >
-                    <MapPin className="w-8 h-8 text-blue-600 animate-pulse" />
-                  </Marker>
-                )
-              }
-              
+
               return (
                  <Marker
                     key={obj.id}
