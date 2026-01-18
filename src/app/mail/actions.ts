@@ -44,18 +44,17 @@ export async function sendEmail(data: z.infer<typeof mailSchema>) {
     },
   });
 
-  const fromDisplayName = parsedData.fromEmail;
-
   const mailOptions: nodemailer.SendMailOptions = {
     from: {
-      name: fromDisplayName || SMTP_USER,
-      address: SMTP_USER,
+      name: parsedData.fromName || SMTP_USER, // Use user's display name or email
+      address: SMTP_USER, // This MUST be the authenticated user
     },
     to: parsedData.to,
     cc: parsedData.cc,
     subject: parsedData.subject,
     text: parsedData.body,
     html: `<p>${parsedData.body.replace(/\n/g, '<br>')}</p>`,
+    replyTo: parsedData.fromEmail, // Set reply-to to the user's actual email
   };
 
   if (parsedData.attachments && parsedData.attachments.length > 0) {
