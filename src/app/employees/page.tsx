@@ -58,7 +58,10 @@ export default function EmployeesPage() {
   const [selectedRows, setSelectedRows] = React.useState<string[]>([]);
   const { profile, isLoading: isProfileLoading } = useProfile();
   
-  const canManage = !isProfileLoading && (profile?.role === 'Super admin' || !!profile?.permissions?.manageEmployees);
+  const isSuperUser = profile?.role === 'Super admin';
+  const canCreate = isSuperUser || !!profile?.permissions?.employees?.create;
+  const canEdit = isSuperUser || !!profile?.permissions?.employees?.edit;
+  const canDelete = isSuperUser || !!profile?.permissions?.employees?.delete;
 
   const medewerkersCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -136,7 +139,7 @@ export default function EmployeesPage() {
             <Filter className="mr-2 h-4 w-4" />
             Filter
           </Button>
-          {canManage && (
+          {canCreate && (
             <Button onClick={handleAddNew}>
               <Plus className="mr-2 h-4 w-4" /> Medewerker toevoegen
             </Button>
@@ -150,7 +153,7 @@ export default function EmployeesPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          {canManage && (
+          {canDelete && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
@@ -176,7 +179,7 @@ export default function EmployeesPage() {
                     onCheckedChange={handleSelectAll}
                     checked={isAllSelected}
                     aria-label="Selecteer alle rijen"
-                    disabled={!canManage}
+                    disabled={!canDelete}
                   />
                   <span>Naam</span>
                   <span>E-mail</span>
@@ -203,7 +206,7 @@ export default function EmployeesPage() {
                         onClick={(e) => e.stopPropagation()}
                         checked={selectedRows.includes(medewerker.id)}
                         aria-label={`Selecteer ${medewerker.voornaam} ${medewerker.achternaam}`}
-                        disabled={!canManage}
+                        disabled={!canDelete}
                       />
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
@@ -226,7 +229,7 @@ export default function EmployeesPage() {
                       >
                         {medewerker.status}
                       </Badge>
-                      {canManage ? (
+                      {(canEdit || canDelete) && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
@@ -235,32 +238,32 @@ export default function EmployeesPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={(e) => handleEdit(e, medewerker)}>
-                              Bewerken
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Verwijderen</DropdownMenuItem>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                  <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                      Deze actie kan niet ongedaan worden gemaakt. Dit zal de medewerker permanent verwijderen.
-                                  </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                  <AlertDialogCancel>Annuleren</AlertDialogCancel>
-                                  <AlertDialogAction onClick={(e) => handleDelete(e, medewerker.id)}>
-                                      Doorgaan
-                                  </AlertDialogAction>
-                                  </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                            {canEdit && <DropdownMenuItem onClick={(e) => handleEdit(e, medewerker)}>Bewerken</DropdownMenuItem>}
+                            {canDelete && <>
+                              <DropdownMenuSeparator />
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Verwijderen</DropdownMenuItem>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                    <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Deze actie kan niet ongedaan worden gemaakt. Dit zal de medewerker permanent verwijderen.
+                                    </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                    <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                                    <AlertDialogAction onClick={(e) => handleDelete(e, medewerker.id)}>
+                                        Doorgaan
+                                    </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </>}
                           </DropdownMenuContent>
                         </DropdownMenu>
-                      ) : <div className="w-8 h-8"/>}
+                      )}
                     </div>
                   ))
                 ) : (
@@ -273,7 +276,7 @@ export default function EmployeesPage() {
           </CardContent>
         </Card>
       </div>
-      {canManage && (
+      {canCreate && (
         <MedewerkerDialog
           open={isDialogOpen}
           onOpenChange={setIsDialogOpen}

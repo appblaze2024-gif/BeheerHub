@@ -13,10 +13,9 @@ import { firebaseConfig } from '@/firebase/config';
 import {
   useCollection,
   useFirestore,
-  useUser,
 } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
-import type { UserProfile, UserPermission } from '@/lib/types';
+import type { UserProfile } from '@/lib/types';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -54,26 +53,38 @@ import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { Checkbox } from './ui/checkbox';
 
-const allPermissions: { id: UserPermission; label: string }[] = [
-    { id: 'manageProjects', label: 'Projecten beheren' },
-    { id: 'manageEmployees', label: 'Medewerkers beheren' },
-    { id: 'manageWorkPlanning', label: 'Werkplanning beheren' },
-    { id: 'manageWeeklyReports', label: 'Weekstaten beheren' },
-    { id: 'viewReports', label: 'Rapportages bekijken' },
-    { id: 'manageVehicles', label: 'Wagenpark beheren' },
-    { id: 'manageObjects', label: 'Objecten beheren' },
-    { id: 'manageInventory', label: 'Voorraad beheren' },
-    { id: 'manageIssues', label: 'Meldingen beheren' },
-    { id: 'useNavigation', label: 'Navigatiemodule gebruiken' },
-    { id: 'useMail', label: 'Mail gebruiken' },
-    { id: 'manageUsers', label: 'Gebruikers beheren' },
+const permissionConfig = [
+    { module: 'projects', label: 'Projecten' },
+    { module: 'employees', label: 'Medewerkers' },
+    { module: 'workPlanning', label: 'Werkplanning', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'edit', label: 'Bewerken' }] },
+    { module: 'weeklyReports', label: 'Weekstaten', actions: [{ id: 'view', label: 'Bekijken' }] },
+    { module: 'reports', label: 'Rapportages', actions: [{ id: 'view', label: 'Bekijken' }] },
+    { module: 'vehicles', label: 'Wagenpark' },
+    { module: 'objects', label: 'Objecten' },
+    { module: 'inventory', label: 'Voorraadbeheer', actions: [{ id: 'view', label: 'Bekijken' }] },
+    { module: 'issues', label: 'Meldingen' },
+    { module: 'navigation', label: 'Navigatiemodule', actions: [{ id: 'use', label: 'Gebruiken' }] },
+    { module: 'mail', label: 'Mail', actions: [{ id: 'use', label: 'Gebruiken' }] },
+    { module: 'users', label: 'Gebruikersbeheer' },
 ];
+
+const standardActions = [
+    { id: 'view', label: 'Bekijken' },
+    { id: 'create', label: 'Aanmaken' },
+    { id: 'edit', label: 'Bewerken' },
+    { id: 'delete', label: 'Verwijderen' },
+];
+
+const allPermissions = permissionConfig.map(p => ({
+    ...p,
+    permissions: p.actions || standardActions
+}));
 
 const userFormSchema = z.object({
   email: z.string().email('Voer een geldig e-mailadres in.'),
   password: z.string().optional(),
   role: z.enum(['Super admin', 'toezichthouder', 'ondersteuner', 'medewerkers']),
-  permissions: z.record(z.boolean()).optional(),
+  permissions: z.record(z.record(z.boolean())).optional(),
 }).refine(data => !data.password || data.password.length >= 6, {
     message: 'Wachtwoord moet minimaal 6 tekens lang zijn.',
     path: ['password'],
@@ -99,39 +110,48 @@ function UserDialog({
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema),
   });
+  const role = form.watch('role');
 
   React.useEffect(() => {
     if (open) {
-      const initialPermissions: { [key: string]: boolean } = {};
-      allPermissions.forEach(p => {
-        initialPermissions[p.id] = false;
+      const defaultPermissions: { [key: string]: { [key: string]: boolean } } = {};
+      allPermissions.forEach(mod => {
+        defaultPermissions[mod.module] = {};
+        mod.permissions.forEach(perm => {
+          defaultPermissions[mod.module][perm.id] = false;
+        });
       });
 
       if (user) {
-        const isSuperUser = user.role === 'Super admin';
-        const existingPermissions = user.permissions || {};
-        const fullPermissions: { [key: string]: boolean } = {};
-        
-        allPermissions.forEach(p => {
-          fullPermissions[p.id] = isSuperUser ? true : !!existingPermissions[p.id as keyof typeof existingPermissions];
-        });
-
         form.reset({
           email: user.email || '',
           role: user.role || 'medewerkers',
           password: '',
-          permissions: fullPermissions,
+          permissions: user.permissions || defaultPermissions,
         });
       } else {
         form.reset({
           email: '',
           password: '',
           role: 'medewerkers',
-          permissions: initialPermissions,
+          permissions: defaultPermissions,
         });
       }
     }
   }, [open, user, form]);
+  
+  React.useEffect(() => {
+    if (role === 'Super admin') {
+        const allTruePermissions: { [key: string]: { [key: string]: boolean } } = {};
+        allPermissions.forEach(mod => {
+            allTruePermissions[mod.module] = {};
+            mod.permissions.forEach(perm => {
+                allTruePermissions[mod.module][perm.id] = true;
+            });
+        });
+        form.setValue('permissions', allTruePermissions);
+    }
+  }, [role, form])
 
   const onSubmit = async (data: UserFormValues) => {
     setIsSubmitting(true);
@@ -150,8 +170,7 @@ function UserDialog({
           return;
         }
 
-        // Use a temporary app instance to create user without signing out the admin
-        const tempApp = initializeApp(firebaseConfig, 'user-creation-app');
+        const tempApp = initializeApp(firebaseConfig, `user-creation-${Date.now()}`);
         const tempAuth = getAuth(tempApp);
         
         try {
@@ -189,14 +208,16 @@ function UserDialog({
     }
   };
 
+  const isSuperAdminEditing = role === 'Super admin';
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>{user ? 'Gebruiker bewerken' : 'Nieuwe gebruiker aanmaken'}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-4">
             <FormField control={form.control} name="email" render={({ field }) => (
                 <FormItem>
                   <FormLabel>E-mailadres</FormLabel>
@@ -212,7 +233,7 @@ function UserDialog({
                   <FormItem>
                     <FormLabel>Wachtwoord</FormLabel>
                     <FormControl>
-                      <Input type="password" />
+                      <Input type="password" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -239,32 +260,38 @@ function UserDialog({
               />
             <div>
               <FormLabel>Rechten</FormLabel>
-              <div className="grid grid-cols-2 gap-4 mt-2 border p-4 rounded-md">
-                {allPermissions.map((permission) => (
-                  <FormField
-                    key={permission.id}
-                    control={form.control}
-                    name={`permissions.${permission.id}`}
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                        <FormLabel className="font-normal" htmlFor={`permission-${permission.id}`}>
-                          {permission.label}
-                        </FormLabel>
-                        <FormControl>
-                          <Checkbox
-                            id={`permission-${permission.id}`}
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            disabled={isSubmitting}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
+              <div className="space-y-4 mt-2">
+                {allPermissions.map((module) => (
+                  <div key={module.module} className="border p-4 rounded-md">
+                    <h4 className="font-semibold capitalize mb-2">{module.label}</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {module.permissions.map((permission) => (
+                        <FormField
+                          key={permission.id}
+                          control={form.control}
+                          name={`permissions.${module.module}.${permission.id}`}
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                  disabled={isSubmitting || isSuperAdminEditing}
+                                />
+                              </FormControl>
+                              <FormLabel className="font-normal">
+                                {permission.label}
+                              </FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="sticky bottom-0 bg-background py-4 -mx-4 px-6">
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Annuleren</Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -286,12 +313,12 @@ export function UserManagement() {
   const [selectedUser, setSelectedUser] = React.useState<UserProfile | null>(null);
 
   const isSuperUser = currentAdminProfile?.role === 'Super admin';
-  const isAdmin = (currentAdminProfile?.permissions?.manageUsers) || isSuperUser;
+  const canManageUsers = isSuperUser || !!currentAdminProfile?.permissions?.users?.view;
 
   const usersCollection = React.useMemo(() => {
-    if (!firestore || !isAdmin) return null;
+    if (!firestore || !canManageUsers) return null;
     return collection(firestore, 'users');
-  }, [firestore, isAdmin]);
+  }, [firestore, canManageUsers]);
 
   const { data: users, isLoading: isLoadingUsers, error: usersError } = useCollection<UserProfile>(usersCollection);
 
@@ -304,6 +331,10 @@ export function UserManagement() {
     setSelectedUser(user);
     setIsDialogOpen(true);
   };
+  
+  const canCreate = isSuperUser || !!currentAdminProfile?.permissions?.users?.create;
+  const canEdit = isSuperUser || !!currentAdminProfile?.permissions?.users?.edit;
+
 
   if (isAdminLoading) {
     return (
@@ -321,7 +352,7 @@ export function UserManagement() {
     )
   }
   
-  if (!isAdmin) {
+  if (!canManageUsers) {
       return (
            <Card>
                 <CardHeader>
@@ -344,9 +375,11 @@ export function UserManagement() {
               Voeg gebruikers toe en beheer hun rollen en rechten.
             </CardDescription>
           </div>
-          <Button onClick={handleAddNew}>
-            <Plus className="mr-2 h-4 w-4" /> Gebruiker toevoegen
-          </Button>
+          {canCreate && (
+            <Button onClick={handleAddNew}>
+              <Plus className="mr-2 h-4 w-4" /> Gebruiker toevoegen
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
             <div className="border rounded-lg">
@@ -376,6 +409,7 @@ export function UserManagement() {
                             <span className="truncate">{user.email}</span>
                             <Badge variant={user.role === 'Super admin' ? 'default' : 'secondary'} className="w-fit">{user.role}</Badge>
                             <div>
+                              {canEdit && (
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -386,6 +420,7 @@ export function UserManagement() {
                                         <DropdownMenuItem onClick={() => handleEdit(user)}>Bewerken</DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
+                              )}
                             </div>
                         </div>
                     ))

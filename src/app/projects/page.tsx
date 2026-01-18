@@ -36,6 +36,7 @@ import { ProjectBestandenDialog } from '@/components/project-bestanden-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
 import { WijkMapDialog } from '@/components/wijk-map-dialog';
+import { useProfile } from '@/firebase/profile-provider';
 
 type Werksoort = {
   id: string;
@@ -142,9 +143,11 @@ const EMPTY_PROJECT: Project = {
 function WerksoortenTab({
   werksoorten,
   setWerksoorten,
+  canEdit
 }: {
   werksoorten: Werksoort[];
   setWerksoorten: React.Dispatch<React.SetStateAction<Werksoort[]>>;
+  canEdit: boolean;
 }) {
   const addRow = () => {
     setWerksoorten([
@@ -189,53 +192,22 @@ function WerksoortenTab({
           key={werksoort.id}
           className="grid grid-cols-[1fr_2fr_1fr_1fr_1fr_auto] items-center gap-x-4"
         >
-          <Input
-            value={werksoort.postnummer}
-            onChange={(e) =>
-              handleInputChange(werksoort.id, 'postnummer', e.target.value)
-            }
-          />
-          <Input
-            value={werksoort.werksoort}
-            onChange={(e) =>
-              handleInputChange(werksoort.id, 'werksoort', e.target.value)
-            }
-          />
-          <Input
-            value={werksoort.eenheid}
-            onChange={(e) =>
-              handleInputChange(werksoort.id, 'eenheid', e.target.value)
-            }
-          />
-          <Input
-            value={werksoort.fictieveH}
-            onChange={(e) =>
-              handleInputChange(werksoort.id, 'fictieveH', e.target.value)
-            }
-          />
-          <Input
-            value={werksoort.uurprijs}
-            onChange={(e) =>
-              handleInputChange(werksoort.id, 'uurprijs', e.target.value)
-            }
-          />
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => removeRow(werksoort.id)}
-          >
+          <Input value={werksoort.postnummer} onChange={(e) => handleInputChange(werksoort.id, 'postnummer', e.target.value)} disabled={!canEdit}/>
+          <Input value={werksoort.werksoort} onChange={(e) => handleInputChange(werksoort.id, 'werksoort', e.target.value)} disabled={!canEdit}/>
+          <Input value={werksoort.eenheid} onChange={(e) => handleInputChange(werksoort.id, 'eenheid', e.target.value)} disabled={!canEdit}/>
+          <Input value={werksoort.fictieveH} onChange={(e) => handleInputChange(werksoort.id, 'fictieveH', e.target.value)} disabled={!canEdit}/>
+          <Input value={werksoort.uurprijs} onChange={(e) => handleInputChange(werksoort.id, 'uurprijs', e.target.value)} disabled={!canEdit}/>
+          {canEdit && <Button variant="ghost" size="icon" onClick={() => removeRow(werksoort.id)}>
             <Trash2 className="h-4 w-4 text-destructive" />
-          </Button>
+          </Button>}
         </div>
       ))}
-      <Button variant="outline" onClick={addRow}>
-        Regel toevoegen
-      </Button>
+      {canEdit && <Button variant="outline" onClick={addRow}>Regel toevoegen</Button>}
     </div>
   );
 }
 
-function BoekingregelsTab({ projectId }: { projectId: string | undefined }) {
+function BoekingregelsTab({ projectId, canEdit }: { projectId: string | undefined; canEdit: boolean; }) {
   const firestore = useFirestore();
   const [newRegelNaam, setNewRegelNaam] = React.useState('');
 
@@ -286,7 +258,7 @@ function BoekingregelsTab({ projectId }: { projectId: string | undefined }) {
         <CardTitle className="text-lg">Interne Boekingregels</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex gap-2">
+        {canEdit && <div className="flex gap-2">
             <Input 
                 placeholder="Nieuwe boekingregel naam"
                 value={newRegelNaam}
@@ -294,7 +266,7 @@ function BoekingregelsTab({ projectId }: { projectId: string | undefined }) {
                 onKeyDown={(e) => e.key === 'Enter' && handleAddRegel()}
             />
             <Button onClick={handleAddRegel}>Toevoegen</Button>
-        </div>
+        </div>}
         <div className="border rounded-md">
             {isLoading ? (
                 <div className='p-4 text-center text-muted-foreground'>Boekingregels laden...</div>
@@ -305,10 +277,11 @@ function BoekingregelsTab({ projectId }: { projectId: string | undefined }) {
                             defaultValue={regel.naam} 
                             onBlur={(e) => handleUpdateRegel(regel.id, e.target.value)}
                             className="flex-1"
+                            disabled={!canEdit}
                        />
-                       <Button variant='ghost' size='icon' onClick={() => handleDeleteRegel(regel.id)}>
+                       {canEdit && <Button variant='ghost' size='icon' onClick={() => handleDeleteRegel(regel.id)}>
                             <Trash2 className='h-4 w-4 text-destructive' />
-                       </Button>
+                       </Button>}
                     </div>
                 ))
             ) : (
@@ -320,7 +293,7 @@ function BoekingregelsTab({ projectId }: { projectId: string | undefined }) {
   );
 }
 
-function AfsprakenTab({ projectId }: { projectId: string | undefined }) {
+function AfsprakenTab({ projectId, canEdit }: { projectId: string | undefined, canEdit: boolean }) {
   const firestore = useFirestore();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedAfspraak, setSelectedAfspraak] = React.useState<Afspraak | undefined>();
@@ -360,7 +333,7 @@ function AfsprakenTab({ projectId }: { projectId: string | undefined }) {
     <Card>
       <CardHeader className='flex-row items-center justify-between'>
         <CardTitle className="text-lg">Afspraken</CardTitle>
-        <Button size="sm" onClick={handleNewAfspraak}><Plus className='mr-2 h-4 w-4' /> Nieuwe afspraak</Button>
+        {canEdit && <Button size="sm" onClick={handleNewAfspraak}><Plus className='mr-2 h-4 w-4' /> Nieuwe afspraak</Button>}
       </CardHeader>
       <CardContent>
         <div className="border rounded-md">
@@ -381,12 +354,14 @@ function AfsprakenTab({ projectId }: { projectId: string | undefined }) {
                 <div>{afspraak.tijd}</div>
                 <div className='truncate'>{afspraak.notities}</div>
                 <div className='flex items-center gap-2'>
-                  <Button variant='ghost' size='icon' onClick={() => handleEditAfspraak(afspraak)}>
-                    <FilePenLine className='h-4 w-4' />
-                  </Button>
-                   <Button variant='ghost' size='icon' onClick={() => handleDeleteAfspraak(afspraak.id!)}>
-                    <Trash2 className='h-4 w-4 text-destructive' />
-                  </Button>
+                  {canEdit && <>
+                    <Button variant='ghost' size='icon' onClick={() => handleEditAfspraak(afspraak)}>
+                      <FilePenLine className='h-4 w-4' />
+                    </Button>
+                     <Button variant='ghost' size='icon' onClick={() => handleDeleteAfspraak(afspraak.id!)}>
+                      <Trash2 className='h-4 w-4 text-destructive' />
+                    </Button>
+                  </>}
                 </div>
               </div>
             ))
@@ -395,17 +370,17 @@ function AfsprakenTab({ projectId }: { projectId: string | undefined }) {
           )}
         </div>
       </CardContent>
-      <AfspraakDialog 
+      {canEdit && <AfspraakDialog 
         open={isDialogOpen} 
         onOpenChange={setIsDialogOpen}
         projectId={projectId}
         afspraak={selectedAfspraak}
-      />
+      />}
     </Card>
   );
 }
 
-function OrganisatieTab({ projectId, wijken }: { projectId: string | undefined, wijken?: Wijk[] }) {
+function OrganisatieTab({ projectId, wijken, canEdit }: { projectId: string | undefined, wijken?: Wijk[], canEdit: boolean }) {
   const firestore = useFirestore();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedContact, setSelectedContact] = React.useState<OrganisatieContact | undefined>();
@@ -445,7 +420,7 @@ function OrganisatieTab({ projectId, wijken }: { projectId: string | undefined, 
     <Card>
       <CardHeader className='flex-row items-center justify-between'>
         <CardTitle className="text-lg">Organisatie</CardTitle>
-        <Button size="sm" onClick={handleNewContact}><Plus className='mr-2 h-4 w-4' /> Nieuw Contact</Button>
+        {canEdit && <Button size="sm" onClick={handleNewContact}><Plus className='mr-2 h-4 w-4' /> Nieuw Contact</Button>}
       </CardHeader>
       <CardContent>
         <div className="border rounded-md">
@@ -470,12 +445,14 @@ function OrganisatieTab({ projectId, wijken }: { projectId: string | undefined, 
                 <div className='truncate'>{contact.telefoon}</div>
                 <div className='truncate'>{contact.email}</div>
                 <div className='flex items-center gap-2'>
-                  <Button variant='ghost' size='icon' onClick={() => handleEditContact(contact)}>
-                    <FilePenLine className='h-4 w-4' />
-                  </Button>
-                   <Button variant='ghost' size='icon' onClick={() => handleDeleteContact(contact.id!)}>
-                    <Trash2 className='h-4 w-4 text-destructive' />
-                  </Button>
+                  {canEdit && <>
+                    <Button variant='ghost' size='icon' onClick={() => handleEditContact(contact)}>
+                      <FilePenLine className='h-4 w-4' />
+                    </Button>
+                     <Button variant='ghost' size='icon' onClick={() => handleDeleteContact(contact.id!)}>
+                      <Trash2 className='h-4 w-4 text-destructive' />
+                    </Button>
+                  </>}
                 </div>
               </div>
             ))
@@ -484,18 +461,18 @@ function OrganisatieTab({ projectId, wijken }: { projectId: string | undefined, 
           )}
         </div>
       </CardContent>
-      <OrganisatieContactDialog
+      {canEdit && <OrganisatieContactDialog
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         projectId={projectId}
         contact={selectedContact}
         wijken={wijken}
-      />
+      />}
     </Card>
   );
 }
 
-function BestandenTab({ projectId }: { projectId: string | undefined }) {
+function BestandenTab({ projectId, canEdit }: { projectId: string | undefined, canEdit: boolean }) {
   const firestore = useFirestore();
   const app = useFirebaseApp();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
@@ -544,7 +521,7 @@ function BestandenTab({ projectId }: { projectId: string | undefined }) {
     <Card>
       <CardHeader className='flex-row items-center justify-between'>
         <CardTitle className="text-lg">Bestanden</CardTitle>
-        <Button size="sm" onClick={() => setIsDialogOpen(true)}><Upload className='mr-2 h-4 w-4' /> Bestanden uploaden</Button>
+        {canEdit && <Button size="sm" onClick={() => setIsDialogOpen(true)}><Upload className='mr-2 h-4 w-4' /> Bestanden uploaden</Button>}
       </CardHeader>
       <CardContent>
         <div className="border rounded-md">
@@ -580,9 +557,9 @@ function BestandenTab({ projectId }: { projectId: string | undefined }) {
                             <Download className='h-4 w-4' />
                         </Button>
                     </a>
-                   <Button variant='ghost' size='icon' onClick={(e) => handleDeleteBestand(e, bestand)}>
+                   {canEdit && <Button variant='ghost' size='icon' onClick={(e) => handleDeleteBestand(e, bestand)}>
                     <Trash2 className='h-4 w-4 text-destructive' />
-                  </Button>
+                  </Button>}
                 </div>
               </div>
             ))
@@ -591,11 +568,11 @@ function BestandenTab({ projectId }: { projectId: string | undefined }) {
           )}
         </div>
       </CardContent>
-      <ProjectBestandenDialog
+      {canEdit && <ProjectBestandenDialog
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         projectId={projectId}
-      />
+      />}
     </Card>
   );
 }
@@ -604,10 +581,12 @@ function WijkenTab({
   wijken,
   setCurrentProject,
   allAreas,
+  canEdit
 }: {
   wijken: Wijk[];
   setCurrentProject: React.Dispatch<React.SetStateAction<Project>>;
   allAreas: any[];
+  canEdit: boolean;
 }) {
   const [mapWijk, setMapWijk] = React.useState<Wijk | null>(null);
 
@@ -666,28 +645,20 @@ function WijkenTab({
           key={wijk.id}
           className="grid grid-cols-[1fr_1fr_auto_auto] items-center gap-x-4"
         >
-          <Input
-            value={wijk.naam}
-            onChange={(e) => handleInputChange(wijk.id, 'naam', e.target.value)}
-          />
-          <Input
-            value={wijk.locatie}
-            onChange={(e) => handleInputChange(wijk.id, 'locatie', e.target.value)}
-          />
+          <Input value={wijk.naam} onChange={(e) => handleInputChange(wijk.id, 'naam', e.target.value)} disabled={!canEdit}/>
+          <Input value={wijk.locatie} onChange={(e) => handleInputChange(wijk.id, 'locatie', e.target.value)} disabled={!canEdit} />
           <Button variant="outline" onClick={() => setMapWijk(wijk)}>
             <MapPin className="mr-2 h-4 w-4" />
-            Gebied tekenen/bewerken
+            Gebied {canEdit ? 'tekenen/bewerken' : 'bekijken'}
           </Button>
           <div className="flex items-center">
-            <Button variant="ghost" size="icon" onClick={() => removeRow(wijk.id)}>
+            {canEdit && <Button variant="ghost" size="icon" onClick={() => removeRow(wijk.id)}>
                 <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
+            </Button>}
           </div>
         </div>
       ))}
-      <Button variant="outline" onClick={addRow}>
-        Wijk toevoegen
-      </Button>
+      {canEdit && <Button variant="outline" onClick={addRow}>Wijk toevoegen</Button>}
       
       {mapWijk && (
         <WijkMapDialog
@@ -696,6 +667,7 @@ function WijkenTab({
           wijk={mapWijk}
           onSave={handleSaveCoordinates}
           allAreas={allAreas}
+          readOnly={!canEdit}
         />
       )}
     </div>
@@ -706,10 +678,12 @@ function VeegroutesTab({
   veegroutes,
   setCurrentProject,
   allAreas,
+  canEdit
 }: {
   veegroutes: Veegroute[];
   setCurrentProject: React.Dispatch<React.SetStateAction<Project>>;
   allAreas: any[];
+  canEdit: boolean;
 }) {
   const [mapRoute, setMapRoute] = React.useState<Veegroute | null>(null);
 
@@ -768,28 +742,20 @@ function VeegroutesTab({
           key={route.id}
           className="grid grid-cols-[1fr_1fr_auto_auto] items-center gap-x-4"
         >
-          <Input
-            value={route.naam}
-            onChange={(e) => handleInputChange(route.id, 'naam', e.target.value)}
-          />
-          <Input
-            value={route.locatie}
-            onChange={(e) => handleInputChange(route.id, 'locatie', e.target.value)}
-          />
+          <Input value={route.naam} onChange={(e) => handleInputChange(route.id, 'naam', e.target.value)} disabled={!canEdit} />
+          <Input value={route.locatie} onChange={(e) => handleInputChange(route.id, 'locatie', e.target.value)} disabled={!canEdit}/>
           <Button variant="outline" onClick={() => setMapRoute(route)}>
             <MapPin className="mr-2 h-4 w-4" />
-            Gebied tekenen/bewerken
+            Gebied {canEdit ? 'tekenen/bewerken' : 'bekijken'}
           </Button>
           <div className="flex items-center">
-            <Button variant="ghost" size="icon" onClick={() => removeRow(route.id)}>
+            {canEdit && <Button variant="ghost" size="icon" onClick={() => removeRow(route.id)}>
                 <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
+            </Button>}
           </div>
         </div>
       ))}
-      <Button variant="outline" onClick={addRow}>
-        Veegroute toevoegen
-      </Button>
+      {canEdit && <Button variant="outline" onClick={addRow}>Veegroute toevoegen</Button>}
       
       {mapRoute && (
         <WijkMapDialog
@@ -798,6 +764,7 @@ function VeegroutesTab({
           wijk={mapRoute}
           onSave={handleSaveCoordinates}
           allAreas={allAreas}
+          readOnly={!canEdit}
         />
       )}
     </div>
@@ -808,10 +775,12 @@ function PrullenbakkenroutesTab({
   prullenbakkenroutes,
   setCurrentProject,
   allAreas,
+  canEdit
 }: {
   prullenbakkenroutes: Prullenbakkenroute[];
   setCurrentProject: React.Dispatch<React.SetStateAction<Project>>;
   allAreas: any[],
+  canEdit: boolean;
 }) {
   const [mapRoute, setMapRoute] = React.useState<Prullenbakkenroute | null>(null);
 
@@ -870,28 +839,20 @@ function PrullenbakkenroutesTab({
           key={route.id}
           className="grid grid-cols-[1fr_1fr_auto_auto] items-center gap-x-4"
         >
-          <Input
-            value={route.naam}
-            onChange={(e) => handleInputChange(route.id, 'naam', e.target.value)}
-          />
-          <Input
-            value={route.locatie}
-            onChange={(e) => handleInputChange(route.id, 'locatie', e.target.value)}
-          />
+          <Input value={route.naam} onChange={(e) => handleInputChange(route.id, 'naam', e.target.value)} disabled={!canEdit}/>
+          <Input value={route.locatie} onChange={(e) => handleInputChange(route.id, 'locatie', e.target.value)} disabled={!canEdit}/>
           <Button variant="outline" onClick={() => setMapRoute(route)}>
             <MapPin className="mr-2 h-4 w-4" />
-            Gebied tekenen/bewerken
+            Gebied {canEdit ? 'tekenen/bewerken' : 'bekijken'}
           </Button>
           <div className="flex items-center">
-            <Button variant="ghost" size="icon" onClick={() => removeRow(route.id)}>
+            {canEdit && <Button variant="ghost" size="icon" onClick={() => removeRow(route.id)}>
                 <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
+            </Button>}
           </div>
         </div>
       ))}
-      <Button variant="outline" onClick={addRow}>
-        Prullenbakkenroute toevoegen
-      </Button>
+      {canEdit && <Button variant="outline" onClick={addRow}>Prullenbakkenroute toevoegen</Button>}
       
       {mapRoute && (
         <WijkMapDialog
@@ -900,6 +861,7 @@ function PrullenbakkenroutesTab({
           wijk={mapRoute}
           onSave={handleSaveCoordinates}
           allAreas={allAreas}
+          readOnly={!canEdit}
         />
       )}
     </div>
@@ -909,12 +871,18 @@ function PrullenbakkenroutesTab({
 
 export default function ProjectsPage() {
   const firestore = useFirestore();
+  const { profile, isLoading: isProfileLoading } = useProfile();
   const [selectedProjectId, setSelectedProjectId] = React.useState<
     string | undefined
   >();
   const [currentProject, setCurrentProject] = React.useState<Project>(EMPTY_PROJECT);
   const [isEndDateHeden, setIsEndDateHeden] = React.useState(false);
   const [isGlobalWijkMapOpen, setIsGlobalWijkMapOpen] = React.useState(false);
+
+  const isSuperUser = profile?.role === 'Super admin';
+  const canCreate = isSuperUser || !!profile?.permissions?.projects?.create;
+  const canEdit = isSuperUser || !!profile?.permissions?.projects?.edit;
+  const canDelete = isSuperUser || !!profile?.permissions?.projects?.delete;
 
   const projectsCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -1016,8 +984,7 @@ export default function ProjectsPage() {
   }
 
   const handleSave = async () => {
-    if (!firestore) return;
-    // Create a deep copy to avoid unintended direct state mutation.
+    if (!firestore || !canEdit) return;
     const projectToSave = JSON.parse(JSON.stringify(currentProject));
 
     if (projectToSave.id) {
@@ -1032,7 +999,7 @@ export default function ProjectsPage() {
   
 
   const handleDelete = async () => {
-    if (!firestore || !currentProject.id) return;
+    if (!firestore || !currentProject.id || !canDelete) return;
     const projectRef = doc(firestore, 'projects', currentProject.id);
     await deleteDocumentNonBlocking(projectRef);
     handleNew();
@@ -1071,7 +1038,7 @@ export default function ProjectsPage() {
               <SelectValue placeholder="Selecteer een project" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="new">-- Nieuw Project --</SelectItem>
+              {canCreate && <SelectItem value="new">-- Nieuw Project --</SelectItem>}
               {projects?.map((project) => (
                 <SelectItem key={project.id} value={project.id}>
                   {project.projectnaam} [{project.projectnummer}]
@@ -1102,25 +1069,25 @@ export default function ProjectsPage() {
                     </div>
                      <div>
                         <Label htmlFor="projectnaam" className="text-xs font-semibold">Projectnaam</Label>
-                        <Input id="projectnaam" value={currentProject.projectnaam} onChange={(e) => handleInputChange('projectnaam', e.target.value)} />
+                        <Input id="projectnaam" value={currentProject.projectnaam} onChange={(e) => handleInputChange('projectnaam', e.target.value)} disabled={!canEdit} />
                     </div>
                      <div>
                         <Label htmlFor="locatie" className="text-xs font-semibold">Locatie</Label>
-                        <Input id="locatie" value={currentProject.locatie} onChange={(e) => handleInputChange('locatie', e.target.value)} />
+                        <Input id="locatie" value={currentProject.locatie} onChange={(e) => handleInputChange('locatie', e.target.value)} disabled={!canEdit}/>
                     </div>
                      <div>
                         <Label htmlFor="opdrachtgever" className="text-xs font-semibold">Opdrachtgever</Label>
-                        <Input id="opdrachtgever" value={currentProject.opdrachtgever} onChange={(e) => handleInputChange('opdrachtgever', e.target.value)} />
+                        <Input id="opdrachtgever" value={currentProject.opdrachtgever} onChange={(e) => handleInputChange('opdrachtgever', e.target.value)} disabled={!canEdit}/>
                     </div>
                      <div>
                         <Label htmlFor="startdatum" className="text-xs font-semibold">Startdatum</Label>
-                        <Input id="startdatum" type="date" value={currentProject.startdatum} onChange={(e) => handleInputChange('startdatum', e.target.value)} />
+                        <Input id="startdatum" type="date" value={currentProject.startdatum} onChange={(e) => handleInputChange('startdatum', e.target.value)} disabled={!canEdit}/>
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="einddatum" className="text-xs font-semibold">Einddatum</Label>
-                        <Input id="einddatum" type="date" value={currentProject.einddatum} onChange={(e) => handleInputChange('einddatum', e.target.value)} disabled={isEndDateHeden} />
+                        <Input id="einddatum" type="date" value={currentProject.einddatum} onChange={(e) => handleInputChange('einddatum', e.target.value)} disabled={isEndDateHeden || !canEdit} />
                         <div className="flex items-center space-x-2">
-                            <Checkbox id="heden" checked={isEndDateHeden} onCheckedChange={(checked) => handleHedenCheckboxChange(!!checked)} />
+                            <Checkbox id="heden" checked={isEndDateHeden} onCheckedChange={(checked) => handleHedenCheckboxChange(!!checked)} disabled={!canEdit} />
                             <label htmlFor="heden" className="text-sm font-medium leading-none">Heden</label>
                         </div>
                     </div>
@@ -1136,19 +1103,19 @@ export default function ProjectsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                    <div>
                         <Label htmlFor="bestek" className="text-xs font-semibold">Bestek</Label>
-                        <Input id="bestek" value={currentProject.bestek} onChange={(e) => handleInputChange('bestek', e.target.value)} />
+                        <Input id="bestek" value={currentProject.bestek} onChange={(e) => handleInputChange('bestek', e.target.value)} disabled={!canEdit}/>
                     </div>
                      <div>
                         <Label htmlFor="besteknummer" className="text-xs font-semibold">Besteknummer</Label>
-                        <Input id="besteknummer" value={currentProject.besteknummer} onChange={(e) => handleInputChange('besteknummer', e.target.value)} />
+                        <Input id="besteknummer" value={currentProject.besteknummer} onChange={(e) => handleInputChange('besteknummer', e.target.value)} disabled={!canEdit}/>
                     </div>
                      <div>
                         <Label htmlFor="versie" className="text-xs font-semibold">Versie</Label>
-                        <Input id="versie" value={currentProject.versie} onChange={(e) => handleInputChange('versie', e.target.value)} />
+                        <Input id="versie" value={currentProject.versie} onChange={(e) => handleInputChange('versie', e.target.value)} disabled={!canEdit}/>
                     </div>
                      <div>
                         <Label htmlFor="datum" className="text-xs font-semibold">Datum</Label>
-                        <Input id="datum" type="date" value={currentProject.datum} onChange={(e) => handleInputChange('datum', e.target.value)} />
+                        <Input id="datum" type="date" value={currentProject.datum} onChange={(e) => handleInputChange('datum', e.target.value)} disabled={!canEdit}/>
                     </div>
                 </div>
               </CardContent>
@@ -1161,70 +1128,40 @@ export default function ProjectsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <Textarea rows={4} value={currentProject.omschrijving} onChange={(e) => handleInputChange('omschrijving', e.target.value)} />
+                <Textarea rows={4} value={currentProject.omschrijving} onChange={(e) => handleInputChange('omschrijving', e.target.value)} disabled={!canEdit}/>
               </CardContent>
             </Card>
 
             <div className="flex justify-start gap-2">
-              <Button onClick={handleSave}>Opslaan</Button>
-              <Button variant="outline" onClick={handleNew}>Nieuw</Button>
-              <Button variant="destructive" onClick={handleDelete} disabled={!currentProject.id}>Verwijder</Button>
+              {canEdit && <Button onClick={handleSave}>Opslaan</Button>}
+              {canCreate && <Button variant="outline" onClick={handleNew}>Nieuw</Button>}
+              {canDelete && <Button variant="destructive" onClick={handleDelete} disabled={!currentProject.id}>Verwijder</Button>}
             </div>
           </div>
         </TabsContent>
-        <TabsContent
-          value="werksoorten"
-          className="flex-1 overflow-y-auto pt-6 pb-2 px-6"
-        >
-          <WerksoortenTab werksoorten={currentProject.werksoorten} setWerksoorten={(newWerksoorten) => setCurrentProject(prev => ({...prev, werksoorten: typeof newWerksoorten === 'function' ? newWerksoorten(prev.werksoorten) : newWerksoorten}))}/>
+        <TabsContent value="werksoorten" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
+          <WerksoortenTab werksoorten={currentProject.werksoorten} setWerksoorten={(newWerksoorten) => setCurrentProject(prev => ({...prev, werksoorten: typeof newWerksoorten === 'function' ? newWerksoorten(prev.werksoorten) : newWerksoorten}))} canEdit={canEdit} />
         </TabsContent>
-        <TabsContent
-          value="boekingregels"
-          className="flex-1 overflow-y-auto pt-6 pb-2 px-6"
-        >
-          <BoekingregelsTab projectId={selectedProjectId} />
+        <TabsContent value="boekingregels" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
+          <BoekingregelsTab projectId={selectedProjectId} canEdit={canEdit} />
         </TabsContent>
-        <TabsContent
-          value="afspraken"
-          className="flex-1 overflow-y-auto pt-6 pb-2 px-6"
-        >
-          <AfsprakenTab projectId={selectedProjectId} />
+        <TabsContent value="afspraken" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
+          <AfsprakenTab projectId={selectedProjectId} canEdit={canEdit} />
         </TabsContent>
-        <TabsContent
-          value="organisatie"
-          className="flex-1 overflow-y-auto pt-6 pb-2 px-6"
-        >
-          <OrganisatieTab projectId={selectedProjectId} wijken={currentProject.wijken} />
+        <TabsContent value="organisatie" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
+          <OrganisatieTab projectId={selectedProjectId} wijken={currentProject.wijken} canEdit={canEdit} />
         </TabsContent>
-         <TabsContent
-          value="bestanden"
-          className="flex-1 overflow-y-auto pt-6 pb-2 px-6"
-        >
-          <BestandenTab projectId={selectedProjectId} />
+         <TabsContent value="bestanden" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
+          <BestandenTab projectId={selectedProjectId} canEdit={canEdit}/>
         </TabsContent>
-        <TabsContent
-          value="wijken"
-          className="flex-1 overflow-y-auto pt-6 pb-2 px-6"
-        >
-          <WijkenTab
-            wijken={currentProject.wijken || []}
-            setCurrentProject={setCurrentProject}
-            allAreas={allAreas}
-          />
+        <TabsContent value="wijken" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
+          <WijkenTab wijken={currentProject.wijken || []} setCurrentProject={setCurrentProject} allAreas={allAreas} canEdit={canEdit}/>
         </TabsContent>
         <TabsContent value="veegroutes" className="flex-1 overflow-y-auto p-6">
-          <VeegroutesTab
-            veegroutes={currentProject.veegroutes || []}
-            setCurrentProject={setCurrentProject}
-            allAreas={allAreas}
-          />
+          <VeegroutesTab veegroutes={currentProject.veegroutes || []} setCurrentProject={setCurrentProject} allAreas={allAreas} canEdit={canEdit}/>
         </TabsContent>
         <TabsContent value="prullenbakkenroutes" className="flex-1 overflow-y-auto p-6">
-          <PrullenbakkenroutesTab
-            prullenbakkenroutes={currentProject.prullenbakkenroutes || []}
-            setCurrentProject={setCurrentProject}
-            allAreas={allAreas}
-          />
+          <PrullenbakkenroutesTab prullenbakkenroutes={currentProject.prullenbakkenroutes || []} setCurrentProject={setCurrentProject} allAreas={allAreas} canEdit={canEdit}/>
         </TabsContent>
       </Tabs>
       

@@ -1,6 +1,10 @@
 export type UserPermissions = {
   [module: string]: {
-    [permission: string]: boolean;
+    view?: boolean;
+    create?: boolean;
+    edit?: boolean;
+    delete?: boolean;
+    use?: boolean;
   };
 };
 

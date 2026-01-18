@@ -68,7 +68,9 @@ export function SidebarNav({ isCollapsed }: { isCollapsed: boolean }) {
     return allMenuItems.filter(item => {
       if (isSuperUser) return true;
       if (!item.module) return true; // Items without a module are visible to everyone
-      return !!permissions[item.module]?.view || !!permissions[item.module]?.use;
+      const modulePermissions = permissions[item.module];
+      if (!modulePermissions) return false;
+      return !!modulePermissions.view || !!modulePermissions.use;
     });
   }, [profile, isProfileLoading, isUserLoading]);
 

@@ -15,15 +15,11 @@ service cloud.firestore {
     }
 
     function isSuperUser() {
-      return isSignedIn() && request.auth.token.email == 'dstoutenburg@meerlanden.nl';
+      return isSignedIn() && getUserData().role == 'Super admin';
     }
 
     function hasPermission(module, action) {
-        return isSignedIn() && (getUserData().permissions[module][action] == true || isSuperUser());
-    }
-
-    function isAdmin() {
-       return hasPermission('users', 'manage');
+        return isSignedIn() && (isSuperUser() || getUserData().permissions[module][action] == true);
     }
 
     match /projects/{projectId} {
@@ -61,9 +57,10 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow get, update: if isOwner(userId) || isAdmin();
-      allow list: if isAdmin();
-      allow create: if isOwner(userId) || isAdmin();
+      allow get: if isOwner(userId) || hasPermission('users', 'view');
+      allow list: if hasPermission('users', 'view');
+      allow create: if hasPermission('users', 'create');
+      allow update: if isOwner(userId) || hasPermission('users', 'edit');
       allow delete: if false;
 
       match /routes/{routeId} {
