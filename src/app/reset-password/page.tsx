@@ -92,7 +92,7 @@ export default function ResetPasswordPage() {
         return (
           <>
             <CardHeader>
-              <CardTitle>Nieuw wachtwoord instellen</CardTitle>
+              <CardTitle>Wachtwoord instellen</CardTitle>
               <CardDescription>
                 Stel een nieuw wachtwoord in voor uw account: {email}
               </CardDescription>
