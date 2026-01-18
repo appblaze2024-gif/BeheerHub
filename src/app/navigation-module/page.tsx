@@ -243,17 +243,21 @@ export default function Page() {
 
  const availableRoutes = React.useMemo(() => {
     if (!selectedProject) return [];
-    let routes: Wijk[] = [];
     if (selectedRouteType === 'veeg') {
-      routes = selectedProject.veegroutes || [];
+      const routes = selectedProject.veegroutes || [];
+      if (profile?.veegroute) {
+        return routes.filter(r => r.naam === profile.veegroute);
+      }
+      return routes;
     }
     if (selectedRouteType === 'prullenbak') {
-      routes = selectedProject.prullenbakkenroutes || [];
+      const routes = selectedProject.prullenbakkenroutes || [];
+      if (profile?.prullenbakkenroute) {
+        return routes.filter(r => r.naam === profile.prullenbakkenroute);
+      }
+      return routes;
     }
-    if (profile?.wijk) {
-      return routes.filter(r => r.naam === profile.wijk);
-    }
-    return routes;
+    return [];
   }, [selectedProject, selectedRouteType, profile]);
 
   const objectCountsForRoutes = React.useMemo(() => {
