@@ -565,13 +565,12 @@ export function UserManagement() {
         </CardHeader>
         <CardContent>
             <div className="border rounded-lg">
-                <div className="grid grid-cols-[1fr_1fr_1fr_1.5fr_1fr_auto] px-4 py-2 font-semibold bg-muted text-muted-foreground">
+                <div className="grid grid-cols-[1fr_1fr_1fr_1.5fr_1fr] px-4 py-2 font-semibold bg-muted text-muted-foreground">
                     <span>Naam</span>
                     <span>E-mail</span>
                     <span>Rol</span>
                     <span>Wijken / Routes</span>
                     <span>Status</span>
-                    <span />
                 </div>
                 {isLoadingUsers ? (
                      <div className="flex items-center justify-center p-8">
@@ -581,7 +580,7 @@ export function UserManagement() {
                     <div className="p-4 text-destructive-foreground bg-destructive/80 text-center">{usersError.message}</div>
                 ) : users && users.length > 0 ? (
                     users.map(user => (
-                        <div key={user.id} className="grid grid-cols-[1fr_1fr_1fr_1.5fr_1fr_auto] items-center px-4 py-3 border-t">
+                        <div key={user.id} onClick={() => canEdit && handleEdit(user)} className="grid grid-cols-[1fr_1fr_1fr_1.5fr_1fr] items-center px-4 py-3 border-t hover:bg-muted/50 cursor-pointer">
                             <div className="flex items-center gap-3">
                                 <Avatar className="h-8 w-8">
                                     <AvatarFallback>
@@ -599,43 +598,33 @@ export function UserManagement() {
                                 {!user.wijk && !user.veegroute && !user.prullenbakkenroute && '-'}
                             </div>
                             <div>
-                                {user.role !== 'Super admin' && (
+                                {(user.status === 'Niet uitgenodigd' || user.status === 'Uitgenodigd') && user.role !== 'Super admin' && canEdit ? (
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleSendInvitation(user);
+                                        }}
+                                    >
+                                        {user.status === 'Niet uitgenodigd' ? 'Verstuur uitnodiging' : 'Opnieuw versturen'}
+                                    </Button>
+                                ) : user.role !== 'Super admin' ? (
                                     <Badge
                                         variant={
                                             user.status === 'Actief' ? 'outline'
                                             : user.status === 'Inactief' ? 'secondary'
-                                            : user.status === 'Uitgenodigd' ? 'outline'
                                             : 'destructive'
                                         }
                                         className={
                                             user.status === 'Actief' ? 'text-green-600 border-green-600 w-fit'
                                             : user.status === 'Inactief' ? 'w-fit'
-                                            : user.status === 'Uitgenodigd' ? 'text-blue-600 border-blue-600 w-fit'
-                                            : user.status === 'Niet uitgenodigd' ? 'text-orange-600 border-orange-600 w-fit' : 'w-fit'
+                                            : 'w-fit'
                                         }
-                                        >
-                                        {user.status || 'Niet uitgenodigd'}
+                                    >
+                                        {user.status || 'N.v.t.'}
                                     </Badge>
-                                )}
-                            </div>
-                            <div>
-                              {canEdit && (
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                                            <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent>
-                                        <DropdownMenuItem onClick={() => handleEdit(user)}>Bewerken</DropdownMenuItem>
-                                        {(user.status === 'Niet uitgenodigd' || user.status === 'Uitgenodigd') && user.role !== 'Super admin' && (
-                                            <DropdownMenuItem onClick={() => handleSendInvitation(user)}>
-                                                {user.status === 'Niet uitgenodigd' ? 'Verstuur uitnodiging' : 'Uitnodiging opnieuw versturen'}
-                                            </DropdownMenuItem>
-                                        )}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                              )}
+                                ) : null}
                             </div>
                         </div>
                     ))
