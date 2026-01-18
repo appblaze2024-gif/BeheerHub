@@ -14,7 +14,7 @@ const mailSchema = z.object({
   cc: z.string().optional(),
   subject: z.string(),
   body: z.string(),
-  fromName: z.string().optional(),
+  fromName: z.string(),
   attachments: z.array(attachmentSchema).optional(),
 });
 
@@ -45,8 +45,8 @@ export async function sendEmail(data: z.infer<typeof mailSchema>) {
 
   const mailOptions: nodemailer.SendMailOptions = {
     from: {
-      name: parsedData.fromName || SMTP_USER, // Use user's display name or email
-      address: SMTP_USER, // This MUST be the authenticated user
+      name: parsedData.fromName,
+      address: SMTP_USER,
     },
     to: parsedData.to,
     cc: parsedData.cc,

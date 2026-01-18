@@ -135,6 +135,14 @@ export function MailMeldingDialog({
 
   const onSubmit = async (data: MailFormValues) => {
     if (!melding) return;
+    if (!user?.email) {
+      toast({
+        variant: "destructive",
+        title: "Fout",
+        description: "Kon gebruiker niet verifiëren. Probeer opnieuw in te loggen.",
+      });
+      return;
+    }
     setIsSubmitting(true);
 
     const pdfDataUri = generateMeldingPDF(melding);
@@ -144,13 +152,13 @@ export function MailMeldingDialog({
       to: data.email,
       cc: data.cc,
       subject: `Melding Details: ${melding.intakenummer}`,
-      body: `Geachte lezer,\n\nIn de bijlage vindt u de details van melding ${melding.intakenummer}.\n\nMet vriendelijke groet,\n${user?.email || ''}`,
+      body: `Geachte lezer,\n\nIn de bijlage vindt u de details van melding ${melding.intakenummer}.\n\nMet vriendelijke groet,\n${user.email}`,
       attachments: [{
         content: pdfBase64,
         filename: `melding_${melding.intakenummer}.pdf`,
         type: 'application/pdf',
       }],
-      fromName: user?.email,
+      fromName: user.email,
     });
 
     if (result.success) {

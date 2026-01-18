@@ -103,6 +103,14 @@ export function ComposeMailDialog({ open, onOpenChange, initialData, children }:
 
 
   async function onSubmit(data: MailFormValues) {
+    if (!user?.email) {
+      toast({
+        variant: "destructive",
+        title: "Fout",
+        description: "Kon gebruiker niet verifiëren. Probeer opnieuw in te loggen.",
+      });
+      return;
+    }
     setIsSending(true);
 
     try {
@@ -125,7 +133,7 @@ export function ComposeMailDialog({ open, onOpenChange, initialData, children }:
 
         const result = await sendEmail({
             ...data,
-            fromName: user?.email,
+            fromName: user.email,
             attachments: allAttachments,
         });
 
