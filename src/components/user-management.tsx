@@ -347,8 +347,13 @@ export function UserManagement() {
 
     toast({ description: `Uitnodiging wordt verstuurd naar ${user.email}...` });
     
+    const actionCodeSettings = {
+        url: 'https://beheerhub.cloud/reset-password',
+        handleCodeInApp: true,
+    };
+
     try {
-        await sendPasswordResetEmail(auth, user.email);
+        await sendPasswordResetEmail(auth, user.email, actionCodeSettings);
         
         const userRef = doc(firestore, 'users', user.id);
         await updateDoc(userRef, { status: 'Actief' });
