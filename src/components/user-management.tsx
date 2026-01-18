@@ -126,7 +126,7 @@ function UserDialog({
           status: user.status || 'Niet uitgenodigd',
           firstName: user.firstName || '',
           lastName: user.lastName || '',
-          wijk: user.wijk || '',
+          wijk: user.wijk || 'geen_wijk',
         });
       } else {
         form.reset({
@@ -136,7 +136,7 @@ function UserDialog({
           status: 'Niet uitgenodigd',
           firstName: '',
           lastName: '',
-          wijk: '',
+          wijk: 'geen_wijk',
         });
       }
     }
@@ -169,7 +169,7 @@ function UserDialog({
             role: data.role,
             permissions: data.permissions,
             status: data.status,
-            wijk: data.wijk || null,
+            wijk: data.wijk === 'geen_wijk' ? null : data.wijk,
         });
         toast({ title: 'Gebruiker bijgewerkt', description: `De rol en rechten voor ${user.email} zijn bijgewerkt.` });
       } else { // Create new user
@@ -191,7 +191,7 @@ function UserDialog({
                 permissions: data.permissions || {},
                 sidebarCollapsed: true,
                 status: 'Niet uitgenodigd',
-                wijk: data.wijk || undefined,
+                wijk: data.wijk === 'geen_wijk' ? undefined : data.wijk,
             };
 
             await setDocumentNonBlocking(doc(firestore, 'users', newUser.uid), userProfileData, {});
@@ -313,14 +313,14 @@ function UserDialog({
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel>Wijk</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                             <SelectTrigger>
                             <SelectValue placeholder="Koppel aan wijk (optioneel)" />
                             </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                            <SelectItem value="">-- Geen wijk --</SelectItem>
+                            <SelectItem value="geen_wijk">-- Geen wijk --</SelectItem>
                             {wijken.map((w: Wijk) => (
                                 <SelectItem key={w.id} value={w.naam}>
                                     {w.naam}
