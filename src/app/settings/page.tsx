@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useUser, useFirestore, useDoc, updateDocumentNonBlocking } from '@/firebase';
+import { useUser, useFirestore, useDoc, setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useToast } from '@/components/ui/use-toast';
 import { Loader2 } from 'lucide-react';
@@ -55,13 +55,13 @@ export default function SettingsPage() {
         firstName: userProfile.firstName || '',
         lastName: userProfile.lastName || '',
       });
-    } else if (user?.displayName) { // Fallback for first-time users
+    } else if (user?.displayName && !isProfileLoading && !userProfile) { // Check that we are not loading and profile is confirmed null
         const nameParts = user.displayName.split(' ');
         const firstName = nameParts.shift() || '';
         const lastName = nameParts.join(' ');
         form.reset({ firstName, lastName });
     }
-  }, [userProfile, user, form]);
+  }, [userProfile, user, form, isProfileLoading]);
 
   const onSubmit = async (data: ProfileFormValues) => {
     if (!userProfileRef) return;
@@ -69,11 +69,11 @@ export default function SettingsPage() {
     setIsSaving(true);
     const displayName = `${data.firstName} ${data.lastName}`.trim();
     try {
-      await updateDocumentNonBlocking(userProfileRef, { 
+      await setDocumentNonBlocking(userProfileRef, { 
         firstName: data.firstName,
         lastName: data.lastName,
         displayName: displayName 
-      });
+      }, { merge: true });
       toast({
         title: 'Profiel opgeslagen',
         description: 'Uw weergavenaam is succesvol bijgewerkt.',
@@ -103,7 +103,12 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent>
             {isProfileLoading ? (
-              <p>Profiel laden...</p>
+              <div className="flex items-center space-x-4">
+                  <div className="space-y-2 w-full">
+                      <Loader2 className='mx-auto h-6 w-6 animate-spin' />
+                      <p className='text-center text-sm text-muted-foreground'>Profiel laden...</p>
+                  </div>
+              </div>
             ) : (
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
