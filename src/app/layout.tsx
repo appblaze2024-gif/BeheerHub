@@ -61,29 +61,22 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
   // Create user profile document if it doesn't exist
   useEffect(() => {
-    if (
-      user &&
-      !isProfileLoading &&
-      !userProfile &&
-      userProfileRef
-    ) {
-      let firstName = '';
-      let lastName = '';
-      if (user.displayName) {
-        const nameParts = user.displayName.split(' ');
-        firstName = nameParts.shift() || '';
-        lastName = nameParts.join(' ');
+    const createProfile = async () => {
+      if (
+        user &&
+        !isProfileLoading &&
+        !userProfile &&
+        userProfileRef
+      ) {
+        const initialProfile = {
+          id: user.uid,
+          email: user.email,
+          sidebarCollapsed: true,
+        };
+        await setDocumentNonBlocking(userProfileRef, initialProfile, { merge: true });
       }
-      const initialProfile = {
-        id: user.uid,
-        email: user.email,
-        displayName: user.displayName,
-        firstName,
-        lastName,
-        sidebarCollapsed: true,
-      };
-      setDocumentNonBlocking(userProfileRef, initialProfile, { merge: true });
-    }
+    };
+    createProfile();
   }, [user, userProfile, isProfileLoading, userProfileRef]);
 
   useEffect(() => {
