@@ -19,6 +19,7 @@ import {
 } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import type { UserProfile } from '@/lib/types';
+import type { Project, Wijk } from '@/app/projects/page';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -80,6 +81,7 @@ const userFormSchema = z.object({
   role: z.enum(['Super admin', 'toezichthouder', 'ondersteuner', 'medewerkers']),
   permissions: z.record(z.record(z.boolean())).optional(),
   status: z.string().optional(),
+  wijk: z.string().optional(),
 });
 
 type UserFormValues = z.infer<typeof userFormSchema>;
@@ -89,11 +91,13 @@ function UserDialog({
   onOpenChange,
   user,
   onSuccess,
+  wijken,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   user: UserProfile | null;
   onSuccess: () => void;
+  wijken: Wijk[];
 }) {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -122,6 +126,7 @@ function UserDialog({
           status: user.status || 'Niet uitgenodigd',
           firstName: user.firstName || '',
           lastName: user.lastName || '',
+          wijk: user.wijk || '',
         });
       } else {
         form.reset({
@@ -131,6 +136,7 @@ function UserDialog({
           status: 'Niet uitgenodigd',
           firstName: '',
           lastName: '',
+          wijk: '',
         });
       }
     }
@@ -163,6 +169,7 @@ function UserDialog({
             role: data.role,
             permissions: data.permissions,
             status: data.status,
+            wijk: data.wijk || null,
         });
         toast({ title: 'Gebruiker bijgewerkt', description: `De rol en rechten voor ${user.email} zijn bijgewerkt.` });
       } else { // Create new user
@@ -184,6 +191,7 @@ function UserDialog({
                 permissions: data.permissions || {},
                 sidebarCollapsed: true,
                 status: 'Niet uitgenodigd',
+                wijk: data.wijk || undefined,
             };
 
             await setDocumentNonBlocking(doc(firestore, 'users', newUser.uid), userProfileData, {});
@@ -273,31 +281,59 @@ function UserDialog({
                 />
             </div>
             
-            {user && (
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecteer een status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Actief">Actief</SelectItem>
-                        <SelectItem value="Inactief">Inactief</SelectItem>
-                        <SelectItem value="Niet uitgenodigd">Niet uitgenodigd</SelectItem>
-                        <SelectItem value="Uitgenodigd">Uitgenodigd</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {user && (
+                <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Status</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                            <SelectTrigger>
+                            <SelectValue placeholder="Selecteer een status" />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            <SelectItem value="Actief">Actief</SelectItem>
+                            <SelectItem value="Inactief">Inactief</SelectItem>
+                            <SelectItem value="Niet uitgenodigd">Niet uitgenodigd</SelectItem>
+                            <SelectItem value="Uitgenodigd">Uitgenodigd</SelectItem>
+                        </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
                 )}
-              />
-            )}
+                <FormField
+                    control={form.control}
+                    name="wijk"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Wijk</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                        <FormControl>
+                            <SelectTrigger>
+                            <SelectValue placeholder="Koppel aan wijk (optioneel)" />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            <SelectItem value="">-- Geen wijk --</SelectItem>
+                            {wijken.map((w: Wijk) => (
+                                <SelectItem key={w.id} value={w.naam}>
+                                    {w.naam}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+            </div>
+
             <div>
               <FormLabel>Rechten</FormLabel>
               <div className="space-y-4 mt-2">
@@ -362,7 +398,27 @@ export function UserManagement() {
     return collection(firestore, 'users');
   }, [firestore, canManageUsers]);
 
+  const projectsCollection = React.useMemo(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'projects');
+  }, [firestore]);
+
   const { data: users, isLoading: isLoadingUsers, error: usersError } = useCollection<UserProfile>(usersCollection);
+  const { data: projects } = useCollection<Project>(projectsCollection);
+
+  const allWijken = React.useMemo(() => {
+    if (!projects) return [];
+    const wijkMap = new Map<string, Wijk>();
+    projects.forEach(p => {
+        (p.wijken || []).forEach(w => {
+            if (!wijkMap.has(w.naam)) {
+                wijkMap.set(w.naam, w);
+            }
+        });
+    });
+    return Array.from(wijkMap.values()).sort((a,b) => a.naam.localeCompare(b.naam));
+  }, [projects]);
+
 
   const handleAddNew = () => {
     setSelectedUser(null);
@@ -454,10 +510,11 @@ export function UserManagement() {
         </CardHeader>
         <CardContent>
             <div className="border rounded-lg">
-                <div className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] px-4 py-2 font-semibold bg-muted text-muted-foreground">
+                <div className="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_auto] px-4 py-2 font-semibold bg-muted text-muted-foreground">
                     <span>Naam</span>
                     <span>E-mail</span>
                     <span>Rol</span>
+                    <span>Wijk</span>
                     <span>Status</span>
                     <span />
                 </div>
@@ -469,7 +526,7 @@ export function UserManagement() {
                     <div className="p-4 text-destructive-foreground bg-destructive/80 text-center">{usersError.message}</div>
                 ) : users && users.length > 0 ? (
                     users.map(user => (
-                        <div key={user.id} className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] items-center px-4 py-3 border-t">
+                        <div key={user.id} className="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_auto] items-center px-4 py-3 border-t">
                             <div className="flex items-center gap-3">
                                 <Avatar className="h-8 w-8">
                                     <AvatarFallback>
@@ -480,6 +537,7 @@ export function UserManagement() {
                             </div>
                             <span className="truncate">{user.email}</span>
                             <Badge variant={user.role === 'Super admin' ? 'default' : 'secondary'} className="w-fit">{user.role}</Badge>
+                            <span className="truncate">{user.wijk || '-'}</span>
                             <div>
                                 {user.role !== 'Super admin' && (
                                     <Badge
@@ -532,6 +590,7 @@ export function UserManagement() {
         onOpenChange={setIsDialogOpen}
         user={selectedUser}
         onSuccess={() => {}}
+        wijken={allWijken}
       />
     </>
   );

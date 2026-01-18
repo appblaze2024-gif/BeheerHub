@@ -18,6 +18,7 @@ export type UserProfile = {
   role?: 'Super admin' | 'toezichthouder' | 'ondersteuner' | 'medewerkers';
   permissions?: UserPermissions;
   status?: 'Actief' | 'Inactief' | 'Niet uitgenodigd' | 'Uitgenodigd';
+  wijk?: string;
 };
 
 export interface Medewerker {

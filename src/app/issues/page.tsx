@@ -21,6 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import { useProfile } from '@/firebase/profile-provider';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -176,6 +177,7 @@ export default function IssuesPage() {
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(new Date());
   const [viewMode, setViewMode] = React.useState<'map' | 'list'>('map');
   const [searchQuery, setSearchQuery] = React.useState('');
+  const { profile } = useProfile();
 
   const meldingenCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -200,6 +202,17 @@ export default function IssuesPage() {
       a.naam.localeCompare(b.naam, undefined, { numeric: true, sensitivity: 'base' })
     );
   }, [selectedProject?.wijken]);
+
+  React.useEffect(() => {
+    if (profile?.wijk && sortedWijken.length > 0) {
+        const userWijk = sortedWijken.find(w => w.naam === profile.wijk);
+        if (userWijk) {
+            setSelectedWijkId(userWijk.id);
+        } else {
+            setSelectedWijkId(null);
+        }
+    }
+  }, [profile, sortedWijken]);
 
   const selectedWijk = React.useMemo(() => {
       if (!selectedProject || !selectedWijkId || selectedWijkId === 'all') return null;
@@ -488,7 +501,7 @@ export default function IssuesPage() {
                                 <Select
                                     value={selectedWijkId || 'all'}
                                     onValueChange={setSelectedWijkId}
-                                    disabled={!selectedProject}
+                                    disabled={!selectedProject || !!profile?.wijk}
                                 >
                                         <SelectTrigger id="wijk-select" className="w-full bg-card">
                                         <SelectValue placeholder="Selecteer een wijk" />

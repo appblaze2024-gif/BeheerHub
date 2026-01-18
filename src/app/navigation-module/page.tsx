@@ -58,6 +58,7 @@ import { useMemo, useCallback } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import Image from 'next/image';
 import { ResponsiveContainer, RadialBarChart, PolarAngleAxis, RadialBar } from 'recharts';
+import { useProfile } from '@/firebase/profile-provider';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -149,6 +150,7 @@ export default function Page() {
   const mapContainerRef = React.useRef<HTMLDivElement>(null);
   const firestore = useFirestore();
   const { user } = useUser();
+  const { profile } = useProfile();
   
   const [viewState, setViewState] = React.useState({
     longitude: 5.2913, // Default center of NL
@@ -241,14 +243,18 @@ export default function Page() {
 
  const availableRoutes = React.useMemo(() => {
     if (!selectedProject) return [];
+    let routes: Wijk[] = [];
     if (selectedRouteType === 'veeg') {
-      return selectedProject.veegroutes || [];
+      routes = selectedProject.veegroutes || [];
     }
     if (selectedRouteType === 'prullenbak') {
-      return selectedProject.prullenbakkenroutes || [];
+      routes = selectedProject.prullenbakkenroutes || [];
     }
-    return [];
-  }, [selectedProject, selectedRouteType]);
+    if (profile?.wijk) {
+      return routes.filter(r => r.naam === profile.wijk);
+    }
+    return routes;
+  }, [selectedProject, selectedRouteType, profile]);
 
   const objectCountsForRoutes = React.useMemo(() => {
     if (!objects || !availableRoutes.length) return {};
