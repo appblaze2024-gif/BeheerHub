@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { initializeApp, deleteApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, setDoc, updateDoc, collection } from 'firebase/firestore';
 import { Loader2, Plus, MoreHorizontal, User as UserIcon } from 'lucide-react';
 import { firebaseConfig } from '@/firebase/config';
@@ -68,17 +68,7 @@ const permissionConfig = [
     { module: 'users', label: 'Gebruikersbeheer', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }] },
 ];
 
-const standardActions = [
-    { id: 'view', label: 'Bekijken' },
-    { id: 'create', label: 'Aanmaken' },
-    { id: 'edit', label: 'Bewerken' },
-    { id: 'delete', label: 'Verwijderen' },
-];
-
-const allPermissions = permissionConfig.map(p => ({
-    ...p,
-    permissions: p.actions || standardActions
-}));
+const allPermissions = permissionConfig;
 
 const userFormSchema = z.object({
   email: z.string().email('Voer een geldig e-mailadres in.'),
@@ -113,7 +103,7 @@ function UserDialog({
       const defaultPermissions: { [key: string]: { [key: string]: boolean } } = {};
       allPermissions.forEach(mod => {
         defaultPermissions[mod.module] = {};
-        mod.permissions.forEach(perm => {
+        mod.actions.forEach(perm => {
           defaultPermissions[mod.module][perm.id] = false;
         });
       });
@@ -139,7 +129,7 @@ function UserDialog({
         const allTruePermissions: { [key: string]: { [key: string]: boolean } } = {};
         allPermissions.forEach(mod => {
             allTruePermissions[mod.module] = {};
-            mod.permissions.forEach(perm => {
+            mod.actions.forEach(perm => {
                 allTruePermissions[mod.module][perm.id] = true;
             });
         });
@@ -162,17 +152,12 @@ function UserDialog({
         const tempAuth = getAuth(tempApp);
         
         try {
-            // Generate a random temporary password
             const tempPassword = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
-            
             const userCredential = await createUserWithEmailAndPassword(tempAuth, data.email, tempPassword);
             const newUser = userCredential.user;
-
-            // Send password reset email before signing out
-            await sendPasswordResetEmail(tempAuth, data.email);
             
-            // Immediately sign out the new user from the temporary auth instance
-            await signOut(tempAuth);
+            // Send password reset email
+            await sendPasswordResetEmail(tempAuth, data.email);
             
             const userProfileData: UserProfile = {
                 id: newUser.uid,
@@ -258,7 +243,7 @@ function UserDialog({
                   <div key={module.module} className="border p-4 rounded-md">
                     <h4 className="font-semibold capitalize mb-2">{module.label}</h4>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {module.permissions.map((permission) => (
+                      {module.actions.map((permission) => (
                         <FormField
                           key={permission.id}
                           control={form.control}
