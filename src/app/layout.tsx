@@ -145,21 +145,30 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const publicPaths = ['/login', '/reset-password'];
   const isPublicPage = publicPaths.includes(pathname);
 
   useEffect(() => {
-    if (isUserLoading) return; // Wait until user status is known
+    // Return early if not mounted or auth is loading, to prevent premature redirects
+    if (!isMounted || isUserLoading) return;
 
     if (!user && !isPublicPage) {
       router.push('/login');
     } else if (user && pathname === '/login') {
       router.push('/');
     }
-  }, [user, isUserLoading, pathname, router, isPublicPage]);
+  }, [user, isUserLoading, pathname, router, isPublicPage, isMounted]);
 
-  if (isUserLoading && !isPublicPage) {
-     return (
+  // During server-side rendering and before the component mounts on the client,
+  // we cannot reliably use client-side hooks like usePathname or check auth state.
+  // Rendering a consistent, static loading state for all pages initially prevents hydration errors.
+  if (!isMounted) {
+    return (
       <div className="flex h-screen items-center justify-center">
         Laden...
       </div>
@@ -170,15 +179,14 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  if (!user && !isPublicPage) {
-      return (
+  if (isUserLoading || !user) {
+    return (
       <div className="flex h-screen items-center justify-center">
         Laden...
       </div>
     );
   }
 
-  // User is loaded and it's a protected page.
   return <ProtectedAppLayout>{children}</ProtectedAppLayout>;
 }
 
