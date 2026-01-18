@@ -48,7 +48,7 @@ export async function sendEmail(data: z.infer<typeof mailSchema>) {
 
   const mailOptions: nodemailer.SendMailOptions = {
     from: {
-      name: fromDisplayName,
+      name: fromDisplayName || 'BeheerHub',
       address: SMTP_USER,
     },
     to: parsedData.to,
