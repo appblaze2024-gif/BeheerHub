@@ -16,7 +16,7 @@ import {
   useUser,
 } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
-import type { UserProfile } from '@/lib/types';
+import type { UserProfile, UserPermission } from '@/lib/types';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -52,12 +52,28 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback } from './ui/avatar';
+import { Checkbox } from './ui/checkbox';
 
+const allPermissions: { id: UserPermission; label: string }[] = [
+    { id: 'manageProjects', label: 'Projecten beheren' },
+    { id: 'manageEmployees', label: 'Medewerkers beheren' },
+    { id: 'manageWorkPlanning', label: 'Werkplanning beheren' },
+    { id: 'manageWeeklyReports', label: 'Weekstaten beheren' },
+    { id: 'viewReports', label: 'Rapportages bekijken' },
+    { id: 'manageVehicles', label: 'Wagenpark beheren' },
+    { id: 'manageObjects', label: 'Objecten beheren' },
+    { id: 'manageInventory', label: 'Voorraad beheren' },
+    { id: 'manageIssues', label: 'Meldingen beheren' },
+    { id: 'useNavigation', label: 'Navigatiemodule gebruiken' },
+    { id: 'useMail', label: 'Mail gebruiken' },
+    { id: 'manageUsers', label: 'Gebruikers beheren' },
+];
 
 const userFormSchema = z.object({
   email: z.string().email('Voer een geldig e-mailadres in.'),
   password: z.string().optional(),
   role: z.enum(['Super admin', 'toezichthouder', 'ondersteuner', 'medewerkers']),
+  permissions: z.record(z.boolean()).optional(),
 }).refine(data => !data.password || data.password.length >= 6, {
     message: 'Wachtwoord moet minimaal 6 tekens lang zijn.',
     path: ['password'],
@@ -86,17 +102,32 @@ function UserDialog({
 
   React.useEffect(() => {
     if (open) {
+      const initialPermissions: { [key: string]: boolean } = {};
+      allPermissions.forEach(p => {
+        initialPermissions[p.id] = false;
+      });
+
       if (user) {
+        const isSuperUser = user.email === 'dstoutenburg@meerlanden.nl';
+        const existingPermissions = user.permissions || {};
+        const fullPermissions: { [key: string]: boolean } = {};
+        
+        allPermissions.forEach(p => {
+          fullPermissions[p.id] = isSuperUser ? true : !!existingPermissions[p.id as keyof typeof existingPermissions];
+        });
+
         form.reset({
           email: user.email || '',
           role: user.role || 'medewerkers',
           password: '',
+          permissions: fullPermissions,
         });
       } else {
         form.reset({
           email: '',
           password: '',
           role: 'medewerkers',
+          permissions: initialPermissions,
         });
       }
     }
@@ -107,8 +138,11 @@ function UserDialog({
     try {
       if (user) { // Edit existing user
         const userRef = doc(firestore, 'users', user.id);
-        await updateDoc(userRef, { role: data.role });
-        toast({ title: 'Gebruiker bijgewerkt', description: `De rol voor ${user.email} is bijgewerkt.` });
+        await updateDoc(userRef, { 
+            role: data.role,
+            permissions: data.permissions 
+        });
+        toast({ title: 'Gebruiker bijgewerkt', description: `De rol en rechten voor ${user.email} zijn bijgewerkt.` });
       } else { // Create new user
         if (!data.password) {
           form.setError('password', { message: 'Wachtwoord is verplicht voor nieuwe gebruikers.'});
@@ -128,6 +162,7 @@ function UserDialog({
                 id: newUser.uid,
                 email: newUser.email || '',
                 role: data.role,
+                permissions: data.permissions || {},
                 firstName: '',
                 lastName: '',
                 sidebarCollapsed: true,
@@ -156,7 +191,7 @@ function UserDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{user ? 'Gebruiker bewerken' : 'Nieuwe gebruiker aanmaken'}</DialogTitle>
         </DialogHeader>
@@ -177,7 +212,7 @@ function UserDialog({
                   <FormItem>
                     <FormLabel>Wachtwoord</FormLabel>
                     <FormControl>
-                      <Input type="password" {...field} />
+                      <Input type="password" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -202,6 +237,33 @@ function UserDialog({
                   </FormItem>
                 )}
               />
+            <div>
+              <FormLabel>Rechten</FormLabel>
+              <div className="grid grid-cols-2 gap-4 mt-2 border p-4 rounded-md">
+                {allPermissions.map((permission) => (
+                  <FormField
+                    key={permission.id}
+                    control={form.control}
+                    name={`permissions.${permission.id}`}
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                        <FormLabel className="font-normal" htmlFor={`permission-${permission.id}`}>
+                          {permission.label}
+                        </FormLabel>
+                        <FormControl>
+                          <Checkbox
+                            id={`permission-${permission.id}`}
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={isSubmitting}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                ))}
+              </div>
+            </div>
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Annuleren</Button>
               <Button type="submit" disabled={isSubmitting}>
@@ -225,14 +287,14 @@ export function UserManagement() {
   const [selectedUser, setSelectedUser] = React.useState<UserProfile | null>(null);
 
   const isSuperUser = currentUser?.email === 'dstoutenburg@meerlanden.nl';
-  const isAdmin = currentAdminProfile?.role === 'Super admin' || isSuperUser;
+  const isAdmin = (currentAdminProfile?.permissions?.manageUsers) || isSuperUser;
 
   const usersCollection = React.useMemo(() => {
     if (!firestore || !isAdmin) return null;
     return collection(firestore, 'users');
   }, [firestore, isAdmin]);
 
-  const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersCollection);
+  const { data: users, isLoading: isLoadingUsers, error: usersError } = useCollection<UserProfile>(usersCollection);
 
   const handleAddNew = () => {
     setSelectedUser(null);
@@ -299,6 +361,8 @@ export function UserManagement() {
                      <div className="flex items-center justify-center p-8">
                         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                     </div>
+                ) : usersError ? (
+                    <div className="p-4 text-destructive-foreground bg-destructive/80 text-center">{usersError.message}</div>
                 ) : users && users.length > 0 ? (
                     users.map(user => (
                         <div key={user.id} className="grid grid-cols-[1fr_1fr_1fr_auto] items-center px-4 py-3 border-t">
