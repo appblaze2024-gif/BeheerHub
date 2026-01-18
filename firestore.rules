@@ -76,10 +76,7 @@ service cloud.firestore {
     }
 
     match /meldingen/{meldingId} {
-        allow get, list: if isSignedIn();
-        allow create: if hasPermission('issues', 'create');
-        allow update: if hasPermission('issues', 'edit');
-        allow delete: if hasPermission('issues', 'delete');
+        allow read, write: if isSignedIn();
     }
 
     match /voertuigen/{vehicleId} {
