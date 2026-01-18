@@ -23,7 +23,7 @@ service cloud.firestore {
     }
 
     match /projects/{projectId} {
-       allow get, list: if hasPermission('projects', 'view');
+       allow get, list: if isSignedIn();
        allow create: if hasPermission('projects', 'create');
        allow update: if hasPermission('projects', 'edit');
        allow delete: if hasPermission('projects', 'delete');
@@ -50,7 +50,7 @@ service cloud.firestore {
     }
 
     match /medewerkers/{medewerkerId} {
-      allow get, list: if hasPermission('employees', 'view');
+      allow get, list: if isSignedIn();
       allow create: if hasPermission('employees', 'create');
       allow update: if hasPermission('employees', 'edit');
       allow delete: if hasPermission('employees', 'delete');
@@ -69,21 +69,21 @@ service cloud.firestore {
     }
 
     match /objects/{objectId} {
-        allow get, list: if hasPermission('objects', 'view');
+        allow get, list: if isSignedIn();
         allow create: if hasPermission('objects', 'create');
         allow update: if hasPermission('objects', 'edit');
         allow delete: if hasPermission('objects', 'delete');
     }
 
     match /meldingen/{meldingId} {
-        allow get, list: if hasPermission('issues', 'view');
+        allow get, list: if isSignedIn();
         allow create: if hasPermission('issues', 'create');
         allow update: if hasPermission('issues', 'edit');
         allow delete: if hasPermission('issues', 'delete');
     }
 
     match /voertuigen/{vehicleId} {
-      allow get, list: if hasPermission('vehicles', 'view');
+      allow get, list: if isSignedIn();
       allow create: if hasPermission('vehicles', 'create');
       allow update: if hasPermission('vehicles', 'edit');
       allow delete: if hasPermission('vehicles', 'delete');
@@ -94,7 +94,7 @@ service cloud.firestore {
     }
 
     match /machines/{machineId} {
-      allow get, list: if hasPermission('vehicles', 'view');
+      allow get, list: if isSignedIn();
       allow create: if hasPermission('vehicles', 'create');
       allow update: if hasPermission('vehicles', 'edit');
       allow delete: if hasPermission('vehicles', 'delete');
