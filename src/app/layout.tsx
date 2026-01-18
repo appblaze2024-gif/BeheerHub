@@ -78,7 +78,6 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
               width={40}
               height={40}
             />
-             <span className="font-bold text-lg ml-2 hidden sm:inline">BeheerHub</span>
           </Link>
           <SidebarNav />
       </header>
