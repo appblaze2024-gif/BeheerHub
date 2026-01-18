@@ -60,7 +60,7 @@ import Image from 'next/image';
 import { ResponsiveContainer, RadialBarChart, PolarAngleAxis, RadialBar } from 'recharts';
 import { useProfile } from '@/firebase/profile-provider';
 import { useNavigationUI } from '@/context/navigation-ui-context';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -154,6 +154,7 @@ export default function Page() {
   const { user } = useUser();
   const { profile } = useProfile();
   const { setIsHeaderVisible } = useNavigationUI();
+  const router = useRouter();
   const searchParams = useSearchParams();
   
   const [viewState, setViewState] = React.useState({
@@ -710,6 +711,10 @@ export default function Page() {
   });
 
   const handleStopNavigation = useCallback(() => {
+    if (isSinglePointNav) {
+        router.push('/issues');
+    }
+
     if (firestore && user && activeRouteHistoryId) {
       const routeHistoryRef = doc(firestore, `users/${user.uid}/routes`, activeRouteHistoryId);
       updateDocumentNonBlocking(routeHistoryRef, {
@@ -761,7 +766,7 @@ export default function Page() {
             padding: { top: 0, bottom: 0, left: 0, right: 0 },
         });
     }
-  }, [firestore, user, activeRouteHistoryId, setIsHeaderVisible]);
+  }, [firestore, user, activeRouteHistoryId, setIsHeaderVisible, isSinglePointNav, router]);
 
   const resumeSimulation = useCallback(() => {
     simulationStateRef.current.isPaused = false;
