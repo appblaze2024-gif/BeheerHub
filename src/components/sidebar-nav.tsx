@@ -31,22 +31,20 @@ import { useProfile } from '@/firebase/profile-provider';
 import { signOut } from 'firebase/auth';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
-import type { UserPermission } from '@/lib/types';
 
-
-const allMenuItems: { href: string; label: string; icon: React.ElementType; permission?: UserPermission }[] = [
+const allMenuItems: { href: string; label: string; icon: React.ElementType; module?: string }[] = [
   { href: '/', label: 'Dashboard', icon: Home },
-  { href: '/projects', label: 'Projecten', icon: ClipboardList, permission: 'manageProjects' },
-  { href: '/employees', label: 'Medewerkers', icon: Users, permission: 'manageEmployees' },
-  { href: '/work-planning', label: 'Werkplanning', icon: CalendarCheck, permission: 'manageWorkPlanning' },
-  { href: '/weekly-reports', label: 'Weekstaten', icon: Newspaper, permission: 'manageWeeklyReports' },
-  { href: '/reports', label: 'Rapportages', icon: FileText, permission: 'viewReports' },
-  { href: '/vehicles', label: 'Wagenpark', icon: Truck, permission: 'manageVehicles' },
-  { href: '/objects', label: 'Objecten', icon: Building2, permission: 'manageObjects' },
-  { href: '/inventory', label: 'Voorraadbeheer', icon: Package, permission: 'manageInventory' },
-  { href: '/issues', label: 'Meldingen', icon: Bell, permission: 'manageIssues' },
-  { href: '/navigation-module', label: 'Navigatiemodule', icon: Map, permission: 'useNavigation' },
-  { href: '/mail', label: 'Mail', icon: Mail, permission: 'useMail' },
+  { href: '/projects', label: 'Projecten', icon: ClipboardList, module: 'projects' },
+  { href: '/employees', label: 'Medewerkers', icon: Users, module: 'employees' },
+  { href: '/work-planning', label: 'Werkplanning', icon: CalendarCheck, module: 'workPlanning' },
+  { href: '/weekly-reports', label: 'Weekstaten', icon: Newspaper, module: 'weeklyReports' },
+  { href: '/reports', label: 'Rapportages', icon: FileText, module: 'reports' },
+  { href: '/vehicles', label: 'Wagenpark', icon: Truck, module: 'vehicles' },
+  { href: '/objects', label: 'Objecten', icon: Building2, module: 'objects' },
+  { href: '/inventory', label: 'Voorraadbeheer', icon: Package, module: 'inventory' },
+  { href: '/issues', label: 'Meldingen', icon: Bell, module: 'issues' },
+  { href: '/navigation-module', label: 'Navigatiemodule', icon: Map, module: 'navigation' },
+  { href: '/mail', label: 'Mail', icon: Mail, module: 'mail' },
 ];
 
 
@@ -69,8 +67,8 @@ export function SidebarNav({ isCollapsed }: { isCollapsed: boolean }) {
 
     return allMenuItems.filter(item => {
       if (isSuperUser) return true;
-      if (!item.permission) return true; // Items without a permission are visible to everyone
-      return !!permissions[item.permission];
+      if (!item.module) return true; // Items without a module are visible to everyone
+      return !!permissions[item.module]?.view || !!permissions[item.module]?.use;
     });
   }, [profile, isProfileLoading, isUserLoading]);
 

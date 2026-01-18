@@ -535,7 +535,14 @@
         },
         "permissions": {
           "type": "object",
-          "description": "Granular permissions for the user."
+          "description": "Granular permissions for the user, structured by module.",
+          "additionalProperties": {
+            "type": "object",
+            "description": "Action-based permissions for a module.",
+            "additionalProperties": {
+              "type": "boolean"
+            }
+          }
         }
       },
       "required": [

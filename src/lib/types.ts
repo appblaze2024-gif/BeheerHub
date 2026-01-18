@@ -1,16 +1,8 @@
-export type UserPermission =
-  | 'manageProjects'
-  | 'manageEmployees'
-  | 'manageWorkPlanning'
-  | 'manageWeeklyReports'
-  | 'viewReports'
-  | 'manageVehicles'
-  | 'manageObjects'
-  | 'manageInventory'
-  | 'manageIssues'
-  | 'useNavigation'
-  | 'useMail'
-  | 'manageUsers';
+export type UserPermissions = {
+  [module: string]: {
+    [permission: string]: boolean;
+  };
+};
 
 export type UserProfile = {
   id: string;
@@ -20,7 +12,7 @@ export type UserProfile = {
   lastName?: string;
   sidebarCollapsed?: boolean;
   role?: 'Super admin' | 'toezichthouder' | 'ondersteuner' | 'medewerkers';
-  permissions?: { [key in UserPermission]?: boolean };
+  permissions?: UserPermissions;
 };
 
 export interface Medewerker {
