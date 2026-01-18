@@ -26,7 +26,7 @@ import {
   LogOut,
   Mail,
 } from 'lucide-react';
-import { useAuth } from '@/firebase';
+import { useAuth, useUser } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { signOut } from 'firebase/auth';
 import { cn } from '@/lib/utils';
@@ -50,19 +50,24 @@ const allMenuItems = [
 export function SidebarNav({ isCollapsed }: { isCollapsed: boolean }) {
   const pathname = usePathname();
   const auth = useAuth();
-  const { profile, isLoading } = useProfile();
+  const { user, isUserLoading } = useUser();
+  const { profile, isLoading: isProfileLoading } = useProfile();
 
   const handleLogout = async () => {
     await signOut(auth);
   };
   
   const menuItems = React.useMemo(() => {
+    const isLoading = isUserLoading || isProfileLoading;
     if (isLoading) return [];
-    if (profile?.role === 'admin') {
+    
+    const isSuperUser = user?.email === 'dstoutenburg@meerlanden.nl';
+
+    if (profile?.role === 'admin' || isSuperUser) {
       return allMenuItems;
     }
     return allMenuItems.filter(item => !item.adminOnly);
-  }, [profile, isLoading]);
+  }, [profile, isProfileLoading, user, isUserLoading]);
 
 
   const bottomMenuItems = [
