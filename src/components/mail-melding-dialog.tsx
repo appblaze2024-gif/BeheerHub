@@ -30,7 +30,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { sendEmail } from '@/app/mail/actions';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useDoc } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 // Define Melding type here or import it
 type Melding = {
@@ -119,7 +120,15 @@ export function MailMeldingDialog({
 }: MailMeldingDialogProps) {
   const { toast } = useToast();
   const { user } = useUser();
+  const firestore = useFirestore();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  const userProfileRef = React.useMemo(() => {
+    if (!user || !firestore) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [user, firestore]);
+
+  const { data: userProfile } = useDoc<{ displayName?: string }>(userProfileRef);
 
   const form = useForm<MailFormValues>({
     resolver: zodResolver(mailFormSchema),
@@ -147,18 +156,21 @@ export function MailMeldingDialog({
 
     const pdfDataUri = generateMeldingPDF(melding);
     const pdfBase64 = pdfDataUri.substring(pdfDataUri.indexOf(',') + 1);
+    
+    const senderName = userProfile?.displayName || user.email;
+    const emailBody = `Geachte lezer,\n\nIn de bijlage vindt u de details van melding ${melding.intakenummer}.\n\nMet vriendelijke groet,\n${senderName}`;
 
     const result = await sendEmail({
       to: data.email,
       cc: data.cc,
       subject: `Melding Details: ${melding.intakenummer}`,
-      body: `Geachte lezer,\n\nIn de bijlage vindt u de details van melding ${melding.intakenummer}.\n\nMet vriendelijke groet,\n${user.email}`,
+      body: emailBody,
       attachments: [{
         content: pdfBase64,
         filename: `melding_${melding.intakenummer}.pdf`,
         type: 'application/pdf',
       }],
-      fromName: user.email,
+      fromName: senderName,
     });
 
     if (result.success) {

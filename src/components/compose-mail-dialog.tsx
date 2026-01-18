@@ -5,9 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Loader2, Send, Paperclip, X } from 'lucide-react';
-import {
-  useUser,
-} from '@/firebase';
+import { useUser, useFirestore, useDoc } from '@/firebase';
+import { doc } from 'firebase/firestore';
 import { sendEmail } from '@/app/mail/actions';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -65,10 +64,18 @@ interface ComposeMailDialogProps {
 export function ComposeMailDialog({ open, onOpenChange, initialData, children }: ComposeMailDialogProps) {
   const { toast } = useToast();
   const { user } = useUser();
+  const firestore = useFirestore();
   const [isSending, setIsSending] = React.useState(false);
   const [newAttachments, setNewAttachments] = React.useState<File[]>([]);
   const [forwardedAttachments, setForwardedAttachments] = React.useState<EmailAttachment[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const userProfileRef = React.useMemo(() => {
+    if (!user || !firestore) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [user, firestore]);
+
+  const { data: userProfile } = useDoc<{ displayName?: string }>(userProfileRef);
 
   const form = useForm<MailFormValues>({
     resolver: zodResolver(mailSchema),
@@ -130,10 +137,11 @@ export function ComposeMailDialog({ open, onOpenChange, initialData, children }:
 
         const allAttachments = [...newAttachmentPayloads, ...forwardedAttachmentPayloads];
 
+        const senderName = userProfile?.displayName || user.email;
 
         const result = await sendEmail({
             ...data,
-            fromName: user.email,
+            fromName: senderName,
             attachments: allAttachments,
         });
 
