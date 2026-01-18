@@ -5,8 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Loader2, Trash2, File as FileIcon, Upload } from 'lucide-react';
-import { useFirestore, useUser, useCollection, useFirebaseApp } from '@/firebase';
-import { collection, doc, addDoc, deleteDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { useFirestore, useUser, useCollection, useFirebaseApp, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, doc, serverTimestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 
 import { format } from 'date-fns';
@@ -552,13 +552,14 @@ export function MeldingDialog({
     try {
         if (melding) {
             const meldingRef = doc(firestore, 'meldingen', meldingId);
-            await updateDoc(meldingRef, meldingData);
+            await updateDocumentNonBlocking(meldingRef, meldingData);
         } else {
             const meldingenColRef = collection(firestore, 'meldingen');
-            await setDoc(doc(meldingenColRef, meldingId), {
+            const meldingRef = doc(meldingenColRef, meldingId);
+            await setDocumentNonBlocking(meldingRef, {
                 ...meldingData, 
                 createdAt: serverTimestamp()
-            });
+            }, {});
         }
       onOpenChange(false);
     } catch (error) {
@@ -583,7 +584,7 @@ export function MeldingDialog({
           }
         }
       }
-      await deleteDoc(doc(firestore, 'meldingen', melding.id));
+      await deleteDocumentNonBlocking(doc(firestore, 'meldingen', melding.id));
       onOpenChange(false);
     } catch (error) {
       console.error("Fout bij het verwijderen van de melding:", error);
