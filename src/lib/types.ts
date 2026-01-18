@@ -19,6 +19,8 @@ export type UserProfile = {
   permissions?: UserPermissions;
   status?: 'Actief' | 'Inactief' | 'Niet uitgenodigd' | 'Uitgenodigd';
   wijk?: string;
+  veegroute?: string;
+  prullenbakkenroute?: string;
 };
 
 export interface Medewerker {

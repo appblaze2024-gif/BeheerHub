@@ -82,6 +82,8 @@ const userFormSchema = z.object({
   permissions: z.record(z.record(z.boolean())).optional(),
   status: z.string().optional(),
   wijk: z.string().optional(),
+  veegroute: z.string().optional(),
+  prullenbakkenroute: z.string().optional(),
 });
 
 type UserFormValues = z.infer<typeof userFormSchema>;
@@ -92,12 +94,16 @@ function UserDialog({
   user,
   onSuccess,
   wijken,
+  veegroutes,
+  prullenbakkenroutes,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   user: UserProfile | null;
   onSuccess: () => void;
   wijken: Wijk[];
+  veegroutes: Wijk[];
+  prullenbakkenroutes: Wijk[];
 }) {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -127,6 +133,8 @@ function UserDialog({
           firstName: user.firstName || '',
           lastName: user.lastName || '',
           wijk: user.wijk || 'geen_wijk',
+          veegroute: user.veegroute || 'geen_veegroute',
+          prullenbakkenroute: user.prullenbakkenroute || 'geen_prullenbakkenroute',
         });
       } else {
         form.reset({
@@ -137,6 +145,8 @@ function UserDialog({
           firstName: '',
           lastName: '',
           wijk: 'geen_wijk',
+          veegroute: 'geen_veegroute',
+          prullenbakkenroute: 'geen_prullenbakkenroute',
         });
       }
     }
@@ -170,6 +180,8 @@ function UserDialog({
             permissions: data.permissions,
             status: data.status,
             wijk: data.wijk === 'geen_wijk' ? null : data.wijk,
+            veegroute: data.veegroute === 'geen_veegroute' ? null : data.veegroute,
+            prullenbakkenroute: data.prullenbakkenroute === 'geen_prullenbakkenroute' ? null : data.prullenbakkenroute,
         });
         toast({ title: 'Gebruiker bijgewerkt', description: `De rol en rechten voor ${user.email} zijn bijgewerkt.` });
       } else { // Create new user
@@ -192,6 +204,8 @@ function UserDialog({
                 sidebarCollapsed: true,
                 status: 'Niet uitgenodigd',
                 wijk: data.wijk === 'geen_wijk' ? undefined : data.wijk,
+                veegroute: data.veegroute === 'geen_veegroute' ? undefined : data.veegroute,
+                prullenbakkenroute: data.prullenbakkenroute === 'geen_prullenbakkenroute' ? undefined : data.prullenbakkenroute,
             };
 
             await setDocumentNonBlocking(doc(firestore, 'users', newUser.uid), userProfileData, {});
@@ -281,8 +295,49 @@ function UserDialog({
                 />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {user && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField control={form.control} name="wijk" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Wijk</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || 'geen_wijk'}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Koppel aan wijk" /></SelectTrigger></FormControl>
+                            <SelectContent>
+                                <SelectItem value="geen_wijk">-- Geen wijk --</SelectItem>
+                                {wijken.map((w: Wijk) => (<SelectItem key={w.id} value={w.naam}>{w.naam}</SelectItem>))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                )} />
+                <FormField control={form.control} name="veegroute" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Veegroute</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || 'geen_veegroute'}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Koppel aan veegroute" /></SelectTrigger></FormControl>
+                            <SelectContent>
+                                <SelectItem value="geen_veegroute">-- Geen veegroute --</SelectItem>
+                                {veegroutes.map((w: Wijk) => (<SelectItem key={w.id} value={w.naam}>{w.naam}</SelectItem>))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                )} />
+                <FormField control={form.control} name="prullenbakkenroute" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Prullenbakkenroute</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || 'geen_prullenbakkenroute'}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Koppel aan route" /></SelectTrigger></FormControl>
+                            <SelectContent>
+                                <SelectItem value="geen_prullenbakkenroute">-- Geen prullenbakkenroute --</SelectItem>
+                                {prullenbakkenroutes.map((w: Wijk) => (<SelectItem key={w.id} value={w.naam}>{w.naam}</SelectItem>))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                )} />
+            </div>
+
+            {user && (
                 <FormField
                     control={form.control}
                     name="status"
@@ -307,32 +362,6 @@ function UserDialog({
                     )}
                 />
                 )}
-                <FormField
-                    control={form.control}
-                    name="wijk"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Wijk</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                            <SelectTrigger>
-                            <SelectValue placeholder="Koppel aan wijk (optioneel)" />
-                            </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                            <SelectItem value="geen_wijk">-- Geen wijk --</SelectItem>
-                            {wijken.map((w: Wijk) => (
-                                <SelectItem key={w.id} value={w.naam}>
-                                    {w.naam}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-            </div>
 
             <div>
               <FormLabel>Rechten</FormLabel>
@@ -417,6 +446,32 @@ export function UserManagement() {
         });
     });
     return Array.from(wijkMap.values()).sort((a,b) => a.naam.localeCompare(b.naam));
+  }, [projects]);
+  
+  const allVeegroutes = React.useMemo(() => {
+    if (!projects) return [];
+    const routeMap = new Map<string, Wijk>();
+    projects.forEach(p => {
+        (p.veegroutes || []).forEach(w => {
+            if (!routeMap.has(w.naam)) {
+                routeMap.set(w.naam, w);
+            }
+        });
+    });
+    return Array.from(routeMap.values()).sort((a,b) => a.naam.localeCompare(b.naam));
+  }, [projects]);
+
+  const allPrullenbakkenroutes = React.useMemo(() => {
+    if (!projects) return [];
+    const routeMap = new Map<string, Wijk>();
+    projects.forEach(p => {
+        (p.prullenbakkenroutes || []).forEach(w => {
+            if (!routeMap.has(w.naam)) {
+                routeMap.set(w.naam, w);
+            }
+        });
+    });
+    return Array.from(routeMap.values()).sort((a,b) => a.naam.localeCompare(b.naam));
   }, [projects]);
 
 
@@ -510,11 +565,11 @@ export function UserManagement() {
         </CardHeader>
         <CardContent>
             <div className="border rounded-lg">
-                <div className="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_auto] px-4 py-2 font-semibold bg-muted text-muted-foreground">
+                <div className="grid grid-cols-[1fr_1fr_1fr_1.5fr_1fr_auto] px-4 py-2 font-semibold bg-muted text-muted-foreground">
                     <span>Naam</span>
                     <span>E-mail</span>
                     <span>Rol</span>
-                    <span>Wijk</span>
+                    <span>Wijken / Routes</span>
                     <span>Status</span>
                     <span />
                 </div>
@@ -526,7 +581,7 @@ export function UserManagement() {
                     <div className="p-4 text-destructive-foreground bg-destructive/80 text-center">{usersError.message}</div>
                 ) : users && users.length > 0 ? (
                     users.map(user => (
-                        <div key={user.id} className="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_auto] items-center px-4 py-3 border-t">
+                        <div key={user.id} className="grid grid-cols-[1fr_1fr_1fr_1.5fr_1fr_auto] items-center px-4 py-3 border-t">
                             <div className="flex items-center gap-3">
                                 <Avatar className="h-8 w-8">
                                     <AvatarFallback>
@@ -537,7 +592,12 @@ export function UserManagement() {
                             </div>
                             <span className="truncate">{user.email}</span>
                             <Badge variant={user.role === 'Super admin' ? 'default' : 'secondary'} className="w-fit">{user.role}</Badge>
-                            <span className="truncate">{user.wijk || '-'}</span>
+                            <div className="truncate text-xs space-y-0.5">
+                                {user.wijk && <div><span className='font-semibold'>W:</span> {user.wijk}</div>}
+                                {user.veegroute && <div><span className='font-semibold'>V:</span> {user.veegroute}</div>}
+                                {user.prullenbakkenroute && <div><span className='font-semibold'>P:</span> {user.prullenbakkenroute}</div>}
+                                {!user.wijk && !user.veegroute && !user.prullenbakkenroute && '-'}
+                            </div>
                             <div>
                                 {user.role !== 'Super admin' && (
                                     <Badge
@@ -591,6 +651,8 @@ export function UserManagement() {
         user={selectedUser}
         onSuccess={() => {}}
         wijken={allWijken}
+        veegroutes={allVeegroutes}
+        prullenbakkenroutes={allPrullenbakkenroutes}
       />
     </>
   );

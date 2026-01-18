@@ -548,6 +548,14 @@
         "wijk": {
             "type": "string",
             "description": "The district/area the user is associated with."
+        },
+        "veegroute": {
+            "type": "string",
+            "description": "The sweeping route the user is associated with."
+        },
+        "prullenbakkenroute": {
+            "type": "string",
+            "description": "The trash can route the user is associated with."
         }
       },
       "required": [
