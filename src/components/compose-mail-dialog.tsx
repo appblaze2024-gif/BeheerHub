@@ -54,10 +54,16 @@ const fileToBase64 = (file: File): Promise<string> => {
     });
 };
 
-export function ComposeMailDialog({ children }: { children: React.ReactNode }) {
+interface ComposeMailDialogProps {
+  children?: React.ReactNode;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  initialData?: Partial<MailFormValues>;
+}
+
+export function ComposeMailDialog({ open, onOpenChange, initialData, children }: ComposeMailDialogProps) {
   const { toast } = useToast();
   const { user } = useUser();
-  const [open, setOpen] = React.useState(false);
   const [isSending, setIsSending] = React.useState(false);
   const [attachments, setAttachments] = React.useState<File[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -68,12 +74,12 @@ export function ComposeMailDialog({ children }: { children: React.ReactNode }) {
   });
 
   React.useEffect(() => {
-    if (!open) {
-      form.reset();
+    if (open) {
+      form.reset(initialData || { to: '', cc: '', subject: '', body: '' });
       setAttachments([]);
       setIsSending(false);
     }
-  }, [open, form]);
+  }, [open, initialData, form]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -111,7 +117,7 @@ export function ComposeMailDialog({ children }: { children: React.ReactNode }) {
                 title: 'E-mail verzonden!',
                 description: `Uw e-mail aan ${data.to} is succesvol in de wachtrij geplaatst.`,
             });
-            setOpen(false);
+            onOpenChange(false);
         } else {
             throw new Error(result.message);
         }
@@ -127,8 +133,8 @@ export function ComposeMailDialog({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Nieuw Bericht</DialogTitle>
@@ -220,7 +226,7 @@ export function ComposeMailDialog({ children }: { children: React.ReactNode }) {
                      />
                 </div>
                 <div className="flex gap-2">
-                    <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isSending}>Annuleren</Button>
+                    <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSending}>Annuleren</Button>
                     <Button type="submit" disabled={isSending}>
                         {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                         Verstuur

@@ -159,6 +159,10 @@ export default function MailPage() {
   const { toast } = useToast();
   const { user } = useUser();
 
+  const [isComposeOpen, setIsComposeOpen] = React.useState(false);
+  const [composeInitialData, setComposeInitialData] = React.useState<any>({});
+
+
   const fetchAndSetEmails = React.useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -227,6 +231,23 @@ export default function MailPage() {
     setFolders(currentFolders => [...currentFolders, newFolder]);
     setSelectedFolder(newFolder.name);
   };
+
+  const handleReply = () => {
+    if (!selectedMail) return;
+    
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = selectedMail.body;
+    const originalBodyText = tempDiv.textContent || tempDiv.innerText || "";
+
+    const replyBody = `\n\n\n----- Oorspronkelijk bericht -----\nVan: ${selectedMail.fromName} <${selectedMail.from}>\nDatum: ${format(new Date(selectedMail.date), 'd MMM yyyy, HH:mm', { locale: nl })}\nOnderwerp: ${selectedMail.subject}\n\n${originalBodyText}`;
+
+    setComposeInitialData({
+        to: selectedMail.from,
+        subject: `Re: ${selectedMail.subject}`,
+        body: replyBody
+    });
+    setIsComposeOpen(true);
+  };
   
   const formatBytes = (bytes: number, decimals = 2) => {
     if (bytes === 0) return '0 Bytes';
@@ -245,12 +266,10 @@ export default function MailPage() {
           
           {/* Panel 1: Folders */}
           <div className="border-r p-3 flex flex-col">
-            <ComposeMailDialog>
-              <Button className="w-full">
+            <Button className="w-full" onClick={() => { setComposeInitialData({}); setIsComposeOpen(true); }}>
                 <PenSquare className="mr-2 h-4 w-4" />
                 Nieuw Bericht
-              </Button>
-            </ComposeMailDialog>
+            </Button>
 
             <nav className="mt-4 space-y-1">
               {folders.map(folder => (
@@ -380,7 +399,7 @@ export default function MailPage() {
 
                     <div className="p-4 border-b">
                         <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm"><Reply className="mr-2 h-4 w-4" /> Beantwoorden</Button>
+                            <Button variant="outline" size="sm" onClick={handleReply}><Reply className="mr-2 h-4 w-4" /> Beantwoorden</Button>
                             <Button variant="outline" size="sm"><ReplyAll className="mr-2 h-4 w-4" /> Allen beantwoorden</Button>
                             <Button variant="outline" size="sm"><Forward className="mr-2 h-4 w-4" /> Doorsturen</Button>
                             <Button variant="outline" size="sm" onClick={handleDelete} disabled={isDeleting}>
@@ -436,6 +455,11 @@ export default function MailPage() {
           </div>
         </div>
       </div>
+      <ComposeMailDialog
+        open={isComposeOpen}
+        onOpenChange={setIsComposeOpen}
+        initialData={composeInitialData}
+      />
     </div>
   );
 }
