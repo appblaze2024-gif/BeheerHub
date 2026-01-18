@@ -13,7 +13,6 @@ import { firebaseConfig } from '@/firebase/config';
 import {
   useCollection,
   useFirestore,
-  useAuth,
 } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import type { UserProfile } from '@/lib/types';
@@ -313,7 +312,7 @@ function UserDialog({
 
 export function UserManagement() {
   const firestore = useFirestore();
-  const auth = useAuth();
+  const auth = getAuth(useFirebaseApp());
   const { profile: currentAdminProfile, isLoading: isAdminLoading } = useProfile();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedUser, setSelectedUser] = React.useState<UserProfile | null>(null);
@@ -347,13 +346,11 @@ export function UserManagement() {
 
     toast({ description: `Uitnodiging wordt verstuurd naar ${user.email}...` });
     
-    const actionCodeSettings = {
-        url: 'https://beheerhub.cloud/reset-password',
-        handleCodeInApp: true,
-    };
-
     try {
-        await sendPasswordResetEmail(auth, user.email, actionCodeSettings);
+        await sendPasswordResetEmail(auth, user.email, {
+            url: `${window.location.origin}/reset-password`,
+            handleCodeInApp: true,
+        });
         
         const userRef = doc(firestore, 'users', user.id);
         await updateDoc(userRef, { status: 'Actief' });
@@ -442,20 +439,24 @@ export function UserManagement() {
                             </div>
                             <span className="truncate">{user.email}</span>
                             <Badge variant={user.role === 'Super admin' ? 'default' : 'secondary'} className="w-fit">{user.role}</Badge>
-                            <Badge
-                                variant={
-                                    user.status === 'Actief' ? 'outline'
-                                    : user.status === 'Inactief' ? 'secondary'
-                                    : 'destructive'
-                                }
-                                className={
-                                    user.status === 'Actief' ? 'text-green-600 border-green-600 w-fit'
-                                    : user.status === 'Inactief' ? 'w-fit'
-                                    : 'text-orange-600 border-orange-600 w-fit'
-                                }
-                                >
-                                {user.status || 'Niet uitgenodigd'}
-                            </Badge>
+                            <div>
+                                {user.role !== 'Super admin' && (
+                                    <Badge
+                                        variant={
+                                            user.status === 'Actief' ? 'outline'
+                                            : user.status === 'Inactief' ? 'secondary'
+                                            : 'destructive'
+                                        }
+                                        className={
+                                            user.status === 'Actief' ? 'text-green-600 border-green-600 w-fit'
+                                            : user.status === 'Inactief' ? 'w-fit'
+                                            : 'text-orange-600 border-orange-600 w-fit'
+                                        }
+                                        >
+                                        {user.status || 'Niet uitgenodigd'}
+                                    </Badge>
+                                )}
+                            </div>
                             <div>
                               {canEdit && (
                                 <DropdownMenu>
@@ -466,7 +467,7 @@ export function UserManagement() {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent>
                                         <DropdownMenuItem onClick={() => handleEdit(user)}>Bewerken</DropdownMenuItem>
-                                        {user.status === 'Niet uitgenodigd' && (
+                                        {user.status === 'Niet uitgenodigd' && user.role !== 'Super admin' && (
                                             <DropdownMenuItem onClick={() => handleSendInvitation(user)}>Verstuur uitnodiging</DropdownMenuItem>
                                         )}
                                     </DropdownMenuContent>
