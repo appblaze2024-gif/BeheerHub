@@ -49,9 +49,11 @@ export default function SettingsPage() {
     },
   });
 
+  const { reset } = form;
+
   React.useEffect(() => {
     if (userProfile) {
-      form.reset({
+      reset({
         firstName: userProfile.firstName || '',
         lastName: userProfile.lastName || '',
       });
@@ -59,9 +61,9 @@ export default function SettingsPage() {
         const nameParts = user.displayName.split(' ');
         const firstName = nameParts.shift() || '';
         const lastName = nameParts.join(' ');
-        form.reset({ firstName, lastName });
+        reset({ firstName, lastName });
     }
-  }, [userProfile, user, form, isProfileLoading]);
+  }, [userProfile, user, isProfileLoading, reset]);
 
   const onSubmit = async (data: ProfileFormValues) => {
     if (!userProfileRef) return;
