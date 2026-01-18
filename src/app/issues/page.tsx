@@ -439,9 +439,6 @@ export default function IssuesPage() {
     <div ref={mapContainerRef} className="flex-1 flex flex-col min-h-0 relative">
       <header className="absolute top-0 left-0 z-10 p-4 flex flex-col gap-2 w-full pointer-events-none">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between w-full gap-4 pointer-events-auto">
-            <div className="bg-card p-2 rounded-lg shadow-md">
-                <h1 className="text-xl font-bold">Meldingen</h1>
-            </div>
             <div className="w-full md:max-w-sm">
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
