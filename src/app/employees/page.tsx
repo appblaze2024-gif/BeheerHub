@@ -46,6 +46,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import type { Medewerker } from '@/lib/types';
+import { useProfile } from '@/firebase/profile-provider';
 
 
 export default function EmployeesPage() {
@@ -55,6 +56,9 @@ export default function EmployeesPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedMedewerker, setSelectedMedewerker] = React.useState<Medewerker | null>(null);
   const [selectedRows, setSelectedRows] = React.useState<string[]>([]);
+  const { profile, isLoading: isProfileLoading } = useProfile();
+  
+  const canManage = !isProfileLoading && (profile?.role === 'Super admin' || !!profile?.permissions?.manageEmployees);
 
   const medewerkersCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -132,9 +136,11 @@ export default function EmployeesPage() {
             <Filter className="mr-2 h-4 w-4" />
             Filter
           </Button>
-          <Button onClick={handleAddNew}>
-            <Plus className="mr-2 h-4 w-4" /> Medewerker toevoegen
-          </Button>
+          {canManage && (
+            <Button onClick={handleAddNew}>
+              <Plus className="mr-2 h-4 w-4" /> Medewerker toevoegen
+            </Button>
+          )}
           <div className="relative w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -144,18 +150,20 @@ export default function EmployeesPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                Bulkacties <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem disabled={selectedRows.length === 0}>
-                Verwijder geselecteerde
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {canManage && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  Bulkacties <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem disabled={selectedRows.length === 0}>
+                  Verwijder geselecteerde
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </PageHeader>
       <div className="flex-1 px-6 pb-6 min-h-0">
@@ -168,6 +176,7 @@ export default function EmployeesPage() {
                     onCheckedChange={handleSelectAll}
                     checked={isAllSelected}
                     aria-label="Selecteer alle rijen"
+                    disabled={!canManage}
                   />
                   <span>Naam</span>
                   <span>E-mail</span>
@@ -176,7 +185,7 @@ export default function EmployeesPage() {
                   <span>Status</span>
                   <span />
                 </div>
-                {isLoading ? (
+                {isLoading || isProfileLoading ? (
                   <div className="p-4 text-center text-muted-foreground">
                     Medewerkers laden...
                   </div>
@@ -194,6 +203,7 @@ export default function EmployeesPage() {
                         onClick={(e) => e.stopPropagation()}
                         checked={selectedRows.includes(medewerker.id)}
                         aria-label={`Selecteer ${medewerker.voornaam} ${medewerker.achternaam}`}
+                        disabled={!canManage}
                       />
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
@@ -216,39 +226,41 @@ export default function EmployeesPage() {
                       >
                         {medewerker.status}
                       </Badge>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={(e) => handleEdit(e, medewerker)}>
-                            Bewerken
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                               <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Verwijderen</DropdownMenuItem>
-                            </AlertDialogTrigger>
-                             <AlertDialogContent>
-                                <AlertDialogHeader>
-                                <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    Deze actie kan niet ongedaan worden gemaakt. Dit zal de medewerker permanent verwijderen.
-                                </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                <AlertDialogCancel>Annuleren</AlertDialogCancel>
-                                <AlertDialogAction onClick={(e) => handleDelete(e, medewerker.id)}>
-                                    Doorgaan
-                                </AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      {canManage ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={(e) => handleEdit(e, medewerker)}>
+                              Bewerken
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Verwijderen</DropdownMenuItem>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                  <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                      Deze actie kan niet ongedaan worden gemaakt. Dit zal de medewerker permanent verwijderen.
+                                  </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                  <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                                  <AlertDialogAction onClick={(e) => handleDelete(e, medewerker.id)}>
+                                      Doorgaan
+                                  </AlertDialogAction>
+                                  </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : <div className="w-8 h-8"/>}
                     </div>
                   ))
                 ) : (
@@ -261,11 +273,13 @@ export default function EmployeesPage() {
           </CardContent>
         </Card>
       </div>
-      <MedewerkerDialog
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        medewerker={selectedMedewerker}
-      />
+      {canManage && (
+        <MedewerkerDialog
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          medewerker={selectedMedewerker}
+        />
+      )}
     </div>
   );
 }

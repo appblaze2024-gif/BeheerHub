@@ -108,7 +108,7 @@ function UserDialog({
       });
 
       if (user) {
-        const isSuperUser = user.email === 'dstoutenburg@meerlanden.nl';
+        const isSuperUser = user.role === 'Super admin';
         const existingPermissions = user.permissions || {};
         const fullPermissions: { [key: string]: boolean } = {};
         
@@ -281,12 +281,11 @@ function UserDialog({
 
 export function UserManagement() {
   const firestore = useFirestore();
-  const { user: currentUser } = useUser();
   const { profile: currentAdminProfile, isLoading: isAdminLoading } = useProfile();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedUser, setSelectedUser] = React.useState<UserProfile | null>(null);
 
-  const isSuperUser = currentUser?.email === 'dstoutenburg@meerlanden.nl';
+  const isSuperUser = currentAdminProfile?.role === 'Super admin';
   const isAdmin = (currentAdminProfile?.permissions?.manageUsers) || isSuperUser;
 
   const usersCollection = React.useMemo(() => {

@@ -53,7 +53,7 @@ const allMenuItems: { href: string; label: string; icon: React.ElementType; perm
 export function SidebarNav({ isCollapsed }: { isCollapsed: boolean }) {
   const pathname = usePathname();
   const auth = useAuth();
-  const { user, isUserLoading } = useUser();
+  const { isUserLoading } = useUser();
   const { profile, isLoading: isProfileLoading } = useProfile();
 
   const handleLogout = async () => {
@@ -64,7 +64,7 @@ export function SidebarNav({ isCollapsed }: { isCollapsed: boolean }) {
     const isLoading = isUserLoading || isProfileLoading;
     if (isLoading) return [];
     
-    const isSuperUser = user?.email === 'dstoutenburg@meerlanden.nl';
+    const isSuperUser = profile?.role === 'Super admin';
     const permissions = profile?.permissions || {};
 
     return allMenuItems.filter(item => {
@@ -72,7 +72,7 @@ export function SidebarNav({ isCollapsed }: { isCollapsed: boolean }) {
       if (!item.permission) return true; // Items without a permission are visible to everyone
       return !!permissions[item.permission];
     });
-  }, [profile, isProfileLoading, user, isUserLoading]);
+  }, [profile, isProfileLoading, isUserLoading]);
 
 
   const bottomMenuItems = [
