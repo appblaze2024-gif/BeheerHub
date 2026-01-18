@@ -81,13 +81,14 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   }, [user, userProfile, isProfileLoading, userProfileRef]);
 
   useEffect(() => {
-    if (isUserLoading) return; // Wacht tot de gebruikerstatus bekend is
+    if (isUserLoading) return; // Wait until user status is known
 
-    const isAuthPage = pathname === '/login';
+    const publicPaths = ['/login', '/reset-password'];
+    const isPublicPage = publicPaths.includes(pathname);
 
-    if (!user && !isAuthPage) {
+    if (!user && !isPublicPage) {
       router.push('/login');
-    } else if (user && isAuthPage) {
+    } else if (user && pathname === '/login') {
       router.push('/');
     }
   }, [user, isUserLoading, pathname, router]);
@@ -111,7 +112,8 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (pathname === '/login') {
+  const publicPaths = ['/login', '/reset-password'];
+  if (publicPaths.includes(pathname)) {
     return <>{children}</>;
   }
 
