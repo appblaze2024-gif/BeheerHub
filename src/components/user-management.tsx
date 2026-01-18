@@ -74,6 +74,7 @@ const userFormSchema = z.object({
   email: z.string().email('Voer een geldig e-mailadres in.'),
   role: z.enum(['Super admin', 'toezichthouder', 'ondersteuner', 'medewerkers']),
   permissions: z.record(z.record(z.boolean())).optional(),
+  status: z.string().optional(),
 });
 
 type UserFormValues = z.infer<typeof userFormSchema>;
@@ -113,12 +114,14 @@ function UserDialog({
           email: user.email || '',
           role: user.role || 'medewerkers',
           permissions: user.permissions || defaultPermissions,
+          status: user.status || 'Niet uitgenodigd',
         });
       } else {
         form.reset({
           email: '',
           role: 'medewerkers',
           permissions: defaultPermissions,
+          status: 'Niet uitgenodigd',
         });
       }
     }
@@ -144,7 +147,8 @@ function UserDialog({
         const userRef = doc(firestore, 'users', user.id);
         await updateDoc(userRef, { 
             role: data.role,
-            permissions: data.permissions 
+            permissions: data.permissions,
+            status: data.status,
         });
         toast({ title: 'Gebruiker bijgewerkt', description: `De rol en rechten voor ${user.email} zijn bijgewerkt.` });
       } else { // Create new user
@@ -156,9 +160,6 @@ function UserDialog({
             const userCredential = await createUserWithEmailAndPassword(tempAuth, data.email, tempPassword);
             const newUser = userCredential.user;
             
-            // Send password reset email
-            await sendPasswordResetEmail(tempAuth, data.email);
-            
             const userProfileData: UserProfile = {
                 id: newUser.uid,
                 email: newUser.email || '',
@@ -167,11 +168,12 @@ function UserDialog({
                 firstName: '',
                 lastName: '',
                 sidebarCollapsed: true,
+                status: 'Niet uitgenodigd',
             };
 
             await setDoc(doc(firestore, 'users', newUser.uid), userProfileData);
 
-            toast({ title: 'Gebruiker uitgenodigd', description: `Een e-mail is naar ${data.email} gestuurd om een wachtwoord in te stellen. Vraag hen de spamfolder te controleren.`});
+            toast({ title: 'Gebruiker aangemaakt', description: `Stuur ${data.email} een uitnodiging om het account te activeren.`});
         } finally {
             await deleteApp(tempApp);
         }
@@ -236,6 +238,30 @@ function UserDialog({
                   </FormItem>
                 )}
               />
+            {user && (
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecteer een status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Actief">Actief</SelectItem>
+                        <SelectItem value="Inactief">Inactief</SelectItem>
+                        <SelectItem value="Niet uitgenodigd">Niet uitgenodigd</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
             <div>
               <FormLabel>Rechten</FormLabel>
               <div className="space-y-4 mt-2">
@@ -273,7 +299,7 @@ function UserDialog({
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Annuleren</Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {user ? 'Opslaan' : 'Uitnodigen'}
+                {user ? 'Opslaan' : 'Aanmaken'}
               </Button>
             </DialogFooter>
           </form>
@@ -289,6 +315,7 @@ export function UserManagement() {
   const { profile: currentAdminProfile, isLoading: isAdminLoading } = useProfile();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedUser, setSelectedUser] = React.useState<UserProfile | null>(null);
+  const { toast } = useToast();
 
   const isSuperUser = currentAdminProfile?.role === 'Super admin';
   const canManageUsers = isSuperUser || !!currentAdminProfile?.permissions?.users?.view;
@@ -310,6 +337,34 @@ export function UserManagement() {
     setIsDialogOpen(true);
   };
   
+  const handleSendInvitation = async (user: UserProfile) => {
+    if (!user.email) {
+        toast({ variant: 'destructive', title: 'Fout', description: 'Gebruiker heeft geen e-mailadres.' });
+        return;
+    }
+
+    toast({ description: `Uitnodiging wordt verstuurd naar ${user.email}...` });
+    
+    const tempApp = initializeApp(firebaseConfig, `invite-${Date.now()}`);
+    const tempAuth = getAuth(tempApp);
+
+    try {
+        await sendPasswordResetEmail(tempAuth, user.email);
+        
+        const userRef = doc(firestore, 'users', user.id);
+        await updateDoc(userRef, { status: 'Actief' });
+
+        toast({ title: 'Uitnodiging verstuurd!', description: `Een e-mail is naar ${user.email} gestuurd om een wachtwoord in te stellen. Vraag hen de spamfolder te controleren.` });
+    } catch (error: any) {
+        console.error("Error sending invitation:", error);
+        toast({ variant: 'destructive', title: 'Versturen mislukt', description: error.message || 'Kon de uitnodiging niet versturen.' });
+    } finally {
+        // It's crucial to sign out from the temporary app before deleting it if any auth state changed
+        await tempAuth.signOut().catch(() => {});
+        await deleteApp(tempApp);
+    }
+  };
+
   const canCreate = isSuperUser || !!currentAdminProfile?.permissions?.users?.create;
   const canEdit = isSuperUser || !!currentAdminProfile?.permissions?.users?.edit;
 
@@ -355,16 +410,17 @@ export function UserManagement() {
           </div>
           {canCreate && (
             <Button onClick={handleAddNew}>
-              <Plus className="mr-2 h-4 w-4" /> Gebruiker uitnodigen
+              <Plus className="mr-2 h-4 w-4" /> Gebruiker aanmaken
             </Button>
           )}
         </CardHeader>
         <CardContent>
             <div className="border rounded-lg">
-                <div className="grid grid-cols-[1fr_1fr_1fr_auto] px-4 py-2 font-semibold bg-muted text-muted-foreground">
+                <div className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] px-4 py-2 font-semibold bg-muted text-muted-foreground">
                     <span>Naam</span>
                     <span>E-mail</span>
                     <span>Rol</span>
+                    <span>Status</span>
                     <span />
                 </div>
                 {isLoadingUsers ? (
@@ -375,7 +431,7 @@ export function UserManagement() {
                     <div className="p-4 text-destructive-foreground bg-destructive/80 text-center">{usersError.message}</div>
                 ) : users && users.length > 0 ? (
                     users.map(user => (
-                        <div key={user.id} className="grid grid-cols-[1fr_1fr_1fr_auto] items-center px-4 py-3 border-t">
+                        <div key={user.id} className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] items-center px-4 py-3 border-t">
                             <div className="flex items-center gap-3">
                                 <Avatar className="h-8 w-8">
                                     <AvatarFallback>
@@ -386,6 +442,20 @@ export function UserManagement() {
                             </div>
                             <span className="truncate">{user.email}</span>
                             <Badge variant={user.role === 'Super admin' ? 'default' : 'secondary'} className="w-fit">{user.role}</Badge>
+                            <Badge
+                                variant={
+                                    user.status === 'Actief' ? 'outline'
+                                    : user.status === 'Inactief' ? 'secondary'
+                                    : 'destructive'
+                                }
+                                className={
+                                    user.status === 'Actief' ? 'text-green-600 border-green-600 w-fit'
+                                    : user.status === 'Inactief' ? 'w-fit'
+                                    : 'text-orange-600 border-orange-600 w-fit'
+                                }
+                                >
+                                {user.status || 'Niet uitgenodigd'}
+                            </Badge>
                             <div>
                               {canEdit && (
                                 <DropdownMenu>
@@ -396,6 +466,9 @@ export function UserManagement() {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent>
                                         <DropdownMenuItem onClick={() => handleEdit(user)}>Bewerken</DropdownMenuItem>
+                                        {user.status === 'Niet uitgenodigd' && (
+                                            <DropdownMenuItem onClick={() => handleSendInvitation(user)}>Verstuur uitnodiging</DropdownMenuItem>
+                                        )}
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                               )}
