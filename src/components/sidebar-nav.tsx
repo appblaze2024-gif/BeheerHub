@@ -31,21 +31,24 @@ import { useProfile } from '@/firebase/profile-provider';
 import { signOut } from 'firebase/auth';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import type { UserPermission } from '@/lib/types';
 
-const allMenuItems = [
-  { href: '/', label: 'Dashboard', icon: Home, adminOnly: false },
-  { href: '/projects', label: 'Projecten', icon: ClipboardList, adminOnly: true },
-  { href: '/employees', label: 'Medewerkers', icon: Users, adminOnly: true },
-  { href: '/work-planning', label: 'Werkplanning', icon: CalendarCheck, adminOnly: true },
-  { href: '/weekly-reports', label: 'Weekstaten', icon: Newspaper, adminOnly: true },
-  { href: '/reports', label: 'Rapportages', icon: FileText, adminOnly: true },
-  { href: '/vehicles', label: 'Wagenpark', icon: Truck, adminOnly: true },
-  { href: '/objects', label: 'Objecten', icon: Building2, adminOnly: false },
-  { href: '/inventory', label: 'Voorraadbeheer', icon: Package, adminOnly: false },
-  { href: '/issues', label: 'Meldingen', icon: Bell, adminOnly: false },
-  { href: '/navigation-module', label: 'Navigatiemodule', icon: Map, adminOnly: false },
-  { href: '/mail', label: 'Mail', icon: Mail, adminOnly: false },
+
+const allMenuItems: { href: string; label: string; icon: React.ElementType; permission?: UserPermission }[] = [
+  { href: '/', label: 'Dashboard', icon: Home },
+  { href: '/projects', label: 'Projecten', icon: ClipboardList, permission: 'manageProjects' },
+  { href: '/employees', label: 'Medewerkers', icon: Users, permission: 'manageEmployees' },
+  { href: '/work-planning', label: 'Werkplanning', icon: CalendarCheck, permission: 'manageWorkPlanning' },
+  { href: '/weekly-reports', label: 'Weekstaten', icon: Newspaper, permission: 'manageWeeklyReports' },
+  { href: '/reports', label: 'Rapportages', icon: FileText, permission: 'viewReports' },
+  { href: '/vehicles', label: 'Wagenpark', icon: Truck, permission: 'manageVehicles' },
+  { href: '/objects', label: 'Objecten', icon: Building2, permission: 'manageObjects' },
+  { href: '/inventory', label: 'Voorraadbeheer', icon: Package, permission: 'manageInventory' },
+  { href: '/issues', label: 'Meldingen', icon: Bell, permission: 'manageIssues' },
+  { href: '/navigation-module', label: 'Navigatiemodule', icon: Map, permission: 'useNavigation' },
+  { href: '/mail', label: 'Mail', icon: Mail, permission: 'useMail' },
 ];
+
 
 export function SidebarNav({ isCollapsed }: { isCollapsed: boolean }) {
   const pathname = usePathname();
@@ -62,11 +65,13 @@ export function SidebarNav({ isCollapsed }: { isCollapsed: boolean }) {
     if (isLoading) return [];
     
     const isSuperUser = user?.email === 'dstoutenburg@meerlanden.nl';
+    const permissions = profile?.permissions || {};
 
-    if (profile?.role === 'Super admin' || isSuperUser) {
-      return allMenuItems;
-    }
-    return allMenuItems.filter(item => !item.adminOnly);
+    return allMenuItems.filter(item => {
+      if (isSuperUser) return true;
+      if (!item.permission) return true; // Items without a permission are visible to everyone
+      return !!permissions[item.permission];
+    });
   }, [profile, isProfileLoading, user, isUserLoading]);
 
 

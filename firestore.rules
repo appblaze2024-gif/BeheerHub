@@ -48,15 +48,20 @@ service cloud.firestore {
       return isOwner(userId) && resource != null;
     }
 
-    /**
-     * isAdmin
-     * @description Checks if the requesting user has the 'admin' role in their user profile or is the super user.
-     * @returns {boolean} True if the user is an admin.
-     */
+     function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+
+    function hasPermission(permission) {
+      return isSignedIn() && getUserData(request.auth.uid).permissions[permission] == true;
+    }
+
+    function isSuperUser() {
+      return isSignedIn() && request.auth.token.email == 'dstoutenburg@meerlanden.nl';
+    }
+
     function isAdmin() {
-      let isRoleAdmin = isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Super admin';
-      let isSuperUser = request.auth.token.email == 'dstoutenburg@meerlanden.nl';
-      return isRoleAdmin || isSuperUser;
+       return isSignedIn() && (hasPermission('manageUsers') || isSuperUser());
     }
 
 

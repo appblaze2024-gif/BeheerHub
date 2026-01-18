@@ -531,8 +531,11 @@
         },
         "role": {
           "type": "string",
-          "description": "User role for authorization.",
-          "enum": ["Super admin", "toezichthouder", "ondersteuner", "medewerkers"]
+          "description": "User role for display purposes."
+        },
+        "permissions": {
+          "type": "object",
+          "description": "Granular permissions for the user."
         }
       },
       "required": [
