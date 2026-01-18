@@ -20,11 +20,15 @@ import {
   FolderPlus,
   Folder,
   Paperclip,
+  Bookmark,
+  MoreVertical,
+  ChevronRight,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 
 import { cn } from '@/lib/utils';
+import { useUser } from '@/firebase';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,6 +48,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { createMailboxFlow } from '@/ai/flows/create-mailbox-flow';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 
 // --- UPDATED TYPE ---
@@ -151,6 +156,7 @@ export default function MailPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const { toast } = useToast();
+  const { user } = useUser();
 
   const fetchAndSetEmails = React.useCallback(async () => {
     setIsLoading(true);
@@ -346,88 +352,79 @@ export default function MailPage() {
           {/* Panel 3: Mail content */}
           <div className="flex flex-col min-h-0">
             {selectedMail ? (
-              <>
-                <div className="flex items-center p-3 border-b">
-                   <div className="flex items-center gap-2">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" disabled={!selectedMail}><Reply className="h-4 w-4" /></Button>
-                          </TooltipTrigger>
-                          <TooltipContent><p>Beantwoorden</p></TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                           <Button variant="ghost" size="icon" disabled={!selectedMail}><ReplyAll className="h-4 w-4" /></Button>
-                          </TooltipTrigger>
-                          <TooltipContent><p>Allen beantwoorden</p></TooltipContent>
-                        </Tooltip>
-                         <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" disabled={!selectedMail}><Forward className="h-4 w-4" /></Button>
-                          </TooltipTrigger>
-                          <TooltipContent><p>Doorsturen</p></TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                   </div>
-                   <Separator orientation="vertical" className="mx-2 h-6" />
-                   <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" disabled={!selectedMail || isDeleting} onClick={handleDelete}>
-                            {isDeleting ? <Loader2 className='h-4 w-4 animate-spin' /> : <Trash2 className="h-4 w-4" />}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Verwijderen</p></TooltipContent>
-                      </Tooltip>
-                   </TooltipProvider>
+                <>
+                <div className="flex items-center p-4 border-b">
+                    <h1 className="text-xl font-bold flex-1 truncate">{selectedMail.subject}</h1>
                 </div>
-                <div className="p-4 space-y-4">
-                  <div className="flex items-start gap-4">
-                     <Avatar>
-                      <AvatarFallback>{selectedMail.fromName.substring(0, 2)}</AvatarFallback>
-                    </Avatar>
-                    <div className="grid gap-1">
-                      <p className="font-semibold">{selectedMail.fromName}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Aan: Mij
-                      </p>
-                    </div>
-                     <div className="ml-auto text-xs text-muted-foreground">
-                        {format(new Date(selectedMail.date), 'PPpp', { locale: nl })}
-                      </div>
-                  </div>
-                   <h2 className="text-xl font-bold">{selectedMail.subject}</h2>
-                </div>
-                <Separator />
-                <div className="flex-1 whitespace-pre-wrap p-4 text-sm overflow-y-auto"
-                   dangerouslySetInnerHTML={{ __html: selectedMail.body }}
-                />
-                {selectedMail.attachments && selectedMail.attachments.length > 0 && (
-                  <>
-                    <Separator />
-                    <div className="p-4 bg-muted/50">
-                        <h3 className="text-sm font-medium mb-2">Bijlagen ({selectedMail.attachments.length})</h3>
-                        <div className="space-y-2">
-                            {selectedMail.attachments.map((att, index) => (
-                                <a
-                                    key={index}
-                                    href={`data:${att.contentType};base64,${att.content}`}
-                                    download={att.filename}
-                                    className="flex items-center gap-2 text-sm p-2 rounded-md bg-background hover:bg-accent"
-                                >
-                                    <File className="h-4 w-4 text-muted-foreground" />
-                                    <span className="truncate">{att.filename}</span>
-                                    <span className="ml-auto text-xs text-muted-foreground">
-                                        {formatBytes(att.size)}
-                                    </span>
-                                </a>
-                            ))}
+
+                <div className="flex-1 overflow-y-auto">
+                    <div className="p-4 border-b">
+                        <div className="flex items-start gap-4">
+                            <Avatar className="h-10 w-10">
+                                <AvatarFallback>{selectedMail.fromName.substring(0, 2).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <div className="grid gap-1 flex-1">
+                                <div className="font-semibold">{selectedMail.fromName} <span className="font-normal text-muted-foreground">&lt;{selectedMail.from}&gt;</span></div>
+                                <div className="text-xs text-muted-foreground">Aan: Mij</div>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <span>{format(new Date(selectedMail.date), 'HH:mm')}</span>
+                                <Button variant="ghost" size="icon" className="h-8 w-8"><Bookmark className="h-4 w-4" /></Button>
+                                <Avatar className="h-8 w-8 text-sm">
+                                    <AvatarFallback>{user?.email?.substring(0,2).toUpperCase() || 'DS'}</AvatarFallback>
+                                </Avatar>
+                            </div>
                         </div>
                     </div>
-                  </>
-                )}
-              </>
+
+                    <div className="p-4 border-b">
+                        <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm"><Reply className="mr-2 h-4 w-4" /> Beantwoorden</Button>
+                            <Button variant="outline" size="sm"><ReplyAll className="mr-2 h-4 w-4" /> Allen beantwoorden</Button>
+                            <Button variant="outline" size="sm"><Forward className="mr-2 h-4 w-4" /> Doorsturen</Button>
+                            <Button variant="outline" size="sm" onClick={handleDelete} disabled={isDeleting}>
+                                {isDeleting ? <Loader2 className='h-4 w-4 animate-spin mr-2' /> : <Trash2 className="h-4 w-4 mr-2" />}
+                                Verwijderen
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 ml-auto"><MoreVertical className="h-4 w-4" /></Button>
+                        </div>
+                    </div>
+                    
+                    {selectedMail.attachments && selectedMail.attachments.length > 0 && (
+                    <div className="p-4 border-b">
+                        <Collapsible>
+                        <CollapsibleTrigger asChild>
+                            <div className="group flex items-center gap-2 text-sm font-medium cursor-pointer">
+                            <Paperclip className="h-4 w-4" />
+                            <span>{selectedMail.attachments.length} bijlage{selectedMail.attachments.length > 1 ? 'n' : ''}</span>
+                            <ChevronRight className="h-4 w-4 transition-transform group-data-[state=open]:rotate-90" />
+                            </div>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                            <div className="pt-4 space-y-2">
+                            {selectedMail.attachments.map((att, index) => (
+                                <div key={index} className="flex items-center gap-2 text-sm p-2 rounded-md bg-muted/50">
+                                <File className="h-6 w-6 text-muted-foreground" />
+                                <div className="flex-1">
+                                    <p className="font-medium truncate">{att.filename}</p>
+                                    <p className="text-xs text-muted-foreground">{formatBytes(att.size)}</p>
+                                </div>
+                                <Button variant="ghost" size="sm" disabled>Weergave</Button>
+                                <a href={`data:${att.contentType};base64,${att.content}`} download={att.filename}>
+                                    <Button variant="ghost" size="sm">Downloaden</Button>
+                                </a>
+                                <Button variant="ghost" size="sm" disabled>Opslaan naar Drive</Button>
+                                </div>
+                            ))}
+                            </div>
+                        </CollapsibleContent>
+                        </Collapsible>
+                    </div>
+                    )}
+
+                    <div className="p-4 text-sm" dangerouslySetInnerHTML={{ __html: selectedMail.body }} />
+                </div>
+            </>
             ) : (
               <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
                 <Inbox className="h-16 w-16" />
