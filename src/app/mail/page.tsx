@@ -57,6 +57,7 @@ type Mail = {
   uid: number;
   from: string;
   fromName: string;
+  to: string;
   subject: string;
   body: string;
   date: string; // ISO string
@@ -365,7 +366,7 @@ export default function MailPage() {
                             </Avatar>
                             <div className="grid gap-1 flex-1">
                                 <div className="font-semibold">{selectedMail.fromName} <span className="font-normal text-muted-foreground">&lt;{selectedMail.from}&gt;</span></div>
-                                <div className="text-xs text-muted-foreground">Aan: Mij</div>
+                                <div className="text-xs text-muted-foreground">Aan: {selectedMail.to || user?.email}</div>
                             </div>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                 <span>{format(new Date(selectedMail.date), 'HH:mm')}</span>
