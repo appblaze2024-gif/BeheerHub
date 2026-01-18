@@ -44,7 +44,7 @@ export async function sendEmail(data: z.infer<typeof mailSchema>) {
     },
   });
 
-  const fromDisplayName = parsedData.fromName || 'BeheerHub';
+  const fromDisplayName = parsedData.fromName || parsedData.fromEmail;
 
   const mailOptions: nodemailer.SendMailOptions = {
     from: {
