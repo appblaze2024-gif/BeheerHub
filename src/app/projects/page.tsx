@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { FilePenLine, Plus, Trash2, Upload, Download, MapPin, Map as MapIcon } from 'lucide-react';
+import { FilePenLine, Plus, Trash2, Upload, Download, MapPin, Map as MapIcon, MoreHorizontal, Copy } from 'lucide-react';
 import {
   useFirestore,
   useCollection,
@@ -37,6 +37,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
 import { WijkMapDialog } from '@/components/wijk-map-dialog';
 import { useProfile } from '@/firebase/profile-provider';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 type Werksoort = {
   id: string;
@@ -632,6 +639,32 @@ function WijkenTab({
     handleInputChange(wijkId, 'subGebieden', coordinates);
   }
 
+  const handleCopyToVeegroutes = (wijkToCopy: Wijk) => {
+    setCurrentProject(prevProject => ({
+      ...prevProject,
+      veegroutes: [
+        ...(prevProject.veegroutes || []),
+        {
+          ...wijkToCopy,
+          id: new Date().toISOString() + Math.random(),
+        }
+      ],
+    }));
+  };
+
+  const handleCopyToPrullenbakkenroutes = (wijkToCopy: Wijk) => {
+    setCurrentProject(prevProject => ({
+      ...prevProject,
+      prullenbakkenroutes: [
+        ...(prevProject.prullenbakkenroutes || []),
+        {
+          ...wijkToCopy,
+          id: new Date().toISOString() + Math.random(),
+        }
+      ],
+    }));
+  };
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-x-4 px-1 text-sm font-semibold">
@@ -651,10 +684,31 @@ function WijkenTab({
             <MapPin className="mr-2 h-4 w-4" />
             Gebied {canEdit ? 'tekenen/bewerken' : 'bekijken'}
           </Button>
-          <div className="flex items-center">
-            {canEdit && <Button variant="ghost" size="icon" onClick={() => removeRow(wijk.id)}>
-                <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>}
+          <div className="flex items-center justify-end">
+            {canEdit && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => handleCopyToVeegroutes(wijk)}>
+                    <Copy className="mr-2 h-4 w-4" />
+                    <span>Kopieer naar Veegroutes</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleCopyToPrullenbakkenroutes(wijk)}>
+                    <Copy className="mr-2 h-4 w-4" />
+                    <span>Kopieer naar Prullenbakkenroutes</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => removeRow(wijk.id)} className="text-destructive focus:text-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    <span>Verwijderen</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
       ))}
