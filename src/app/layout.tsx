@@ -158,20 +158,27 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [user, isUserLoading, pathname, router, isPublicPage]);
 
-  if (isPublicPage) {
-    return <>{children}</>;
-  }
-
-  // For protected pages, show a loader while auth state is being confirmed
-  // If the user is not authenticated, the useEffect above will redirect them.
-  if (isUserLoading || !user) {
-    return (
+  if (isUserLoading && !isPublicPage) {
+     return (
       <div className="flex h-screen items-center justify-center">
         Laden...
       </div>
     );
   }
 
+  if (isPublicPage) {
+    return <>{children}</>;
+  }
+
+  if (!user && !isPublicPage) {
+      return (
+      <div className="flex h-screen items-center justify-center">
+        Laden...
+      </div>
+    );
+  }
+
+  // User is loaded and it's a protected page.
   return <ProtectedAppLayout>{children}</ProtectedAppLayout>;
 }
 
