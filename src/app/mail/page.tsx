@@ -57,7 +57,8 @@ type Mail = {
   uid: number;
   from: string;
   fromName: string;
-  to: string;
+  to: string[];
+  cc?: string[];
   subject: string;
   body: string;
   date: string; // ISO string
@@ -249,6 +250,35 @@ export default function MailPage() {
     setIsComposeOpen(true);
   };
   
+  const handleReplyAll = () => {
+    if (!selectedMail || !user) return;
+    
+    // Combine To and Cc recipients
+    const allRecipients = [
+        ...selectedMail.to,
+        ...(selectedMail.cc || [])
+    ];
+    
+    // Add the original sender
+    const replyToRecipients = [selectedMail.from, ...allRecipients];
+
+    // Filter out the current user's email and remove duplicates
+    const uniqueRecipients = [...new Set(replyToRecipients.filter(email => email && email.toLowerCase() !== user.email?.toLowerCase()))];
+    
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = selectedMail.body;
+    const originalBodyText = tempDiv.textContent || tempDiv.innerText || "";
+
+    const replyBody = `\n\n\n----- Oorspronkelijk bericht -----\nVan: ${selectedMail.fromName} <${selectedMail.from}>\nNaar: ${selectedMail.to.join(', ')}\n${selectedMail.cc && selectedMail.cc.length > 0 ? `Cc: ${selectedMail.cc.join(', ')}\n` : ''}Datum: ${format(new Date(selectedMail.date), 'd MMM yyyy, HH:mm', { locale: nl })}\nOnderwerp: ${selectedMail.subject}\n\n${originalBodyText}`;
+
+    setComposeInitialData({
+        to: uniqueRecipients.join(', '),
+        subject: `Re: ${selectedMail.subject}`,
+        body: replyBody
+    });
+    setIsComposeOpen(true);
+  };
+
   const formatBytes = (bytes: number, decimals = 2) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -385,7 +415,10 @@ export default function MailPage() {
                             </Avatar>
                             <div className="grid gap-1 flex-1">
                                 <div className="font-semibold">{selectedMail.fromName} <span className="font-normal text-muted-foreground">&lt;{selectedMail.from}&gt;</span></div>
-                                <div className="text-xs text-muted-foreground">Aan: {selectedMail.to || user?.email}</div>
+                                <div className="text-xs text-muted-foreground">Aan: {selectedMail.to.join(', ')}</div>
+                                {selectedMail.cc && selectedMail.cc.length > 0 && (
+                                    <div className="text-xs text-muted-foreground">Cc: {selectedMail.cc.join(', ')}</div>
+                                )}
                             </div>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                 <span>{format(new Date(selectedMail.date), 'HH:mm')}</span>
@@ -400,7 +433,7 @@ export default function MailPage() {
                     <div className="p-4 border-b">
                         <div className="flex items-center gap-2">
                             <Button variant="outline" size="sm" onClick={handleReply}><Reply className="mr-2 h-4 w-4" /> Beantwoorden</Button>
-                            <Button variant="outline" size="sm"><ReplyAll className="mr-2 h-4 w-4" /> Allen beantwoorden</Button>
+                            <Button variant="outline" size="sm" onClick={handleReplyAll}><ReplyAll className="mr-2 h-4 w-4" /> Allen beantwoorden</Button>
                             <Button variant="outline" size="sm"><Forward className="mr-2 h-4 w-4" /> Doorsturen</Button>
                             <Button variant="outline" size="sm" onClick={handleDelete} disabled={isDeleting}>
                                 {isDeleting ? <Loader2 className='h-4 w-4 animate-spin mr-2' /> : <Trash2 className="h-4 w-4 mr-2" />}

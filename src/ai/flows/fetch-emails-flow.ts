@@ -18,7 +18,8 @@ const EmailSchema = z.object({
   uid: z.number(),
   from: z.string(),
   fromName: z.string(),
-  to: z.string(),
+  to: z.array(z.string()),
+  cc: z.array(z.string()).optional(),
   subject: z.string(),
   body: z.string(),
   date: z.string(),
@@ -81,14 +82,16 @@ async function fetchEmails(mailbox: string): Promise<FetchEmailsOutput> {
             content: att.content.toString('base64'),
         }));
         
-        const toAddresses = parsed.to?.value?.map(t => t.address).filter(Boolean) || [];
+        const toAddresses = parsed.to?.value?.map(t => t.address).filter((a): a is string => !!a) || [];
+        const ccAddresses = parsed.cc?.value?.map(c => c.address).filter((a): a is string => !!a) || [];
 
         return {
           id: parsed.messageId || uid.toString(),
           uid: uid,
           from: parsed.from?.value[0]?.address || 'Unknown Sender',
           fromName: parsed.from?.value[0]?.name || 'Unknown Sender',
-          to: toAddresses.join(', '),
+          to: toAddresses,
+          cc: ccAddresses,
           subject: parsed.subject || '(No Subject)',
           body: parsed.html || parsed.textAsHtml || '',
           date: parsed.date?.toISOString() || new Date().toISOString(),
