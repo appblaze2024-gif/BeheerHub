@@ -168,6 +168,9 @@ function UserDialog({
             const userCredential = await createUserWithEmailAndPassword(tempAuth, data.email, tempPassword);
             const newUser = userCredential.user;
 
+            // Send password reset email before signing out
+            await sendPasswordResetEmail(tempAuth, data.email);
+            
             // Immediately sign out the new user from the temporary auth instance
             await signOut(tempAuth);
             
@@ -182,9 +185,6 @@ function UserDialog({
             };
 
             await setDoc(doc(firestore, 'users', newUser.uid), userProfileData);
-
-            // Send password reset email
-            await sendPasswordResetEmail(tempAuth, data.email);
 
             toast({ title: 'Gebruiker uitgenodigd', description: `Een e-mail is naar ${data.email} gestuurd om een wachtwoord in te stellen. Vraag hen de spamfolder te controleren.`});
         } finally {
