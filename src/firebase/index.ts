@@ -6,32 +6,40 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage';
 
+// Define a type for the global object to avoid TypeScript errors
+declare global {
+  // eslint-disable-next-line no-var
+  var __firebase_services__: ReturnType<typeof getSdks> | undefined;
+}
+
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
-  if (!getApps().length) {
-    // Important! initializeApp() is called without any arguments because Firebase App Hosting
-    // integrates with the initializeApp() function to provide the environment variables needed to
-    // populate the FirebaseOptions in production. It is critical that we attempt to call initializeApp()
-    // without arguments.
+  // In a client component context (due to 'use client'), `window` is available.
+  // We use a global singleton to ensure Firebase services are initialized only once
+  // and survive Hot Module Replacement (HMR) during development.
+  if (!globalThis.__firebase_services__) {
     let firebaseApp;
-    try {
-      // Attempt to initialize via Firebase App Hosting environment variables
-      firebaseApp = initializeApp();
-    } catch (e) {
-      // Only warn in production because it's normal to use the firebaseConfig to initialize
-      // during development
-      if (process.env.NODE_ENV === "production") {
-        console.warn('Automatic initialization failed. Falling back to firebase config object.', e);
+    // Check if a Firebase app has already been initialized
+    if (!getApps().length) {
+      try {
+        // Firebase App Hosting provides config via environment variables.
+        // Attempt to initialize without an explicit config object.
+        firebaseApp = initializeApp();
+      } catch (e) {
+        // Fallback to the local config file if auto-initialization fails.
+        // This is the expected path for local development.
+        firebaseApp = initializeApp(firebaseConfig);
       }
-      firebaseApp = initializeApp(firebaseConfig);
+    } else {
+      // If an app is already initialized, use it.
+      firebaseApp = getApp();
     }
-
-    return getSdks(firebaseApp);
+    globalThis.__firebase_services__ = getSdks(firebaseApp);
   }
 
-  // If already initialized, return the SDKs with the already initialized App
-  return getSdks(getApp());
+  return globalThis.__firebase_services__;
 }
+
 
 export function getSdks(firebaseApp: FirebaseApp) {
   return {
