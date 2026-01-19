@@ -155,47 +155,40 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   
   const initialFeaturesRef = React.useRef<any[]>([]);
 
-    const fetchRoadsForPolygon = React.useCallback(async (polygon: turf.Feature<turf.Polygon | turf.MultiPolygon>) => {
+  const fetchRoadsForPolygon = React.useCallback(async (polygon: turf.Feature<turf.Polygon | turf.MultiPolygon>) => {
     try {
-        const simplified = turf.simplify(polygon, { tolerance: 0.001, highQuality: false });
-        const bbox = turf.bbox(simplified);
-        const minX = bbox[0];
-        const minY = bbox[1];
-        const maxX = bbox[2];
-        const maxY = bbox[3];
-
-        const points = [];
-        const numPointsPerSide = 5; 
+        const bbox = turf.bbox(polygon);
         
-        if (minX === Infinity || minY === Infinity || maxX === -Infinity || maxY === -Infinity) {
+        if (bbox[0] === Infinity || bbox[1] === Infinity || bbox[2] === -Infinity || bbox[3] === -Infinity) {
             return [];
         }
 
-        for (let i = 0; i < numPointsPerSide; i++) {
-            for (let j = 0; j < numPointsPerSide; j++) {
-                const lon = minX + (maxX - minX) * (i / (numPointsPerSide - 1));
-                const lat = minY + (maxY - minY) * (j / (numPointsPerSide - 1));
-                const point = turf.point([lon, lat]);
-                if (turf.booleanPointInPolygon(point, simplified)) {
-                    points.push(point.geometry.coordinates);
-                }
-            }
-        }
+        const [minX, minY, maxX, maxY] = bbox;
+        const width = turf.distance([minX, minY], [maxX, minY], { units: 'kilometers' });
+        const height = turf.distance([minX, minY], [minX, maxY], { units: 'kilometers' });
+        const largerDim = Math.max(width, height, 0.1); // ensure largerDim is not 0
+        const cellSide = largerDim / 15; // Create a ~15x15 grid
+
+        const grid = turf.pointGrid(bbox, cellSide, { units: 'kilometers' });
+        const pointsInside = turf.pointsWithinPolygon(grid, polygon);
+
+        const pointsToQuery = pointsInside.features.slice(0, 50); // Limit to 50 points to avoid too many API calls
         
-        if (points.length === 0) {
-            const center = turf.centroid(simplified);
+        if (pointsToQuery.length === 0) {
+            const center = turf.centroid(polygon);
             if (center && center.geometry) {
-                points.push(center.geometry.coordinates);
+                pointsToQuery.push(center);
             }
         }
         
-        if (points.length === 0) return [];
+        if (pointsToQuery.length === 0) return [];
 
         const allRoadTypes = new Set<string>();
 
-        const promises = points.map(pointCoords => {
-            const [lon, lat] = pointCoords;
-            const tilequeryUrl = `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${lon},${lat}.json?access_token=${MAPBOX_TOKEN}&radius=500&limit=50`;
+        const promises = pointsToQuery.map(point => {
+            const [lon, lat] = point.geometry.coordinates;
+            // The Tilequery API expects lon,lat
+            const tilequeryUrl = `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${lon},${lat}.json?access_token=${MAPBOX_TOKEN}&radius=250&limit=50`;
             
             return fetch(tilequeryUrl)
                 .then(response => {
@@ -211,6 +204,9 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                             .filter((f: any) => f.properties.layer === 'road' && f.properties.class)
                             .forEach((f: any) => allRoadTypes.add(f.properties.class));
                     }
+                }).catch(error => {
+                    console.error(`Fetch failed for point ${lon},${lat}:`, error);
+                    return null;
                 });
         });
 
