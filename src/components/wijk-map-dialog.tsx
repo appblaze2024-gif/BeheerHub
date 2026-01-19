@@ -155,6 +155,70 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   
   const initialFeaturesRef = React.useRef<any[]>([]);
 
+    const fetchRoadsForPolygon = React.useCallback(async (polygon: turf.Feature<turf.Polygon | turf.MultiPolygon>) => {
+    try {
+        const bbox = turf.bbox(polygon);
+        const minX = bbox[0];
+        const minY = bbox[1];
+        const maxX = bbox[2];
+        const maxY = bbox[3];
+
+        // Create a grid of points within the bounding box
+        const points = [];
+        const numPointsPerSide = 5; // Sample 5x5 grid -> 25 points
+        
+        if (minX === Infinity || minY === Infinity || maxX === -Infinity || maxY === -Infinity) {
+            return []; // Invalid bbox
+        }
+
+        for (let i = 0; i < numPointsPerSide; i++) {
+            for (let j = 0; j < numPointsPerSide; j++) {
+                const lon = minX + (maxX - minX) * (i / (numPointsPerSide - 1));
+                const lat = minY + (maxY - minY) * (j / (numPointsPerSide - 1));
+                const point = turf.point([lon, lat]);
+                if (turf.booleanPointInPolygon(point, polygon)) {
+                    points.push(point.geometry.coordinates);
+                }
+            }
+        }
+        
+        if (points.length === 0) {
+            const center = turf.centroid(polygon);
+            if (center && center.geometry) {
+                points.push(center.geometry.coordinates);
+            }
+        }
+        
+        if(points.length === 0) return [];
+
+        const multiPoint = turf.multiPoint(points);
+        const tilequeryUrl = `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery.json?access_token=${MAPBOX_TOKEN}&radius=500&limit=50`;
+
+        const response = await fetch(tilequeryUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(multiPoint.geometry),
+        });
+
+        if (!response.ok) {
+            console.error('Error from Mapbox Tilequery API:', await response.text());
+            return [];
+        }
+        const data = await response.json();
+        
+        const roadTypes = new Set<string>();
+        data.features
+            .filter((f: any) => f.properties.layer === 'road' && f.properties.class)
+            .forEach((f: any) => roadTypes.add(f.properties.class));
+
+        return Array.from(roadTypes);
+
+    } catch (error) {
+        console.error('Error fetching road data:', error);
+        return [];
+    }
+  }, []);
+
   const geojson = React.useMemo(() => {
     if (!wijk?.subGebieden) return null;
     try {
@@ -203,39 +267,16 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   }, [open, wijk, showRoadTypes]);
 
   React.useEffect(() => {
-    if (!geojson || geojson.features.length === 0 || readOnly || !showRoadTypes) {
+    if (!geojson || readOnly || !showRoadTypes) {
         setAvailableRoads([]);
         return;
     }
-
-    const fetchRoadsForPolygon = async (polygon: turf.Feature<turf.Polygon | turf.MultiPolygon>) => {
-        try {
-            const response = await fetch(`https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery.json?access_token=${MAPBOX_TOKEN}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(polygon.geometry),
-            });
-            if (!response.ok) {
-                console.error('Error from Mapbox Tilequery API:', await response.text());
-                return [];
-            }
-            const data = await response.json();
-            return data.features
-                .filter((f: any) => f.properties.layer === 'road')
-                .map((f: any) => f.properties.class)
-                .filter(Boolean);
-        } catch (error) {
-            console.error('Error fetching road data:', error);
-            return [];
-        }
-    };
     
     const fetchAllRoads = async () => {
         const allRoadTypes = new Set<string>();
         for (const feature of geojson.features) {
             if (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon') {
-                const simplifiedFeature = turf.simplify(feature, { tolerance: 0.0001, highQuality: false });
-                const roadTypes = await fetchRoadsForPolygon(simplifiedFeature as turf.Feature<turf.Polygon | turf.MultiPolygon>);
+                const roadTypes = await fetchRoadsForPolygon(feature as turf.Feature<turf.Polygon | turf.MultiPolygon>);
                 roadTypes.forEach(rt => allRoadTypes.add(rt));
             }
         }
@@ -244,7 +285,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
 
     fetchAllRoads();
     
-  }, [geojson, readOnly, showRoadTypes]);
+  }, [geojson, readOnly, showRoadTypes, fetchRoadsForPolygon]);
 
 
   const cleanup = React.useCallback(() => {
