@@ -217,6 +217,8 @@ export default function Page() {
   
   const [displayedRoute, setDisplayedRoute] = React.useState<any>(null);
 
+  const isSuperUser = profile?.role === 'Super admin';
+
 
   const objectsCollection = useMemo(() => {
     if (!firestore || !user) return null;
@@ -1333,9 +1335,11 @@ export default function Page() {
             </Button>
             {isNavigating && (
                 <>
-                 <Button variant="secondary" size="icon" className="bg-card/80 border-stone-300 text-card-foreground hover:bg-muted shadow-lg" onClick={handleToggleSimulation}>
-                    {isSimulating ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-                </Button>
+                 {isSuperUser && (
+                    <Button variant="secondary" size="icon" className="bg-card/80 border-stone-300 text-card-foreground hover:bg-muted shadow-lg" onClick={handleToggleSimulation}>
+                        {isSimulating ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                    </Button>
+                 )}
                  <Button variant="secondary" size="icon" className="bg-card/80 border-stone-300 text-card-foreground hover:bg-muted shadow-lg">
                     <Volume2 className="h-5 w-5" />
                 </Button>
@@ -1357,18 +1361,8 @@ export default function Page() {
         )}
 
         {isNavigating && (
-            <div className="absolute bottom-4 left-0 right-0 z-10 px-4">
-              <div className="flex justify-between items-end gap-4">
-                <div>
-                    <Button
-                    variant="destructive"
-                    className="rounded-full h-16 w-16 p-0 flex items-center justify-center shadow-lg"
-                    onClick={handleStopNavigation}
-                    >
-                    <X className="h-8 w-8" />
-                    </Button>
-                </div>
-                
+            <div className="absolute bottom-4 right-4 z-10">
+              <div className="flex flex-col items-end gap-4">
                 <div className="bg-card/90 backdrop-blur-sm p-4 rounded-xl shadow-lg flex items-center justify-center gap-6 text-card-foreground">
                     <div className="flex items-center gap-2">
                         <Clock className="h-5 w-5" />
@@ -1385,6 +1379,15 @@ export default function Page() {
                         ? `${formatDuration(routeInfoRef.current.duration)} aankomst`
                         : '-'}
                     </div>
+                </div>
+                <div>
+                    <Button
+                    variant="destructive"
+                    className="rounded-full h-16 w-16 p-0 flex items-center justify-center shadow-lg"
+                    onClick={handleStopNavigation}
+                    >
+                    <X className="h-8 w-8" />
+                    </Button>
                 </div>
               </div>
             </div>
