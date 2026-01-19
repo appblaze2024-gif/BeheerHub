@@ -20,6 +20,7 @@ import {
 import { useProfile } from '@/firebase/profile-provider';
 import type { UserProfile } from '@/lib/types';
 import type { Project, Wijk } from '@/app/projects/page';
+import { permissionConfig, getDefaultPermissions } from '@/lib/permissions';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -56,21 +57,6 @@ import { useToast } from '@/components/ui/use-toast';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { Checkbox } from './ui/checkbox';
-
-const permissionConfig = [
-    { module: 'projects', label: 'Projecten', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }] },
-    { module: 'employees', label: 'Medewerkers', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }] },
-    { module: 'workPlanning', label: 'Werkplanning', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'edit', label: 'Bewerken' }] },
-    { module: 'weeklyReports', label: 'Weekstaten', actions: [{ id: 'view', label: 'Bekijken' }] },
-    { module: 'reports', label: 'Rapportages', actions: [{ id: 'view', label: 'Bekijken' }] },
-    { module: 'vehicles', label: 'Wagenpark', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }] },
-    { module: 'objects', label: 'Objecten', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }] },
-    { module: 'inventory', label: 'Voorraadbeheer', actions: [{ id: 'view', label: 'Bekijken' }] },
-    { module: 'issues', label: 'Meldingen', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }] },
-    { module: 'navigation', label: 'Navigatiemodule', actions: [{ id: 'use', label: 'Gebruiken' }] },
-    { module: 'mail', label: 'Mail', actions: [{ id: 'use', label: 'Gebruiken' }] },
-    { module: 'users', label: 'Gebruikersbeheer', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }] },
-];
 
 const allPermissions = permissionConfig;
 
@@ -116,13 +102,7 @@ function UserDialog({
 
   React.useEffect(() => {
     if (open) {
-      const defaultPermissions: { [key: string]: { [key: string]: boolean } } = {};
-      allPermissions.forEach(mod => {
-        defaultPermissions[mod.module] = {};
-        mod.actions.forEach(perm => {
-          defaultPermissions[mod.module][perm.id] = false;
-        });
-      });
+      const defaultPermissions = getDefaultPermissions();
 
       if (user) {
         form.reset({

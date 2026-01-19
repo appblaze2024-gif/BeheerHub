@@ -22,6 +22,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 import { NavigationUIProvider, useNavigationUI } from '@/context/navigation-ui-context';
+import { getDefaultPermissions } from '@/lib/permissions';
 
 
 function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
@@ -45,22 +46,18 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
         !userProfile &&
         userProfileRef
       ) {
-        const initialProfile = {
+        const initialProfile: UserProfile = {
           id: user.uid,
           email: user.email,
+          role: 'medewerkers',
+          permissions: getDefaultPermissions(),
+          status: 'Actief'
         };
         await setDocumentNonBlocking(userProfileRef, initialProfile, { merge: true });
       }
     };
     createProfile();
   }, [user, userProfile, isProfileLoading, userProfileRef]);
-
-  // Update status from 'Uitgenodigd' to 'Actief' on first login
-  useEffect(() => {
-    if (userProfileRef && userProfile?.status === 'Uitgenodigd') {
-      updateDocumentNonBlocking(userProfileRef, { status: 'Actief' });
-    }
-  }, [userProfile, userProfileRef]);
   
   if (isUserLoading || isProfileLoading) {
       return (
