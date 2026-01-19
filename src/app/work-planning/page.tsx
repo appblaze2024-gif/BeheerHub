@@ -14,7 +14,7 @@ import {
   isToday,
 } from 'date-fns';
 import { nl } from 'date-fns/locale';
-import { collection, query, where, doc, getDocs, updateDoc, addDoc, writeBatch } from 'firebase/firestore';
+import { collection, query, where, doc, getDocs, writeBatch } from 'firebase/firestore';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
@@ -33,6 +33,8 @@ import {
   useDoc,
   useCollection,
   deleteDocumentNonBlocking,
+  addDocumentNonBlocking,
+  updateDocumentNonBlocking,
 } from '@/firebase';
 import type { Medewerker, Dienst, Voertuig } from '@/lib/types';
 import { DienstToevoegenDialog } from '@/components/dienst-toevoegen-dialog';
@@ -322,7 +324,7 @@ export default function WorkPlanningPage() {
         // Copy action: create a new document
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { id, ...newDienstData } = droppedDienst;
-        await addDoc(dienstenColRef, {
+        await addDocumentNonBlocking(dienstenColRef, {
           ...newDienstData,
           medewerkerId: newMedewerkerId,
           datum: newDatumString,
@@ -330,7 +332,7 @@ export default function WorkPlanningPage() {
       } else {
         // Move action: update the existing document
         const dienstRef = doc(dienstenColRef, droppedDienst.id);
-        await updateDoc(dienstRef, {
+        await updateDocumentNonBlocking(dienstRef, {
           medewerkerId: newMedewerkerId,
           datum: newDatumString,
         });

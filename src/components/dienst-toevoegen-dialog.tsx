@@ -8,8 +8,10 @@ import { Loader2, Trash2 } from 'lucide-react';
 import {
   useFirestore,
   deleteDocumentNonBlocking,
+  addDocumentNonBlocking,
+  updateDocumentNonBlocking,
 } from '@/firebase';
-import { collection, doc, addDoc, updateDoc } from 'firebase/firestore';
+import { collection, doc } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 
@@ -120,7 +122,7 @@ export function DienstToevoegenDialog({
 
     try {
         const dienstenColRef = collection(firestore, 'projects', project.id, 'diensten');
-        await addDoc(dienstenColRef, dienstData);
+        await addDocumentNonBlocking(dienstenColRef, dienstData);
         onSuccess();
     } catch (error) {
         console.error('Fout bij opslaan verlof:', error);
@@ -144,7 +146,7 @@ export function DienstToevoegenDialog({
     try {
       if (dienst) {
         const dienstRef = doc(firestore, 'projects', project.id, 'diensten', dienst.id);
-        await updateDoc(dienstRef, dienstData);
+        await updateDocumentNonBlocking(dienstRef, dienstData);
       } else {
         const dienstenColRef = collection(
           firestore,
@@ -152,7 +154,7 @@ export function DienstToevoegenDialog({
           project.id,
           'diensten'
         );
-        await addDoc(dienstenColRef, dienstData);
+        await addDocumentNonBlocking(dienstenColRef, dienstData);
       }
       onSuccess();
     } catch (error) {
