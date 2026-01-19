@@ -35,7 +35,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import * as turf from '@turf/turf';
 import { useCollection, useFirestore, useUser, addDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, doc, serverTimestamp, getDocs } from 'firebase/firestore';
+import { collection, query, where, doc, serverTimestamp, getDocs, collectionGroup } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
@@ -61,6 +61,7 @@ import { ResponsiveContainer, RadialBarChart, PolarAngleAxis, RadialBar } from '
 import { useProfile } from '@/firebase/profile-provider';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
+import type { UserProfile } from '@/lib/types';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -227,11 +228,27 @@ export default function Page() {
   const { data: objects, isLoading: isLoadingObjects } = useCollection<MapObject>(objectsCollection);
   const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsCollection);
 
+  const usersCollection = useMemo(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'users');
+  }, [firestore]);
+  const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersCollection);
+
+  const usersMap = useMemo(() => {
+    if (!users) return new Map<string, string>();
+    return new Map(users.map(u => [u.id, u.displayName || u.email || 'Onbekende gebruiker']));
+  }, [users]);
 
   const userHistoryCollection = useMemo(() => {
     if (!firestore || !user) return null;
+    const isAdminOrSupervisor = profile?.role === 'Super admin' || profile?.role === 'toezichthouder';
+
+    if (isAdminOrSupervisor) {
+      return query(collectionGroup(firestore, 'routes'));
+    }
+    
     return query(collection(firestore, `users/${user.uid}/routes`));
-  }, [firestore, user]);
+  }, [firestore, user, profile]);
 
   const { data: historyRoutes, isLoading: isLoadingHistory } = useCollection<Route>(userHistoryCollection);
   
@@ -1170,7 +1187,10 @@ export default function Page() {
                                     <SelectItem value="new">-- Nieuwe Route --</SelectItem>
                                     {availableHistoryRoutes.map(r => (
                                       <SelectItem key={r.id} value={r.id}>
-                                        {r.routeName} - {r.startTime?.toDate ? new Date(r.startTime.toDate()).toLocaleString() : 'Recent'}
+                                        {(profile?.role === 'Super admin' || profile?.role === 'toezichthouder') && usersMap.get(r.userId) ? (
+                                          <span className="font-semibold mr-1">{usersMap.get(r.userId)}:</span>
+                                        ) : null}
+                                        {r.routeName} - {r.startTime?.toDate ? new Date(r.startTime.toDate()).toLocaleString('nl-NL') : 'Recent'}
                                       </SelectItem>
                                     ))}
                                 </SelectContent>

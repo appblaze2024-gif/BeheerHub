@@ -18,6 +18,10 @@ service cloud.firestore {
       return isSignedIn() && getUserData().role == 'Super admin';
     }
 
+    function isToezichthouder() {
+      return isSignedIn() && getUserData().role == 'toezichthouder';
+    }
+
     function hasPermission(module, action) {
         return isSignedIn() && (isSuperUser() || getUserData().permissions[module][action] == true);
     }
@@ -64,7 +68,8 @@ service cloud.firestore {
       allow delete: if false;
 
       match /routes/{routeId} {
-        allow get, list, create, update, delete: if isOwner(userId) && hasPermission('navigation', 'use');
+        allow get, list: if isOwner(userId) || isSuperUser() || isToezichthouder();
+        allow create, update, delete: if isOwner(userId) && hasPermission('navigation', 'use');
       }
     }
 
