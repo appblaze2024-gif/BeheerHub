@@ -251,60 +251,77 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   }, [open, wijk, showRoadTypes]);
 
   const fetchRoadsForPolygon = React.useCallback(async (polygon: turf.Feature<turf.Polygon | turf.MultiPolygon>): Promise<turf.Feature<turf.LineString>[]> => {
-    const allFeatures: turf.Feature<turf.LineString>[] = [];
+    const allRoads = new Map<number, turf.Feature<turf.LineString>>();
 
-    const processSinglePolygon = async (singlePolygon: turf.Feature<turf.Polygon>) => {
-      const simplifiedPolygon = turf.simplify(singlePolygon, { tolerance: 0.0005, highQuality: false });
-      const polyString = simplifiedPolygon.geometry.coordinates[0].map(p => `${p[1]} ${p[0]}`).join(' ');
-      const overpassQuery = `[out:json][timeout:25];(way(poly: "${polyString}")["highway"];>;);out;`;
-      const overpassUrl = 'https://z.overpass-api.de/api/interpreter';
+    // 1. Get bounding box
+    const bbox = turf.bbox(polygon);
 
-      try {
+    // 2. Create grid of points
+    const cellSide = Math.max(bbox[2] - bbox[0], bbox[3] - bbox[1]) / 15; // Denser 15x15 grid
+    const grid = turf.pointGrid(bbox, cellSide, { units: 'degrees' });
+
+    // 3. Filter points inside polygon
+    const pointsInside = grid.features.filter(pt => turf.booleanPointInPolygon(pt, polygon));
+    
+    if (pointsInside.length === 0 && polygon.geometry.type.includes('Polygon')) {
+        const centroid = turf.centroid(polygon);
+        pointsInside.push(centroid);
+    }
+
+    if (pointsInside.length === 0) {
+        return [];
+    }
+
+    // Overpass query for multiple points is more efficient
+    const overpassUrl = 'https://overpass.kumi.systems/api/interpreter';
+    const radius = 250; // Smaller radius since we have more points
+    
+    const pointsQueryPart = pointsInside.map(point => {
+        const [lon, lat] = point.geometry.coordinates;
+        return `way(around:${radius},${lat},${lon})["highway"~"motorway|trunk|primary|secondary|tertiary|unclassified|residential|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link|living_street|service|pedestrian|track|busway|footway|bridleway|steps|corridor|path|cycleway|raceway|road|services|proposed|construction"];`;
+    }).join('');
+
+    const overpassQuery = `[out:json][timeout:30];(${pointsQueryPart});(._;>;);out;`;
+
+    try {
         const response = await fetch(overpassUrl, {
-          method: 'POST',
-          body: `data=${encodeURIComponent(overpassQuery)}`
+            method: 'POST',
+            body: `data=${encodeURIComponent(overpassQuery)}`
         });
 
         if (!response.ok) {
-          console.error(`Error from Overpass API:`, response.status, response.statusText);
-          const errorText = await response.text();
-          console.error('Overpass API error response:', errorText);
-          return;
+            console.error(`Error from Overpass API:`, response.status, response.statusText);
+            const errorText = await response.text();
+            console.error('Overpass API error response:', errorText);
+            return [];
         }
         const data = await response.json();
 
         if (data && data.elements) {
-          const nodes = new Map<number, [number, number]>();
-          data.elements.forEach((element: any) => {
-            if (element.type === 'node') {
-              nodes.set(element.id, [element.lon, element.lat]);
-            }
-          });
+            const nodes = new Map<number, [number, number]>();
+            data.elements.forEach((element: any) => {
+                if (element.type === 'node') {
+                    nodes.set(element.id, [element.lon, element.lat]);
+                }
+            });
 
-          data.elements.forEach((element: any) => {
-            if (element.type === 'way' && element.nodes && element.tags?.highway) {
-              const coordinates = element.nodes.map((nodeId: number) => nodes.get(nodeId)).filter(Boolean) as [number, number][];
-              if (coordinates.length >= 2) {
-                const feature = turf.lineString(coordinates, { highway: element.tags.highway, id: element.id });
-                allFeatures.push(feature);
-              }
-            }
-          });
+            data.elements.forEach((element: any) => {
+                if (element.type === 'way' && element.nodes && element.tags?.highway) {
+                    const coordinates = element.nodes.map((nodeId: number) => nodes.get(nodeId)).filter(Boolean) as [number, number][];
+                    if (coordinates.length >= 2) {
+                        const feature = turf.lineString(coordinates, { highway: element.tags.highway, id: element.id });
+                        if (!allRoads.has(element.id)) {
+                            allRoads.set(element.id, feature);
+                        }
+                    }
+                }
+            });
         }
-      } catch (error) {
+    } catch (error) {
         console.error(`Fetch failed for Overpass API:`, error);
-      }
-    };
-
-    if (polygon.geometry.type === 'Polygon') {
-      await processSinglePolygon(polygon as turf.Feature<turf.Polygon>);
-    } else if (polygon.geometry.type === 'MultiPolygon') {
-      for (const polygonCoords of polygon.geometry.coordinates) {
-        await processSinglePolygon(turf.polygon(polygonCoords));
-      }
     }
-
-    return allFeatures;
+    
+    return Array.from(allRoads.values());
   }, []);
 
   const fetchAllRoadsForCurrentDrawState = React.useCallback(async () => {
@@ -315,7 +332,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     }
 
     setIsFetchingRoads(true);
-    const allFeatures: turf.Feature<turf.LineString>[] = [];
+    const allFoundRoads = new Map<number, turf.Feature<turf.LineString>>();
     const allRoadTypes = new Set<string>();
     const featuresToProcess = drawRef.current.getAll().features;
     
@@ -326,19 +343,24 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         return;
     }
 
-    for (const feature of featuresToProcess) {
-        if (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon') {
-            const roadFeatures = await fetchRoadsForPolygon(feature as turf.Feature<turf.Polygon | turf.MultiPolygon>);
-            roadFeatures.forEach(rf => {
-                allFeatures.push(rf);
-                if (rf.properties?.highway) {
-                    allRoadTypes.add(rf.properties.highway);
-                }
-            });
-        }
-    }
+    const roadPromises = featuresToProcess
+        .filter(feature => feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon')
+        .map(feature => fetchRoadsForPolygon(feature as turf.Feature<turf.Polygon | turf.MultiPolygon>));
+
+    const results = await Promise.all(roadPromises);
+
+    results.forEach(roadFeatures => {
+        roadFeatures.forEach(rf => {
+            if (rf.properties?.id && !allFoundRoads.has(rf.properties.id)) {
+                allFoundRoads.set(rf.properties.id, rf);
+            }
+            if (rf.properties?.highway) {
+                allRoadTypes.add(rf.properties.highway);
+            }
+        });
+    });
     
-    setAllRoadFeatures(allFeatures);
+    setAllRoadFeatures(Array.from(allFoundRoads.values()));
 
     const filteredRoads = Array.from(allRoadTypes);
 
