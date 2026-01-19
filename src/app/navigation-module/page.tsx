@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -572,6 +573,38 @@ export default function Page() {
     }
   }, [searchParams, userPosition, calculateRoute, setIsHeaderVisible, isNavigating]);
 
+  const fetchRoadsForPolygon = React.useCallback(async (polygon: turf.Feature<turf.Polygon | turf.MultiPolygon>): Promise<turf.Feature<turf.LineString>[]> => {
+    const bbox = turf.bbox(polygon);
+
+    const overpassQuery = `
+        [out:json][timeout:90];
+        (
+            way["highway"~"${selectedRoute.roadTypes.join('|')}"](poly:"${turf.bboxPolygon(bbox).geometry.coordinates[0].flat().join(' ')}");
+        );
+        (._;>;);
+        out geom;
+    `;
+
+    const overpassUrl = 'https://overpass-api.de/api/interpreter';
+    const response = await fetch(overpassUrl, {
+        method: 'POST',
+        body: `data=${encodeURIComponent(overpassQuery)}`,
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Overpass API error:", errorText)
+        throw new Error(`Overpass API failed with status ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    return turf.featureCollection(data.elements
+        .filter((el: any) => el.type === 'way' && el.geometry)
+        .map((el: any) => turf.lineString(el.geometry.map((node: any) => [node.lon, node.lat]), el.tags))
+    ).features;
+  }, [selectedRoute?.roadTypes]);
+
   React.useEffect(() => {
     const fetchRouteRoads = async () => {
         if (!selectedRoute || !selectedRoute.subGebieden || !selectedRoute.roadTypes?.length) {
@@ -583,25 +616,26 @@ export default function Page() {
       
         try {
             const polygons = JSON.parse(selectedRoute.subGebieden) as turf.Feature<turf.Polygon | turf.MultiPolygon>[];
-            if (!polygons || polygons.length === 0) {
-                setRouteRoads(null);
-                setIsFetchingRoads(false);
-                return;
-            }
 
             let unionPolygon: turf.Feature<turf.Polygon | turf.MultiPolygon> | null = null;
-            if (polygons.length > 0) {
+            if (polygons && polygons.length > 0) {
                 try {
                     const cleanedPolygons = polygons.map(p => {
-                        if (p && p.geometry && (p.geometry.type === 'Polygon') && p.geometry.coordinates && p.geometry.coordinates.length > 0) {
+                        if (!p || !p.geometry || !p.geometry.coordinates || p.geometry.coordinates.length === 0) return null;
+                        if (p.geometry.type === 'Polygon') {
                             try {
+                                if (p.geometry.coordinates.some(ring => !ring || ring.length < 4 || ring.some(coord => !coord || coord.length < 2 || typeof coord[0] !== 'number' || typeof coord[1] !== 'number'))) {
+                                    return null;
+                                }
                                 return turf.polygon(p.geometry.coordinates, p.properties);
                             } catch { return null; }
-                        }
-                        if (p && p.geometry && (p.geometry.type === 'MultiPolygon') && p.geometry.coordinates && p.geometry.coordinates.length > 0) {
-                           try {
+                        } else if (p.geometry.type === 'MultiPolygon') {
+                            try {
+                                if (p.geometry.coordinates.some(poly => !poly || poly.some(ring => !ring || ring.length < 4 || ring.some(coord => !coord || coord.length < 2 || typeof coord[0] !== 'number' || typeof coord[1] !== 'number')))) {
+                                    return null;
+                                }
                                 return turf.multiPolygon(p.geometry.coordinates, p.properties);
-                           } catch { return null; }
+                            } catch { return null; }
                         }
                         return null;
                     }).filter((p): p is turf.Feature<turf.Polygon | turf.MultiPolygon> => !!p);
@@ -619,68 +653,28 @@ export default function Page() {
                  setIsFetchingRoads(false);
                  return;
             }
-
-            const bbox = turf.bbox(unionPolygon);
-
-            const overpassQuery = `
-                [out:json][timeout:90];
-                (
-                    way["highway"~"${selectedRoute.roadTypes.join('|')}"](poly:"${turf.bboxPolygon(bbox).geometry.coordinates[0].flat().join(' ')}");
-                );
-                (._;>;);
-                out geom;
-            `;
-
-            const overpassUrl = 'https://overpass-api.de/api/interpreter';
-            const response = await fetch(overpassUrl, {
-                method: 'POST',
-                body: `data=${encodeURIComponent(overpassQuery)}`,
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error("Overpass API error:", errorText)
-                throw new Error(`Overpass API failed with status ${response.status}`);
-            }
             
-            const data = await response.json();
-            
-            const allRoadsInBbox = turf.featureCollection(data.elements
-                .filter((el: any) => el.type === 'way' && el.geometry)
-                .map((el: any) => turf.lineString(el.geometry.map((node: any) => [node.lon, node.lat]), el.tags))
-            );
+            const roadsInBoundingBox = await fetchRoadsForPolygon(unionPolygon);
 
-            const clippedRoadFeatures: turf.Feature<turf.LineString | turf.MultiLineString>[] = [];
-            allRoadsInBbox.features.forEach(road => {
+            const clippedRoadFeatures: turf.Feature<turf.LineString>[] = [];
+            roadsInBoundingBox.forEach(road => {
                 try {
                     const intersection = turf.intersect(road as any, unionPolygon!);
                     if (intersection) {
-                       if (intersection.geometry.type === 'LineString' || intersection.geometry.type === 'MultiLineString') {
-                           clippedRoadFeatures.push(intersection as turf.Feature<turf.LineString | turf.MultiLineString>);
-                       } else if (intersection.geometry.type === 'GeometryCollection') {
-                           intersection.geometry.geometries.forEach(geom => {
-                               if (geom.type === 'LineString' || geom.type === 'MultiLineString') {
-                                   clippedRoadFeatures.push(turf.feature(geom) as turf.Feature<turf.LineString | turf.MultiLineString>);
-                               }
+                       if (intersection.geometry.type === 'LineString') {
+                           clippedRoadFeatures.push(intersection as turf.Feature<turf.LineString>);
+                       } else if (intersection.geometry.type === 'MultiLineString') {
+                           intersection.geometry.coordinates.forEach(coords => {
+                               clippedRoadFeatures.push(turf.lineString(coords, intersection.properties));
                            });
                        }
                     }
                 } catch (e) {
-                    // console.error("Error intersecting road with polygon", e);
+                     // console.error("Error intersecting road with polygon", e);
                 }
-            });
-            
-            const finalLineStrings = clippedRoadFeatures.flatMap(feature => {
-                if (feature.geometry.type === 'LineString') {
-                    return [feature as turf.Feature<turf.LineString>];
-                }
-                if (feature.geometry.type === 'MultiLineString') {
-                    return feature.geometry.coordinates.map(coords => turf.lineString(coords, feature.properties));
-                }
-                return [];
             });
 
-            setRouteRoads(turf.featureCollection(finalLineStrings));
+            setRouteRoads(turf.featureCollection(clippedRoadFeatures));
             
         } catch (error) {
             console.error("Failed to fetch or process route roads:", error);
@@ -691,7 +685,7 @@ export default function Page() {
     };
 
     fetchRouteRoads();
-  }, [selectedRoute]);
+  }, [selectedRoute, fetchRoadsForPolygon]);
 
 
   const getMarkerColor = (objectId: string): string => {
