@@ -3,7 +3,6 @@
 import * as React from "react";
 import Link from 'next/link';
 import { Card, CardContent } from "@/components/ui/card";
-import { PageHeader } from "@/components/page-header";
 import { allMenuItems, type MenuItem } from "@/lib/menu-config";
 import { cn } from "@/lib/utils";
 
@@ -41,8 +40,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col flex-1 p-6 min-h-0">
-      <PageHeader title="Dashboard" />
-      <div className="flex-1 mt-6 overflow-y-auto pr-2">
+      <div className="flex-1 overflow-y-auto pr-2">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
           {gridItems.map((item, index) => (
             <NavCard key={item.href} item={item} color={cardColors[index % cardColors.length]} />
