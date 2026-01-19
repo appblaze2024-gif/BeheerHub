@@ -13,7 +13,6 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from './ui/button';
-import { Wijk } from '@/app/projects/page';
 import { Input } from './ui/input';
 import { Loader2, BoxSelect, Trash2, ChevronDown } from 'lucide-react';
 import * as turf from '@turf/turf';
@@ -34,13 +33,22 @@ import { Checkbox } from './ui/checkbox';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
+interface AreaLike {
+  id: string;
+  naam: string;
+  locatie: string;
+  subGebieden: string;
+  roadTypes?: string[];
+}
+
 interface WijkMapDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  wijk: Wijk | null;
+  wijk: AreaLike | null;
   onSave: (wijkId: string, coordinates: string, roadTypes: string[]) => void;
   readOnly?: boolean;
   allAreas?: any[];
+  showRoadTypes?: boolean;
 }
 
 interface Suggestion {
@@ -117,7 +125,7 @@ const polygonLabelLayer: SymbolLayer = {
   }
 };
 
-export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = false, allAreas = [] }: WijkMapDialogProps) {
+export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = false, allAreas = [], showRoadTypes = true }: WijkMapDialogProps) {
   const drawRef = React.useRef<MapboxDraw | null>(null);
   const mapRef = React.useRef<any>(null);
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -186,12 +194,16 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
 
   React.useEffect(() => {
     if (open && wijk) {
-        setSelectedRoads(wijk.roadTypes || []);
+        if (showRoadTypes) {
+            setSelectedRoads(wijk.roadTypes || []);
+        } else {
+            setSelectedRoads([]);
+        }
     }
-  }, [open, wijk]);
+  }, [open, wijk, showRoadTypes]);
 
   React.useEffect(() => {
-    if (!geojson || geojson.features.length === 0 || readOnly) {
+    if (!geojson || geojson.features.length === 0 || readOnly || !showRoadTypes) {
         setAvailableRoads([]);
         return;
     }
@@ -235,7 +247,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
 
     fetchAllRoads();
     
-  }, [geojson, readOnly]);
+  }, [geojson, readOnly, showRoadTypes]);
 
 
   const cleanup = React.useCallback(() => {
@@ -828,7 +840,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                       </Button>
                   </div>
               </div>
-              {availableRoads.length > 0 && !readOnly && (
+              {showRoadTypes && availableRoads.length > 0 && !readOnly && (
                 <div className="space-y-2">
                     <Label className="text-xs font-semibold">Selecteer wegtypes</Label>
                     <div className="border rounded-md p-2 max-h-32 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
@@ -924,5 +936,3 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     </Dialog>
   );
 }
-
-    
