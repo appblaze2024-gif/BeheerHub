@@ -40,7 +40,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex-1 p-6">
-      <div className="grid h-full grid-cols-4 gap-6">
+      <div className="grid h-full grid-cols-5 gap-6">
           {gridItems.map((item, index) => (
             <NavCard key={item.href} item={item} color={cardColors[index % cardColors.length]} />
           ))}
