@@ -213,11 +213,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
             const response = await fetch(`https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery.json?access_token=${MAPBOX_TOKEN}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    "type": "Feature",
-                    "properties": {},
-                    "geometry": polygon.geometry
-                })
+                body: JSON.stringify(polygon.geometry),
             });
             if (!response.ok) {
                 console.error('Error from Mapbox Tilequery API:', await response.text());
