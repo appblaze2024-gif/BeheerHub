@@ -589,8 +589,6 @@ export default function Page() {
                 return;
             }
 
-            const roadTypesQueryPart = selectedRoute.roadTypes.join('|');
-            
             let unionPolygon: turf.Feature<turf.Polygon | turf.MultiPolygon> | null = null;
             if (polygons.length > 0) {
                 try {
@@ -606,7 +604,7 @@ export default function Page() {
                            } catch { return null; }
                         }
                         return null;
-                    }).filter((p): p is turf.Feature<turf.Polygon | turf.MultiPolygon> => p !== null);
+                    }).filter((p): p is turf.Feature<turf.Polygon | turf.MultiPolygon> => !!p);
 
                     if (cleanedPolygons.length > 0) {
                       unionPolygon = turf.union(...cleanedPolygons);
@@ -627,13 +625,13 @@ export default function Page() {
             const overpassQuery = `
                 [out:json][timeout:90];
                 (
-                    way["highway"~"${roadTypesQueryPart}"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+                    way["highway"~"${selectedRoute.roadTypes.join('|')}"](poly:"${turf.bboxPolygon(bbox).geometry.coordinates[0].flat().join(' ')}");
                 );
                 (._;>;);
                 out geom;
             `;
 
-            const overpassUrl = 'https://overpass.kumi.systems/api/interpreter';
+            const overpassUrl = 'https://overpass-api.de/api/interpreter';
             const response = await fetch(overpassUrl, {
                 method: 'POST',
                 body: `data=${encodeURIComponent(overpassQuery)}`,
@@ -1768,3 +1766,5 @@ export default function Page() {
     </div>
   );
 }
+
+    
