@@ -210,20 +210,20 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
       const processSinglePolygon = async (singlePolygon: turf.Feature<turf.Polygon>) => {
         const polyString = singlePolygon.geometry.coordinates[0].map(p => `${p[1]} ${p[0]}`).join(' ');
   
-        const overpassQuery = `
-          [out:json];
-          (
-            way(poly: "${polyString}")["highway"];
-          );
-          out tags;
-        `;
+        const overpassQuery = `[out:json];(way(poly: "${polyString}")["highway"];);out tags;`;
         
-        const overpassUrl = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(overpassQuery)}`;
+        const overpassUrl = `https://overpass-api.de/api/interpreter`;
         
         try {
-          const response = await fetch(overpassUrl);
+          const response = await fetch(overpassUrl, {
+            method: 'POST',
+            body: overpassQuery
+          });
+
           if (!response.ok) {
               console.error(`Error from Overpass API:`, response.status, response.statusText);
+              const errorText = await response.text();
+              console.error('Overpass API error response:', errorText);
               return;
           }
           const data = await response.json();
@@ -282,14 +282,13 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         return;
     }
     
-    const roadTypePromises = featuresToProcess
-        .filter(feature => feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon')
-        .map(feature => fetchRoadsForPolygon(feature as turf.Feature<turf.Polygon | turf.MultiPolygon>));
-
-    const results = await Promise.all(roadTypePromises);
-    results.forEach(roadTypes => {
-        roadTypes.forEach(rt => allRoadTypes.add(rt));
-    });
+    // Using a sequential loop instead of Promise.all to be kinder to the API
+    for (const feature of featuresToProcess) {
+        if (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon') {
+            const roadTypes = await fetchRoadsForPolygon(feature as turf.Feature<turf.Polygon | turf.MultiPolygon>);
+            roadTypes.forEach(rt => allRoadTypes.add(rt));
+        }
+    }
 
     setAvailableRoads(Array.from(allRoadTypes).sort());
     setIsFetchingRoads(false);
