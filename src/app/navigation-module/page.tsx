@@ -582,7 +582,7 @@ export default function Page() {
         setIsFetchingRoads(true);
       
         try {
-            const polygons = JSON.parse(selectedRoute.subGebieden) as turf.Feature<turf.Polygon>[];
+            const polygons = JSON.parse(selectedRoute.subGebieden) as turf.Feature<turf.Polygon | turf.MultiPolygon>[];
             if (!polygons || polygons.length === 0) {
                 setRouteRoads(null);
                 setIsFetchingRoads(false);
@@ -590,9 +590,40 @@ export default function Page() {
             }
 
             const roadTypesQueryPart = selectedRoute.roadTypes.join('|');
-            const polygonFeatures = turf.featureCollection(polygons);
-            const bbox = turf.bbox(polygonFeatures);
             
+            let unionPolygon: turf.Feature<turf.Polygon | turf.MultiPolygon> | null = null;
+            if (polygons.length > 0) {
+                try {
+                    const cleanedPolygons = polygons.map(p => {
+                        if (p && p.geometry && (p.geometry.type === 'Polygon') && p.geometry.coordinates && p.geometry.coordinates.length > 0) {
+                            try {
+                                return turf.polygon(p.geometry.coordinates, p.properties);
+                            } catch { return null; }
+                        }
+                        if (p && p.geometry && (p.geometry.type === 'MultiPolygon') && p.geometry.coordinates && p.geometry.coordinates.length > 0) {
+                           try {
+                                return turf.multiPolygon(p.geometry.coordinates, p.properties);
+                           } catch { return null; }
+                        }
+                        return null;
+                    }).filter((p): p is turf.Feature<turf.Polygon | turf.MultiPolygon> => p !== null);
+
+                    if (cleanedPolygons.length > 0) {
+                      unionPolygon = turf.union(...cleanedPolygons);
+                    }
+                } catch (e) {
+                    console.error("Error creating union polygon:", e);
+                }
+            }
+
+            if (!unionPolygon) {
+                 setRouteRoads(null);
+                 setIsFetchingRoads(false);
+                 return;
+            }
+
+            const bbox = turf.bbox(unionPolygon);
+
             const overpassQuery = `
                 [out:json][timeout:90];
                 (
@@ -621,32 +652,20 @@ export default function Page() {
                 .map((el: any) => turf.lineString(el.geometry.map((node: any) => [node.lon, node.lat]), el.tags))
             );
 
-            let unionPolygon: turf.Feature<turf.Polygon | turf.MultiPolygon> | null = null;
-            if (polygons.length > 0) {
-                try {
-                    const validPolygons = polygons.filter(p => p && p.geometry && (p.geometry.type === 'Polygon' || p.geometry.type === 'MultiPolygon') && p.geometry.coordinates && p.geometry.coordinates.length > 0);
-                    if (validPolygons.length > 0) {
-                      unionPolygon = turf.union(...validPolygons as any);
-                    }
-                } catch (e) {
-                    console.error("Error creating union polygon, using individual polygons.", e);
-                }
-            }
-
-            if (!unionPolygon) {
-                 setRouteRoads(null);
-                 setIsFetchingRoads(false);
-                 return;
-            }
-
             const clippedRoadFeatures: turf.Feature<turf.LineString | turf.MultiLineString>[] = [];
             allRoadsInBbox.features.forEach(road => {
                 try {
                     const intersection = turf.intersect(road as any, unionPolygon!);
                     if (intersection) {
-                        if (intersection.geometry.type === 'LineString' || intersection.geometry.type === 'MultiLineString') {
-                            clippedRoadFeatures.push(intersection as turf.Feature<turf.LineString | turf.MultiLineString>);
-                        }
+                       if (intersection.geometry.type === 'LineString' || intersection.geometry.type === 'MultiLineString') {
+                           clippedRoadFeatures.push(intersection as turf.Feature<turf.LineString | turf.MultiLineString>);
+                       } else if (intersection.geometry.type === 'GeometryCollection') {
+                           intersection.geometry.geometries.forEach(geom => {
+                               if (geom.type === 'LineString' || geom.type === 'MultiLineString') {
+                                   clippedRoadFeatures.push(turf.feature(geom) as turf.Feature<turf.LineString | turf.MultiLineString>);
+                               }
+                           });
+                       }
                     }
                 } catch (e) {
                     // console.error("Error intersecting road with polygon", e);
