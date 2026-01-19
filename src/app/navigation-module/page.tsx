@@ -624,7 +624,7 @@ export default function Page() {
             let unionPolygon: turf.Feature<turf.Polygon | turf.MultiPolygon> | null = null;
             if (polygons.length > 0) {
                 try {
-                    const validPolygons = polygons.filter(p => p && p.geometry && p.geometry.coordinates);
+                    const validPolygons = polygons.filter(p => p && p.geometry && (p.geometry.type === 'Polygon' || p.geometry.type === 'MultiPolygon') && p.geometry.coordinates && p.geometry.coordinates.length > 0);
                     if (validPolygons.length > 0) {
                       unionPolygon = turf.union(...validPolygons as any);
                     }
