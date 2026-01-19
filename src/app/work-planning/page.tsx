@@ -35,6 +35,8 @@ import {
   deleteDocumentNonBlocking,
   addDocumentNonBlocking,
   updateDocumentNonBlocking,
+  errorEmitter,
+  FirestorePermissionError,
 } from '@/firebase';
 import type { Medewerker, Dienst, Voertuig } from '@/lib/types';
 import { DienstToevoegenDialog } from '@/components/dienst-toevoegen-dialog';
@@ -246,6 +248,11 @@ export default function WorkPlanningPage() {
       setDiensten(dienstenData);
     } catch (error) {
       console.error("Error fetching diensten: ", error);
+      const contextualError = new FirestorePermissionError({
+        path: `projects/${selectedProjectId}/diensten`,
+        operation: 'list',
+      });
+      errorEmitter.emit('permission-error', contextualError);
       setDiensten([]);
     } finally {
       setIsLoadingDiensten(false);
