@@ -198,6 +198,9 @@ export default function Page() {
   const [userPosition, setUserPosition] = React.useState<[number, number] | null>(null);
   const [isSinglePointNav, setIsSinglePointNav] = React.useState(false);
 
+  const [isSpectatorMode, setIsSpectatorMode] = React.useState(false);
+  const [spectatorRoute, setSpectatorRoute] = React.useState<Route | null>(null);
+
 
   // Simulation state
   const [isSimulating, setIsSimulating] = React.useState(false);
@@ -954,17 +957,80 @@ export default function Page() {
     } 
   }, [historyRoutes, objects, projects, calculateRoute]);
 
-  const handleStartOrResume = useCallback(() => {
-    setJustCompletedObjectId(null);
-    setIsNavigating(true);
-    setIsCalculating(true);
-    setIsHeaderVisible(false);
-    if (selectedHistoryId) {
-        handleResumeRoute(selectedHistoryId);
-    } else if (selectedRouteId) {
-        handleStartNavigation();
+   const selectedHistoryRoute = useMemo(() => {
+        if (!selectedHistoryId || !historyRoutes) return null;
+        return historyRoutes.find(r => r.id === selectedHistoryId);
+    }, [selectedHistoryId, historyRoutes]);
+
+    const isOwnSelectedHistoryRoute = selectedHistoryRoute?.userId === user?.uid;
+    const isAdminOrSupervisor = profile?.role === 'Super admin' || profile?.role === 'toezichthouder';
+
+    const handleViewRoute = useCallback((historyId: string) => {
+        const routeToView = historyRoutes?.find(r => r.id === historyId);
+        if (!routeToView || !objects || !projects) return;
+
+        setIsSpectatorMode(true);
+        setSpectatorRoute(routeToView);
+        setIsHeaderVisible(false);
+
+        const routeObjects = (routeToView.allObjectIds || [])
+            .map(id => objects.find(o => o.id === id))
+            .filter((o): o is MapObject => !!o);
+
+        setCompletedObjects(routeToView.completedObjects || []);
+        setSkippedObjects(routeToView.skippedObjects || []);
+        setPendingObjects(routeObjects.filter(o => !(routeToView.completedObjects || []).includes(o.id) && !(routeToView.skippedObjects || []).includes(o.id)));
+        
+        const project = projects.find(p => p.id === routeToView.projectId);
+        const routeInfo = [...(project?.veegroutes || []), ...(project?.prullenbakkenroutes || [])].find(r => r.id === routeToView.originalRouteId);
+
+        if (routeInfo && mapRef.current) {
+            try {
+                const features = JSON.parse(routeInfo.subGebieden);
+                if (!Array.isArray(features) || features.length === 0) return;
+                const featureCollection = turf.featureCollection(features);
+                const bbox = turf.bbox(featureCollection);
+                if (bbox[0] !== Infinity) {
+                    mapRef.current.getMap().fitBounds(bbox, { padding: 40, duration: 1000 });
+                }
+            } catch (error) {
+                console.error("Error fitting bounds for wijk:", error);
+            }
+        }
+    }, [historyRoutes, objects, projects, setIsHeaderVisible]);
+
+    const handleStopSpectating = useCallback(() => {
+        setIsSpectatorMode(false);
+        setSpectatorRoute(null);
+        setIsHeaderVisible(true);
+        setSelectedHistoryId(null);
+        setSelectedRouteId(null);
+        setSelectedRouteType(null);
+        setSelectedProjectId(null);
+    }, [setIsHeaderVisible]);
+
+    const spectatorObjects = useMemo(() => {
+        if (!isSpectatorMode || !spectatorRoute || !objects) return [];
+        return (spectatorRoute.allObjectIds || [])
+              .map(id => objects.find(o => o.id === id))
+              .filter((o): o is MapObject => !!o);
+    }, [isSpectatorMode, spectatorRoute, objects]);
+
+  const handlePrimaryAction = useCallback(() => {
+    if (isAdminOrSupervisor && selectedHistoryId && !isOwnSelectedHistoryRoute) {
+      handleViewRoute(selectedHistoryId);
+    } else {
+      setJustCompletedObjectId(null);
+      setIsNavigating(true);
+      setIsCalculating(true);
+      setIsHeaderVisible(false);
+      if (selectedHistoryId) {
+          handleResumeRoute(selectedHistoryId);
+      } else if (selectedRouteId) {
+          handleStartNavigation();
+      }
     }
-  }, [selectedHistoryId, selectedRouteId, handleResumeRoute, handleStartNavigation, setIsHeaderVisible]);
+  }, [isAdminOrSupervisor, selectedHistoryId, isOwnSelectedHistoryRoute, handleViewRoute, setIsHeaderVisible, handleResumeRoute, selectedRouteId, handleStartNavigation]);
   
   const findNextObject = (currentOrigin: [number, number], availableObjects: MapObject[]): MapObject | null => {
       if (!currentOrigin || availableObjects.length === 0) return null;
@@ -1105,7 +1171,7 @@ export default function Page() {
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       <div ref={mapContainerRef} className="flex-1 relative bg-gray-800">
-        {!isNavigating && !isSinglePointNav && (
+        {!isNavigating && !isSinglePointNav && !isSpectatorMode && (
             <div className="absolute top-4 left-4 z-10 bg-card/90 backdrop-blur-sm p-4 rounded-lg shadow-lg w-full max-w-sm text-card-foreground">
                 <h2 className="text-lg font-bold mb-2">Start een nieuwe route</h2>
                 <div className="space-y-4">
@@ -1199,14 +1265,35 @@ export default function Page() {
                         </>
                     )}
 
-                    <Button onClick={handleStartOrResume} disabled={(!selectedRouteId && !selectedHistoryId) || isCalculating}>
+                    <Button onClick={handlePrimaryAction} disabled={(!selectedRouteId && !selectedHistoryId) || isCalculating}>
                         {isCalculating ? (
                             <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Bezig...</>
-                        ) : selectedHistoryId ? 'Hervat Route' : 'Start Route'}
+                        ) : selectedHistoryId ? (isAdminOrSupervisor && !isOwnSelectedHistoryRoute ? 'Bekijk Voortgang' : 'Hervat Route') : 'Start Route'}
                     </Button>
 
                 </div>
             </div>
+        )}
+
+        {isSpectatorMode && spectatorRoute && (
+          <>
+            <div className="absolute top-4 left-4 z-10 bg-card/90 backdrop-blur-sm p-4 rounded-lg shadow-lg w-full max-w-sm text-card-foreground">
+              <h2 className="text-lg font-bold mb-2">Route: {spectatorRoute.routeName}</h2>
+              <p className="text-sm text-muted-foreground">Gebruiker: {usersMap.get(spectatorRoute.userId) || 'Onbekend'}</p>
+              <div className="mt-4">
+                <p className="font-semibold text-sm">Voortgang</p>
+                <Progress value={ (spectatorRoute.totalObjects || 0) > 0 ? (((spectatorRoute.completedObjects?.length || 0) + (spectatorRoute.skippedObjects?.length || 0)) / (spectatorRoute.totalObjects || 1)) * 100 : 0 } className="h-2 mt-1" />
+                <p className="text-sm text-muted-foreground mt-1">
+                  {(spectatorRoute.completedObjects?.length || 0) + (spectatorRoute.skippedObjects?.length || 0)} / {spectatorRoute.totalObjects || 0} objecten
+                </p>
+              </div>
+            </div>
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
+              <Button variant="destructive" className="rounded-full h-16 w-16 p-0 flex items-center justify-center shadow-lg" onClick={handleStopSpectating}>
+                <X className="h-8 w-8" />
+              </Button>
+            </div>
+          </>
         )}
         
         {isNavigating && currentInstruction && (
@@ -1357,8 +1444,25 @@ export default function Page() {
                 </Marker>
               )
           })}
+          
+           {isSpectatorMode && spectatorObjects.map(obj => {
+                const color = getMarkerColor(obj.id);
+                return (
+                    <Marker
+                    key={obj.id}
+                    longitude={obj.longitude}
+                    latitude={obj.latitude}
+                    anchor="center"
+                    onClick={() => handleMarkerClick(obj)}
+                    onMouseEnter={() => setHoveredObject(obj)}
+                    onMouseLeave={() => setHoveredObject(null)}
+                    >
+                    <div className={cn(`w-3 h-3 rounded-full border-2 border-white cursor-pointer`, color)}/>
+                    </Marker>
+                )
+            })}
 
-          {!isNavigating && objectsInWijk?.map(obj => {
+          {!isNavigating && !isSpectatorMode && objectsInWijk?.map(obj => {
             return (
              <Marker
                 key={obj.id}
