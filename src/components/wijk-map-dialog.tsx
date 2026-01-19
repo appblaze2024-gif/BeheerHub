@@ -156,76 +156,6 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   
   const initialFeaturesRef = React.useRef<any[]>([]);
 
-  const fetchRoadsForPolygon = React.useCallback(async (polygon: turf.Feature<turf.Polygon | turf.MultiPolygon>) => {
-    try {
-      const allRoadTypes = new Set<string>();
-  
-      const processSinglePolygon = async (singlePolygon: turf.Feature<turf.Polygon>) => {
-        // Overpass expects coordinates in `lat lon` order. GeoJSON is `lon lat`.
-        const polyString = singlePolygon.geometry.coordinates[0].map(p => `${p[1]} ${p[0]}`).join(' ');
-  
-        // Overpass QL query to get ways with a 'highway' tag within the polygon
-        const overpassQuery = `
-          [out:json];
-          (
-            way(poly: "${polyString}")["highway"];
-          );
-          out tags;
-        `;
-        
-        const overpassUrl = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(overpassQuery)}`;
-        
-        try {
-          const response = await fetch(overpassUrl);
-          if (!response.ok) {
-              console.error(`Error from Overpass API:`, response.status, response.statusText);
-              return;
-          }
-          const data = await response.json();
-  
-          if (data && data.elements) {
-            data.elements.forEach((element: any) => {
-              if (element.type === 'way' && element.tags && element.tags.highway) {
-                allRoadTypes.add(element.tags.highway);
-              }
-            });
-          }
-        } catch (error) {
-          console.error(`Fetch failed for Overpass API:`, error);
-        }
-      };
-  
-      // A single polygon can be made of multiple rings (e.g. with holes). The first ring is the exterior.
-      // And a MultiPolygon is an array of Polygons.
-      const processGeometry = async (geometry: turf.Polygon | turf.MultiPolygon) => {
-         if (geometry.type === 'Polygon') {
-           // We only consider the outer ring for the query. Holes are ignored for simplicity.
-           const exteriorRing = turf.polygon([geometry.coordinates[0]]);
-           await processSinglePolygon(exteriorRing);
-         } else if (geometry.type === 'MultiPolygon') {
-            for (const polygonCoords of geometry.coordinates) {
-              // Each part of the multipolygon is a valid polygon to query
-              const singlePolygonFeature = turf.polygon(polygonCoords);
-              await processSinglePolygon(singlePolygonFeature);
-            }
-         }
-      }
-      
-      await processGeometry(polygon.geometry);
-      
-      // Filter out some common non-road highway types that are less relevant for sweeping
-      const filteredRoads = Array.from(allRoadTypes).filter(type => 
-        !['footway', 'cycleway', 'path', 'track', 'service', 'pedestrian', 'steps', 'corridor', 'bridleway', 'proposed', 'construction'].includes(type)
-      );
-  
-      return filteredRoads.sort();
-  
-    } catch (error) {
-        console.error('Error fetching road data:', error);
-        return [];
-    }
-  }, []);
-
   const geojson = React.useMemo(() => {
     if (!wijk?.subGebieden) return null;
     try {
@@ -273,28 +203,97 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     }
   }, [open, wijk, showRoadTypes]);
 
-  React.useEffect(() => {
-    if (!geojson || readOnly || !showRoadTypes) {
+  const fetchRoadsForPolygon = React.useCallback(async (polygon: turf.Feature<turf.Polygon | turf.MultiPolygon>) => {
+    try {
+      const allRoadTypes = new Set<string>();
+  
+      const processSinglePolygon = async (singlePolygon: turf.Feature<turf.Polygon>) => {
+        const polyString = singlePolygon.geometry.coordinates[0].map(p => `${p[1]} ${p[0]}`).join(' ');
+  
+        const overpassQuery = `
+          [out:json];
+          (
+            way(poly: "${polyString}")["highway"];
+          );
+          out tags;
+        `;
+        
+        const overpassUrl = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(overpassQuery)}`;
+        
+        try {
+          const response = await fetch(overpassUrl);
+          if (!response.ok) {
+              console.error(`Error from Overpass API:`, response.status, response.statusText);
+              return;
+          }
+          const data = await response.json();
+  
+          if (data && data.elements) {
+            data.elements.forEach((element: any) => {
+              if (element.type === 'way' && element.tags && element.tags.highway) {
+                allRoadTypes.add(element.tags.highway);
+              }
+            });
+          }
+        } catch (error) {
+          console.error(`Fetch failed for Overpass API:`, error);
+        }
+      };
+  
+      const processGeometry = async (geometry: turf.Polygon | turf.MultiPolygon) => {
+         if (geometry.type === 'Polygon') {
+           const exteriorRing = turf.polygon([geometry.coordinates[0]]);
+           await processSinglePolygon(exteriorRing);
+         } else if (geometry.type === 'MultiPolygon') {
+            for (const polygonCoords of geometry.coordinates) {
+              const singlePolygonFeature = turf.polygon(polygonCoords);
+              await processSinglePolygon(singlePolygonFeature);
+            }
+         }
+      }
+      
+      await processGeometry(polygon.geometry);
+      
+      const filteredRoads = Array.from(allRoadTypes).filter(type => 
+        !['footway', 'cycleway', 'path', 'track', 'service', 'pedestrian', 'steps', 'corridor', 'bridleway', 'proposed', 'construction'].includes(type)
+      );
+  
+      return filteredRoads.sort();
+  
+    } catch (error) {
+        console.error('Error fetching road data:', error);
+        return [];
+    }
+  }, []);
+
+  const fetchAllRoadsForCurrentDrawState = React.useCallback(async () => {
+    if (readOnly || !showRoadTypes || !drawRef.current) {
         setAvailableRoads([]);
         return;
     }
-    
-    const fetchAllRoads = async () => {
-        setIsFetchingRoads(true);
-        const allRoadTypes = new Set<string>();
-        for (const feature of geojson.features) {
-            if (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon') {
-                const roadTypes = await fetchRoadsForPolygon(feature as turf.Feature<turf.Polygon | turf.MultiPolygon>);
-                roadTypes.forEach(rt => allRoadTypes.add(rt));
-            }
-        }
-        setAvailableRoads(Array.from(allRoadTypes).sort());
-        setIsFetchingRoads(false);
-    };
 
-    fetchAllRoads();
+    setIsFetchingRoads(true);
+    const allRoadTypes = new Set<string>();
+    const featuresToProcess = drawRef.current.getAll().features;
+
+    if (featuresToProcess.length === 0) {
+        setAvailableRoads([]);
+        setIsFetchingRoads(false);
+        return;
+    }
     
-  }, [geojson, readOnly, showRoadTypes, fetchRoadsForPolygon]);
+    const roadTypePromises = featuresToProcess
+        .filter(feature => feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon')
+        .map(feature => fetchRoadsForPolygon(feature as turf.Feature<turf.Polygon | turf.MultiPolygon>));
+
+    const results = await Promise.all(roadTypePromises);
+    results.forEach(roadTypes => {
+        roadTypes.forEach(rt => allRoadTypes.add(rt));
+    });
+
+    setAvailableRoads(Array.from(allRoadTypes).sort());
+    setIsFetchingRoads(false);
+  }, [readOnly, showRoadTypes, fetchRoadsForPolygon]);
 
 
   const cleanup = React.useCallback(() => {
@@ -455,88 +454,92 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
       drawRef.current = draw;
       setIsDrawReady(true);
       
-      map.on('draw.create', (e: { features: turf.Feature[] }) => {
+      const onDrawAction = (e: { features: turf.Feature[], type: string }) => {
         const drawInstance = drawRef.current;
         if (!drawInstance) return;
 
-        if (isBulkDeletingRef.current) {
-            const editId = editingFeatureIdRef.current;
-            if (!editId) return;
+        if (e.type === 'draw.create') {
+             if (isBulkDeletingRef.current) {
+                const editId = editingFeatureIdRef.current;
+                if (!editId) return;
 
-            const deletionArea = e.features[0];
-            drawInstance.delete(deletionArea.id as string);
+                const deletionArea = e.features[0];
+                drawInstance.delete(deletionArea.id as string);
 
-            const targetFeature = drawInstance.get(editId);
-            if (targetFeature && targetFeature.geometry.type === 'Polygon') {
-                const newCoordinates = targetFeature.geometry.coordinates.map(ring => {
-                    const filteredRing = ring.filter(point => !turf.booleanPointInPolygon(point, deletionArea.geometry as any));
-                    if (filteredRing.length < 3) return ring; // Revert if ring becomes invalid
-                    
-                    const firstPointStr = JSON.stringify(filteredRing[0]);
-                    const lastPointStr = JSON.stringify(filteredRing[filteredRing.length - 1]);
-                    if (firstPointStr !== lastPointStr) {
-                        filteredRing.push(filteredRing[0]);
-                    }
-                    if (filteredRing.length < 4) return ring; // Revert if final ring is invalid
-                    return filteredRing;
-                });
-                
-                targetFeature.geometry.coordinates = newCoordinates;
-                drawInstance.add(targetFeature as any);
-            }
-            
-            setIsBulkDeleting(false);
-            setEditingFeatureId(null);
-            drawInstance.changeMode('direct_select', { featureId: editId });
-            return;
-        }
-
-        if (isFillModeRef.current) {
-            const newBoundary = e.features[0] as turf.Feature<turf.Polygon | turf.MultiPolygon>;
-            if (!newBoundary) return;
-            drawInstance.delete(newBoundary.id as string);
-
-            const editingPolygons = drawInstance.getAll().features.filter(f => f.geometry.type.includes('Polygon')) as turf.Feature<turf.Polygon | turf.MultiPolygon>[];
-
-            let referencePolygons: turf.Feature<turf.Polygon | turf.MultiPolygon>[] = [];
-            const refAreaIds = referenceAreaIdsRef.current;
-            const refAreas = allAreas.filter(a => refAreaIds.includes(a.id) && a.type === 'wijk');
-
-            refAreas.forEach(refArea => {
-              if (refArea?.subGebieden) {
-                  try {
-                      const refFeatures = JSON.parse(refArea.subGebieden);
-                      if (Array.isArray(refFeatures)) {
-                          referencePolygons.push(...refFeatures.filter(f => f.geometry.type.includes('Polygon')));
-                      }
-                  } catch (err) { console.error("Could not parse reference area GeoJSON", err); }
-              }
-            });
-
-
-            const allObstacles = [...editingPolygons, ...referencePolygons];
-            let filledArea: turf.Feature<turf.Polygon | turf.MultiPolygon> | null = newBoundary;
-            
-            for (const obstacle of allObstacles) {
-                if (filledArea) {
-                    try {
-                        if (obstacle?.geometry && turf.booleanIntersects(filledArea, obstacle)) {
-                            filledArea = turf.difference(filledArea, obstacle);
+                const targetFeature = drawInstance.get(editId);
+                if (targetFeature && targetFeature.geometry.type === 'Polygon') {
+                    const newCoordinates = targetFeature.geometry.coordinates.map(ring => {
+                        const filteredRing = ring.filter(point => !turf.booleanPointInPolygon(point, deletionArea.geometry as any));
+                        if (filteredRing.length < 3) return ring;
+                        
+                        const firstPointStr = JSON.stringify(filteredRing[0]);
+                        const lastPointStr = JSON.stringify(filteredRing[filteredRing.length - 1]);
+                        if (firstPointStr !== lastPointStr) {
+                            filteredRing.push(filteredRing[0]);
                         }
-                    } catch (err) {
-                        console.error("Error during turf.difference:", err);
+                        if (filteredRing.length < 4) return ring;
+                        return filteredRing;
+                    });
+                    
+                    targetFeature.geometry.coordinates = newCoordinates;
+                    drawInstance.add(targetFeature as any);
+                }
+                
+                setIsBulkDeleting(false);
+                setEditingFeatureId(null);
+                drawInstance.changeMode('direct_select', { featureId: editId });
+            } else if (isFillModeRef.current) {
+                const newBoundary = e.features[0] as turf.Feature<turf.Polygon | turf.MultiPolygon>;
+                if (!newBoundary) return;
+                drawInstance.delete(newBoundary.id as string);
+
+                const editingPolygons = drawInstance.getAll().features.filter(f => f.geometry.type.includes('Polygon')) as turf.Feature<turf.Polygon | turf.MultiPolygon>[];
+
+                let referencePolygons: turf.Feature<turf.Polygon | turf.MultiPolygon>[] = [];
+                const refAreaIds = referenceAreaIdsRef.current;
+                const refAreas = allAreas.filter(a => refAreaIds.includes(a.id) && a.type === 'wijk');
+
+                refAreas.forEach(refArea => {
+                  if (refArea?.subGebieden) {
+                      try {
+                          const refFeatures = JSON.parse(refArea.subGebieden);
+                          if (Array.isArray(refFeatures)) {
+                              referencePolygons.push(...refFeatures.filter(f => f.geometry.type.includes('Polygon')));
+                          }
+                      } catch (err) { console.error("Could not parse reference area GeoJSON", err); }
+                  }
+                });
+
+                const allObstacles = [...editingPolygons, ...referencePolygons];
+                let filledArea: turf.Feature<turf.Polygon | turf.MultiPolygon> | null = newBoundary;
+                
+                for (const obstacle of allObstacles) {
+                    if (filledArea) {
+                        try {
+                            if (obstacle?.geometry && turf.booleanIntersects(filledArea, obstacle)) {
+                                filledArea = turf.difference(filledArea, obstacle);
+                            }
+                        } catch (err) {
+                            console.error("Error during turf.difference:", err);
+                        }
                     }
                 }
-            }
 
-            if (filledArea?.geometry) {
-              drawInstance.add(filledArea as any);
+                if (filledArea?.geometry) {
+                  drawInstance.add(filledArea as any);
+                }
+                setIsFillMode(false);
+                drawInstance.changeMode('simple_select');
             }
-            setIsFillMode(false);
-            drawInstance.changeMode('simple_select');
         }
-      });
-
+        
+        fetchAllRoadsForCurrentDrawState();
+      };
+      
+      map.on('draw.create', onDrawAction);
+      map.on('draw.update', onDrawAction);
+      map.on('draw.delete', onDrawAction);
+      
       const onSelectionChange = (e: { features: turf.Feature[] }) => {
         if (readOnly) return;
         const drawInstance = drawRef.current;
@@ -560,20 +563,10 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
 
       map.on('draw.selectionchange', onSelectionChange);
       
-      const onUpdateOrDelete = () => {
-         const draw = drawRef.current;
-         if (!draw) return;
-         const selected = draw.getSelected();
-         const selectedIsPolygon = selected.features.length > 0 && selected.features.every(f => f.geometry.type.includes('Polygon'));
-         setHasPolygonSelection(selectedIsPolygon);
-      };
-      
-      map.on('draw.delete', onUpdateOrDelete);
-      map.on('draw.update', onUpdateOrDelete);
-
       if (geojson && geojson.features.length > 0) {
         initialFeaturesRef.current = geojson.features; // Store initial features
         draw.add(geojson as any);
+        fetchAllRoadsForCurrentDrawState();
 
         const bbox = turf.bbox(geojson);
         if (bbox[0] !== Infinity) {
@@ -589,17 +582,15 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
            }
        }
     }
-  }, [geojson, readOnly, allAreas]);
+  }, [geojson, readOnly, allAreas, fetchAllRoadsForCurrentDrawState]);
   
   const handleMapClick = React.useCallback(async (event: MapLayerMouseEvent) => {
-    // In edit mode, don't trigger reverse geocode if user is drawing or clicking a drawn feature.
     if (!readOnly) {
       const drawMode = drawRef.current?.getMode();
       if (drawMode !== 'simple_select' || event.features?.some(f => f.layer.id.startsWith('gl-draw'))) {
         return;
       }
     }
-     // In read-only mode, prioritize showing wijk name from existing polygons.
     if (readOnly && event.features?.some(f => f.layer.id === 'wijk-polygon-fill')) {
         const wijkFeature = event.features.find(f => f.layer.id === 'wijk-polygon-fill');
         if (wijkFeature?.properties?.wijkNaam) {
@@ -619,7 +610,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
 
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=16` // Zoom 16 for neighborhood level
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=16`
       );
       const data = await response.json();
       
