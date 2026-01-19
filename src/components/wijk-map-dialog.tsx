@@ -157,18 +157,18 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
 
     const fetchRoadsForPolygon = React.useCallback(async (polygon: turf.Feature<turf.Polygon | turf.MultiPolygon>) => {
     try {
-        const bbox = turf.bbox(polygon);
+        const simplified = turf.simplify(polygon, { tolerance: 0.001, highQuality: false });
+        const bbox = turf.bbox(simplified);
         const minX = bbox[0];
         const minY = bbox[1];
         const maxX = bbox[2];
         const maxY = bbox[3];
 
-        // Create a grid of points within the bounding box
         const points = [];
-        const numPointsPerSide = 5; // Sample 5x5 grid -> 25 points
+        const numPointsPerSide = 5; 
         
         if (minX === Infinity || minY === Infinity || maxX === -Infinity || maxY === -Infinity) {
-            return []; // Invalid bbox
+            return [];
         }
 
         for (let i = 0; i < numPointsPerSide; i++) {
@@ -176,42 +176,46 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                 const lon = minX + (maxX - minX) * (i / (numPointsPerSide - 1));
                 const lat = minY + (maxY - minY) * (j / (numPointsPerSide - 1));
                 const point = turf.point([lon, lat]);
-                if (turf.booleanPointInPolygon(point, polygon)) {
+                if (turf.booleanPointInPolygon(point, simplified)) {
                     points.push(point.geometry.coordinates);
                 }
             }
         }
         
         if (points.length === 0) {
-            const center = turf.centroid(polygon);
+            const center = turf.centroid(simplified);
             if (center && center.geometry) {
                 points.push(center.geometry.coordinates);
             }
         }
         
-        if(points.length === 0) return [];
+        if (points.length === 0) return [];
 
-        const multiPoint = turf.multiPoint(points);
-        const tilequeryUrl = `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery.json?access_token=${MAPBOX_TOKEN}&radius=500&limit=50`;
+        const allRoadTypes = new Set<string>();
 
-        const response = await fetch(tilequeryUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(multiPoint.geometry),
+        const promises = points.map(pointCoords => {
+            const [lon, lat] = pointCoords;
+            const tilequeryUrl = `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${lon},${lat}.json?access_token=${MAPBOX_TOKEN}&radius=500&limit=50`;
+            
+            return fetch(tilequeryUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        console.error(`Error from Mapbox Tilequery API for point ${lon},${lat}:`, response.statusText);
+                        return null;
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data) {
+                         data.features
+                            .filter((f: any) => f.properties.layer === 'road' && f.properties.class)
+                            .forEach((f: any) => allRoadTypes.add(f.properties.class));
+                    }
+                });
         });
 
-        if (!response.ok) {
-            console.error('Error from Mapbox Tilequery API:', await response.text());
-            return [];
-        }
-        const data = await response.json();
-        
-        const roadTypes = new Set<string>();
-        data.features
-            .filter((f: any) => f.properties.layer === 'road' && f.properties.class)
-            .forEach((f: any) => roadTypes.add(f.properties.class));
-
-        return Array.from(roadTypes);
+        await Promise.all(promises);
+        return Array.from(allRoadTypes).sort();
 
     } catch (error) {
         console.error('Error fetching road data:', error);
