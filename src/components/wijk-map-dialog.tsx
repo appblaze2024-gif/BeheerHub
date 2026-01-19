@@ -205,61 +205,59 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
 
   const fetchRoadsForPolygon = React.useCallback(async (polygon: turf.Feature<turf.Polygon | turf.MultiPolygon>) => {
     try {
-      const allRoadTypes = new Set<string>();
-  
-      const processSinglePolygon = async (singlePolygon: turf.Feature<turf.Polygon>) => {
-        const polyString = singlePolygon.geometry.coordinates[0].map(p => `${p[1]} ${p[0]}`).join(' ');
-  
-        const overpassQuery = `[out:json];(way(poly: "${polyString}")["highway"];);out tags;`;
+        const allRoadTypes = new Set<string>();
         
-        const overpassUrl = `https://overpass-api.de/api/interpreter`;
-        
-        try {
-          const response = await fetch(overpassUrl, {
-            method: 'POST',
-            body: overpassQuery
-          });
+        const simplifiedPolygon = turf.simplify(polygon, { tolerance: 0.001, highQuality: false });
 
-          if (!response.ok) {
-              console.error(`Error from Overpass API:`, response.status, response.statusText);
-              const errorText = await response.text();
-              console.error('Overpass API error response:', errorText);
-              return;
-          }
-          const data = await response.json();
-  
-          if (data && data.elements) {
-            data.elements.forEach((element: any) => {
-              if (element.type === 'way' && element.tags && element.tags.highway) {
-                allRoadTypes.add(element.tags.highway);
-              }
-            });
-          }
-        } catch (error) {
-          console.error(`Fetch failed for Overpass API:`, error);
-        }
-      };
-  
-      const processGeometry = async (geometry: turf.Polygon | turf.MultiPolygon) => {
-         if (geometry.type === 'Polygon') {
-           const exteriorRing = turf.polygon([geometry.coordinates[0]]);
-           await processSinglePolygon(exteriorRing);
-         } else if (geometry.type === 'MultiPolygon') {
-            for (const polygonCoords of geometry.coordinates) {
-              const singlePolygonFeature = turf.polygon(polygonCoords);
-              await processSinglePolygon(singlePolygonFeature);
+        const processSinglePolygon = async (singlePolygon: turf.Feature<turf.Polygon>) => {
+            const polyString = singlePolygon.geometry.coordinates[0].map(p => `${p[1]} ${p[0]}`).join(' ');
+            const overpassQuery = `[out:json];(way(poly: "${polyString}")["highway"];);out tags;`;
+            const overpassUrl = `https://overpass-api.de/api/interpreter`;
+            
+            try {
+                const response = await fetch(overpassUrl, {
+                    method: 'POST',
+                    body: `data=${encodeURIComponent(overpassQuery)}`
+                });
+                
+                if (!response.ok) {
+                    console.error(`Error from Overpass API:`, response.status, response.statusText);
+                    const errorText = await response.text();
+                    console.error('Overpass API error response:', errorText);
+                    return;
+                }
+                const data = await response.json();
+    
+                if (data && data.elements) {
+                    data.elements.forEach((element: any) => {
+                    if (element.type === 'way' && element.tags && element.tags.highway) {
+                        allRoadTypes.add(element.tags.highway);
+                    }
+                    });
+                }
+            } catch (error) {
+                console.error(`Fetch failed for Overpass API:`, error);
             }
-         }
-      }
-      
-      await processGeometry(polygon.geometry);
-      
-      const filteredRoads = Array.from(allRoadTypes).filter(type => 
-        !['footway', 'cycleway', 'path', 'track', 'service', 'pedestrian', 'steps', 'corridor', 'bridleway', 'proposed', 'construction'].includes(type)
-      );
-  
-      return filteredRoads.sort();
-  
+        };
+
+        const processGeometry = async (geometry: turf.Polygon | turf.MultiPolygon) => {
+            if (geometry.type === 'Polygon') {
+                await processSinglePolygon(turf.polygon(geometry.coordinates));
+            } else if (geometry.type === 'MultiPolygon') {
+                for (const polygonCoords of geometry.coordinates) {
+                    await processSinglePolygon(turf.polygon(polygonCoords));
+                }
+            }
+        };
+        
+        await processGeometry(simplifiedPolygon.geometry);
+        
+        const filteredRoads = Array.from(allRoadTypes).filter(type => 
+            !['footway', 'cycleway', 'path', 'track', 'service', 'pedestrian', 'steps', 'corridor', 'bridleway', 'proposed', 'construction'].includes(type)
+        );
+
+        return filteredRoads.sort();
+
     } catch (error) {
         console.error('Error fetching road data:', error);
         return [];
@@ -282,17 +280,17 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         return;
     }
     
-    // Using a sequential loop instead of Promise.all to be kinder to the API
+    // Using a sequential loop to be kinder to the API
     for (const feature of featuresToProcess) {
         if (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon') {
             const roadTypes = await fetchRoadsForPolygon(feature as turf.Feature<turf.Polygon | turf.MultiPolygon>);
             roadTypes.forEach(rt => allRoadTypes.add(rt));
         }
     }
-
+    
     setAvailableRoads(Array.from(allRoadTypes).sort());
     setIsFetchingRoads(false);
-  }, [readOnly, showRoadTypes, fetchRoadsForPolygon]);
+}, [readOnly, showRoadTypes, fetchRoadsForPolygon]);
 
 
   const cleanup = React.useCallback(() => {
@@ -705,6 +703,9 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         drawRef.current.add(feature as any);
         const [lon, lat] = [parseFloat(suggestion.lon), parseFloat(suggestion.lat)];
         mapRef.current?.getMap().flyTo({ center: [lon, lat], zoom: 13 });
+
+        // Explicitly trigger road type analysis after adding a feature from search.
+        fetchAllRoadsForCurrentDrawState();
     }
   };
   
