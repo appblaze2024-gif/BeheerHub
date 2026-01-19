@@ -254,10 +254,10 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     const allFeatures: turf.Feature<turf.LineString>[] = [];
 
     const processSinglePolygon = async (singlePolygon: turf.Feature<turf.Polygon>) => {
-      const simplifiedPolygon = turf.simplify(singlePolygon, { tolerance: 0.0001, highQuality: false });
+      const simplifiedPolygon = turf.simplify(singlePolygon, { tolerance: 0.0005, highQuality: false });
       const polyString = simplifiedPolygon.geometry.coordinates[0].map(p => `${p[1]} ${p[0]}`).join(' ');
       const overpassQuery = `[out:json][timeout:25];(way(poly: "${polyString}")["highway"];>;);out;`;
-      const overpassUrl = `https://overpass-api.de/api/interpreter`;
+      const overpassUrl = 'https://z.overpass-api.de/api/interpreter';
 
       try {
         const response = await fetch(overpassUrl, {
@@ -340,9 +340,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     
     setAllRoadFeatures(allFeatures);
 
-    const filteredRoads = Array.from(allRoadTypes).filter(type => 
-        !['track', 'service', 'pedestrian', 'steps', 'corridor', 'bridleway', 'proposed', 'construction'].includes(type)
-    );
+    const filteredRoads = Array.from(allRoadTypes);
 
     setAvailableRoads(filteredRoads.sort());
     setIsFetchingRoads(false);
