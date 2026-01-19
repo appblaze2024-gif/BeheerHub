@@ -141,6 +141,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   const [editingFeatureId, setEditingFeatureId] = React.useState<string | null>(null);
   const [referenceAreaIds, setReferenceAreaIds] = React.useState<string[]>([]);
   
+  const [isFetchingRoads, setIsFetchingRoads] = React.useState(false);
   const [availableRoads, setAvailableRoads] = React.useState<string[]>([]);
   const [selectedRoads, setSelectedRoads] = React.useState<string[]>([]);
 
@@ -157,61 +158,68 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
 
   const fetchRoadsForPolygon = React.useCallback(async (polygon: turf.Feature<turf.Polygon | turf.MultiPolygon>) => {
     try {
-        const bbox = turf.bbox(polygon);
-        
+      const allRoadTypes = new Set<string>();
+
+      const processSinglePolygon = async (singlePolygon: turf.Feature<turf.Polygon>) => {
+        const bbox = turf.bbox(singlePolygon);
         if (bbox[0] === Infinity || bbox[1] === Infinity || bbox[2] === -Infinity || bbox[3] === -Infinity) {
-            return [];
+          return;
         }
 
         const [minX, minY, maxX, maxY] = bbox;
         const width = turf.distance([minX, minY], [maxX, minY], { units: 'kilometers' });
         const height = turf.distance([minX, minY], [minX, maxY], { units: 'kilometers' });
-        const largerDim = Math.max(width, height, 0.1); // ensure largerDim is not 0
-        const cellSide = largerDim / 15; // Create a ~15x15 grid
+        const largerDim = Math.max(width, height, 0.1);
+        const cellSide = largerDim / 10; // Use a 10x10 grid - less dense
 
         const grid = turf.pointGrid(bbox, cellSide, { units: 'kilometers' });
-        const pointsInside = turf.pointsWithinPolygon(grid, polygon);
+        const pointsInside = turf.pointsWithinPolygon(grid, singlePolygon);
 
-        const pointsToQuery = pointsInside.features.slice(0, 50); // Limit to 50 points to avoid too many API calls
+        const pointsToQuery = pointsInside.features.slice(0, 30); // Limit points
         
         if (pointsToQuery.length === 0) {
-            const center = turf.centroid(polygon);
+            const center = turf.centroid(singlePolygon);
             if (center && center.geometry) {
                 pointsToQuery.push(center);
             }
         }
         
-        if (pointsToQuery.length === 0) return [];
-
-        const allRoadTypes = new Set<string>();
-
-        const promises = pointsToQuery.map(point => {
+        if (pointsToQuery.length === 0) return;
+        
+        // Process points sequentially to avoid rate limiting
+        for (const point of pointsToQuery) {
+          try {
             const [lon, lat] = point.geometry.coordinates;
-            // The Tilequery API expects lon,lat
-            const tilequeryUrl = `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${lon},${lat}.json?access_token=${MAPBOX_TOKEN}&radius=250&limit=50`;
+            const tilequeryUrl = `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${lon},${lat}.json?access_token=${MAPBOX_TOKEN}&radius=500&limit=50`;
             
-            return fetch(tilequeryUrl)
-                .then(response => {
-                    if (!response.ok) {
-                        console.error(`Error from Mapbox Tilequery API for point ${lon},${lat}:`, response.statusText);
-                        return null;
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data) {
-                         data.features
-                            .filter((f: any) => f.properties.layer === 'road' && f.properties.class)
-                            .forEach((f: any) => allRoadTypes.add(f.properties.class));
-                    }
-                }).catch(error => {
-                    console.error(`Fetch failed for point ${lon},${lat}:`, error);
-                    return null;
-                });
-        });
+            const response = await fetch(tilequeryUrl);
+            if (!response.ok) {
+                console.error(`Error from Mapbox Tilequery API for point ${lon},${lat}:`, response.statusText);
+                continue; // Continue to next point
+            }
+            const data = await response.json();
+            if (data) {
+                 data.features
+                    .filter((f: any) => f.properties.layer === 'road' && f.properties.class)
+                    .forEach((f: any) => allRoadTypes.add(f.properties.class));
+            }
+          } catch (error) {
+            console.error(`Fetch failed for point:`, error);
+            // Don't stop, just log and continue
+          }
+        }
+      };
 
-        await Promise.all(promises);
-        return Array.from(allRoadTypes).sort();
+      if (polygon.geometry.type === 'MultiPolygon') {
+        for (const polygonCoords of polygon.geometry.coordinates) {
+          const singlePolygonFeature = turf.polygon(polygonCoords);
+          await processSinglePolygon(singlePolygonFeature);
+        }
+      } else {
+        await processSinglePolygon(polygon as turf.Feature<turf.Polygon>);
+      }
+      
+      return Array.from(allRoadTypes).sort();
 
     } catch (error) {
         console.error('Error fetching road data:', error);
@@ -273,6 +281,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     }
     
     const fetchAllRoads = async () => {
+        setIsFetchingRoads(true);
         const allRoadTypes = new Set<string>();
         for (const feature of geojson.features) {
             if (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon') {
@@ -281,6 +290,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
             }
         }
         setAvailableRoads(Array.from(allRoadTypes).sort());
+        setIsFetchingRoads(false);
     };
 
     fetchAllRoads();
@@ -878,23 +888,29 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                       </Button>
                   </div>
               </div>
-              {showRoadTypes && availableRoads.length > 0 && !readOnly && (
+              {showRoadTypes && !readOnly && (
                 <div className="space-y-2">
                     <Label className="text-xs font-semibold">Selecteer wegtypes</Label>
-                    <div className="border rounded-md p-2 max-h-32 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                        {availableRoads.map(roadType => (
-                            <div key={roadType} className="flex items-center space-x-2">
-                                <Checkbox
-                                    id={`road-${roadType}`}
-                                    checked={selectedRoads.includes(roadType)}
-                                    onCheckedChange={(checked) => handleRoadTypeChange(roadType, !!checked)}
-                                />
-                                <Label htmlFor={`road-${roadType}`} className="font-normal capitalize text-sm">
-                                    {roadType.replace(/_/g, ' ')}
-                                </Label>
-                            </div>
-                        ))}
-                    </div>
+                    {isFetchingRoads ? (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Wegtypes analyseren...</div>
+                    ) : availableRoads.length > 0 ? (
+                        <div className="border rounded-md p-2 max-h-32 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                            {availableRoads.map(roadType => (
+                                <div key={roadType} className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id={`road-${roadType}`}
+                                        checked={selectedRoads.includes(roadType)}
+                                        onCheckedChange={(checked) => handleRoadTypeChange(roadType, !!checked)}
+                                    />
+                                    <Label htmlFor={`road-${roadType}`} className="font-normal capitalize text-sm">
+                                        {roadType.replace(/_/g, ' ')}
+                                    </Label>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-sm text-muted-foreground">Geen wegtypes gevonden voor dit gebied. Teken een polygoon om te beginnen.</div>
+                    )}
                 </div>
               )}
               {!isDrawReady && <p className='text-xs text-muted-foreground'>Kaart laden...</p>}
