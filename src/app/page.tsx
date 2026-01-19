@@ -25,9 +25,9 @@ function NavCard({ item, color }: { item: MenuItem, color: string }) {
   return (
     <Link href={item.href} passHref>
       <Card className={cn("text-white transition-transform transform hover:-translate-y-1 h-full flex", color)}>
-        <CardContent className="flex flex-1 flex-col items-center justify-center p-4">
-          <item.icon className="h-12 w-12 mb-4" />
-          <h2 className="text-lg font-semibold text-center">{item.label}</h2>
+        <CardContent className="flex flex-1 flex-col items-center justify-center p-6">
+          <item.icon className="h-16 w-16 mb-6" />
+          <h2 className="text-xl font-semibold text-center">{item.label}</h2>
         </CardContent>
       </Card>
     </Link>
@@ -39,7 +39,7 @@ export default function DashboardPage() {
   const gridItems = allMenuItems.filter(item => item.href !== '/');
 
   return (
-    <div className="flex-1 p-6">
+    <div className="flex-1 p-6 h-full">
       <div className="grid h-full grid-cols-5 gap-6">
           {gridItems.map((item, index) => (
             <NavCard key={item.href} item={item} color={cardColors[index % cardColors.length]} />
