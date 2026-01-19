@@ -67,10 +67,18 @@ service cloud.firestore {
       allow update: if isOwner(userId) || hasPermission('users', 'edit');
       allow delete: if false;
 
+      // This rule only covers direct access for the owner.
+      // Admin/supervisor access for specific user's routes is handled by the collection group rule.
       match /routes/{routeId} {
-        allow get, list: if isOwner(userId) || isSuperUser() || isToezichthouder();
+        allow get, list: if isOwner(userId);
         allow create, update, delete: if isOwner(userId) && hasPermission('navigation', 'use');
       }
+    }
+
+    // This rule is specifically for the collectionGroup query, but also allows admins
+    // to get/list routes of specific users directly.
+    match /{path=**}/routes/{routeId} {
+      allow get, list: if isSuperUser() || isToezichthouder();
     }
 
     match /objects/{objectId} {
