@@ -159,68 +159,67 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   const fetchRoadsForPolygon = React.useCallback(async (polygon: turf.Feature<turf.Polygon | turf.MultiPolygon>) => {
     try {
       const allRoadTypes = new Set<string>();
-
+  
       const processSinglePolygon = async (singlePolygon: turf.Feature<turf.Polygon>) => {
-        const bbox = turf.bbox(singlePolygon);
-        if (bbox[0] === Infinity || bbox[1] === Infinity || bbox[2] === -Infinity || bbox[3] === -Infinity) {
-          return;
-        }
-
-        const [minX, minY, maxX, maxY] = bbox;
-        const width = turf.distance([minX, minY], [maxX, minY], { units: 'kilometers' });
-        const height = turf.distance([minX, minY], [minX, maxY], { units: 'kilometers' });
-        const largerDim = Math.max(width, height, 0.1);
-        const cellSide = largerDim / 10; // Use a 10x10 grid - less dense
-
-        const grid = turf.pointGrid(bbox, cellSide, { units: 'kilometers' });
-        const pointsInside = turf.pointsWithinPolygon(grid, singlePolygon);
-
-        const pointsToQuery = pointsInside.features.slice(0, 30); // Limit points
+        // Overpass expects coordinates in `lat lon` order. GeoJSON is `lon lat`.
+        const polyString = singlePolygon.geometry.coordinates[0].map(p => `${p[1]} ${p[0]}`).join(' ');
+  
+        // Overpass QL query to get ways with a 'highway' tag within the polygon
+        const overpassQuery = `
+          [out:json];
+          (
+            way(poly: "${polyString}")["highway"];
+          );
+          out tags;
+        `;
         
-        if (pointsToQuery.length === 0) {
-            const center = turf.centroid(singlePolygon);
-            if (center && center.geometry) {
-                pointsToQuery.push(center);
-            }
-        }
+        const overpassUrl = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(overpassQuery)}`;
         
-        if (pointsToQuery.length === 0) return;
-        
-        // Process points sequentially to avoid rate limiting
-        for (const point of pointsToQuery) {
-          try {
-            const [lon, lat] = point.geometry.coordinates;
-            const tilequeryUrl = `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery/${lon},${lat}.json?access_token=${MAPBOX_TOKEN}&radius=500&limit=50`;
-            
-            const response = await fetch(tilequeryUrl);
-            if (!response.ok) {
-                console.error(`Error from Mapbox Tilequery API for point ${lon},${lat}:`, response.statusText);
-                continue; // Continue to next point
-            }
-            const data = await response.json();
-            if (data) {
-                 data.features
-                    .filter((f: any) => f.properties.layer === 'road' && f.properties.class)
-                    .forEach((f: any) => allRoadTypes.add(f.properties.class));
-            }
-          } catch (error) {
-            console.error(`Fetch failed for point:`, error);
-            // Don't stop, just log and continue
+        try {
+          const response = await fetch(overpassUrl);
+          if (!response.ok) {
+              console.error(`Error from Overpass API:`, response.status, response.statusText);
+              return;
           }
+          const data = await response.json();
+  
+          if (data && data.elements) {
+            data.elements.forEach((element: any) => {
+              if (element.type === 'way' && element.tags && element.tags.highway) {
+                allRoadTypes.add(element.tags.highway);
+              }
+            });
+          }
+        } catch (error) {
+          console.error(`Fetch failed for Overpass API:`, error);
         }
       };
-
-      if (polygon.geometry.type === 'MultiPolygon') {
-        for (const polygonCoords of polygon.geometry.coordinates) {
-          const singlePolygonFeature = turf.polygon(polygonCoords);
-          await processSinglePolygon(singlePolygonFeature);
-        }
-      } else {
-        await processSinglePolygon(polygon as turf.Feature<turf.Polygon>);
+  
+      // A single polygon can be made of multiple rings (e.g. with holes). The first ring is the exterior.
+      // And a MultiPolygon is an array of Polygons.
+      const processGeometry = async (geometry: turf.Polygon | turf.MultiPolygon) => {
+         if (geometry.type === 'Polygon') {
+           // We only consider the outer ring for the query. Holes are ignored for simplicity.
+           const exteriorRing = turf.polygon([geometry.coordinates[0]]);
+           await processSinglePolygon(exteriorRing);
+         } else if (geometry.type === 'MultiPolygon') {
+            for (const polygonCoords of geometry.coordinates) {
+              // Each part of the multipolygon is a valid polygon to query
+              const singlePolygonFeature = turf.polygon(polygonCoords);
+              await processSinglePolygon(singlePolygonFeature);
+            }
+         }
       }
       
-      return Array.from(allRoadTypes).sort();
-
+      await processGeometry(polygon.geometry);
+      
+      // Filter out some common non-road highway types that are less relevant for sweeping
+      const filteredRoads = Array.from(allRoadTypes).filter(type => 
+        !['footway', 'cycleway', 'path', 'track', 'service', 'pedestrian', 'steps', 'corridor', 'bridleway', 'proposed', 'construction'].includes(type)
+      );
+  
+      return filteredRoads.sort();
+  
     } catch (error) {
         console.error('Error fetching road data:', error);
         return [];
