@@ -1358,8 +1358,8 @@ export default function Page() {
 
         {isNavigating && (
             <div className="absolute bottom-4 left-0 right-0 z-10 px-4">
-              <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-4">
-                <div className="flex justify-start">
+              <div className="flex justify-between items-end gap-4">
+                <div>
                     <Button
                     variant="destructive"
                     className="rounded-full h-16 w-16 p-0 flex items-center justify-center shadow-lg"
@@ -1369,27 +1369,23 @@ export default function Page() {
                     </Button>
                 </div>
                 
-                <div className="flex justify-center">
-                    <div className="bg-card/90 backdrop-blur-sm p-3 rounded-xl shadow-lg flex items-center justify-center gap-4 text-card-foreground">
-                        <div className="flex items-center gap-2">
-                            <Clock className="h-5 w-5" />
-                            <span className="font-bold text-lg">{currentTime}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                            <RouteIcon className="h-5 w-5" />
-                            <span>
-                                {remainingDistance !== null ? formatDistance(remainingDistance) : routeInfoRef.current ? formatDistance(routeInfoRef.current.distance) : '-'}
-                            </span>
-                        </div>
-                        <div className="text-muted-foreground text-sm">
-                            {routeInfoRef.current
-                            ? `${formatDuration(routeInfoRef.current.duration)} aankomst`
-                            : '-'}
-                        </div>
+                <div className="bg-card/90 backdrop-blur-sm p-4 rounded-xl shadow-lg flex items-center justify-center gap-6 text-card-foreground">
+                    <div className="flex items-center gap-2">
+                        <Clock className="h-5 w-5" />
+                        <span className="font-bold text-lg">{currentTime}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                        <RouteIcon className="h-5 w-5" />
+                        <span>
+                            {remainingDistance !== null ? formatDistance(remainingDistance) : routeInfoRef.current ? formatDistance(routeInfoRef.current.distance) : '-'}
+                        </span>
+                    </div>
+                    <div className="text-muted-foreground text-sm">
+                        {routeInfoRef.current
+                        ? `${formatDuration(routeInfoRef.current.duration)} aankomst`
+                        : '-'}
                     </div>
                 </div>
-
-                <div className="flex justify-end"></div>
               </div>
             </div>
         )}
