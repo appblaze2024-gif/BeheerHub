@@ -26,8 +26,8 @@ function NavCard({ item, color }: { item: MenuItem, color: string }) {
     <Link href={item.href} passHref>
       <Card className={cn("text-white transition-transform transform hover:-translate-y-1 h-full flex", color)}>
         <CardContent className="flex flex-1 flex-col items-center justify-center p-4">
-          <item.icon className="h-10 w-10 mb-3" />
-          <h2 className="text-base font-semibold text-center">{item.label}</h2>
+          <item.icon className="h-12 w-12 mb-4" />
+          <h2 className="text-lg font-semibold text-center">{item.label}</h2>
         </CardContent>
       </Card>
     </Link>
