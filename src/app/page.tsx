@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from 'next/link';
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
-import { useProfile } from "@/firebase/profile-provider";
 import { allMenuItems, type MenuItem } from "@/lib/menu-config";
 import { cn } from "@/lib/utils";
 
@@ -37,26 +36,8 @@ function NavCard({ item, color }: { item: MenuItem, color: string }) {
 }
 
 export default function DashboardPage() {
-  const { profile, isLoading: isProfileLoading } = useProfile();
-
-  const menuItems = React.useMemo(() => {
-    if (isProfileLoading) return [];
-    
-    const isSuperUser = profile?.role === 'Super admin';
-    const permissions = profile?.permissions || {};
-
-    return allMenuItems.filter(item => {
-      if (item.href === '/') return true;
-      if (isSuperUser) return true;
-      if (!item.module) return true;
-      const modulePermissions = permissions[item.module];
-      if (!modulePermissions) return false;
-      return !!modulePermissions.view || !!modulePermissions.use;
-    });
-  }, [profile, isProfileLoading]);
-
-  // Remove dashboard from grid
-  const gridItems = menuItems.filter(item => item.href !== '/');
+  // Show all menu items on the dashboard, permissions are handled on the pages themselves.
+  const gridItems = allMenuItems.filter(item => item.href !== '/');
 
   return (
     <div className="flex flex-col flex-1 p-6 min-h-0">
