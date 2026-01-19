@@ -214,48 +214,6 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     }
   }, [open, wijk, showRoadTypes]);
 
-  const fetchAllRoadsForCurrentDrawState = React.useCallback(async () => {
-    if (readOnly || !showRoadTypes || !drawRef.current) {
-        setAllRoadFeatures([]);
-        setAvailableRoads([]);
-        return;
-    }
-
-    setIsFetchingRoads(true);
-    const allFeatures: turf.Feature<turf.LineString>[] = [];
-    const allRoadTypes = new Set<string>();
-    const featuresToProcess = drawRef.current.getAll().features;
-    
-    if (featuresToProcess.length === 0) {
-        setAllRoadFeatures([]);
-        setAvailableRoads([]);
-        setIsFetchingRoads(false);
-        return;
-    }
-
-    for (const feature of featuresToProcess) {
-        if (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon') {
-            const roadFeatures = await fetchRoadsForPolygon(feature as turf.Feature<turf.Polygon | turf.MultiPolygon>);
-            roadFeatures.forEach(rf => {
-                allFeatures.push(rf);
-                if (rf.properties?.highway) {
-                    allRoadTypes.add(rf.properties.highway);
-                }
-            });
-        }
-    }
-    
-    setAllRoadFeatures(allFeatures);
-
-    const filteredRoads = Array.from(allRoadTypes).filter(type => 
-        !['footway', 'cycleway', 'path', 'track', 'service', 'pedestrian', 'steps', 'corridor', 'bridleway', 'proposed', 'construction'].includes(type)
-    );
-
-    setAvailableRoads(filteredRoads.sort());
-    setIsFetchingRoads(false);
-  }, [readOnly, showRoadTypes, fetchRoadsForPolygon]);
-
-
   const fetchRoadsForPolygon = React.useCallback(async (polygon: turf.Feature<turf.Polygon | turf.MultiPolygon>): Promise<turf.Feature<turf.LineString>[]> => {
     try {
       const allFeatures: turf.Feature<turf.LineString>[] = [];
@@ -321,6 +279,48 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         return [];
     }
   }, []);
+
+  const fetchAllRoadsForCurrentDrawState = React.useCallback(async () => {
+    if (readOnly || !showRoadTypes || !drawRef.current) {
+        setAllRoadFeatures([]);
+        setAvailableRoads([]);
+        return;
+    }
+
+    setIsFetchingRoads(true);
+    const allFeatures: turf.Feature<turf.LineString>[] = [];
+    const allRoadTypes = new Set<string>();
+    const featuresToProcess = drawRef.current.getAll().features;
+    
+    if (featuresToProcess.length === 0) {
+        setAllRoadFeatures([]);
+        setAvailableRoads([]);
+        setIsFetchingRoads(false);
+        return;
+    }
+
+    for (const feature of featuresToProcess) {
+        if (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon') {
+            const roadFeatures = await fetchRoadsForPolygon(feature as turf.Feature<turf.Polygon | turf.MultiPolygon>);
+            roadFeatures.forEach(rf => {
+                allFeatures.push(rf);
+                if (rf.properties?.highway) {
+                    allRoadTypes.add(rf.properties.highway);
+                }
+            });
+        }
+    }
+    
+    setAllRoadFeatures(allFeatures);
+
+    const filteredRoads = Array.from(allRoadTypes).filter(type => 
+        !['footway', 'cycleway', 'path', 'track', 'service', 'pedestrian', 'steps', 'corridor', 'bridleway', 'proposed', 'construction'].includes(type)
+    );
+
+    setAvailableRoads(filteredRoads.sort());
+    setIsFetchingRoads(false);
+  }, [readOnly, showRoadTypes, fetchRoadsForPolygon]);
+
 
   const cleanup = React.useCallback(() => {
     if (drawRef.current && mapRef.current?.getMap()?.isStyleLoaded()) {
