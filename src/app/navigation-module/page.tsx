@@ -80,6 +80,7 @@ interface Wijk {
   naam: string;
   locatie: string;
   subGebieden: string;
+  roadTypes?: string[];
 };
 
 type Prullenbakkenroute = Wijk;
@@ -216,6 +217,8 @@ export default function Page() {
   const currentInstructionIndexRef = React.useRef(0);
   
   const [displayedRoute, setDisplayedRoute] = React.useState<any>(null);
+  const [routeRoads, setRouteRoads] = React.useState<turf.FeatureCollection<turf.LineString> | null>(null);
+  const [isFetchingRoads, setIsFetchingRoads] = React.useState(false);
 
   const isSuperUser = profile?.role === 'Super admin';
 
@@ -568,6 +571,110 @@ export default function Page() {
         setSkippedObjects([]);
     }
   }, [searchParams, userPosition, calculateRoute, setIsHeaderVisible, isNavigating]);
+
+  React.useEffect(() => {
+    const fetchRouteRoads = async () => {
+        if (!selectedRoute || !selectedRoute.subGebieden || !selectedRoute.roadTypes?.length) {
+            setRouteRoads(null);
+            return;
+        }
+      
+        setIsFetchingRoads(true);
+      
+        try {
+            const polygons = JSON.parse(selectedRoute.subGebieden) as turf.Feature<turf.Polygon>[];
+            if (!polygons || polygons.length === 0) {
+                setRouteRoads(null);
+                setIsFetchingRoads(false);
+                return;
+            }
+
+            const roadTypesQueryPart = selectedRoute.roadTypes.join('|');
+            const polygonFeatures = turf.featureCollection(polygons);
+            const bbox = turf.bbox(polygonFeatures);
+            
+            const overpassQuery = `
+                [out:json][timeout:90];
+                (
+                    way["highway"~"${roadTypesQueryPart}"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+                );
+                (._;>;);
+                out geom;
+            `;
+
+            const overpassUrl = 'https://overpass.kumi.systems/api/interpreter';
+            const response = await fetch(overpassUrl, {
+                method: 'POST',
+                body: `data=${encodeURIComponent(overpassQuery)}`,
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error("Overpass API error:", errorText)
+                throw new Error(`Overpass API failed with status ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            const allRoadsInBbox = turf.featureCollection(data.elements
+                .filter((el: any) => el.type === 'way' && el.geometry)
+                .map((el: any) => turf.lineString(el.geometry.map((node: any) => [node.lon, node.lat]), el.tags))
+            );
+
+            let unionPolygon: turf.Feature<turf.Polygon | turf.MultiPolygon> | null = null;
+            if (polygons.length > 0) {
+                try {
+                    const validPolygons = polygons.filter(p => p && p.geometry && p.geometry.coordinates);
+                    if (validPolygons.length > 0) {
+                      unionPolygon = turf.union(...validPolygons as any);
+                    }
+                } catch (e) {
+                    console.error("Error creating union polygon, using individual polygons.", e);
+                }
+            }
+
+            if (!unionPolygon) {
+                 setRouteRoads(null);
+                 setIsFetchingRoads(false);
+                 return;
+            }
+
+            const clippedRoadFeatures: turf.Feature<turf.LineString | turf.MultiLineString>[] = [];
+            allRoadsInBbox.features.forEach(road => {
+                try {
+                    const intersection = turf.intersect(road as any, unionPolygon!);
+                    if (intersection) {
+                        if (intersection.geometry.type === 'LineString' || intersection.geometry.type === 'MultiLineString') {
+                            clippedRoadFeatures.push(intersection as turf.Feature<turf.LineString | turf.MultiLineString>);
+                        }
+                    }
+                } catch (e) {
+                    // console.error("Error intersecting road with polygon", e);
+                }
+            });
+            
+            const finalLineStrings = clippedRoadFeatures.flatMap(feature => {
+                if (feature.geometry.type === 'LineString') {
+                    return [feature as turf.Feature<turf.LineString>];
+                }
+                if (feature.geometry.type === 'MultiLineString') {
+                    return feature.geometry.coordinates.map(coords => turf.lineString(coords, feature.properties));
+                }
+                return [];
+            });
+
+            setRouteRoads(turf.featureCollection(finalLineStrings));
+            
+        } catch (error) {
+            console.error("Failed to fetch or process route roads:", error);
+            setRouteRoads(null);
+        } finally {
+            setIsFetchingRoads(false);
+        }
+    };
+
+    fetchRouteRoads();
+  }, [selectedRoute]);
 
 
   const getMarkerColor = (objectId: string): string => {
@@ -1279,6 +1386,15 @@ export default function Page() {
                 </div>
             </div>
         )}
+        
+        {isFetchingRoads && (
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 bg-card/80 p-4 rounded-lg shadow-lg">
+                <div className="flex items-center gap-2">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>Wegen laden...</span>
+                </div>
+            </div>
+        )}
 
         {isSpectatorMode && spectatorRoute && (
           <>
@@ -1517,6 +1633,20 @@ export default function Page() {
           {displayedRoute && (
             <Source id="route" type="geojson" data={displayedRoute}>
               <Layer {...routeLayer} />
+            </Source>
+          )}
+
+          {routeRoads && !isNavigating && (
+            <Source id="route-roads" type="geojson" data={routeRoads}>
+                <Layer 
+                    id="route-roads-layer"
+                    type="line"
+                    paint={{
+                        'line-color': '#0000ff', // blue
+                        'line-width': 4,
+                        'line-opacity': 0.7
+                    }}
+                />
             </Source>
           )}
         </MapGL>

@@ -45,7 +45,7 @@ interface WijkMapDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   wijk: AreaLike | null;
-  onSave: (wijkId: string, coordinates: string, roadTypes: string[]) => void;
+  onSave: (wijkId: string, coordinates: string, roadTypes?: string[]) => Promise<void>;
   readOnly?: boolean;
   allAreas?: any[];
   showRoadTypes?: boolean;
@@ -140,10 +140,8 @@ const roadTypeTranslations: { [key: string]: string } = {
     living_street: 'Woonerf',
     motorway: 'Snelweg',
     motorway_link: 'Verbindingsweg (snelweg)',
-    platform: 'Platform',
     primary: 'Primaire weg',
     primary_link: 'Verbindingsweg (primair)',
-    raceway: 'Racebaan',
     residential: 'Woonstraat',
     secondary: 'Secundaire weg',
     secondary_link: 'Verbindingsweg (secundair)',
@@ -158,13 +156,7 @@ const roadTypeTranslations: { [key: string]: string } = {
     footway: 'Voetpad',
     cycleway: 'Fietspad',
     path: 'Pad',
-    track: 'Spoor',
     pedestrian: 'Voetgangersgebied',
-    steps: 'Trappen',
-    corridor: 'Corridor',
-    bridleway: 'Ruiterpad',
-    proposed: 'Gepland',
-    construction: 'In aanbouw'
 };
 
 const getTranslatedRoadType = (type: string) => {
@@ -711,10 +703,10 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   }, [readOnly]);
 
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (drawRef.current && wijk) {
       const data = drawRef.current.getAll();
-      onSave(wijk.id, JSON.stringify(data.features), selectedRoads);
+      await onSave(wijk.id, JSON.stringify(data.features), selectedRoads);
       onOpenChange(false);
     }
   };

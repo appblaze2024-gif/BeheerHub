@@ -589,12 +589,16 @@ function WijkenTab({
   wijken,
   setCurrentProject,
   allAreas,
-  canEdit
+  canEdit,
+  projectId,
+  firestore
 }: {
   wijken: Wijk[];
   setCurrentProject: React.Dispatch<React.SetStateAction<Project>>;
   allAreas: any[];
   canEdit: boolean;
+  projectId?: string;
+  firestore: any;
 }) {
   const [mapWijk, setMapWijk] = React.useState<Wijk | null>(null);
 
@@ -636,13 +640,14 @@ function WijkenTab({
     setWijken(prev => (prev || []).map((w) => (w.id === id ? { ...w, [field]: value } : w)));
   };
   
-  const handleSaveCoordinates = (wijkId: string, coordinates: string) => {
-    setCurrentProject(prevProject => ({
-      ...prevProject,
-      wijken: (prevProject.wijken || []).map(w => 
-        w.id === wijkId ? { ...w, subGebieden: coordinates } : w
-      ),
-    }));
+  const handleSaveCoordinates = async (wijkId: string, coordinates: string) => {
+    if (!firestore || !projectId) return;
+    const updatedWijken = (wijken || []).map(w => 
+      w.id === wijkId ? { ...w, subGebieden: coordinates } : w
+    );
+    const projectRef = doc(firestore, 'projects', projectId);
+    await updateDocumentNonBlocking(projectRef, { wijken: updatedWijken });
+    setCurrentProject(prev => ({ ...prev, wijken: updatedWijken }));
   };
 
   const handleCopyToVeegroutes = (wijkToCopy: Wijk) => {
@@ -726,7 +731,7 @@ function WijkenTab({
           open={!!mapWijk}
           onOpenChange={(open) => !open && setMapWijk(null)}
           wijk={mapWijk}
-          onSave={(id, coords) => handleSaveCoordinates(id, coords)}
+          onSave={handleSaveCoordinates}
           allAreas={allAreas}
           readOnly={!canEdit}
           showRoadTypes={false}
@@ -740,12 +745,16 @@ function VeegroutesTab({
   veegroutes,
   setCurrentProject,
   allAreas,
-  canEdit
+  canEdit,
+  projectId,
+  firestore
 }: {
   veegroutes: Veegroute[];
   setCurrentProject: React.Dispatch<React.SetStateAction<Project>>;
   allAreas: any[];
   canEdit: boolean;
+  projectId?: string;
+  firestore: any;
 }) {
   const [mapRoute, setMapRoute] = React.useState<Veegroute | null>(null);
 
@@ -788,13 +797,14 @@ function VeegroutesTab({
     setVeegroutes(prev => (prev || []).map((r) => (r.id === id ? { ...r, [field]: value } : r)));
   };
   
-  const handleSaveCoordinates = (routeId: string, coordinates: string, roadTypes: string[]) => {
-    setCurrentProject(prevProject => ({
-      ...prevProject,
-      veegroutes: (prevProject.veegroutes || []).map(r =>
-        r.id === routeId ? { ...r, subGebieden: coordinates, roadTypes: roadTypes } : r
-      ),
-    }));
+  const handleSaveCoordinates = async (routeId: string, coordinates: string, roadTypes: string[]) => {
+    if (!firestore || !projectId) return;
+    const updatedVeegroutes = (veegroutes || []).map(r =>
+      r.id === routeId ? { ...r, subGebieden: coordinates, roadTypes: roadTypes } : r
+    );
+    const projectRef = doc(firestore, 'projects', projectId);
+    await updateDocumentNonBlocking(projectRef, { veegroutes: updatedVeegroutes });
+    setCurrentProject(prev => ({ ...prev, veegroutes: updatedVeegroutes }));
   };
 
   return (
@@ -844,12 +854,16 @@ function PrullenbakkenroutesTab({
   prullenbakkenroutes,
   setCurrentProject,
   allAreas,
-  canEdit
+  canEdit,
+  projectId,
+  firestore
 }: {
   prullenbakkenroutes: Prullenbakkenroute[];
   setCurrentProject: React.Dispatch<React.SetStateAction<Project>>;
   allAreas: any[],
   canEdit: boolean;
+  projectId?: string;
+  firestore: any;
 }) {
   const [mapRoute, setMapRoute] = React.useState<Prullenbakkenroute | null>(null);
 
@@ -891,13 +905,14 @@ function PrullenbakkenroutesTab({
     setPrullenbakkenroutes(prev => (prev || []).map((r) => (r.id === id ? { ...r, [field]: value } : r)));
   };
   
-  const handleSaveCoordinates = (routeId: string, coordinates: string) => {
-    setCurrentProject(prevProject => ({
-      ...prevProject,
-      prullenbakkenroutes: (prevProject.prullenbakkenroutes || []).map(r =>
-        r.id === routeId ? { ...r, subGebieden: coordinates } : r
-      ),
-    }));
+  const handleSaveCoordinates = async (routeId: string, coordinates: string) => {
+    if (!firestore || !projectId) return;
+    const updatedRoutes = (prullenbakkenroutes || []).map(r =>
+      r.id === routeId ? { ...r, subGebieden: coordinates } : r
+    );
+    const projectRef = doc(firestore, 'projects', projectId);
+    await updateDocumentNonBlocking(projectRef, { prullenbakkenroutes: updatedRoutes });
+    setCurrentProject(prev => ({ ...prev, prullenbakkenroutes: updatedRoutes }));
   };
 
   return (
@@ -933,7 +948,7 @@ function PrullenbakkenroutesTab({
           open={!!mapRoute}
           onOpenChange={(open) => !open && setMapRoute(null)}
           wijk={mapRoute}
-          onSave={(id, coords) => handleSaveCoordinates(id, coords)}
+          onSave={handleSaveCoordinates}
           allAreas={allAreas}
           readOnly={!canEdit}
           showRoadTypes={false}
@@ -1230,13 +1245,13 @@ export default function ProjectsPage() {
           <BestandenTab projectId={selectedProjectId} canEdit={canEdit}/>
         </TabsContent>
         <TabsContent value="wijken" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
-          <WijkenTab wijken={currentProject.wijken || []} setCurrentProject={setCurrentProject} allAreas={allAreas} canEdit={canEdit}/>
+          <WijkenTab wijken={currentProject.wijken || []} setCurrentProject={setCurrentProject} allAreas={allAreas} canEdit={canEdit} projectId={currentProject.id} firestore={firestore}/>
         </TabsContent>
         <TabsContent value="veegroutes" className="flex-1 overflow-y-auto p-6">
-          <VeegroutesTab veegroutes={currentProject.veegroutes || []} setCurrentProject={setCurrentProject} allAreas={allAreas} canEdit={canEdit}/>
+          <VeegroutesTab veegroutes={currentProject.veegroutes || []} setCurrentProject={setCurrentProject} allAreas={allAreas} canEdit={canEdit} projectId={currentProject.id} firestore={firestore}/>
         </TabsContent>
         <TabsContent value="prullenbakkenroutes" className="flex-1 overflow-y-auto p-6">
-          <PrullenbakkenroutesTab prullenbakkenroutes={currentProject.prullenbakkenroutes || []} setCurrentProject={setCurrentProject} allAreas={allAreas} canEdit={canEdit}/>
+          <PrullenbakkenroutesTab prullenbakkenroutes={currentProject.prullenbakkenroutes || []} setCurrentProject={setCurrentProject} allAreas={allAreas} canEdit={canEdit} projectId={currentProject.id} firestore={firestore}/>
         </TabsContent>
       </Tabs>
       
