@@ -104,6 +104,16 @@ const referencePolygonOutlineLayer: LineLayer = {
     },
 };
 
+const selectedRoadsLayerStyle: LineLayer = {
+    id: 'selected-roads-layer',
+    type: 'line',
+    paint: {
+        'line-color': '#FF00FF', // Bright magenta
+        'line-width': 3,
+        'line-opacity': 0.8
+    },
+  };
+
 
 const polygonLabelLayer: SymbolLayer = {
   id: 'wijk-polygon-labels',
@@ -144,6 +154,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   const [isFetchingRoads, setIsFetchingRoads] = React.useState(false);
   const [availableRoads, setAvailableRoads] = React.useState<string[]>([]);
   const [selectedRoads, setSelectedRoads] = React.useState<string[]>([]);
+  const [allRoadFeatures, setAllRoadFeatures] = React.useState<turf.Feature<turf.LineString>[]>([]);
 
   const isFillModeRef = React.useRef(isFillMode);
   isFillModeRef.current = isFillMode;
@@ -203,60 +214,65 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     }
   }, [open, wijk, showRoadTypes]);
 
-  const fetchRoadsForPolygon = React.useCallback(async (polygon: turf.Feature<turf.Polygon | turf.MultiPolygon>) => {
+ const fetchRoadsForPolygon = React.useCallback(async (polygon: turf.Feature<turf.Polygon | turf.MultiPolygon>): Promise<turf.Feature<turf.LineString>[]> => {
     try {
-        const allRoadTypes = new Set<string>();
-        
-        const simplifiedPolygon = turf.simplify(polygon, { tolerance: 0.001, highQuality: false });
+      const allFeatures: turf.Feature<turf.LineString>[] = [];
 
-        const processSinglePolygon = async (singlePolygon: turf.Feature<turf.Polygon>) => {
-            const polyString = singlePolygon.geometry.coordinates[0].map(p => `${p[1]} ${p[0]}`).join(' ');
-            const overpassQuery = `[out:json];(way(poly: "${polyString}")["highway"];);out tags;`;
-            const overpassUrl = `https://overpass-api.de/api/interpreter`;
-            
-            try {
-                const response = await fetch(overpassUrl, {
-                    method: 'POST',
-                    body: `data=${encodeURIComponent(overpassQuery)}`
-                });
-                
-                if (!response.ok) {
-                    console.error(`Error from Overpass API:`, response.status, response.statusText);
-                    const errorText = await response.text();
-                    console.error('Overpass API error response:', errorText);
-                    return;
-                }
-                const data = await response.json();
-    
-                if (data && data.elements) {
-                    data.elements.forEach((element: any) => {
-                    if (element.type === 'way' && element.tags && element.tags.highway) {
-                        allRoadTypes.add(element.tags.highway);
-                    }
-                    });
-                }
-            } catch (error) {
-                console.error(`Fetch failed for Overpass API:`, error);
-            }
-        };
-
-        const processGeometry = async (geometry: turf.Polygon | turf.MultiPolygon) => {
-            if (geometry.type === 'Polygon') {
-                await processSinglePolygon(turf.polygon(geometry.coordinates));
-            } else if (geometry.type === 'MultiPolygon') {
-                for (const polygonCoords of geometry.coordinates) {
-                    await processSinglePolygon(turf.polygon(polygonCoords));
-                }
-            }
-        };
+      const processSinglePolygon = async (singlePolygon: turf.Feature<turf.Polygon>) => {
+        const polyString = singlePolygon.geometry.coordinates[0].map(p => `${p[1]} ${p[0]}`).join(' ');
         
-        await processGeometry(simplifiedPolygon.geometry);
+        const overpassQuery = `[out:json];(way(poly: "${polyString}")["highway"];>;);out;`;
         
-        const filteredRoads = Array.from(allRoadTypes).filter(type => 
-            !['footway', 'cycleway', 'path', 'track', 'service', 'pedestrian', 'steps', 'corridor', 'bridleway', 'proposed', 'construction'].includes(type)
-        );
+        const overpassUrl = `https://overpass-api.de/api/interpreter`;
 
-        return filteredRoads.sort();
+        try {
+          const response = await fetch(overpassUrl, {
+            method: 'POST',
+            body: `data=${encodeURIComponent(overpassQuery)}`
+          });
+          
+          if (!response.ok) {
+            console.error(`Error from Overpass API:`, response.status, response.statusText);
+            const errorText = await response.text();
+            console.error('Overpass API error response:', errorText);
+            return;
+          }
+          const data = await response.json();
+
+          if (data && data.elements) {
+            const nodes = new Map<number, [number, number]>();
+            data.elements.forEach((element: any) => {
+              if (element.type === 'node') {
+                nodes.set(element.id, [element.lon, element.lat]);
+              }
+            });
+
+            data.elements.forEach((element: any) => {
+              if (element.type === 'way' && element.nodes && element.tags?.highway) {
+                const coordinates = element.nodes.map((nodeId: number) => nodes.get(nodeId)).filter(Boolean) as [number, number][];
+                if (coordinates.length >= 2) {
+                  const feature = turf.lineString(coordinates, { highway: element.tags.highway, id: element.id });
+                  allFeatures.push(feature);
+                }
+              }
+            });
+          }
+        } catch (error) {
+          console.error(`Fetch failed for Overpass API:`, error);
+        }
+      };
+
+      const simplifiedPolygon = turf.simplify(polygon, { tolerance: 0.001, highQuality: false });
+
+      if (simplifiedPolygon.geometry.type === 'Polygon') {
+        await processSinglePolygon(simplifiedPolygon as turf.Feature<turf.Polygon>);
+      } else if (simplifiedPolygon.geometry.type === 'MultiPolygon') {
+        for (const polygonCoords of simplifiedPolygon.geometry.coordinates) {
+          await processSinglePolygon(turf.polygon(polygonCoords));
+        }
+      }
+
+      return allFeatures;
 
     } catch (error) {
         console.error('Error fetching road data:', error);
@@ -266,31 +282,44 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
 
   const fetchAllRoadsForCurrentDrawState = React.useCallback(async () => {
     if (readOnly || !showRoadTypes || !drawRef.current) {
+        setAllRoadFeatures([]);
         setAvailableRoads([]);
         return;
     }
 
     setIsFetchingRoads(true);
+    const allFeatures: turf.Feature<turf.LineString>[] = [];
     const allRoadTypes = new Set<string>();
     const featuresToProcess = drawRef.current.getAll().features;
-
+    
     if (featuresToProcess.length === 0) {
+        setAllRoadFeatures([]);
         setAvailableRoads([]);
         setIsFetchingRoads(false);
         return;
     }
-    
-    // Using a sequential loop to be kinder to the API
+
     for (const feature of featuresToProcess) {
         if (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon') {
-            const roadTypes = await fetchRoadsForPolygon(feature as turf.Feature<turf.Polygon | turf.MultiPolygon>);
-            roadTypes.forEach(rt => allRoadTypes.add(rt));
+            const roadFeatures = await fetchRoadsForPolygon(feature as turf.Feature<turf.Polygon | turf.MultiPolygon>);
+            roadFeatures.forEach(rf => {
+                allFeatures.push(rf);
+                if (rf.properties?.highway) {
+                    allRoadTypes.add(rf.properties.highway);
+                }
+            });
         }
     }
     
-    setAvailableRoads(Array.from(allRoadTypes).sort());
+    setAllRoadFeatures(allFeatures);
+
+    const filteredRoads = Array.from(allRoadTypes).filter(type => 
+        !['footway', 'cycleway', 'path', 'track', 'service', 'pedestrian', 'steps', 'corridor', 'bridleway', 'proposed', 'construction'].includes(type)
+    );
+
+    setAvailableRoads(filteredRoads.sort());
     setIsFetchingRoads(false);
-}, [readOnly, showRoadTypes, fetchRoadsForPolygon]);
+  }, [readOnly, showRoadTypes, fetchRoadsForPolygon]);
 
 
   const cleanup = React.useCallback(() => {
@@ -317,6 +346,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     setReferenceAreaIds([]);
     setAvailableRoads([]);
     setSelectedRoads([]);
+    setAllRoadFeatures([]);
   }, []);
 
   const onMapLoad = React.useCallback(() => {
@@ -703,8 +733,6 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         drawRef.current.add(feature as any);
         const [lon, lat] = [parseFloat(suggestion.lon), parseFloat(suggestion.lat)];
         mapRef.current?.getMap().flyTo({ center: [lon, lat], zoom: 13 });
-
-        // Explicitly trigger road type analysis after adding a feature from search.
         fetchAllRoadsForCurrentDrawState();
     }
   };
@@ -740,6 +768,16 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     drawRef.current.changeMode('draw_polygon');
   };
   
+  const displayedRoadsGeoJSON = React.useMemo(() => {
+    if (selectedRoads.length === 0 || allRoadFeatures.length === 0) {
+        return null;
+    }
+    const filteredFeatures = allRoadFeatures.filter(feature => 
+        feature.properties?.highway && selectedRoads.includes(feature.properties.highway)
+    );
+    return turf.featureCollection(filteredFeatures);
+  }, [selectedRoads, allRoadFeatures]);
+
   React.useEffect(() => {
     return () => {
       if (searchTimeoutRef.current) {
@@ -931,6 +969,11 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                 <Layer {...referencePolygonFillLayer} />
                 <Layer {...referencePolygonOutlineLayer} />
               </Source>
+            )}
+            {displayedRoadsGeoJSON && (
+                <Source id="selected-roads" type="geojson" data={displayedRoadsGeoJSON}>
+                    <Layer {...selectedRoadsLayerStyle} />
+                </Source>
             )}
              {clickPopupInfo && (
                 <Popup
