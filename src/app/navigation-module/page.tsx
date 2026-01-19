@@ -234,11 +234,12 @@ export default function Page() {
   const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsCollection);
 
   const usersCollection = useMemo(() => {
-    if (!firestore) return null;
-    const isAdminOrSupervisor = profile?.role === 'Super admin' || profile?.role === 'toezichthouder';
+    if (!firestore || !profile) return null;
+    const isAdminOrSupervisor = profile.role === 'Super admin' || profile.role === 'toezichthouder';
     if (!isAdminOrSupervisor) return null;
     return collection(firestore, 'users');
   }, [firestore, profile]);
+
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersCollection);
 
   const usersMap = useMemo(() => {
@@ -1363,36 +1364,40 @@ export default function Page() {
         )}
 
         {isNavigating && (
-            <div className="absolute bottom-4 right-4 z-10">
-              <div className="flex flex-col items-end gap-4">
-                <div className="bg-card/90 backdrop-blur-sm p-4 rounded-xl shadow-lg flex items-center justify-center gap-6 text-card-foreground">
-                    <div className="flex items-center gap-2">
-                        <Clock className="h-5 w-5" />
-                        <span className="font-bold text-lg">{currentTime}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                        <RouteIcon className="h-5 w-5" />
-                        <span>
-                            {remainingDistance !== null ? formatDistance(remainingDistance) : routeInfoRef.current ? formatDistance(routeInfoRef.current.distance) : '-'}
-                        </span>
-                    </div>
-                    <div className="text-muted-foreground text-sm">
-                        {routeInfoRef.current
-                        ? `${formatDuration(routeInfoRef.current.duration)} aankomst`
-                        : '-'}
-                    </div>
+          <div className="absolute bottom-4 left-4 right-4 z-10">
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <Button
+                  variant="destructive"
+                  className="rounded-full h-16 w-16 p-0 flex items-center justify-center shadow-lg"
+                  onClick={handleStopNavigation}
+                >
+                  <X className="h-8 w-8" />
+                </Button>
+              </div>
+              <div className="bg-card/90 backdrop-blur-sm p-4 rounded-xl shadow-lg flex items-center justify-center gap-6 text-card-foreground">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  <span className="font-bold text-lg">{currentTime}</span>
                 </div>
-                <div>
-                    <Button
-                    variant="destructive"
-                    className="rounded-full h-16 w-16 p-0 flex items-center justify-center shadow-lg"
-                    onClick={handleStopNavigation}
-                    >
-                    <X className="h-8 w-8" />
-                    </Button>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <RouteIcon className="h-5 w-5" />
+                  <span>
+                    {remainingDistance !== null
+                      ? formatDistance(remainingDistance)
+                      : routeInfoRef.current
+                      ? formatDistance(routeInfoRef.current.distance)
+                      : '-'}
+                  </span>
+                </div>
+                <div className="text-muted-foreground text-sm">
+                  {routeInfoRef.current
+                    ? `${formatDuration(routeInfoRef.current.duration)} aankomst`
+                    : '-'}
                 </div>
               </div>
             </div>
+          </div>
         )}
 
 
