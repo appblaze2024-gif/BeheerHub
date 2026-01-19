@@ -1375,7 +1375,7 @@ export default function Page() {
                   <X className="h-8 w-8" />
                 </Button>
               </div>
-              <div className="bg-card/90 backdrop-blur-sm p-4 rounded-xl shadow-lg flex items-center justify-center gap-6 text-card-foreground">
+              <div className="bg-card/90 backdrop-blur-sm px-4 py-8 rounded-xl shadow-lg flex items-center justify-center gap-6 text-card-foreground">
                 <div className="flex items-center gap-2">
                   <Clock className="h-5 w-5" />
                   <span className="font-bold text-lg">{currentTime}</span>
