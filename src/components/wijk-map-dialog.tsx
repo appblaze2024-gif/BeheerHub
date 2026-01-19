@@ -219,11 +219,15 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
       const allFeatures: turf.Feature<turf.LineString>[] = [];
 
       const processSinglePolygon = async (singlePolygon: turf.Feature<turf.Polygon>) => {
-        const polyString = singlePolygon.geometry.coordinates[0].map(p => `${p[1]} ${p[0]}`).join(' ');
+        // Simplify polygon to reduce query complexity
+        const simplifiedPolygon = turf.simplify(singlePolygon, { tolerance: 0.0001, highQuality: false });
         
-        const overpassQuery = `[out:json];(way(poly: "${polyString}")["highway"];>;);out;`;
+        const polyString = simplifiedPolygon.geometry.coordinates[0].map(p => `${p[1]} ${p[0]}`).join(' ');
         
-        const overpassUrl = `https://overpass-api.de/api/interpreter`;
+        const overpassQuery = `[out:json][timeout:25];(way(poly: "${polyString}")["highway"];>;);out;`;
+        
+        // Using a different Overpass API instance to mitigate timeout errors from the main server.
+        const overpassUrl = `https://lz4.overpass-api.de/api/interpreter`;
 
         try {
           const response = await fetch(overpassUrl, {
@@ -261,13 +265,11 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
           console.error(`Fetch failed for Overpass API:`, error);
         }
       };
-
-      const simplifiedPolygon = turf.simplify(polygon, { tolerance: 0.001, highQuality: false });
-
-      if (simplifiedPolygon.geometry.type === 'Polygon') {
-        await processSinglePolygon(simplifiedPolygon as turf.Feature<turf.Polygon>);
-      } else if (simplifiedPolygon.geometry.type === 'MultiPolygon') {
-        for (const polygonCoords of simplifiedPolygon.geometry.coordinates) {
+      
+      if (polygon.geometry.type === 'Polygon') {
+        await processSinglePolygon(polygon as turf.Feature<turf.Polygon>);
+      } else if (polygon.geometry.type === 'MultiPolygon') {
+        for (const polygonCoords of polygon.geometry.coordinates) {
           await processSinglePolygon(turf.polygon(polygonCoords));
         }
       }
