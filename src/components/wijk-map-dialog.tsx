@@ -135,6 +135,42 @@ const polygonLabelLayer: SymbolLayer = {
   }
 };
 
+const roadTypeTranslations: { [key: string]: string } = {
+    busway: 'Busbaan',
+    living_street: 'Woonerf',
+    motorway: 'Snelweg',
+    motorway_link: 'Verbindingsweg (snelweg)',
+    platform: 'Platform',
+    primary: 'Primaire weg',
+    primary_link: 'Verbindingsweg (primair)',
+    raceway: 'Racebaan',
+    residential: 'Woonstraat',
+    secondary: 'Secundaire weg',
+    secondary_link: 'Verbindingsweg (secundair)',
+    service: 'Dienstweg',
+    services: 'Dienstwegen',
+    tertiary: 'Tertiaire weg',
+    tertiary_link: 'Verbindingsweg (tertiair)',
+    trunk: 'Hoofdweg',
+    trunk_link: 'Verbindingsweg (hoofdweg)',
+    unclassified: 'Ongeclassificeerd',
+    road: 'Weg',
+    footway: 'Voetpad',
+    cycleway: 'Fietspad',
+    path: 'Pad',
+    track: 'Spoor',
+    pedestrian: 'Voetgangersgebied',
+    steps: 'Trappen',
+    corridor: 'Corridor',
+    bridleway: 'Ruiterpad',
+    proposed: 'Gepland',
+    construction: 'In aanbouw'
+};
+
+const getTranslatedRoadType = (type: string) => {
+    return roadTypeTranslations[type] || type.replace(/_/g, ' ');
+};
+
 export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = false, allAreas = [], showRoadTypes = false }: WijkMapDialogProps) {
   const drawRef = React.useRef<MapboxDraw | null>(null);
   const mapRef = React.useRef<any>(null);
@@ -215,71 +251,60 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   }, [open, wijk, showRoadTypes]);
 
   const fetchRoadsForPolygon = React.useCallback(async (polygon: turf.Feature<turf.Polygon | turf.MultiPolygon>): Promise<turf.Feature<turf.LineString>[]> => {
-    try {
-      const allFeatures: turf.Feature<turf.LineString>[] = [];
+    const allFeatures: turf.Feature<turf.LineString>[] = [];
 
-      const processSinglePolygon = async (singlePolygon: turf.Feature<turf.Polygon>) => {
-        // Simplify polygon to reduce query complexity
-        const simplifiedPolygon = turf.simplify(singlePolygon, { tolerance: 0.0001, highQuality: false });
-        
-        const polyString = simplifiedPolygon.geometry.coordinates[0].map(p => `${p[1]} ${p[0]}`).join(' ');
-        
-        const overpassQuery = `[out:json][timeout:25];(way(poly: "${polyString}")["highway"];>;);out;`;
-        
-        // Using a different Overpass API instance to mitigate timeout errors from the main server.
-        const overpassUrl = `https://lz4.overpass-api.de/api/interpreter`;
+    const processSinglePolygon = async (singlePolygon: turf.Feature<turf.Polygon>) => {
+      const simplifiedPolygon = turf.simplify(singlePolygon, { tolerance: 0.0001, highQuality: false });
+      const polyString = simplifiedPolygon.geometry.coordinates[0].map(p => `${p[1]} ${p[0]}`).join(' ');
+      const overpassQuery = `[out:json][timeout:25];(way(poly: "${polyString}")["highway"];>;);out;`;
+      const overpassUrl = `https://overpass.kumi.systems/api/interpreter`;
 
-        try {
-          const response = await fetch(overpassUrl, {
-            method: 'POST',
-            body: `data=${encodeURIComponent(overpassQuery)}`
+      try {
+        const response = await fetch(overpassUrl, {
+          method: 'POST',
+          body: `data=${encodeURIComponent(overpassQuery)}`
+        });
+
+        if (!response.ok) {
+          console.error(`Error from Overpass API:`, response.status, response.statusText);
+          const errorText = await response.text();
+          console.error('Overpass API error response:', errorText);
+          return;
+        }
+        const data = await response.json();
+
+        if (data && data.elements) {
+          const nodes = new Map<number, [number, number]>();
+          data.elements.forEach((element: any) => {
+            if (element.type === 'node') {
+              nodes.set(element.id, [element.lon, element.lat]);
+            }
           });
-          
-          if (!response.ok) {
-            console.error(`Error from Overpass API:`, response.status, response.statusText);
-            const errorText = await response.text();
-            console.error('Overpass API error response:', errorText);
-            return;
-          }
-          const data = await response.json();
 
-          if (data && data.elements) {
-            const nodes = new Map<number, [number, number]>();
-            data.elements.forEach((element: any) => {
-              if (element.type === 'node') {
-                nodes.set(element.id, [element.lon, element.lat]);
+          data.elements.forEach((element: any) => {
+            if (element.type === 'way' && element.nodes && element.tags?.highway) {
+              const coordinates = element.nodes.map((nodeId: number) => nodes.get(nodeId)).filter(Boolean) as [number, number][];
+              if (coordinates.length >= 2) {
+                const feature = turf.lineString(coordinates, { highway: element.tags.highway, id: element.id });
+                allFeatures.push(feature);
               }
-            });
-
-            data.elements.forEach((element: any) => {
-              if (element.type === 'way' && element.nodes && element.tags?.highway) {
-                const coordinates = element.nodes.map((nodeId: number) => nodes.get(nodeId)).filter(Boolean) as [number, number][];
-                if (coordinates.length >= 2) {
-                  const feature = turf.lineString(coordinates, { highway: element.tags.highway, id: element.id });
-                  allFeatures.push(feature);
-                }
-              }
-            });
-          }
-        } catch (error) {
-          console.error(`Fetch failed for Overpass API:`, error);
+            }
+          });
         }
-      };
-      
-      if (polygon.geometry.type === 'Polygon') {
-        await processSinglePolygon(polygon as turf.Feature<turf.Polygon>);
-      } else if (polygon.geometry.type === 'MultiPolygon') {
-        for (const polygonCoords of polygon.geometry.coordinates) {
-          await processSinglePolygon(turf.polygon(polygonCoords));
-        }
+      } catch (error) {
+        console.error(`Fetch failed for Overpass API:`, error);
       }
+    };
 
-      return allFeatures;
-
-    } catch (error) {
-        console.error('Error fetching road data:', error);
-        return [];
+    if (polygon.geometry.type === 'Polygon') {
+      await processSinglePolygon(polygon as turf.Feature<turf.Polygon>);
+    } else if (polygon.geometry.type === 'MultiPolygon') {
+      for (const polygonCoords of polygon.geometry.coordinates) {
+        await processSinglePolygon(turf.polygon(polygonCoords));
+      }
     }
+
+    return allFeatures;
   }, []);
 
   const fetchAllRoadsForCurrentDrawState = React.useCallback(async () => {
@@ -933,7 +958,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                                         onCheckedChange={(checked) => handleRoadTypeChange(roadType, !!checked)}
                                     />
                                     <Label htmlFor={`road-${roadType}`} className="font-normal capitalize text-sm">
-                                        {roadType.replace(/_/g, ' ')}
+                                        {getTranslatedRoadType(roadType)}
                                     </Label>
                                 </div>
                             ))}
