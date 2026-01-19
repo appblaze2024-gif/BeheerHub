@@ -235,8 +235,10 @@ export default function Page() {
 
   const usersCollection = useMemo(() => {
     if (!firestore) return null;
+    const isAdminOrSupervisor = profile?.role === 'Super admin' || profile?.role === 'toezichthouder';
+    if (!isAdminOrSupervisor) return null;
     return collection(firestore, 'users');
-  }, [firestore]);
+  }, [firestore, profile]);
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersCollection);
 
   const usersMap = useMemo(() => {
