@@ -5,16 +5,15 @@ import Image from 'next/image';
 import Link from 'next/link';
 import './globals.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { SidebarNav } from '@/components/sidebar-nav';
 import {
   FirebaseClientProvider,
   useUser,
   useFirestore,
   useDoc,
   setDocumentNonBlocking,
-  updateDocumentNonBlocking,
+  useAuth,
 } from '@/firebase';
-import { ProfileProvider } from '@/firebase/profile-provider';
+import { ProfileProvider, useProfile } from '@/firebase/profile-provider';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
@@ -23,11 +22,25 @@ import { doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 import { NavigationUIProvider, useNavigationUI } from '@/context/navigation-ui-context';
 import { getDefaultPermissions } from '@/lib/permissions';
+import { signOut } from 'firebase/auth';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { LogOut, Settings, ChevronDown } from 'lucide-react';
 
 
 function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const auth = useAuth();
+  const { profile, isLoading: isProfileLoading } = useProfile();
   const { isHeaderVisible } = useNavigationUI();
 
   const userProfileRef = useMemo(() => {
@@ -35,7 +48,7 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
     return doc(firestore, 'users', user.uid);
   }, [user, firestore]);
 
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
 
   // Create user profile document if it doesn't exist
   useEffect(() => {
@@ -57,7 +70,17 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
       }
     };
     createProfile();
-  }, [user, userProfile, isProfileLoading, userProfileRef]);
+  }, [user, userProfile, isProfileLoading, userProfileRef, firestore]);
+  
+  const handleLogout = async () => {
+    await signOut(auth);
+  };
+  
+  const getInitials = (firstName?: string, lastName?: string) => {
+    const firstInitial = firstName?.[0] || '';
+    const lastInitial = lastName?.[0] || '';
+    return `${firstInitial}${lastInitial}`.toUpperCase();
+  };
   
   if (isUserLoading || isProfileLoading) {
       return (
@@ -70,7 +93,7 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className={cn('font-body antialiased flex flex-col h-svh overflow-hidden')}>
       {isHeaderVisible && (
-        <header className="bg-background flex h-16 shrink-0 items-center gap-4 border-b border-border px-6 shadow-sm z-30">
+        <header className="bg-background flex h-16 shrink-0 items-center justify-between border-b border-border px-6 shadow-sm z-30">
             <Link href="/" className="mr-4 flex items-center">
               <Image
                 src="https://i.ibb.co/fVxCTj33/Whats-App-Image-2026-01-16-at-12-09-08-1-removebg-preview.png"
@@ -79,7 +102,32 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
                 height={40}
               />
             </Link>
-            <SidebarNav />
+            
+            <div className="flex items-center gap-4">
+              <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="flex items-center gap-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={user?.photoURL || undefined} />
+                          <AvatarFallback>{getInitials(profile?.firstName, profile?.lastName)}</AvatarFallback>
+                        </Avatar>
+                        <span className="hidden md:inline">{profile?.displayName || profile?.email}</span>
+                        <ChevronDown className="h-4 w-4 hidden md:inline" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Mijn Account</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <Link href="/profile" passHref><DropdownMenuItem>Profiel</DropdownMenuItem></Link>
+                    <Link href="/settings" passHref><DropdownMenuItem>Instellingen</DropdownMenuItem></Link>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Uitloggen</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
         </header>
       )}
       <main className="flex-1 flex flex-col overflow-auto bg-background">
