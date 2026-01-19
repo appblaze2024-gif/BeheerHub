@@ -125,7 +125,7 @@ const polygonLabelLayer: SymbolLayer = {
   }
 };
 
-export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = false, allAreas = [], showRoadTypes = true }: WijkMapDialogProps) {
+export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = false, allAreas = [], showRoadTypes = false }: WijkMapDialogProps) {
   const drawRef = React.useRef<MapboxDraw | null>(null);
   const mapRef = React.useRef<any>(null);
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -238,7 +238,8 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         const allRoadTypes = new Set<string>();
         for (const feature of geojson.features) {
             if (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon') {
-                const roadTypes = await fetchRoadsForPolygon(feature as turf.Feature<turf.Polygon | turf.MultiPolygon>);
+                const simplifiedFeature = turf.simplify(feature, { tolerance: 0.0001, highQuality: false });
+                const roadTypes = await fetchRoadsForPolygon(simplifiedFeature as turf.Feature<turf.Polygon | turf.MultiPolygon>);
                 roadTypes.forEach(rt => allRoadTypes.add(rt));
             }
         }
