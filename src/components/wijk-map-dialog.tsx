@@ -257,7 +257,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
       const simplifiedPolygon = turf.simplify(singlePolygon, { tolerance: 0.0001, highQuality: false });
       const polyString = simplifiedPolygon.geometry.coordinates[0].map(p => `${p[1]} ${p[0]}`).join(' ');
       const overpassQuery = `[out:json][timeout:25];(way(poly: "${polyString}")["highway"];>;);out;`;
-      const overpassUrl = `https://overpass.kumi.systems/api/interpreter`;
+      const overpassUrl = `https://overpass-api.de/api/interpreter`;
 
       try {
         const response = await fetch(overpassUrl, {
@@ -341,7 +341,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     setAllRoadFeatures(allFeatures);
 
     const filteredRoads = Array.from(allRoadTypes).filter(type => 
-        !['footway', 'cycleway', 'path', 'track', 'service', 'pedestrian', 'steps', 'corridor', 'bridleway', 'proposed', 'construction'].includes(type)
+        !['track', 'service', 'pedestrian', 'steps', 'corridor', 'bridleway', 'proposed', 'construction'].includes(type)
     );
 
     setAvailableRoads(filteredRoads.sort());
@@ -636,7 +636,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
            }
        }
     }
-  }, [geojson, readOnly, allAreas, fetchAllRoadsForCurrentDrawState]);
+  }, [open, geojson, readOnly, allAreas, fetchAllRoadsForCurrentDrawState]);
   
   const handleMapClick = React.useCallback(async (event: MapLayerMouseEvent) => {
     if (!readOnly) {
