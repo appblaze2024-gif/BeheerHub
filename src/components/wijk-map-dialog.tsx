@@ -243,78 +243,53 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   }, [open, wijk, showRoadTypes]);
 
   const fetchRoadsForPolygon = React.useCallback(async (polygon: turf.Feature<turf.Polygon | turf.MultiPolygon>): Promise<turf.Feature<turf.LineString>[]> => {
-    const allRoads = new Map<number, turf.Feature<turf.LineString>>();
-
-    // 1. Get bounding box
     const bbox = turf.bbox(polygon);
 
-    // 2. Create grid of points
-    const cellSide = Math.max(bbox[2] - bbox[0], bbox[3] - bbox[1]) / 15; // Denser 15x15 grid
-    const grid = turf.pointGrid(bbox, cellSide, { units: 'degrees' });
+    const roadTypesQuery = (wijk?.roadTypes && wijk.roadTypes.length > 0) 
+      ? wijk.roadTypes.join('|')
+      : 'motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|service|pedestrian|track|road|footway|cycleway|path';
 
-    // 3. Filter points inside polygon
-    const pointsInside = grid.features.filter(pt => turf.booleanPointInPolygon(pt, polygon));
-    
-    if (pointsInside.length === 0 && polygon.geometry.type.includes('Polygon')) {
-        const centroid = turf.centroid(polygon);
-        pointsInside.push(centroid);
-    }
-
-    if (pointsInside.length === 0) {
+    if (!bbox.every(isFinite)) {
+        console.error("Invalid bounding box for polygon, skipping Overpass query.");
         return [];
     }
 
-    // Overpass query for multiple points is more efficient
-    const overpassUrl = 'https://overpass.kumi.systems/api/interpreter';
-    const radius = 250; // Smaller radius since we have more points
+    const overpassQuery = `
+        [out:json][timeout:90];
+        (
+            way["highway"~"${roadTypesQuery}"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+        );
+        (._;>;);
+        out geom;
+    `;
+
+    const overpassUrl = 'https://overpass-api.de/api/interpreter';
     
-    const pointsQueryPart = pointsInside.map(point => {
-        const [lon, lat] = point.geometry.coordinates;
-        return `way(around:${radius},${lat},${lon})["highway"~"motorway|trunk|primary|secondary|tertiary|unclassified|residential|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link|living_street|service|pedestrian|track|busway|footway|bridleway|steps|corridor|path|cycleway|raceway|road|services|proposed|construction"];`;
-    }).join('');
-
-    const overpassQuery = `[out:json][timeout:30];(${pointsQueryPart});(._;>;);out;`;
-
     try {
         const response = await fetch(overpassUrl, {
             method: 'POST',
-            body: `data=${encodeURIComponent(overpassQuery)}`
+            body: `data=${encodeURIComponent(overpassQuery)}`,
         });
 
-        if (!response.ok) {
-            console.error(`Error from Overpass API:`, response.status, response.statusText);
-            const errorText = await response.text();
-            console.error('Overpass API error response:', errorText);
+        const responseText = await response.text();
+        
+        if (!response.ok || responseText.trim().startsWith('<?xml')) {
+            console.error("Overpass API error or unexpected XML response:", responseText);
             return [];
         }
-        const data = await response.json();
+        
+        const data = JSON.parse(responseText);
+        
+        return turf.featureCollection(data.elements
+            .filter((el: any) => el.type === 'way' && el.geometry)
+            .map((el: any) => turf.lineString(el.geometry.map((node: any) => [node.lon, node.lat]), { ...el.tags, id: el.id }))
+        ).features;
 
-        if (data && data.elements) {
-            const nodes = new Map<number, [number, number]>();
-            data.elements.forEach((element: any) => {
-                if (element.type === 'node') {
-                    nodes.set(element.id, [element.lon, element.lat]);
-                }
-            });
-
-            data.elements.forEach((element: any) => {
-                if (element.type === 'way' && element.nodes && element.tags?.highway) {
-                    const coordinates = element.nodes.map((nodeId: number) => nodes.get(nodeId)).filter(Boolean) as [number, number][];
-                    if (coordinates.length >= 2) {
-                        const feature = turf.lineString(coordinates, { highway: element.tags.highway, id: element.id });
-                        if (!allRoads.has(element.id)) {
-                            allRoads.set(element.id, feature);
-                        }
-                    }
-                }
-            });
-        }
     } catch (error) {
-        console.error(`Fetch failed for Overpass API:`, error);
+        console.error("Error fetching or processing roads from Overpass:", error);
+        return [];
     }
-    
-    return Array.from(allRoads.values());
-  }, []);
+  }, [wijk?.roadTypes]);
 
   const fetchAllRoadsForCurrentDrawState = React.useCallback(async () => {
     if (readOnly || !showRoadTypes || !drawRef.current) {
@@ -354,7 +329,13 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     
     setAllRoadFeatures(Array.from(allFoundRoads.values()));
 
-    const filteredRoads = Array.from(allRoadTypes);
+    const relevantRoadTypes = [
+      'busway', 'living_street', 'motorway', 'motorway_link', 'primary', 'primary_link',
+      'residential', 'secondary', 'secondary_link', 'service', 'services', 'tertiary',
+      'tertiary_link', 'trunk', 'trunk_link', 'unclassified', 'road', 'footway', 'cycleway', 'path', 'pedestrian'
+    ];
+    
+    const filteredRoads = Array.from(allRoadTypes).filter(type => relevantRoadTypes.includes(type));
 
     setAvailableRoads(filteredRoads.sort());
     setIsFetchingRoads(false);
@@ -781,6 +762,14 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         checked ? [...prev, roadType] : prev.filter(r => r !== roadType)
     );
   };
+  
+  const handleSetDefaultRoads = (type: 'veeg' | 'borstel') => {
+      if (type === 'veeg') {
+          setSelectedRoads(['motorway', 'trunk', 'primary', 'secondary', 'tertiary', 'unclassified', 'residential', 'living_street', 'service']);
+      } else { // borstel
+          setSelectedRoads(['footway', 'cycleway', 'path', 'pedestrian', 'living_street', 'residential', 'service']);
+      }
+  };
 
   const toggleFillMode = () => {
     const nextFillMode = !isFillMode;
@@ -957,7 +946,13 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
               </div>
               {showRoadTypes && !readOnly && (
                 <div className="space-y-2">
-                    <Label className="text-xs font-semibold">Selecteer wegtypes</Label>
+                    <div className='flex justify-between items-center'>
+                      <Label className="text-xs font-semibold">Selecteer wegtypes</Label>
+                      <div className='flex items-center gap-2'>
+                          <Button size="xs" variant="outline" onClick={() => handleSetDefaultRoads('veeg')}>Standaard Veeg</Button>
+                          <Button size="xs" variant="outline" onClick={() => handleSetDefaultRoads('borstel')}>Standaard Borstel</Button>
+                      </div>
+                    </div>
                     {isFetchingRoads ? (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Wegtypes analyseren...</div>
                     ) : availableRoads.length > 0 ? (
