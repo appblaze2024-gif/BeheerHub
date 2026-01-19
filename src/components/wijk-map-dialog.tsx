@@ -29,6 +29,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
+import { Checkbox } from './ui/checkbox';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -37,7 +38,7 @@ interface WijkMapDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   wijk: Wijk | null;
-  onSave: (wijkId: string, coordinates: string) => void;
+  onSave: (wijkId: string, coordinates: string, roadTypes: string[]) => void;
   readOnly?: boolean;
   allAreas?: any[];
 }
@@ -131,6 +132,9 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   const [isBulkDeleting, setIsBulkDeleting] = React.useState(false);
   const [editingFeatureId, setEditingFeatureId] = React.useState<string | null>(null);
   const [referenceAreaIds, setReferenceAreaIds] = React.useState<string[]>([]);
+  
+  const [availableRoads, setAvailableRoads] = React.useState<string[]>([]);
+  const [selectedRoads, setSelectedRoads] = React.useState<string[]>([]);
 
   const isFillModeRef = React.useRef(isFillMode);
   isFillModeRef.current = isFillMode;
@@ -180,6 +184,59 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
       };
   }, [referenceAreas]);
 
+  React.useEffect(() => {
+    if (open && wijk) {
+        setSelectedRoads(wijk.roadTypes || []);
+    }
+  }, [open, wijk]);
+
+  React.useEffect(() => {
+    if (!geojson || geojson.features.length === 0 || readOnly) {
+        setAvailableRoads([]);
+        return;
+    }
+
+    const fetchRoadsForPolygon = async (polygon: turf.Feature<turf.Polygon | turf.MultiPolygon>) => {
+        try {
+            const response = await fetch(`https://api.mapbox.com/v4/mapbox.mapbox-streets-v8/tilequery.json?access_token=${MAPBOX_TOKEN}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    "type": "Feature",
+                    "properties": {},
+                    "geometry": polygon.geometry
+                })
+            });
+            if (!response.ok) {
+                console.error('Error from Mapbox Tilequery API:', await response.text());
+                return [];
+            }
+            const data = await response.json();
+            return data.features
+                .filter((f: any) => f.properties.layer === 'road')
+                .map((f: any) => f.properties.class)
+                .filter(Boolean);
+        } catch (error) {
+            console.error('Error fetching road data:', error);
+            return [];
+        }
+    };
+    
+    const fetchAllRoads = async () => {
+        const allRoadTypes = new Set<string>();
+        for (const feature of geojson.features) {
+            if (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon') {
+                const roadTypes = await fetchRoadsForPolygon(feature as turf.Feature<turf.Polygon | turf.MultiPolygon>);
+                roadTypes.forEach(rt => allRoadTypes.add(rt));
+            }
+        }
+        setAvailableRoads(Array.from(allRoadTypes).sort());
+    };
+
+    fetchAllRoads();
+    
+  }, [geojson, readOnly]);
+
 
   const cleanup = React.useCallback(() => {
     if (drawRef.current && mapRef.current?.getMap()?.isStyleLoaded()) {
@@ -203,6 +260,8 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     setIsBulkDeleting(false);
     setEditingFeatureId(null);
     setReferenceAreaIds([]);
+    setAvailableRoads([]);
+    setSelectedRoads([]);
   }, []);
 
   const onMapLoad = React.useCallback(() => {
@@ -531,7 +590,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   const handleSave = () => {
     if (drawRef.current && wijk) {
       const data = drawRef.current.getAll();
-      onSave(wijk.id, JSON.stringify(data.features));
+      onSave(wijk.id, JSON.stringify(data.features), selectedRoads);
       onOpenChange(false);
     }
   };
@@ -598,6 +657,12 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         const [lon, lat] = [parseFloat(suggestion.lon), parseFloat(suggestion.lat)];
         mapRef.current?.getMap().flyTo({ center: [lon, lat], zoom: 13 });
     }
+  };
+  
+  const handleRoadTypeChange = (roadType: string, checked: boolean) => {
+    setSelectedRoads(prev => 
+        checked ? [...prev, roadType] : prev.filter(r => r !== roadType)
+    );
   };
 
   const toggleFillMode = () => {
@@ -763,6 +828,25 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                       </Button>
                   </div>
               </div>
+              {availableRoads.length > 0 && !readOnly && (
+                <div className="space-y-2">
+                    <Label className="text-xs font-semibold">Selecteer wegtypes</Label>
+                    <div className="border rounded-md p-2 max-h-32 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                        {availableRoads.map(roadType => (
+                            <div key={roadType} className="flex items-center space-x-2">
+                                <Checkbox
+                                    id={`road-${roadType}`}
+                                    checked={selectedRoads.includes(roadType)}
+                                    onCheckedChange={(checked) => handleRoadTypeChange(roadType, !!checked)}
+                                />
+                                <Label htmlFor={`road-${roadType}`} className="font-normal capitalize text-sm">
+                                    {roadType.replace(/_/g, ' ')}
+                                </Label>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+              )}
               {!isDrawReady && <p className='text-xs text-muted-foreground'>Kaart laden...</p>}
             </div>
         )}
@@ -840,3 +924,5 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     </Dialog>
   );
 }
+
+    

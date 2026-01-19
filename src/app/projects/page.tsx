@@ -59,6 +59,7 @@ export type Wijk = {
   naam: string;
   locatie: string;
   subGebieden: string;
+  roadTypes?: string[];
 };
 
 type Veegroute = {
@@ -66,6 +67,7 @@ type Veegroute = {
   naam: string;
   locatie: string;
   subGebieden: string;
+  roadTypes?: string[];
 };
 
 type Prullenbakkenroute = {
@@ -73,6 +75,7 @@ type Prullenbakkenroute = {
   naam: string;
   locatie: string;
   subGebieden: string;
+  roadTypes?: string[];
 };
 
 type Boekingregel = {
@@ -619,6 +622,7 @@ function WijkenTab({
         naam: '',
         locatie: '',
         subGebieden: '[]',
+        roadTypes: [],
       },
     ]);
   };
@@ -635,9 +639,14 @@ function WijkenTab({
     setWijken(prev => (prev || []).map((w) => (w.id === id ? { ...w, [field]: value } : w)));
   };
   
-  const handleSaveCoordinates = (wijkId: string, coordinates: string) => {
-    handleInputChange(wijkId, 'subGebieden', coordinates);
-  }
+  const handleSaveCoordinates = (wijkId: string, coordinates: string, roadTypes: string[]) => {
+    setCurrentProject(prevProject => ({
+      ...prevProject,
+      wijken: (prevProject.wijken || []).map(w => 
+        w.id === wijkId ? { ...w, subGebieden: coordinates, roadTypes: roadTypes } : w
+      ),
+    }));
+  };
 
   const handleCopyToVeegroutes = (wijkToCopy: Wijk) => {
     setCurrentProject(prevProject => ({
@@ -763,6 +772,7 @@ function VeegroutesTab({
         naam: '',
         locatie: '',
         subGebieden: '[]',
+        roadTypes: [],
       },
     ]);
   };
@@ -779,9 +789,14 @@ function VeegroutesTab({
     setVeegroutes(prev => (prev || []).map((r) => (r.id === id ? { ...r, [field]: value } : r)));
   };
   
-  const handleSaveCoordinates = (routeId: string, coordinates: string) => {
-    handleInputChange(routeId, 'subGebieden', coordinates);
-  }
+  const handleSaveCoordinates = (routeId: string, coordinates: string, roadTypes: string[]) => {
+    setCurrentProject(prevProject => ({
+      ...prevProject,
+      veegroutes: (prevProject.veegroutes || []).map(r =>
+        r.id === routeId ? { ...r, subGebieden: coordinates, roadTypes: roadTypes } : r
+      ),
+    }));
+  };
 
   return (
     <div className="space-y-4">
@@ -860,6 +875,7 @@ function PrullenbakkenroutesTab({
         naam: '',
         locatie: '',
         subGebieden: '[]',
+        roadTypes: [],
       },
     ]);
   };
@@ -876,9 +892,14 @@ function PrullenbakkenroutesTab({
     setPrullenbakkenroutes(prev => (prev || []).map((r) => (r.id === id ? { ...r, [field]: value } : r)));
   };
   
-  const handleSaveCoordinates = (routeId: string, coordinates: string) => {
-    handleInputChange(routeId, 'subGebieden', coordinates);
-  }
+  const handleSaveCoordinates = (routeId: string, coordinates: string, roadTypes: string[]) => {
+    setCurrentProject(prevProject => ({
+      ...prevProject,
+      prullenbakkenroutes: (prevProject.prullenbakkenroutes || []).map(r =>
+        r.id === routeId ? { ...r, subGebieden: coordinates, roadTypes: roadTypes } : r
+      ),
+    }));
+  };
 
   return (
     <div className="space-y-4">
@@ -1231,3 +1252,5 @@ export default function ProjectsPage() {
     </div>
   );
 }
+
+    
