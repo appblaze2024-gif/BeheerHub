@@ -33,7 +33,13 @@ service cloud.firestore {
        allow delete: if hasPermission('projects', 'delete');
 
        match /diensten/{dienstId} {
-         allow read, write: if hasPermission('workPlanning', 'view') || hasPermission('workPlanning', 'edit');
+         allow get: if hasPermission('workPlanning', 'view') || hasPermission('workPlanning', 'edit');
+         allow update, delete: if hasPermission('workPlanning', 'edit');
+       }
+
+       match /diensten {
+         allow create: if hasPermission('workPlanning', 'edit');
+         allow list: if hasPermission('workPlanning', 'view') || hasPermission('workPlanning', 'edit');
        }
 
        match /boekingregels/{boekingregelId} {
