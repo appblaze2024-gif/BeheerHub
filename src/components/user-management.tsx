@@ -103,12 +103,21 @@ function UserDialog({
   React.useEffect(() => {
     if (open) {
       const defaultPermissions = getDefaultPermissions();
-
       if (user) {
+        const userPermissions = user.permissions || {};
+        const mergedPermissions: { [key: string]: { [key: string]: boolean } } = {};
+
+        Object.keys(defaultPermissions).forEach(module => {
+            mergedPermissions[module] = {
+                ...defaultPermissions[module],
+                ...(userPermissions[module] || {})
+            };
+        });
+        
         form.reset({
           email: user.email || '',
           role: user.role || 'medewerkers',
-          permissions: user.permissions || defaultPermissions,
+          permissions: mergedPermissions,
           status: user.status || 'Niet uitgenodigd',
           firstName: user.firstName || '',
           lastName: user.lastName || '',
