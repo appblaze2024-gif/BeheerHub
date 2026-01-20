@@ -98,8 +98,8 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
               <Image
                 src="https://i.ibb.co/b54NVfJm/Whats-App-Image-2026-01-20-at-08-32-27-removebg-preview.png"
                 alt="BeheerHub Logo"
-                width={180}
-                height={45}
+                width={90}
+                height={22.5}
               />
             </Link>
             
@@ -148,8 +148,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     setIsMounted(true);
   }, []);
 
-  const publicPaths = ['/login', '/reset-password'];
-  const isPublicPage = publicPaths.includes(pathname);
+  const isPublicPage = pathname === '/login' || pathname.startsWith('/reset-password');
 
   useEffect(() => {
     // Return early if not mounted or auth is loading, to prevent premature redirects
