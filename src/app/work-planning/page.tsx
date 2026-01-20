@@ -18,7 +18,6 @@ import { collection, query, where, doc, getDocs, writeBatch } from 'firebase/fir
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
-import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -661,13 +660,13 @@ export default function WorkPlanningPage() {
 
   return (
     <div className="flex flex-col flex-1 h-full min-h-0" id="planning-container">
-      <PageHeader title="Bezetting">
+      <header className="flex items-center justify-between p-6">
         <div className="flex items-center gap-2">
           {renderActionButtons()}
           <span className="text-sm font-medium text-muted-foreground hidden lg:inline">
             Project:
           </span>
-          <Select 
+          <Select
             value={selectedProjectId}
             onValueChange={setSelectedProjectId}
             disabled={isLoadingProjects}
@@ -697,7 +696,7 @@ export default function WorkPlanningPage() {
           </Button>
           <Button>Uren controleren</Button>
         </div>
-      </PageHeader>
+      </header>
       <div className="flex-1 overflow-auto border-t">
         <div className="grid grid-cols-[250px_repeat(7,1fr)] min-w-[1200px]">
           {/* Header Row */}
