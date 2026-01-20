@@ -1,189 +1,135 @@
-/**
- * Core Philosophy: This ruleset enforces a strict user-ownership model for user-specific data,
- * while allowing collaborative access to shared application data like vehicles.
- *
- * Data Structure:
- * - User-specific data is nested under `/users/{userId}`.
- * - Shared data like vehicles is at the root level in `/voertuigen`.
- *
- * Key Security Decisions:
- * - User Data Privacy: A user's root document and their private subcollections are only accessible by them.
- * - Vehicle Data Openness: All authenticated users can read vehicle information and manage related
- *   subcollections (actions, maintenance, damages) to facilitate collaboration.
- * - Prevent User Enumeration: Listing the top-level `/users` collection is forbidden.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions to promote readable, secure, and maintainable rules.
-    
-    /**
-     * isSignedIn
-     * @description Checks if a user is authenticated.
-     * @returns {boolean} True if the user has a valid auth object.
-     */
     function isSignedIn() {
       return request.auth != null;
     }
-    
-    /**
-     * isOwner
-     * @description Checks if the requesting user is the owner of the document, based on the userId in the path.
-     * @param {string} userId The user ID from the document path.
-     * @returns {boolean} True if the authenticated user's UID matches the provided userId.
-     */
+
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
-    
-    /**
-     * isExistingOwner
-     * @description A stricter version of isOwner used for updates and deletes.
-     * It ensures the document already exists before allowing the operation.
-     * @param {string} userId The user ID from the document path.
-     * @returns {boolean} True if the user is the owner and the document exists.
-     */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    /**
-     * @description Manages the root projects collection. Any authenticated user can manage projects.
-     */
+    function isSuperUser() {
+      return isSignedIn() && getUserData().role == 'Super admin';
+    }
+
+    function isToezichthouder() {
+      return isSignedIn() && getUserData().role == 'toezichthouder';
+    }
+
+    function hasPermission(module, action) {
+        return isSignedIn() && (isSuperUser() || getUserData().permissions[module][action] == true);
+    }
+
     match /projects/{projectId} {
-       allow read, write: if isSignedIn();
-       
-       /**
-        * @description Secures project-specific shifts. Any authenticated user can manage them.
-        */
+       allow get, list: if isSignedIn();
+       allow create: if hasPermission('projects', 'create');
+       allow update: if hasPermission('projects', 'edit');
+       allow delete: if hasPermission('projects', 'delete');
+
        match /diensten/{dienstId} {
-         allow read, write: if isSignedIn();
+         allow get, list: if hasPermission('workPlanning', 'view');
+         allow write: if hasPermission('workPlanning', 'edit');
        }
 
-       /**
-        * @description Secures project-specific booking rules. Any authenticated user can manage them.
-        */
        match /boekingregels/{boekingregelId} {
-         allow read, write: if isSignedIn();
+         allow read, write: if hasPermission('projects', 'edit');
        }
 
-       /**
-        * @description Secures project-specific files. Any authenticated user can manage them.
-        */
        match /bestanden/{bestandId} {
-         allow read, write: if isSignedIn();
+         allow get, list: if hasPermission('projects', 'view');
+         allow create: if hasPermission('projects', 'edit');
+         allow delete: if hasPermission('projects', 'delete');
+         allow update: if false;
        }
 
-       /**
-        * @description Secures project-specific appointments. Any authenticated user can manage them.
-        */
        match /afspraken/{afspraakId} {
-         allow read, write: if isSignedIn();
+         allow get, list: if hasPermission('projects', 'view');
+         allow create, update: if hasPermission('projects', 'edit');
+         allow delete: if hasPermission('projects', 'delete');
        }
-       /**
-        * @description Secures project-specific organization contacts. Any authenticated user can manage them.
-        */
+
        match /organisatie/{contactId} {
-         allow read, write: if isSignedIn();
+         allow get, list: if hasPermission('projects', 'view');
+         allow create, update: if hasPermission('projects', 'edit');
+         allow delete: if hasPermission('projects', 'delete');
+       }
+
+       match /besteksmeldingen/{besteksmeldingId} {
+         allow read: if hasPermission('specReports', 'view');
+         allow write: if hasPermission('specReports', 'create') || hasPermission('specReports', 'edit') || hasPermission('specReports', 'delete');
        }
     }
-    
-     /**
-     * @description Manages the root employees collection. Any authenticated user can manage employees.
-     */
+
     match /medewerkers/{medewerkerId} {
-      allow read, write: if isSignedIn();
+      allow get, list: if isSignedIn();
+      allow create: if hasPermission('employees', 'create');
+      allow update: if hasPermission('employees', 'edit');
+      allow delete: if hasPermission('employees', 'delete');
     }
-    
-    /**
-     * @description Manages the root user document. A user can create their own document
-     *   but cannot modify or delete it once created. Listing all users is forbidden.
-     */
+
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
+      allow get: if isOwner(userId) || hasPermission('users', 'view');
+      allow list: if hasPermission('users', 'view');
+      allow create: if hasPermission('users', 'create');
+      allow update: if isOwner(userId) || hasPermission('users', 'edit');
       allow delete: if false;
 
-      /**
-       * @description Secures a user's route history.
-       */
+      // This rule only covers direct access for the owner.
+      // Admin/supervisor access for specific user's routes is handled by the collection group rule.
       match /routes/{routeId} {
-        allow get, list, create, update, delete: if isOwner(userId);
+        allow get, list: if isOwner(userId);
+        allow create, update, delete: if isOwner(userId) && hasPermission('navigation', 'use');
       }
     }
 
-    /**
-     * @description Manages the root objects collection. Any authenticated user can manage objects.
-     */
-    match /objects/{objectId} {
-        allow read, write: if isSignedIn();
+    // This rule is specifically for the collectionGroup query, but also allows admins
+    // to get/list routes of specific users directly.
+    match /{path=**}/routes/{routeId} {
+      allow get, list: if isSuperUser() || isToezichthouder();
     }
-    
-    /**
-     * @description Manages the root issues (meldingen) collection. Any authenticated user can manage issues.
-     */
+
+    match /objects/{objectId} {
+        allow get, list: if isSignedIn();
+        allow create: if hasPermission('objects', 'create');
+        allow update: if hasPermission('objects', 'edit');
+        allow delete: if hasPermission('objects', 'delete');
+    }
+
     match /meldingen/{meldingId} {
         allow read, write: if isSignedIn();
     }
-    
-    /**
-     * @description Secures a user's private revenue entries. Only the authenticated owner
-     *   of the data can perform any read or write operations.
-     */
-    match /users/{userId}/revenues/{revenueId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
-    }
-    
-    /**
-     * @description Secures a user's private expense entries. Only the authenticated owner
-     *   of the data can perform any read or write operations.
-     */
-    match /users/{userId}/expenses/{expenseId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
-    }
-    
-    /**
-     * @description Secures a user's private appointment entries. Only the authenticated owner
-     *   of the data can perform any read or write operations.
-     */
-    match /users/{userId}/appointments/{appointmentId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
-    }
 
-    /**
-     * @description Manages shared vehicle data. All authenticated users can read
-     *   the list of vehicles and their details. Writing is restricted.
-     */
     match /voertuigen/{vehicleId} {
       allow get, list: if isSignedIn();
-      // Allow creation/updates only if the user is signed in.
-      // More specific validation could be added here.
-      allow create, update: if isSignedIn();
-      allow delete: if false; // Deleting vehicles is disallowed for now.
+      allow create: if hasPermission('vehicles', 'create');
+      allow update: if hasPermission('vehicles', 'edit');
+      allow delete: if hasPermission('vehicles', 'delete');
+
+      match /{subcollection}/{docId} {
+        allow read, write: if hasPermission('vehicles', 'edit');
+      }
+    }
+
+    match /machines/{machineId} {
+      allow get, list: if isSignedIn();
+      allow create: if hasPermission('vehicles', 'create');
+      allow update: if hasPermission('vehicles', 'edit');
+      allow delete: if hasPermission('vehicles', 'delete');
+
+      match /{subcollection}/{docId} {
+        allow read, write: if hasPermission('vehicles', 'edit');
+      }
     }
     
-    /**
-     * @description Secures vehicle-related subcollections like actions, maintenance, and damages.
-     *   Any authenticated user can read and write to these collections, a
-     *   collaborative management of vehicle data.
-     */
-    match /voertuigen/{vehicleId}/{subcollection}/{docId} {
-      allow read, write: if isSignedIn();
+     // Legacy collections, deny all access for now.
+    match /users/{userId}/{subcollection}/{docId} {
+        allow read, write: if false;
     }
   }
 }
