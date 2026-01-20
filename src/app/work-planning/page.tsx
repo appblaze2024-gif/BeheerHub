@@ -96,6 +96,10 @@ type Project = {
   id: string;
   projectnaam: string;
   projectnummer: string;
+  vehicleAvailability?: {
+    unavailable: Record<string, string[]>;
+    available: Record<string, string[]>;
+  };
 };
 
 const DienstItem = ({ dienst, onEdit, onDelete, onContextMenu, isNonWorkingDay }: { dienst: Dienst, onEdit: (dienst: Dienst) => void, onDelete: (dienst: Dienst) => void, onContextMenu: (e: React.MouseEvent, dienst: Dienst) => void, isNonWorkingDay: boolean }) => {
@@ -212,6 +216,7 @@ export default function WorkPlanningPage() {
   const [selectedCells, setSelectedCells] = React.useState<{ medewerkerId: string; datum: string }[]>([]);
   const [unavailableVehicles, setUnavailableVehicles] = React.useState<Record<string, string[]>>({});
   const [availableVehicles, setAvailableVehicles] = React.useState<Record<string, string[]>>({});
+  const isFirestoreDataLoaded = React.useRef(false);
 
 
   const firestore = useFirestore();
@@ -287,6 +292,39 @@ export default function WorkPlanningPage() {
   const selectedProject = React.useMemo(() => {
     return projects?.find(p => p.id === selectedProjectId);
   }, [projects, selectedProjectId]);
+
+  React.useEffect(() => {
+    if (selectedProject) {
+        isFirestoreDataLoaded.current = false;
+        setUnavailableVehicles(selectedProject.vehicleAvailability?.unavailable || {});
+        setAvailableVehicles(selectedProject.vehicleAvailability?.available || {});
+        setTimeout(() => {
+            isFirestoreDataLoaded.current = true;
+        }, 200);
+    } else {
+        setUnavailableVehicles({});
+        setAvailableVehicles({});
+    }
+  }, [selectedProject]);
+
+  React.useEffect(() => {
+    if (!isFirestoreDataLoaded.current || !firestore || !selectedProjectId) {
+        return;
+    }
+
+    const handler = setTimeout(() => {
+        const projectRef = doc(firestore, 'projects', selectedProjectId);
+        updateDocumentNonBlocking(projectRef, {
+            vehicleAvailability: {
+                unavailable: unavailableVehicles,
+                available: availableVehicles,
+            }
+        }).catch(e => console.error("Error saving vehicle availability", e));
+    }, 1500);
+
+    return () => clearTimeout(handler);
+  }, [unavailableVehicles, availableVehicles, firestore, selectedProjectId]);
+
   
   const handleOpenSheetForNew = (medewerker: Medewerker, datum: Date) => {
     setSelectedMedewerker(medewerker);
@@ -557,39 +595,35 @@ export default function WorkPlanningPage() {
 
   const handleUnavailableVehicleToggle = (dateKey: string, vehicleId: string, checked: boolean) => {
     setUnavailableVehicles(prev => {
-        const currentForDay = prev[dateKey] || [];
+        const newState = { ...prev };
+        const currentForDay = newState[dateKey] || [];
         const newForDay = checked
             ? [...currentForDay, vehicleId]
             : currentForDay.filter(id => id !== vehicleId);
         
         if (newForDay.length === 0) {
-            const { [dateKey]: _, ...rest } = prev;
-            return rest;
+            delete newState[dateKey];
+        } else {
+            newState[dateKey] = newForDay;
         }
-
-        return {
-            ...prev,
-            [dateKey]: newForDay,
-        };
+        return newState;
     });
   };
 
   const handleAvailableVehicleToggle = (dateKey: string, vehicleId: string, checked: boolean) => {
     setAvailableVehicles(prev => {
-        const currentForDay = prev[dateKey] || [];
+        const newState = { ...prev };
+        const currentForDay = newState[dateKey] || [];
         const newForDay = checked
             ? [...currentForDay, vehicleId]
             : currentForDay.filter(id => id !== vehicleId);
         
         if (newForDay.length === 0) {
-            const { [dateKey]: _, ...rest } = prev;
-            return rest;
+            delete newState[dateKey];
+        } else {
+            newState[dateKey] = newForDay;
         }
-
-        return {
-            ...prev,
-            [dateKey]: newForDay,
-        };
+        return newState;
     });
   };
 

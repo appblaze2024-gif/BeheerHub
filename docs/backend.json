@@ -110,6 +110,30 @@
             "items": {
                 "$ref": "#/backend/entities/Prullenbakkenroute"
             }
+        },
+        "vehicleAvailability": {
+          "type": "object",
+          "description": "Stores vehicle availability per day for this project.",
+          "properties": {
+            "unavailable": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "available": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
         }
       },
       "required": [
