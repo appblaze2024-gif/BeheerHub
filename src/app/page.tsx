@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { useCollection, useFirestore } from "@/firebase";
 import { collection } from "firebase/firestore";
 import { Badge } from "@/components/ui/badge";
+import { fetchEmailsFlow } from "@/ai/flows/fetch-emails-flow";
 
 const cardColors = [
   'bg-teal-600 hover:bg-teal-700',
@@ -47,6 +48,7 @@ function NavCard({ item, color, badgeCount }: { item: MenuItem, color: string, b
 
 export default function DashboardPage() {
   const firestore = useFirestore();
+  const [unreadMailCount, setUnreadMailCount] = React.useState(0);
 
   const meldingenCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -60,6 +62,22 @@ export default function DashboardPage() {
     return meldingen.filter(m => m.status !== 'Afgerond').length;
   }, [meldingen]);
 
+  React.useEffect(() => {
+    const getUnreadCount = async () => {
+      try {
+        const emails = await fetchEmailsFlow('INBOX');
+        const unreadCount = emails.filter(email => !email.read).length;
+        setUnreadMailCount(unreadCount);
+      } catch (error) {
+        console.error("Failed to fetch unread email count:", error);
+      }
+    };
+
+    getUnreadCount();
+    const intervalId = setInterval(getUnreadCount, 60000); // Refresh every minute
+
+    return () => clearInterval(intervalId); // Cleanup on unmount
+  }, []);
 
   // Show all menu items on the dashboard, permissions are handled on the pages themselves.
   const gridItems = allMenuItems.filter(item => item.href !== '/');
@@ -68,7 +86,12 @@ export default function DashboardPage() {
     <div className="flex flex-col flex-1 p-6">
       <div className="flex-1 grid grid-cols-5 gap-4 content-start">
           {gridItems.map((item, index) => {
-            const badgeCount = item.href === '/issues' ? openMeldingenCount : undefined;
+            let badgeCount: number | undefined = undefined;
+            if (item.href === '/issues') {
+                badgeCount = openMeldingenCount;
+            } else if (item.href === '/mail') {
+                badgeCount = unreadMailCount;
+            }
             return (
                 <NavCard key={item.href} item={item} color={cardColors[index % cardColors.length]} badgeCount={badgeCount} />
             )
