@@ -491,18 +491,18 @@ export function MedewerkerDialog({
               />
               <div>
                 <FormLabel>Standaard werktijden</FormLabel>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-2">
+                <div className="mt-2 space-y-4 rounded-md border p-4">
                   {weekDagen.map((day) => (
-                    <div key={day} className="space-y-2 rounded-md border p-2">
-                        <FormLabel className='text-xs capitalize font-semibold'>{day}</FormLabel>
-                        <div className="flex items-center gap-1">
+                    <div key={day} className="grid grid-cols-[100px_1fr] items-center gap-4">
+                        <FormLabel className='text-sm capitalize font-normal'>{day}</FormLabel>
+                        <div className="flex items-center gap-2">
                             <FormField
                                 control={form.control}
                                 name={`urenPerDag.${day}.start`}
                                 render={({ field }) => (
                                     <FormItem className="flex-1">
                                         <FormControl>
-                                            <Input type="time" {...field} className='h-8' />
+                                            <Input type="time" {...field} className='h-9' />
                                         </FormControl>
                                     </FormItem>
                                 )}
@@ -514,7 +514,7 @@ export function MedewerkerDialog({
                                 render={({ field }) => (
                                     <FormItem className="flex-1">
                                         <FormControl>
-                                            <Input type="time" {...field} className='h-8' />
+                                            <Input type="time" {...field} className='h-9' />
                                         </FormControl>
                                     </FormItem>
                                 )}
