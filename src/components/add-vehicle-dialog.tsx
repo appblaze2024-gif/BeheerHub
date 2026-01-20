@@ -4,9 +4,7 @@ import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { CalendarIcon, Loader2 } from 'lucide-react';
-import { format } from 'date-fns';
-import { nl } from 'date-fns/locale';
+import { Loader2 } from 'lucide-react';
 import { doc } from 'firebase/firestore';
 
 import { cn } from '@/lib/utils';
@@ -33,12 +31,6 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -46,11 +38,11 @@ import {
   SelectValue,
 } from './ui/select';
 
-const vehicleFormSchema = z.object({
-  kenteken: z.string().min(1, { message: 'Kenteken is verplicht.' }),
-  voertuignummer: z.string().optional(),
-  merk: z.string().min(1, { message: 'Selecteer een merk.' }),
-  model: z.string().min(1, { message: 'Selecteer een model.' }),
+const materieelFormSchema = z.object({
+  id: z.string().min(1, { message: 'ID/Kenteken is verplicht.' }),
+  nummer: z.string().optional(),
+  merk: z.string().min(1, { message: 'Merk is verplicht.' }),
+  model: z.string().min(1, { message: 'Model is verplicht.' }),
   type: z.string().optional(),
   status: z.string().default('Actief'),
   bouwjaar: z.string().optional(),
@@ -59,13 +51,15 @@ const vehicleFormSchema = z.object({
   imageUrl: z.string().url().optional().nullable(),
 });
 
-type VehicleFormValues = z.infer<typeof vehicleFormSchema>;
+type MaterieelFormValues = z.infer<typeof materieelFormSchema>;
+
 
 interface AddVehicleDialogProps {
   children?: React.ReactNode;
   vehicle?: any | null;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  materieelType: 'voertuigen' | 'machines';
 }
 
 const carBrands = Object.keys(carData);
@@ -80,43 +74,45 @@ const fuelTypes = [
     "Waterstof"
 ];
 
-export function AddVehicleDialog({ children, vehicle = null, open: controlledOpen, onOpenChange: controlledOnOpenChange }: AddVehicleDialogProps) {
+export function AddVehicleDialog({ children, vehicle = null, open: controlledOpen, onOpenChange: controlledOnOpenChange, materieelType }: AddVehicleDialogProps) {
   const firestore = useFirestore();
   const [isLocallyOpen, setLocallyOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const open = controlledOpen !== undefined ? controlledOpen : isLocallyOpen;
   const onOpenChange = controlledOnOpenChange !== undefined ? controlledOnOpenChange : setLocallyOpen;
+  
+  const isMachine = materieelType === 'machines';
 
-  const form = useForm<VehicleFormValues>({
-    resolver: zodResolver(vehicleFormSchema),
+  const form = useForm<MaterieelFormValues>({
+    resolver: zodResolver(materieelFormSchema),
   });
 
   const selectedBrand = form.watch('merk');
   const selectedModel = form.watch('model');
   
-  const models = selectedBrand ? Object.keys(carData[selectedBrand] || {}) : [];
-  const types = selectedBrand && selectedModel ? (carData[selectedBrand]?.[selectedModel] || []) : [];
+  const models = selectedBrand && !isMachine ? Object.keys(carData[selectedBrand] || {}) : [];
+  const types = selectedBrand && selectedModel && !isMachine ? (carData[selectedBrand]?.[selectedModel] || []) : [];
 
   React.useEffect(() => {
     if (open) {
       if (vehicle) {
         form.reset({
-          kenteken: vehicle.id || '',
-          voertuignummer: vehicle.voertuignummer || '',
+          id: vehicle.id || '',
+          nummer: vehicle.voertuignummer || vehicle.machinenummer || '',
           merk: vehicle.merk || '',
           model: vehicle.model || '',
           type: vehicle.type || '',
           status: vehicle.status || 'Actief',
           bouwjaar: vehicle.bouwjaar || '',
           brandstof: vehicle.brandstof || '',
-          apk_vervaldatum: vehicle.apk_vervaldatum,
+          apk_vervaldatum: vehicle.apk_vervaldatum || '',
           imageUrl: vehicle.imageUrl ?? null,
         });
       } else {
         form.reset({
-          kenteken: '',
-          voertuignummer: '',
+          id: '',
+          nummer: '',
           merk: '',
           model: '',
           type: '',
@@ -128,25 +124,25 @@ export function AddVehicleDialog({ children, vehicle = null, open: controlledOpe
         });
       }
     }
-  }, [open, vehicle, form]);
+  }, [open, vehicle, form, isMachine]);
 
   React.useEffect(() => {
-    if (!form.formState.isDirty) return;
+    if (isMachine || !form.formState.isDirty) return;
     if (selectedBrand !== vehicle?.merk) {
       form.setValue('model', '');
       form.setValue('type', '');
     }
-  }, [selectedBrand, form, vehicle]);
+  }, [selectedBrand, form, vehicle, isMachine]);
 
   React.useEffect(() => {
-    if (!form.formState.isDirty) return;
+    if (isMachine || !form.formState.isDirty) return;
     if (selectedModel !== vehicle?.model) {
       form.setValue('type', '');
     }
-  }, [selectedModel, form, vehicle]);
+  }, [selectedModel, form, vehicle, isMachine]);
 
 
-  const onSubmit = async (data: VehicleFormValues) => {
+  const onSubmit = async (data: MaterieelFormValues) => {
     if (!firestore) {
       console.error('Firestore not available');
       return;
@@ -155,28 +151,36 @@ export function AddVehicleDialog({ children, vehicle = null, open: controlledOpe
     setIsSubmitting(true);
 
     try {
-      const vehicleData = {
-        ...data,
-        apk_vervaldatum: data.apk_vervaldatum || null,
+      const { nummer, ...restOfData } = data;
+      const materieelData: any = {
+        ...restOfData,
       };
+
+      if (isMachine) {
+        materieelData.machinenummer = nummer || null;
+        // Don't save apk_vervaldatum for machines
+        delete materieelData.apk_vervaldatum;
+      } else { // It's a vehicle
+        materieelData.voertuignummer = nummer || null;
+        materieelData.apk_vervaldatum = data.apk_vervaldatum || null;
+      }
       
-      const vehicleRef = doc(firestore, 'voertuigen', vehicleData.kenteken);
+      const materieelRef = doc(firestore, materieelType, materieelData.id);
       
       if (vehicle) {
-        // Kenteken cannot be changed for existing vehicles
-        if (vehicle.id !== data.kenteken) {
-            console.error("Changing kenteken is not allowed.");
+        if (vehicle.id !== data.id) {
+            console.error("Changing ID/Kenteken is not allowed.");
             setIsSubmitting(false);
             return
         }
-        await updateDocumentNonBlocking(vehicleRef, vehicleData);
+        await updateDocumentNonBlocking(materieelRef, materieelData);
       } else {
-        await setDocumentNonBlocking(vehicleRef, vehicleData, { merge: false });
+        await setDocumentNonBlocking(materieelRef, materieelData, { merge: false });
       }
 
       onOpenChange(false);
     } catch (error) {
-      console.error('Error saving vehicle: ', error);
+      console.error(`Error saving ${materieelType}: `, error);
     } finally {
         setIsSubmitting(false);
     }
@@ -189,19 +193,19 @@ export function AddVehicleDialog({ children, vehicle = null, open: controlledOpe
       {DialogTriggerComponent}
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>{vehicle ? 'Voertuig Bewerken' : 'Voertuig Toevoegen'}</DialogTitle>
+          <DialogTitle>{vehicle ? (isMachine ? 'Machine Bewerken' : 'Voertuig Bewerken') : (isMachine ? 'Machine Toevoegen' : 'Voertuig Toevoegen')}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="kenteken"
+                name="id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Kenteken</FormLabel>
+                    <FormLabel>{isMachine ? 'ID' : 'Kenteken'}</FormLabel>
                     <FormControl>
-                      <Input placeholder="12-ABC-3" {...field} disabled={!!vehicle} />
+                      <Input placeholder={isMachine ? 'Unieke ID' : '12-ABC-3'} {...field} disabled={!!vehicle} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -209,12 +213,12 @@ export function AddVehicleDialog({ children, vehicle = null, open: controlledOpe
               />
               <FormField
                 control={form.control}
-                name="voertuignummer"
+                name="nummer"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Voertuignummer</FormLabel>
+                    <FormLabel>{isMachine ? 'Machinenummer' : 'Voertuignummer'}</FormLabel>
                     <FormControl>
-                      <Input placeholder="V001" {...field} />
+                      <Input placeholder={isMachine ? 'M001' : 'V001'} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -222,24 +226,30 @@ export function AddVehicleDialog({ children, vehicle = null, open: controlledOpe
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <FormField
+               <FormField
                 control={form.control}
                 name="merk"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Merk</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    {isMachine ? (
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecteer een merk" />
-                        </SelectTrigger>
+                        <Input placeholder="Merk van de machine" {...field} />
                       </FormControl>
-                      <SelectContent>
-                        {carBrands.sort().map(brand => (
-                            <SelectItem key={brand} value={brand}>{brand}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    ) : (
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecteer een merk" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {carBrands.sort().map(brand => (
+                              <SelectItem key={brand} value={brand}>{brand}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -250,18 +260,24 @@ export function AddVehicleDialog({ children, vehicle = null, open: controlledOpe
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Model</FormLabel>
-                     <Select onValueChange={field.onChange} value={field.value} disabled={!selectedBrand}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecteer een model" />
-                        </SelectTrigger>
+                     {isMachine ? (
+                       <FormControl>
+                        <Input placeholder="Model van de machine" {...field} />
                       </FormControl>
-                      <SelectContent>
-                        {models.map(model => (
-                            <SelectItem key={model} value={model}>{model}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    ) : (
+                      <Select onValueChange={field.onChange} value={field.value} disabled={!selectedBrand}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecteer een model" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {models.map(model => (
+                              <SelectItem key={model} value={model}>{model}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -274,18 +290,24 @@ export function AddVehicleDialog({ children, vehicle = null, open: controlledOpe
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Type</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} disabled={!selectedModel || types.length === 0}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecteer een type" />
-                        </SelectTrigger>
+                    {isMachine ? (
+                       <FormControl>
+                        <Input placeholder="Type machine" {...field} />
                       </FormControl>
-                      <SelectContent>
-                        {types.map(type => (
-                            <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    ) : (
+                      <Select onValueChange={field.onChange} value={field.value} disabled={!selectedModel || types.length === 0}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecteer een type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {types.map(type => (
+                              <SelectItem key={type} value={type}>{type}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -350,19 +372,21 @@ export function AddVehicleDialog({ children, vehicle = null, open: controlledOpe
                 )}
               />
             </div>
-            <FormField
-              control={form.control}
-              name="apk_vervaldatum"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>APK Datum</FormLabel>
-                  <FormControl>
-                    <Input type='date' {...field} value={field.value ?? ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {!isMachine && (
+              <FormField
+                control={form.control}
+                name="apk_vervaldatum"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>APK Datum</FormLabel>
+                    <FormControl>
+                      <Input type='date' {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
             <DialogFooter>
               <DialogClose asChild>
                 <Button type="button" variant="ghost" disabled={isSubmitting}>
