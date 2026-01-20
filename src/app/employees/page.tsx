@@ -18,7 +18,6 @@ import {
   CardContent,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { PageHeader } from '@/components/page-header';
 import {
   useCollection,
   useFirestore,
@@ -133,7 +132,7 @@ export default function EmployeesPage() {
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <PageHeader title="Medewerkers">
+      <header className="flex items-center justify-end p-6">
         <div className="flex items-center gap-2">
           <Button variant="outline">
             <Filter className="mr-2 h-4 w-4" />
@@ -168,7 +167,7 @@ export default function EmployeesPage() {
             </DropdownMenu>
           )}
         </div>
-      </PageHeader>
+      </header>
       <div className="flex-1 px-6 pb-6 min-h-0">
         <Card className="h-full flex flex-col">
           <CardContent className="p-0 flex-1 overflow-hidden">
