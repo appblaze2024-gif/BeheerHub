@@ -44,7 +44,7 @@ export default function LoginPage() {
       />
       <div className="absolute top-8 left-8 z-10">
          <Image
-          src="https://i.ibb.co/6R9xTjQ5/Chat-GPT-Image-20-jan-2026-08-23-45-removebg-preview.png"
+          src="https://i.ibb.co/rKbcyMm9/Chat-GPT-Image-20-jan-2026-08-23-45.png"
           alt="Logo"
           width={320}
           height={104}
@@ -55,7 +55,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-xl z-10 bg-white/50 backdrop-blur-xl border border-white/20 shadow-2xl rounded-xl">
         <CardHeader className="items-center text-center py-4">
             <Image
-                src="https://i.ibb.co/6R9xTjQ5/Chat-GPT-Image-20-jan-2026-08-23-45-removebg-preview.png"
+                src="https://i.ibb.co/rKbcyMm9/Chat-GPT-Image-20-jan-2026-08-23-45.png"
                 alt="Logo"
                 width={320}
                 height={104}
