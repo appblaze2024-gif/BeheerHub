@@ -38,7 +38,7 @@ function NavCard({ item, color, badgeCount }: { item: MenuItem, color: string, b
           <h2 className="text-lg font-semibold text-center">{item.label}</h2>
         </CardContent>
         {badgeCount !== undefined && badgeCount > 0 && (
-            <Badge variant="destructive" className="absolute -top-2 -right-2">{badgeCount}</Badge>
+            <Badge variant="destructive" className="absolute -top-2 -right-2 h-7 w-7 flex items-center justify-center p-0 border-2 border-white text-base animate-pulse-scale">{badgeCount}</Badge>
         )}
       </Card>
     </Link>
