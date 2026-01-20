@@ -492,36 +492,54 @@ export function MedewerkerDialog({
               <div>
                 <FormLabel>Standaard werktijden</FormLabel>
                 <div className="mt-2 space-y-4 rounded-md border p-4">
-                  {weekDagen.map((day) => (
-                    <div key={day} className="grid grid-cols-[100px_1fr] items-center gap-4">
-                        <FormLabel className='text-sm capitalize font-normal'>{day}</FormLabel>
+                  {weekDagen.map((day) => {
+                    const worksOnDay = !!form.watch(`urenPerDag.${day}.start`) || !!form.watch(`urenPerDag.${day}.eind`);
+                    return (
+                      <div key={day} className="grid grid-cols-[150px_1fr] items-center gap-4">
                         <div className="flex items-center gap-2">
-                            <FormField
-                                control={form.control}
-                                name={`urenPerDag.${day}.start`}
-                                render={({ field }) => (
-                                    <FormItem className="flex-1">
-                                        <FormControl>
-                                            <Input type="time" {...field} className='h-9' />
-                                        </FormControl>
-                                    </FormItem>
-                                )}
-                            />
-                            <span className="text-muted-foreground">-</span>
-                            <FormField
-                                control={form.control}
-                                name={`urenPerDag.${day}.eind`}
-                                render={({ field }) => (
-                                    <FormItem className="flex-1">
-                                        <FormControl>
-                                            <Input type="time" {...field} className='h-9' />
-                                        </FormControl>
-                                    </FormItem>
-                                )}
-                            />
+                          <Checkbox
+                            id={`works-${day}`}
+                            checked={worksOnDay}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                form.setValue(`urenPerDag.${day}.start`, defaultUren[day]?.start || '07:00');
+                                form.setValue(`urenPerDag.${day}.eind`, defaultUren[day]?.eind || '15:30');
+                              } else {
+                                form.setValue(`urenPerDag.${day}.start`, '');
+                                form.setValue(`urenPerDag.${day}.eind`, '');
+                              }
+                            }}
+                          />
+                          <label htmlFor={`works-${day}`} className='text-sm capitalize font-normal cursor-pointer'>{day}</label>
                         </div>
-                    </div>
-                  ))}
+                        <div className="flex items-center gap-2">
+                          <FormField
+                            control={form.control}
+                            name={`urenPerDag.${day}.start`}
+                            render={({ field }) => (
+                              <FormItem className="flex-1">
+                                <FormControl>
+                                  <Input type="time" {...field} value={field.value || ''} className='h-9' disabled={!worksOnDay} />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <span className="text-muted-foreground">-</span>
+                          <FormField
+                            control={form.control}
+                            name={`urenPerDag.${day}.eind`}
+                            render={({ field }) => (
+                              <FormItem className="flex-1">
+                                <FormControl>
+                                  <Input type="time" {...field} value={field.value || ''} className='h-9' disabled={!worksOnDay} />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
                <FormField
