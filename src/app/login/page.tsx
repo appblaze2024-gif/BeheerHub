@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -68,9 +69,9 @@ export default function LoginPage() {
           <div className="grid gap-2">
             <div className="flex items-center">
                 <Label htmlFor="password">Wachtwoord</Label>
-                <a href="/reset-password" className="ml-auto inline-block text-xs text-primary hover:underline">
-                Wachtwoord vergeten?
-                </a>
+                <Link href="/reset-password" className="ml-auto inline-block text-xs text-primary hover:underline">
+                    Wachtwoord vergeten?
+                </Link>
             </div>
              <div className='relative'>
                 <Lock className='absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground' />
