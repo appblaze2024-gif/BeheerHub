@@ -5,8 +5,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Loader2, Send, Paperclip, X } from 'lucide-react';
-import { useUser, useFirestore, useDoc } from '@/firebase';
-import { doc } from 'firebase/firestore';
 import { sendEmail } from '@/app/mail/actions';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -61,28 +59,12 @@ interface ComposeMailDialogProps {
   initialData?: Partial<MailFormValues & { attachments: EmailAttachment[] }>;
 }
 
-type UserProfileData = {
-  displayName?: string;
-  firstName?: string;
-  lastName?: string;
-};
-
-
 export function ComposeMailDialog({ open, onOpenChange, initialData, children }: ComposeMailDialogProps) {
   const { toast } = useToast();
-  const { user } = useUser();
-  const firestore = useFirestore();
   const [isSending, setIsSending] = React.useState(false);
   const [newAttachments, setNewAttachments] = React.useState<File[]>([]);
   const [forwardedAttachments, setForwardedAttachments] = React.useState<EmailAttachment[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-
-  const userProfileRef = React.useMemo(() => {
-    if (!user || !firestore) return null;
-    return doc(firestore, 'users', user.uid);
-  }, [user, firestore]);
-
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfileData>(userProfileRef);
 
   const form = useForm<MailFormValues>({
     resolver: zodResolver(mailSchema),
@@ -117,14 +99,6 @@ export function ComposeMailDialog({ open, onOpenChange, initialData, children }:
 
 
   async function onSubmit(data: MailFormValues) {
-    if (!user?.email) {
-      toast({
-        variant: "destructive",
-        title: "Fout",
-        description: "Kon gebruiker niet verifiëren. Probeer opnieuw in te loggen.",
-      });
-      return;
-    }
     setIsSending(true);
 
     try {
@@ -144,25 +118,8 @@ export function ComposeMailDialog({ open, onOpenChange, initialData, children }:
 
         const allAttachments = [...newAttachmentPayloads, ...forwardedAttachmentPayloads];
 
-        let senderName: string;
-        if (userProfile?.firstName && userProfile?.lastName) {
-          senderName = `${userProfile.firstName} ${userProfile.lastName}`;
-        } else if (user?.email) {
-          senderName = user.email;
-        } else {
-           toast({
-            variant: "destructive",
-            title: "Fout",
-            description: "Kon afzendernaam niet vinden. Stel uw naam in op de profielpagina.",
-          });
-          setIsSending(false);
-          return;
-        }
-
         const result = await sendEmail({
             ...data,
-            fromName: senderName,
-            fromEmail: user.email,
             attachments: allAttachments,
         });
 
@@ -289,8 +246,8 @@ export function ComposeMailDialog({ open, onOpenChange, initialData, children }:
                 </div>
                 <div className="flex gap-2">
                     <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSending}>Annuleren</Button>
-                    <Button type="submit" disabled={isSending || isProfileLoading}>
-                        {isSending || isProfileLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                    <Button type="submit" disabled={isSending}>
+                        {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                         Verstuur
                     </Button>
                 </div>

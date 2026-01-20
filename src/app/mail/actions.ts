@@ -14,8 +14,6 @@ const mailSchema = z.object({
   cc: z.string().optional(),
   subject: z.string(),
   body: z.string(),
-  fromName: z.string().min(1, "Afzendernaam is verplicht."),
-  fromEmail: z.string().email("Ongeldig afzender e-mailadres."),
   attachments: z.array(attachmentSchema).optional(),
 });
 
@@ -46,12 +44,8 @@ export async function sendEmail(data: z.infer<typeof mailSchema>) {
 
   const mailOptions: nodemailer.SendMailOptions = {
     from: {
-        name: parsedData.fromName,
-        address: SMTP_USER, // Use the SMTP user email as the sender address
-    },
-    replyTo: { // Add the user's email to the Reply-To header
-        name: parsedData.fromName,
-        address: parsedData.fromEmail,
+        name: "BeheerHub Notificatie",
+        address: SMTP_USER,
     },
     to: parsedData.to,
     cc: parsedData.cc,
