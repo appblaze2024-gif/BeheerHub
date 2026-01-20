@@ -64,8 +64,8 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
               <Image
                 src="https://i.ibb.co/b54NVfJm/Whats-App-Image-2026-01-20-at-08-32-27-removebg-preview.png"
                 alt="BeheerHub Logo"
-                width={120}
-                height={30}
+                width={100}
+                height={25}
               />
             </Link>
             
