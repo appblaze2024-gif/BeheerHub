@@ -97,7 +97,7 @@ export type UploadedFile = {
 export interface Besteksmelding {
   id: string;
   projectId: string;
-  werksoortId: string;
+  werksoort: string;
   latitude: number;
   longitude: number;
   omschrijving: string;
@@ -114,3 +114,5 @@ export type Werksoort = {
   fictieveH: string;
   uurprijs: string;
 };
+
+    

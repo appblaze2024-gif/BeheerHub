@@ -13,10 +13,9 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { Besteksmelding, UploadedFile } from '@/lib/types';
+import type { Besteksmelding } from '@/lib/types';
 import type { Project } from '@/app/projects/page';
 import { useProfile } from '@/firebase/profile-provider';
-import type { Werksoort } from '@/lib/types';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -27,7 +26,7 @@ const statusConfig: Record<string, { color: string; textColor: string; borderCol
   Afgerond: { color: '#22c55e', textColor: 'white', borderColor: '#22c55e' }, // green-500
 };
 
-function BestekmeldingenList({ meldingen, onMeldingClick, werksoortenMap }: { meldingen: Besteksmelding[], onMeldingClick: (melding: Besteksmelding) => void, werksoortenMap: Map<string, Werksoort> }) {
+function BestekmeldingenList({ meldingen, onMeldingClick }: { meldingen: Besteksmelding[], onMeldingClick: (melding: Besteksmelding) => void }) {
   if (meldingen.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center text-muted-foreground p-8">
@@ -54,7 +53,7 @@ function BestekmeldingenList({ meldingen, onMeldingClick, werksoortenMap }: { me
           className="grid grid-cols-[1fr_2fr_1fr_1fr_auto] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
         >
           <span className="truncate">{melding.datum ? format(new Date(melding.datum), 'dd-MM-yyyy') : '-'}</span>
-          <span className="font-medium truncate">{werksoortenMap.get(melding.werksoortId)?.werksoort || 'Onbekend'}</span>
+          <span className="font-medium truncate">{melding.werksoort || 'Onbekend'}</span>
           <span className="truncate">{melding.omschrijving}</span>
           <Badge
             style={{
@@ -100,29 +99,16 @@ export default function SpecReportsPage() {
 
   const { data: meldingen, isLoading: isLoadingMeldingen } = useCollection<Besteksmelding>(bestekmeldingenCollection);
 
-  const selectedProject = React.useMemo(() => {
-    return projects?.find(p => p.id === selectedProjectId) ?? null;
-  }, [projects, selectedProjectId]);
-  
-  const werksoortenMap = React.useMemo(() => {
-    const map = new Map<string, Werksoort>();
-    if (selectedProject?.werksoorten) {
-      selectedProject.werksoorten.forEach(ws => map.set(ws.id, ws));
-    }
-    return map;
-  }, [selectedProject]);
-
-
   const filteredMeldingen = React.useMemo(() => {
     if (!meldingen) return [];
     if (!searchQuery) return meldingen;
 
     return meldingen.filter(m => 
         (m.omschrijving && m.omschrijving.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (werksoortenMap.get(m.werksoortId)?.werksoort.toLowerCase().includes(searchQuery.toLowerCase()))
+        (m.werksoort && m.werksoort.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
-  }, [meldingen, searchQuery, werksoortenMap]);
+  }, [meldingen, searchQuery]);
 
   const mapRef = React.useRef<any>(null);
   const mapContainerRef = React.useRef<HTMLDivElement>(null);
@@ -252,7 +238,7 @@ export default function SpecReportsPage() {
                     anchor="bottom"
                 >
                     <div className="p-1 max-w-xs">
-                        <h3 className="font-bold text-base mb-2">{werksoortenMap.get(selectedMelding.werksoortId)?.werksoort || 'Onbekend'}</h3>
+                        <h3 className="font-bold text-base mb-2">{selectedMelding.werksoort || 'Onbekend'}</h3>
                         <div className="grid grid-cols-[100px_1fr] gap-x-2 gap-y-1 text-sm">
                             <span className="font-semibold">Omschrijving:</span>
                             <span>{selectedMelding.omschrijving}</span>
@@ -275,7 +261,7 @@ export default function SpecReportsPage() {
                     <CardTitle>Overzicht Besteksmeldingen ({filteredMeldingen?.length || 0})</CardTitle>
                 </CardHeader>
                 <CardContent className='p-0 flex-1 min-h-0'>
-                    <BestekmeldingenList meldingen={filteredMeldingen || []} onMeldingClick={handleMeldingClickFromList} werksoortenMap={werksoortenMap} />
+                    <BestekmeldingenList meldingen={filteredMeldingen || []} onMeldingClick={handleMeldingClickFromList} />
                 </CardContent>
             </Card>
         </div>
@@ -285,8 +271,9 @@ export default function SpecReportsPage() {
             onOpenChange={handleDialogClose}
             melding={selectedMelding}
             projectId={selectedProjectId}
-            werksoorten={selectedProject?.werksoorten || []}
         />
     </div>
   );
 }
+
+    

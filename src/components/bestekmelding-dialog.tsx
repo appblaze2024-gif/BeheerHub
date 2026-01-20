@@ -34,11 +34,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Progress } from './ui/progress';
 import { MapboxView } from './mapbox-view';
 import type { Besteksmelding, UploadedFile } from '@/lib/types';
-import type { Werksoort } from '@/lib/types';
+import { Input } from '@/components/ui/input';
 
 
 const meldingFormSchema = z.object({
-  werksoortId: z.string().min(1, 'Werksoort is verplicht'),
+  werksoort: z.string().min(1, 'Werksoort is verplicht'),
   omschrijving: z.string().min(1, 'Omschrijving is verplicht'),
   status: z.string().min(1, 'Status is verplicht'),
 });
@@ -52,10 +52,9 @@ interface BestekmeldingDialogProps {
   onOpenChange: (open: boolean) => void;
   melding: Besteksmelding | null;
   projectId: string | null;
-  werksoorten: Werksoort[];
 }
 
-export function BestekmeldingDialog({ open, onOpenChange, melding, projectId, werksoorten }: BestekmeldingDialogProps) {
+export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: BestekmeldingDialogProps) {
   const firestore = useFirestore();
   const app = useFirebaseApp();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -77,12 +76,12 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId, we
       form.reset(
         melding
           ? {
-              werksoortId: melding.werksoortId,
+              werksoort: melding.werksoort,
               omschrijving: melding.omschrijving,
               status: melding.status,
             }
           : {
-              werksoortId: '',
+              werksoort: '',
               omschrijving: '',
               status: 'Nieuw',
             }
@@ -223,15 +222,12 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId, we
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
              <div className="space-y-4">
-                 <FormField control={form.control} name="werksoortId" render={({ field }) => (
+                 <FormField control={form.control} name="werksoort" render={({ field }) => (
                     <FormItem>
                         <FormLabel>Werksoort</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Selecteer een werksoort" /></SelectTrigger></FormControl>
-                            <SelectContent>
-                                {werksoorten.map(ws => (<SelectItem key={ws.id} value={ws.id}>{ws.postnummer} - {ws.werksoort}</SelectItem>))}
-                            </SelectContent>
-                        </Select>
+                        <FormControl>
+                          <Input placeholder="Voer werksoort in" {...field} />
+                        </FormControl>
                         <FormMessage />
                     </FormItem>
                 )} />
@@ -328,3 +324,5 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId, we
     </Dialog>
   );
 }
+
+    
