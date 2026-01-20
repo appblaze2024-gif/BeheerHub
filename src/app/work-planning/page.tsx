@@ -106,7 +106,7 @@ const DienstItem = ({ dienst, onEdit, onDelete, onContextMenu, isNonWorkingDay, 
     const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
 
     const handleEdit = (e: React.MouseEvent) => {
-        if (!canEdit) return;
+        if (!canEdit || isNonWorkingDay) return;
         // Prevent triggering edit when clicking delete button
         if ((e.target as HTMLElement).closest('.delete-button')) {
             return;
@@ -152,8 +152,8 @@ const DienstItem = ({ dienst, onEdit, onDelete, onContextMenu, isNonWorkingDay, 
                         : isNonWorkingDay
                             ? 'border border-gray-600 text-gray-200 bg-transparent'
                             : "bg-blue-100 text-blue-900 dark:bg-blue-900/50 dark:text-white",
-                    canEdit && !isVisuallyNonWorkingDay && (isZiek ? "hover:bg-yellow-300 dark:hover:bg-yellow-900/70" : isVerlof ? "hover:bg-orange-300 dark:hover:bg-orange-900/70" : "hover:bg-blue-200 dark:hover:bg-blue-900/70"),
-                    canEdit && !isVisuallyNonWorkingDay && 'cursor-pointer'
+                    canEdit && !isNonWorkingDay && (isZiek ? "hover:bg-yellow-300 dark:hover:bg-yellow-900/70" : isVerlof ? "hover:bg-orange-300 dark:hover:bg-orange-900/70" : "hover:bg-blue-200 dark:hover:bg-blue-900/70"),
+                    canEdit && !isNonWorkingDay && 'cursor-pointer'
                 )}
             >
                 <p className="font-semibold truncate">{dienst.werksoort}</p>
