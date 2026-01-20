@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { ChevronLeft, ChevronRight, Clock, MoreHorizontal, Plus, Printer, Trash2, Copy } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, MoreHorizontal, Plus, Printer, Trash2, Copy, ClipboardCopy } from 'lucide-react';
 import {
   startOfWeek,
   endOfWeek,
@@ -214,8 +214,10 @@ export default function WorkPlanningPage() {
     y: number;
     dienst?: Dienst;
     cellContext?: { medewerker: Medewerker; datum: Date };
+    dayHeaderContext?: { datum: Date };
   } | null>(null);
   const [copiedDienst, setCopiedDienst] = React.useState<Dienst | null>(null);
+  const [copiedDay, setCopiedDay] = React.useState<{ diensten: Omit<Dienst, 'id'>[] } | null>(null);
   const [selectedCells, setSelectedCells] = React.useState<{ medewerkerId: string; datum: string }[]>([]);
   const [unavailableVehicles, setUnavailableVehicles] = React.useState<Record<string, string[]>>({});
   const [availableVehicles, setAvailableVehicles] = React.useState<Record<string, string[]>>({});
@@ -543,12 +545,58 @@ export default function WorkPlanningPage() {
     return buttons;
   }
 
-  const handleContextMenu = (e: React.MouseEvent, context: { dienst?: Dienst; cellContext?: { medewerker: Medewerker; datum: Date } }) => {
+  const handleContextMenu = (e: React.MouseEvent, context: { dienst?: Dienst; cellContext?: { medewerker: Medewerker; datum: Date }; dayHeaderContext?: { datum: Date }; }) => {
     e.preventDefault();
     if (!canEdit) return;
     setContextMenu({ x: e.clientX, y: e.clientY, ...context });
   };
+
+  const handleDayHeaderContextMenu = (e: React.MouseEvent, datum: Date) => {
+    handleContextMenu(e, { dayHeaderContext: { datum } });
+  };
   
+  const handleCopyDay = () => {
+    if (!contextMenu?.dayHeaderContext || !diensten) return;
+    const dateToCopy = contextMenu.dayHeaderContext.datum;
+    const dateStringToCopy = format(dateToCopy, 'yyyy-MM-dd');
+
+    const dienstenToCopy = diensten.filter(d => d.datum === dateStringToCopy);
+
+    // Remove IDs so they are created as new documents on paste
+    const dienstenWithoutIds = dienstenToCopy.map(({ id, ...rest }) => rest);
+
+    setCopiedDay({ diensten: dienstenWithoutIds });
+    setContextMenu(null);
+  };
+  
+  const handlePasteDay = async () => {
+    if (!contextMenu?.dayHeaderContext || !copiedDay || !firestore || !selectedProjectId || !canEdit) return;
+
+    const targetDate = contextMenu.dayHeaderContext.datum;
+    const targetDateString = format(targetDate, 'yyyy-MM-dd');
+
+    const batch = writeBatch(firestore);
+    const dienstenColRef = collection(firestore, 'projects', selectedProjectId, 'diensten');
+
+    copiedDay.diensten.forEach(dienstToPaste => {
+        const newDienstData = {
+            ...dienstToPaste,
+            datum: targetDateString,
+        };
+        const newDocRef = doc(dienstenColRef);
+        batch.set(newDocRef, newDienstData);
+    });
+
+    try {
+        await batch.commit();
+        fetchDiensten(); // This will handle loading state and refetch
+    } catch (error) {
+        console.error('Error pasting day:', error);
+    } finally {
+        setContextMenu(null);
+    }
+  };
+
   const handlePaste = async () => {
     if (!copiedDienst || selectedCells.length === 0 || !firestore || !selectedProjectId || !canEdit) return;
   
@@ -729,8 +777,9 @@ export default function WorkPlanningPage() {
           {weekDays.map((day) => (
             <div
               key={day.toISOString()}
+              onContextMenu={(e) => handleDayHeaderContextMenu(e, day)}
               className={cn(
-                "sticky top-0 z-20 p-2 text-center bg-background border-b border-r day-column",
+                "sticky top-0 z-20 p-2 text-center bg-background border-b border-r day-column cursor-context-menu",
                 isToday(day) && "bg-muted/50"
               )}
             >
@@ -921,12 +970,27 @@ export default function WorkPlanningPage() {
                 Kopiëren
               </DropdownMenuItem>
             )}
+            
+            {contextMenu?.dayHeaderContext && (
+                <>
+                    <DropdownMenuItem onClick={handleCopyDay}>
+                        <Copy className="mr-2 h-4 w-4" />
+                        Kopieer Dag
+                    </DropdownMenuItem>
+                    {copiedDay && (
+                        <DropdownMenuItem onClick={handlePasteDay}>
+                            <ClipboardCopy className="mr-2 h-4 w-4" />
+                            Plak Dag
+                        </DropdownMenuItem>
+                    )}
+                </>
+            )}
 
             {(contextMenu?.cellContext || contextMenu?.dienst) && (copiedDienst || selectedCells.length > 0) && <DropdownMenuSeparator />}
 
             {copiedDienst && (
               <DropdownMenuItem onClick={handlePaste} disabled={selectedCells.length === 0}>
-                <Copy className="mr-2 h-4 w-4" />
+                <ClipboardCopy className="mr-2 h-4 w-4" />
                 Plakken
               </DropdownMenuItem>
             )}
