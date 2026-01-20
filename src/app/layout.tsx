@@ -8,20 +8,14 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import {
   FirebaseClientProvider,
   useUser,
-  useFirestore,
-  useDoc,
-  setDocumentNonBlocking,
   useAuth,
 } from '@/firebase';
 import { ProfileProvider, useProfile } from '@/firebase/profile-provider';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState, useMemo, Suspense } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
-import { doc } from 'firebase/firestore';
-import type { UserProfile } from '@/lib/types';
 import { NavigationUIProvider, useNavigationUI } from '@/context/navigation-ui-context';
-import { getDefaultPermissions } from '@/lib/permissions';
 import { signOut } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import {
@@ -65,7 +59,7 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className={cn('font-body antialiased flex flex-col h-svh overflow-hidden')}>
       {isHeaderVisible && (
-        <header className="bg-background flex h-24 shrink-0 items-center justify-between border-b border-border px-6 shadow-sm z-30">
+        <header className="bg-background flex h-20 shrink-0 items-center justify-between border-b border-border px-6 shadow-sm z-30">
             <Link href="/" className="mr-4 flex items-center">
               <Image
                 src="https://i.ibb.co/b54NVfJm/Whats-App-Image-2026-01-20-at-08-32-27-removebg-preview.png"
