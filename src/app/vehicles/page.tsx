@@ -180,11 +180,9 @@ function MaterielView({ materieelType }: { materieelType: MaterieelType }) {
                   >
                     <div className="flex-1">
                        <div className="inline-flex items-center bg-yellow-400 rounded-sm border-2 border-black overflow-hidden font-mono font-bold text-black text-sm">
-                        {materieelType === 'voertuigen' && 
-                          <div className="bg-blue-600 px-1 py-0.5 text-white text-xs">
-                             <span className='font-sans'>NL</span>
-                          </div>
-                        }
+                        <div className="bg-blue-600 px-1 py-0.5 text-white text-xs">
+                           <span className='font-sans'>NL</span>
+                        </div>
                         <span className="px-2 py-0.5 tracking-wider">{item.id}</span>
                       </div>
                       <p className="text-sm text-muted-foreground mt-1">
