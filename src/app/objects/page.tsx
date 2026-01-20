@@ -276,7 +276,7 @@ export default function ObjectsPage() {
 
 
   return (
-    <div className="flex flex-col flex-1 h-full min-h-0 bg-muted/30">
+    <div className="flex flex-col flex-1 h-full min-h-0 bg-background">
       {/* Header */}
       <header className="flex items-center justify-between p-3 bg-card border-b shadow-sm">
         <div className="flex items-center gap-2">

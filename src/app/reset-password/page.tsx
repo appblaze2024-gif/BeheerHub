@@ -18,7 +18,7 @@ function Fallback() {
 
 export default function ResetPasswordPage() {
   return (
-    <div className="flex h-screen items-center justify-center bg-muted/40">
+    <div className="flex h-screen items-center justify-center bg-background">
       <div className="absolute top-8 left-8 z-10">
          <Image
           src="https://i.ibb.co/Fk1pVzqw/IMG-1314.png"
