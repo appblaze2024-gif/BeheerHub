@@ -20,9 +20,9 @@ type Melding = {
 function NavCard({ item, badgeCount }: { item: MenuItem, badgeCount?: number }) {
   return (
     <Link href={item.href} passHref>
-      <Card className={cn("text-white transition-transform transform hover:-translate-y-1 flex h-40 relative", item.color)}>
+      <Card className={cn("text-card-foreground transition-transform transform hover:-translate-y-1 flex h-40 relative", item.color)}>
         <CardContent className="flex flex-1 flex-col items-center justify-center p-4">
-          <item.icon className="h-16 w-16 mb-3" />
+          <item.icon className="h-12 w-12 mb-3" />
           <h2 className="text-lg font-semibold text-center">{item.label}</h2>
         </CardContent>
         {badgeCount !== undefined && badgeCount > 0 && (
