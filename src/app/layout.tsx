@@ -98,8 +98,8 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
               <Image
                 src="https://i.ibb.co/rKbcyMm9/Chat-GPT-Image-20-jan-2026-08-23-45.png"
                 alt="BeheerHub Logo"
-                width={120}
-                height={30}
+                width={100}
+                height={25}
               />
             </Link>
             
