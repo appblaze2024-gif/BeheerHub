@@ -83,7 +83,8 @@ export function DienstToevoegenDialog({
 }: DienstToevoegenDialogProps) {
   const firestore = useFirestore();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  
+  const [quickSubmitType, setQuickSubmitType] = React.useState<'Verlof' | 'ADV' | 'Ziek' | null>(null);
+
   const form = useForm<DienstFormValues>({
     resolver: zodResolver(dienstFormSchema),
   });
@@ -114,16 +115,28 @@ export function DienstToevoegenDialog({
           voertuignummer: null,
         });
       }
+    } else {
+        setIsSubmitting(false);
+        setQuickSubmitType(null);
     }
   }, [open, dienst, form, medewerker, datum]);
 
-  const handleVerlofSubmit = async () => {
+  const handleFullDaySubmit = async (werksoort: 'Verlof' | 'ADV' | 'Ziek') => {
     if (!firestore || !project?.id || !datum || !medewerker) return;
+    
     setIsSubmitting(true);
+    setQuickSubmitType(werksoort);
+
+    const dayName = format(datum, 'eeee', { locale: nl }).toLowerCase() as keyof NonNullable<Medewerker['urenPerDag']>;
+    const defaultTimes = medewerker.urenPerDag?.[dayName];
+
+    const starttijd = (defaultTimes?.start && defaultTimes.start !== '') ? defaultTimes.start : '00:00';
+    const eindtijd = (defaultTimes?.eind && defaultTimes.eind !== '') ? defaultTimes.eind : '23:59';
+    
     const dienstData = {
-        werksoort: 'Verlof',
-        starttijd: '00:00',
-        eindtijd: '23:59',
+        werksoort: werksoort,
+        starttijd: starttijd,
+        eindtijd: eindtijd,
         medewerkerId: medewerker.id,
         projectId: project.id,
         datum: format(datum, 'yyyy-MM-dd'),
@@ -135,9 +148,10 @@ export function DienstToevoegenDialog({
         await addDocumentNonBlocking(dienstenColRef, dienstData);
         onSuccess();
     } catch (error) {
-        console.error('Fout bij opslaan verlof:', error);
+        console.error(`Fout bij opslaan ${werksoort}:`, error);
     } finally {
         setIsSubmitting(false);
+        setQuickSubmitType(null);
     }
   };
 
@@ -215,10 +229,20 @@ export function DienstToevoegenDialog({
         <div className="py-4 space-y-4">
             {!dienst && (
                 <>
-                    <Button type="button" variant="outline" className="w-full" onClick={handleVerlofSubmit} disabled={isSubmitting}>
-                        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                        Hele dag als verlof plannen
-                    </Button>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <Button type="button" variant="outline" className="w-full" onClick={() => handleFullDaySubmit('Verlof')} disabled={isSubmitting}>
+                            {isSubmitting && quickSubmitType === 'Verlof' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Hele dag Verlof
+                        </Button>
+                        <Button type="button" variant="outline" className="w-full" onClick={() => handleFullDaySubmit('ADV')} disabled={isSubmitting}>
+                            {isSubmitting && quickSubmitType === 'ADV' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Hele dag ADV
+                        </Button>
+                        <Button type="button" variant="outline" className="w-full" onClick={() => handleFullDaySubmit('Ziek')} disabled={isSubmitting}>
+                            {isSubmitting && quickSubmitType === 'Ziek' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Hele dag Ziek
+                        </Button>
+                    </div>
                     <div className="relative">
                         <Separator />
                         <span className="absolute left-1/2 -translate-x-1/2 -top-2.5 bg-background px-2 text-xs text-muted-foreground">OF</span>
@@ -339,7 +363,7 @@ export function DienstToevoegenDialog({
                     Annuleren
                   </Button>
                 <Button type="submit" form="dienst-toevoegen-form" disabled={isSubmitting}>
-                  {isSubmitting ? (
+                  {isSubmitting && !quickSubmitType ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       {dienst ? 'Opslaan...' : 'Toevoegen...'}
