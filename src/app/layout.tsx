@@ -38,39 +38,9 @@ import { LogOut, Settings, ChevronDown } from 'lucide-react';
 
 function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
-  const firestore = useFirestore();
   const auth = useAuth();
   const { profile, isLoading: isProfileLoading } = useProfile();
   const { isHeaderVisible } = useNavigationUI();
-
-  const userProfileRef = useMemo(() => {
-    if (!user || !firestore) return null;
-    return doc(firestore, 'users', user.uid);
-  }, [user, firestore]);
-
-  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
-
-  // Create user profile document if it doesn't exist
-  useEffect(() => {
-    const createProfile = async () => {
-      if (
-        user &&
-        !isProfileLoading &&
-        !userProfile &&
-        userProfileRef
-      ) {
-        const initialProfile: UserProfile = {
-          id: user.uid,
-          email: user.email,
-          role: 'medewerkers',
-          permissions: getDefaultPermissions(),
-          status: 'Actief'
-        };
-        await setDocumentNonBlocking(userProfileRef, initialProfile, { merge: true });
-      }
-    };
-    createProfile();
-  }, [user, userProfile, isProfileLoading, userProfileRef, firestore]);
   
   const handleLogout = async () => {
     if(auth) {
