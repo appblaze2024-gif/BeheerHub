@@ -701,7 +701,14 @@ export default function WorkPlanningPage() {
       <div className="flex-1 overflow-auto border-t">
         <div className="grid grid-cols-[250px_repeat(7,1fr)] min-w-[1200px]">
           {/* Header Row */}
-          <div className="sticky top-0 z-20 p-2 bg-background border-b border-r"></div>
+          <div className="sticky top-0 z-20 p-2 bg-background border-b border-r">
+            <div className="grid grid-rows-3 h-full">
+              <div className="row-span-2"></div>
+              <div className="flex items-end">
+                <span className="font-semibold text-sm">Medewerker</span>
+              </div>
+            </div>
+          </div>
           {weekDays.map((day) => (
             <div
               key={day.toISOString()}
@@ -716,83 +723,58 @@ export default function WorkPlanningPage() {
               <p className="text-xs text-muted-foreground">
                 {format(day, 'dd-MM', { locale: nl })}
               </p>
+               <div className="grid grid-cols-2 gap-1 mt-1">
+                 <div className='text-xs text-left text-muted-foreground'>
+                   <span className="font-semibold">Onbeschikbaar</span>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="xs" className="w-full h-auto text-xs justify-start text-left mt-0.5 truncate p-1">
+                                {(unavailableVehicles[format(day, 'yyyy-MM-dd')] || []).length > 0 ? (unavailableVehicles[format(day, 'yyyy-MM-dd')] || []).join(', ') : "Geen"}
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-64 max-h-80 overflow-y-auto">
+                            <DropdownMenuLabel>Onbeschikbare voertuigen</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {sortedVoertuigen && sortedVoertuigen.length > 0 ? sortedVoertuigen.map(v => (
+                                <DropdownMenuCheckboxItem
+                                    key={v.id}
+                                    checked={(unavailableVehicles[format(day, 'yyyy-MM-dd')] || []).includes(v.id)}
+                                    onCheckedChange={(checked) => handleUnavailableVehicleToggle(format(day, 'yyyy-MM-dd'), v.id, !!checked)}
+                                    onSelect={(e) => e.preventDefault()}
+                                >
+                                    {v.voertuignummer || v.id} ({v.merk})
+                                </DropdownMenuCheckboxItem>
+                            )) : <DropdownMenuItem disabled>Geen voertuigen</DropdownMenuItem>}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                 </div>
+                 <div className='text-xs text-left text-muted-foreground'>
+                    <span className="font-semibold">Beschikbaar</span>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="xs" className="w-full h-auto text-xs justify-start text-left mt-0.5 truncate p-1">
+                                 {(availableVehicles[format(day, 'yyyy-MM-dd')] || []).length > 0 ? (availableVehicles[format(day, 'yyyy-MM-dd')] || []).join(', ') : "Alle"}
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-64 max-h-80 overflow-y-auto">
+                            <DropdownMenuLabel>Beschikbare voertuigen</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                             {sortedVoertuigen && sortedVoertuigen.length > 0 ? sortedVoertuigen.map(v => (
+                                <DropdownMenuCheckboxItem
+                                    key={v.id}
+                                    checked={(availableVehicles[format(day, 'yyyy-MM-dd')] || []).includes(v.id)}
+                                    onCheckedChange={(checked) => handleAvailableVehicleToggle(format(day, 'yyyy-MM-dd'), v.id, !!checked)}
+                                    onSelect={(e) => e.preventDefault()}
+                                >
+                                    {v.voertuignummer || v.id} ({v.merk})
+                                </DropdownMenuCheckboxItem>
+                            )) : <DropdownMenuItem disabled>Geen voertuigen</DropdownMenuItem>}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                 </div>
+              </div>
             </div>
           ))}
-
-          {/* UNAVAILABLE VEHICLES ROW */}
-          <div className="p-3 border-b border-r flex items-center bg-background h-11 medewerker-header">
-            <span className="font-semibold text-sm whitespace-nowrap">Onbeschikbaar</span>
-          </div>
-          {weekDays.map((day) => {
-              const dateKey = format(day, 'yyyy-MM-dd');
-              const unavailableForDay = unavailableVehicles[dateKey] || [];
-              const buttonText = unavailableForDay.length > 0
-                  ? sortedVoertuigen?.filter(v => unavailableForDay.includes(v.id)).map(v => v.voertuignummer || v.id).join(', ')
-                  : "Geen";
-              return (
-                  <div key={`${day.toISOString()}-unavailable`} className="p-1 border-b border-r day-column bg-background h-11">
-                      <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                              <Button variant="outline" className="w-full h-full text-xs justify-start text-left">
-                                  <span className='truncate'>{buttonText}</span>
-                              </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent className="w-64 max-h-80 overflow-y-auto">
-                              <DropdownMenuLabel>Onbeschikbare voertuigen</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              {sortedVoertuigen && sortedVoertuigen.length > 0 ? sortedVoertuigen.map(v => (
-                                  <DropdownMenuCheckboxItem
-                                      key={v.id}
-                                      checked={unavailableForDay.includes(v.id)}
-                                      onCheckedChange={(checked) => handleUnavailableVehicleToggle(dateKey, v.id, !!checked)}
-                                      onSelect={(e) => e.preventDefault()}
-                                  >
-                                      {v.voertuignummer || v.id} ({v.merk})
-                                  </DropdownMenuCheckboxItem>
-                              )) : <DropdownMenuItem disabled>Geen voertuigen geladen</DropdownMenuItem>}
-                          </DropdownMenuContent>
-                      </DropdownMenu>
-                  </div>
-              );
-          })}
-          
-           {/* AVAILABLE VEHICLES ROW */}
-          <div className="p-3 border-b border-r flex items-center bg-background h-11 medewerker-header">
-            <span className="font-semibold text-sm whitespace-nowrap">Beschikbare auto's</span>
-          </div>
-          {weekDays.map((day) => {
-              const dateKey = format(day, 'yyyy-MM-dd');
-              const availableForDay = availableVehicles[dateKey] || [];
-              const buttonText = availableForDay.length > 0
-                  ? sortedVoertuigen?.filter(v => availableForDay.includes(v.id)).map(v => v.voertuignummer || v.id).join(', ')
-                  : "Alle";
-              return (
-                  <div key={`${day.toISOString()}-available`} className="p-1 border-b border-r day-column bg-background h-11">
-                      <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                              <Button variant="outline" className="w-full h-full text-xs justify-start text-left">
-                                  <span className='truncate'>{buttonText}</span>
-                              </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent className="w-64 max-h-80 overflow-y-auto">
-                              <DropdownMenuLabel>Beschikbare voertuigen</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              {sortedVoertuigen && sortedVoertuigen.length > 0 ? sortedVoertuigen.map(v => (
-                                  <DropdownMenuCheckboxItem
-                                      key={v.id}
-                                      checked={availableForDay.includes(v.id)}
-                                      onCheckedChange={(checked) => handleAvailableVehicleToggle(dateKey, v.id, !!checked)}
-                                      onSelect={(e) => e.preventDefault()}
-                                  >
-                                      {v.voertuignummer || v.id} ({v.merk})
-                                  </DropdownMenuCheckboxItem>
-                              )) : <DropdownMenuItem disabled>Geen voertuigen geladen</DropdownMenuItem>}
-                          </DropdownMenuContent>
-                      </DropdownMenu>
-                  </div>
-              );
-          })}
-
 
           {/* Data Rows */}
           {isLoadingMedewerkers ? (
@@ -814,7 +796,7 @@ export default function WorkPlanningPage() {
           ) : (
             medewerkers?.filter(m => m.status === 'Actief').map((medewerker) => (
               <React.Fragment key={medewerker.id}>
-                <div className="flex flex-col justify-center p-3 border-b border-r medewerker-header sticky left-0 bg-background z-10">
+                <div className="flex flex-col justify-center p-3 border-b border-r medewerker-header">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
                        <AvatarImage
