@@ -59,9 +59,11 @@ interface BestekmeldingDialogProps {
   onOpenChange: (open: boolean) => void;
   melding: Besteksmelding | null;
   projectId: string | null;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }
 
-export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: BestekmeldingDialogProps) {
+export function BestekmeldingDialog({ open, onOpenChange, melding, projectId, canEdit, canDelete }: BestekmeldingDialogProps) {
   const firestore = useFirestore();
   const app = useFirebaseApp();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -281,6 +283,7 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
   };
 
   const isUploading = Object.keys(uploadProgress).length > 0;
+  const isReadOnly = !!melding && !canEdit;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -298,7 +301,7 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
                     <FormItem>
                         <FormLabel>Werksoort</FormLabel>
                         <FormControl>
-                          <Input placeholder="Voer werksoort in" {...field} />
+                          <Input placeholder="Voer werksoort in" {...field} disabled={isReadOnly} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -307,7 +310,7 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
                 <FormField control={form.control} name="omschrijving" render={({ field }) => (
                     <FormItem>
                         <FormLabel>Omschrijving</FormLabel>
-                        <FormControl><Textarea rows={5} placeholder="Omschrijf de melding..." {...field} /></FormControl>
+                        <FormControl><Textarea rows={5} placeholder="Omschrijf de melding..." {...field} disabled={isReadOnly} /></FormControl>
                         <FormMessage />
                     </FormItem>
                 )} />
@@ -315,7 +318,7 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
                 <FormField control={form.control} name="status" render={({ field }) => (
                   <FormItem>
                       <FormLabel>Status</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={isReadOnly}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                         <SelectContent>{statusOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                       </Select>
                       <FormMessage />
@@ -324,9 +327,9 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
 
                 <div className='space-y-2'>
                     <FormLabel>Foto's</FormLabel>
-                    <Button type="button" variant="outline" disabled={isUploading || isSubmitting} onClick={() => document.getElementById('bestek-file-input')?.click()}>
+                    {!isReadOnly && <Button type="button" variant="outline" disabled={isUploading || isSubmitting} onClick={() => document.getElementById('bestek-file-input')?.click()}>
                         <Upload className="mr-2 h-4 w-4" /> Upload een foto
-                    </Button>
+                    </Button>}
                     <input type="file" id="bestek-file-input" onChange={handleFileChange} className="hidden" multiple accept="image/*" />
                      {Object.entries(uploadProgress).map(([name, progress]) => (
                       <div key={name} className="space-y-1 mt-2">
@@ -341,7 +344,7 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
                                     <a href={file.url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline flex items-center gap-2">
                                         <FileIcon className='h-4 w-4 shrink-0'/> {file.name}
                                     </a>
-                                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleFileDelete(file)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                    {!isReadOnly && <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleFileDelete(file)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
                                 </div>
                             ))}
                         </div>
@@ -358,6 +361,7 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             autoComplete="off"
+                            disabled={isReadOnly}
                         />
                         {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
                         {suggestions.length > 0 && (
@@ -384,7 +388,7 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
             </div>
              <DialogFooter className="md:col-span-2 flex justify-between w-full">
               <div>
-                {melding && (
+                {melding && canDelete && (
                    <AlertDialog>
                    <AlertDialogTrigger asChild>
                      <Button type="button" variant="destructive" disabled={isDeleting || isSubmitting}>
@@ -407,9 +411,9 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
               </div>
               <div className="flex gap-2">
                 <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Annuleren</Button>
-                <Button type="submit" disabled={isSubmitting || isUploading || !location}>
+                {!isReadOnly && <Button type="submit" disabled={isSubmitting || isUploading || !location}>
                   {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Opslaan...</> : 'Melding Opslaan'}
-                </Button>
+                </Button>}
               </div>
             </DialogFooter>
           </form>

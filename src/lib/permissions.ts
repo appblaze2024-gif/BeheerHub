@@ -11,7 +11,7 @@ export const permissionConfig = [
     { module: 'navigation', label: 'Navigatiemodule', actions: [{ id: 'use', label: 'Gebruiken' }] },
     { module: 'mail', label: 'Mail', actions: [{ id: 'use', label: 'Gebruiken' }] },
     { module: 'users', label: 'Gebruikersbeheer', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }] },
-    { module: 'specReports', label: 'Besteksmeldingen', actions: [{ id: 'view', label: 'Bekijken' }] },
+    { module: 'specReports', label: 'Besteksmeldingen', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }] },
 ];
 
 export const getDefaultPermissions = () => {

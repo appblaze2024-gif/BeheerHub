@@ -10,20 +10,31 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
-    function isSuperUser() {
-      return isSignedIn() && getUserData().role == 'Super admin';
-    }
-
-    function isToezichthouder() {
-      return isSignedIn() && getUserData().role == 'toezichthouder';
-    }
-
+    // A single function for checking permissions, making only one document read.
     function hasPermission(module, action) {
-        return isSignedIn() && (isSuperUser() || getUserData().permissions[module][action] == true);
+      if (!isSignedIn()) {
+        return false;
+      }
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+
+      if (!userDoc.exists) {
+        return false;
+      }
+      if (userDoc.data.role == 'Super admin') {
+        return true;
+      }
+      return module in userDoc.data.permissions &&
+             action in userDoc.data.permissions[module] &&
+             userDoc.data.permissions[module][action] == true;
+    }
+    
+    // A function to check against a list of roles with one document read.
+    function isOneOfRoles(roles) {
+      if (!isSignedIn()) {
+        return false;
+      }
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return userDoc.exists && userDoc.data.role in roles;
     }
 
     match /projects/{projectId} {
@@ -91,7 +102,7 @@ service cloud.firestore {
     // This rule is specifically for the collectionGroup query, but also allows admins
     // to get/list routes of specific users directly.
     match /{path=**}/routes/{routeId} {
-      allow get, list: if isSuperUser() || isToezichthouder();
+      allow get, list: if isOneOfRoles({ 'Super admin': true, 'toezichthouder': true });
     }
 
     match /objects/{objectId} {

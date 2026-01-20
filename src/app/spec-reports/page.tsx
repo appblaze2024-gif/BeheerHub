@@ -85,6 +85,11 @@ export default function SpecReportsPage() {
   const [searchQuery, setSearchQuery] = React.useState('');
   const { profile } = useProfile();
 
+  const isSuperUser = profile?.role === 'Super admin';
+  const canCreate = isSuperUser || !!profile?.permissions?.specReports?.create;
+  const canEdit = isSuperUser || !!profile?.permissions?.specReports?.edit;
+  const canDelete = isSuperUser || !!profile?.permissions?.specReports?.delete;
+
   const projectsCollection = React.useMemo(() => {
     if (!firestore) return null;
     return collection(firestore, 'projects');
@@ -193,10 +198,10 @@ export default function SpecReportsPage() {
         </div>
         <div className="flex flex-col sm:flex-row gap-2 pointer-events-auto w-full md:w-auto">
             <div className='flex gap-2 items-center'>
-                    <Button onClick={handleNewMelding} disabled={!selectedProjectId}>
+                    {canCreate && <Button onClick={handleNewMelding} disabled={!selectedProjectId}>
                         <Plus className="mr-2 h-4 w-4" />
                         Nieuwe Besteksmelding
-                    </Button>
+                    </Button>}
                     <Button variant="outline" onClick={() => setViewMode(viewMode === 'map' ? 'list' : 'map')} className="bg-card">
                       {viewMode === 'map' ? <List className="mr-2 h-4 w-4" /> : <MapIcon className="mr-2 h-4 w-4" />}
                       {viewMode === 'map' ? 'Lijst' : 'Kaart'}
@@ -271,9 +276,9 @@ export default function SpecReportsPage() {
             onOpenChange={handleDialogClose}
             melding={selectedMelding}
             projectId={selectedProjectId}
+            canEdit={canEdit}
+            canDelete={canDelete}
         />
     </div>
   );
 }
-
-    
