@@ -122,8 +122,10 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
         return;
     }
 
-    if (!searchQuery.trim()) {
-      setSuggestions([]);
+    if (!searchQuery.trim() || suggestions.some(s => s.display_name === searchQuery)) {
+      if (!justSelectedSuggestion.current) {
+         setSuggestions([]);
+      }
       return;
     }
 
@@ -150,7 +152,7 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [searchQuery]);
+  }, [searchQuery, suggestions]);
 
   const handleSuggestionClick = (suggestion: Suggestion) => {
     justSelectedSuggestion.current = true;
@@ -164,16 +166,16 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
     setSuggestions([]);
   };
 
-  const uploadFile = (file: File, meldingId: string): Promise<UploadedFile> => {
+  const uploadFile = (file: File, meldingId: string, projectId: string): Promise<UploadedFile> => {
     return new Promise((resolve, reject) => {
-        if (!app) {
-            reject(new Error("Firebase app not available"));
+        if (!app || !projectId) {
+            reject(new Error("Firebase app of project ID niet beschikbaar"));
             return;
         }
         const storage = getStorage(app);
         const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
         const uniqueFileName = `${new Date().getTime()}-${sanitizedFileName}`;
-        const storagePath = `besteksmeldingen/${meldingId}/${uniqueFileName}`;
+        const storagePath = `projects/${projectId}/besteksmeldingen/${meldingId}/${uniqueFileName}`;
         const storageRef = ref(storage, storagePath);
         const uploadTask = uploadBytesResumable(storageRef, file);
 
@@ -200,10 +202,10 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files || !meldingIdRef.current) return;
+    if (!files || !meldingIdRef.current || !projectId) return;
     for (const file of Array.from(files)) {
       try {
-        const uploadedFile = await uploadFile(file, meldingIdRef.current);
+        const uploadedFile = await uploadFile(file, meldingIdRef.current, projectId);
         setUploadedFiles(prev => [...prev, uploadedFile]);
       } catch (error) { 
         console.error(`Kon ${file.name} niet uploaden.`, error); 
