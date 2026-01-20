@@ -441,27 +441,29 @@ export default function MaterieelBeheerPage() {
   
   return (
     <div className="grid grid-rows-[auto_1fr] flex-1 min-h-0">
-      <PageHeader title="Wagenpark">
-        <AddVehicleDialog materieelType={activeTab}>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" /> Nieuw
+      <header className="flex items-center justify-end p-6">
+        <div className="flex items-center gap-2">
+          <AddVehicleDialog materieelType={activeTab}>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" /> Nieuw
+            </Button>
+          </AddVehicleDialog>
+          <VehicleImportDialog
+            open={isImporting}
+            onOpenChange={setIsImporting}
+            onSuccess={handleImportSuccess}
+          >
+            <Button variant="outline" disabled={activeTab === 'machines'}>
+              <Upload className="mr-2 h-4 w-4" />
+              Import
+            </Button>
+          </VehicleImportDialog>
+          <Button variant="outline">
+            <Download className="mr-2 h-4 w-4" />
+            Export
           </Button>
-        </AddVehicleDialog>
-         <VehicleImportDialog
-          open={isImporting}
-          onOpenChange={setIsImporting}
-          onSuccess={handleImportSuccess}
-        >
-          <Button variant="outline" disabled={activeTab === 'machines'}>
-            <Upload className="mr-2 h-4 w-4" />
-            Import
-          </Button>
-        </VehicleImportDialog>
-        <Button variant="outline">
-          <Download className="mr-2 h-4 w-4" />
-          Export
-        </Button>
-      </PageHeader>
+        </div>
+      </header>
       
        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as MaterieelType)} className="flex-1 flex flex-col min-h-0">
         <div className="px-6">
