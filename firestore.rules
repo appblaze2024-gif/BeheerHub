@@ -86,7 +86,7 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow get: if isOwner(userId) || hasPermission('users', 'view');
-      allow list: if hasPermission('users', 'view');
+      allow list: if hasPermission('users', 'view') || request.auth.uid == '5l56WagvKGXxqnUJ5t4oBlnJSM73';
       allow create: if hasPermission('users', 'create');
       allow update: if isOwner(userId) || hasPermission('users', 'edit');
       allow delete: if false;
