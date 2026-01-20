@@ -376,10 +376,27 @@ function RoosterTab({ medewerker }: { medewerker: Medewerker }) {
                     
                     const dayName = format(day, 'eeee', { locale: nl }).toLowerCase() as keyof NonNullable<Medewerker['urenPerDag']>;
                     const isWeekend = dayName === 'zaterdag' || dayName === 'zondag';
-                    const defaultUren = { maandag: 8, dinsdag: 8, woensdag: 8, donderdag: 8, vrijdag: 8, zaterdag: 0, zondag: 0 };
-                    const urenPerDag = medewerker.urenPerDag || defaultUren;
-                    const contractHours = urenPerDag.hasOwnProperty(dayName) ? urenPerDag[dayName] : (isWeekend ? 0 : 8);
-                    const isNonWorkingDay = (contractHours ?? 0) === 0;
+                    const defaultUren = {
+                        maandag: { start: '07:00', eind: '15:30' },
+                        dinsdag: { start: '07:00', eind: '15:30' },
+                        woensdag: { start: '07:00', eind: '15:30' },
+                        donderdag: { start: '07:00', eind: '15:30' },
+                        vrijdag: { start: '07:00', eind: '15:30' },
+                        zaterdag: { start: '', eind: '' },
+                        zondag: { start: '', eind: '' }
+                    };
+                    const urenPerDag = { ...defaultUren };
+                    if (medewerker.urenPerDag) {
+                        for (const d of Object.keys(defaultUren)) {
+                            const dayKey = d as keyof typeof defaultUren;
+                            if (medewerker.urenPerDag[dayKey]) {
+                                urenPerDag[dayKey] = { ...urenPerDag[dayKey], ...medewerker.urenPerDag[dayKey] };
+                            }
+                        }
+                    }
+
+                    const dagUren = urenPerDag[dayName];
+                    const isNonWorkingDay = !dagUren || !dagUren.start || !dagUren.eind;
                     const isVisuallyNonWorkingDay = isNonWorkingDay && !isWeekend;
 
                     return (

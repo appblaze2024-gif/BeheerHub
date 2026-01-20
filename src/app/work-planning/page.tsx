@@ -68,8 +68,22 @@ const getWeekContractHours = (medewerker: Medewerker): number => {
     if (!medewerker || !medewerker.urenPerDag) {
       return 40;
     }
-    const { maandag = 0, dinsdag = 0, woensdag = 0, donderdag = 0, vrijdag = 0, zaterdag = 0, zondag = 0 } = medewerker.urenPerDag;
-    return maandag + dinsdag + woensdag + donderdag + vrijdag + zaterdag + zondag;
+    let totalMinutes = 0;
+    for (const day in medewerker.urenPerDag) {
+        const times = medewerker.urenPerDag[day as keyof typeof medewerker.urenPerDag];
+        if (times && times.start && times.eind) {
+            try {
+                const startTijd = parse(times.start, 'HH:mm', new Date());
+                const eindTijd = parse(times.eind, 'HH:mm', new Date());
+                let duration = (eindTijd.getTime() - startTijd.getTime()) / (1000 * 60);
+                if (duration < 0) duration += 24 * 60; // Overnight
+                totalMinutes += duration;
+            } catch(e) {
+                // ignore parsing error
+            }
+        }
+    }
+    return totalMinutes / 60;
 };
 
 const formatHours = (totalHours: number) => {

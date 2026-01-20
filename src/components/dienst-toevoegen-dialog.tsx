@@ -96,8 +96,18 @@ export function DienstToevoegenDialog({
           ...dienst,
           voertuignummer: dienst.voertuignummer || null,
         });
-      } else {
+      } else if (medewerker && datum) {
+        const dayName = format(datum, 'eeee', { locale: nl }).toLowerCase() as keyof NonNullable<Medewerker['urenPerDag']>;
+        const defaultTimes = medewerker.urenPerDag?.[dayName];
+        
         form.reset({
+          werksoort: '',
+          starttijd: defaultTimes?.start || '07:00',
+          eindtijd: defaultTimes?.eind || '15:30',
+          voertuignummer: null,
+        });
+      } else {
+         form.reset({
           werksoort: '',
           starttijd: '07:00',
           eindtijd: '15:30',
@@ -105,7 +115,7 @@ export function DienstToevoegenDialog({
         });
       }
     }
-  }, [open, dienst, form]);
+  }, [open, dienst, form, medewerker, datum]);
 
   const handleVerlofSubmit = async () => {
     if (!firestore || !project?.id || !datum || !medewerker) return;

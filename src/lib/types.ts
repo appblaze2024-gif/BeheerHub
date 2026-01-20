@@ -49,13 +49,13 @@ export interface Medewerker {
   status?: 'Actief' | 'Inactief' | 'Niet uitgenodigd';
   avatarUrl?: string;
   urenPerDag?: {
-    maandag?: number;
-    dinsdag?: number;
-    woensdag?: number;
-    donderdag?: number;
-    vrijdag?: number;
-    zaterdag?: number;
-    zondag?: number;
+    maandag?: { start?: string; eind?: string };
+    dinsdag?: { start?: string; eind?: string };
+    woensdag?: { start?: string; eind?: string };
+    donderdag?: { start?: string; eind?: string };
+    vrijdag?: { start?: string; eind?: string };
+    zaterdag?: { start?: string; eind?: string };
+    zondag?: { start?: string; eind?: string };
   };
 }
 

@@ -55,13 +55,13 @@ const medewerkerFormSchema = z.object({
   uitdiensttreding: z.string().optional().nullable(),
   contractType: z.string().optional(),
   urenPerDag: z.object({
-    maandag: z.coerce.number().optional(),
-    dinsdag: z.coerce.number().optional(),
-    woensdag: z.coerce.number().optional(),
-    donderdag: z.coerce.number().optional(),
-    vrijdag: z.coerce.number().optional(),
-    zaterdag: z.coerce.number().optional(),
-    zondag: z.coerce.number().optional(),
+    maandag: z.object({ start: z.string().optional(), eind: z.string().optional() }).optional(),
+    dinsdag: z.object({ start: z.string().optional(), eind: z.string().optional() }).optional(),
+    woensdag: z.object({ start: z.string().optional(), eind: z.string().optional() }).optional(),
+    donderdag: z.object({ start: z.string().optional(), eind: z.string().optional() }).optional(),
+    vrijdag: z.object({ start: z.string().optional(), eind: z.string().optional() }).optional(),
+    zaterdag: z.object({ start: z.string().optional(), eind: z.string().optional() }).optional(),
+    zondag: z.object({ start: z.string().optional(), eind: z.string().optional() }).optional(),
   }).optional(),
   notities: z.string().optional(),
 });
@@ -94,7 +94,13 @@ export function MedewerkerDialog({
   const [activeTab, setActiveTab] = React.useState("Basis");
   
   const defaultUren = {
-      maandag: 8, dinsdag: 8, woensdag: 8, donderdag: 8, vrijdag: 8, zaterdag: 0, zondag: 0
+      maandag: { start: '07:00', eind: '15:30' },
+      dinsdag: { start: '07:00', eind: '15:30' },
+      woensdag: { start: '07:00', eind: '15:30' },
+      donderdag: { start: '07:00', eind: '15:30' },
+      vrijdag: { start: '07:00', eind: '15:30' },
+      zaterdag: { start: '', eind: '' },
+      zondag: { start: '', eind: '' },
   };
 
   const form = useForm<MedewerkerFormValues>({
@@ -162,12 +168,20 @@ export function MedewerkerDialog({
       };
 
       if (medewerker) {
+          const mergedUren = { ...defaultUren };
+          if (medewerker.urenPerDag) {
+              for (const day of weekDagen) {
+                  if (medewerker.urenPerDag[day]) {
+                      mergedUren[day] = { ...defaultUren[day], ...medewerker.urenPerDag[day] };
+                  }
+              }
+          }
           form.reset({
             ...defaultValues,
             ...medewerker,
             indiensttreding: dateToInputString(medewerker.indiensttreding),
             uitdiensttreding: dateToInputString(medewerker.uitdiensttreding),
-            urenPerDag: medewerker.urenPerDag ? { ...defaultUren, ...medewerker.urenPerDag } : defaultUren
+            urenPerDag: mergedUren
           });
       } else {
           form.reset(defaultValues);
@@ -476,22 +490,37 @@ export function MedewerkerDialog({
                 )}
               />
               <div>
-                <FormLabel>Uren per dag</FormLabel>
-                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 mt-2">
+                <FormLabel>Standaard werktijden</FormLabel>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-2">
                   {weekDagen.map((day) => (
-                    <FormField
-                      key={day}
-                      control={form.control}
-                      name={`urenPerDag.${day}`}
-                      render={({ field }) => (
-                        <FormItem className='text-center'>
-                          <FormLabel className='text-xs capitalize'>{day.substring(0, 2)}</FormLabel>
-                          <FormControl>
-                            <Input type="number" className="text-center" {...field} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
+                    <div key={day} className="space-y-2 rounded-md border p-2">
+                        <FormLabel className='text-xs capitalize font-semibold'>{day}</FormLabel>
+                        <div className="flex items-center gap-1">
+                            <FormField
+                                control={form.control}
+                                name={`urenPerDag.${day}.start`}
+                                render={({ field }) => (
+                                    <FormItem className="flex-1">
+                                        <FormControl>
+                                            <Input type="time" {...field} className='h-8' />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
+                            <span className="text-muted-foreground">-</span>
+                            <FormField
+                                control={form.control}
+                                name={`urenPerDag.${day}.eind`}
+                                render={({ field }) => (
+                                    <FormItem className="flex-1">
+                                        <FormControl>
+                                            <Input type="time" {...field} className='h-8' />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                    </div>
                   ))}
                 </div>
               </div>
