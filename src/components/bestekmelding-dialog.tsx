@@ -87,7 +87,7 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
       meldingIdRef.current = melding?.id || doc(collection(firestore, 'temp')).id;
       setUploadedFiles(melding?.fotos || []);
       setLocation(melding ? { latitude: melding.latitude, longitude: melding.longitude } : null);
-      setSearchQuery('');
+      setSearchQuery(melding ? `${melding.latitude.toFixed(6)}, ${melding.longitude.toFixed(6)}` : '');
       setSuggestions([]);
       setIsSearching(false);
       form.reset(
@@ -122,8 +122,12 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
         return;
     }
 
-    if (!searchQuery.trim()) {
-      setSuggestions([]);
+    if (!searchQuery.trim() || suggestions.some(s => s.display_name === searchQuery)) {
+      // Don't clear suggestions if the current query is one of the suggestions,
+      // this prevents flicker when selecting.
+      if (!suggestions.some(s => s.display_name === searchQuery)) {
+        setSuggestions([]);
+      }
       return;
     }
 
@@ -150,7 +154,7 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [searchQuery]);
+  }, [searchQuery, suggestions]);
 
   const handleSuggestionClick = (suggestion: Suggestion) => {
     justSelectedSuggestion.current = true;
@@ -171,7 +175,8 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
             return;
         }
         const storage = getStorage(app);
-        const uniqueFileName = `${new Date().getTime()}-${file.name}`;
+        const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const uniqueFileName = `${new Date().getTime()}-${sanitizedFileName}`;
         const storagePath = `besteksmeldingen/${meldingId}/${uniqueFileName}`;
         const storageRef = ref(storage, storagePath);
         const uploadTask = uploadBytesResumable(storageRef, file);
@@ -204,7 +209,9 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
       try {
         const uploadedFile = await uploadFile(file, meldingIdRef.current);
         setUploadedFiles(prev => [...prev, uploadedFile]);
-      } catch (error) { console.error(`Kon ${file.name} niet uploaden.`); }
+      } catch (error) { 
+        console.error(`Kon ${file.name} niet uploaden.`, error); 
+      }
     }
   };
 
