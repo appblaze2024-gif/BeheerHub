@@ -46,8 +46,8 @@ export default function LoginPage() {
          <Image
           src="https://i.ibb.co/XxdPbvks/Whats-App-Image-2026-01-20-at-08-32-27.jpg"
           alt="Logo"
-          width={100}
-          height={25}
+          width={150}
+          height={38}
           priority
         />
       </div>
@@ -57,8 +57,8 @@ export default function LoginPage() {
             <Image
                 src="https://i.ibb.co/XxdPbvks/Whats-App-Image-2026-01-20-at-08-32-27.jpg"
                 alt="Logo"
-                width={100}
-                height={25}
+                width={150}
+                height={38}
                 priority
             />
           <h1 className="text-2xl font-bold text-white">Inloggen met e-mail</h1>
