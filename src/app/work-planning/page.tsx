@@ -211,6 +211,7 @@ export default function WorkPlanningPage() {
   const [copiedDienst, setCopiedDienst] = React.useState<Dienst | null>(null);
   const [selectedCells, setSelectedCells] = React.useState<{ medewerkerId: string; datum: string }[]>([]);
   const [unavailableVehicles, setUnavailableVehicles] = React.useState<Record<string, string[]>>({});
+  const [availableVehicles, setAvailableVehicles] = React.useState<Record<string, string[]>>({});
 
 
   const firestore = useFirestore();
@@ -573,15 +574,41 @@ export default function WorkPlanningPage() {
     });
   };
 
+  const handleAvailableVehicleToggle = (dateKey: string, vehicleId: string, checked: boolean) => {
+    setAvailableVehicles(prev => {
+        const currentForDay = prev[dateKey] || [];
+        const newForDay = checked
+            ? [...currentForDay, vehicleId]
+            : currentForDay.filter(id => id !== vehicleId);
+        
+        if (newForDay.length === 0) {
+            const { [dateKey]: _, ...rest } = prev;
+            return rest;
+        }
+
+        return {
+            ...prev,
+            [dateKey]: newForDay,
+        };
+    });
+  };
+
   const availableVoertuigenForDialog = React.useMemo(() => {
     if (!voertuigen) return [];
     if (!selectedDay) return voertuigen;
     
     const dateKey = format(selectedDay, 'yyyy-MM-dd');
     const unavailableForDay = unavailableVehicles[dateKey] || [];
+    const availableForDay = availableVehicles[dateKey] || [];
+
+    if (availableForDay.length > 0) {
+        // If specific vehicles are marked as available, only they are available (and not unavailable).
+        return voertuigen.filter(v => availableForDay.includes(v.id) && !unavailableForDay.includes(v.id));
+    }
     
+    // Otherwise, all vehicles are available except those marked as unavailable.
     return voertuigen.filter(v => !unavailableForDay.includes(v.id));
-  }, [voertuigen, selectedDay, unavailableVehicles]);
+  }, [voertuigen, selectedDay, unavailableVehicles, availableVehicles]);
 
 
   return (
@@ -645,7 +672,7 @@ export default function WorkPlanningPage() {
           ))}
 
           {/* UNAVAILABLE VEHICLES ROW */}
-          <div className="p-3 border-b border-r flex items-center sticky top-[57px] bg-background z-10">
+          <div className="p-3 border-b border-r flex items-center sticky top-[57px] bg-background z-10 h-11">
             <span className="font-semibold text-sm whitespace-nowrap">Onbeschikbaar</span>
           </div>
           {weekDays.map((day) => {
@@ -655,7 +682,7 @@ export default function WorkPlanningPage() {
                   ? voertuigen?.filter(v => unavailableForDay.includes(v.id)).map(v => v.voertuignummer || v.id).join(', ')
                   : "Geen";
               return (
-                  <div key={`${day.toISOString()}-unavailable`} className="p-1 border-b border-r day-column sticky top-[57px] bg-background z-10">
+                  <div key={`${day.toISOString()}-unavailable`} className="p-1 border-b border-r day-column sticky top-[57px] bg-background z-10 h-11">
                       <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                               <Button variant="outline" className="w-full h-full text-xs justify-start text-left">
@@ -670,6 +697,43 @@ export default function WorkPlanningPage() {
                                       key={v.id}
                                       checked={unavailableForDay.includes(v.id)}
                                       onCheckedChange={(checked) => handleUnavailableVehicleToggle(dateKey, v.id, !!checked)}
+                                      onSelect={(e) => e.preventDefault()}
+                                  >
+                                      {v.voertuignummer || v.id} ({v.merk})
+                                  </DropdownMenuCheckboxItem>
+                              )) : <DropdownMenuItem disabled>Geen voertuigen geladen</DropdownMenuItem>}
+                          </DropdownMenuContent>
+                      </DropdownMenu>
+                  </div>
+              );
+          })}
+          
+           {/* AVAILABLE VEHICLES ROW */}
+          <div className="p-3 border-b border-r flex items-center sticky top-[101px] bg-background z-10 h-11">
+            <span className="font-semibold text-sm whitespace-nowrap">Beschikbaar</span>
+          </div>
+          {weekDays.map((day) => {
+              const dateKey = format(day, 'yyyy-MM-dd');
+              const availableForDay = availableVehicles[dateKey] || [];
+              const buttonText = availableForDay.length > 0
+                  ? voertuigen?.filter(v => availableForDay.includes(v.id)).map(v => v.voertuignummer || v.id).join(', ')
+                  : "Alle";
+              return (
+                  <div key={`${day.toISOString()}-available`} className="p-1 border-b border-r day-column sticky top-[101px] bg-background z-10 h-11">
+                      <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                              <Button variant="outline" className="w-full h-full text-xs justify-start text-left">
+                                  <span className='truncate'>{buttonText}</span>
+                              </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="w-64 max-h-80 overflow-y-auto">
+                              <DropdownMenuLabel>Beschikbare voertuigen</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              {voertuigen && voertuigen.length > 0 ? voertuigen.map(v => (
+                                  <DropdownMenuCheckboxItem
+                                      key={v.id}
+                                      checked={availableForDay.includes(v.id)}
+                                      onCheckedChange={(checked) => handleAvailableVehicleToggle(dateKey, v.id, !!checked)}
                                       onSelect={(e) => e.preventDefault()}
                                   >
                                       {v.voertuignummer || v.id} ({v.merk})
@@ -844,3 +908,5 @@ export default function WorkPlanningPage() {
     </div>
   );
 }
+
+    
