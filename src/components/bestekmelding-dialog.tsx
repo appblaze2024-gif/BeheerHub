@@ -122,12 +122,8 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
         return;
     }
 
-    if (!searchQuery.trim() || suggestions.some(s => s.display_name === searchQuery)) {
-      // Don't clear suggestions if the current query is one of the suggestions,
-      // this prevents flicker when selecting.
-      if (!suggestions.some(s => s.display_name === searchQuery)) {
-        setSuggestions([]);
-      }
+    if (!searchQuery.trim()) {
+      setSuggestions([]);
       return;
     }
 
@@ -154,7 +150,7 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [searchQuery, suggestions]);
+  }, [searchQuery]);
 
   const handleSuggestionClick = (suggestion: Suggestion) => {
     justSelectedSuggestion.current = true;
