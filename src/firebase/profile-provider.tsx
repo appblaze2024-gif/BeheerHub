@@ -1,7 +1,7 @@
 'use client';
 
 import { useUser, useDoc, useFirestore, updateDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import React, { createContext, useContext, ReactNode, useMemo, useEffect } from 'react';
 import type { UserProfile } from '@/lib/types';
 import { getDefaultPermissions } from '@/lib/permissions';
@@ -23,6 +23,38 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   }, [user, firestore]);
 
   const { data: profile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+
+  // This effect now safely creates a user profile only if it truly doesn't exist,
+  // preventing race conditions during first login.
+  useEffect(() => {
+    const createProfile = async () => {
+      if (
+        user &&
+        !isProfileLoading &&
+        !profile && // `profile` from useDoc is null, indicating it might not exist
+        userProfileRef
+      ) {
+        // To prevent a race condition, we perform a direct `get` to be certain.
+        const docSnap = await getDoc(userProfileRef);
+        if (!docSnap.exists()) {
+          // The document genuinely does not exist, so we can create it.
+          const initialProfile: UserProfile = {
+            id: user.uid,
+            email: user.email,
+            role: 'medewerkers',
+            permissions: getDefaultPermissions(),
+            status: 'Actief'
+          };
+          // Use `set` without merge, as we are creating a new document.
+          await setDocumentNonBlocking(userProfileRef, initialProfile, {});
+        }
+        // If the document *does* exist, we do nothing. `useDoc` will eventually
+        // receive the data and update the `profile` state.
+      }
+    };
+    createProfile();
+  }, [user, profile, isProfileLoading, userProfileRef, firestore]);
+
 
   // Grant Super Admin role to a specific user
   useEffect(() => {
@@ -52,7 +84,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     if (!isProfileLoading && !isUserLoading) {
       grantAdminRole();
     }
-  }, [user, profile, isProfileLoading, isUserLoading, userProfileRef, firestore]);
+  }, [user, profile, isProfileLoading, isUserLoading, userProfileRef]);
 
 
   const value: ProfileContextValue = useMemo(() => ({
