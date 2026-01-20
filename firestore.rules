@@ -33,7 +33,8 @@ service cloud.firestore {
        allow delete: if hasPermission('projects', 'delete');
 
        match /diensten/{dienstId} {
-         allow read, write: if isSignedIn();
+         allow get, list: if hasPermission('workPlanning', 'view');
+         allow write: if hasPermission('workPlanning', 'edit');
        }
 
        match /boekingregels/{boekingregelId} {
@@ -41,15 +42,22 @@ service cloud.firestore {
        }
 
        match /bestanden/{bestandId} {
-         allow read, write: if hasPermission('projects', 'view') || hasPermission('projects', 'edit');
+         allow get, list: if hasPermission('projects', 'view');
+         allow create: if hasPermission('projects', 'edit');
+         allow delete: if hasPermission('projects', 'delete');
+         allow update: if false;
        }
 
        match /afspraken/{afspraakId} {
-         allow read, write: if hasPermission('projects', 'view') || hasPermission('projects', 'edit');
+         allow get, list: if hasPermission('projects', 'view');
+         allow create, update: if hasPermission('projects', 'edit');
+         allow delete: if hasPermission('projects', 'delete');
        }
 
        match /organisatie/{contactId} {
-         allow read, write: if hasPermission('projects', 'view') || hasPermission('projects', 'edit');
+         allow get, list: if hasPermission('projects', 'view');
+         allow create, update: if hasPermission('projects', 'edit');
+         allow delete: if hasPermission('projects', 'delete');
        }
 
        match /besteksmeldingen/{besteksmeldingId} {

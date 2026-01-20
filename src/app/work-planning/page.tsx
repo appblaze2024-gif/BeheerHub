@@ -55,6 +55,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useIsMobile } from '@/hooks/use-mobile';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuCheckboxItem, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
+import { useProfile } from '@/firebase/profile-provider';
 
 
 const getInitials = (firstName?: string, lastName?: string) => {
@@ -101,10 +102,11 @@ type Project = {
   };
 };
 
-const DienstItem = ({ dienst, onEdit, onDelete, onContextMenu, isNonWorkingDay }: { dienst: Dienst, onEdit: (dienst: Dienst) => void, onDelete: (dienst: Dienst) => void, onContextMenu: (e: React.MouseEvent, dienst: Dienst) => void, isNonWorkingDay: boolean }) => {
+const DienstItem = ({ dienst, onEdit, onDelete, onContextMenu, isNonWorkingDay, canEdit }: { dienst: Dienst, onEdit: (dienst: Dienst) => void, onDelete: (dienst: Dienst) => void, onContextMenu: (e: React.MouseEvent, dienst: Dienst) => void, isNonWorkingDay: boolean, canEdit: boolean }) => {
     const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
 
     const handleEdit = (e: React.MouseEvent) => {
+        if (!canEdit) return;
         // Prevent triggering edit when clicking delete button
         if ((e.target as HTMLElement).closest('.delete-button')) {
             return;
@@ -122,7 +124,7 @@ const DienstItem = ({ dienst, onEdit, onDelete, onContextMenu, isNonWorkingDay }
     }
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-        if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (canEdit && (e.key === 'Delete' || e.key === 'Backspace')) {
             e.preventDefault();
             setShowDeleteConfirm(true);
         }
@@ -136,20 +138,22 @@ const DienstItem = ({ dienst, onEdit, onDelete, onContextMenu, isNonWorkingDay }
             <div 
                 onClick={handleEdit}
                 onKeyDown={handleKeyDown}
-                onContextMenu={(e) => onContextMenu(e, dienst)}
+                onContextMenu={(e) => { if(canEdit) onContextMenu(e, dienst) }}
                 tabIndex={0}
-                draggable
-                onDragStart={handleDragStart}
+                draggable={canEdit}
+                onDragStart={canEdit ? handleDragStart : undefined}
                 onDragEnd={handleDragEnd}
                 className={cn(
-                    "rounded-md p-2 text-xs cursor-pointer relative group/dienst focus:outline-none focus:ring-2 focus:ring-primary",
+                    "rounded-md p-2 text-xs relative group/dienst focus:outline-none focus:ring-2 focus:ring-primary",
                      isZiek 
-                        ? "bg-yellow-200 text-yellow-900 hover:bg-yellow-300 dark:bg-yellow-900/50 dark:text-white dark:hover:bg-yellow-900/70"
+                        ? "bg-yellow-200 text-yellow-900 dark:bg-yellow-900/50 dark:text-white"
                      : isVerlof
-                        ? "bg-orange-200 text-orange-900 hover:bg-orange-300 dark:bg-orange-900/50 dark:text-white dark:hover:bg-orange-900/70"
+                        ? "bg-orange-200 text-orange-900 dark:bg-orange-900/50 dark:text-white"
                         : isNonWorkingDay
                             ? 'border border-gray-600 text-gray-200 bg-transparent'
-                            : "bg-blue-100 text-blue-900 hover:bg-blue-200 dark:bg-blue-900/50 dark:text-white dark:hover:bg-blue-900/70"
+                            : "bg-blue-100 text-blue-900 dark:bg-blue-900/50 dark:text-white",
+                    canEdit && !isVisuallyNonWorkingDay && (isZiek ? "hover:bg-yellow-300 dark:hover:bg-yellow-900/70" : isVerlof ? "hover:bg-orange-300 dark:hover:bg-orange-900/70" : "hover:bg-blue-200 dark:hover:bg-blue-900/70"),
+                    canEdit && !isVisuallyNonWorkingDay && 'cursor-pointer'
                 )}
             >
                 <p className="font-semibold truncate">{dienst.werksoort}</p>
@@ -157,7 +161,7 @@ const DienstItem = ({ dienst, onEdit, onDelete, onContextMenu, isNonWorkingDay }
                 {dienst.voertuignummer && (
                     <p className="truncate">Voertuignummer: {dienst.voertuignummer}</p>
                 )}
-                <Button 
+                {canEdit && <Button 
                     variant="ghost" 
                     size="icon" 
                     className="delete-button absolute top-0 right-0 h-6 w-6 opacity-0 group-hover/dienst:opacity-100 focus:opacity-100"
@@ -167,7 +171,7 @@ const DienstItem = ({ dienst, onEdit, onDelete, onContextMenu, isNonWorkingDay }
                     }}
                 >
                     <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
+                </Button>}
             </div>
              <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
                 <AlertDialogContent>
@@ -217,6 +221,7 @@ export default function WorkPlanningPage() {
   const [availableVehicles, setAvailableVehicles] = React.useState<Record<string, string[]>>({});
   const isFirestoreDataLoaded = React.useRef(false);
 
+  const { profile, isLoading: isProfileLoading } = useProfile();
 
   const firestore = useFirestore();
 
@@ -243,6 +248,10 @@ export default function WorkPlanningPage() {
 
   const { data: voertuigen, isLoading: isLoadingVoertuigen } = useCollection<Voertuig>(voertuigenCollection);
 
+  const isSuperUser = profile?.role === 'Super admin';
+  const canView = isSuperUser || !!profile?.permissions?.workPlanning?.view;
+  const canEdit = isSuperUser || !!profile?.permissions?.workPlanning?.edit;
+
   const sortedVoertuigen = React.useMemo(() => {
     if (!voertuigen) return [];
     return [...voertuigen].sort((a, b) => 
@@ -258,6 +267,11 @@ export default function WorkPlanningPage() {
     if (!firestore || !selectedProjectId) {
       setDiensten([]);
       return;
+    }
+    if (!canView) {
+        setDiensten([]);
+        setIsLoadingDiensten(false);
+        return;
     }
     setIsLoadingDiensten(true);
     const startDateString = format(start, 'yyyy-MM-dd');
@@ -284,7 +298,7 @@ export default function WorkPlanningPage() {
     } finally {
       setIsLoadingDiensten(false);
     }
-  }, [firestore, selectedProjectId, start, end]);
+  }, [firestore, selectedProjectId, start, end, canView]);
 
   React.useEffect(() => {
     fetchDiensten();
@@ -333,6 +347,7 @@ export default function WorkPlanningPage() {
 
   
   const handleOpenSheetForNew = (medewerker: Medewerker, datum: Date) => {
+    if (!canEdit) return;
     setSelectedMedewerker(medewerker);
     setSelectedDay(datum);
     setSelectedDienst(undefined);
@@ -340,6 +355,7 @@ export default function WorkPlanningPage() {
   };
   
   const handleOpenSheetForEdit = (dienst: Dienst) => {
+    if (!canEdit) return;
     const medewerker = medewerkers?.find(m => m.id === dienst.medewerkerId);
     setSelectedMedewerker(medewerker);
     setSelectedDay(new Date(dienst.datum));
@@ -348,7 +364,7 @@ export default function WorkPlanningPage() {
   };
 
   const handleDienstDelete = async (dienst: Dienst) => {
-      if (!firestore || !selectedProjectId || !dienst.id) return;
+      if (!firestore || !selectedProjectId || !dienst.id || !canEdit) return;
       const dienstRef = doc(firestore, 'projects', selectedProjectId, 'diensten', dienst.id);
       await deleteDocumentNonBlocking(dienstRef);
       fetchDiensten();
@@ -363,7 +379,7 @@ export default function WorkPlanningPage() {
     e.preventDefault();
     setDragOverCell(null);
   
-    if (!firestore) return;
+    if (!firestore || !canEdit) return;
     
     const dienstJson = e.dataTransfer.getData('application/json');
     if (!dienstJson) return;
@@ -412,6 +428,7 @@ export default function WorkPlanningPage() {
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>, medewerkerId: string, day: Date) => {
     e.preventDefault();
+    if (!canEdit) return;
     setDragOverCell({ medewerkerId, day: format(day, 'yyyy-MM-dd') });
   }
 
@@ -528,11 +545,12 @@ export default function WorkPlanningPage() {
 
   const handleContextMenu = (e: React.MouseEvent, context: { dienst?: Dienst; cellContext?: { medewerker: Medewerker; datum: Date } }) => {
     e.preventDefault();
+    if (!canEdit) return;
     setContextMenu({ x: e.clientX, y: e.clientY, ...context });
   };
   
   const handlePaste = async () => {
-    if (!copiedDienst || selectedCells.length === 0 || !firestore || !selectedProjectId) return;
+    if (!copiedDienst || selectedCells.length === 0 || !firestore || !selectedProjectId || !canEdit) return;
   
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id, ...dienstToCopy } = copiedDienst;
@@ -559,7 +577,7 @@ export default function WorkPlanningPage() {
   };
 
    const handleDeleteSelected = async () => {
-    if (selectedCells.length === 0 || !firestore || !selectedProjectId || !diensten) return;
+    if (selectedCells.length === 0 || !firestore || !selectedProjectId || !diensten || !canEdit) return;
 
     const dienstenToDelete = diensten.filter(d => 
       selectedCells.some(cell => cell.medewerkerId === d.medewerkerId && cell.datum === d.datum)
@@ -727,7 +745,7 @@ export default function WorkPlanningPage() {
                    <span className="font-semibold">Onbeschikbaar</span>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="xs" className="w-full h-auto text-xs justify-start text-left mt-0.5 truncate p-1">
+                            <Button variant="outline" size="xs" className="w-full h-auto text-xs justify-start text-left mt-0.5 truncate p-1" disabled={!canEdit}>
                                 {(unavailableVehicles[format(day, 'yyyy-MM-dd')] || []).length > 0 ? (unavailableVehicles[format(day, 'yyyy-MM-dd')] || []).join(', ') : "Geen"}
                             </Button>
                         </DropdownMenuTrigger>
@@ -751,7 +769,7 @@ export default function WorkPlanningPage() {
                     <span className="font-semibold">Beschikbaar</span>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="xs" className="w-full h-auto text-xs justify-start text-left mt-0.5 truncate p-1">
+                            <Button variant="outline" size="xs" className="w-full h-auto text-xs justify-start text-left mt-0.5 truncate p-1" disabled={!canEdit}>
                                  {(availableVehicles[format(day, 'yyyy-MM-dd')] || []).length > 0 ? (availableVehicles[format(day, 'yyyy-MM-dd')] || []).join(', ') : "Alle"}
                             </Button>
                         </DropdownMenuTrigger>
@@ -776,7 +794,7 @@ export default function WorkPlanningPage() {
           ))}
 
           {/* Data Rows */}
-          {isLoadingMedewerkers ? (
+          {isLoadingMedewerkers || isProfileLoading ? (
             <div className="col-span-8 p-4">
               {Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className='grid grid-cols-[250px_repeat(7,1fr)]'>
@@ -792,6 +810,8 @@ export default function WorkPlanningPage() {
                 </div>
               ))}
             </div>
+          ) : !canView ? (
+              <div className="col-span-8 p-8 text-center text-muted-foreground">U heeft geen rechten om deze planning te bekijken.</div>
           ) : (
             medewerkers?.filter(m => m.status === 'Actief').map((medewerker) => (
               <React.Fragment key={medewerker.id}>
@@ -835,17 +855,17 @@ export default function WorkPlanningPage() {
                   return (
                     <div
                         key={day.toISOString()}
-                        onDrop={(e) => !isVisuallyNonWorkingDay && handleDrop(e, medewerker.id, day)}
-                        onDragOver={(e) => !isVisuallyNonWorkingDay && handleDragOver(e, medewerker.id, day)}
+                        onDrop={(e) => !isVisuallyNonWorkingDay && canEdit && handleDrop(e, medewerker.id, day)}
+                        onDragOver={(e) => !isVisuallyNonWorkingDay && canEdit && handleDragOver(e, medewerker.id, day)}
                         onDragLeave={() => setDragOverCell(null)}
                         onContextMenu={(e) => {
-                          if (isVisuallyNonWorkingDay) return;
+                          if (isVisuallyNonWorkingDay || !canEdit) return;
                           if (!(e.target as HTMLElement).closest('.group\\/dienst')) {
                             handleContextMenu(e, { cellContext: { medewerker, datum: day } });
                           }
                         }}
                         onClick={(e) => {
-                            if (isVisuallyNonWorkingDay) return;
+                            if (isVisuallyNonWorkingDay || !canEdit) return;
                             if ((e.target as HTMLElement).closest('.group\\/dienst')) return;
                             handleOpenSheetForNew(medewerker, day);
                         }}
@@ -856,7 +876,7 @@ export default function WorkPlanningPage() {
                                 : isToday(day) ? "bg-muted/50" : "",
                             isDragOver && !isVisuallyNonWorkingDay && "bg-blue-100 dark:bg-blue-900/30",
                             isSelected && !isVisuallyNonWorkingDay && "bg-primary/10",
-                            !isVisuallyNonWorkingDay && "cursor-pointer"
+                            !isVisuallyNonWorkingDay && canEdit && "cursor-pointer"
                         )}
                     >
                         <div className="flex-1 space-y-1 relative z-10">
@@ -866,8 +886,8 @@ export default function WorkPlanningPage() {
                             dienstenForDay?.map(dienst => (
                                 <DienstItem key={dienst.id} dienst={dienst} onEdit={handleOpenSheetForEdit} onDelete={handleDienstDelete} onContextMenu={(e, d) => {
                                     e.stopPropagation(); // Prevent grid cell context menu
-                                    handleContextMenu(e, { dienst: d });
-                                }} isNonWorkingDay={isVisuallyNonWorkingDay} />
+                                    if(canEdit) handleContextMenu(e, { dienst: d });
+                                }} isNonWorkingDay={isVisuallyNonWorkingDay} canEdit={canEdit} />
                             ))
                           )}
                         </div>
