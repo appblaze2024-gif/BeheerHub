@@ -418,12 +418,12 @@ function RoosterTab({ medewerker }: { medewerker: Medewerker }) {
                             <div className="mt-1 space-y-1">
                                 {dayDiensten.map(dienst => {
                                     const isZiek = dienst.werksoort === 'Ziek';
-                                    const isVerlof = dienst.werksoort === 'Verlof' || dienst.werksoort === 'ATV';
+                                    const isVerlof = dienst.werksoort === 'Verlof' || dienst.werksoort === 'ADV';
                                     return (
                                         <div key={dienst.id} className={cn(
                                             "rounded-md p-1.5 text-sm leading-snug",
                                             isZiek 
-                                                ? "bg-red-200 text-red-900 dark:bg-red-900/50 dark:text-white"
+                                                ? "bg-yellow-200 text-yellow-900 dark:bg-yellow-900/50 dark:text-white"
                                             : isVerlof
                                                 ? "bg-orange-200 text-orange-900 dark:bg-orange-900/50 dark:text-white"
                                             : isVisuallyNonWorkingDay

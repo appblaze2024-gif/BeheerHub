@@ -126,7 +126,7 @@ const DienstItem = ({ dienst, onEdit, onDelete, onContextMenu, isNonWorkingDay }
     };
     
     const isZiek = dienst.werksoort === 'Ziek';
-    const isVerlof = dienst.werksoort === 'Verlof' || dienst.werksoort === 'ATV';
+    const isVerlof = dienst.werksoort === 'Verlof' || dienst.werksoort === 'ADV';
 
     return (
         <>
@@ -141,7 +141,7 @@ const DienstItem = ({ dienst, onEdit, onDelete, onContextMenu, isNonWorkingDay }
                 className={cn(
                     "rounded-md p-2 text-xs cursor-pointer relative group/dienst focus:outline-none focus:ring-2 focus:ring-primary",
                      isZiek 
-                        ? "bg-red-200 text-red-900 hover:bg-red-300 dark:bg-red-900/50 dark:text-white dark:hover:bg-red-900/70"
+                        ? "bg-yellow-200 text-yellow-900 hover:bg-yellow-300 dark:bg-yellow-900/50 dark:text-white dark:hover:bg-yellow-900/70"
                      : isVerlof
                         ? "bg-orange-200 text-orange-900 hover:bg-orange-300 dark:bg-orange-900/50 dark:text-white dark:hover:bg-orange-900/70"
                         : isNonWorkingDay
