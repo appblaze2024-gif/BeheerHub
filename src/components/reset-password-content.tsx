@@ -86,7 +86,7 @@ export function ResetPasswordContent() {
   const onEmailSubmit = async (data: EmailFormValues) => {
     try {
       await sendPasswordResetEmail(auth, data.email, {
-        url: window.location.href, // This will include the current URL, so when they click the link they come back here
+        url: `${window.location.origin}/reset-password`,
       });
       setEmailForReset(data.email);
       setMode('email-sent');
