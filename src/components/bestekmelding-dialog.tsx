@@ -75,6 +75,7 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
   const [suggestions, setSuggestions] = React.useState<Suggestion[]>([]);
   const [isSearching, setIsSearching] = React.useState(false);
   const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const justSelectedSuggestion = React.useRef(false);
 
 
   const form = useForm<MeldingFormValues>({
@@ -116,7 +117,12 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
         clearTimeout(searchTimeoutRef.current);
     }
 
-    if (!searchQuery.trim() || suggestions.some(s => s.display_name === searchQuery)) {
+    if (justSelectedSuggestion.current) {
+        justSelectedSuggestion.current = false;
+        return;
+    }
+
+    if (!searchQuery.trim()) {
       setSuggestions([]);
       return;
     }
@@ -144,9 +150,10 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [searchQuery, suggestions]);
+  }, [searchQuery]);
 
   const handleSuggestionClick = (suggestion: Suggestion) => {
+    justSelectedSuggestion.current = true;
     setSearchQuery(suggestion.display_name);
     const lat = parseFloat(suggestion.lat);
     const lon = parseFloat(suggestion.lon);
