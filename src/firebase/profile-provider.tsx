@@ -1,7 +1,7 @@
 'use client';
 
-import { useUser, useDoc, useFirestore, updateDocumentNonBlocking } from '@/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { useUser, useDoc, useFirestore, updateDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { doc, getDocFromServer } from 'firebase/firestore';
 import React, { createContext, useContext, ReactNode, useMemo, useEffect } from 'react';
 import type { UserProfile } from '@/lib/types';
 import { getDefaultPermissions } from '@/lib/permissions';
@@ -34,8 +34,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         !profile && // `profile` from useDoc is null, indicating it might not exist
         userProfileRef
       ) {
-        // To prevent a race condition, we perform a direct `get` to be certain.
-        const docSnap = await getDoc(userProfileRef);
+        // To prevent a race condition, we perform a direct `get` from the server to be certain.
+        const docSnap = await getDocFromServer(userProfileRef);
         if (!docSnap.exists()) {
           // The document genuinely does not exist, so we can create it.
           const initialProfile: UserProfile = {
