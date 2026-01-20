@@ -96,10 +96,10 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
         <header className="bg-background flex h-16 shrink-0 items-center justify-between border-b border-border px-6 shadow-sm z-30">
             <Link href="/" className="mr-4 flex items-center">
               <Image
-                src="https://i.ibb.co/fVxCTj33/Whats-App-Image-2026-01-16-at-12-09-08-1-removebg-preview.png"
+                src="https://i.ibb.co/6R9xTjQ5/Chat-GPT-Image-20-jan-2026-08-23-45-removebg-preview.png"
                 alt="BeheerHub Logo"
-                width={40}
-                height={40}
+                width={120}
+                height={30}
               />
             </Link>
             
