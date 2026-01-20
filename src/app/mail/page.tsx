@@ -190,9 +190,14 @@ export default function MailPage() {
   const [isLabelManagerOpen, setIsLabelManagerOpen] = React.useState(false);
   const [mailLabels, setMailLabels] = React.useState<Record<string, string>>({});
 
+  const selectedMailRef = React.useRef(selectedMail);
+  selectedMailRef.current = selectedMail;
 
-  const fetchAndSetEmails = React.useCallback(async () => {
-    setIsLoading(true);
+
+  const fetchAndSetEmails = React.useCallback(async (showLoading = true) => {
+    if (showLoading) {
+      setIsLoading(true);
+    }
     setError(null);
     try {
       const folder = folders.find(f => f.name === selectedFolder);
@@ -200,17 +205,33 @@ export default function MailPage() {
           throw new Error('Geselecteerde map niet gevonden.');
       }
       const fetchedMails = await fetchEmailsFlow(folder.boxName);
-      setMails(fetchedMails);
+      setMails(currentMails => {
+        if (JSON.stringify(currentMails) !== JSON.stringify(fetchedMails)) {
+            const currentSelectedMail = selectedMailRef.current;
+            if (currentSelectedMail && !fetchedMails.find(m => m.id === currentSelectedMail.id)) {
+                setSelectedMail(null);
+            }
+            return fetchedMails;
+        }
+        return currentMails;
+      });
     } catch (error: any) {
       console.error("Failed to fetch emails:", error);
       setError(error.message || 'Kon e-mails niet ophalen.');
     } finally {
-      setIsLoading(false);
+      if (showLoading) {
+        setIsLoading(false);
+      }
     }
   }, [selectedFolder, folders]);
 
   React.useEffect(() => {
-    fetchAndSetEmails();
+    fetchAndSetEmails(true);
+    const interval = setInterval(() => {
+      fetchAndSetEmails(false);
+    }, 15000); // Poll every 15 seconds
+
+    return () => clearInterval(interval);
   }, [fetchAndSetEmails]);
 
   const handleDelete = async (e: React.MouseEvent) => {
@@ -384,7 +405,7 @@ export default function MailPage() {
               <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={fetchAndSetEmails} disabled={isLoading}>
+                        <Button variant="ghost" size="icon" onClick={() => fetchAndSetEmails(true)} disabled={isLoading}>
                           {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                         </Button>
                     </TooltipTrigger>
