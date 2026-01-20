@@ -15,7 +15,7 @@ import {
 } from '@/firebase';
 import { ProfileProvider, useProfile } from '@/firebase/profile-provider';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, Suspense } from 'react';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import { doc } from 'firebase/firestore';
@@ -70,8 +70,8 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
               <Image
                 src="https://i.ibb.co/b54NVfJm/Whats-App-Image-2026-01-20-at-08-32-27-removebg-preview.png"
                 alt="BeheerHub Logo"
-                width={270}
-                height={67.5}
+                width={360}
+                height={90}
               />
             </Link>
             
@@ -188,6 +188,10 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   return <ProtectedAppLayout>{children}</ProtectedAppLayout>;
 }
 
+function AppLayoutFallback() {
+    return <div className="flex h-screen items-center justify-center">Laden...</div>;
+}
+
 
 export default function RootLayout({
   children,
@@ -213,7 +217,9 @@ export default function RootLayout({
         <FirebaseClientProvider>
           <ProfileProvider>
             <NavigationUIProvider>
-              <AppLayout>{children}</AppLayout>
+              <Suspense fallback={<AppLayoutFallback />}>
+                <AppLayout>{children}</AppLayout>
+              </Suspense>
             </NavigationUIProvider>
           </ProfileProvider>
         </FirebaseClientProvider>
