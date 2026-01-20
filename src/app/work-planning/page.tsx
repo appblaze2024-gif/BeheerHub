@@ -247,7 +247,7 @@ export default function WorkPlanningPage() {
   const sortedVoertuigen = React.useMemo(() => {
     if (!voertuigen) return [];
     return [...voertuigen].sort((a, b) => 
-        (a.voertuignummer || '').localeCompare(b.voertuignummer || '', undefined, { numeric: true, sensitivity: 'base' })
+        (a.voertuignummer || a.id).localeCompare(b.voertuignummer || b.id, undefined, { numeric: true, sensitivity: 'base' })
     );
   }, [voertuigen]);
 
@@ -758,7 +758,7 @@ export default function WorkPlanningPage() {
           
            {/* AVAILABLE VEHICLES ROW */}
           <div className="p-3 border-b border-r flex items-center bg-background h-11 medewerker-header">
-            <span className="font-semibold text-sm whitespace-nowrap">Beschikbaar</span>
+            <span className="font-semibold text-sm whitespace-nowrap">Beschikbare auto's</span>
           </div>
           {weekDays.map((day) => {
               const dateKey = format(day, 'yyyy-MM-dd');
