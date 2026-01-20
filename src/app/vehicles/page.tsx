@@ -21,7 +21,6 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { PageHeader } from '@/components/page-header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import {
@@ -441,41 +440,38 @@ export default function MaterieelBeheerPage() {
   
   return (
     <div className="grid grid-rows-[auto_1fr] flex-1 min-h-0">
-      <header className="flex items-center justify-end p-6">
-        <div className="flex items-center gap-2">
-          <AddVehicleDialog materieelType={activeTab}>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" /> Nieuw
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as MaterieelType)} className="flex-1 flex flex-col min-h-0">
+        <header className="flex items-center justify-between p-6">
+            <TabsList>
+                <TabsTrigger value="voertuigen">Voertuigen</TabsTrigger>
+                <TabsTrigger value="machines">Machines</TabsTrigger>
+            </TabsList>
+            <div className="flex items-center gap-2">
+            <AddVehicleDialog materieelType={activeTab}>
+                <Button>
+                <Plus className="mr-2 h-4 w-4" /> Nieuw
+                </Button>
+            </AddVehicleDialog>
+            <VehicleImportDialog
+                open={isImporting}
+                onOpenChange={setIsImporting}
+                onSuccess={handleImportSuccess}
+            >
+                <Button variant="outline" disabled={activeTab === 'machines'}>
+                <Upload className="mr-2 h-4 w-4" />
+                Import
+                </Button>
+            </VehicleImportDialog>
+            <Button variant="outline">
+                <Download className="mr-2 h-4 w-4" />
+                Export
             </Button>
-          </AddVehicleDialog>
-          <VehicleImportDialog
-            open={isImporting}
-            onOpenChange={setIsImporting}
-            onSuccess={handleImportSuccess}
-          >
-            <Button variant="outline" disabled={activeTab === 'machines'}>
-              <Upload className="mr-2 h-4 w-4" />
-              Import
-            </Button>
-          </VehicleImportDialog>
-          <Button variant="outline">
-            <Download className="mr-2 h-4 w-4" />
-            Export
-          </Button>
-        </div>
-      </header>
-      
-       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as MaterieelType)} className="flex-1 flex flex-col min-h-0">
-        <div className="px-6">
-          <TabsList>
-            <TabsTrigger value="voertuigen">Voertuigen</TabsTrigger>
-            <TabsTrigger value="machines">Machines</TabsTrigger>
-          </TabsList>
-        </div>
-        <TabsContent value="voertuigen" className="px-6 pb-6 mt-4 flex-1 min-h-0">
+            </div>
+        </header>
+        <TabsContent value="voertuigen" className="px-6 pb-6 flex-1 min-h-0">
           <MaterielView materieelType="voertuigen" />
         </TabsContent>
-        <TabsContent value="machines" className="px-6 pb-6 mt-4 flex-1 min-h-0">
+        <TabsContent value="machines" className="px-6 pb-6 flex-1 min-h-0">
           <MaterielView materieelType="machines" />
         </TabsContent>
       </Tabs>
