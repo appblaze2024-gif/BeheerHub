@@ -9,6 +9,8 @@ import { useCollection, useFirestore } from "@/firebase";
 import { collection } from "firebase/firestore";
 import { Badge } from "@/components/ui/badge";
 import { fetchEmailsFlow } from "@/ai/flows/fetch-emails-flow";
+import { useProfile } from "@/firebase/profile-provider";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const cardColors = [
   'bg-teal-600 hover:bg-teal-700',
@@ -49,6 +51,7 @@ function NavCard({ item, color, badgeCount }: { item: MenuItem, color: string, b
 export default function DashboardPage() {
   const firestore = useFirestore();
   const [unreadMailCount, setUnreadMailCount] = React.useState(0);
+  const { profile, isLoading: isProfileLoading } = useProfile();
 
   const meldingenCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -79,8 +82,48 @@ export default function DashboardPage() {
     return () => clearInterval(intervalId); // Cleanup on unmount
   }, []);
 
-  // Show all menu items on the dashboard, permissions are handled on the pages themselves.
-  const gridItems = allMenuItems.filter(item => item.href !== '/');
+  const gridItems = React.useMemo(() => {
+    if (isProfileLoading || !profile) {
+      return [];
+    }
+
+    const isSuperUser = profile.role === 'Super admin';
+
+    return allMenuItems.filter(item => {
+      if (item.href === '/') {
+        return false;
+      }
+
+      if (!item.module) {
+        return true;
+      }
+
+      if (isSuperUser) {
+        return true;
+      }
+
+      const modulePermissions = profile.permissions?.[item.module];
+      if (!modulePermissions) {
+        return false;
+      }
+
+      // Check for 'view' permission for most modules, or 'use' for specific ones.
+      return modulePermissions.view || modulePermissions.use || false;
+    });
+  }, [profile, isProfileLoading]);
+
+
+  if (isProfileLoading) {
+      return (
+          <div className="flex flex-col flex-1 p-6">
+              <div className="flex-1 grid grid-cols-5 gap-4 content-start">
+                  {Array.from({ length: 12 }).map((_, index) => (
+                      <Skeleton key={index} className="h-40" />
+                  ))}
+              </div>
+          </div>
+      );
+  }
 
   return (
     <div className="flex flex-col flex-1 p-6">
