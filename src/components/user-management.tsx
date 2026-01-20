@@ -192,9 +192,9 @@ function UserDialog({
                 permissions: data.permissions || {},
                 sidebarCollapsed: true,
                 status: 'Niet uitgenodigd',
-                wijk: data.wijk === 'geen_wijk' ? undefined : data.wijk,
-                veegroute: data.veegroute === 'geen_veegroute' ? undefined : data.veegroute,
-                prullenbakkenroute: data.prullenbakkenroute === 'geen_prullenbakkenroute' ? undefined : data.prullenbakkenroute,
+                wijk: data.wijk === 'geen_wijk' ? null : data.wijk,
+                veegroute: data.veegroute === 'geen_veegroute' ? null : data.veegroute,
+                prullenbakkenroute: data.prullenbakkenroute === 'geen_prullenbakkenroute' ? null : data.prullenbakkenroute,
             };
 
             await setDocumentNonBlocking(doc(firestore, 'users', newUser.uid), userProfileData, {});
@@ -635,5 +635,3 @@ export function UserManagement() {
     </>
   );
 }
-
-    
