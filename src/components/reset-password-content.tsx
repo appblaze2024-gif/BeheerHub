@@ -73,7 +73,6 @@ export function ResetPasswordContent() {
 
   const onPasswordSubmit = async (data: PasswordResetFormValues) => {
     if (!oobCode) return;
-    passwordForm.formState.isSubmitting = true;
     try {
       await confirmPasswordReset(auth, oobCode, data.password);
       setMode('success');
@@ -81,13 +80,10 @@ export function ResetPasswordContent() {
       console.error(error);
       setErrorMessage('Er is een fout opgetreden bij het instellen van uw wachtwoord. Probeer het opnieuw.');
       setMode('error');
-    } finally {
-        passwordForm.formState.isSubmitting = false;
     }
   };
 
   const onEmailSubmit = async (data: EmailFormValues) => {
-    emailForm.formState.isSubmitting = true;
     try {
       await sendPasswordResetEmail(auth, data.email, {
         url: window.location.href, // This will include the current URL, so when they click the link they come back here
@@ -98,8 +94,6 @@ export function ResetPasswordContent() {
       console.error(error);
       setErrorMessage('Er is een fout opgetreden bij het verzenden van de e-mail. Controleer het e-mailadres en probeer het opnieuw.');
       setMode('error');
-    } finally {
-        emailForm.formState.isSubmitting = false;
     }
   };
 
