@@ -672,7 +672,7 @@ export default function WorkPlanningPage() {
           ))}
 
           {/* UNAVAILABLE VEHICLES ROW */}
-          <div className="p-3 border-b border-r flex items-center sticky top-[57px] bg-background z-10 h-11">
+          <div className="p-3 border-b border-r flex items-center bg-background h-11 medewerker-header sticky left-0 z-10">
             <span className="font-semibold text-sm whitespace-nowrap">Onbeschikbaar</span>
           </div>
           {weekDays.map((day) => {
@@ -682,7 +682,7 @@ export default function WorkPlanningPage() {
                   ? voertuigen?.filter(v => unavailableForDay.includes(v.id)).map(v => v.voertuignummer || v.id).join(', ')
                   : "Geen";
               return (
-                  <div key={`${day.toISOString()}-unavailable`} className="p-1 border-b border-r day-column sticky top-[57px] bg-background z-10 h-11">
+                  <div key={`${day.toISOString()}-unavailable`} className="p-1 border-b border-r day-column bg-background h-11">
                       <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                               <Button variant="outline" className="w-full h-full text-xs justify-start text-left">
@@ -709,7 +709,7 @@ export default function WorkPlanningPage() {
           })}
           
            {/* AVAILABLE VEHICLES ROW */}
-          <div className="p-3 border-b border-r flex items-center sticky top-[101px] bg-background z-10 h-11">
+          <div className="p-3 border-b border-r flex items-center bg-background h-11 medewerker-header sticky left-0 z-10">
             <span className="font-semibold text-sm whitespace-nowrap">Beschikbaar</span>
           </div>
           {weekDays.map((day) => {
@@ -719,7 +719,7 @@ export default function WorkPlanningPage() {
                   ? voertuigen?.filter(v => availableForDay.includes(v.id)).map(v => v.voertuignummer || v.id).join(', ')
                   : "Alle";
               return (
-                  <div key={`${day.toISOString()}-available`} className="p-1 border-b border-r day-column sticky top-[101px] bg-background z-10 h-11">
+                  <div key={`${day.toISOString()}-available`} className="p-1 border-b border-r day-column bg-background h-11">
                       <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                               <Button variant="outline" className="w-full h-full text-xs justify-start text-left">
@@ -908,5 +908,3 @@ export default function WorkPlanningPage() {
     </div>
   );
 }
-
-    
