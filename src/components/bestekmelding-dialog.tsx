@@ -37,6 +37,13 @@ import type { Besteksmelding, UploadedFile } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 
 
+interface Suggestion {
+  place_id: number;
+  display_name: string;
+  lon: string;
+  lat: string;
+}
+
 const meldingFormSchema = z.object({
   werksoort: z.string().min(1, 'Werksoort is verplicht'),
   omschrijving: z.string().min(1, 'Omschrijving is verplicht'),
@@ -64,6 +71,12 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
   const meldingIdRef = React.useRef(melding?.id);
   const [location, setLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
 
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [suggestions, setSuggestions] = React.useState<Suggestion[]>([]);
+  const [isSearching, setIsSearching] = React.useState(false);
+  const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+
   const form = useForm<MeldingFormValues>({
     resolver: zodResolver(meldingFormSchema),
   });
@@ -73,6 +86,9 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
       meldingIdRef.current = melding?.id || doc(collection(firestore, 'temp')).id;
       setUploadedFiles(melding?.fotos || []);
       setLocation(melding ? { latitude: melding.latitude, longitude: melding.longitude } : null);
+      setSearchQuery('');
+      setSuggestions([]);
+      setIsSearching(false);
       form.reset(
         melding
           ? {
@@ -94,6 +110,52 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
       setLocation(null);
     }
   }, [open, melding, form, firestore]);
+
+  React.useEffect(() => {
+    if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+    }
+
+    if (!searchQuery.trim() || suggestions.some(s => s.display_name === searchQuery)) {
+      setSuggestions([]);
+      return;
+    }
+
+    setIsSearching(true);
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+            searchQuery
+          )}&format=json&countrycodes=nl&limit=5`
+        );
+        const data: Suggestion[] = await response.json();
+        setSuggestions(data);
+      } catch (error) {
+        console.error("Fout bij zoeken:", error);
+        setSuggestions([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 500); // 500ms debounce
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery, suggestions]);
+
+  const handleSuggestionClick = (suggestion: Suggestion) => {
+    setSearchQuery(suggestion.display_name);
+    const lat = parseFloat(suggestion.lat);
+    const lon = parseFloat(suggestion.lon);
+
+    if (!isNaN(lat) && !isNaN(lon)) {
+        setLocation({ latitude: lat, longitude: lon });
+    }
+    setSuggestions([]);
+  };
 
   const uploadFile = (file: File, meldingId: string): Promise<UploadedFile> => {
     return new Promise((resolve, reject) => {
@@ -280,7 +342,29 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
             <div className="space-y-4">
                  <FormItem>
                     <FormLabel>Locatie*</FormLabel>
-                    <div className='aspect-video w-full border rounded-md overflow-hidden'>
+                     <div className="relative w-full">
+                        <Input
+                            placeholder="Zoek een adres..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            autoComplete="off"
+                        />
+                        {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
+                        {suggestions.length > 0 && (
+                            <div className="absolute z-10 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                {suggestions.map((suggestion) => (
+                                <div
+                                    key={suggestion.place_id}
+                                    onClick={() => handleSuggestionClick(suggestion)}
+                                    className="px-4 py-2 text-sm cursor-pointer hover:bg-muted"
+                                >
+                                    {suggestion.display_name}
+                                </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                    <div className='aspect-video w-full border rounded-md overflow-hidden mt-2'>
                         <MapboxView
                             longitude={location?.longitude}
                             latitude={location?.latitude}
@@ -324,5 +408,3 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
     </Dialog>
   );
 }
-
-    
