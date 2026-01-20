@@ -36,8 +36,8 @@ export default function LoginPage() {
          <Image
           src="https://i.ibb.co/b54NVfJm/Whats-App-Image-2026-01-20-at-08-32-27-removebg-preview.png"
           alt="Logo"
-          width={180}
-          height={45}
+          width={360}
+          height={90}
           priority
         />
       </div>
