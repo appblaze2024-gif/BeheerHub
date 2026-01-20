@@ -95,7 +95,7 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className={cn('font-body antialiased flex flex-col h-svh overflow-hidden')}>
       {isHeaderVisible && (
-        <header className="bg-background flex h-20 shrink-0 items-center justify-between border-b border-border px-6 shadow-sm z-30">
+        <header className="bg-background flex h-16 shrink-0 items-center justify-between border-b border-border px-6 shadow-sm z-30">
             <Link href="/" className="mr-4 flex items-center">
               <Image
                 src="https://i.ibb.co/b54NVfJm/Whats-App-Image-2026-01-20-at-08-32-27-removebg-preview.png"
