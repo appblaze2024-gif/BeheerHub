@@ -864,6 +864,7 @@ export default function Page() {
         if (wijkIdFromNav) {
             params.set('wijkId', wijkIdFromNav);
         }
+        params.set('view', 'list');
         const queryString = params.toString();
         router.push(queryString ? `/issues?${queryString}` : '/issues');
     }

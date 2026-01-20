@@ -188,11 +188,15 @@ export default function IssuesPage() {
   React.useEffect(() => {
     const projectId = searchParams.get('projectId');
     const wijkId = searchParams.get('wijkId');
+    const view = searchParams.get('view');
     if (projectId) {
       setSelectedProjectId(projectId);
     }
     if (wijkId) {
       setSelectedWijkId(wijkId);
+    }
+    if (view === 'list' || view === 'map') {
+        setViewMode(view);
     }
   }, [searchParams]);
 
