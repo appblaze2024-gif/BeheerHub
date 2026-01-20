@@ -114,18 +114,16 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
 
   React.useEffect(() => {
     if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
+      clearTimeout(searchTimeoutRef.current);
     }
 
     if (justSelectedSuggestion.current) {
-        justSelectedSuggestion.current = false;
-        return;
+      justSelectedSuggestion.current = false;
+      return;
     }
 
-    if (!searchQuery.trim() || suggestions.some(s => s.display_name === searchQuery)) {
-      if (!justSelectedSuggestion.current) {
-         setSuggestions([]);
-      }
+    if (!searchQuery.trim()) {
+      setSuggestions([]);
       return;
     }
 
@@ -152,7 +150,7 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId }: 
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [searchQuery, suggestions]);
+  }, [searchQuery]);
 
   const handleSuggestionClick = (suggestion: Suggestion) => {
     justSelectedSuggestion.current = true;
