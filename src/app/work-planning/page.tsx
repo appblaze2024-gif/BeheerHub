@@ -55,7 +55,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useIsMobile } from '@/hooks/use-mobile';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuCheckboxItem, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
 
 
 const getInitials = (firstName?: string, lastName?: string) => {
@@ -210,6 +210,7 @@ export default function WorkPlanningPage() {
   } | null>(null);
   const [copiedDienst, setCopiedDienst] = React.useState<Dienst | null>(null);
   const [selectedCells, setSelectedCells] = React.useState<{ medewerkerId: string; datum: string }[]>([]);
+  const [unavailableVehicles, setUnavailableVehicles] = React.useState<Record<string, string[]>>({});
 
 
   const firestore = useFirestore();
@@ -553,6 +554,35 @@ export default function WorkPlanningPage() {
     }
   };
 
+  const handleUnavailableVehicleToggle = (dateKey: string, vehicleId: string, checked: boolean) => {
+    setUnavailableVehicles(prev => {
+        const currentForDay = prev[dateKey] || [];
+        const newForDay = checked
+            ? [...currentForDay, vehicleId]
+            : currentForDay.filter(id => id !== vehicleId);
+        
+        if (newForDay.length === 0) {
+            const { [dateKey]: _, ...rest } = prev;
+            return rest;
+        }
+
+        return {
+            ...prev,
+            [dateKey]: newForDay,
+        };
+    });
+  };
+
+  const availableVoertuigenForDialog = React.useMemo(() => {
+    if (!voertuigen) return [];
+    if (!selectedDay) return voertuigen;
+    
+    const dateKey = format(selectedDay, 'yyyy-MM-dd');
+    const unavailableForDay = unavailableVehicles[dateKey] || [];
+    
+    return voertuigen.filter(v => !unavailableForDay.includes(v.id));
+  }, [voertuigen, selectedDay, unavailableVehicles]);
+
 
   return (
     <div className="flex flex-col flex-1 h-full min-h-0" id="planning-container">
@@ -596,12 +626,12 @@ export default function WorkPlanningPage() {
       <div className="flex-1 overflow-auto border-t">
         <div className="grid grid-cols-[250px_repeat(7,1fr)] min-w-[1200px]">
           {/* Header Row */}
-          <div className="sticky top-0 z-10 p-2 bg-background border-b border-r"></div>
+          <div className="sticky top-0 z-20 p-2 bg-background border-b border-r"></div>
           {weekDays.map((day) => (
             <div
               key={day.toISOString()}
               className={cn(
-                "sticky top-0 z-10 p-2 text-center bg-background border-b border-r day-column",
+                "sticky top-0 z-20 p-2 text-center bg-background border-b border-r day-column",
                 isToday(day) && "bg-muted/50"
               )}
             >
@@ -613,6 +643,44 @@ export default function WorkPlanningPage() {
               </p>
             </div>
           ))}
+
+          {/* UNAVAILABLE VEHICLES ROW */}
+          <div className="p-3 border-b border-r flex items-center sticky top-[57px] bg-background z-10">
+            <span className="font-semibold text-sm whitespace-nowrap">Onbeschikbaar</span>
+          </div>
+          {weekDays.map((day) => {
+              const dateKey = format(day, 'yyyy-MM-dd');
+              const unavailableForDay = unavailableVehicles[dateKey] || [];
+              const buttonText = unavailableForDay.length > 0
+                  ? voertuigen?.filter(v => unavailableForDay.includes(v.id)).map(v => v.voertuignummer || v.id).join(', ')
+                  : "Geen";
+              return (
+                  <div key={`${day.toISOString()}-unavailable`} className="p-1 border-b border-r day-column sticky top-[57px] bg-background z-10">
+                      <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                              <Button variant="outline" className="w-full h-full text-xs justify-start text-left">
+                                  <span className='truncate'>{buttonText}</span>
+                              </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="w-64 max-h-80 overflow-y-auto">
+                              <DropdownMenuLabel>Onbeschikbare voertuigen</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              {voertuigen && voertuigen.length > 0 ? voertuigen.map(v => (
+                                  <DropdownMenuCheckboxItem
+                                      key={v.id}
+                                      checked={unavailableForDay.includes(v.id)}
+                                      onCheckedChange={(checked) => handleUnavailableVehicleToggle(dateKey, v.id, !!checked)}
+                                      onSelect={(e) => e.preventDefault()}
+                                  >
+                                      {v.voertuignummer || v.id} ({v.merk})
+                                  </DropdownMenuCheckboxItem>
+                              )) : <DropdownMenuItem disabled>Geen voertuigen geladen</DropdownMenuItem>}
+                          </DropdownMenuContent>
+                      </DropdownMenu>
+                  </div>
+              );
+          })}
+
 
           {/* Data Rows */}
           {isLoadingMedewerkers ? (
@@ -634,7 +702,7 @@ export default function WorkPlanningPage() {
           ) : (
             medewerkers?.filter(m => m.status === 'Actief').map((medewerker) => (
               <React.Fragment key={medewerker.id}>
-                <div className="flex flex-col justify-center p-3 border-b border-r medewerker-header">
+                <div className="flex flex-col justify-center p-3 border-b border-r medewerker-header sticky left-0 bg-background z-10">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
                        <AvatarImage
@@ -663,10 +731,11 @@ export default function WorkPlanningPage() {
                   
                   const dayName = format(day, 'eeee', { locale: nl }).toLowerCase() as keyof NonNullable<Medewerker['urenPerDag']>;
                   const isWeekend = dayName === 'zaterdag' || dayName === 'zondag';
-                  const defaultUren = { maandag: 8, dinsdag: 8, woensdag: 8, donderdag: 8, vrijdag: 8, zaterdag: 0, zondag: 0 };
-                  const urenPerDag = medewerker.urenPerDag || defaultUren;
-                  const contractHours = urenPerDag.hasOwnProperty(dayName) ? urenPerDag[dayName] : (isWeekend ? 0 : 8);
-                  const isNonWorkingDay = (contractHours ?? 0) === 0;
+                  const defaultUren = { maandag: { start: '07:00', eind: '15:30' }, dinsdag: { start: '07:00', eind: '15:30' }, woensdag: { start: '07:00', eind: '15:30' }, donderdag: { start: '07:00', eind: '15:30' }, vrijdag: { start: '07:00', eind: '15:30' }, zaterdag: { start: '', eind: '' }, zondag: { start: '', eind: '' } };
+                  const urenPerDag = { ...defaultUren, ...(medewerker.urenPerDag || {}) };
+
+                  const dagUren = urenPerDag[dayName];
+                  const isNonWorkingDay = !dagUren || !dagUren.start || !dagUren.eind;
                   const isVisuallyNonWorkingDay = isNonWorkingDay && !isWeekend;
 
 
@@ -685,7 +754,7 @@ export default function WorkPlanningPage() {
                         onClick={(e) => {
                             if (isVisuallyNonWorkingDay) return;
                             if ((e.target as HTMLElement).closest('.group\\/dienst')) return;
-                            handleCellClick(e, medewerker.id, datumString);
+                            handleOpenSheetForNew(medewerker, day);
                         }}
                         className={cn(
                             "group relative p-2 border-b border-r min-h-[80px] flex flex-col gap-1 transition-colors day-column",
@@ -764,7 +833,7 @@ export default function WorkPlanningPage() {
             project={selectedProject}
             dienst={selectedDienst}
             onSuccess={handleSheetSuccess}
-            voertuigen={voertuigen || []}
+            voertuigen={availableVoertuigenForDialog}
         />
         <PrintDayDialog 
             open={isPrintDayDialogOpen}
