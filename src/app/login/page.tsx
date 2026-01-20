@@ -29,19 +29,9 @@ export default function LoginPage() {
     }
   };
   
-  const sunnyCloudsImage = "https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxkYXJrfGVufDB8fHx8MTc2ODUwNTY5Mnww&ixlib=rb-4.1.0&q=80&w=1080";
-
 
   return (
-    <div className="relative flex h-screen w-screen flex-col items-center justify-center">
-      <Image
-        src={sunnyCloudsImage}
-        alt="Sunny sky background"
-        fill
-        className="object-cover z-0"
-        data-ai-hint="checkerboard pattern"
-        priority
-      />
+    <div className="flex h-screen w-screen flex-col items-center justify-center bg-gray-100 dark:bg-gray-950">
       <div className="absolute top-8 left-8 z-10">
          <Image
           src="https://i.ibb.co/XxdPbvks/Whats-App-Image-2026-01-20-at-08-32-27.jpg"
@@ -52,25 +42,18 @@ export default function LoginPage() {
         />
       </div>
 
-      <Card className="w-full max-w-xl z-10 bg-white/50 backdrop-blur-xl border border-white/20 shadow-2xl rounded-xl">
-        <CardHeader className="items-center text-center py-4">
-            <Image
-                src="https://i.ibb.co/XxdPbvks/Whats-App-Image-2026-01-20-at-08-32-27.jpg"
-                alt="Logo"
-                width={150}
-                height={38}
-                priority
-            />
-          <h1 className="text-2xl font-bold text-white">Inloggen met e-mail</h1>
-          <p className="text-white/80 text-sm">
+      <Card className="w-full max-w-md">
+        <CardHeader className="items-center text-center">
+          <h1 className="text-2xl font-bold">Inloggen</h1>
+          <p className="text-sm text-muted-foreground">
             Voer uw gegevens in om toegang te krijgen tot uw account.
           </p>
         </CardHeader>
-        <CardContent className="grid gap-3 px-8 pb-6 pt-2">
+        <CardContent className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="email" className="text-white">Email</Label>
+            <Label htmlFor="email">Email</Label>
             <div className='relative'>
-              <Mail className='absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400' />
+              <Mail className='absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground' />
               <Input
                 id="email"
                 type="email"
@@ -78,29 +61,31 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="pl-10 bg-white/50 border-white/30 placeholder:text-gray-500"
+                className="pl-10"
               />
             </div>
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="password" className="text-white">Wachtwoord</Label>
+            <div className="flex items-center">
+                <Label htmlFor="password">Wachtwoord</Label>
+                <a href="/reset-password" className="ml-auto inline-block text-xs text-primary hover:underline">
+                Wachtwoord vergeten?
+                </a>
+            </div>
              <div className='relative'>
-                <Lock className='absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400' />
+                <Lock className='absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground' />
                 <Input
                 id="password"
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="pl-10 bg-white/50 border-white/30 placeholder:text-gray-500"
+                className="pl-10"
                 />
             </div>
-             <a href="#" className="text-right text-xs text-white/80 hover:underline">
-              Wachtwoord vergeten?
-            </a>
           </div>
-          {error && <p className="text-sm text-red-500 bg-red-100/50 p-2 rounded-md border border-red-500/50">{error}</p>}
-           <Button className="w-full mt-2 bg-gray-800 text-white hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-800 text-base py-6" onClick={handleSignIn}>
+          {error && <p className="text-sm text-destructive bg-destructive/10 p-2 rounded-md border border-destructive/20">{error}</p>}
+           <Button className="w-full" onClick={handleSignIn}>
             Inloggen
           </Button>
         </CardContent>
