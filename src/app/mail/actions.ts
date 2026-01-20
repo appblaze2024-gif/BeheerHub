@@ -47,6 +47,10 @@ export async function sendEmail(data: z.infer<typeof mailSchema>) {
   const mailOptions: nodemailer.SendMailOptions = {
     from: {
         name: parsedData.fromName,
+        address: SMTP_USER, // Use the SMTP user email as the sender address
+    },
+    replyTo: { // Add the user's email to the Reply-To header
+        name: parsedData.fromName,
         address: parsedData.fromEmail,
     },
     to: parsedData.to,
