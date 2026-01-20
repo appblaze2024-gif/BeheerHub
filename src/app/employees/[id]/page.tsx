@@ -54,17 +54,20 @@ import { MedewerkerDialog } from '@/components/medewerker-dialog';
 import { cn } from '@/lib/utils';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
+import { useProfile } from '@/firebase/profile-provider';
 
 function DetailField({
   label,
   value,
   fieldName,
   medewerkerId,
+  canEdit,
 }: {
   label: string;
   value: string | undefined | null;
   fieldName: keyof Medewerker;
   medewerkerId: string;
+  canEdit: boolean;
 }) {
   const firestore = useFirestore();
   const [isEditing, setIsEditing] = React.useState(false);
@@ -109,7 +112,7 @@ function DetailField({
           <p className="text-sm font-medium min-h-[2rem] flex items-center">{currentValue || '-'}</p>
         )}
       </div>
-      <div className="flex items-center gap-1 ml-2">
+      {canEdit && <div className="flex items-center gap-1 ml-2">
         {isEditing ? (
           <>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleSave}>
@@ -124,12 +127,12 @@ function DetailField({
             <Pencil className="h-4 w-4 text-muted-foreground" />
           </Button>
         )}
-      </div>
+      </div>}
     </div>
   );
 }
 
-function AfwezigheidTab() {
+function AfwezigheidTab({ canEdit }: { canEdit: boolean}) {
   const [currentDate, setCurrentDate] = React.useState(new Date());
   const [selectedDate, setSelectedDate] = React.useState<Date>(new Date());
 
@@ -215,7 +218,7 @@ function AfwezigheidTab() {
                     <TabsTrigger value="nagekeken">Nagekeken</TabsTrigger>
                     <TabsTrigger value="verleden">Verleden</TabsTrigger>
                   </TabsList>
-                  <Button><Plus className="h-4 w-4 mr-2" />Afwezigheid toevoegen</Button>
+                  {canEdit && <Button><Plus className="h-4 w-4 mr-2" />Afwezigheid toevoegen</Button>}
                 </div>
                 <TabsContent value="aanvragen" className="mt-6">
                   <div className="text-center text-muted-foreground py-12">
@@ -448,7 +451,7 @@ function RoosterTab({ medewerker }: { medewerker: Medewerker }) {
   )
 }
 
-function ContractenTab() {
+function ContractenTab({ canEdit }: { canEdit: boolean }) {
   // Placeholder data
   const contracts: any[] = [];
 
@@ -460,9 +463,9 @@ function ContractenTab() {
             <CardTitle>Contracten</CardTitle>
             <Info className="h-4 w-4 text-muted-foreground" />
           </div>
-          <Button>
+          {canEdit && <Button>
             <Plus className="mr-2 h-4 w-4" /> Contract toevoegen
-          </Button>
+          </Button>}
         </CardHeader>
         <CardContent>
           <div className="text-sm">
@@ -524,6 +527,10 @@ export default function EmployeeDetailPage() {
   const firestore = useFirestore();
   const id = params.id as string;
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const { profile, isLoading: isProfileLoading } = useProfile();
+  
+  const isSuperUser = profile?.role === 'Super admin';
+  const canEdit = isSuperUser || !!profile?.permissions?.employees?.edit;
 
   const employeeRef = React.useMemo(() => {
     if (!firestore || !id) return null;
@@ -542,7 +549,7 @@ export default function EmployeeDetailPage() {
     setIsDialogOpen(true);
   };
 
-  if (isLoading) {
+  if (isLoading || isProfileLoading) {
     return (
       <div className="flex h-full items-center justify-center">
         Medewerker wordt geladen...
@@ -581,10 +588,10 @@ export default function EmployeeDetailPage() {
             <h1 className="text-2xl font-bold">{`${medewerker.voornaam || ''} ${
               medewerker.tussenvoegsel || ''
             } ${medewerker.achternaam || ''}`.trim()}</h1>
-            <Button onClick={handleEdit}>
+            {canEdit && <Button onClick={handleEdit}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Bewerken
-            </Button>
+            </Button>}
           </div>
         </div>
       </div>
@@ -607,27 +614,27 @@ export default function EmployeeDetailPage() {
                   </CardHeader>
                   <CardContent className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-12 gap-y-4">
                     <div>
-                      <DetailField label="Voornaam" value={medewerker.voornaam} fieldName="voornaam" medewerkerId={id} />
-                      <DetailField label="Tussenvoegsel" value={medewerker.tussenvoegsel} fieldName="tussenvoegsel" medewerkerId={id} />
-                      <DetailField label="Achternaam" value={medewerker.achternaam} fieldName="achternaam" medewerkerId={id} />
-                      <DetailField label="Geboortedatum" value={medewerker.geboortedatum} fieldName="geboortedatum" medewerkerId={id} />
-                      <DetailField label="Geboorteplaats" value={medewerker.geboorteplaats} fieldName="geboorteplaats" medewerkerId={id} />
+                      <DetailField label="Voornaam" value={medewerker.voornaam} fieldName="voornaam" medewerkerId={id} canEdit={canEdit} />
+                      <DetailField label="Tussenvoegsel" value={medewerker.tussenvoegsel} fieldName="tussenvoegsel" medewerkerId={id} canEdit={canEdit} />
+                      <DetailField label="Achternaam" value={medewerker.achternaam} fieldName="achternaam" medewerkerId={id} canEdit={canEdit} />
+                      <DetailField label="Geboortedatum" value={medewerker.geboortedatum} fieldName="geboortedatum" medewerkerId={id} canEdit={canEdit} />
+                      <DetailField label="Geboorteplaats" value={medewerker.geboorteplaats} fieldName="geboorteplaats" medewerkerId={id} canEdit={canEdit} />
                     </div>
                     <div>
-                      <DetailField label="Telefoonnr." value={medewerker.telefoonnummer} fieldName="telefoonnummer" medewerkerId={id} />
-                      <DetailField label="Mobiel nr." value={medewerker.mobiel} fieldName="mobiel" medewerkerId={id} />
-                      <DetailField label="Nood nr." value={medewerker.noodnummer} fieldName="noodnummer" medewerkerId={id} />
-                      <DetailField label="Adres" value={medewerker.adres} fieldName="adres" medewerkerId={id} />
-                      <DetailField label="Postcode" value={medewerker.postcode} fieldName="postcode" medewerkerId={id} />
-                      <DetailField label="Plaats" value={medewerker.plaats} fieldName="plaats" medewerkerId={id} />
+                      <DetailField label="Telefoonnr." value={medewerker.telefoonnummer} fieldName="telefoonnummer" medewerkerId={id} canEdit={canEdit} />
+                      <DetailField label="Mobiel nr." value={medewerker.mobiel} fieldName="mobiel" medewerkerId={id} canEdit={canEdit} />
+                      <DetailField label="Nood nr." value={medewerker.noodnummer} fieldName="noodnummer" medewerkerId={id} canEdit={canEdit} />
+                      <DetailField label="Adres" value={medewerker.adres} fieldName="adres" medewerkerId={id} canEdit={canEdit} />
+                      <DetailField label="Postcode" value={medewerker.postcode} fieldName="postcode" medewerkerId={id} canEdit={canEdit} />
+                      <DetailField label="Plaats" value={medewerker.plaats} fieldName="plaats" medewerkerId={id} canEdit={canEdit} />
                     </div>
                     <div>
-                      <DetailField label="Nationaliteit" value={medewerker.nationaliteit} fieldName="nationaliteit" medewerkerId={id} />
-                      <DetailField label="BSN" value={medewerker.bsn} fieldName="bsn" medewerkerId={id} />
-                      <DetailField label="ID/Paspoort nr." value={medewerker.paspoortnummer} fieldName="paspoortnummer" medewerkerId={id} />
-                      <DetailField label="Bankrekening" value={medewerker.bankrekening} fieldName="bankrekening" medewerkerId={id} />
-                      <DetailField label="Datum in dienst" value={medewerker.indiensttreding} fieldName="indiensttreding" medewerkerId={id} />
-                      <DetailField label="Personeels nr." value={medewerker.personeelsnummer} fieldName="personeelsnummer" medewerkerId={id} />
+                      <DetailField label="Nationaliteit" value={medewerker.nationaliteit} fieldName="nationaliteit" medewerkerId={id} canEdit={canEdit} />
+                      <DetailField label="BSN" value={medewerker.bsn} fieldName="bsn" medewerkerId={id} canEdit={canEdit} />
+                      <DetailField label="ID/Paspoort nr." value={medewerker.paspoortnummer} fieldName="paspoortnummer" medewerkerId={id} canEdit={canEdit} />
+                      <DetailField label="Bankrekening" value={medewerker.bankrekening} fieldName="bankrekening" medewerkerId={id} canEdit={canEdit} />
+                      <DetailField label="Datum in dienst" value={medewerker.indiensttreding} fieldName="indiensttreding" medewerkerId={id} canEdit={canEdit} />
+                      <DetailField label="Personeels nr." value={medewerker.personeelsnummer} fieldName="personeelsnummer" medewerkerId={id} canEdit={canEdit} />
                     </div>
                   </CardContent>
                 </Card>
@@ -640,7 +647,7 @@ export default function EmployeeDetailPage() {
                           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                           <Input placeholder="Persoonlijk bestand z..." className="pl-8 h-9" />
                         </div>
-                        <Button size="sm"><Plus className="h-4 w-4 mr-2" />Bestand toevoegen</Button>
+                        {canEdit && <Button size="sm"><Plus className="h-4 w-4 mr-2" />Bestand toevoegen</Button>}
                       </div>
                     </CardHeader>
                     <CardContent className="flex h-32 items-center justify-center text-muted-foreground">
@@ -653,7 +660,7 @@ export default function EmployeeDetailPage() {
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between">
                       <CardTitle>Persoonlijke notities</CardTitle>
-                      <Button size="sm"><Plus className="h-4 w-4 mr-2" />Notitie toevoegen</Button>
+                      {canEdit && <Button size="sm"><Plus className="h-4 w-4 mr-2" />Notitie toevoegen</Button>}
                     </CardHeader>
                     <CardContent className="flex h-32 items-center justify-center text-muted-foreground">
                       <div className="text-center">
@@ -666,13 +673,13 @@ export default function EmployeeDetailPage() {
             </div>
           </TabsContent>
           <TabsContent value="afwezigheid" className="flex-1 overflow-y-auto">
-            <AfwezigheidTab />
+            <AfwezigheidTab canEdit={canEdit} />
           </TabsContent>
           <TabsContent value="rooster" className="flex-1 overflow-y-auto">
             <RoosterTab medewerker={medewerker} />
           </TabsContent>
           <TabsContent value="contracten" className="flex-1 overflow-y-auto">
-             <ContractenTab />
+             <ContractenTab canEdit={canEdit}/>
           </TabsContent>
         </Tabs>
       </div>

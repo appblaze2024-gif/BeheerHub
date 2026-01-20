@@ -37,10 +37,11 @@ import { AddDocumentDialog } from '@/components/add-document-dialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { ArrowLeft, Pencil } from 'lucide-react';
+import { useProfile } from '@/firebase/profile-provider';
 
 type MaterieelType = 'voertuigen' | 'machines';
 
-function MaterielView({ materieelType }: { materieelType: MaterieelType }) {
+function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: MaterieelType, canEdit: boolean, canDelete: boolean }) {
   const firestore = useFirestore();
   const [searchTerm, setSearchTerm] = React.useState('');
   const isTablet = useIsMobile(1024);
@@ -252,7 +253,7 @@ function MaterielView({ materieelType }: { materieelType: MaterieelType }) {
                         <h3 className="text-lg font-semibold">
                           Algemene gegevens
                         </h3>
-                        <AddVehicleDialog
+                        {canEdit && <AddVehicleDialog
                           vehicle={selectedItem}
                           open={isVehicleDialogOpen}
                           onOpenChange={setIsVehicleDialogOpen}
@@ -261,7 +262,7 @@ function MaterielView({ materieelType }: { materieelType: MaterieelType }) {
                           <Button variant="ghost" size="icon" onClick={handleEditVehicle}>
                             <Pencil className="h-4 w-4" />
                           </Button>
-                        </AddVehicleDialog>
+                        </AddVehicleDialog>}
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                         <div className="flex justify-between border-b pb-2">
@@ -346,12 +347,12 @@ function MaterielView({ materieelType }: { materieelType: MaterieelType }) {
                   <Card className="h-full flex flex-col">
                     <CardHeader className="flex-row items-center justify-between">
                       <CardTitle>Acties</CardTitle>
-                      <AddActionDialog materieelId={selectedItem.id} materieelType={materieelType}>
+                      {canEdit && <AddActionDialog materieelId={selectedItem.id} materieelType={materieelType}>
                         <Button size="sm">
                           <Plus className="mr-2 h-4 w-4" />
                           Actie toevoegen
                         </Button>
-                      </AddActionDialog>
+                      </AddActionDialog>}
                     </CardHeader>
                     {/* Actions content here */}
                   </Card>
@@ -361,12 +362,12 @@ function MaterielView({ materieelType }: { materieelType: MaterieelType }) {
                    <Card className="h-full flex flex-col">
                     <CardHeader className="flex-row items-center justify-between">
                       <CardTitle>Onderhoud</CardTitle>
-                      <AddMaintenanceDialog materieelId={selectedItem.id} materieelType={materieelType}>
+                      {canEdit && <AddMaintenanceDialog materieelId={selectedItem.id} materieelType={materieelType}>
                         <Button size="sm">
                           <Plus className="mr-2 h-4 w-4" />
                           Onderhoud toevoegen
                         </Button>
-                      </AddMaintenanceDialog>
+                      </AddMaintenanceDialog>}
                     </CardHeader>
                     {/* Maintenance content here */}
                   </Card>
@@ -376,10 +377,10 @@ function MaterielView({ materieelType }: { materieelType: MaterieelType }) {
                   <Card className="h-full flex flex-col">
                     <CardHeader className="flex-row items-center justify-between">
                       <CardTitle>Schade</CardTitle>
-                      <Button size="sm" onClick={handleAddNewDamage}>
+                      {canEdit && <Button size="sm" onClick={handleAddNewDamage}>
                         <Plus className="mr-2 h-4 w-4" />
                         Schade melden
-                      </Button>
+                      </Button>}
                     </CardHeader>
                     {/* Damages content here */}
                   </Card>
@@ -389,10 +390,10 @@ function MaterielView({ materieelType }: { materieelType: MaterieelType }) {
                   <Card className="h-full flex flex-col">
                     <CardHeader className="flex-row items-center justify-between">
                       <CardTitle>Documenten</CardTitle>
-                      <Button size="sm" onClick={handleAddNewDocument}>
+                      {canEdit && <Button size="sm" onClick={handleAddNewDocument}>
                         <Plus className="mr-2 h-4 w-4" />
                         Document toevoegen
-                      </Button>
+                      </Button>}
                     </CardHeader>
                     {/* Documents content here */}
                   </Card>
@@ -404,6 +405,7 @@ function MaterielView({ materieelType }: { materieelType: MaterieelType }) {
                 materieelId={selectedItem.id}
                 materieelType={materieelType}
                 damage={editingDamage}
+                canDelete={canDelete}
               />
               <AddDocumentDialog
                 open={isDocumentDialogOpen}
@@ -411,6 +413,7 @@ function MaterielView({ materieelType }: { materieelType: MaterieelType }) {
                 materieelId={selectedItem.id}
                 materieelType={materieelType}
                 document={editingDocument}
+                canDelete={canDelete}
               />
             </>
           ) : isLoading ? (
@@ -431,6 +434,13 @@ function MaterielView({ materieelType }: { materieelType: MaterieelType }) {
 export default function MaterieelBeheerPage() {
   const [isImporting, setIsImporting] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<MaterieelType>('voertuigen');
+  const { profile } = useProfile();
+
+  const isSuperUser = profile?.role === 'Super admin';
+  const canCreate = isSuperUser || !!profile?.permissions?.vehicles?.create;
+  const canEdit = isSuperUser || !!profile?.permissions?.vehicles?.edit;
+  const canDelete = isSuperUser || !!profile?.permissions?.vehicles?.delete;
+
 
   const handleImportSuccess = () => {
     setIsImporting(false);
@@ -445,11 +455,11 @@ export default function MaterieelBeheerPage() {
                 <TabsTrigger value="machines">Machines</TabsTrigger>
             </TabsList>
             <div className="flex items-center gap-2">
-            <AddVehicleDialog materieelType={activeTab}>
+            {canCreate && <AddVehicleDialog materieelType={activeTab}>
                 <Button>
                 <Plus className="mr-2 h-4 w-4" /> Nieuw
                 </Button>
-            </AddVehicleDialog>
+            </AddVehicleDialog>}
             <VehicleImportDialog
                 open={isImporting}
                 onOpenChange={setIsImporting}
@@ -467,10 +477,10 @@ export default function MaterieelBeheerPage() {
             </div>
         </header>
         <TabsContent value="voertuigen" className="px-6 pb-6 flex-1 min-h-0">
-          <MaterielView materieelType="voertuigen" />
+          <MaterielView materieelType="voertuigen" canEdit={canEdit} canDelete={canDelete} />
         </TabsContent>
         <TabsContent value="machines" className="px-6 pb-6 flex-1 min-h-0">
-          <MaterielView materieelType="machines" />
+          <MaterielView materieelType="machines" canEdit={canEdit} canDelete={canDelete} />
         </TabsContent>
       </Tabs>
     </div>

@@ -82,6 +82,7 @@ interface AddDamageDialogProps {
   materieelId: string;
   materieelType: 'voertuigen' | 'machines';
   damage?: any | null;
+  canDelete?: boolean;
 }
 
 export function AddDamageDialog({
@@ -90,6 +91,7 @@ export function AddDamageDialog({
   materieelId,
   materieelType,
   damage = null,
+  canDelete = false,
 }: AddDamageDialogProps) {
   const firestore = useFirestore();
   const app = useFirebaseApp();
@@ -435,7 +437,7 @@ export function AddDamageDialog({
 
             <DialogFooter className='flex justify-between w-full'>
               <div>
-                {damage && (
+                {damage && canDelete && (
                    <AlertDialog>
                    <AlertDialogTrigger asChild>
                      <Button type="button" variant="destructive" disabled={isDeleting || isSubmitting}>

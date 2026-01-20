@@ -301,7 +301,7 @@ function BoekingregelsTab({ projectId, canEdit }: { projectId: string | undefine
   );
 }
 
-function AfsprakenTab({ projectId, canEdit }: { projectId: string | undefined, canEdit: boolean }) {
+function AfsprakenTab({ projectId, canEdit, canDelete }: { projectId: string | undefined, canEdit: boolean, canDelete: boolean }) {
   const firestore = useFirestore();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedAfspraak, setSelectedAfspraak] = React.useState<Afspraak | undefined>();
@@ -362,14 +362,8 @@ function AfsprakenTab({ projectId, canEdit }: { projectId: string | undefined, c
                 <div>{afspraak.tijd}</div>
                 <div className='truncate'>{afspraak.notities}</div>
                 <div className='flex items-center gap-2'>
-                  {canEdit && <>
-                    <Button variant='ghost' size='icon' onClick={() => handleEditAfspraak(afspraak)}>
-                      <FilePenLine className='h-4 w-4' />
-                    </Button>
-                     <Button variant='ghost' size='icon' onClick={() => handleDeleteAfspraak(afspraak.id!)}>
-                      <Trash2 className='h-4 w-4 text-destructive' />
-                    </Button>
-                  </>}
+                  {canEdit && <Button variant='ghost' size='icon' onClick={() => handleEditAfspraak(afspraak)}><FilePenLine className='h-4 w-4' /></Button>}
+                  {canDelete && <Button variant='ghost' size='icon' onClick={() => handleDeleteAfspraak(afspraak.id!)}><Trash2 className='h-4 w-4 text-destructive' /></Button>}
                 </div>
               </div>
             ))
@@ -388,7 +382,7 @@ function AfsprakenTab({ projectId, canEdit }: { projectId: string | undefined, c
   );
 }
 
-function OrganisatieTab({ projectId, wijken, canEdit }: { projectId: string | undefined, wijken?: Wijk[], canEdit: boolean }) {
+function OrganisatieTab({ projectId, wijken, canEdit, canDelete }: { projectId: string | undefined, wijken?: Wijk[], canEdit: boolean, canDelete: boolean }) {
   const firestore = useFirestore();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedContact, setSelectedContact] = React.useState<OrganisatieContact | undefined>();
@@ -453,14 +447,8 @@ function OrganisatieTab({ projectId, wijken, canEdit }: { projectId: string | un
                 <div className='truncate'>{contact.telefoon}</div>
                 <div className='truncate'>{contact.email}</div>
                 <div className='flex items-center gap-2'>
-                  {canEdit && <>
-                    <Button variant='ghost' size='icon' onClick={() => handleEditContact(contact)}>
-                      <FilePenLine className='h-4 w-4' />
-                    </Button>
-                     <Button variant='ghost' size='icon' onClick={() => handleDeleteContact(contact.id!)}>
-                      <Trash2 className='h-4 w-4 text-destructive' />
-                    </Button>
-                  </>}
+                  {canEdit && <Button variant='ghost' size='icon' onClick={() => handleEditContact(contact)}><FilePenLine className='h-4 w-4' /></Button>}
+                  {canDelete && <Button variant='ghost' size='icon' onClick={() => handleDeleteContact(contact.id!)}><Trash2 className='h-4 w-4 text-destructive' /></Button>}
                 </div>
               </div>
             ))
@@ -480,7 +468,7 @@ function OrganisatieTab({ projectId, wijken, canEdit }: { projectId: string | un
   );
 }
 
-function BestandenTab({ projectId, canEdit }: { projectId: string | undefined, canEdit: boolean }) {
+function BestandenTab({ projectId, canEdit, canDelete }: { projectId: string | undefined, canEdit: boolean, canDelete: boolean }) {
   const firestore = useFirestore();
   const app = useFirebaseApp();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
@@ -565,7 +553,7 @@ function BestandenTab({ projectId, canEdit }: { projectId: string | undefined, c
                             <Download className='h-4 w-4' />
                         </Button>
                     </a>
-                   {canEdit && <Button variant='ghost' size='icon' onClick={(e) => handleDeleteBestand(e, bestand)}>
+                   {canDelete && <Button variant='ghost' size='icon' onClick={(e) => handleDeleteBestand(e, bestand)}>
                     <Trash2 className='h-4 w-4 text-destructive' />
                   </Button>}
                 </div>
@@ -1236,13 +1224,13 @@ export default function ProjectsPage() {
           <BoekingregelsTab projectId={selectedProjectId} canEdit={canEdit} />
         </TabsContent>
         <TabsContent value="afspraken" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
-          <AfsprakenTab projectId={selectedProjectId} canEdit={canEdit} />
+          <AfsprakenTab projectId={selectedProjectId} canEdit={canEdit} canDelete={canDelete} />
         </TabsContent>
         <TabsContent value="organisatie" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
-          <OrganisatieTab projectId={selectedProjectId} wijken={currentProject.wijken} canEdit={canEdit} />
+          <OrganisatieTab projectId={selectedProjectId} wijken={currentProject.wijken} canEdit={canEdit} canDelete={canDelete} />
         </TabsContent>
          <TabsContent value="bestanden" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
-          <BestandenTab projectId={selectedProjectId} canEdit={canEdit}/>
+          <BestandenTab projectId={selectedProjectId} canEdit={canEdit} canDelete={canDelete}/>
         </TabsContent>
         <TabsContent value="wijken" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
           <WijkenTab wijken={currentProject.wijken || []} setCurrentProject={setCurrentProject} allAreas={allAreas} canEdit={canEdit} projectId={currentProject.id} firestore={firestore}/>

@@ -75,6 +75,7 @@ interface AddDocumentDialogProps {
   materieelId: string;
   materieelType: 'voertuigen' | 'machines';
   document?: any | null;
+  canDelete?: boolean;
 }
 
 export function AddDocumentDialog({
@@ -83,6 +84,7 @@ export function AddDocumentDialog({
   materieelId,
   materieelType,
   document: docToEdit = null,
+  canDelete = false,
 }: AddDocumentDialogProps) {
   const firestore = useFirestore();
   const app = useFirebaseApp();
@@ -402,7 +404,7 @@ export function AddDocumentDialog({
 
             <DialogFooter className='flex justify-between w-full'>
               <div>
-                {docToEdit && (
+                {docToEdit && canDelete && (
                    <AlertDialog>
                    <AlertDialogTrigger asChild>
                      <Button type="button" variant="destructive" disabled={isDeleting || isSubmitting}>
