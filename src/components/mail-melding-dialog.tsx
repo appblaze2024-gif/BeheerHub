@@ -195,6 +195,7 @@ export function MailMeldingDialog({
         type: 'application/pdf',
       }],
       fromName: senderName,
+      fromEmail: user.email,
     });
 
     if (result.success) {

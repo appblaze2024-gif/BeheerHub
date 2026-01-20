@@ -15,6 +15,7 @@ const mailSchema = z.object({
   subject: z.string(),
   body: z.string(),
   fromName: z.string().min(1, "Afzendernaam is verplicht."),
+  fromEmail: z.string().email("Ongeldig afzender e-mailadres."),
   attachments: z.array(attachmentSchema).optional(),
 });
 
@@ -46,7 +47,7 @@ export async function sendEmail(data: z.infer<typeof mailSchema>) {
   const mailOptions: nodemailer.SendMailOptions = {
     from: {
         name: parsedData.fromName,
-        address: SMTP_USER as string,
+        address: parsedData.fromEmail,
     },
     to: parsedData.to,
     cc: parsedData.cc,
