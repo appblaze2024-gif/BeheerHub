@@ -244,6 +244,13 @@ export default function WorkPlanningPage() {
 
   const { data: voertuigen, isLoading: isLoadingVoertuigen } = useCollection<Voertuig>(voertuigenCollection);
 
+  const sortedVoertuigen = React.useMemo(() => {
+    if (!voertuigen) return [];
+    return [...voertuigen].sort((a, b) => 
+        (a.voertuignummer || '').localeCompare(b.voertuignummer || '', undefined, { numeric: true, sensitivity: 'base' })
+    );
+  }, [voertuigen]);
+
 
   const start = React.useMemo(() => startOfWeek(currentDate, { weekStartsOn: 1 }), [currentDate]);
   const end = React.useMemo(() => endOfWeek(currentDate, { weekStartsOn: 1 }), [currentDate]);
@@ -629,19 +636,26 @@ export default function WorkPlanningPage() {
 
   const availableVoertuigenForDialog = React.useMemo(() => {
     if (!voertuigen) return [];
-    if (!selectedDay) return voertuigen;
     
-    const dateKey = format(selectedDay, 'yyyy-MM-dd');
-    const unavailableForDay = unavailableVehicles[dateKey] || [];
-    const availableForDay = availableVehicles[dateKey] || [];
+    let filteredVoertuigen = voertuigen;
 
-    if (availableForDay.length > 0) {
-        // If specific vehicles are marked as available, only they are available (and not unavailable).
-        return voertuigen.filter(v => availableForDay.includes(v.id) && !unavailableForDay.includes(v.id));
+    if (selectedDay) {
+        const dateKey = format(selectedDay, 'yyyy-MM-dd');
+        const unavailableForDay = unavailableVehicles[dateKey] || [];
+        const availableForDay = availableVehicles[dateKey] || [];
+
+        if (availableForDay.length > 0) {
+            // If specific vehicles are marked as available, only they are available (and not unavailable).
+            filteredVoertuigen = voertuigen.filter(v => availableForDay.includes(v.id) && !unavailableForDay.includes(v.id));
+        } else {
+            // Otherwise, all vehicles are available except those marked as unavailable.
+            filteredVoertuigen = voertuigen.filter(v => !unavailableForDay.includes(v.id));
+        }
     }
     
-    // Otherwise, all vehicles are available except those marked as unavailable.
-    return voertuigen.filter(v => !unavailableForDay.includes(v.id));
+    return [...filteredVoertuigen].sort((a, b) => 
+        (a.voertuignummer || '').localeCompare(b.voertuignummer || '', undefined, { numeric: true, sensitivity: 'base' })
+    );
   }, [voertuigen, selectedDay, unavailableVehicles, availableVehicles]);
 
 
@@ -706,14 +720,14 @@ export default function WorkPlanningPage() {
           ))}
 
           {/* UNAVAILABLE VEHICLES ROW */}
-          <div className="p-3 border-b border-r flex items-center bg-background h-11 medewerker-header sticky left-0 z-10">
+          <div className="p-3 border-b border-r flex items-center bg-background h-11 medewerker-header">
             <span className="font-semibold text-sm whitespace-nowrap">Onbeschikbaar</span>
           </div>
           {weekDays.map((day) => {
               const dateKey = format(day, 'yyyy-MM-dd');
               const unavailableForDay = unavailableVehicles[dateKey] || [];
               const buttonText = unavailableForDay.length > 0
-                  ? voertuigen?.filter(v => unavailableForDay.includes(v.id)).map(v => v.voertuignummer || v.id).join(', ')
+                  ? sortedVoertuigen?.filter(v => unavailableForDay.includes(v.id)).map(v => v.voertuignummer || v.id).join(', ')
                   : "Geen";
               return (
                   <div key={`${day.toISOString()}-unavailable`} className="p-1 border-b border-r day-column bg-background h-11">
@@ -726,7 +740,7 @@ export default function WorkPlanningPage() {
                           <DropdownMenuContent className="w-64 max-h-80 overflow-y-auto">
                               <DropdownMenuLabel>Onbeschikbare voertuigen</DropdownMenuLabel>
                               <DropdownMenuSeparator />
-                              {voertuigen && voertuigen.length > 0 ? voertuigen.map(v => (
+                              {sortedVoertuigen && sortedVoertuigen.length > 0 ? sortedVoertuigen.map(v => (
                                   <DropdownMenuCheckboxItem
                                       key={v.id}
                                       checked={unavailableForDay.includes(v.id)}
@@ -743,14 +757,14 @@ export default function WorkPlanningPage() {
           })}
           
            {/* AVAILABLE VEHICLES ROW */}
-          <div className="p-3 border-b border-r flex items-center bg-background h-11 medewerker-header sticky left-0 z-10">
+          <div className="p-3 border-b border-r flex items-center bg-background h-11 medewerker-header">
             <span className="font-semibold text-sm whitespace-nowrap">Beschikbaar</span>
           </div>
           {weekDays.map((day) => {
               const dateKey = format(day, 'yyyy-MM-dd');
               const availableForDay = availableVehicles[dateKey] || [];
               const buttonText = availableForDay.length > 0
-                  ? voertuigen?.filter(v => availableForDay.includes(v.id)).map(v => v.voertuignummer || v.id).join(', ')
+                  ? sortedVoertuigen?.filter(v => availableForDay.includes(v.id)).map(v => v.voertuignummer || v.id).join(', ')
                   : "Alle";
               return (
                   <div key={`${day.toISOString()}-available`} className="p-1 border-b border-r day-column bg-background h-11">
@@ -763,7 +777,7 @@ export default function WorkPlanningPage() {
                           <DropdownMenuContent className="w-64 max-h-80 overflow-y-auto">
                               <DropdownMenuLabel>Beschikbare voertuigen</DropdownMenuLabel>
                               <DropdownMenuSeparator />
-                              {voertuigen && voertuigen.length > 0 ? voertuigen.map(v => (
+                              {sortedVoertuigen && sortedVoertuigen.length > 0 ? sortedVoertuigen.map(v => (
                                   <DropdownMenuCheckboxItem
                                       key={v.id}
                                       checked={availableForDay.includes(v.id)}
