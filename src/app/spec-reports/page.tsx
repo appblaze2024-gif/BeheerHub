@@ -1,12 +1,292 @@
-import { PageHeader } from "@/components/page-header";
+'use client';
+
+import * as React from 'react';
+import MapGL, { Marker, Popup } from 'react-map-gl';
+import { useCollection, useFirestore } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
+import { Plus, Search, List, Map as MapIcon, Bell } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { BestekmeldingDialog } from '@/components/bestekmelding-dialog'; // New component
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import type { Besteksmelding, UploadedFile } from '@/lib/types';
+import type { Project } from '@/app/projects/page';
+import { useProfile } from '@/firebase/profile-provider';
+import type { Werksoort } from '@/lib/types';
+
+
+const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
+
+const statusConfig: Record<string, { color: string; textColor: string; borderColor: string }> = {
+  Nieuw: { color: '#ef4444', textColor: 'white', borderColor: '#ef4444' }, // red-500
+  'In behandeling': { color: '#f97316', textColor: 'white', borderColor: '#f97316' }, // orange-500
+  Afgerond: { color: '#22c55e', textColor: 'white', borderColor: '#22c55e' }, // green-500
+};
+
+function BestekmeldingenList({ meldingen, onMeldingClick, werksoortenMap }: { meldingen: Besteksmelding[], onMeldingClick: (melding: Besteksmelding) => void, werksoortenMap: Map<string, Werksoort> }) {
+  if (meldingen.length === 0) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center text-muted-foreground p-8">
+        <Bell className="h-12 w-12 mb-4" />
+        <p className="text-lg">Geen besteksmeldingen gevonden</p>
+        <p className="text-sm">Pas de filters aan of maak een nieuwe melding.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-y-auto">
+      <div className="grid grid-cols-[1fr_2fr_1fr_1fr_auto] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
+        <span>Datum</span>
+        <span>Werksoort</span>
+        <span>Omschrijving</span>
+        <span>Status</span>
+        <span />
+      </div>
+      {meldingen.map((melding) => (
+        <div
+          key={melding.id}
+          onClick={() => onMeldingClick(melding)}
+          className="grid grid-cols-[1fr_2fr_1fr_1fr_auto] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
+        >
+          <span className="truncate">{melding.datum ? format(new Date(melding.datum), 'dd-MM-yyyy') : '-'}</span>
+          <span className="font-medium truncate">{werksoortenMap.get(melding.werksoortId)?.werksoort || 'Onbekend'}</span>
+          <span className="truncate">{melding.omschrijving}</span>
+          <Badge
+            style={{
+              backgroundColor: statusConfig[melding.status]?.color || '#ccc',
+              color: statusConfig[melding.status]?.textColor || 'black',
+              borderColor: statusConfig[melding.status]?.borderColor || '#ccc'
+            }}
+            variant={melding.status === 'Afgerond' ? 'default' : 'destructive'}
+            className="justify-center"
+          >
+            {melding.status}
+          </Badge>
+          <div className="flex justify-end">
+            {/* Action buttons if needed */}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 
 export default function SpecReportsPage() {
+  const firestore = useFirestore();
+  const [selectedMelding, setSelectedMelding] = React.useState<Besteksmelding | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
+  const [viewMode, setViewMode] = React.useState<'map' | 'list'>('map');
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const { profile } = useProfile();
+
+  const projectsCollection = React.useMemo(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'projects');
+  }, [firestore]);
+
+  const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsCollection);
+
+  const bestekmeldingenCollection = React.useMemo(() => {
+    if (!firestore || !selectedProjectId) return null;
+    return collection(firestore, 'projects', selectedProjectId, 'besteksmeldingen');
+  }, [firestore, selectedProjectId]);
+
+  const { data: meldingen, isLoading: isLoadingMeldingen } = useCollection<Besteksmelding>(bestekmeldingenCollection);
+
+  const selectedProject = React.useMemo(() => {
+    return projects?.find(p => p.id === selectedProjectId) ?? null;
+  }, [projects, selectedProjectId]);
+  
+  const werksoortenMap = React.useMemo(() => {
+    const map = new Map<string, Werksoort>();
+    if (selectedProject?.werksoorten) {
+      selectedProject.werksoorten.forEach(ws => map.set(ws.id, ws));
+    }
+    return map;
+  }, [selectedProject]);
+
+
+  const filteredMeldingen = React.useMemo(() => {
+    if (!meldingen) return [];
+    if (!searchQuery) return meldingen;
+
+    return meldingen.filter(m => 
+        (m.omschrijving && m.omschrijving.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (werksoortenMap.get(m.werksoortId)?.werksoort.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+
+  }, [meldingen, searchQuery, werksoortenMap]);
+
+  const mapRef = React.useRef<any>(null);
+  const mapContainerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!mapContainerRef.current) return;
+    const resizeObserver = new ResizeObserver(() => {
+      if (mapRef.current) {
+        mapRef.current.getMap().resize();
+      }
+    });
+    resizeObserver.observe(mapContainerRef.current);
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  const initialViewState = {
+    longitude: 5.2913,
+    latitude: 52.1326,
+    zoom: 7,
+  };
+  
+  const handleDialogClose = (open: boolean) => {
+    setIsDialogOpen(open);
+     if (!open) {
+      setSelectedMelding(null);
+    }
+  }
+
+  const handleNewMelding = () => {
+    setSelectedMelding(null);
+    setIsDialogOpen(true);
+  }
+  
+  const handleMarkerClick = (e: mapboxgl.MapboxEvent<MouseEvent>, melding: Besteksmelding) => {
+    e.originalEvent.stopPropagation();
+    setSelectedMelding(melding);
+  }
+
+  const handlePopupClose = () => setSelectedMelding(null);
+
+  const handleMeldingClickFromList = (melding: Besteksmelding) => {
+    setSelectedMelding(melding);
+    setIsDialogOpen(true);
+  };
+  
+  React.useEffect(() => {
+    if (selectedMelding && !isDialogOpen) {
+      setIsDialogOpen(true);
+    }
+  }, [selectedMelding, isDialogOpen]);
+
   return (
-    <div className="flex flex-col flex-1 p-6 min-h-0">
-      <PageHeader title="Besteksmeldingen" />
-      <div className="flex-1 mt-6">
-        {/* Page content goes here */}
-      </div>
+    <div ref={mapContainerRef} className="flex-1 flex flex-col min-h-0 relative">
+      <header className="absolute top-0 left-0 z-10 p-4 flex flex-col gap-2 w-full pointer-events-none">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between w-full gap-4 pointer-events-auto">
+            <div className="w-full md:max-w-sm">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      placeholder="Zoek op omschrijving of werksoort" 
+                      className="pl-9 bg-card"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+            </div>
+             <div className='space-y-2'>
+                <Label htmlFor='project-select' className='text-sm font-medium sr-only'>Project</Label>
+                <Select
+                  value={selectedProjectId || ''}
+                  onValueChange={setSelectedProjectId}
+                  disabled={isLoadingProjects}
+                >
+                  <SelectTrigger id="project-select" className="w-full md:w-72 bg-card">
+                    <SelectValue placeholder="Selecteer een project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects?.map(p => <SelectItem key={p.id} value={p.id}>{p.projectnaam}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+            </div>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2 pointer-events-auto w-full md:w-auto">
+            <div className='flex gap-2 items-center'>
+                    <Button onClick={handleNewMelding} disabled={!selectedProjectId}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Nieuwe Besteksmelding
+                    </Button>
+                    <Button variant="outline" onClick={() => setViewMode(viewMode === 'map' ? 'list' : 'map')} className="bg-card">
+                      {viewMode === 'map' ? <List className="mr-2 h-4 w-4" /> : <MapIcon className="mr-2 h-4 w-4" />}
+                      {viewMode === 'map' ? 'Lijst' : 'Kaart'}
+                    </Button>
+            </div>
+        </div>
+      </header>
+
+      {viewMode === 'map' ? (
+        <MapGL
+            ref={mapRef}
+            initialViewState={initialViewState}
+            style={{ width: '100%', height: '100%' }}
+            mapStyle="mapbox://styles/mapbox/streets-v12"
+            mapboxAccessToken={MAPBOX_TOKEN}
+            cursor="default"
+        >
+            {filteredMeldingen?.map(melding => (
+                <Marker
+                    key={melding.id}
+                    longitude={melding.longitude}
+                    latitude={melding.latitude}
+                    onClick={(e) => handleMarkerClick(e, melding)}
+                >
+                    <div
+                        aria-label="Map marker"
+                        className="w-4 h-4 rounded-full cursor-pointer border-2 border-white"
+                        style={{ backgroundColor: statusConfig[melding.status]?.color || '#ccc' }}
+                    />
+                </Marker>
+            ))}
+
+            {selectedMelding && (
+                <Popup
+                    longitude={selectedMelding.longitude}
+                    latitude={selectedMelding.latitude}
+                    onClose={handlePopupClose}
+                    closeOnClick={false}
+                    anchor="bottom"
+                >
+                    <div className="p-1 max-w-xs">
+                        <h3 className="font-bold text-base mb-2">{werksoortenMap.get(selectedMelding.werksoortId)?.werksoort || 'Onbekend'}</h3>
+                        <div className="grid grid-cols-[100px_1fr] gap-x-2 gap-y-1 text-sm">
+                            <span className="font-semibold">Omschrijving:</span>
+                            <span>{selectedMelding.omschrijving}</span>
+                            <span className="font-semibold">Status:</span>
+                            <span>{selectedMelding.status}</span>
+                            <span className="font-semibold">Aangemaakt:</span>
+                            <span>{selectedMelding.datum}</span>
+                        </div>
+                         <Button size="sm" className="w-full mt-2" onClick={() => setIsDialogOpen(true)}>
+                          Details bekijken
+                        </Button>
+                    </div>
+                </Popup>
+            )}
+        </MapGL>
+      ) : (
+        <div className="pt-48 px-4 pb-4 h-full">
+            <Card className='h-full flex flex-col'>
+                <CardHeader>
+                    <CardTitle>Overzicht Besteksmeldingen ({filteredMeldingen?.length || 0})</CardTitle>
+                </CardHeader>
+                <CardContent className='p-0 flex-1 min-h-0'>
+                    <BestekmeldingenList meldingen={filteredMeldingen || []} onMeldingClick={handleMeldingClickFromList} werksoortenMap={werksoortenMap} />
+                </CardContent>
+            </Card>
+        </div>
+      )}
+         <BestekmeldingDialog 
+            open={isDialogOpen}
+            onOpenChange={handleDialogClose}
+            melding={selectedMelding}
+            projectId={selectedProjectId}
+            werksoorten={selectedProject?.werksoorten || []}
+        />
     </div>
   );
 }

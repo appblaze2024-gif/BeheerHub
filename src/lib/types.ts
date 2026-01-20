@@ -84,3 +84,33 @@ export interface Voertuig {
   apk_vervaldatum?: string; // YYYY-MM-DD
   imageUrl?: string;
 }
+
+export type UploadedFile = {
+  name: string;
+  url: string;
+  size: number;
+  type: string;
+  uploadedAt: string;
+  storagePath: string;
+};
+
+export interface Besteksmelding {
+  id: string;
+  projectId: string;
+  werksoortId: string;
+  latitude: number;
+  longitude: number;
+  omschrijving: string;
+  fotos?: UploadedFile[];
+  datum: string;
+  status: 'Nieuw' | 'In behandeling' | 'Afgerond';
+}
+
+export type Werksoort = {
+  id: string;
+  postnummer: string;
+  werksoort: string;
+  eenheid: string;
+  fictieveH: string;
+  uurprijs: string;
+};

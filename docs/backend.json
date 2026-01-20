@@ -1,6 +1,26 @@
 
 {
   "entities": {
+    "Besteksmelding": {
+      "title": "Besteksmelding",
+      "type": "object",
+      "description": "Represents a report related to a specific work item in the project specifications (bestek).",
+      "properties": {
+        "id": { "type": "string" },
+        "projectId": { "type": "string" },
+        "werksoortId": { "type": "string" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "omschrijving": { "type": "string" },
+        "fotos": { "type": "array", "items": { "type": "string" } },
+        "datum": { "type": "string", "format": "date" },
+        "status": {
+          "type": "string",
+          "enum": ["Nieuw", "In behandeling", "Afgerond"]
+        }
+      },
+      "required": ["projectId", "werksoortId", "latitude", "longitude", "datum", "status"]
+    },
     "Route": {
       "title": "Route",
       "type": "object",
@@ -70,27 +90,7 @@
         "werksoorten": {
           "type": "array",
           "items": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "postnummer": {
-                "type": "string"
-              },
-              "werksoort": {
-                "type": "string"
-              },
-              "eenheid": {
-                "type": "string"
-              },
-              "fictieveH": {
-                "type": "string"
-              },
-              "uurprijs": {
-                "type": "string"
-              }
-            }
+            "$ref": "#/backend/entities/Werksoort"
           }
         },
         "wijken": {
@@ -140,6 +140,20 @@
         "projectnummer",
         "projectnaam"
       ]
+    },
+    "Werksoort": {
+      "title": "Werksoort",
+      "type": "object",
+      "description": "Represents a work type within a project specification.",
+      "properties": {
+        "id": { "type": "string" },
+        "postnummer": { "type": "string" },
+        "werksoort": { "type": "string" },
+        "eenheid": { "type": "string" },
+        "fictieveH": { "type": "string" },
+        "uurprijs": { "type": "string" }
+      },
+      "required": ["id", "werksoort"]
     },
     "Wijk": {
         "title": "Wijk",
@@ -642,6 +656,26 @@
           ]
         }
       },
+      {
+        "path": "/projects/{projectId}/besteksmeldingen/{besteksmeldingId}",
+        "definition": {
+          "entityName": "Besteksmelding",
+          "schema": {
+            "$ref": "#/backend/entities/Besteksmelding"
+          },
+          "description": "Stores specification reports for a specific project.",
+          "params": [
+            {
+              "name": "projectId",
+              "description": "The ID of the project."
+            },
+            {
+              "name": "besteksmeldingId",
+              "description": "The ID of the specification report."
+            }
+          ]
+        }
+      },
        {
         "path": "/projects/{projectId}/diensten/{dienstId}",
         "definition": {
@@ -823,5 +857,3 @@
     "reasoning": "The Firestore structure is designed to provide a secure and scalable foundation for the BizBoard application, focusing on clear ownership and authorization. Each user's data (revenues, expenses, and appointments) is stored under their respective user ID, ensuring data isolation and simplified security rules. This design avoids complex queries and `get()` calls in security rules, which aligns with the principles of Authorization Independence and facilitates easier debugging. The use of path-based ownership `/users/{userId}/revenues/{revenueId}` makes it straightforward to implement security rules that grant access only to the owner of the data.\\n\\n*   **Authorization Independence:** Achieved by structuring data under user-specific paths, eliminating the need for `get()` calls to parent documents for authorization. All data needed for authorization is implicitly available in the path.\\n*   **QAPs:** Secure list operations are supported by the path-based ownership model. Listing revenues, expenses, or appointments is always scoped to a specific user, preventing unauthorized access to other users' data.\\n\\nBy adhering to these principles, the data structure promotes a maintainable and secure application."
   }
 }
-
-    

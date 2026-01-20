@@ -51,6 +51,11 @@ service cloud.firestore {
        match /organisatie/{contactId} {
          allow read, write: if hasPermission('projects', 'view') || hasPermission('projects', 'edit');
        }
+
+       match /besteksmeldingen/{besteksmeldingId} {
+         allow read: if hasPermission('specReports', 'view');
+         allow write: if hasPermission('specReports', 'create') || hasPermission('specReports', 'edit') || hasPermission('specReports', 'delete');
+       }
     }
 
     match /medewerkers/{medewerkerId} {
