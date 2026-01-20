@@ -223,8 +223,12 @@ export default function EmployeesPage() {
                       <span className="truncate">{medewerker.telefoonnummer || '-'}</span>
                       <span className="truncate">{medewerker.mobiel || '-'}</span>
                       <Badge
-                        variant={medewerker.status === 'Actief' ? 'outline' : medewerker.status === 'Inactief' ? 'destructive' : 'secondary'}
-                        className={medewerker.status === 'Actief' ? 'text-green-600 border-green-600 w-14 justify-center' : 'px-2'}
+                        variant={medewerker.status === 'Actief' || medewerker.status === 'Inactief' ? 'outline' : 'secondary'}
+                        className={
+                            medewerker.status === 'Actief' ? 'text-green-600 border-green-600 w-14 justify-center'
+                            : medewerker.status === 'Inactief' ? 'text-red-600 border-red-600 w-14 justify-center'
+                            : 'px-2'
+                        }
                       >
                         {medewerker.status}
                       </Badge>
