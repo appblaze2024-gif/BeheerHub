@@ -65,7 +65,7 @@ const userFormSchema = z.object({
   lastName: z.string().min(1, 'Achternaam is verplicht.'),
   email: z.string().email('Voer een geldig e-mailadres in.'),
   role: z.enum(['Super admin', 'toezichthouder', 'ondersteuner', 'medewerkers']),
-  permissions: z.record(z.record(z.boolean())).optional(),
+  permissions: z.record(z.any()).optional(),
   status: z.string().optional(),
   wijk: z.string().optional(),
   veegroute: z.string().optional(),
@@ -105,13 +105,19 @@ function UserDialog({
       const defaultPermissions = getDefaultPermissions();
       if (user) {
         const userPermissions = user.permissions || {};
-        const mergedPermissions: { [key: string]: { [key: string]: boolean } } = {};
+        const mergedPermissions: { [key: string]: any } = {};
 
         Object.keys(defaultPermissions).forEach(module => {
             mergedPermissions[module] = {
                 ...defaultPermissions[module],
-                ...(userPermissions[module] || {})
+                ...(userPermissions[module] || {}),
             };
+            if(defaultPermissions[module].tabs) {
+                mergedPermissions[module].tabs = {
+                    ...(defaultPermissions[module].tabs || {}),
+                    ...(userPermissions[module]?.tabs || {})
+                }
+            }
         });
         
         form.reset({
@@ -143,12 +149,19 @@ function UserDialog({
   
   React.useEffect(() => {
     if (role === 'Super admin') {
-        const allTruePermissions: { [key: string]: { [key: string]: boolean } } = {};
+        const allTruePermissions: { [key: string]: { [key: string]: boolean | { [key: string]: boolean } } } = {};
         allPermissions.forEach(mod => {
             allTruePermissions[mod.module] = {};
             mod.actions.forEach(perm => {
-                allTruePermissions[mod.module][perm.id] = true;
+                (allTruePermissions[mod.module] as any)[perm.id] = true;
             });
+            if (mod.tabs) {
+              const tabPermissions: { [key: string]: boolean } = {};
+              mod.tabs.forEach(tab => {
+                  tabPermissions[tab.id] = true;
+              });
+              allTruePermissions[mod.module].tabs = tabPermissions;
+          }
         });
         form.setValue('permissions', allTruePermissions);
     }
@@ -381,6 +394,34 @@ function UserDialog({
                         />
                       ))}
                     </div>
+                     {module.tabs && (
+                        <>
+                            <h5 className="font-semibold text-sm mt-4 mb-2">Tab Rechten</h5>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                {module.tabs.map((tab) => (
+                                    <FormField
+                                        key={tab.id}
+                                        control={form.control}
+                                        name={`permissions.${module.module}.tabs.${tab.id}`}
+                                        render={({ field }) => (
+                                            <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                                <FormControl>
+                                                    <Checkbox
+                                                        checked={field.value}
+                                                        onCheckedChange={field.onChange}
+                                                        disabled={isSubmitting || isSuperAdminEditing}
+                                                    />
+                                                </FormControl>
+                                                <FormLabel className="font-normal">
+                                                    {tab.label}
+                                                </FormLabel>
+                                            </FormItem>
+                                        )}
+                                    />
+                                ))}
+                            </div>
+                        </>
+                    )}
                   </div>
                 ))}
               </div>

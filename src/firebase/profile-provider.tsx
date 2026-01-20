@@ -22,7 +22,29 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     return doc(firestore, 'users', user.uid);
   }, [user, firestore]);
 
-  const { data: profile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+  const { data: profileFromDb, isLoading: isProfileLoadingFromDoc } = useDoc<UserProfile>(userProfileRef);
+
+  const profile = useMemo(() => {
+    if (!profileFromDb) return null;
+    const defaultPermissions = getDefaultPermissions();
+    const userPermissions = profileFromDb.permissions || {};
+    const mergedPermissions: { [key: string]: any } = {};
+
+    Object.keys(defaultPermissions).forEach(module => {
+        mergedPermissions[module] = {
+            ...defaultPermissions[module],
+            ...(userPermissions[module] || {}),
+        };
+        if(defaultPermissions[module].tabs) {
+            mergedPermissions[module].tabs = {
+                ...(defaultPermissions[module].tabs || {}),
+                ...(userPermissions[module]?.tabs || {})
+            }
+        }
+    });
+    return { ...profileFromDb, permissions: mergedPermissions };
+  }, [profileFromDb]);
+
 
   // This effect now safely creates a user profile only if it truly doesn't exist,
   // preventing race conditions during first login.
@@ -30,8 +52,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     const createProfile = async () => {
       if (
         user &&
-        !isProfileLoading &&
-        !profile && // `profile` from useDoc is null, indicating it might not exist
+        !isProfileLoadingFromDoc &&
+        !profileFromDb && // `profile` from useDoc is null, indicating it might not exist
         userProfileRef
       ) {
         // To prevent a race condition, we perform a direct `get` from the server to be certain.
@@ -53,7 +75,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       }
     };
     createProfile();
-  }, [user, profile, isProfileLoading, userProfileRef, firestore]);
+  }, [user, profileFromDb, isProfileLoadingFromDoc, userProfileRef, firestore]);
 
 
   // Grant Super Admin role to a specific user
@@ -66,8 +88,15 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         // Grant all permissions
         Object.keys(adminPermissions).forEach(module => {
             Object.keys(adminPermissions[module]).forEach(action => {
-              (adminPermissions as any)[module][action] = true;
+              if (action !== 'tabs') {
+                (adminPermissions as any)[module][action] = true;
+              }
             });
+             if (adminPermissions[module].tabs) {
+              Object.keys(adminPermissions[module].tabs).forEach(tab => {
+                adminPermissions[module].tabs[tab] = true;
+              });
+            }
         });
 
         try {
@@ -81,16 +110,16 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    if (!isProfileLoading && !isUserLoading) {
+    if (!isProfileLoadingFromDoc && !isUserLoading) {
       grantAdminRole();
     }
-  }, [user, profile, isProfileLoading, isUserLoading, userProfileRef]);
+  }, [user, profile, isProfileLoadingFromDoc, isUserLoading, userProfileRef]);
 
 
   const value: ProfileContextValue = useMemo(() => ({
     profile,
-    isLoading: isUserLoading || isProfileLoading,
-  }), [profile, isUserLoading, isProfileLoading]);
+    isLoading: isUserLoading || isProfileLoadingFromDoc,
+  }), [profile, isUserLoading, isProfileLoadingFromDoc]);
 
   return <ProfileContext.Provider value={value}>{children}</ProfileContext.Provider>;
 }

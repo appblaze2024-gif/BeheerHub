@@ -1082,21 +1082,26 @@ export default function ProjectsPage() {
     await deleteDocumentNonBlocking(projectRef);
     handleNew();
   };
+  
+  const canViewTab = (tabId: string) => {
+    if (isSuperUser) return true;
+    return profile?.permissions?.projects?.tabs?.[tabId] ?? true;
+  };
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
       <Tabs defaultValue="project" className="flex-1 flex flex-col min-h-0">
         <div className="px-6 pt-6 overflow-x-auto">
           <TabsList className="inline-flex">
-            <TabsTrigger value="project">Project</TabsTrigger>
-            <TabsTrigger value="werksoorten">Werksoorten</TabsTrigger>
-            <TabsTrigger value="boekingregels">Boekingregels</TabsTrigger>
-            <TabsTrigger value="afspraken">Afspraken</TabsTrigger>
-            <TabsTrigger value="organisatie">Organisatie</TabsTrigger>
-            <TabsTrigger value="bestanden">Bestanden</TabsTrigger>
-            <TabsTrigger value="wijken">Wijken</TabsTrigger>
-            <TabsTrigger value="veegroutes">Veegroutes</TabsTrigger>
-            <TabsTrigger value="prullenbakkenroutes">Prullenbakkenroutes</TabsTrigger>
+            {canViewTab('project') && <TabsTrigger value="project">Project</TabsTrigger>}
+            {canViewTab('werksoorten') && <TabsTrigger value="werksoorten">Werksoorten</TabsTrigger>}
+            {canViewTab('boekingregels') && <TabsTrigger value="boekingregels">Boekingregels</TabsTrigger>}
+            {canViewTab('afspraken') && <TabsTrigger value="afspraken">Afspraken</TabsTrigger>}
+            {canViewTab('organisatie') && <TabsTrigger value="organisatie">Organisatie</TabsTrigger>}
+            {canViewTab('bestanden') && <TabsTrigger value="bestanden">Bestanden</TabsTrigger>}
+            {canViewTab('wijken') && <TabsTrigger value="wijken">Wijken</TabsTrigger>}
+            {canViewTab('veegroutes') && <TabsTrigger value="veegroutes">Veegroutes</TabsTrigger>}
+            {canViewTab('prullenbakkenroutes') && <TabsTrigger value="prullenbakkenroutes">Prullenbakkenroutes</TabsTrigger>}
           </TabsList>
         </div>
 
@@ -1130,7 +1135,7 @@ export default function ProjectsPage() {
           </Button>
         </div>
 
-        <TabsContent
+        {canViewTab('project') && <TabsContent
           value="project"
           className="flex-1 overflow-y-auto pt-6 pb-2 px-6"
         >
@@ -1216,31 +1221,31 @@ export default function ProjectsPage() {
               {canDelete && <Button variant="destructive" onClick={handleDelete} disabled={!currentProject.id}>Verwijder</Button>}
             </div>
           </div>
-        </TabsContent>
-        <TabsContent value="werksoorten" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
+        </TabsContent>}
+        {canViewTab('werksoorten') && <TabsContent value="werksoorten" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
           <WerksoortenTab werksoorten={currentProject.werksoorten} setWerksoorten={(newWerksoorten) => setCurrentProject(prev => ({...prev, werksoorten: typeof newWerksoorten === 'function' ? newWerksoorten(prev.werksoorten) : newWerksoorten}))} canEdit={canEdit} />
-        </TabsContent>
-        <TabsContent value="boekingregels" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
+        </TabsContent>}
+        {canViewTab('boekingregels') && <TabsContent value="boekingregels" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
           <BoekingregelsTab projectId={selectedProjectId} canEdit={canEdit} />
-        </TabsContent>
-        <TabsContent value="afspraken" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
+        </TabsContent>}
+        {canViewTab('afspraken') && <TabsContent value="afspraken" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
           <AfsprakenTab projectId={selectedProjectId} canEdit={canEdit} canDelete={canDelete} />
-        </TabsContent>
-        <TabsContent value="organisatie" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
+        </TabsContent>}
+        {canViewTab('organisatie') && <TabsContent value="organisatie" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
           <OrganisatieTab projectId={selectedProjectId} wijken={currentProject.wijken} canEdit={canEdit} canDelete={canDelete} />
-        </TabsContent>
-         <TabsContent value="bestanden" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
+        </TabsContent>}
+         {canViewTab('bestanden') && <TabsContent value="bestanden" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
           <BestandenTab projectId={selectedProjectId} canEdit={canEdit} canDelete={canDelete}/>
-        </TabsContent>
-        <TabsContent value="wijken" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
+        </TabsContent>}
+        {canViewTab('wijken') && <TabsContent value="wijken" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
           <WijkenTab wijken={currentProject.wijken || []} setCurrentProject={setCurrentProject} allAreas={allAreas} canEdit={canEdit} projectId={currentProject.id} firestore={firestore}/>
-        </TabsContent>
-        <TabsContent value="veegroutes" className="flex-1 overflow-y-auto p-6">
+        </TabsContent>}
+        {canViewTab('veegroutes') && <TabsContent value="veegroutes" className="flex-1 overflow-y-auto p-6">
           <VeegroutesTab veegroutes={currentProject.veegroutes || []} setCurrentProject={setCurrentProject} allAreas={allAreas} canEdit={canEdit} projectId={currentProject.id} firestore={firestore}/>
-        </TabsContent>
-        <TabsContent value="prullenbakkenroutes" className="flex-1 overflow-y-auto p-6">
+        </TabsContent>}
+        {canViewTab('prullenbakkenroutes') && <TabsContent value="prullenbakkenroutes" className="flex-1 overflow-y-auto p-6">
           <PrullenbakkenroutesTab prullenbakkenroutes={currentProject.prullenbakkenroutes || []} setCurrentProject={setCurrentProject} allAreas={allAreas} canEdit={canEdit} projectId={currentProject.id} firestore={firestore}/>
-        </TabsContent>
+        </TabsContent>}
       </Tabs>
       
       {isGlobalWijkMapOpen && (

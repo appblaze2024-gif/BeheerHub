@@ -5,6 +5,9 @@ export type UserPermissions = {
     edit?: boolean;
     delete?: boolean;
     use?: boolean;
+    tabs?: {
+      [tabId: string]: boolean;
+    };
   };
 };
 

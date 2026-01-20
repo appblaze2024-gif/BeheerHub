@@ -15,6 +15,8 @@ import { Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { UserManagement } from '@/components/user-management';
 import type { UserProfile } from '@/lib/types';
+import { useProfile } from '@/firebase/profile-provider';
+
 
 const profileFormSchema = z.object({
   firstName: z.string().min(1, 'Voornaam is verplicht.'),
@@ -29,13 +31,15 @@ export default function ProfilePage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = React.useState(false);
+  const { profile, isLoading: isProfileLoading } = useProfile();
+
 
   const userProfileRef = React.useMemo(() => {
     if (!user || !firestore) return null;
     return doc(firestore, 'users', user.uid);
   }, [user, firestore]);
 
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+  const { data: userProfile, isLoading: isProfileLoadingFromDoc } = useDoc<UserProfile>(userProfileRef);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -83,15 +87,21 @@ export default function ProfilePage() {
     }
   };
 
+  const canViewTab = (tabId: 'profile' | 'users') => {
+    if (isProfileLoading) return false;
+    if (profile?.role === 'Super admin') return true;
+    return profile?.permissions?.users?.tabs?.[tabId] ?? false;
+  };
+
   return (
     <div className="flex flex-col flex-1 min-h-0 p-6">
       <Tabs defaultValue="profile" className="flex flex-col flex-1 space-y-6">
         <TabsList>
-          <TabsTrigger value="profile">Mijn Profiel</TabsTrigger>
-          <TabsTrigger value="users">Gebruikers</TabsTrigger>
+          {canViewTab('profile') && <TabsTrigger value="profile">Mijn Profiel</TabsTrigger>}
+          {canViewTab('users') && <TabsTrigger value="users">Gebruikers</TabsTrigger>}
         </TabsList>
         
-        <TabsContent value="profile">
+        {canViewTab('profile') && <TabsContent value="profile">
           <Card className="max-w-2xl">
             <CardHeader>
               <CardTitle>Mijn Profiel</CardTitle>
@@ -100,7 +110,7 @@ export default function ProfilePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isProfileLoading ? (
+              {isProfileLoadingFromDoc ? (
                 <div className="flex items-center justify-center space-x-4 h-40">
                     <div className="space-y-2 w-full">
                         <Loader2 className='mx-auto h-6 w-6 animate-spin' />
@@ -149,11 +159,11 @@ export default function ProfilePage() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+        </TabsContent>}
         
-        <TabsContent value="users">
+        {canViewTab('users') && <TabsContent value="users">
           <UserManagement />
-        </TabsContent>
+        </TabsContent>}
       </Tabs>
     </div>
   );

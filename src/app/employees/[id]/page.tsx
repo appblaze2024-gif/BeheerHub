@@ -548,6 +548,11 @@ export default function EmployeeDetailPage() {
   const handleEdit = () => {
     setIsDialogOpen(true);
   };
+  
+  const canViewTab = (tabId: string) => {
+    if (isSuperUser) return true;
+    return profile?.permissions?.employees?.tabs?.[tabId] ?? true;
+  };
 
   if (isLoading || isProfileLoading) {
     return (
@@ -600,13 +605,13 @@ export default function EmployeeDetailPage() {
         <Tabs defaultValue="overzicht" className="flex-1 flex flex-col min-h-0">
           <div className="px-6">
             <TabsList>
-              <TabsTrigger value="overzicht">Overzicht</TabsTrigger>
-              <TabsTrigger value="afwezigheid">Afwezigheid</TabsTrigger>
-              <TabsTrigger value="rooster">Rooster</TabsTrigger>
-              <TabsTrigger value="contracten">Contracten</TabsTrigger>
+              {canViewTab('overzicht') && <TabsTrigger value="overzicht">Overzicht</TabsTrigger>}
+              {canViewTab('afwezigheid') && <TabsTrigger value="afwezigheid">Afwezigheid</TabsTrigger>}
+              {canViewTab('rooster') && <TabsTrigger value="rooster">Rooster</TabsTrigger>}
+              {canViewTab('contracten') && <TabsTrigger value="contracten">Contracten</TabsTrigger>}
             </TabsList>
           </div>
-          <TabsContent value="overzicht" className="flex-1 overflow-y-auto">
+          {canViewTab('overzicht') && <TabsContent value="overzicht" className="flex-1 overflow-y-auto">
              <div className="p-6 space-y-6">
                 <Card>
                   <CardHeader>
@@ -671,16 +676,16 @@ export default function EmployeeDetailPage() {
                   </Card>
                 </div>
             </div>
-          </TabsContent>
-          <TabsContent value="afwezigheid" className="flex-1 overflow-y-auto">
+          </TabsContent>}
+          {canViewTab('afwezigheid') && <TabsContent value="afwezigheid" className="flex-1 overflow-y-auto">
             <AfwezigheidTab canEdit={canEdit} />
-          </TabsContent>
-          <TabsContent value="rooster" className="flex-1 overflow-y-auto">
+          </TabsContent>}
+          {canViewTab('rooster') && <TabsContent value="rooster" className="flex-1 overflow-y-auto">
             <RoosterTab medewerker={medewerker} />
-          </TabsContent>
-          <TabsContent value="contracten" className="flex-1 overflow-y-auto">
+          </TabsContent>}
+          {canViewTab('contracten') && <TabsContent value="contracten" className="flex-1 overflow-y-auto">
              <ContractenTab canEdit={canEdit}/>
-          </TabsContent>
+          </TabsContent>}
         </Tabs>
       </div>
        <MedewerkerDialog

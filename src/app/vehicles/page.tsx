@@ -45,6 +45,7 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
   const firestore = useFirestore();
   const [searchTerm, setSearchTerm] = React.useState('');
   const isTablet = useIsMobile(1024);
+  const { profile } = useProfile();
 
   const collectionName = materieelType;
 
@@ -150,6 +151,11 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
   const idLabel = materieelType === 'voertuigen' ? 'Kenteken' : 'ID';
   const numberLabel = materieelType === 'voertuigen' ? 'Voertuignummer' : 'Machinenummer';
   const numberField = materieelType === 'voertuigen' ? 'voertuignummer' : 'machinenummer';
+
+  const canViewTab = (tabId: string) => {
+    if (profile?.role === 'Super admin') return true;
+    return profile?.permissions?.vehicles?.tabs?.[tabId] ?? true;
+  };
 
   return (
     <div className="grid lg:grid-cols-[300px_1fr] gap-6 min-h-0 h-full">
@@ -337,13 +343,13 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
 
               <Tabs defaultValue="actions" className="flex-1 flex flex-col min-h-0">
                 <TabsList>
-                  <TabsTrigger value="actions">Acties</TabsTrigger>
-                  <TabsTrigger value="maintenance">Onderhoud</TabsTrigger>
-                  <TabsTrigger value="damages">Schade</TabsTrigger>
-                  <TabsTrigger value="documents">Documenten</TabsTrigger>
+                  {canViewTab('actions') && <TabsTrigger value="actions">Acties</TabsTrigger>}
+                  {canViewTab('maintenance') && <TabsTrigger value="maintenance">Onderhoud</TabsTrigger>}
+                  {canViewTab('damages') && <TabsTrigger value="damages">Schade</TabsTrigger>}
+                  {canViewTab('documents') && <TabsTrigger value="documents">Documenten</TabsTrigger>}
                 </TabsList>
                 
-                <TabsContent value="actions" className="h-full mt-4">
+                {canViewTab('actions') && <TabsContent value="actions" className="h-full mt-4">
                   <Card className="h-full flex flex-col">
                     <CardHeader className="flex-row items-center justify-between">
                       <CardTitle>Acties</CardTitle>
@@ -356,9 +362,9 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                     </CardHeader>
                     {/* Actions content here */}
                   </Card>
-                </TabsContent>
+                </TabsContent>}
 
-                <TabsContent value="maintenance" className="h-full mt-4">
+                {canViewTab('maintenance') && <TabsContent value="maintenance" className="h-full mt-4">
                    <Card className="h-full flex flex-col">
                     <CardHeader className="flex-row items-center justify-between">
                       <CardTitle>Onderhoud</CardTitle>
@@ -371,9 +377,9 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                     </CardHeader>
                     {/* Maintenance content here */}
                   </Card>
-                </TabsContent>
+                </TabsContent>}
 
-                <TabsContent value="damages" className="h-full mt-4">
+                {canViewTab('damages') && <TabsContent value="damages" className="h-full mt-4">
                   <Card className="h-full flex flex-col">
                     <CardHeader className="flex-row items-center justify-between">
                       <CardTitle>Schade</CardTitle>
@@ -384,9 +390,9 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                     </CardHeader>
                     {/* Damages content here */}
                   </Card>
-                </TabsContent>
+                </TabsContent>}
 
-                <TabsContent value="documents" className="h-full mt-4">
+                {canViewTab('documents') && <TabsContent value="documents" className="h-full mt-4">
                   <Card className="h-full flex flex-col">
                     <CardHeader className="flex-row items-center justify-between">
                       <CardTitle>Documenten</CardTitle>
@@ -397,7 +403,7 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                     </CardHeader>
                     {/* Documents content here */}
                   </Card>
-                </TabsContent>
+                </TabsContent>}
               </Tabs>
               <AddDamageDialog
                 open={isDamageDialogOpen}
