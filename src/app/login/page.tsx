@@ -44,10 +44,10 @@ export default function LoginPage() {
       />
       <div className="absolute top-8 left-8 z-10">
          <Image
-          src="https://i.ibb.co/rKbcyMm9/Chat-GPT-Image-20-jan-2026-08-23-45.png"
+          src="https://i.ibb.co/XxdPbvks/Whats-App-Image-2026-01-20-at-08-32-27.jpg"
           alt="Logo"
-          width={150}
-          height={39}
+          width={100}
+          height={25}
           priority
         />
       </div>
@@ -55,10 +55,10 @@ export default function LoginPage() {
       <Card className="w-full max-w-xl z-10 bg-white/50 backdrop-blur-xl border border-white/20 shadow-2xl rounded-xl">
         <CardHeader className="items-center text-center py-4">
             <Image
-                src="https://i.ibb.co/rKbcyMm9/Chat-GPT-Image-20-jan-2026-08-23-45.png"
+                src="https://i.ibb.co/XxdPbvks/Whats-App-Image-2026-01-20-at-08-32-27.jpg"
                 alt="Logo"
-                width={150}
-                height={39}
+                width={100}
+                height={25}
                 priority
             />
           <h1 className="text-2xl font-bold text-white">Inloggen met e-mail</h1>
