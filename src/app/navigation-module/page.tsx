@@ -574,12 +574,34 @@ export default function Page() {
   }, [searchParams, userPosition, calculateRoute, setIsHeaderVisible, isNavigating]);
 
   const fetchRoadsForPolygon = React.useCallback(async (polygon: turf.Feature<turf.Polygon | turf.MultiPolygon>): Promise<turf.Feature<turf.LineString>[]> => {
-    const bbox = turf.bbox(polygon);
+    if (!selectedRoute?.roadTypes || selectedRoute.roadTypes.length === 0) return [];
+    
+    const roadTypesQuery = selectedRoute.roadTypes.join('|');
+
+    const buildWayQueries = (geometry: turf.Polygon | turf.MultiPolygon, roadTypes: string): string => {
+        if (geometry.type === 'Polygon') {
+            const polyCoords = geometry.coordinates[0].map(p => `${p[1]} ${p[0]}`).join(' ');
+            return `way["highway"~"${roadTypes}"](poly:"${polyCoords}");`;
+        }
+        if (geometry.type === 'MultiPolygon') {
+            return geometry.coordinates.map(polygonCoords => {
+                const polyCoords = polygonCoords[0].map(p => `${p[1]} ${p[0]}`).join(' ');
+                return `way["highway"~"${roadTypes}"](poly:"${polyCoords}");`;
+            }).join('\n');
+        }
+        return '';
+    };
+
+    const wayQueries = buildWayQueries(polygon.geometry, roadTypesQuery);
+    if (!wayQueries) {
+      console.error("Invalid polygon geometry, cannot build Overpass query.");
+      return [];
+    }
 
     const overpassQuery = `
         [out:json][timeout:90];
         (
-            way["highway"~"${selectedRoute.roadTypes.join('|')}"](poly:"${turf.bboxPolygon(bbox).geometry.coordinates[0].flat().join(' ')}");
+            ${wayQueries}
         );
         (._;>;);
         out geom;
@@ -603,7 +625,7 @@ export default function Page() {
         .filter((el: any) => el.type === 'way' && el.geometry)
         .map((el: any) => turf.lineString(el.geometry.map((node: any) => [node.lon, node.lat]), el.tags))
     ).features;
-  }, [selectedRoute?.roadTypes]);
+  }, [selectedRoute]);
 
   React.useEffect(() => {
     const fetchRouteRoads = async () => {

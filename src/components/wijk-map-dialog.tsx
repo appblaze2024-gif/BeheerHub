@@ -243,21 +243,34 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   }, [open, wijk, showRoadTypes]);
 
   const fetchRoadsForPolygon = React.useCallback(async (polygon: turf.Feature<turf.Polygon | turf.MultiPolygon>): Promise<turf.Feature<turf.LineString>[]> => {
-    const bbox = turf.bbox(polygon);
-
     const roadTypesQuery = (wijk?.roadTypes && wijk.roadTypes.length > 0) 
       ? wijk.roadTypes.join('|')
       : 'motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|service|pedestrian|track|road|footway|cycleway|path';
 
-    if (!bbox.every(isFinite)) {
-        console.error("Invalid bounding box for polygon, skipping Overpass query.");
+    const buildWayQueries = (geometry: turf.Polygon | turf.MultiPolygon, roadTypes: string): string => {
+        if (geometry.type === 'Polygon') {
+            const polyCoords = geometry.coordinates[0].map(p => `${p[1]} ${p[0]}`).join(' ');
+            return `way["highway"~"${roadTypes}"](poly:"${polyCoords}");`;
+        }
+        if (geometry.type === 'MultiPolygon') {
+            return geometry.coordinates.map(polygonCoords => {
+                const polyCoords = polygonCoords[0].map(p => `${p[1]} ${p[0]}`).join(' ');
+                return `way["highway"~"${roadTypes}"](poly:"${polyCoords}");`;
+            }).join('\n');
+        }
+        return '';
+    };
+
+    const wayQueries = buildWayQueries(polygon.geometry, roadTypesQuery);
+    if (!wayQueries) {
+        console.error("Invalid polygon geometry, cannot build Overpass query.");
         return [];
     }
 
     const overpassQuery = `
         [out:json][timeout:90];
         (
-            way["highway"~"${roadTypesQuery}"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});
+          ${wayQueries}
         );
         (._;>;);
         out geom;
