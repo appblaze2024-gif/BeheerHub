@@ -11,6 +11,7 @@ import {
   Home,
   Newspaper,
   Mail,
+  FileCheck,
 } from 'lucide-react';
 import type { ElementType } from 'react';
 
@@ -34,4 +35,5 @@ export const allMenuItems: MenuItem[] = [
     { href: '/issues', label: 'Meldingen', icon: Bell, module: 'issues' },
     { href: '/navigation-module', label: 'Navigatiemodule', icon: Map, module: 'navigation' },
     { href: '/mail', label: 'Mail', icon: Mail, module: 'mail' },
+    { href: '/spec-reports', label: 'Besteksmeldingen', icon: FileCheck, module: 'specReports' },
 ];
