@@ -22,7 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { useProfile } from '@/firebase/profile-provider';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -171,6 +171,7 @@ function MeldingenList({ meldingen, onMeldingClick, onMailMelding, onNavigateToM
 export default function IssuesPage() {
   const firestore = useFirestore();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [selectedMelding, setSelectedMelding] = React.useState<Melding | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
@@ -183,6 +184,17 @@ export default function IssuesPage() {
   const [viewMode, setViewMode] = React.useState<'map' | 'list'>('map');
   const [searchQuery, setSearchQuery] = React.useState('');
   const { profile } = useProfile();
+
+  React.useEffect(() => {
+    const projectId = searchParams.get('projectId');
+    const wijkId = searchParams.get('wijkId');
+    if (projectId) {
+      setSelectedProjectId(projectId);
+    }
+    if (wijkId) {
+      setSelectedWijkId(wijkId);
+    }
+  }, [searchParams]);
 
   const meldingenCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -448,7 +460,17 @@ export default function IssuesPage() {
   
   const handleNavigateToMelding = (melding: Melding) => {
     if (melding.latitude && melding.longitude) {
-        router.push(`/navigation-module?dest_lat=${melding.latitude}&dest_lon=${melding.longitude}&dest_id=${melding.id}`);
+        const params = new URLSearchParams();
+        params.set('dest_lat', melding.latitude.toString());
+        params.set('dest_lon', melding.longitude.toString());
+        params.set('dest_id', melding.id);
+        if (selectedProjectId) {
+            params.set('projectId', selectedProjectId);
+        }
+        if (selectedWijkId) {
+            params.set('wijkId', selectedWijkId);
+        }
+        router.push(`/navigation-module?${params.toString()}`);
     }
   };
 

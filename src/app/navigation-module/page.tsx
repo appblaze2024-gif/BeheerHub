@@ -855,7 +855,17 @@ export default function Page() {
 
   const handleStopNavigation = useCallback(() => {
     if (isSinglePointNav) {
-        router.push('/issues');
+        const projectIdFromNav = searchParams.get('projectId');
+        const wijkIdFromNav = searchParams.get('wijkId');
+        const params = new URLSearchParams();
+        if (projectIdFromNav) {
+            params.set('projectId', projectIdFromNav);
+        }
+        if (wijkIdFromNav) {
+            params.set('wijkId', wijkIdFromNav);
+        }
+        const queryString = params.toString();
+        router.push(queryString ? `/issues?${queryString}` : '/issues');
     }
 
     if (firestore && user && activeRouteHistoryId) {
@@ -909,7 +919,7 @@ export default function Page() {
             padding: { top: 0, bottom: 0, left: 0, right: 0 },
         });
     }
-  }, [firestore, user, activeRouteHistoryId, setIsHeaderVisible, isSinglePointNav, router]);
+  }, [firestore, user, activeRouteHistoryId, setIsHeaderVisible, isSinglePointNav, router, searchParams]);
 
   const resumeSimulation = useCallback(() => {
     simulationStateRef.current.isPaused = false;
@@ -1761,4 +1771,3 @@ export default function Page() {
   );
 }
 
-    
