@@ -46,8 +46,8 @@ export default function LoginPage() {
          <Image
           src="https://i.ibb.co/rKbcyMm9/Chat-GPT-Image-20-jan-2026-08-23-45.png"
           alt="Logo"
-          width={240}
-          height={78}
+          width={150}
+          height={39}
           priority
         />
       </div>
@@ -57,8 +57,8 @@ export default function LoginPage() {
             <Image
                 src="https://i.ibb.co/rKbcyMm9/Chat-GPT-Image-20-jan-2026-08-23-45.png"
                 alt="Logo"
-                width={240}
-                height={78}
+                width={150}
+                height={39}
                 priority
             />
           <h1 className="text-2xl font-bold text-white">Inloggen met e-mail</h1>
