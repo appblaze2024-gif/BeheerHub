@@ -14,7 +14,7 @@ import {
   useAuth,
 } from '@/firebase';
 import { ProfileProvider, useProfile } from '@/firebase/profile-provider';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
@@ -73,7 +73,9 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
   }, [user, userProfile, isProfileLoading, userProfileRef, firestore]);
   
   const handleLogout = async () => {
-    await signOut(auth);
+    if(auth) {
+      await signOut(auth);
+    }
   };
   
   const getInitials = (firstName?: string, lastName?: string) => {
@@ -141,6 +143,7 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
 function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
 
   const [isMounted, setIsMounted] = useState(false);
@@ -148,22 +151,33 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     setIsMounted(true);
   }, []);
 
+  const mode = searchParams.get('mode');
+  const oobCode = searchParams.get('oobCode');
+
+  // This handles the case where the password reset link from the email incorrectly points to any page other than the reset page.
+  const isPasswordResetFlow = mode === 'resetPassword' && oobCode;
+
+  useEffect(() => {
+    if (isPasswordResetFlow && pathname !== '/reset-password') {
+      router.replace(`/reset-password?${searchParams.toString()}`);
+    }
+  }, [isPasswordResetFlow, pathname, router, searchParams]);
+
   const isPublicPage = pathname === '/login' || pathname.startsWith('/reset-password');
 
   useEffect(() => {
-    // Return early if not mounted or auth is loading, to prevent premature redirects
-    if (!isMounted || isUserLoading) return;
+    // Don't run auth checks until client is mounted, auth is resolved, and we're not in a password reset flow.
+    if (!isMounted || isUserLoading || isPasswordResetFlow) {
+      return;
+    }
 
     if (!user && !isPublicPage) {
       router.push('/login');
     } else if (user && pathname === '/login') {
       router.push('/');
     }
-  }, [user, isUserLoading, pathname, router, isPublicPage, isMounted]);
+  }, [user, isUserLoading, pathname, router, isPublicPage, isMounted, isPasswordResetFlow]);
 
-  // During server-side rendering and before the component mounts on the client,
-  // we cannot reliably use client-side hooks like usePathname or check auth state.
-  // Rendering a consistent, static loading state for all pages initially prevents hydration errors.
   if (!isMounted) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -172,6 +186,11 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // While redirecting for password reset, show a loading indicator.
+  if (isPasswordResetFlow && pathname !== '/reset-password') {
+    return <div className="flex h-screen items-center justify-center">Een ogenblik geduld...</div>;
+  }
+  
   if (isUserLoading && !isPublicPage) {
      return (
       <div className="flex h-screen items-center justify-center">
@@ -181,6 +200,10 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   }
   
   if (!user && !isPublicPage) {
+    // This check is important, but we must make sure we don't block the reset flow
+    if (isPasswordResetFlow) {
+        return <>{children}</>;
+    }
     return (
        <div className="flex h-screen items-center justify-center">
         Laden...
@@ -194,6 +217,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
   return <ProtectedAppLayout>{children}</ProtectedAppLayout>;
 }
+
 
 export default function RootLayout({
   children,
