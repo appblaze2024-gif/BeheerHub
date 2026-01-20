@@ -203,7 +203,7 @@ export function ComposeMailDialog({ open, onOpenChange, initialData, children }:
                 <FormItem>
                   <FormLabel>Aan</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} value={field.value ?? ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -216,7 +216,7 @@ export function ComposeMailDialog({ open, onOpenChange, initialData, children }:
                 <FormItem>
                   <FormLabel>Cc</FormLabel>
                   <FormControl>
-                    <Input placeholder="" {...field} />
+                    <Input placeholder="" {...field} value={field.value ?? ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -229,7 +229,7 @@ export function ComposeMailDialog({ open, onOpenChange, initialData, children }:
                 <FormItem>
                   <FormLabel>Onderwerp</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} value={field.value ?? ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -242,7 +242,7 @@ export function ComposeMailDialog({ open, onOpenChange, initialData, children }:
                 <FormItem>
                   <FormLabel>Bericht</FormLabel>
                   <FormControl>
-                    <Textarea className="min-h-[200px]" {...field} />
+                    <Textarea className="min-h-[200px]" {...field} value={field.value ?? ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
