@@ -44,8 +44,8 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import type { Medewerker, Dienst, Voertuig } from '@/lib/types';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import type { Medewerker, Dienst, Voertuig, Machine } from '@/lib/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from './ui/select';
 import { Separator } from './ui/separator';
 import { Textarea } from './ui/textarea';
 
@@ -70,7 +70,7 @@ interface DienstToevoegenDialogProps {
   };
   dienst?: Dienst;
   onSuccess: () => void;
-  voertuigen: Voertuig[];
+  equipment: (Voertuig & { __type?: 'voertuig' } | Machine & { __type?: 'machine' })[];
 }
 
 export function DienstToevoegenDialog({
@@ -81,7 +81,7 @@ export function DienstToevoegenDialog({
   project,
   dienst,
   onSuccess,
-  voertuigen,
+  equipment,
 }: DienstToevoegenDialogProps) {
   const firestore = useFirestore();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -308,20 +308,35 @@ export function DienstToevoegenDialog({
                     name="voertuignummer"
                     render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Voertuignummer</FormLabel>
+                        <FormLabel>Voertuig/Machine</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value || ''}>
                             <FormControl>
                             <SelectTrigger>
-                                <SelectValue placeholder="Selecteer een voertuig" />
+                                <SelectValue placeholder="Selecteer een voertuig of machine" />
                             </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                            <SelectItem value=" ">Geen voertuig</SelectItem>
-                            {voertuigen.map((v) => (
-                                <SelectItem key={v.id} value={v.voertuignummer || v.id}>
-                                {v.voertuignummer || v.id} ({v.merk} {v.model})
-                                </SelectItem>
-                            ))}
+                                <SelectItem value=" ">Geen voertuig/machine</SelectItem>
+                                {equipment.filter(e => e.__type === 'voertuig').length > 0 && (
+                                    <SelectGroup>
+                                        <SelectLabel>Voertuigen</SelectLabel>
+                                        {equipment.filter(e => e.__type === 'voertuig').map((v) => (
+                                            <SelectItem key={v.id} value={(v as Voertuig).voertuignummer || v.id}>
+                                            {(v as Voertuig).voertuignummer || v.id} ({v.merk} {v.model})
+                                            </SelectItem>
+                                        ))}
+                                    </SelectGroup>
+                                )}
+                                {equipment.filter(e => e.__type === 'machine').length > 0 && (
+                                     <SelectGroup>
+                                        <SelectLabel>Machines</SelectLabel>
+                                        {equipment.filter(e => e.__type === 'machine').map((m) => (
+                                            <SelectItem key={m.id} value={(m as Machine).machinenummer || m.id}>
+                                            {(m as Machine).machinenummer || m.id} ({m.merk} {m.model})
+                                            </SelectItem>
+                                        ))}
+                                    </SelectGroup>
+                                )}
                             </SelectContent>
                         </Select>
                         <FormMessage />

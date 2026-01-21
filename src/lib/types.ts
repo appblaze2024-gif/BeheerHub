@@ -90,6 +90,18 @@ export interface Voertuig {
   imageUrl?: string;
 }
 
+export interface Machine {
+  id: string;
+  machinenummer?: string;
+  merk?: string;
+  model?: string;
+  type?: string;
+  status?: 'Actief' | 'Inactief' | 'In onderhoud';
+  bouwjaar?: string;
+  brandstof?: 'Benzine' | 'Diesel' | 'Elektrisch' | 'Hybride (benzine)' | 'Hybride (diesel)' | 'LPG' | 'CNG (Aardgas)' | 'Waterstof';
+  imageUrl?: string;
+}
+
 export type UploadedFile = {
   name: string;
   url: string;

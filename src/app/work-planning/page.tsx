@@ -37,7 +37,7 @@ import {
   errorEmitter,
   FirestorePermissionError,
 } from '@/firebase';
-import type { Medewerker, Dienst, Voertuig } from '@/lib/types';
+import type { Medewerker, Dienst, Voertuig, Machine } from '@/lib/types';
 import { DienstToevoegenDialog } from '@/components/dienst-toevoegen-dialog';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -255,17 +255,31 @@ export default function WorkPlanningPage() {
 
   const { data: voertuigen, isLoading: isLoadingVoertuigen } = useCollection<Voertuig>(voertuigenCollection);
 
+  const machinesCollection = React.useMemo(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'machines');
+  }, [firestore]);
+
+  const { data: machines, isLoading: isLoadingMachines } = useCollection<Machine>(machinesCollection);
+
+  const allEquipment = React.useMemo(() => {
+    const all: (Voertuig & {__type: 'voertuig'} | Machine & {__type: 'machine'})[] = [];
+    if (voertuigen) {
+        all.push(...voertuigen.map(v => ({...v, __type: 'voertuig' as const})));
+    }
+    if (machines) {
+        all.push(...machines.map(m => ({...m, __type: 'machine' as const})));
+    }
+    return all.sort((a, b) => {
+        const numA = (a.__type === 'voertuig' ? a.voertuignummer : a.machinenummer) || a.id;
+        const numB = (b.__type === 'voertuig' ? b.voertuignummer : b.machinenummer) || b.id;
+        return numA.localeCompare(numB, undefined, { numeric: true, sensitivity: 'base' });
+    });
+  }, [voertuigen, machines]);
+
   const isSuperUser = profile?.role === 'Super admin';
   const canView = isSuperUser || !!profile?.permissions?.workPlanning?.view;
   const canEdit = isSuperUser || !!profile?.permissions?.workPlanning?.edit;
-
-  const sortedVoertuigen = React.useMemo(() => {
-    if (!voertuigen) return [];
-    return [...voertuigen].sort((a, b) => 
-        (a.voertuignummer || a.id).localeCompare(b.voertuignummer || b.id, undefined, { numeric: true, sensitivity: 'base' })
-    );
-  }, [voertuigen]);
-
 
   const start = React.useMemo(() => startOfWeek(currentDate, { weekStartsOn: 1 }), [currentDate]);
   const end = React.useMemo(() => endOfWeek(currentDate, { weekStartsOn: 1 }), [currentDate]);
@@ -808,10 +822,10 @@ export default function WorkPlanningPage() {
     });
   };
 
-  const availableVoertuigenForDialog = React.useMemo(() => {
-    if (!voertuigen) return [];
+  const availableEquipmentForDialog = React.useMemo(() => {
+    if (!allEquipment) return [];
     
-    let filteredVoertuigen = voertuigen;
+    let filteredEquipment = allEquipment;
 
     if (selectedDay) {
         const dateKey = format(selectedDay, 'yyyy-MM-dd');
@@ -819,18 +833,14 @@ export default function WorkPlanningPage() {
         const availableForDay = availableVehicles[dateKey] || [];
 
         if (availableForDay.length > 0) {
-            // If specific vehicles are marked as available, only they are available (and not unavailable).
-            filteredVoertuigen = voertuigen.filter(v => availableForDay.includes(v.id) && !unavailableForDay.includes(v.id));
+            filteredEquipment = allEquipment.filter(e => availableForDay.includes(e.id) && !unavailableForDay.includes(e.id));
         } else {
-            // Otherwise, all vehicles are available except those marked as unavailable.
-            filteredVoertuigen = voertuigen.filter(v => !unavailableForDay.includes(v.id));
+            filteredEquipment = allEquipment.filter(e => !unavailableForDay.includes(e.id));
         }
     }
     
-    return [...filteredVoertuigen].sort((a, b) => 
-        (a.voertuignummer || '').localeCompare(b.voertuignummer || '', undefined, { numeric: true, sensitivity: 'base' })
-    );
-  }, [voertuigen, selectedDay, unavailableVehicles, availableVehicles]);
+    return filteredEquipment;
+  }, [allEquipment, selectedDay, unavailableVehicles, availableVehicles]);
 
 
   return (
@@ -908,18 +918,35 @@ export default function WorkPlanningPage() {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="w-64 max-h-80 overflow-y-auto">
-                            <DropdownMenuLabel>Onbeschikbare voertuigen</DropdownMenuLabel>
+                            <DropdownMenuLabel>Onbeschikbaar Materieel</DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            {sortedVoertuigen && sortedVoertuigen.length > 0 ? sortedVoertuigen.map(v => (
-                                <DropdownMenuCheckboxItem
-                                    key={v.id}
-                                    checked={(unavailableVehicles[format(day, 'yyyy-MM-dd')] || []).includes(v.id)}
-                                    onCheckedChange={(checked) => handleUnavailableVehicleToggle(format(day, 'yyyy-MM-dd'), v.id, !!checked)}
-                                    onSelect={(e) => e.preventDefault()}
-                                >
-                                    {v.voertuignummer || v.id} ({v.merk})
-                                </DropdownMenuCheckboxItem>
-                            )) : <DropdownMenuItem disabled>Geen voertuigen</DropdownMenuItem>}
+                            {allEquipment && allEquipment.length > 0 ? (
+                                <>
+                                    <DropdownMenuLabel className="text-xs px-2">Voertuigen</DropdownMenuLabel>
+                                    {allEquipment.filter(e => e.__type === 'voertuig').map(v => (
+                                        <DropdownMenuCheckboxItem
+                                            key={v.id}
+                                            checked={(unavailableVehicles[format(day, 'yyyy-MM-dd')] || []).includes(v.id)}
+                                            onCheckedChange={(checked) => handleUnavailableVehicleToggle(format(day, 'yyyy-MM-dd'), v.id, !!checked)}
+                                            onSelect={(e) => e.preventDefault()}
+                                        >
+                                            {(v as Voertuig).voertuignummer || v.id} ({v.merk})
+                                        </DropdownMenuCheckboxItem>
+                                    ))}
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuLabel className="text-xs px-2">Machines</DropdownMenuLabel>
+                                    {allEquipment.filter(e => e.__type === 'machine').map(m => (
+                                        <DropdownMenuCheckboxItem
+                                            key={m.id}
+                                            checked={(unavailableVehicles[format(day, 'yyyy-MM-dd')] || []).includes(m.id)}
+                                            onCheckedChange={(checked) => handleUnavailableVehicleToggle(format(day, 'yyyy-MM-dd'), m.id, !!checked)}
+                                            onSelect={(e) => e.preventDefault()}
+                                        >
+                                            {(m as Machine).machinenummer || m.id} ({m.merk})
+                                        </DropdownMenuCheckboxItem>
+                                    ))}
+                                </>
+                            ) : <DropdownMenuItem disabled>Geen materieel</DropdownMenuItem>}
                         </DropdownMenuContent>
                     </DropdownMenu>
                  </div>
@@ -932,18 +959,35 @@ export default function WorkPlanningPage() {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="w-64 max-h-80 overflow-y-auto">
-                            <DropdownMenuLabel>Beschikbare voertuigen</DropdownMenuLabel>
+                           <DropdownMenuLabel>Beschikbaar Materieel</DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                             {sortedVoertuigen && sortedVoertuigen.length > 0 ? sortedVoertuigen.map(v => (
-                                <DropdownMenuCheckboxItem
-                                    key={v.id}
-                                    checked={(availableVehicles[format(day, 'yyyy-MM-dd')] || []).includes(v.id)}
-                                    onCheckedChange={(checked) => handleAvailableVehicleToggle(format(day, 'yyyy-MM-dd'), v.id, !!checked)}
-                                    onSelect={(e) => e.preventDefault()}
-                                >
-                                    {v.voertuignummer || v.id} ({v.merk})
-                                </DropdownMenuCheckboxItem>
-                            )) : <DropdownMenuItem disabled>Geen voertuigen</DropdownMenuItem>}
+                            {allEquipment && allEquipment.length > 0 ? (
+                                <>
+                                    <DropdownMenuLabel className="text-xs px-2">Voertuigen</DropdownMenuLabel>
+                                    {allEquipment.filter(e => e.__type === 'voertuig').map(v => (
+                                        <DropdownMenuCheckboxItem
+                                            key={v.id}
+                                            checked={(availableVehicles[format(day, 'yyyy-MM-dd')] || []).includes(v.id)}
+                                            onCheckedChange={(checked) => handleAvailableVehicleToggle(format(day, 'yyyy-MM-dd'), v.id, !!checked)}
+                                            onSelect={(e) => e.preventDefault()}
+                                        >
+                                            {(v as Voertuig).voertuignummer || v.id} ({v.merk})
+                                        </DropdownMenuCheckboxItem>
+                                    ))}
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuLabel className="text-xs px-2">Machines</DropdownMenuLabel>
+                                    {allEquipment.filter(e => e.__type === 'machine').map(m => (
+                                        <DropdownMenuCheckboxItem
+                                            key={m.id}
+                                            checked={(availableVehicles[format(day, 'yyyy-MM-dd')] || []).includes(m.id)}
+                                            onCheckedChange={(checked) => handleAvailableVehicleToggle(format(day, 'yyyy-MM-dd'), m.id, !!checked)}
+                                            onSelect={(e) => e.preventDefault()}
+                                        >
+                                            {(m as Machine).machinenummer || m.id} ({m.merk})
+                                        </DropdownMenuCheckboxItem>
+                                    ))}
+                                </>
+                            ) : <DropdownMenuItem disabled>Geen materieel</DropdownMenuItem>}
                         </DropdownMenuContent>
                     </DropdownMenu>
                  </div>
@@ -1119,7 +1163,7 @@ export default function WorkPlanningPage() {
             project={selectedProject}
             dienst={selectedDienst}
             onSuccess={handleSheetSuccess}
-            voertuigen={availableVoertuigenForDialog}
+            equipment={availableEquipmentForDialog}
         />
         <PrintDayDialog 
             open={isPrintDayDialogOpen}
