@@ -3,50 +3,50 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     
-    // Sta leesbewerkingen toe voor alle bestanden. Dit is nodig zodat de app 
-    // de geüploade bestanden kan weergeven. In een productie-app zou je dit 
-    // wellicht verder willen beveiligen.
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Allow read operations for all authenticated users.
+    // For a production app, you might want more granular read rules.
     match /{allPaths=**} {
-      allow read;
-    }
-
-    // Beveilig de 'projects' map specifiek.
-    // Alleen een ingelogde gebruiker (request.auth != null) mag bestanden schrijven (uploaden).
-    match /projects/{projectId}/{allPaths=**} {
-      allow write: if request.auth != null;
-    }
-
-    // Beveilig de 'damages' map specifiek.
-    // Alleen een ingelogde gebruiker (request.auth != null) mag bestanden schrijven (uploaden).
-    match /damages/{materieelId}/{damageId}/{allPaths=**} {
-      allow write: if request.auth != null;
+      allow read: if isSignedIn();
     }
     
-    // Beveilig de 'meldingen' map.
-    // Alleen een ingelogde gebruiker (request.auth != null) mag bestanden schrijven (uploaden).
-    match /meldingen/{meldingId}/{allPaths=**} {
-        allow write: if request.auth != null;
-    }
-
-    // Beveilig de 'besteksmeldingen' map.
+    // --- WRITE RULES (Simplified) ---
+    // Allow any signed-in user to write to these paths.
+    // This is less secure for now but will unblock the user.
+    
+    // Rule for 'Besteksmeldingen' photos.
     match /projects/{projectId}/besteksmeldingen/{meldingId}/{allPaths=**} {
-      allow write: if request.auth != null;
+      allow write: if isSignedIn();
     }
 
-    // Voeg een regel toe om het uploaden van voertuigafbeeldingen toe te staan
-    // voor ingelogde gebruikers.
-    match /voertuigen/{vehicleId}/main_image/{allPaths=**} {
-      allow write: if request.auth != null;
+    // Rule for general project files (e.g., in the 'Bestanden' tab)
+    match /projects/{projectId}/bestanden/{allPaths=**} {
+        allow write: if isSignedIn();
     }
     
-     match /machines/{machineId}/main_image/{allPaths=**} {
-      allow write: if request.auth != null;
+    // Rule for public issue reports ('meldingen') photos
+    match /meldingen/{meldingId}/{allPaths=**} {
+        allow write: if isSignedIn();
     }
 
-    // Voeg een regel toe om het uploaden van documenten toe te staan
-    // voor ingelogde gebruikers.
-    match /documents/{materieelId}/{documentId}/{allPaths=**} {
-      allow write: if request.auth != null;
+    // Rules for vehicle/machine images and documents
+    match /voertuigen/{vehicleId}/{allPaths=**} {
+      allow write: if isSignedIn();
+    }
+    
+    match /machines/{machineId}/{allPaths=**} {
+      allow write: if isSignedIn();
+    }
+    
+    match /damages/{materieelId}/{allPaths=**} {
+      allow write: if isSignedIn();
+    }
+    
+    match /documents/{materieelId}/{allPaths=**} {
+      allow write: if isSignedIn();
     }
   }
 }
