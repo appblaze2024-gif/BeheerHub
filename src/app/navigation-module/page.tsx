@@ -74,6 +74,7 @@ interface MapObject {
     longitude: number;
     locatieWerkgebieden?: string[];
     vulgraad?: number;
+    vulgraadHistory?: { timestamp: any; value: number }[];
     [key: string]: any;
 }
 
@@ -195,6 +196,7 @@ export default function Page() {
   const [activeRouteHistoryId, setActiveRouteHistoryId] = React.useState<string | null>(null);
   
   const [completionVulgraadPercentage, setCompletionVulgraadPercentage] = React.useState<number>(0);
+  const [averageVulgraad, setAverageVulgraad] = React.useState<number | null>(null);
   const [remainingDistance, setRemainingDistance] = React.useState<number | null>(null);
   const [justCompletedObjectId, setJustCompletedObjectId] = React.useState<string | null>(null);
   
@@ -548,6 +550,79 @@ export default function Page() {
     }
   }, []);
   
+  const findNextObject = async (currentOrigin: [number, number], availableObjects: MapObject[]): Promise<MapObject | null> => {
+      if (!currentOrigin || availableObjects.length === 0) return null;
+
+      if (availableObjects.length === 1) return availableObjects[0];
+
+      // Batch objects into groups of 24 (since the first coordinate is the origin)
+      const batchSize = 24;
+      const batches: MapObject[][] = [];
+      for (let i = 0; i < availableObjects.length; i += batchSize) {
+          batches.push(availableObjects.slice(i, i + batchSize));
+      }
+
+      let closestObject: MapObject | null = null;
+      let minDistance = Infinity;
+
+      try {
+        for (const batch of batches) {
+            const coordinates = [currentOrigin, ...batch.map(obj => [obj.longitude, obj.latitude])];
+            const coordinatesString = coordinates.map(c => c.join(',')).join(';');
+            const approaches = ['curb', ...batch.map(() => 'unrestricted')].join(';');
+
+            const response = await fetch(
+                `https://api.mapbox.com/directions-matrix/v1/mapbox/driving-traffic/${coordinatesString}?sources=0&annotations=distance&approaches=${approaches}&access_token=${MAPBOX_TOKEN}`
+            );
+            
+            if (!response.ok) {
+                console.error(`Mapbox Matrix API batch failed: ${response.statusText}`);
+                continue; // Try next batch
+            }
+
+            const data = await response.json();
+
+            if (data.code !== 'Ok' || !data.distances) {
+                console.error(`Mapbox Matrix API error for batch: ${data.message || 'No distances returned'}`);
+                continue;
+            }
+
+            const distances = data.distances[0].slice(1);
+
+            distances.forEach((distance: number | null, index: number) => {
+                if (distance !== null && distance < minDistance) {
+                    minDistance = distance;
+                    closestObject = batch[index];
+                }
+            });
+        }
+
+        if (closestObject) {
+            return closestObject;
+        }
+
+        // If all API calls fail or return no valid distances, fall back to straight-line on all available objects.
+        throw new Error("All Matrix API batches failed or returned no valid routes.");
+
+      } catch (error) {
+          console.error("Error finding next object via routing:", error);
+          // Fallback to the nearest object by straight-line distance across ALL available objects.
+          const from = turf.point(currentOrigin);
+          let fallbackClosestObject: MapObject | null = null;
+          let fallbackMinDistance = Infinity;
+
+          availableObjects.forEach(obj => {
+              const to = turf.point([obj.longitude, obj.latitude]);
+              const distance = turf.distance(from, to);
+              if (distance < fallbackMinDistance) {
+                  fallbackMinDistance = distance;
+                  fallbackClosestObject = obj;
+              }
+          });
+          return fallbackClosestObject;
+      }
+  }
+  
   React.useEffect(() => {
     const destLat = searchParams.get('dest_lat');
     const destLon = searchParams.get('dest_lon');
@@ -721,14 +796,32 @@ export default function Page() {
     return 'bg-blue-600';
   }
   
-  const handleMarkerClick = useCallback((obj: MapObject) => {
+  const handleMarkerClick = useCallback(async (obj: MapObject) => {
     if (isNavigating && destination?.id === obj.id) {
-        setCompletionVulgraadPercentage(obj.vulgraad || 0);
+        setCompletionVulgraadPercentage(0);
+        setAverageVulgraad(null);
+        
+        try {
+            if (firestore && obj.id) {
+                const historyCol = collection(firestore, 'objects', obj.id, 'vulgraadHistory');
+                const historySnapshot = await getDocs(historyCol);
+                const historyData = historySnapshot.docs.map(d => d.data() as { value: number });
+
+                if (historyData.length > 0) {
+                    const total = historyData.reduce((sum, item) => sum + item.value, 0);
+                    const avg = total / historyData.length;
+                    setAverageVulgraad(Math.round(avg));
+                }
+            }
+        } catch (error) {
+            console.error("Error fetching vulgraadHistory:", error);
+        }
+        
         setIsCompletionSheetOpen(true);
     } else {
         setSelectedObjectForInfo(obj);
     }
-  }, [isNavigating, destination]);
+  }, [isNavigating, destination, firestore]);
 
  const updateMapAndPosition = useCallback(async () => {
     const userLocation = positionRef.current;
@@ -746,7 +839,7 @@ export default function Page() {
                 simulationStateRef.current.isPaused = true;
                 setCurrentSpeed(0);
             }
-            handleMarkerClick(destination);
+            await handleMarkerClick(destination);
             return;
         }
     }
@@ -1190,77 +1283,6 @@ export default function Page() {
     }
   }, [isAdminOrSupervisor, selectedHistoryId, isOwnSelectedHistoryRoute, handleViewRoute, setIsHeaderVisible, handleResumeRoute, selectedRouteId, handleStartNavigation]);
   
-  const findNextObject = async (currentOrigin: [number, number], availableObjects: MapObject[]): Promise<MapObject | null> => {
-      if (!currentOrigin || availableObjects.length === 0) return null;
-
-      // To avoid hitting API limits and for performance, let's pre-filter to a reasonable number of candidates by straight-line distance first.
-      const candidates = availableObjects
-          .map(obj => ({
-              obj,
-              distance: turf.distance(turf.point(currentOrigin), turf.point([obj.longitude, obj.latitude]))
-          }))
-          .sort((a, b) => a.distance - b.distance)
-          .slice(0, 24) // API limit is 25, so we use 1 origin + 24 destinations
-          .map(item => item.obj);
-      
-      if (candidates.length === 0) return null;
-      if (candidates.length === 1) return candidates[0];
-
-      const coordinates = [currentOrigin, ...candidates.map(obj => [obj.longitude, obj.latitude])];
-      const coordinatesString = coordinates.map(c => c.join(',')).join(';');
-
-      try {
-          const response = await fetch(
-              `https://api.mapbox.com/directions-matrix/v1/mapbox/driving/${coordinatesString}?sources=0&annotations=distance&access_token=${MAPBOX_TOKEN}`
-          );
-
-          if (!response.ok) {
-              throw new Error(`Mapbox Matrix API failed: ${response.statusText}`);
-          }
-
-          const data = await response.json();
-
-          if (data.code !== 'Ok' || !data.distances) {
-              throw new Error(`Mapbox Matrix API error: ${data.message || 'No distances returned'}`);
-          }
-
-          const distances = data.distances[0].slice(1);
-
-          let closestObjectIndex = -1;
-          let minDistance = Infinity;
-
-          distances.forEach((distance: number | null, index: number) => {
-              if (distance !== null && distance < minDistance) {
-                  minDistance = distance;
-                  closestObjectIndex = index;
-              }
-          });
-
-          if (closestObjectIndex !== -1) {
-              return candidates[closestObjectIndex];
-          }
-
-          // Fallback to straight-line distance if Matrix API fails for all candidates
-          return candidates[0];
-
-      } catch (error) {
-          console.error("Error finding next object via routing:", error);
-          // Fallback to the nearest object by straight-line distance if the API call fails
-          const from = turf.point(currentOrigin);
-          let closestObject: MapObject | null = null;
-          let minDistance = Infinity;
-
-          candidates.forEach(obj => {
-              const to = turf.point([obj.longitude, obj.latitude]);
-              const distance = turf.distance(from, to);
-              if (distance < minDistance) {
-                  minDistance = distance;
-                  closestObject = obj;
-              }
-          });
-          return closestObject;
-      }
-  }
 
   const updateObjectStatus = async (objectId: string, status: 'completed' | 'skipped'): Promise<MapObject[]> => {
       if (!firestore || !user || !activeRouteHistoryId) return pendingObjects;
@@ -1279,7 +1301,14 @@ export default function Page() {
 
       if (status === 'completed' && destination) {
         const objectRef = doc(firestore, 'objects', destination.id);
-        updateDocumentNonBlocking(objectRef, {
+        const historyCol = collection(objectRef, 'vulgraadHistory');
+
+        await addDocumentNonBlocking(historyCol, {
+          value: completionVulgraadPercentage,
+          timestamp: serverTimestamp(),
+        });
+
+        await updateDocumentNonBlocking(objectRef, {
             lastCleaned: serverTimestamp(),
             vulgraad: completionVulgraadPercentage,
         });
@@ -1769,7 +1798,26 @@ export default function Page() {
                     <div className="space-y-4 py-4">
                       <div className="space-y-4">
                           <Label className="text-center block">Selecteer vulgraad</Label>
-                          <div className="h-48 -mb-4">
+                          {averageVulgraad !== null && (
+                            <div className="text-center text-sm text-muted-foreground">Laatste gemiddelde: {averageVulgraad}%</div>
+                          )}
+                          <div className="h-48 -mb-4 relative">
+                              {averageVulgraad !== null && (
+                                  <div className="absolute bottom-0 left-0 w-full h-full flex justify-center items-end">
+                                      <div className="w-1/2 h-24 relative overflow-hidden rounded-t-full">
+                                          <div className="absolute bottom-0 left-0 w-full h-full border-gray-300 border-8 rounded-t-full" />
+                                          <div
+                                            className="absolute bottom-0 left-0 w-full h-full origin-bottom"
+                                            style={{
+                                                transform: `rotate(${averageVulgraad * 1.8}deg)`,
+                                                transformOrigin: 'bottom center',
+                                            }}
+                                          >
+                                            <div className="absolute top-0 left-1/2 -ml-1 w-2 h-1/2 bg-gray-400" />
+                                          </div>
+                                      </div>
+                                  </div>
+                              )}
                               <ResponsiveContainer width="100%" height="100%">
                                   <RadialBarChart 
                                       cx="50%"
@@ -1850,4 +1898,3 @@ export default function Page() {
 
 
 
-    
