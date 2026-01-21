@@ -76,7 +76,7 @@ interface MedewerkerDialogProps {
 
 const navItems = ["Basis", "Details", "Vrije velden", "Contract"];
 
-const functieOptions = ["Chauffeur", "Grondwerker", "Kantoor", "Machinist", "Stratenmaker", "Voorman"];
+const functieOptions = ["Chauffeur", "Grondwerker", "Kantoor", "Machinist", "Onkruidploeg", "Stratenmaker", "Voorman"];
 const statusOptions = ["Actief", "Inactief", "Niet uitgenodigd"];
 const soortMedewerkerOptions = ["Eigen medewerker", "ZZP'er", "Inhuur"];
 const contractTypeOptions = ["Vast", "Tijdelijk", "Oproep", "Nul-uren"];
