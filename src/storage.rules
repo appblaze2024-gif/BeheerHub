@@ -12,40 +12,40 @@ service firebase.storage {
 
     // Beveilig de 'projects' map specifiek.
     // Alleen een ingelogde gebruiker (request.auth != null) mag bestanden schrijven (uploaden).
-    match /projects/{projectId}/{fileName} {
+    match /projects/{projectId}/{allPaths=**} {
       allow write: if request.auth != null;
     }
 
     // Beveilig de 'damages' map specifiek.
     // Alleen een ingelogde gebruiker (request.auth != null) mag bestanden schrijven (uploaden).
-    match /damages/{materieelId}/{damageId}/{fileName} {
+    match /damages/{materieelId}/{damageId}/{allPaths=**} {
       allow write: if request.auth != null;
     }
     
     // Beveilig de 'meldingen' map.
     // Alleen een ingelogde gebruiker (request.auth != null) mag bestanden schrijven (uploaden).
-    match /meldingen/{meldingId}/{fileName} {
+    match /meldingen/{meldingId}/{allPaths=**} {
         allow write: if request.auth != null;
     }
 
-    // Beveilig de 'besteksmeldingen' map, nu genest onder projects
-    match /projects/{projectId}/besteksmeldingen/{meldingId}/{fileName} {
+    // Beveilig de 'besteksmeldingen' map.
+    match /projects/{projectId}/besteksmeldingen/{meldingId}/{allPaths=**} {
       allow write: if request.auth != null;
     }
 
     // Voeg een regel toe om het uploaden van voertuigafbeeldingen toe te staan
     // voor ingelogde gebruikers.
-    match /voertuigen/{vehicleId}/main_image/{fileName} {
+    match /voertuigen/{vehicleId}/main_image/{allPaths=**} {
       allow write: if request.auth != null;
     }
     
-     match /machines/{machineId}/main_image/{fileName} {
+     match /machines/{machineId}/main_image/{allPaths=**} {
       allow write: if request.auth != null;
     }
 
     // Voeg een regel toe om het uploaden van documenten toe te staan
     // voor ingelogde gebruikers.
-    match /documents/{materieelId}/{documentId}/{fileName} {
+    match /documents/{materieelId}/{documentId}/{allPaths=**} {
       allow write: if request.auth != null;
     }
   }
