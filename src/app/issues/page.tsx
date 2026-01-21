@@ -653,7 +653,7 @@ export default function IssuesPage() {
             )}
         </MapGL>
       ) : (
-        <div className="pt-36 px-4 pb-4 h-full">
+        <div className="pt-28 px-4 pb-4 h-full">
             <Card className='h-full flex flex-col'>
                 <CardHeader>
                     <CardTitle>Overzicht Meldingen ({filteredMeldingen.length})</CardTitle>
