@@ -70,7 +70,7 @@ export function ProjectBestandenDialog({
             return;
         }
         const uniqueFileName = `${new Date().getTime()}-${file.name}`;
-        const storagePath = `projects/${projectId}/${uniqueFileName}`;
+        const storagePath = `projects/${projectId}/bestanden/${uniqueFileName}`;
         const storageRef = ref(getStorage(app), storagePath);
         const uploadTask = uploadBytesResumable(storageRef, file);
 

@@ -2,51 +2,74 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    
-    // Sta leesbewerkingen toe voor alle bestanden. Dit is nodig zodat de app 
-    // de geüploade bestanden kan weergeven. In een productie-app zou je dit 
-    // wellicht verder willen beveiligen.
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // This function checks for user permissions by reading the user's profile from Firestore.
+    // It's used to ensure that storage operations are only performed by authorized users,
+    // mirroring the logic in firestore.rules.
+    function hasPermission(module, action) {
+      if (!isSignedIn()) {
+        return false;
+      }
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+
+      if (!userDoc.exists) {
+        return false;
+      }
+      if (userDoc.data.role == 'Super admin') {
+        return true;
+      }
+      
+      // Securely check nested properties for permissions.
+      return userDoc.data.permissions != null &&
+             module in userDoc.data.permissions &&
+             userDoc.data.permissions[module] != null &&
+             action in userDoc.data.permissions[module] &&
+             userDoc.data.permissions[module][action] == true;
+    }
+
+    // Allow read operations for all authenticated users.
+    // For a production app, you might want more granular read rules.
     match /{allPaths=**} {
-      allow read;
-    }
-
-    // Beveilig de 'projects' map specifiek.
-    // Alleen een ingelogde gebruiker (request.auth != null) mag bestanden schrijven (uploaden).
-    match /projects/{projectId}/{allPaths=**} {
-      allow write: if request.auth != null;
-    }
-
-    // Beveilig de 'damages' map specifiek.
-    // Alleen een ingelogde gebruiker (request.auth != null) mag bestanden schrijven (uploaden).
-    match /damages/{materieelId}/{damageId}/{allPaths=**} {
-      allow write: if request.auth != null;
+      allow read: if isSignedIn();
     }
     
-    // Beveilig de 'meldingen' map.
-    // Alleen een ingelogde gebruiker (request.auth != null) mag bestanden schrijven (uploaden).
-    match /meldingen/{meldingId}/{allPaths=**} {
-        allow write: if request.auth != null;
-    }
+    // --- WRITE RULES ---
 
-    // Beveilig de 'besteksmeldingen' map.
+    // Rule for general project files (e.g., in the 'Bestanden' tab)
+    match /projects/{projectId}/bestanden/{allPaths=**} {
+        allow write: if hasPermission('projects', 'edit');
+    }
+    
+    // Rule for 'Besteksmeldingen' photos.
+    // This allows users who can create or edit spec reports to upload files.
     match /projects/{projectId}/besteksmeldingen/{meldingId}/{allPaths=**} {
-      allow write: if request.auth != null;
+      allow write: if hasPermission('specReports', 'create') || hasPermission('specReports', 'edit');
     }
 
-    // Voeg een regel toe om het uploaden van voertuigafbeeldingen toe te staan
-    // voor ingelogde gebruikers.
-    match /voertuigen/{vehicleId}/main_image/{allPaths=**} {
-      allow write: if request.auth != null;
+    // Rule for public issue reports ('meldingen') photos
+    match /meldingen/{meldingId}/{allPaths=**} {
+        allow write: if isSignedIn();
+    }
+
+    // Rules for vehicle/machine images and documents
+    match /voertuigen/{vehicleId}/{allPaths=**} {
+      allow write: if hasPermission('vehicles', 'edit');
     }
     
-     match /machines/{machineId}/main_image/{allPaths=**} {
-      allow write: if request.auth != null;
+    match /machines/{machineId}/{allPaths=**} {
+      allow write: if hasPermission('vehicles', 'edit');
     }
-
-    // Voeg een regel toe om het uploaden van documenten toe te staan
-    // voor ingelogde gebruikers.
-    match /documents/{materieelId}/{documentId}/{allPaths=**} {
-      allow write: if request.auth != null;
+    
+    match /damages/{materieelId}/{allPaths=**} {
+      allow write: if hasPermission('vehicles', 'edit');
+    }
+    
+    match /documents/{materieelId}/{allPaths=**} {
+      allow write: if hasPermission('vehicles', 'edit');
     }
   }
 }
