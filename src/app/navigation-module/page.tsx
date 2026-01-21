@@ -193,7 +193,7 @@ export default function Page() {
   const [currentTime, setCurrentTime] = React.useState('');
   const [activeRouteHistoryId, setActiveRouteHistoryId] = React.useState<string | null>(null);
   
-  const [completionVulgraadPercentage, setCompletionVulgraadPercentage] = React.useState<number>(38);
+  const [completionVulgraadPercentage, setCompletionVulgraadPercentage] = React.useState<number>(0);
   const [remainingDistance, setRemainingDistance] = React.useState<number | null>(null);
   const [justCompletedObjectId, setJustCompletedObjectId] = React.useState<string | null>(null);
   
@@ -722,7 +722,7 @@ export default function Page() {
   
   const handleMarkerClick = useCallback((obj: MapObject) => {
     if (isNavigating && destination?.id === obj.id) {
-        setCompletionVulgraadPercentage(obj.vulgraad || 38);
+        setCompletionVulgraadPercentage(obj.vulgraad || 0);
         setIsCompletionSheetOpen(true);
     } else {
         setSelectedObjectForInfo(obj);
@@ -1741,7 +1741,7 @@ export default function Page() {
                               </ResponsiveContainer>
                           </div>
                           <div className="flex items-center justify-center gap-4 pt-4">
-                              <Button variant="outline" size="icon" className="h-12 w-12 rounded-full" onClick={() => setCompletionVulgraadPercentage(v => Math.max(0, v - 5))}>
+                              <Button variant="outline" size="icon" className="h-12 w-12 rounded-full" onClick={() => setCompletionVulgraadPercentage(v => Math.max(0, v - 10))}>
                                   <span className="text-2xl">-</span>
                               </Button>
                               <Input
@@ -1757,7 +1757,7 @@ export default function Page() {
                                   }}
                                   className="w-24 text-center text-2xl font-bold h-12"
                               />
-                              <Button variant="outline" size="icon" className="h-12 w-12 rounded-full" onClick={() => setCompletionVulgraadPercentage(v => Math.min(100, v + 5))}>
+                              <Button variant="outline" size="icon" className="h-12 w-12 rounded-full" onClick={() => setCompletionVulgraadPercentage(v => Math.min(100, v + 10))}>
                                   <span className="text-2xl">+</span>
                               </Button>
                           </div>
