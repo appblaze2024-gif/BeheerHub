@@ -546,7 +546,7 @@ export default function ObjectsPage() {
                      <Card>
                      <CardContent className="p-4">
                          <h3 className="text-sm font-medium mb-2">Vulgraad</h3>
-                         <Progress value={selectedObject?.vulgraad || 0} />
+                         <Progress value={selectedObject?.vulgraad || 0} variant="gauge" />
                          <p className="text-center text-sm font-semibold mt-2">{selectedObject?.vulgraad || 0}%</p>
                      </CardContent>
                      </Card>
