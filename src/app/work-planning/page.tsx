@@ -531,20 +531,29 @@ export default function WorkPlanningPage() {
       
       const isZiek = dienst.werksoort?.toLowerCase() === 'ziek';
       const isVerlof = dienst.werksoort?.toLowerCase().includes('verlof') || dienst.werksoort?.toLowerCase() === 'adv';
+      const hasNotities = dienst.notities && dienst.notities.trim() !== '';
 
-      let activiteit = dienst.notities || '';
-      let gebied = dienst.werksoort || '';
-
-      if (isZiek || isVerlof) {
-        activiteit = '';
-        gebied = dienst.werksoort;
+      const activiteitText = dienst.notities || '';
+      const gebiedText = dienst.werksoort || '';
+      
+      const activiteitCell: any = { content: activiteitText };
+      const gebiedCell: any = { content: gebiedText };
+      
+      if (isZiek) {
+          gebiedCell.styles = { fillColor: [255, 228, 196] }; // Light Orange/Peach
+          activiteitCell.content = '';
+      } else if (isVerlof) {
+          gebiedCell.styles = { fillColor: [230, 230, 250] }; // Light Purple
+          activiteitCell.content = '';
+      } else if (hasNotities) {
+          activiteitCell.styles = { fillColor: [255, 255, 204] }; // Light Yellow
       }
 
       body.push([
         dienst.voertuignummer || medewerker.personeelsnummer || '',
         `${medewerker.voornaam || ''} ${medewerker.achternaam || ''}`.trim(),
-        activiteit,
-        gebied,
+        activiteitCell,
+        gebiedCell,
       ]);
     };
     
