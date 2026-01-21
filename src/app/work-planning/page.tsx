@@ -510,12 +510,12 @@ export default function WorkPlanningPage() {
         const { medewerker } = item;
         let assignedGroup: string;
 
-        if (medewerker.functie === 'Machinist') {
+        if (medewerker.soortMedewerker === 'Inhuur') {
+            assignedGroup = 'Inhuur';
+        } else if (medewerker.functie === 'Machinist') {
             assignedGroup = 'Machinist';
         } else if (medewerker.functie === 'Chauffeur') {
             assignedGroup = 'Chauffeur';
-        } else if (medewerker.soortMedewerker === 'Inhuur') {
-            assignedGroup = 'Inhuur';
         } else {
             assignedGroup = 'Onkruidploeg';
         }
