@@ -500,15 +500,15 @@ export default function WorkPlanningPage() {
       }
     });
     
-    const groupOrder = ['Machinist', 'Chauffeur', 'Inhuur', 'Onkruidploeg', 'Overig'];
+    const groupOrder = ['Machinist', 'Chauffeur', 'Inhuur', 'Onkruidploeg'];
     const groupedData: { [key: string]: { medewerker: Medewerker; diensten: Dienst[] }[] } = {};
 
     // Initialize groups
     groupOrder.forEach(group => groupedData[group] = []);
 
     tableData.forEach(item => {
-        const { medewerker, diensten } = item;
-        let assignedGroup = 'Overig';
+        const { medewerker } = item;
+        let assignedGroup: string;
 
         if (medewerker.functie === 'Machinist') {
             assignedGroup = 'Machinist';
@@ -516,10 +516,13 @@ export default function WorkPlanningPage() {
             assignedGroup = 'Chauffeur';
         } else if (medewerker.soortMedewerker === 'Inhuur') {
             assignedGroup = 'Inhuur';
-        } else if (diensten.some(d => d.werksoort === 'Onkruidploeg')) {
+        } else {
             assignedGroup = 'Onkruidploeg';
         }
         
+        if(!groupedData[assignedGroup]) {
+             groupedData[assignedGroup] = [];
+        }
         groupedData[assignedGroup].push(item);
     });
 
@@ -534,19 +537,22 @@ export default function WorkPlanningPage() {
       const hasNotities = dienst.notities && dienst.notities.trim() !== '';
 
       const activiteitText = dienst.notities || '';
-      const gebiedText = dienst.werksoort || '';
+      let gebiedText = dienst.werksoort || '';
       
+      if (isZiek) gebiedText = 'Ziek';
+      if (isVerlof) gebiedText = 'Verlof';
+
       const activiteitCell: any = { content: activiteitText };
       const gebiedCell: any = { content: gebiedText };
       
+      if (hasNotities && !isZiek && !isVerlof) {
+          activiteitCell.styles = { fillColor: [255, 255, 204] }; // Light Yellow
+      }
+      
       if (isZiek) {
           gebiedCell.styles = { fillColor: [255, 228, 196] }; // Light Orange/Peach
-          activiteitCell.content = '';
       } else if (isVerlof) {
           gebiedCell.styles = { fillColor: [230, 230, 250] }; // Light Purple
-          activiteitCell.content = '';
-      } else if (hasNotities) {
-          activiteitCell.styles = { fillColor: [255, 255, 204] }; // Light Yellow
       }
 
       body.push([
