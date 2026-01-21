@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -1199,7 +1200,7 @@ export default function Page() {
               distance: turf.distance(turf.point(currentOrigin), turf.point([obj.longitude, obj.latitude]))
           }))
           .sort((a, b) => a.distance - b.distance)
-          .slice(0, 12) // API limit is 25, but 12 is a safe number (origin + 11 destinations)
+          .slice(0, 24) // API limit is 25, so we use 1 origin + 24 destinations
           .map(item => item.obj);
       
       if (candidates.length === 0) return null;
@@ -1847,3 +1848,6 @@ export default function Page() {
   );
 }
 
+
+
+    
