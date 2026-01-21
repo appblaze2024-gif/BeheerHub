@@ -519,25 +519,26 @@ export default function WorkPlanningPage() {
 
     // Initialize groups
     groupOrder.forEach(group => groupedData[group] = []);
+    groupedData['Onkruidploeg'] = []; // Explicitly init 'Overig' which is now 'Onkruidploeg'
 
     tableData.forEach(item => {
         const { medewerker } = item;
-        let assignedGroup: string;
+        let assignedGroup: string | undefined;
 
         if (medewerker.soortMedewerker === 'Inhuur') {
             assignedGroup = 'Inhuur';
-        } else if (medewerker.functie === 'Machinist') {
-            assignedGroup = 'Machinist';
-        } else if (medewerker.functie === 'Chauffeur') {
-            assignedGroup = 'Chauffeur';
+        } else if (medewerker.functie && groupOrder.includes(medewerker.functie)) {
+            assignedGroup = medewerker.functie;
         } else {
             assignedGroup = 'Onkruidploeg';
         }
         
-        if(!groupedData[assignedGroup]) {
+        if(assignedGroup && !groupedData[assignedGroup]) {
              groupedData[assignedGroup] = [];
         }
-        groupedData[assignedGroup].push(item);
+        if (assignedGroup) {
+            groupedData[assignedGroup].push(item);
+        }
     });
 
     const body: any[] = [];
@@ -577,7 +578,9 @@ export default function WorkPlanningPage() {
       ]);
     };
     
-    groupOrder.forEach((groupName) => {
+    const finalGroupOrder = ['Machinist', 'Chauffeur', 'Inhuur', 'Onkruidploeg'];
+    
+    finalGroupOrder.forEach((groupName) => {
         const items = groupedData[groupName];
         if (!items || items.length === 0) return;
 
@@ -595,7 +598,9 @@ export default function WorkPlanningPage() {
             }
         });
         
-        body.push(['', '', '', '']); // Spacer
+        if (body.length > 0) {
+           body.push(['', '', '', '']); // Spacer
+        }
     });
 
     if(body.length > 0 && body[body.length - 1].every((cell: string) => cell === '')) {
@@ -628,6 +633,60 @@ export default function WorkPlanningPage() {
         3: { cellWidth: 'auto' },
       }
     });
+    
+    const dateKey = format(dayToPrint, 'yyyy-MM-dd');
+    const unavailableIds = unavailableVehicles[dateKey] || [];
+    const availableForDayIds = availableVehicles[dateKey] || [];
+
+    const unavailableEquipmentNames = allEquipment
+        .filter(e => unavailableIds.includes(e.id))
+        .map(e => (e as Voertuig).voertuignummer || (e as Machine).machinenummer || e.id)
+        .join(', ') || 'Geen';
+
+    let availableEquipmentText: string;
+    if (availableForDayIds.length > 0) {
+        availableEquipmentText = allEquipment
+            .filter(e => availableForDayIds.includes(e.id) && !unavailableIds.includes(e.id))
+            .map(e => (e as Voertuig).voertuignummer || (e as Machine).machinenummer || e.id)
+            .join(', ') || 'Geen';
+    } else {
+        availableEquipmentText = 'Alle (m.u.v. onbeschikbaar)';
+    }
+
+    let finalY = (doc as any).lastAutoTable.finalY;
+    if (!finalY || finalY < 36) { // If table was empty or very short
+        const headerHeight = 22;
+        const dateStrHeight = 8;
+        const margin = 14;
+        finalY = headerHeight + dateStrHeight + margin; // Estimate where table would have ended
+    }
+
+    finalY += 10; // Add some margin
+
+    if (finalY > 260) { // Check if we need a new page
+      doc.addPage();
+      finalY = 20;
+    }
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Beschikbaar materieel:', 14, finalY);
+
+    doc.setFont('helvetica', 'normal');
+    doc.text(availableEquipmentText, 14, finalY + 5, { maxWidth: 180 });
+
+    finalY += 15;
+
+    if (finalY > 260) { // Check if we need a new page
+      doc.addPage();
+      finalY = 20;
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Onbeschikbaar materieel:', 14, finalY);
+
+    doc.setFont('helvetica', 'normal');
+    doc.text(unavailableEquipmentNames, 14, finalY + 5, { maxWidth: 180 });
 
     doc.save(`dagplanning_${format(dayToPrint, 'yyyy-MM-dd')}.pdf`);
   };
