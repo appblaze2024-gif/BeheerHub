@@ -51,6 +51,7 @@ export interface Medewerker {
   functie?: string;
   status?: 'Actief' | 'Inactief' | 'Niet uitgenodigd';
   avatarUrl?: string;
+  soortMedewerker?: string;
   urenPerDag?: {
     maandag?: { start?: string; eind?: string };
     dinsdag?: { start?: string; eind?: string };

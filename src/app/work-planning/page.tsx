@@ -490,8 +490,7 @@ export default function WorkPlanningPage() {
     
     const employeesWithDienst = Array.from(new Set(dayDiensten.map(d => d.medewerkerId)))
       .map(id => medewerkersById.get(id))
-      .filter((m): m is Medewerker => !!m)
-      .sort((a, b) => (a.achternaam || '').localeCompare(b.achternaam || ''));
+      .filter((m): m is Medewerker => !!m);
 
     const tableData: { medewerker: Medewerker; diensten: Dienst[] }[] = [];
     employeesWithDienst.forEach(medewerker => {
@@ -501,74 +500,78 @@ export default function WorkPlanningPage() {
       }
     });
     
-    const groupOrder = ['Reiniging machinaal', 'Inhuur', 'Onkruidploeg'];
+    const groupOrder = ['Machinist', 'Chauffeur', 'Inhuur', 'Onkruidploeg', 'Overig'];
     const groupedData: { [key: string]: { medewerker: Medewerker; diensten: Dienst[] }[] } = {};
 
     // Initialize groups
     groupOrder.forEach(group => groupedData[group] = []);
-    groupedData['Overig'] = [];
 
     tableData.forEach(item => {
-      const { medewerker, diensten } = item;
-      const mainDienst = diensten[0];
-      let assignedGroup = 'Overig';
-      
-      if (medewerker.soortMedewerker === 'Inhuur') {
-        assignedGroup = 'Inhuur';
-      } else if (groupOrder.includes(mainDienst.werksoort)) {
-        assignedGroup = mainDienst.werksoort;
-      }
-      
-      groupedData[assignedGroup].push(item);
+        const { medewerker, diensten } = item;
+        let assignedGroup = 'Overig';
+
+        if (medewerker.functie === 'Machinist') {
+            assignedGroup = 'Machinist';
+        } else if (medewerker.functie === 'Chauffeur') {
+            assignedGroup = 'Chauffeur';
+        } else if (medewerker.soortMedewerker === 'Inhuur') {
+            assignedGroup = 'Inhuur';
+        } else if (diensten.some(d => d.werksoort === 'Onkruidploeg')) {
+            assignedGroup = 'Onkruidploeg';
+        }
+        
+        groupedData[assignedGroup].push(item);
     });
 
     const body: any[] = [];
     const head = [['Voertuig', 'FTE', 'activiteit', 'gebied']];
-    const cellStyles: { [key: string]: any } = {};
-
+    
     const addRow = (item: { medewerker: Medewerker; dienst: Dienst; }) => {
       const { medewerker, dienst } = item;
-      const rowIndex = body.length;
       
       const isZiek = dienst.werksoort?.toLowerCase() === 'ziek';
+      const isVerlof = dienst.werksoort?.toLowerCase().includes('verlof') || dienst.werksoort?.toLowerCase() === 'adv';
+
+      let activiteit = dienst.notities || '';
+      let gebied = dienst.werksoort || '';
+
+      if (isZiek || isVerlof) {
+        activiteit = '';
+        gebied = dienst.werksoort;
+      }
 
       body.push([
         dienst.voertuignummer || medewerker.personeelsnummer || '',
         `${medewerker.voornaam || ''} ${medewerker.achternaam || ''}`.trim(),
-        isZiek ? '' : dienst.notities || '',
-        isZiek ? 'ziek' : dienst.werksoort || '',
+        activiteit,
+        gebied,
       ]);
-
-      if (!isZiek && dienst.notities) {
-        cellStyles[`${rowIndex}-2`] = { fillColor: [254, 249, 195] }; // yellow
-      }
-      if (isZiek) {
-        cellStyles[`${rowIndex}-3`] = { fillColor: [255, 237, 213] }; // orange
-      }
     };
     
-    [...groupOrder, 'Overig'].forEach((groupName, groupIndex, arr) => {
+    groupOrder.forEach((groupName) => {
         const items = groupedData[groupName];
         if (!items || items.length === 0) return;
 
         items.sort((a, b) => (a.medewerker.achternaam || '').localeCompare(b.medewerker.achternaam || ''));
 
-        if (groupName !== 'Overig' || arr.filter(g => groupedData[g] && groupedData[g].length > 0).length === 1) {
-            body.push([{ content: groupName, colSpan: 4, styles: { halign: 'left', fontStyle: 'bold' } }]);
-        }
+        body.push([{ content: groupName, colSpan: 4, styles: { halign: 'left', fontStyle: 'bold' } }]);
         
         items.forEach(({ medewerker, diensten }) => {
             if (diensten.length > 0) {
-                diensten.forEach(dienst => {
-                    addRow({ medewerker, dienst });
-                })
-            } else {
-                 body.push(['', `${medewerker.voornaam || ''} ${medewerker.achternaam || ''}`.trim(), '', '']);
+                diensten
+                    .sort((a,b) => a.starttijd.localeCompare(b.starttijd))
+                    .forEach(dienst => {
+                        addRow({ medewerker, dienst });
+                    })
             }
         });
         
         body.push(['', '', '', '']); // Spacer
     });
+
+    if(body.length > 0 && body[body.length - 1].every((cell: string) => cell === '')) {
+        body.pop();
+    }
 
 
     (doc as any).autoTable({
@@ -588,13 +591,6 @@ export default function WorkPlanningPage() {
         fillColor: [228, 228, 231], // gray-200
         textColor: [0, 0, 0],
         fontStyle: 'bold',
-      },
-      didDrawCell: (data: any) => {
-        const style = cellStyles[`${data.row.index}-${data.column.index}`];
-        if (style) {
-          doc.setFillColor(style.fillColor[0], style.fillColor[1], style.fillColor[2]);
-          doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
-        }
       },
       columnStyles: {
         0: { cellWidth: 25 },
