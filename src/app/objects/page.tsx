@@ -17,6 +17,7 @@ import {
   RefreshCw,
   List,
   Palette,
+  Download,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +42,7 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { MapboxView } from '@/components/mapbox-view';
 import { ObjectImportDialog } from '@/components/object-import-dialog';
+import { ObjectExportDialog } from '@/components/object-export-dialog';
 import { useCollection, useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { Wijk } from '@/app/projects/page';
@@ -318,6 +320,12 @@ export default function ObjectsPage() {
               Import
             </Button>
           </ObjectImportDialog>
+          <ObjectExportDialog objects={objects} projects={projects}>
+            <Button variant="outline">
+              <Download className="mr-2 h-4 w-4" />
+              Export
+            </Button>
+          </ObjectExportDialog>
         </div>
       </header>
 
