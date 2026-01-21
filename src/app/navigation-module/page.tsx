@@ -729,7 +729,7 @@ export default function Page() {
     }
   }, [isNavigating, destination]);
 
- const updateMapAndPosition = useCallback(() => {
+ const updateMapAndPosition = useCallback(async () => {
     const userLocation = positionRef.current;
     if (!userLocation || !isNavigating) return;
 
@@ -765,7 +765,7 @@ export default function Page() {
     const deviation = turf.distance(currentPoint, snapped, { units: 'meters' });
     if (deviation > 50) {
         console.log("Deviation detected. Rerouting...");
-        const nextObject = findNextObject(userLocation, pendingObjects);
+        const nextObject = await findNextObject(userLocation, pendingObjects);
         if (nextObject) {
             setDestination(nextObject);
             calculateRoute([userLocation, [nextObject.longitude, nextObject.latitude]]);
@@ -846,7 +846,9 @@ export default function Page() {
         positionRef.current = [longitude, latitude];
         const newSpeed = (gpsSpeed || 0) * 3.6; // m/s to km/h
         setCurrentSpeed(newSpeed);
-        updateMapAndPosition();
+        (async () => {
+            await updateMapAndPosition();
+        })();
         setLocationError(null);
       },
       (error) => {
@@ -863,7 +865,6 @@ export default function Page() {
       isMounted = false;
       if (trackWatchIdRef.current) {
         navigator.geolocation.clearWatch(trackWatchIdRef.current);
-        trackWatchIdRef.current = null;
       }
     };
   }, [isNavigating, isSimulating, updateMapAndPosition]);
@@ -1058,7 +1059,7 @@ export default function Page() {
     setSkippedObjects([]);
     setPendingObjects(allObjects);
 
-    const firstObject = findNextObject(positionRef.current, allObjects);
+    const firstObject = await findNextObject(positionRef.current, allObjects);
 
     if (firstObject) {
         setDestination(firstObject);
@@ -1106,7 +1107,7 @@ export default function Page() {
     );
     setPendingObjects(remainingObjects);
 
-    const nextObject = findNextObject(positionRef.current, remainingObjects);
+    const nextObject = await findNextObject(positionRef.current, remainingObjects);
     if (nextObject) {
         setDestination(nextObject);
         await calculateRoute([positionRef.current, [nextObject.longitude, nextObject.latitude]]);
@@ -1188,24 +1189,76 @@ export default function Page() {
     }
   }, [isAdminOrSupervisor, selectedHistoryId, isOwnSelectedHistoryRoute, handleViewRoute, setIsHeaderVisible, handleResumeRoute, selectedRouteId, handleStartNavigation]);
   
-  const findNextObject = (currentOrigin: [number, number], availableObjects: MapObject[]): MapObject | null => {
+  const findNextObject = async (currentOrigin: [number, number], availableObjects: MapObject[]): Promise<MapObject | null> => {
       if (!currentOrigin || availableObjects.length === 0) return null;
-      
-      const from = turf.point(currentOrigin);
-      let closestObject: MapObject | null = null;
-      let minDistance = Infinity;
 
-      availableObjects.forEach(obj => {
-          if (obj.latitude != null && obj.longitude != null) {
+      // To avoid hitting API limits and for performance, let's pre-filter to a reasonable number of candidates by straight-line distance first.
+      const candidates = availableObjects
+          .map(obj => ({
+              obj,
+              distance: turf.distance(turf.point(currentOrigin), turf.point([obj.longitude, obj.latitude]))
+          }))
+          .sort((a, b) => a.distance - b.distance)
+          .slice(0, 12) // API limit is 25, but 12 is a safe number (origin + 11 destinations)
+          .map(item => item.obj);
+      
+      if (candidates.length === 0) return null;
+      if (candidates.length === 1) return candidates[0];
+
+      const coordinates = [currentOrigin, ...candidates.map(obj => [obj.longitude, obj.latitude])];
+      const coordinatesString = coordinates.map(c => c.join(',')).join(';');
+
+      try {
+          const response = await fetch(
+              `https://api.mapbox.com/directions-matrix/v1/mapbox/driving/${coordinatesString}?sources=0&annotations=distance&access_token=${MAPBOX_TOKEN}`
+          );
+
+          if (!response.ok) {
+              throw new Error(`Mapbox Matrix API failed: ${response.statusText}`);
+          }
+
+          const data = await response.json();
+
+          if (data.code !== 'Ok' || !data.distances) {
+              throw new Error(`Mapbox Matrix API error: ${data.message || 'No distances returned'}`);
+          }
+
+          const distances = data.distances[0].slice(1);
+
+          let closestObjectIndex = -1;
+          let minDistance = Infinity;
+
+          distances.forEach((distance: number | null, index: number) => {
+              if (distance !== null && distance < minDistance) {
+                  minDistance = distance;
+                  closestObjectIndex = index;
+              }
+          });
+
+          if (closestObjectIndex !== -1) {
+              return candidates[closestObjectIndex];
+          }
+
+          // Fallback to straight-line distance if Matrix API fails for all candidates
+          return candidates[0];
+
+      } catch (error) {
+          console.error("Error finding next object via routing:", error);
+          // Fallback to the nearest object by straight-line distance if the API call fails
+          const from = turf.point(currentOrigin);
+          let closestObject: MapObject | null = null;
+          let minDistance = Infinity;
+
+          candidates.forEach(obj => {
               const to = turf.point([obj.longitude, obj.latitude]);
-              const distance = turf.distance(from, to, { units: 'kilometers' });
+              const distance = turf.distance(from, to);
               if (distance < minDistance) {
                   minDistance = distance;
                   closestObject = obj;
               }
-          }
-      });
-      return closestObject;
+          });
+          return closestObject;
+      }
   }
 
   const updateObjectStatus = async (objectId: string, status: 'completed' | 'skipped'): Promise<MapObject[]> => {
@@ -1247,7 +1300,7 @@ export default function Page() {
     
     const newPendingObjects = await updateObjectStatus(destination.id, status);
 
-    const nextObject = findNextObject(positionRef.current, newPendingObjects);
+    const nextObject = await findNextObject(positionRef.current, newPendingObjects);
 
     if (nextObject) {
       setDestination(nextObject);
