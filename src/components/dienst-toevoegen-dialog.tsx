@@ -47,12 +47,14 @@ import { Input } from '@/components/ui/input';
 import type { Medewerker, Dienst, Voertuig } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Separator } from './ui/separator';
+import { Textarea } from './ui/textarea';
 
 const dienstFormSchema = z.object({
   werksoort: z.string().min(1, 'Omschrijving is verplicht.'),
   starttijd: z.string().min(1, 'Starttijd is verplicht.'),
   eindtijd: z.string().min(1, 'Eindtijd is verplicht.'),
   voertuignummer: z.string().optional().nullable(),
+  notities: z.string().optional(),
 });
 
 type DienstFormValues = z.infer<typeof dienstFormSchema>;
@@ -96,6 +98,7 @@ export function DienstToevoegenDialog({
         form.reset({
           ...dienst,
           voertuignummer: dienst.voertuignummer || null,
+          notities: dienst.notities || '',
         });
       } else if (medewerker && datum) {
         const dayName = format(datum, 'eeee', { locale: nl }).toLowerCase() as keyof NonNullable<Medewerker['urenPerDag']>;
@@ -106,6 +109,7 @@ export function DienstToevoegenDialog({
           starttijd: defaultTimes?.start || '07:00',
           eindtijd: defaultTimes?.eind || '15:30',
           voertuignummer: null,
+          notities: '',
         });
       } else {
          form.reset({
@@ -113,6 +117,7 @@ export function DienstToevoegenDialog({
           starttijd: '07:00',
           eindtijd: '15:30',
           voertuignummer: null,
+          notities: '',
         });
       }
     } else {
@@ -319,6 +324,20 @@ export function DienstToevoegenDialog({
                             ))}
                             </SelectContent>
                         </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                
+                <FormField
+                    control={form.control}
+                    name="notities"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Opmerking</FormLabel>
+                        <FormControl>
+                        <Textarea placeholder="Voeg een opmerking toe..." {...field} />
+                        </FormControl>
                         <FormMessage />
                     </FormItem>
                     )}

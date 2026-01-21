@@ -73,6 +73,7 @@ export interface Dienst {
   datum: string; // YYYY-MM-DD
   onbetaaldePauze?: number;
   voertuignummer?: string | null;
+  notities?: string;
 }
 
 export interface Voertuig {

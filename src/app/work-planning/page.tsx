@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { ChevronLeft, ChevronRight, Clock, MoreHorizontal, Plus, Printer, Trash2, Copy, ClipboardCopy } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, MoreHorizontal, Plus, Printer, Trash2, Copy, ClipboardCopy, FileText } from 'lucide-react';
 import {
   startOfWeek,
   endOfWeek,
@@ -157,9 +157,14 @@ const DienstItem = ({ dienst, onEdit, onDelete, onContextMenu, isNonWorkingDay, 
                 )}
             >
                 <p className="font-semibold truncate">{dienst.werksoort}</p>
-                <p className="truncate">{dienst.starttijd} - {dienst.eindtijd}</p>
+                 <div className="flex items-center justify-between gap-1">
+                    <p className="truncate">{dienst.starttijd} - {dienst.eindtijd}</p>
+                    {dienst.notities && (
+                        <FileText className="h-3 w-3 text-muted-foreground shrink-0" title={dienst.notities} />
+                    )}
+                </div>
                 {dienst.voertuignummer && (
-                    <p className="truncate">Voertuignummer: {dienst.voertuignummer}</p>
+                    <p className="truncate text-xs text-muted-foreground">Voertuig: {dienst.voertuignummer}</p>
                 )}
                 {canEdit && <Button 
                     variant="ghost" 
@@ -575,6 +580,7 @@ export default function WorkPlanningPage() {
     const targetDate = contextMenu.dayHeaderContext.datum;
     const targetDateString = format(targetDate, 'yyyy-MM-dd');
 
+    setIsLoadingDiensten(true);
     const batch = writeBatch(firestore);
     const dienstenColRef = collection(firestore, 'projects', selectedProjectId, 'diensten');
 
@@ -592,6 +598,7 @@ export default function WorkPlanningPage() {
         fetchDiensten(); // This will handle loading state and refetch
     } catch (error) {
         console.error('Error pasting day:', error);
+        setIsLoadingDiensten(false);
     } finally {
         setContextMenu(null);
     }
