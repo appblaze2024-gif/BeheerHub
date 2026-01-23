@@ -9,7 +9,7 @@ import {
   FileText,
   Calendar,
 } from 'lucide-react';
-import { collection, query, where, collectionGroup } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 
@@ -43,9 +43,11 @@ export default function SchouwenPage() {
 
   const schouwingenCollection = React.useMemo(() => {
     if (!firestore || !selectedProjectId) return null;
-    return query(
-      collectionGroup(firestore, 'schouwingen'),
-      where('projectId', '==', selectedProjectId)
+    return collection(
+      firestore,
+      'projects',
+      selectedProjectId,
+      'schouwingen'
     );
   }, [firestore, selectedProjectId]);
 

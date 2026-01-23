@@ -81,6 +81,7 @@ service cloud.firestore {
        }
        
        match /schouwingen/{schouwId} {
+        allow get, list: if isSignedIn();
         allow create: if hasPermission('schouwen', 'create');
         allow update: if hasPermission('schouwen', 'edit');
         allow delete: if hasPermission('schouwen', 'delete');
