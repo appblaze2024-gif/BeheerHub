@@ -477,6 +477,10 @@
           "type": "string",
           "format": "uri",
           "description": "URL of the employee's avatar image."
+        },
+        "lastUsedDienstColor": {
+          "type": "string",
+          "description": "The last custom color used for a 'Dienst' (shift)."
         }
       },
       "required": ["voornaam", "achternaam"]
@@ -857,5 +861,3 @@
     "reasoning": "The Firestore structure is designed to provide a secure and scalable foundation for the BizBoard application, focusing on clear ownership and authorization. Each user's data (revenues, expenses, and appointments) is stored under their respective user ID, ensuring data isolation and simplified security rules. This design avoids complex queries and `get()` calls in security rules, which aligns with the principles of Authorization Independence and facilitates easier debugging. The use of path-based ownership `/users/{userId}/revenues/{revenueId}` makes it straightforward to implement security rules that grant access only to the owner of the data.\\n\\n*   **Authorization Independence:** Achieved by structuring data under user-specific paths, eliminating the need for `get()` calls to parent documents for authorization. All data needed for authorization is implicitly available in the path.\\n*   **QAPs:** Secure list operations are supported by the path-based ownership model. Listing revenues, expenses, or appointments is always scoped to a specific user, preventing unauthorized access to other users' data.\\n\\nBy adhering to these principles, the data structure promotes a maintainable and secure application."
   }
 }
-
-    

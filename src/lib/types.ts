@@ -61,6 +61,7 @@ export interface Medewerker {
     zaterdag?: { start?: string; eind?: string };
     zondag?: { start?: string; eind?: string };
   };
+  lastUsedDienstColor?: string;
 }
 
 export interface Dienst {

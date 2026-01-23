@@ -110,14 +110,16 @@ export function DienstToevoegenDialog({
         const dayName = format(datum, 'eeee', { locale: nl }).toLowerCase() as keyof NonNullable<Medewerker['urenPerDag']>;
         const defaultTimes = medewerker.urenPerDag?.[dayName];
         
-        setUseCustomColor(false);
+        const hasLastColor = !!medewerker.lastUsedDienstColor;
+        setUseCustomColor(hasLastColor);
+        
         form.reset({
           werksoort: '',
           starttijd: defaultTimes?.start || '07:00',
           eindtijd: defaultTimes?.eind || '15:30',
           voertuignummer: null,
           notities: '',
-          celkleur: '#000000',
+          celkleur: medewerker.lastUsedDienstColor || '#000000',
         });
       } else {
         setUseCustomColor(false);
@@ -176,9 +178,16 @@ export function DienstToevoegenDialog({
     if (!firestore || !project?.id || (!datum && !dienst)) return;
     setIsSubmitting(true);
     
+    const medewerkerId = medewerker?.id || dienst?.medewerkerId;
+    if (!medewerkerId) {
+        console.error("Medewerker ID is missing, cannot save dienst.");
+        setIsSubmitting(false);
+        return;
+    }
+
     const dienstData = {
       ...data,
-      medewerkerId: medewerker?.id || dienst?.medewerkerId,
+      medewerkerId: medewerkerId,
       projectId: project.id,
       datum: format(datum || new Date(dienst!.datum), 'yyyy-MM-dd'),
       voertuignummer: data.voertuignummer === " " ? null : data.voertuignummer,
@@ -198,6 +207,12 @@ export function DienstToevoegenDialog({
         );
         await addDocumentNonBlocking(dienstenColRef, dienstData);
       }
+
+      if (useCustomColor && data.celkleur) {
+        const medewerkerRef = doc(firestore, 'medewerkers', medewerkerId);
+        await updateDocumentNonBlocking(medewerkerRef, { lastUsedDienstColor: data.celkleur });
+      }
+
       onSuccess();
     } catch (error) {
       console.error('Fout bij opslaan dienst:', error);
@@ -386,19 +401,33 @@ export function DienstToevoegenDialog({
                 </div>
 
                 {useCustomColor && (
-                    <FormField
-                        control={form.control}
-                        name="celkleur"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Celkleur</FormLabel>
-                                <FormControl>
-                                    <Input type="color" {...field} value={field.value || '#000000'} className="h-10 p-1 w-full" />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                  <FormField
+                      control={form.control}
+                      name="celkleur"
+                      render={({ field }) => (
+                          <FormItem>
+                              <FormLabel>Celkleur</FormLabel>
+                              <FormControl>
+                                  <div className="flex items-center gap-2">
+                                      <Input 
+                                          type="color" 
+                                          value={field.value || '#000000'}
+                                          onChange={field.onChange}
+                                          className="h-10 w-12 p-1" 
+                                      />
+                                      <Input 
+                                          type="text"
+                                          value={field.value || ''}
+                                          onChange={field.onChange}
+                                          placeholder="#RRGGBB"
+                                          className="flex-1"
+                                      />
+                                  </div>
+                              </FormControl>
+                              <FormMessage />
+                          </FormItem>
+                      )}
+                  />
                 )}
 
             </form>
