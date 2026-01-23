@@ -75,6 +75,13 @@ service cloud.firestore {
          allow read: if hasPermission('specReports', 'view');
          allow write: if hasPermission('specReports', 'create') || hasPermission('specReports', 'edit') || hasPermission('specReports', 'delete');
        }
+
+       match /schouwingen/{schouwId} {
+         allow read: if hasPermission('schouwen', 'view');
+         allow create: if hasPermission('schouwen', 'create');
+         allow update: if hasPermission('schouwen', 'edit');
+         allow delete: if hasPermission('schouwen', 'delete');
+       }
     }
 
     match /medewerkers/{medewerkerId} {
@@ -115,6 +122,13 @@ service cloud.firestore {
     match /meldingen/{meldingId} {
         allow read, write: if isSignedIn();
     }
+    
+    match /prullenbakken/{prullenbakId} {
+      allow list, get: if isSignedIn();
+      allow create: if hasPermission('objects', 'create');
+      allow update: if hasPermission('objects', 'edit');
+      allow delete: if hasPermission('objects', 'delete');
+    }
 
     match /voertuigen/{vehicleId} {
       allow get, list: if isSignedIn();
@@ -144,3 +158,5 @@ service cloud.firestore {
     }
   }
 }
+
+    

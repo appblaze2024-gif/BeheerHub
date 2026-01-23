@@ -133,3 +133,52 @@ export type Werksoort = {
   fictieveH: string;
   uurprijs: string;
 };
+
+export type Project = {
+  id?: string;
+  projectnummer: string;
+  projectnaam: string;
+  locatie: string;
+  opdrachtgever: string;
+  startdatum: string;
+  einddatum: string;
+  bestek: string;
+  besteknummer: string;
+  versie: string;
+  datum: string;
+  omschrijving: string;
+  werksoorten: Werksoort[];
+  boekingregels?: any[]; // Replace with specific type if known
+  wijken?: any[]; // Replace with specific type if known
+  veegroutes?: any[]; // Replace with specific type if known
+  prullenbakkenroutes?: any[]; // Replace with specific type if known
+};
+
+export type SchouwItem = {
+    id: string;
+    name: string;
+    status: "Goed" | "Voldoende" | "Onvoldoende" | "Niet van toepassing";
+    notes: string;
+    photos: UploadedFile[];
+    location?: {
+        latitude: number;
+        longitude: number;
+    }
+};
+
+export type Schouw = {
+    id: string;
+    projectId: string;
+    title: string;
+    date: string; // YYYY-MM-DD
+    inspectorId: string;
+    inspectorName: string;
+    status: "Nieuw" | "In uitvoering" | "Voltooid";
+    inspectionArea?: {
+        name: string;
+        geojson: string;
+    };
+    items?: SchouwItem[];
+};
+
+    
