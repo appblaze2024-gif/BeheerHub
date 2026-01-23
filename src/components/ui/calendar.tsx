@@ -2,7 +2,8 @@
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import * as React from "react";
-import { DayPicker, useDayPicker, useNavigation, format, CaptionProps } from "react-day-picker";
+import { DayPicker, useDayPicker, useNavigation, CaptionProps } from "react-day-picker";
+import { format } from "date-fns";
 import { nl } from 'date-fns/locale';
 
 
@@ -40,7 +41,7 @@ function CustomCaption(props: CaptionProps) {
   }
 
   return (
-    <div className="flex items-center justify-center gap-1">
+    <div className="flex items-center justify-center gap-2">
       <select
         value={currentMonth.getMonth()}
         onChange={handleMonthChange}
@@ -80,7 +81,7 @@ function Calendar({
     months: "relative flex flex-col sm:flex-row gap-4",
     month: "w-full",
     month_caption: "relative mx-10 mb-1 flex h-9 items-center justify-center z-20",
-    caption_dropdowns: "flex items-center gap-1",
+    caption_dropdowns: "flex items-center gap-2",
     caption_label: "text-sm font-medium",
     nav: "absolute top-0 flex w-full justify-between z-10",
     button_previous: cn(
