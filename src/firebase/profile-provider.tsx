@@ -4,7 +4,7 @@ import { useUser, useDoc, useFirestore, updateDocumentNonBlocking, setDocumentNo
 import { doc, getDocFromServer } from 'firebase/firestore';
 import React, { createContext, useContext, ReactNode, useMemo, useEffect } from 'react';
 import type { UserProfile } from '@/lib/types';
-import { getDefaultPermissions } from '@/lib/permissions';
+import { getDefaultPermissions, permissionConfig } from '@/lib/permissions';
 
 interface ProfileContextValue {
   profile: UserProfile | null;
@@ -78,34 +78,38 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   }, [user, profileFromDb, isProfileLoadingFromDoc, userProfileRef, firestore]);
 
 
-  // Grant Super Admin role to a specific user
+  // Grant Super Admin role to a specific user and ensure permissions are up-to-date
   useEffect(() => {
     const grantAdminRole = async () => {
-      // Check if this is the target user and they are not already an admin
-      if (user && profile && user.email === 'dstoutenburg@meerlanden.nl' && profile.role !== 'Super admin' && userProfileRef) {
+      if (user && profile && user.email === 'dstoutenburg@meerlanden.nl' && userProfileRef) {
         
-        const adminPermissions = getDefaultPermissions();
-        // Grant all permissions
-        Object.keys(adminPermissions).forEach(module => {
-            Object.keys(adminPermissions[module]).forEach(action => {
-              if (action !== 'tabs') {
-                (adminPermissions as any)[module][action] = true;
-              }
+        const allTruePermissions: { [key: string]: any } = {};
+        permissionConfig.forEach(mod => {
+            allTruePermissions[mod.module] = {};
+            mod.actions.forEach(perm => {
+                allTruePermissions[mod.module][perm.id] = true;
             });
-             if (adminPermissions[module].tabs) {
-              Object.keys(adminPermissions[module].tabs).forEach(tab => {
-                adminPermissions[module].tabs[tab] = true;
-              });
+            if (mod.tabs) {
+                const tabPermissions: { [key: string]: boolean } = {};
+                mod.tabs.forEach(tab => {
+                    tabPermissions[tab.id] = true;
+                });
+                allTruePermissions[mod.module].tabs = tabPermissions;
             }
         });
 
-        try {
-          await updateDocumentNonBlocking(userProfileRef, { 
-            role: 'Super admin',
-            permissions: adminPermissions
-          });
-        } catch (error) {
-            console.error("Failed to grant admin role:", error);
+        // Deep compare to see if an update is needed
+        const permissionsAreStale = JSON.stringify(profile.permissions) !== JSON.stringify(allTruePermissions);
+
+        if (profile.role !== 'Super admin' || permissionsAreStale) {
+            try {
+              await updateDocumentNonBlocking(userProfileRef, { 
+                role: 'Super admin',
+                permissions: allTruePermissions
+              });
+            } catch (error) {
+                console.error("Failed to grant/update admin role:", error);
+            }
         }
       }
     };
