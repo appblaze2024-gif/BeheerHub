@@ -37,7 +37,7 @@ import {
   errorEmitter,
   FirestorePermissionError,
 } from '@/firebase';
-import type { Medewerker, Dienst, Voertuig, Machine } from '@/lib/types';
+import type { Medewerker, Dienst, Voertuig, Machine, UserProfile } from '@/lib/types';
 import { DienstToevoegenDialog } from '@/components/dienst-toevoegen-dialog';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -56,6 +56,8 @@ import {
 import { useIsMobile } from '@/hooks/use-mobile';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuCheckboxItem, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
 import { useProfile } from '@/firebase/profile-provider';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 
 
 const getInitials = (firstName?: string, lastName?: string) => {
@@ -957,10 +959,26 @@ export default function WorkPlanningPage() {
           <Button variant="ghost" size="icon" onClick={prevWeek}>
             <ChevronLeft className="h-5 w-5" />
           </Button>
-          <span className="text-sm font-semibold text-center w-64">
-            {format(start, 'd MMMM', { locale: nl })} -{' '}
-            {format(end, 'd MMMM yyyy', { locale: nl })}
-          </span>
+          <Popover>
+            <PopoverTrigger asChild>
+                <Button variant={'outline'} className="w-64 justify-center text-sm font-semibold">
+                    {format(start, 'd MMMM', { locale: nl })} -{' '}
+                    {format(end, 'd MMMM yyyy', { locale: nl })}
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+                <Calendar
+                    mode="single"
+                    selected={currentDate}
+                    onSelect={(date) => date && setCurrentDate(date)}
+                    captionLayout="dropdown-buttons"
+                    fromYear={2020}
+                    toYear={new Date().getFullYear() + 5}
+                    initialFocus
+                    locale={nl}
+                />
+            </PopoverContent>
+          </Popover>
           <Button variant="ghost" size="icon" onClick={nextWeek}>
             <ChevronRight className="h-5 w-5" />
           </Button>
