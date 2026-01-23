@@ -125,7 +125,7 @@ const routeRoadsLayerStyle: any = {
   id: 'veegroute-roads',
   type: 'line',
   paint: {
-    'line-color': '#4b5563', // gray-600
+    'line-color': '#1f2937', // gray-800
     'line-width': [
       'interpolate',
       ['linear'],
@@ -147,7 +147,7 @@ const routeRoadsLayerStyleCasing: any = {
     id: 'veegroute-roads-casing',
     type: 'line',
     paint: {
-      'line-color': '#4b5563', // gray-600
+      'line-color': '#1f2937', // gray-800
       'line-width': [
         'interpolate',
         ['linear'],
@@ -589,28 +589,27 @@ export default function Page() {
   }, []);
   
   const findNextObject = async (currentOrigin: [number, number], availableObjects: MapObject[]): Promise<MapObject | null> => {
-      if (!currentOrigin || availableObjects.length === 0) return null;
+    if (!currentOrigin || availableObjects.length === 0) return null;
 
-      const validObjects = availableObjects.filter(obj => 
-        typeof obj.latitude === 'number' && !isNaN(obj.latitude) &&
-        typeof obj.longitude === 'number' && !isNaN(obj.longitude)
-      );
+    const validObjects = availableObjects.filter(obj => 
+      typeof obj.latitude === 'number' && !isNaN(obj.latitude) &&
+      typeof obj.longitude === 'number' && !isNaN(obj.longitude)
+    );
 
-      if (validObjects.length === 0) return null;
-      if (validObjects.length === 1) return validObjects[0];
+    if (validObjects.length === 0) return null;
+    if (validObjects.length === 1) return validObjects[0];
 
-      // Batch objects into groups of 9 (since the first coordinate is the origin, for a total of 10)
-      const batchSize = 9;
-      const batches: MapObject[][] = [];
-      for (let i = 0; i < validObjects.length; i += batchSize) {
-          batches.push(validObjects.slice(i, i + batchSize));
-      }
+    const batchSize = 9;
+    const batches: MapObject[][] = [];
+    for (let i = 0; i < validObjects.length; i += batchSize) {
+        batches.push(validObjects.slice(i, i + batchSize));
+    }
 
-      let closestObject: MapObject | null = null;
-      let minDistance = Infinity;
+    let closestObject: MapObject | null = null;
+    let minDistance = Infinity;
 
-      try {
-        for (const batch of batches) {
+    for (const batch of batches) {
+        try {
             const coordinates = [currentOrigin, ...batch.map(obj => [obj.longitude, obj.latitude])];
             const coordinatesString = coordinates.map(c => c.join(',')).join(';');
             const approaches = ['curb', ...batch.map(() => 'unrestricted')].join(';');
@@ -618,11 +617,11 @@ export default function Page() {
             const response = await fetch(
                 `https://api.mapbox.com/directions-matrix/v1/mapbox/driving-traffic/${coordinatesString}?sources=0&annotations=distance&approaches=${approaches}&access_token=${MAPBOX_TOKEN}`
             );
-            
+
             if (!response.ok) {
                 const errorBody = await response.text();
                 console.error(`Mapbox Matrix API batch failed: ${errorBody}`);
-                continue; // Try next batch
+                continue;
             }
 
             const data = await response.json();
@@ -640,33 +639,35 @@ export default function Page() {
                     closestObject = batch[index];
                 }
             });
+        } catch (error) {
+            console.error("Network error during Mapbox Matrix API call:", error);
+            continue; // Move to next batch on network error
         }
+    }
 
-        if (closestObject) {
-            return closestObject;
+    if (closestObject) {
+        return closestObject;
+    }
+
+    // If we are here, it means either all API calls failed, or they returned no valid routes.
+    // In either case, we fall back to straight-line distance.
+    console.warn("Could not determine next object via routing API. Falling back to straight-line distance.");
+
+    const from = turf.point(currentOrigin);
+    let fallbackClosestObject: MapObject | null = null;
+    let fallbackMinDistance = Infinity;
+
+    validObjects.forEach(obj => {
+        const to = turf.point([obj.longitude, obj.latitude]);
+        const distance = turf.distance(from, to);
+        if (distance < fallbackMinDistance) {
+            fallbackMinDistance = distance;
+            fallbackClosestObject = obj;
         }
+    });
 
-        // If all API calls fail or return no valid distances, fall back to straight-line on all available objects.
-        throw new Error("All Matrix API batches failed or returned no valid routes.");
-
-      } catch (error) {
-          console.error("Error finding next object via routing:", error);
-          // Fallback to the nearest object by straight-line distance across ALL available objects.
-          const from = turf.point(currentOrigin);
-          let fallbackClosestObject: MapObject | null = null;
-          let fallbackMinDistance = Infinity;
-
-          validObjects.forEach(obj => {
-              const to = turf.point([obj.longitude, obj.latitude]);
-              const distance = turf.distance(from, to);
-              if (distance < fallbackMinDistance) {
-                  fallbackMinDistance = distance;
-                  fallbackClosestObject = obj;
-              }
-          });
-          return fallbackClosestObject;
-      }
-  }
+    return fallbackClosestObject;
+}
   
   React.useEffect(() => {
     const destLat = searchParams.get('dest_lat');
@@ -1232,10 +1233,10 @@ export default function Page() {
   }, [user, firestore, selectedProjectId, selectedRouteId, selectedRoute, objectsInWijk, calculateRoute, setIsHeaderVisible, selectedRouteType, routeRoads]);
 
   const handleResumeRoute = React.useCallback(async (historyId: string) => {
-    setIsCalculating(true);
-    setJustCompletedObjectId(null);
     setIsNavigating(true);
     setIsHeaderVisible(false);
+    setIsCalculating(true);
+    setJustCompletedObjectId(null);
 
     const routeToResume = historyRoutes?.find(r => r.id === historyId);
     if (!routeToResume || !objects || !positionRef.current) {
