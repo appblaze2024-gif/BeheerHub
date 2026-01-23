@@ -10,7 +10,7 @@ import {
   Newspaper,
   Mail,
   FileCheck,
-  Trash2,
+  MapPin,
 } from 'lucide-react';
 import { ElementType, createElement } from 'react';
 import Image from 'next/image';
@@ -54,7 +54,7 @@ export const allMenuItems: MenuItem[] = [
     { href: '/weekly-reports', label: 'Weekstaten', icon: Newspaper, module: 'weeklyReports', color: 'bg-muted hover:bg-accent' },
     { href: '/reports', label: 'Rapportages', icon: FileText, module: 'reports', color: 'bg-muted hover:bg-accent' },
     { href: '/vehicles', label: 'Wagenpark', icon: Truck, module: 'vehicles', color: 'bg-muted hover:bg-accent' },
-    { href: '/prullenbakken', label: 'Prullenbakken', icon: Trash2, module: 'prullenbakken', color: 'bg-muted hover:bg-accent' },
+    { href: '/objects', label: 'Objecten', icon: MapPin, module: 'objects', color: 'bg-muted hover:bg-accent' },
     { href: '/inventory', label: 'Voorraadbeheer', icon: Package, module: 'inventory', color: 'bg-muted hover:bg-accent' },
     { href: '/issues', label: 'Meldingen', icon: Bell, module: 'issues', color: 'bg-muted hover:bg-accent' },
     { href: '/navigation-module', label: 'Navigatiemodule', icon: NavigatieIcon, module: 'navigation', color: 'bg-muted hover:bg-accent' },
