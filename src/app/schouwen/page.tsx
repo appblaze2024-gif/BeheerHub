@@ -14,6 +14,7 @@ import { nl } from 'date-fns/locale';
 
 import {
   useFirestore,
+  useCollection,
   errorEmitter,
   FirestorePermissionError,
 } from '@/firebase';
