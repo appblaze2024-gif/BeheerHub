@@ -37,8 +37,11 @@ service cloud.firestore {
       return userDoc.exists && userDoc.data.role in roles;
     }
 
-    match /{path=**}/schouwingen/{schouwId} {
-      allow read: if isSignedIn();
+    match /projects/{projectId}/schouwingen/{schouwId} {
+      allow get, list: if isSignedIn();
+      allow create: if hasPermission('schouwen', 'create');
+      allow update: if hasPermission('schouwen', 'edit');
+      allow delete: if hasPermission('schouwen', 'delete');
     }
 
     match /projects/{projectId} {
@@ -79,13 +82,6 @@ service cloud.firestore {
          allow read: if hasPermission('specReports', 'view');
          allow write: if hasPermission('specReports', 'create') || hasPermission('specReports', 'edit') || hasPermission('specReports', 'delete');
        }
-       
-       match /schouwingen/{schouwId} {
-        allow get, list: if isSignedIn();
-        allow create: if hasPermission('schouwen', 'create');
-        allow update: if hasPermission('schouwen', 'edit');
-        allow delete: if hasPermission('schouwen', 'delete');
-      }
     }
 
     match /medewerkers/{medewerkerId} {
