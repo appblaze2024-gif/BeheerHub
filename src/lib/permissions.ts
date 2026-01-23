@@ -40,7 +40,7 @@ export const permissionConfig = [
             { id: 'documents', label: 'Documenten' },
         ]
     },
-    { module: 'objects', label: 'Objecten', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }] },
+    { module: 'prullenbakken', label: 'Prullenbakken', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }] },
     { module: 'inventory', label: 'Voorraadbeheer', actions: [{ id: 'view', label: 'Bekijken' }] },
     { module: 'issues', label: 'Meldingen', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }] },
     { module: 'navigation', label: 'Navigatiemodule', actions: [{ id: 'use', label: 'Gebruiken' }] },
@@ -55,6 +55,7 @@ export const permissionConfig = [
         ]
     },
     { module: 'specReports', label: 'Besteksmeldingen', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }] },
+    { module: 'schouwen', label: 'Schouwen', actions: [{ id: 'view', label: 'Bekijken' }] },
 ];
 
 export const getDefaultPermissions = () => {

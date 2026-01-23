@@ -4,7 +4,6 @@ import {
   FileText,
   CalendarCheck,
   Truck,
-  Building2,
   Map,
   Package,
   Bell,
@@ -12,8 +11,33 @@ import {
   Newspaper,
   Mail,
   FileCheck,
+  Trash2,
 } from 'lucide-react';
-import type { ElementType } from 'react';
+import { ElementType, SVGProps, createElement } from 'react';
+
+// Using an inline SVG for the playground icon as requested, since it's not in lucide-react.
+function PlaygroundIcon(props: SVGProps<SVGSVGElement>) {
+  return createElement('svg', {
+    xmlns: "http://www.w3.org/2000/svg",
+    width: "24",
+    height: "24",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    ...props
+  }, 
+    createElement('path', { d: "M13.2 22H18a2 2 0 0 0 2-2V8", key: 1 }),
+    createElement('path', { d: "M6 22V8", key: 2 }),
+    createElement('path', { d: "M12 22V8", key: 3 }),
+    createElement('path', { d: "m3.5 15.5 8-8", key: 4 }),
+    createElement('path', { d: "M12 3.5 11 2", key: 5 }),
+    createElement('path', { d: "M20.5 10.5 12 2", key: 6 }),
+  );
+}
+
 
 export interface MenuItem {
   href: string;
@@ -31,10 +55,11 @@ export const allMenuItems: MenuItem[] = [
     { href: '/weekly-reports', label: 'Weekstaten', icon: Newspaper, module: 'weeklyReports', color: 'bg-muted hover:bg-accent' },
     { href: '/reports', label: 'Rapportages', icon: FileText, module: 'reports', color: 'bg-muted hover:bg-accent' },
     { href: '/vehicles', label: 'Wagenpark', icon: Truck, module: 'vehicles', color: 'bg-muted hover:bg-accent' },
-    { href: '/objects', label: 'Objecten', icon: Building2, module: 'objects', color: 'bg-muted hover:bg-accent' },
+    { href: '/prullenbakken', label: 'Prullenbakken', icon: Trash2, module: 'prullenbakken', color: 'bg-muted hover:bg-accent' },
     { href: '/inventory', label: 'Voorraadbeheer', icon: Package, module: 'inventory', color: 'bg-muted hover:bg-accent' },
     { href: '/issues', label: 'Meldingen', icon: Bell, module: 'issues', color: 'bg-muted hover:bg-accent' },
     { href: '/navigation-module', label: 'Navigatiemodule', icon: Map, module: 'navigation', color: 'bg-muted hover:bg-accent' },
     { href: '/mail', label: 'Mail', icon: Mail, module: 'mail', color: 'bg-muted hover:bg-accent' },
     { href: '/spec-reports', label: 'Besteksmeldingen', icon: FileCheck, module: 'specReports', color: 'bg-muted hover:bg-accent' },
+    { href: '/schouwen', label: 'Schouwen', icon: PlaygroundIcon, module: 'schouwen', color: 'bg-muted hover:bg-accent' },
 ];
