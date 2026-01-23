@@ -8,7 +8,7 @@ import {
   FileText,
   Calendar,
 } from 'lucide-react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, getDocs } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 
@@ -219,7 +219,7 @@ export default function SchouwenPage() {
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         projectId={selectedProjectId}
-        onSuccess={() => {}}
+        onSuccess={fetchSchouwingen}
       />
     </div>
   );
