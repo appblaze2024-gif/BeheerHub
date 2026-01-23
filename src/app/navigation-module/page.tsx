@@ -111,21 +111,59 @@ interface RouteInstruction {
   }
 }
 
-
-const routeLayer: any = {
-  id: 'route',
+const routeLayerStyle: any = {
+  id: 'route-line',
   type: 'line',
-  source: 'route',
-  layout: {
-    'line-join': 'round',
-    'line-cap': 'round',
-  },
   paint: {
-    'line-color': '#3b82f6',
-    'line-width': 10,
-    'line-opacity': 0.9,
+    'line-color': '#2563eb',
+    'line-width': 8,
+    'line-opacity': 0.8,
   },
 };
+
+const routeRoadsLayerStyle: any = {
+  id: 'veegroute-roads',
+  type: 'line',
+  paint: {
+    'line-color': '#4b5563', // gray-600
+    'line-width': [
+      'interpolate',
+      ['linear'],
+      ['zoom'],
+      12, 2,
+      16, 6
+    ],
+    'line-offset': [
+      'interpolate',
+      ['linear'],
+      ['zoom'],
+      12, 2,
+      16, 6
+    ],
+  },
+};
+
+const routeRoadsLayerStyleCasing: any = {
+    id: 'veegroute-roads-casing',
+    type: 'line',
+    paint: {
+      'line-color': '#4b5563', // gray-600
+      'line-width': [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        12, 2,
+        16, 6
+      ],
+      'line-offset': [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        12, -2,
+        16, -6
+      ],
+    },
+  };
 
 const getManeuverIcon = (type: string, modifier?: string) => {
     switch (type) {
@@ -553,13 +591,19 @@ export default function Page() {
   const findNextObject = async (currentOrigin: [number, number], availableObjects: MapObject[]): Promise<MapObject | null> => {
       if (!currentOrigin || availableObjects.length === 0) return null;
 
-      if (availableObjects.length === 1) return availableObjects[0];
+      const validObjects = availableObjects.filter(obj => 
+        typeof obj.latitude === 'number' && !isNaN(obj.latitude) &&
+        typeof obj.longitude === 'number' && !isNaN(obj.longitude)
+      );
 
-      // Batch objects into groups of 24 (since the first coordinate is the origin)
-      const batchSize = 24;
+      if (validObjects.length === 0) return null;
+      if (validObjects.length === 1) return validObjects[0];
+
+      // Batch objects into groups of 9 (since the first coordinate is the origin, for a total of 10)
+      const batchSize = 9;
       const batches: MapObject[][] = [];
-      for (let i = 0; i < availableObjects.length; i += batchSize) {
-          batches.push(availableObjects.slice(i, i + batchSize));
+      for (let i = 0; i < validObjects.length; i += batchSize) {
+          batches.push(validObjects.slice(i, i + batchSize));
       }
 
       let closestObject: MapObject | null = null;
@@ -576,7 +620,8 @@ export default function Page() {
             );
             
             if (!response.ok) {
-                console.error(`Mapbox Matrix API batch failed: ${response.statusText}`);
+                const errorBody = await response.text();
+                console.error(`Mapbox Matrix API batch failed: ${errorBody}`);
                 continue; // Try next batch
             }
 
@@ -611,7 +656,7 @@ export default function Page() {
           let fallbackClosestObject: MapObject | null = null;
           let fallbackMinDistance = Infinity;
 
-          availableObjects.forEach(obj => {
+          validObjects.forEach(obj => {
               const to = turf.point([obj.longitude, obj.latitude]);
               const distance = turf.distance(from, to);
               if (distance < fallbackMinDistance) {
@@ -650,9 +695,11 @@ export default function Page() {
   }, [searchParams, userPosition, calculateRoute, setIsHeaderVisible, isNavigating]);
 
   const fetchRoadsForPolygon = React.useCallback(async (polygon: turf.Feature<turf.Polygon | turf.MultiPolygon>): Promise<turf.Feature<turf.LineString>[]> => {
-    if (!selectedRoute?.roadTypes || selectedRoute.roadTypes.length === 0) return [];
-    
-    const roadTypesQuery = selectedRoute.roadTypes.join('|');
+    if (selectedRouteType !== 'veeg' || !selectedRoute) return [];
+
+    const roadTypesQuery = (selectedRoute.roadTypes && selectedRoute.roadTypes.length > 0) 
+      ? selectedRoute.roadTypes.join('|')
+      : 'motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|service';
 
     const buildWayQueries = (geometry: turf.Polygon | turf.MultiPolygon, roadTypes: string): string => {
         if (geometry.type === 'Polygon') {
@@ -689,23 +736,24 @@ export default function Page() {
         body: `data=${encodeURIComponent(overpassQuery)}`,
     });
 
-    if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Overpass API error:", errorText)
-        throw new Error(`Overpass API failed with status ${response.status}`);
+    const responseText = await response.text();
+    
+    if (!response.ok || responseText.trim().startsWith('<?xml')) {
+        console.error("Overpass API error or unexpected XML response:", responseText);
+        return [];
     }
     
-    const data = await response.json();
+    const data = JSON.parse(responseText);
     
     return turf.featureCollection(data.elements
         .filter((el: any) => el.type === 'way' && el.geometry)
         .map((el: any) => turf.lineString(el.geometry.map((node: any) => [node.lon, node.lat]), el.tags))
     ).features;
-  }, [selectedRoute]);
+  }, [selectedRoute, selectedRouteType]);
 
   React.useEffect(() => {
     const fetchRouteRoads = async () => {
-        if (!selectedRoute || !selectedRoute.subGebieden || !selectedRoute.roadTypes?.length) {
+        if (selectedRouteType !== 'veeg' || !selectedRoute || !selectedRoute.subGebieden) {
             setRouteRoads(null);
             return;
         }
@@ -783,7 +831,7 @@ export default function Page() {
     };
 
     fetchRouteRoads();
-  }, [selectedRoute, fetchRoadsForPolygon]);
+  }, [selectedRoute, fetchRoadsForPolygon, selectedRouteType]);
 
 
   const getMarkerColor = (objectId: string): string => {
@@ -1126,6 +1174,11 @@ export default function Page() {
   const handleStartNavigation = React.useCallback(async () => {
     if (!positionRef.current || !user || !firestore || !selectedProjectId || !selectedRouteId || !selectedRoute) return;
 
+    setIsCalculating(true);
+    setJustCompletedObjectId(null);
+    setIsNavigating(true);
+    setIsHeaderVisible(false);
+
     const allObjects = objectsInWijk;
     const allObjectIds = allObjects.map(obj => obj.id);
 
@@ -1157,20 +1210,48 @@ export default function Page() {
 
     if (firstObject) {
         setDestination(firstObject);
-        await calculateRoute([positionRef.current, [firstObject.longitude, firstObject.latitude]]);
+        if (selectedRouteType === 'veeg' && routeRoads?.features?.length) {
+            const startPoint = positionRef.current;
+            const endPoint: [number, number] = [firstObject.longitude, firstObject.latitude];
+            
+            const nearestOnRouteStart = turf.nearestPointOnLine(turf.featureCollection(routeRoads.features), startPoint, { units: 'meters' });
+            const nearestOnRouteEnd = turf.nearestPointOnLine(turf.featureCollection(routeRoads.features), endPoint, { units: 'meters' });
+            
+            await calculateRoute([
+                startPoint, 
+                nearestOnRouteStart.geometry.coordinates,
+                ...routeRoads.features.flatMap(f => f.geometry.coordinates),
+                nearestOnRouteEnd.geometry.coordinates,
+                endPoint
+            ]);
+
+        } else {
+             await calculateRoute([positionRef.current, [firstObject.longitude, firstObject.latitude]]);
+        }
     }
-  }, [user, firestore, selectedProjectId, selectedRouteId, selectedRoute, objectsInWijk, calculateRoute]);
+  }, [user, firestore, selectedProjectId, selectedRouteId, selectedRoute, objectsInWijk, calculateRoute, setIsHeaderVisible, selectedRouteType, routeRoads]);
 
   const handleResumeRoute = React.useCallback(async (historyId: string) => {
+    setIsCalculating(true);
+    setJustCompletedObjectId(null);
+    setIsNavigating(true);
+    setIsHeaderVisible(false);
+
     const routeToResume = historyRoutes?.find(r => r.id === historyId);
     if (!routeToResume || !objects || !positionRef.current) {
         console.error("Route to resume not found or objects/origin not ready.");
+        setIsCalculating(false);
+        setIsNavigating(false);
+        setIsHeaderVisible(true);
         return;
     }
 
     const project = projects?.find(p => p.id === routeToResume.projectId);
     if (!project) {
         console.error("Project for the route not found.");
+        setIsCalculating(false);
+        setIsNavigating(false);
+        setIsHeaderVisible(true);
         return;
     }
 
@@ -1200,13 +1281,18 @@ export default function Page() {
         obj => !completed.includes(obj.id) && !skipped.includes(obj.id)
     );
     setPendingObjects(remainingObjects);
+    
+    if (remainingObjects.length === 0) {
+        handleStopNavigation();
+        return;
+    }
 
     const nextObject = await findNextObject(positionRef.current, remainingObjects);
     if (nextObject) {
         setDestination(nextObject);
         await calculateRoute([positionRef.current, [nextObject.longitude, nextObject.latitude]]);
     } 
-  }, [historyRoutes, objects, projects, calculateRoute]);
+  }, [historyRoutes, objects, projects, calculateRoute, setIsHeaderVisible, handleStopNavigation]);
 
    const selectedHistoryRoute = useMemo(() => {
         if (!selectedHistoryId || !historyRoutes) return null;
@@ -1271,17 +1357,13 @@ export default function Page() {
     if (isAdminOrSupervisor && selectedHistoryId && !isOwnSelectedHistoryRoute) {
       handleViewRoute(selectedHistoryId);
     } else {
-      setJustCompletedObjectId(null);
-      setIsNavigating(true);
-      setIsCalculating(true);
-      setIsHeaderVisible(false);
       if (selectedHistoryId) {
           handleResumeRoute(selectedHistoryId);
       } else if (selectedRouteId) {
           handleStartNavigation();
       }
     }
-  }, [isAdminOrSupervisor, selectedHistoryId, isOwnSelectedHistoryRoute, handleViewRoute, setIsHeaderVisible, handleResumeRoute, selectedRouteId, handleStartNavigation]);
+  }, [isAdminOrSupervisor, selectedHistoryId, isOwnSelectedHistoryRoute, handleViewRoute, handleResumeRoute, selectedRouteId, handleStartNavigation]);
   
 
   const updateObjectStatus = async (objectId: string, status: 'completed' | 'skipped'): Promise<MapObject[]> => {
@@ -1759,21 +1841,14 @@ export default function Page() {
 
           {displayedRoute && (
             <Source id="route" type="geojson" data={displayedRoute}>
-              <Layer {...routeLayer} />
+              <Layer {...routeLayerStyle} />
             </Source>
           )}
 
-          {routeRoads && !isNavigating && (
+          {routeRoads && !isNavigating && selectedRouteType === 'veeg' && (
             <Source id="route-roads" type="geojson" data={routeRoads}>
-                <Layer 
-                    id="route-roads-layer"
-                    type="line"
-                    paint={{
-                        'line-color': '#0000ff', // blue
-                        'line-width': 4,
-                        'line-opacity': 0.7
-                    }}
-                />
+                <Layer {...routeRoadsLayerStyleCasing} />
+                <Layer {...routeRoadsLayerStyle} />
             </Source>
           )}
         </MapGL>
@@ -1895,6 +1970,7 @@ export default function Page() {
     </div>
   );
 }
+
 
 
 
