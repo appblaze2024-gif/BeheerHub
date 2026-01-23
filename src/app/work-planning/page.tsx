@@ -164,7 +164,7 @@ const DienstItem = ({ dienst, onEdit, onDelete, onContextMenu, isNonWorkingDay, 
                 className={cn(
                     "rounded-md p-2 text-xs relative group/dienst focus:outline-none focus:ring-2 focus:ring-primary",
                     !hasCustomColor && (isZiek 
-                        ? "bg-yellow-200 text-yellow-900 dark:bg-yellow-900/50 dark:text-white"
+                        ? "bg-red-200 text-red-900 dark:bg-red-900/50 dark:text-white"
                         : isVerlof
                             ? "bg-orange-200 text-orange-900 dark:bg-orange-900/50 dark:text-white"
                             : isNonWorkingDay
@@ -173,7 +173,7 @@ const DienstItem = ({ dienst, onEdit, onDelete, onContextMenu, isNonWorkingDay, 
                     ),
                     canEdit && !isNonWorkingDay && (
                         hasCustomColor ? 'hover:brightness-90 transition-all' : (
-                            isZiek ? "hover:bg-yellow-300 dark:hover:bg-yellow-900/70" 
+                            isZiek ? "hover:bg-red-300 dark:hover:bg-red-900/70" 
                             : isVerlof ? "hover:bg-orange-300 dark:hover:bg-orange-900/70" 
                             : "hover:bg-blue-200 dark:hover:bg-blue-900/70"
                         )
