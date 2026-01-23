@@ -13,8 +13,9 @@ import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 
 import {
-  useCollection,
   useFirestore,
+  errorEmitter,
+  FirestorePermissionError,
 } from '@/firebase';
 import type { Schouw, Project } from '@/lib/types';
 import { useProfile } from '@/firebase/profile-provider';
@@ -59,6 +60,11 @@ export default function SchouwenPage() {
         setSchouwingen(data);
       } catch (error) {
         console.error("Fout bij ophalen inspecties:", error);
+        const contextualError = new FirestorePermissionError({
+          path: `projects/${selectedProjectId}/schouwingen`,
+          operation: 'list',
+        });
+        errorEmitter.emit('permission-error', contextualError);
         setSchouwingen([]);
       } finally {
         setIsLoadingSchouwingen(false);
