@@ -57,6 +57,9 @@ import { useToast } from '@/components/ui/use-toast';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { Checkbox } from './ui/checkbox';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { Info } from 'lucide-react';
+
 
 const allPermissions = permissionConfig;
 
@@ -366,65 +369,74 @@ function UserDialog({
                 )}
 
             <div>
-              <FormLabel>Rechten</FormLabel>
-              <div className="space-y-4 mt-2">
-                {allPermissions.map((module) => (
-                  <div key={module.module} className="border p-4 rounded-md">
-                    <h4 className="font-semibold capitalize mb-2">{module.label}</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {module.actions.map((permission) => (
-                        <FormField
-                          key={permission.id}
-                          control={form.control}
-                          name={`permissions.${module.module}.${permission.id}`}
-                          render={({ field }) => (
-                            <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                  disabled={isSubmitting || isSuperAdminEditing}
-                                />
-                              </FormControl>
-                              <FormLabel className="font-normal">
-                                {permission.label}
-                              </FormLabel>
-                            </FormItem>
-                          )}
-                        />
-                      ))}
+                {role === 'Super admin' && (
+                    <Alert>
+                        <Info className="h-4 w-4" />
+                        <AlertTitle>Let op!</AlertTitle>
+                        <AlertDescription>
+                            Super admins hebben automatisch volledige toegang tot alle modules en rechten. De onderstaande instellingen zijn informatief en niet bewerkbaar.
+                        </AlertDescription>
+                    </Alert>
+                )}
+                <div className="space-y-4 mt-4">
+                  <FormLabel>Rechten</FormLabel>
+                  {allPermissions.map((module) => (
+                    <div key={module.module} className="border p-4 rounded-md">
+                      <h4 className="font-semibold capitalize mb-2">{module.label}</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {module.actions.map((permission) => (
+                          <FormField
+                            key={permission.id}
+                            control={form.control}
+                            name={`permissions.${module.module}.${permission.id}`}
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    disabled={isSubmitting || isSuperAdminEditing}
+                                  />
+                                </FormControl>
+                                <FormLabel className="font-normal">
+                                  {permission.label}
+                                </FormLabel>
+                              </FormItem>
+                            )}
+                          />
+                        ))}
+                      </div>
+                      {module.tabs && (
+                          <>
+                              <h5 className="font-semibold text-sm mt-4 mb-2">Tab Rechten</h5>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                  {module.tabs.map((tab) => (
+                                      <FormField
+                                          key={tab.id}
+                                          control={form.control}
+                                          name={`permissions.${module.module}.tabs.${tab.id}`}
+                                          render={({ field }) => (
+                                              <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                                  <FormControl>
+                                                      <Checkbox
+                                                          checked={field.value}
+                                                          onCheckedChange={field.onChange}
+                                                          disabled={isSubmitting || isSuperAdminEditing}
+                                                      />
+                                                  </FormControl>
+                                                  <FormLabel className="font-normal">
+                                                      {tab.label}
+                                                  </FormLabel>
+                                              </FormItem>
+                                          )}
+                                      />
+                                  ))}
+                              </div>
+                          </>
+                      )}
                     </div>
-                     {module.tabs && (
-                        <>
-                            <h5 className="font-semibold text-sm mt-4 mb-2">Tab Rechten</h5>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {module.tabs.map((tab) => (
-                                    <FormField
-                                        key={tab.id}
-                                        control={form.control}
-                                        name={`permissions.${module.module}.tabs.${tab.id}`}
-                                        render={({ field }) => (
-                                            <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                                                <FormControl>
-                                                    <Checkbox
-                                                        checked={field.value}
-                                                        onCheckedChange={field.onChange}
-                                                        disabled={isSubmitting || isSuperAdminEditing}
-                                                    />
-                                                </FormControl>
-                                                <FormLabel className="font-normal">
-                                                    {tab.label}
-                                                </FormLabel>
-                                            </FormItem>
-                                        )}
-                                    />
-                                ))}
-                            </div>
-                        </>
-                    )}
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
             </div>
             <DialogFooter className="sticky bottom-0 bg-background py-4 -mx-4 px-6">
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Annuleren</Button>
