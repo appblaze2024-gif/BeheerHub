@@ -24,6 +24,7 @@ export type UserProfile = {
   wijk?: string;
   veegroute?: string;
   prullenbakkenroute?: string;
+  lastUsedDienstColor?: string;
 };
 
 export interface Medewerker {
@@ -61,7 +62,6 @@ export interface Medewerker {
     zaterdag?: { start?: string; eind?: string };
     zondag?: { start?: string; eind?: string };
   };
-  lastUsedDienstColor?: string;
 }
 
 export interface Dienst {
@@ -133,5 +133,3 @@ export type Werksoort = {
   fictieveH: string;
   uurprijs: string;
 };
-
-    

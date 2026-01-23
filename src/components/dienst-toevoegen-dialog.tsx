@@ -10,6 +10,7 @@ import {
   deleteDocumentNonBlocking,
   addDocumentNonBlocking,
   updateDocumentNonBlocking,
+  useUser,
 } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { format } from 'date-fns';
@@ -44,7 +45,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import type { Medewerker, Dienst, Voertuig, Machine } from '@/lib/types';
+import type { Medewerker, Dienst, Voertuig, Machine, UserProfile } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from './ui/select';
 import { Separator } from './ui/separator';
 import { Textarea } from './ui/textarea';
@@ -73,6 +74,7 @@ interface DienstToevoegenDialogProps {
   dienst?: Dienst;
   onSuccess: () => void;
   equipment: (Voertuig & { __type?: 'voertuig' } | Machine & { __type?: 'machine' })[];
+  currentUserProfile?: UserProfile | null;
 }
 
 export function DienstToevoegenDialog({
@@ -84,8 +86,10 @@ export function DienstToevoegenDialog({
   dienst,
   onSuccess,
   equipment,
+  currentUserProfile,
 }: DienstToevoegenDialogProps) {
   const firestore = useFirestore();
+  const { user } = useUser();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [quickSubmitType, setQuickSubmitType] = React.useState<'Verlof' | 'ADV' | 'Ziek' | null>(null);
   const [useCustomColor, setUseCustomColor] = React.useState(false);
@@ -104,13 +108,13 @@ export function DienstToevoegenDialog({
           ...dienst,
           voertuignummer: dienst.voertuignummer || null,
           notities: dienst.notities || '',
-          celkleur: dienst.celkleur || '#000000',
+          celkleur: dienst.celkleur || currentUserProfile?.lastUsedDienstColor || '#000000',
         });
       } else if (medewerker && datum) {
         const dayName = format(datum, 'eeee', { locale: nl }).toLowerCase() as keyof NonNullable<Medewerker['urenPerDag']>;
         const defaultTimes = medewerker.urenPerDag?.[dayName];
         
-        const hasLastColor = !!medewerker.lastUsedDienstColor;
+        const hasLastColor = !!currentUserProfile?.lastUsedDienstColor;
         setUseCustomColor(hasLastColor);
         
         form.reset({
@@ -119,7 +123,7 @@ export function DienstToevoegenDialog({
           eindtijd: defaultTimes?.eind || '15:30',
           voertuignummer: null,
           notities: '',
-          celkleur: medewerker.lastUsedDienstColor || '#000000',
+          celkleur: currentUserProfile?.lastUsedDienstColor || '#000000',
         });
       } else {
         setUseCustomColor(false);
@@ -137,7 +141,7 @@ export function DienstToevoegenDialog({
         setQuickSubmitType(null);
         setUseCustomColor(false);
     }
-  }, [open, dienst, form, medewerker, datum]);
+  }, [open, dienst, form, medewerker, datum, currentUserProfile]);
 
   const handleFullDaySubmit = async (werksoort: 'Verlof' | 'ADV' | 'Ziek') => {
     if (!firestore || !project?.id || !datum || !medewerker) return;
@@ -208,9 +212,9 @@ export function DienstToevoegenDialog({
         await addDocumentNonBlocking(dienstenColRef, dienstData);
       }
 
-      if (useCustomColor && data.celkleur) {
-        const medewerkerRef = doc(firestore, 'medewerkers', medewerkerId);
-        await updateDocumentNonBlocking(medewerkerRef, { lastUsedDienstColor: data.celkleur });
+      if (useCustomColor && data.celkleur && user) {
+        const userProfileRef = doc(firestore, 'users', user.uid);
+        await updateDocumentNonBlocking(userProfileRef, { lastUsedDienstColor: data.celkleur });
       }
 
       onSuccess();

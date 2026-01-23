@@ -1249,6 +1249,7 @@ export default function WorkPlanningPage() {
             dienst={selectedDienst}
             onSuccess={handleSheetSuccess}
             equipment={availableEquipmentForDialog}
+            currentUserProfile={profile}
         />
         <PrintDayDialog 
             open={isPrintDayDialogOpen}
