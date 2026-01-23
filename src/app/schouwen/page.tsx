@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -9,7 +8,7 @@ import {
   FileText,
   Calendar,
 } from 'lucide-react';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 
@@ -33,6 +32,9 @@ export default function SchouwenPage() {
   const [selectedProjectId, setSelectedProjectId] = React.useState<string>('');
   const [selectedSchouw, setSelectedSchouw] = React.useState<Schouw | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  
+  const [schouwingen, setSchouwingen] = React.useState<Schouw[] | null>(null);
+  const [isLoadingSchouwingen, setIsLoadingSchouwingen] = React.useState(true);
 
   const projectsCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -41,17 +43,30 @@ export default function SchouwenPage() {
 
   const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsCollection);
 
-  const schouwingenCollection = React.useMemo(() => {
-    if (!firestore || !selectedProjectId) return null;
-    return collection(
-      firestore,
-      'projects',
-      selectedProjectId,
-      'schouwingen'
-    );
-  }, [firestore, selectedProjectId]);
+  React.useEffect(() => {
+    const fetchSchouwingen = async () => {
+      if (!firestore || !selectedProjectId) {
+        setSchouwingen([]);
+        setIsLoadingSchouwingen(false);
+        return;
+      }
+      setIsLoadingSchouwingen(true);
+      try {
+        const schouwingenCollection = collection(firestore, 'projects', selectedProjectId, 'schouwingen');
+        const q = query(schouwingenCollection);
+        const querySnapshot = await getDocs(q);
+        const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Schouw));
+        setSchouwingen(data);
+      } catch (error) {
+        console.error("Fout bij ophalen inspecties:", error);
+        setSchouwingen([]);
+      } finally {
+        setIsLoadingSchouwingen(false);
+      }
+    };
 
-  const { data: schouwingen, isLoading: isLoadingSchouwingen } = useCollection<Schouw>(schouwingenCollection);
+    fetchSchouwingen();
+  }, [firestore, selectedProjectId]);
   
   const isSuperUser = profile?.role === 'Super admin';
   const canView = isSuperUser || !!profile?.permissions?.schouwen?.view;
