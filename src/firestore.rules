@@ -124,7 +124,10 @@ service cloud.firestore {
     }
     
     match /prullenbakken/{prullenbakId} {
-      allow read, write: if isSignedIn();
+      allow get, list: if isSignedIn();
+      allow create: if hasPermission('prullenbakken', 'create');
+      allow update: if hasPermission('prullenbakken', 'edit');
+      allow delete: if hasPermission('prullenbakken', 'delete');
     }
 
     match /voertuigen/{vehicleId} {
