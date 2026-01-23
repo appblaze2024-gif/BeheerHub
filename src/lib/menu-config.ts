@@ -4,7 +4,6 @@ import {
   FileText,
   CalendarCheck,
   Truck,
-  Map,
   Package,
   Bell,
   Home,
@@ -27,6 +26,17 @@ function SchouwenIcon(props: { className?: string }) {
     });
 }
 
+// Custom icon for "Navigatiemodule"
+function NavigatieIcon(props: { className?: string }) {
+  return createElement(Image, {
+    src: "https://i.ibb.co/Mxv40YCG/navigation-592248.png",
+    alt: "Navigatie Icoon",
+    width: 48,
+    height: 48,
+    ...props
+  });
+}
+
 
 export interface MenuItem {
   href: string;
@@ -47,7 +57,7 @@ export const allMenuItems: MenuItem[] = [
     { href: '/prullenbakken', label: 'Prullenbakken', icon: Trash2, module: 'prullenbakken', color: 'bg-muted hover:bg-accent' },
     { href: '/inventory', label: 'Voorraadbeheer', icon: Package, module: 'inventory', color: 'bg-muted hover:bg-accent' },
     { href: '/issues', label: 'Meldingen', icon: Bell, module: 'issues', color: 'bg-muted hover:bg-accent' },
-    { href: '/navigation-module', label: 'Navigatiemodule', icon: Map, module: 'navigation', color: 'bg-muted hover:bg-accent' },
+    { href: '/navigation-module', label: 'Navigatiemodule', icon: NavigatieIcon, module: 'navigation', color: 'bg-muted hover:bg-accent' },
     { href: '/mail', label: 'Mail', icon: Mail, module: 'mail', color: 'bg-muted hover:bg-accent' },
     { href: '/spec-reports', label: 'Besteksmeldingen', icon: FileCheck, module: 'specReports', color: 'bg-muted hover:bg-accent' },
     { href: '/schouwen', label: 'Schouwen', icon: SchouwenIcon, module: 'schouwen', color: 'bg-muted hover:bg-accent' },
