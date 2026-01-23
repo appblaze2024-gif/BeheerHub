@@ -75,9 +75,9 @@ service cloud.firestore {
          allow read: if hasPermission('specReports', 'view');
          allow write: if hasPermission('specReports', 'create') || hasPermission('specReports', 'edit') || hasPermission('specReports', 'delete');
        }
-
+       
        match /schouwingen/{schouwId} {
-         allow read: if hasPermission('schouwen', 'view');
+         allow get, list: if isSignedIn();
          allow create: if hasPermission('schouwen', 'create');
          allow update: if hasPermission('schouwen', 'edit');
          allow delete: if hasPermission('schouwen', 'delete');
@@ -124,10 +124,7 @@ service cloud.firestore {
     }
     
     match /prullenbakken/{prullenbakId} {
-      allow list, get: if isSignedIn();
-      allow create: if hasPermission('objects', 'create');
-      allow update: if hasPermission('objects', 'edit');
-      allow delete: if hasPermission('objects', 'delete');
+      allow read, write: if isSignedIn();
     }
 
     match /voertuigen/{vehicleId} {
@@ -158,5 +155,3 @@ service cloud.firestore {
     }
   }
 }
-
-    
