@@ -48,6 +48,7 @@ import type { Medewerker, Dienst, Voertuig, Machine } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from './ui/select';
 import { Separator } from './ui/separator';
 import { Textarea } from './ui/textarea';
+import { Checkbox } from './ui/checkbox';
 
 const dienstFormSchema = z.object({
   werksoort: z.string().min(1, 'Omschrijving is verplicht.'),
@@ -55,6 +56,7 @@ const dienstFormSchema = z.object({
   eindtijd: z.string().min(1, 'Eindtijd is verplicht.'),
   voertuignummer: z.string().optional().nullable(),
   notities: z.string().optional(),
+  celkleur: z.string().optional(),
 });
 
 type DienstFormValues = z.infer<typeof dienstFormSchema>;
@@ -86,6 +88,7 @@ export function DienstToevoegenDialog({
   const firestore = useFirestore();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [quickSubmitType, setQuickSubmitType] = React.useState<'Verlof' | 'ADV' | 'Ziek' | null>(null);
+  const [useCustomColor, setUseCustomColor] = React.useState(false);
 
   const form = useForm<DienstFormValues>({
     resolver: zodResolver(dienstFormSchema),
@@ -95,34 +98,42 @@ export function DienstToevoegenDialog({
   React.useEffect(() => {
     if (open) {
       if (dienst) {
+        const hasColor = !!dienst.celkleur;
+        setUseCustomColor(hasColor);
         form.reset({
           ...dienst,
           voertuignummer: dienst.voertuignummer || null,
           notities: dienst.notities || '',
+          celkleur: dienst.celkleur || '#000000',
         });
       } else if (medewerker && datum) {
         const dayName = format(datum, 'eeee', { locale: nl }).toLowerCase() as keyof NonNullable<Medewerker['urenPerDag']>;
         const defaultTimes = medewerker.urenPerDag?.[dayName];
         
+        setUseCustomColor(false);
         form.reset({
           werksoort: '',
           starttijd: defaultTimes?.start || '07:00',
           eindtijd: defaultTimes?.eind || '15:30',
           voertuignummer: null,
           notities: '',
+          celkleur: '#000000',
         });
       } else {
+        setUseCustomColor(false);
          form.reset({
           werksoort: '',
           starttijd: '07:00',
           eindtijd: '15:30',
           voertuignummer: null,
           notities: '',
+          celkleur: '#000000',
         });
       }
     } else {
         setIsSubmitting(false);
         setQuickSubmitType(null);
+        setUseCustomColor(false);
     }
   }, [open, dienst, form, medewerker, datum]);
 
@@ -146,6 +157,7 @@ export function DienstToevoegenDialog({
         projectId: project.id,
         datum: format(datum, 'yyyy-MM-dd'),
         voertuignummer: null,
+        celkleur: null,
     };
 
     try {
@@ -170,6 +182,7 @@ export function DienstToevoegenDialog({
       projectId: project.id,
       datum: format(datum || new Date(dienst!.datum), 'yyyy-MM-dd'),
       voertuignummer: data.voertuignummer === " " ? null : data.voertuignummer,
+      celkleur: useCustomColor ? data.celkleur : null,
     };
 
     try {
@@ -357,6 +370,36 @@ export function DienstToevoegenDialog({
                     </FormItem>
                     )}
                 />
+
+                <div className="flex items-center space-x-2 pt-2">
+                    <Checkbox
+                        id="use-celkleur"
+                        checked={useCustomColor}
+                        onCheckedChange={(checked) => setUseCustomColor(!!checked)}
+                    />
+                    <label
+                        htmlFor="use-celkleur"
+                        className="text-sm font-medium leading-none"
+                    >
+                        Gebruik aangepaste celkleur
+                    </label>
+                </div>
+
+                {useCustomColor && (
+                    <FormField
+                        control={form.control}
+                        name="celkleur"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Celkleur</FormLabel>
+                                <FormControl>
+                                    <Input type="color" {...field} value={field.value || '#000000'} className="h-10 p-1 w-full" />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                )}
 
             </form>
             </Form>

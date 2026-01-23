@@ -102,6 +102,19 @@ type Project = {
   };
 };
 
+const getContrastColor = (hexcolor: string) => {
+    if (!hexcolor) return '#000000';
+    hexcolor = hexcolor.replace("#", "");
+    if (hexcolor.length === 3) {
+      hexcolor = hexcolor.split('').map(char => char + char).join('');
+    }
+    const r = parseInt(hexcolor.substr(0, 2), 16);
+    const g = parseInt(hexcolor.substr(2, 2), 16);
+    const b = parseInt(hexcolor.substr(4, 2), 16);
+    const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+    return (yiq >= 128) ? '#000000' : '#FFFFFF';
+};
+
 const DienstItem = ({ dienst, onEdit, onDelete, onContextMenu, isNonWorkingDay, canEdit }: { dienst: Dienst, onEdit: (dienst: Dienst) => void, onDelete: (dienst: Dienst) => void, onContextMenu: (e: React.MouseEvent, dienst: Dienst) => void, isNonWorkingDay: boolean, canEdit: boolean }) => {
     const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
 
@@ -132,6 +145,11 @@ const DienstItem = ({ dienst, onEdit, onDelete, onContextMenu, isNonWorkingDay, 
     
     const isZiek = dienst.werksoort === 'Ziek';
     const isVerlof = dienst.werksoort === 'Verlof' || dienst.werksoort === 'ADV';
+    
+    const hasCustomColor = !!dienst.celkleur;
+    const customColorStyle = hasCustomColor 
+        ? { backgroundColor: dienst.celkleur, color: getContrastColor(dienst.celkleur) } 
+        : {};
 
     return (
         <>
@@ -145,26 +163,34 @@ const DienstItem = ({ dienst, onEdit, onDelete, onContextMenu, isNonWorkingDay, 
                 onDragEnd={handleDragEnd}
                 className={cn(
                     "rounded-md p-2 text-xs relative group/dienst focus:outline-none focus:ring-2 focus:ring-primary",
-                     isZiek 
+                    !hasCustomColor && (isZiek 
                         ? "bg-yellow-200 text-yellow-900 dark:bg-yellow-900/50 dark:text-white"
-                     : isVerlof
-                        ? "bg-orange-200 text-orange-900 dark:bg-orange-900/50 dark:text-white"
-                        : isNonWorkingDay
-                            ? 'border border-gray-600 text-gray-200 bg-transparent'
-                            : "bg-blue-100 text-blue-900 dark:bg-blue-900/50 dark:text-white",
-                    canEdit && !isNonWorkingDay && (isZiek ? "hover:bg-yellow-300 dark:hover:bg-yellow-900/70" : isVerlof ? "hover:bg-orange-300 dark:hover:bg-orange-900/70" : "hover:bg-blue-200 dark:hover:bg-blue-900/70"),
+                        : isVerlof
+                            ? "bg-orange-200 text-orange-900 dark:bg-orange-900/50 dark:text-white"
+                            : isNonWorkingDay
+                                ? 'border border-gray-600 text-gray-200 bg-transparent'
+                                : "bg-blue-100 text-blue-900 dark:bg-blue-900/50 dark:text-white"
+                    ),
+                    canEdit && !isNonWorkingDay && (
+                        hasCustomColor ? 'hover:brightness-90 transition-all' : (
+                            isZiek ? "hover:bg-yellow-300 dark:hover:bg-yellow-900/70" 
+                            : isVerlof ? "hover:bg-orange-300 dark:hover:bg-orange-900/70" 
+                            : "hover:bg-blue-200 dark:hover:bg-blue-900/70"
+                        )
+                    ),
                     canEdit && !isNonWorkingDay && 'cursor-pointer'
                 )}
+                style={customColorStyle}
             >
                 <p className="font-semibold truncate">{dienst.werksoort}</p>
                  <div className="flex items-center justify-between gap-1">
                     <p className="truncate">{dienst.starttijd} - {dienst.eindtijd}</p>
                     {dienst.notities && (
-                        <FileText className="h-3 w-3 text-muted-foreground shrink-0" title={dienst.notities} />
+                        <FileText className={cn("h-3 w-3 shrink-0", !hasCustomColor && 'text-muted-foreground')} title={dienst.notities} />
                     )}
                 </div>
                 {dienst.voertuignummer && (
-                    <p className="truncate text-xs text-muted-foreground">Voertuig: {dienst.voertuignummer}</p>
+                    <p className={cn("truncate text-xs", !hasCustomColor && 'text-muted-foreground')}>Voertuig: {dienst.voertuignummer}</p>
                 )}
                 {canEdit && <Button 
                     variant="ghost" 

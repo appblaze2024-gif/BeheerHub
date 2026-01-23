@@ -75,6 +75,7 @@ export interface Dienst {
   onbetaaldePauze?: number;
   voertuignummer?: string | null;
   notities?: string;
+  celkleur?: string;
 }
 
 export interface Voertuig {
