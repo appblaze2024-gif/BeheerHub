@@ -45,35 +45,35 @@ export default function SchouwenPage() {
 
   const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsCollection);
 
-  React.useEffect(() => {
-    const fetchSchouwingen = async () => {
-      if (!firestore || !selectedProjectId) {
-        setSchouwingen([]);
-        setIsLoadingSchouwingen(false);
-        return;
-      }
-      setIsLoadingSchouwingen(true);
-      try {
-        const schouwingenCollection = collection(firestore, 'projects', selectedProjectId, 'schouwingen');
-        const q = query(schouwingenCollection);
-        const querySnapshot = await getDocs(q);
-        const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Schouw));
-        setSchouwingen(data);
-      } catch (error) {
-        console.error("Fout bij ophalen inspecties:", error);
-        const contextualError = new FirestorePermissionError({
-          path: `projects/${selectedProjectId}/schouwingen`,
-          operation: 'list',
-        });
-        errorEmitter.emit('permission-error', contextualError);
-        setSchouwingen([]);
-      } finally {
-        setIsLoadingSchouwingen(false);
-      }
-    };
-
-    fetchSchouwingen();
+  const fetchSchouwingen = React.useCallback(async () => {
+    if (!firestore || !selectedProjectId) {
+      setSchouwingen([]);
+      setIsLoadingSchouwingen(false);
+      return;
+    }
+    setIsLoadingSchouwingen(true);
+    try {
+      const schouwingenCollection = collection(firestore, 'projects', selectedProjectId, 'schouwingen');
+      const q = query(schouwingenCollection);
+      const querySnapshot = await getDocs(q);
+      const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Schouw));
+      setSchouwingen(data);
+    } catch (error) {
+      console.error("Fout bij ophalen inspecties:", error);
+      const contextualError = new FirestorePermissionError({
+        path: `projects/${selectedProjectId}/schouwingen`,
+        operation: 'list',
+      });
+      errorEmitter.emit('permission-error', contextualError);
+      setSchouwingen([]);
+    } finally {
+      setIsLoadingSchouwingen(false);
+    }
   }, [firestore, selectedProjectId]);
+
+  React.useEffect(() => {
+    fetchSchouwingen();
+  }, [fetchSchouwingen]);
   
   const isSuperUser = profile?.role === 'Super admin';
   const canView = isSuperUser || !!profile?.permissions?.schouwen?.view;
