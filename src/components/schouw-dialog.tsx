@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Loader2 } from 'lucide-react';
 import { useFirestore, addDocumentNonBlocking } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, serverTimestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { useProfile } from '@/firebase/profile-provider';
 
@@ -81,6 +81,8 @@ export function SchouwDialog({
       inspectorName: profile.displayName || profile.email,
       status: 'Nieuw',
       items: [],
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
     };
 
     try {
@@ -144,5 +146,3 @@ export function SchouwDialog({
     </Dialog>
   );
 }
-
-    

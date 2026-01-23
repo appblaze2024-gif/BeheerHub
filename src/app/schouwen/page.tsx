@@ -17,7 +17,7 @@ import {
   useCollection,
   useFirestore,
 } from '@/firebase';
-import type { Schouw, Project, UserProfile } from '@/lib/types';
+import type { Schouw, Project } from '@/lib/types';
 import { useProfile } from '@/firebase/profile-provider';
 
 import { Button } from '@/components/ui/button';
@@ -53,7 +53,9 @@ export default function SchouwenPage() {
 
   const { data: schouwingen, isLoading: isLoadingSchouwingen } = useCollection<Schouw>(schouwingenCollection);
   
-  const canCreate = profile?.role === 'Super admin' || !!profile?.permissions?.schouwen?.create;
+  const isSuperUser = profile?.role === 'Super admin';
+  const canView = isSuperUser || !!profile?.permissions?.schouwen?.view;
+  const canCreate = isSuperUser || !!profile?.permissions?.schouwen?.create;
 
   React.useEffect(() => {
     if (projects && projects.length > 0 && !selectedProjectId) {
@@ -68,8 +70,34 @@ export default function SchouwenPage() {
         if (!schouwingen.find(s => s.id === selectedSchouw.id)) {
             setSelectedSchouw(schouwingen.length > 0 ? schouwingen[0] : null);
         }
+    } else if (!isLoadingSchouwingen && schouwingen?.length === 0) {
+        setSelectedSchouw(null);
     }
-  }, [schouwingen, selectedSchouw]);
+  }, [schouwingen, selectedSchouw, isLoadingSchouwingen]);
+  
+  const handleNewSchouw = () => {
+    setSelectedSchouw(null);
+    setIsDialogOpen(true);
+  }
+
+  if (isProfileLoading || isLoadingProjects) {
+    return <div className="flex h-full items-center justify-center">Laden...</div>;
+  }
+  
+  if (!canView) {
+      return (
+          <div className="flex flex-col flex-1 p-6 items-center justify-center">
+              <Card className="w-full max-w-md">
+                <CardHeader>
+                    <CardTitle>Geen Toegang</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p>U heeft geen rechten om inspecties te bekijken.</p>
+                </CardContent>
+            </Card>
+        </div>
+      )
+  }
 
   return (
     <div className="flex flex-col flex-1 h-full min-h-0">
@@ -85,7 +113,7 @@ export default function SchouwenPage() {
               </SelectContent>
             </Select>
             {canCreate && (
-                <Button onClick={() => setIsDialogOpen(true)} disabled={!selectedProjectId}>
+                <Button onClick={handleNewSchouw} disabled={!selectedProjectId}>
                   <Plus className="mr-2 h-4 w-4" /> Nieuwe Schouw
                 </Button>
             )}
@@ -103,7 +131,7 @@ export default function SchouwenPage() {
               <div className="flex flex-col p-2">
                {isLoadingSchouwingen ? (
                   <div className="text-center text-muted-foreground p-4">
-                   Laden...
+                   Inspecties laden...
                  </div>
                ) : schouwingen && schouwingen.length > 0 ? (
                  schouwingen.map((schouw) => (
