@@ -2,12 +2,72 @@
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import * as React from "react";
-import { DayPicker } from "react-day-picker";
+import { DayPicker, useDayPicker, useNavigation, format, CaptionProps } from "react-day-picker";
+import { nl } from 'date-fns/locale';
+
 
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>;
+
+function CustomCaption(props: CaptionProps) {
+  const { fromDate, toDate } = useDayPicker();
+  const { goToMonth, currentMonth } = useNavigation();
+
+  const handleMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newMonth = new Date(currentMonth);
+    newMonth.setMonth(Number(e.target.value));
+    goToMonth(newMonth);
+  };
+
+  const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newMonth = new Date(currentMonth);
+    newMonth.setFullYear(Number(e.target.value));
+    goToMonth(newMonth);
+  };
+
+  const months = Array.from({ length: 12 }, (_, i) => {
+    const monthDate = new Date(currentMonth.getFullYear(), i, 1);
+    return format(monthDate, "MMMM", { locale: nl });
+  });
+
+  const years: number[] = [];
+  const fromYear = fromDate?.getFullYear() || new Date().getFullYear() - 10;
+  const toYear = toDate?.getFullYear() || new Date().getFullYear() + 10;
+  for (let i = fromYear; i <= toYear; i++) {
+    years.push(i);
+  }
+
+  return (
+    <div className="flex items-center justify-center gap-1">
+      <select
+        value={currentMonth.getMonth()}
+        onChange={handleMonthChange}
+        className="text-sm font-medium border-0 bg-transparent p-1 focus:ring-0"
+      >
+        {months.map((month, i) => (
+          <option key={month} value={i}>
+            {month}
+          </option>
+        ))}
+      </select>
+      <span className="text-sm font-medium">-</span>
+      <select
+        value={currentMonth.getFullYear()}
+        onChange={handleYearChange}
+        className="text-sm font-medium border-0 bg-transparent p-1 focus:ring-0"
+      >
+        {years.map((year) => (
+          <option key={year} value={year}>
+            {year}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 
 function Calendar({
   className,
@@ -20,7 +80,7 @@ function Calendar({
     months: "relative flex flex-col sm:flex-row gap-4",
     month: "w-full",
     month_caption: "relative mx-10 mb-1 flex h-9 items-center justify-center z-20",
-    caption_dropdowns: "flex items-center gap-2",
+    caption_dropdowns: "flex items-center gap-1",
     caption_label: "text-sm font-medium",
     nav: "absolute top-0 flex w-full justify-between z-10",
     button_previous: cn(
@@ -70,6 +130,7 @@ function Calendar({
   const mergedComponents = {
     ...defaultComponents,
     ...userComponents,
+    ...(props.captionLayout === 'dropdown-buttons' && { Caption: CustomCaption })
   };
 
   return (
