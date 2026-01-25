@@ -78,7 +78,7 @@ export default function SchouwenPage() {
       setMapStyle(profile.schouwenMapStyle);
     }
     if (!isProfileLoading && profile?.schouwenGemeente) {
-      setSelectedGemeente(profile.schouwenGemeente);
+      setSelectedGemeente(profile.schouwingenGemeente);
     }
   }, [profile, isProfileLoading]);
 
@@ -404,34 +404,34 @@ export default function SchouwenPage() {
                 offset={10}
                 className="!p-0"
             >
-                <div className="w-64 rounded-lg shadow-lg bg-card text-card-foreground overflow-hidden">
+                <div className="w-72 rounded-lg shadow-lg bg-card text-card-foreground overflow-hidden">
                     {selectedSchouwing.fotos && selectedSchouwing.fotos.length > 0 ? (
-                        <div className="relative h-32 w-full bg-black">
+                        <div className="relative h-40 w-full bg-muted">
                             <Image
                                 src={selectedSchouwing.fotos[0].url}
                                 alt={`Foto van schouwing ${selectedSchouwing.id || ''}`}
                                 fill
-                                className="object-contain"
+                                className="object-cover"
                             />
                         </div>
                     ) : null}
-                    <div className="p-3">
-                        <h3 className="font-bold text-base mb-2">Schouwing {selectedSchouwing.id?.slice(0, 6)}</h3>
-                        <div className="space-y-1 text-sm">
-                            <div className="flex">
-                                <span className="w-20 font-semibold text-muted-foreground flex-shrink-0">Opmerking:</span>
-                                <span className="truncate">{selectedSchouwing.opmerkingen}</span>
-                            </div>
-                            <div className="flex">
-                                <span className="w-20 font-semibold text-muted-foreground flex-shrink-0">Status:</span>
-                                <span>{selectedSchouwing.status}</span>
-                            </div>
-                            <div className="flex">
-                                <span className="w-20 font-semibold text-muted-foreground flex-shrink-0">Datum:</span>
-                                <span>{format(new Date(selectedSchouwing.datum), 'dd-MM-yyyy', { locale: nl })}</span>
-                            </div>
+                    <div className="p-4">
+                        <h3 className="font-bold text-lg mb-2 leading-tight">
+                            Schouwing {selectedSchouwing.id?.slice(0, 6)}
+                        </h3>
+                        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
+                            <span className="font-semibold text-muted-foreground">Status:</span>
+                            <span className="font-medium">{selectedSchouwing.status}</span>
+
+                            <span className="font-semibold text-muted-foreground">Datum:</span>
+                            <span className="font-medium">{format(new Date(selectedSchouwing.datum), 'dd-MM-yyyy', { locale: nl })}</span>
+                            
+                            <span className="font-semibold text-muted-foreground self-start">Opmerking:</span>
+                            <p className="font-medium break-words">{selectedSchouwing.opmerkingen}</p>
                         </div>
-                        <Button size="sm" className="w-full mt-3" onClick={() => handleEditSchouwing(selectedSchouwing)}>Details</Button>
+                        <Button size="sm" className="w-full mt-4" onClick={() => handleEditSchouwing(selectedSchouwing)}>
+                            Details Bewerken
+                        </Button>
                     </div>
                 </div>
             </Popup>
