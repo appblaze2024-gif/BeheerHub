@@ -153,12 +153,16 @@ export default function SchouwenPage() {
     const map = mapRef.current?.getMap();
     if (!map) return;
     
-    const queryableLayers = ['road', 'landuse', 'building', 'water'];
-    const features = map.queryRenderedFeatures(event.point, { layers: queryableLayers });
+    const features = map.queryRenderedFeatures(event.point);
     
-    if (features.length > 0) {
-      const mainFeature = features[0];
-      const featureId = mainFeature.id || JSON.stringify(mainFeature.geometry);
+    const selectableFeature = features.find(f => 
+        (f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon') &&
+        !f.layer.id.startsWith('gl-draw')
+    );
+
+    if (selectableFeature) {
+      const mainFeature = selectableFeature;
+      const featureId = mainFeature.id || JSON.stringify(mainFeature.geometry); // Create a stable ID if none exists
 
       setSelectedFeatures(prev => {
         const isAlreadySelected = prev.some(f => (f.id || JSON.stringify(f.geometry)) === featureId);
@@ -254,7 +258,6 @@ export default function SchouwenPage() {
         mapStyle={mapStyle}
         mapboxAccessToken={MAPBOX_TOKEN}
         onClick={handleMapClick}
-        interactiveLayerIds={isSelectionMode ? ['road', 'landuse', 'building', 'water'] : []}
         cursor={isSelectionMode ? 'pointer' : 'grab'}
       >
         {schouwingen.map((schouwing) => (
