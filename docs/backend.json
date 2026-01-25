@@ -21,6 +21,23 @@
       },
       "required": ["projectId", "werksoort", "latitude", "longitude", "datum", "status"]
     },
+    "Schouwing": {
+      "title": "Schouwing",
+      "type": "object",
+      "description": "Represents an inspection (schouwing).",
+      "properties": {
+        "id": { "type": "string" },
+        "projectId": { "type": "string" },
+        "datum": { "type": "string", "format": "date-time" },
+        "inspecteur": { "type": "string" },
+        "opmerkingen": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": ["Open", "In behandeling", "Afgerond"]
+        }
+      },
+      "required": ["projectId", "datum", "inspecteur", "status"]
+    },
     "Route": {
       "title": "Route",
       "type": "object",
@@ -761,6 +778,20 @@
               "name": "contactId",
               "description": "The ID of the contact."
             }
+          ]
+        }
+      },
+      {
+        "path": "/projects/{projectId}/schouwingen/{schouwId}",
+        "definition": {
+          "entityName": "Schouwing",
+          "schema": {
+            "$ref": "#/backend/entities/Schouwing"
+          },
+          "description": "Stores inspection data for a specific project.",
+          "params": [
+            { "name": "projectId", "description": "The ID of the project." },
+            { "name": "schouwId", "description": "The ID of the inspection." }
           ]
         }
       },

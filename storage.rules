@@ -27,6 +27,11 @@ service firebase.storage {
         allow write: if isSignedIn();
     }
     
+    // Rule for 'Schouwingen' files
+    match /projects/{projectId}/schouwingen/{schouwId}/{allPaths=**} {
+      allow write: if isSignedIn();
+    }
+    
     // Rule for public issue reports ('meldingen') photos
     match /meldingen/{meldingId}/{allPaths=**} {
         allow write: if isSignedIn();

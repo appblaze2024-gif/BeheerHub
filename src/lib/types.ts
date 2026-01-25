@@ -125,6 +125,15 @@ export interface Besteksmelding {
   status: 'Nieuw' | 'In behandeling' | 'Afgerond';
 }
 
+export interface Schouwing {
+  id: string;
+  projectId: string;
+  datum: any; // or string/Timestamp
+  inspecteur: string;
+  opmerkingen: string;
+  status: 'Open' | 'In behandeling' | 'Afgerond';
+}
+
 export type Werksoort = {
   id: string;
   postnummer: string;

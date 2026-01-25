@@ -1,3 +1,5 @@
+'use client';
+
 import {
   Users,
   ClipboardList,
@@ -11,6 +13,7 @@ import {
   Mail,
   FileCheck,
   MapPin,
+  ClipboardCheck,
 } from 'lucide-react';
 import { ElementType, createElement } from 'react';
 import Image from 'next/image';
@@ -49,4 +52,5 @@ export const allMenuItems: MenuItem[] = [
     { href: '/navigation-module', label: 'Navigatiemodule', icon: NavigatieIcon, module: 'navigation', color: 'bg-muted hover:bg-accent' },
     { href: '/mail', label: 'Mail', icon: Mail, module: 'mail', color: 'bg-muted hover:bg-accent' },
     { href: '/spec-reports', label: 'Besteksmeldingen', icon: FileCheck, module: 'specReports', color: 'bg-muted hover:bg-accent' },
+    { href: '/schouwen', label: 'Schouwen', icon: ClipboardCheck, module: 'schouwen', color: 'bg-muted hover:bg-accent' },
 ];

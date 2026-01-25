@@ -75,6 +75,11 @@ service cloud.firestore {
          allow read: if hasPermission('specReports', 'view');
          allow write: if hasPermission('specReports', 'create') || hasPermission('specReports', 'edit') || hasPermission('specReports', 'delete');
        }
+
+       match /schouwingen/{schouwId} {
+         allow get, list: if hasPermission('schouwen', 'view');
+         allow write: if hasPermission('schouwen', 'create') || hasPermission('schouwen', 'edit') || hasPermission('schouwen', 'delete');
+       }
     }
 
     match /medewerkers/{medewerkerId} {
