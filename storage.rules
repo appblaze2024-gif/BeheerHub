@@ -2,56 +2,9 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    // Allow read operations for all authenticated users.
-    // For a production app, you might want more granular read rules.
     match /{allPaths=**} {
-      allow read: if isSignedIn();
-    }
-    
-    // --- WRITE RULES (Simplified) ---
-    // Allow any signed-in user to write to these paths.
-    // This is less secure for now but will unblock the user.
-    
-    // Rule for 'Besteksmeldingen' photos.
-    match /projects/{projectId}/besteksmeldingen/{meldingId}/{allPaths=**} {
-      allow write: if isSignedIn();
-    }
-
-    // Rule for general project files (e.g., in the 'Bestanden' tab)
-    match /projects/{projectId}/bestanden/{allPaths=**} {
-        allow write: if isSignedIn();
-    }
-    
-    // Rule for 'Schouwingen' files
-    match /projects/{projectId}/schouwingen/{schouwId}/{allPaths=**} {
-      allow write: if isSignedIn();
-    }
-    
-    // Rule for public issue reports ('meldingen') photos
-    match /meldingen/{meldingId}/{allPaths=**} {
-        allow write: if isSignedIn();
-    }
-
-    // Rules for vehicle/machine images and documents
-    match /voertuigen/{vehicleId}/{allPaths=**} {
-      allow write: if isSignedIn();
-    }
-    
-    match /machines/{machineId}/{allPaths=**} {
-      allow write: if isSignedIn();
-    }
-    
-    match /damages/{materieelId}/{allPaths=**} {
-      allow write: if isSignedIn();
-    }
-    
-    match /documents/{materieelId}/{allPaths=**} {
-      allow write: if isSignedIn();
+      // Allow read and write access for all users if they are signed in.
+      allow read, write: if request.auth != null;
     }
   }
 }
