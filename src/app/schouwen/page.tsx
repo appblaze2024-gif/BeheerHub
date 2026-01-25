@@ -2,6 +2,8 @@
 
 import * as React from 'react';
 import MapGL, { Marker, Popup, Source, Layer, MapLayerMouseEvent } from 'react-map-gl';
+import MapboxDraw from '@mapbox/mapbox-gl-draw';
+import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import { useFirestore, useUser } from '@/firebase';
 import { collection, getDocs, query, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -12,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Layers as MapLayersIcon, Check, X, Loader2, LocateFixed } from 'lucide-react';
+import { Plus, Layers as MapLayersIcon, Check, X, Loader2, LocateFixed, Save } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import * as turf from '@turf/turf';
@@ -26,24 +28,6 @@ import { cn } from '@/lib/utils';
 import type { FillLayer, LineLayer } from 'react-map-gl';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
-
-const selectedAreasFillLayer: FillLayer = {
-  id: 'selected-areas-fill',
-  type: 'fill',
-  paint: {
-    'fill-color': '#3b82f6', // blue-500
-    'fill-opacity': 0.5,
-  },
-};
-
-const selectedAreasOutlineLayer: LineLayer = {
-  id: 'selected-areas-outline',
-  type: 'line',
-  paint: {
-    'line-color': '#1d4ed8', // blue-700
-    'line-width': 2,
-  },
-};
 
 const gemeenteBoundaryLayer: LineLayer = {
     id: 'gemeente-boundary-outline',
@@ -77,8 +61,7 @@ export default function SchouwenPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [mapStyle, setMapStyle] = React.useState('mapbox://styles/mapbox/streets-v12');
   
-  const [isSelectionMode, setIsSelectionMode] = React.useState(false);
-  const [selectedFeatures, setSelectedFeatures] = React.useState<any[]>([]);
+  const [isDrawingMode, setIsDrawingMode] = React.useState(false);
 
   const [selectedGemeente, setSelectedGemeente] = React.useState<string | null>(null);
   const [gemeenteBoundary, setGemeenteBoundary] = React.useState<any | null>(null);
@@ -89,7 +72,7 @@ export default function SchouwenPage() {
   const [userHeading, setUserHeading] = React.useState<number>(0);
   const watchIdRef = React.useRef<number | null>(null);
 
-
+  const drawRef = React.useRef<MapboxDraw | null>(null);
   const mapRef = React.useRef<any>(null);
 
   React.useEffect(() => {
@@ -191,7 +174,6 @@ export default function SchouwenPage() {
     }
   }, [gemeenteBoundary]);
 
-  // Get initial user position
   React.useEffect(() => {
     let isMounted = true;
     if (navigator.geolocation) {
@@ -200,7 +182,6 @@ export default function SchouwenPage() {
           if (isMounted) {
             const { longitude, latitude } = position.coords;
             setUserPosition([longitude, latitude]);
-            // Only fly to user location if no specific boundary is set
             if (!gemeenteBoundary && mapRef.current) {
               mapRef.current.getMap().flyTo({ center: [longitude, latitude], zoom: 14 });
             }
@@ -213,7 +194,6 @@ export default function SchouwenPage() {
     return () => { isMounted = false; };
   }, [gemeenteBoundary]);
 
-  // Effect to handle location watching for follow mode
   React.useEffect(() => {
     if (isFollowing) {
         if (watchIdRef.current !== null) {
@@ -250,7 +230,6 @@ export default function SchouwenPage() {
     } else {
         if (watchIdRef.current !== null) {
             navigator.geolocation.clearWatch(watchIdRef.current);
-            watchIdRef.current = null;
         }
         if (mapRef.current?.getMap()) {
             mapRef.current.getMap().easeTo({
@@ -268,108 +247,69 @@ export default function SchouwenPage() {
     };
   }, [isFollowing, userHeading]);
 
-  const handleToggleSelectionMode = () => {
-    setIsSelectionMode(prev => {
-      if (prev) { // if turning off
-        setSelectedFeatures([]);
-      }
-      return !prev;
-    });
+  // Effect to manage MapboxDraw control
+  React.useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+
+    if (isDrawingMode && !drawRef.current) {
+      const draw = new MapboxDraw({
+        displayControlsDefault: false,
+        controls: {
+          polygon: true,
+          trash: true
+        }
+      });
+      map.addControl(draw, 'top-left');
+      drawRef.current = draw;
+    } else if (!isDrawingMode && drawRef.current) {
+      map.removeControl(drawRef.current);
+      drawRef.current = null;
+    }
+  }, [isDrawingMode]);
+
+
+  const handleToggleDrawingMode = () => {
+    setIsDrawingMode(prev => !prev);
+  };
+  
+  const handleCancelDrawing = () => {
+    if (drawRef.current) {
+        drawRef.current.deleteAll();
+    }
+    setIsDrawingMode(false);
   };
 
-  const handleSaveSelection = () => {
-    if (selectedFeatures.length === 0) {
+  const handleSaveDrawing = () => {
+    if (!drawRef.current) return;
+    const data = drawRef.current.getAll();
+    if (data.features.length === 0) {
+      // maybe show a toast
       return;
     }
-    const featureCollection = turf.featureCollection(selectedFeatures);
+
+    const featureCollection = turf.featureCollection(data.features);
     const center = turf.centerOfMass(featureCollection);
     const [longitude, latitude] = center.geometry.coordinates;
 
     const newSchouwingData: Partial<Schouwing> = {
         latitude,
         longitude,
-        gebieden: JSON.stringify(selectedFeatures)
+        gebieden: JSON.stringify(data.features)
     };
 
     setSelectedSchouwing(newSchouwingData as Schouwing);
     setIsDialogOpen(true);
-    setIsSelectionMode(false);
+    // Reset drawing mode after saving
+    setIsDrawingMode(false); 
   };
 
+
   const handleMapClick = (event: MapLayerMouseEvent) => {
-    if (!isSelectionMode) {
-      if (event.defaultPrevented) return;
-      setSelectedSchouwing(null);
-      return;
-    }
+    if (isDrawingMode) return; // Let MapboxDraw handle clicks
 
-    const map = mapRef.current?.getMap();
-    if (!map) return;
-    
-    const allLayerIds = map.getStyle().layers.map((layer: any) => layer.id);
-
-    const features = map.queryRenderedFeatures(event.point, { layers: allLayerIds });
-
-    let selectableFeature: any | null = null;
-    
-    const polygons = features.filter(f => 
-        (f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon')
-    ) as turf.Feature<turf.Polygon | turf.MultiPolygon>[];
-
-    const lines = features.filter(f => 
-        f.geometry.type === 'LineString'
-    ) as turf.Feature<turf.LineString>[];
-
-    if (polygons.length > 0) {
-        polygons.sort((a, b) => turf.area(a) - turf.area(b));
-        const smallestPolygonFeature = polygons[0];
-
-        if (smallestPolygonFeature.geometry.type === 'MultiPolygon') {
-            const clickPoint = turf.point([event.lngLat.lng, event.lngLat.lat]);
-            for (const polyCoords of smallestPolygonFeature.geometry.coordinates) {
-                const singlePolygon = turf.polygon(polyCoords);
-                if (turf.booleanPointInPolygon(clickPoint, singlePolygon)) {
-                    selectableFeature = {
-                        type: 'Feature',
-                        geometry: singlePolygon.geometry,
-                        properties: smallestPolygonFeature.properties
-                    };
-                    break;
-                }
-            }
-        } else {
-            selectableFeature = smallestPolygonFeature;
-        }
-    } 
-    else if (lines.length > 0) {
-        const lineFeature = lines[0];
-        try {
-            const buffered = turf.buffer(lineFeature, 8, { units: 'meters' });
-            selectableFeature = {
-                ...buffered,
-                properties: { ...lineFeature.properties, original_geometry_type: 'LineString' },
-            };
-        } catch(e) {
-            console.error("Error buffering line:", e);
-            selectableFeature = null;
-        }
-    }
-
-    if (selectableFeature) {
-      const featureId = JSON.stringify(selectableFeature.geometry.coordinates);
-      
-      if (!selectableFeature.properties) selectableFeature.properties = {};
-      selectableFeature.properties.customId = featureId;
-
-      setSelectedFeatures(prev => {
-        const isAlreadySelected = prev.some(f => f.properties.customId === featureId);
-        if (isAlreadySelected) {
-          return prev.filter(f => f.properties.customId !== featureId);
-        } else {
-          return [...prev, selectableFeature];
-        }
-      });
-    }
+    if (event.defaultPrevented) return;
+    setSelectedSchouwing(null);
   };
 
   const handleMarkerClick = (schouwing: Schouwing, event: mapboxgl.MapboxEvent) => {
@@ -391,13 +331,7 @@ export default function SchouwenPage() {
   const handleSuccess = () => {
       fetchSchouwingen();
       setSelectedSchouwing(null);
-      setSelectedFeatures([]);
   }
-  
-  const selectedFeaturesGeoJSON = React.useMemo(() => ({
-    type: 'FeatureCollection',
-    features: selectedFeatures,
-  }), [selectedFeatures]);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
@@ -443,20 +377,20 @@ export default function SchouwenPage() {
                 <SelectItem value="mapbox://styles/mapbox/dark-v11">Donker</SelectItem>
               </SelectContent>
             </Select>
-             {isSelectionMode ? (
+             {isDrawingMode ? (
               <div className='flex gap-2'>
-                <Button onClick={handleSaveSelection} disabled={selectedFeatures.length === 0}>
-                  <Check className="mr-2 h-4 w-4" />
+                <Button onClick={handleSaveDrawing}>
+                  <Save className="mr-2 h-4 w-4" />
                   Opslaan
                 </Button>
-                <Button variant="destructive" onClick={handleToggleSelectionMode}>
+                <Button variant="destructive" onClick={handleCancelDrawing}>
                   <X className="mr-2 h-4 w-4" />
                   Annuleren
                 </Button>
               </div>
             ) : (
                 <>
-                    <Button onClick={handleToggleSelectionMode} disabled={!selectedProjectId}>
+                    <Button onClick={handleToggleDrawingMode} disabled={!selectedProjectId}>
                         <Plus className="mr-2 h-4 w-4" />
                         Nieuwe Schouwing
                     </Button>
@@ -476,7 +410,7 @@ export default function SchouwenPage() {
         mapStyle={mapStyle}
         mapboxAccessToken={MAPBOX_TOKEN}
         onClick={handleMapClick}
-        cursor={isSelectionMode ? 'pointer' : 'grab'}
+        cursor={isDrawingMode ? 'crosshair' : 'grab'}
       >
         {gemeenteBoundary && (
             <Source id="gemeente-boundary" type="geojson" data={gemeenteBoundary}>
@@ -524,14 +458,6 @@ export default function SchouwenPage() {
               </div>
           </Popup>
         )}
-        
-        {isSelectionMode && (
-          <Source id="selected-areas" type="geojson" data={selectedFeaturesGeoJSON}>
-            <Layer {...selectedAreasFillLayer} />
-            <Layer {...selectedAreasOutlineLayer} />
-          </Source>
-        )}
-
       </MapGL>
       <SchouwDialog
         open={isDialogOpen}
