@@ -56,8 +56,7 @@ export default function SchouwenPage() {
   const [isLoadingSchouwingen, setIsLoadingSchouwingen] = React.useState(false);
   
   const [selectedSchouwing, setSelectedSchouwing] = React.useState<Schouwing | null>(null);
-  const [hoveredSchouwing, setHoveredSchouwing] = React.useState<Schouwing | null>(null);
-
+  
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [mapStyle, setMapStyle] = React.useState('mapbox://styles/mapbox/streets-v12');
   
@@ -254,6 +253,10 @@ export default function SchouwenPage() {
     setSelectedSchouwing(schouwing);
     setIsDialogOpen(true);
   }
+  
+  const handleMarkerClick = (schouwing: Schouwing) => {
+    setSelectedSchouwing(schouwing);
+  };
 
   const initialViewState = {
     longitude: 5.2913,
@@ -371,9 +374,10 @@ export default function SchouwenPage() {
             key={schouwing.id}
             longitude={schouwing.longitude}
             latitude={schouwing.latitude}
-            onClick={() => handleEditSchouwing(schouwing)}
-            onMouseEnter={() => setHoveredSchouwing(schouwing)}
-            onMouseLeave={() => setHoveredSchouwing(null)}
+            onClick={(e) => {
+                e.originalEvent.stopPropagation();
+                handleMarkerClick(schouwing);
+            }}
           >
             <div className="w-3 h-3 bg-blue-600 rounded-full border-2 border-white cursor-pointer" />
           </Marker>
@@ -387,37 +391,37 @@ export default function SchouwenPage() {
               </div>
           </Marker>
         )}
-        {hoveredSchouwing && !isDialogOpen && (
+        {selectedSchouwing && (
           <Popup
-              longitude={hoveredSchouwing.longitude}
-              latitude={hoveredSchouwing.latitude}
-              onClose={() => setHoveredSchouwing(null)}
-              closeButton={false}
+              longitude={selectedSchouwing.longitude}
+              latitude={selectedSchouwing.latitude}
+              onClose={() => setSelectedSchouwing(null)}
+              closeButton={true}
               closeOnClick={false}
               anchor="top"
               className='min-w-64 p-0'
           >
               <div className="w-64">
-                  {hoveredSchouwing.fotos && hoveredSchouwing.fotos.length > 0 && (
+                  {selectedSchouwing.fotos && selectedSchouwing.fotos.length > 0 && (
                       <div className="relative h-32 w-full rounded-t-lg overflow-hidden">
                           <Image
-                              src={hoveredSchouwing.fotos[0].url}
-                              alt={`Foto van schouwing ${hoveredSchouwing.id}`}
+                              src={selectedSchouwing.fotos[0].url}
+                              alt={`Foto van schouwing ${selectedSchouwing.id}`}
                               fill
                               className="object-cover"
                           />
                       </div>
                   )}
                   <div className="p-2">
-                    <h3 className="font-bold text-base mb-1">Schouwing {hoveredSchouwing.id.slice(0, 6)}</h3>
-                    <p className='truncate'>{hoveredSchouwing.opmerkingen}</p>
+                    <h3 className="font-bold text-base mb-1">Schouwing {selectedSchouwing.id?.slice(0, 6)}</h3>
+                    <p className='truncate'>{selectedSchouwing.opmerkingen}</p>
                     <p className="text-sm mt-1">
-                        <strong>Status:</strong> {hoveredSchouwing.status}
+                        <strong>Status:</strong> {selectedSchouwing.status}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                        Datum: {format(new Date(hoveredSchouwing.datum), 'dd-MM-yyyy', { locale: nl })}
+                        Datum: {format(new Date(selectedSchouwing.datum), 'dd-MM-yyyy', { locale: nl })}
                     </p>
-                    <Button size="sm" className="w-full mt-2" onClick={() => handleEditSchouwing(hoveredSchouwing)}>Details</Button>
+                    <Button size="sm" className="w-full mt-2" onClick={() => handleEditSchouwing(selectedSchouwing)}>Details</Button>
                   </div>
               </div>
           </Popup>
