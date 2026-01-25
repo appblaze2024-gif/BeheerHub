@@ -35,8 +35,8 @@ export default function LoginPage() {
     <div className="flex h-screen w-screen flex-col items-center justify-center bg-gray-100 dark:bg-gray-950">
       <div className="absolute top-8 left-8 z-10">
          <Image
-          src="https://i.ibb.co/fVSLJxcG/Ontwerp-zonder-titel-2.png"
-          alt="Ontwerp-zonder-titel-2"
+          src="https://i.ibb.co/HLV8MBp0/Ontwerp-zonder-titel-3.png"
+          alt="Ontwerp-zonder-titel-3"
           width={360}
           height={90}
           priority
