@@ -154,22 +154,55 @@ export default function SchouwenPage() {
     if (!map) return;
     
     const features = map.queryRenderedFeatures(event.point);
+
+    let selectableFeature: any | null = null;
     
-    const selectableFeature = features.find(f => 
-        (f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon') &&
-        !f.layer.id.startsWith('gl-draw')
-    );
+    // Separate features into polygons and lines
+    const polygons = features.filter(f => 
+        (f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon')
+    ) as turf.Feature<turf.Polygon | turf.MultiPolygon>[];
+
+    const lines = features.filter(f => 
+        f.geometry.type === 'LineString'
+    ) as turf.Feature<turf.LineString>[];
+
+    // Prioritize smallest polygon
+    if (polygons.length > 0) {
+        polygons.sort((a, b) => turf.area(a) - turf.area(b));
+        selectableFeature = polygons[0];
+    } 
+    // If no polygons, check for lines (like sidewalks)
+    else if (lines.length > 0) {
+        const lineFeature = lines[0]; // Take the topmost line feature
+        // Create a buffer around the line to make it a selectable area
+        try {
+            const buffered = turf.buffer(lineFeature, 2, { units: 'meters' });
+            selectableFeature = {
+                ...buffered,
+                properties: { ...lineFeature.properties, original_geometry_type: 'LineString' }, // Keep original props
+            };
+        } catch(e) {
+            console.error("Error buffering line:", e);
+            selectableFeature = null;
+        }
+    }
 
     if (selectableFeature) {
-      const mainFeature = selectableFeature;
-      const featureId = mainFeature.id || JSON.stringify(mainFeature.geometry); // Create a stable ID if none exists
+      // Use feature's source layer and source to create a more unique ID if available
+      const sourceId = `${selectableFeature.layer?.source || ''}-${selectableFeature.layer?.id || ''}-${selectableFeature.id || ''}`;
+      const featureId = selectableFeature.id || sourceId + JSON.stringify(selectableFeature.geometry);
+
+      // Add a unique ID to the feature if it doesn't have one
+      if (!selectableFeature.id) {
+          selectableFeature.id = featureId;
+      }
 
       setSelectedFeatures(prev => {
-        const isAlreadySelected = prev.some(f => (f.id || JSON.stringify(f.geometry)) === featureId);
+        const isAlreadySelected = prev.some(f => f.id === featureId);
         if (isAlreadySelected) {
-          return prev.filter(f => (f.id || JSON.stringify(f.geometry)) !== featureId);
+          return prev.filter(f => f.id !== featureId);
         } else {
-          return [...prev, mainFeature];
+          return [...prev, selectableFeature];
         }
       });
     }
