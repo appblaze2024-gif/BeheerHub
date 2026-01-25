@@ -153,7 +153,12 @@ export default function SchouwenPage() {
     const map = mapRef.current?.getMap();
     if (!map) return;
     
-    const features = map.queryRenderedFeatures(event.point);
+    // Use a small bounding box to query features, more reliable than a single point
+    const bbox: [[number, number], [number, number]] = [
+      [event.point.x - 5, event.point.y - 5],
+      [event.point.x + 5, event.point.y + 5]
+    ];
+    const features = map.queryRenderedFeatures(bbox);
 
     let selectableFeature: any | null = null;
     
@@ -189,6 +194,7 @@ export default function SchouwenPage() {
     else if (lines.length > 0) {
         const lineFeature = lines[0];
         try {
+            // Buffer the line to make it a selectable area
             const buffered = turf.buffer(lineFeature, 2, { units: 'meters' });
             selectableFeature = {
                 ...buffered,
@@ -199,6 +205,15 @@ export default function SchouwenPage() {
             selectableFeature = null;
         }
     }
+
+    // Fallback to creating a circle if no feature was found
+    if (!selectableFeature) {
+        const center = [event.lngLat.lng, event.lngLat.lat];
+        const radius = 10; // 10 meters
+        const options = { steps: 64, units: 'meters' as const };
+        selectableFeature = turf.circle(center, radius, options);
+    }
+
 
     if (selectableFeature) {
       const featureId = JSON.stringify(selectableFeature.geometry);
