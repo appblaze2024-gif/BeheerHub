@@ -37,57 +37,37 @@ service cloud.firestore {
       return userDoc.exists && userDoc.data.role in roles;
     }
 
-    // BRUTE-FORCE DIAGNOSTIC RULE: Temporarily allow all signed-in users to read/write all project data.
-    match /projects/{projectId}/{document=**} {
-      allow read, write: if isSignedIn();
-    }
-
-    /*
     match /projects/{projectId} {
-       allow get, list: if isSignedIn();
-       allow create: if hasPermission('projects', 'create');
-       allow update: if hasPermission('projects', 'edit');
-       allow delete: if hasPermission('projects', 'delete');
+       allow read, write: if isSignedIn();
 
        match /diensten/{dienstId} {
-         allow get, list: if hasPermission('workPlanning', 'view');
-         allow write: if hasPermission('workPlanning', 'edit');
+         allow read, write: if isSignedIn();
        }
 
        match /boekingregels/{boekingregelId} {
-         allow read, write: if hasPermission('projects', 'edit');
+         allow read, write: if isSignedIn();
        }
 
        match /bestanden/{bestandId} {
-         allow get, list: if hasPermission('projects', 'view');
-         allow create: if hasPermission('projects', 'edit');
-         allow delete: if hasPermission('projects', 'delete');
-         allow update: if false;
+         allow read, write: if isSignedIn();
        }
 
        match /afspraken/{afspraakId} {
-         allow get, list: if hasPermission('projects', 'view');
-         allow create, update: if hasPermission('projects', 'edit');
-         allow delete: if hasPermission('projects', 'delete');
+         allow read, write: if isSignedIn();
        }
 
        match /organisatie/{contactId} {
-         allow get, list: if hasPermission('projects', 'view');
-         allow create, update: if hasPermission('projects', 'edit');
-         allow delete: if hasPermission('projects', 'delete');
+         allow read, write: if isSignedIn();
        }
 
        match /besteksmeldingen/{besteksmeldingId} {
-         allow read: if hasPermission('specReports', 'view');
-         allow write: if hasPermission('specReports', 'create') || hasPermission('specReports', 'edit') || hasPermission('specReports', 'delete');
+         allow read, write: if isSignedIn();
        }
 
        match /schouwingen/{schouwId} {
-         allow get, list: if isSignedIn();
-         allow write: if hasPermission('schouwen', 'create') || hasPermission('schouwen', 'edit') || hasPermission('schouwen', 'delete');
+         allow read, write: if isSignedIn();
        }
     }
-    */
 
     match /medewerkers/{medewerkerId} {
       allow get, list: if isSignedIn();
