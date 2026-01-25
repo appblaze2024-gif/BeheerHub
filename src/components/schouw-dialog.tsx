@@ -11,7 +11,8 @@ import {
   updateDocumentNonBlocking,
   useUser,
   useFirebaseApp,
-  deleteDocumentNonBlocking
+  deleteDocumentNonBlocking,
+  setDocumentNonBlocking
 } from '@/firebase';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -251,7 +252,8 @@ export function SchouwDialog({
         return;
     }
     setIsSubmitting(true);
-    const schouwingId = schouwing?.id || schouwingIdRef.current;
+    const isEditing = !!schouwing?.id;
+    const schouwingId = isEditing ? schouwing.id : schouwingIdRef.current;
     if (!schouwingId) return;
 
     const schouwingData = {
@@ -266,7 +268,7 @@ export function SchouwDialog({
 
     const schouwingRef = doc(firestore, 'projects', projectId, 'schouwingen', schouwingId);
     try {
-      if (schouwing) {
+      if (isEditing) {
         await updateDocumentNonBlocking(schouwingRef, schouwingData);
       } else {
         await setDocumentNonBlocking(schouwingRef, { ...schouwingData, createdAt: serverTimestamp() }, {});
