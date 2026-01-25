@@ -254,9 +254,11 @@ export default function SchouwenPage() {
     setIsDialogOpen(true);
   }
   
-  const handleMarkerClick = (schouwing: Schouwing) => {
+  const handleMarkerClick = (schouwing: Schouwing, event: mapboxgl.MapboxEvent) => {
+    event.originalEvent.stopPropagation();
     setSelectedSchouwing(schouwing);
   };
+  
 
   const initialViewState = {
     longitude: 5.2913,
@@ -376,7 +378,7 @@ export default function SchouwenPage() {
             latitude={schouwing.latitude}
             onClick={(e) => {
                 e.originalEvent.stopPropagation();
-                handleMarkerClick(schouwing);
+                handleMarkerClick(schouwing, e);
             }}
           >
             <div className="w-3 h-3 bg-blue-600 rounded-full border-2 border-white cursor-pointer" />
@@ -414,14 +416,14 @@ export default function SchouwenPage() {
                   )}
                   <div className="p-2">
                     <h3 className="font-bold text-base mb-1">Schouwing {selectedSchouwing.id?.slice(0, 6)}</h3>
-                    <p className='truncate'>{selectedSchouwing.opmerkingen}</p>
-                    <p className="text-sm mt-1">
-                        <strong>Status:</strong> {selectedSchouwing.status}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                        Datum: {format(new Date(selectedSchouwing.datum), 'dd-MM-yyyy', { locale: nl })}
-                    </p>
-                    <Button size="sm" className="w-full mt-2" onClick={() => handleEditSchouwing(selectedSchouwing)}>Details</Button>
+                    <p className='truncate text-sm mb-2'>{selectedSchouwing.opmerkingen}</p>
+                    <div className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-sm">
+                        <strong>Status:</strong>
+                        <span>{selectedSchouwing.status}</span>
+                        <strong>Datum:</strong>
+                        <span>{format(new Date(selectedSchouwing.datum), 'dd-MM-yyyy', { locale: nl })}</span>
+                    </div>
+                    <Button size="sm" className="w-full mt-3" onClick={() => handleEditSchouwing(selectedSchouwing)}>Details</Button>
                   </div>
               </div>
           </Popup>
