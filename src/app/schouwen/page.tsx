@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -78,7 +79,7 @@ export default function SchouwenPage() {
       setMapStyle(profile.schouwenMapStyle);
     }
     if (!isProfileLoading && profile?.schouwenGemeente) {
-      setSelectedGemeente(profile.schouwenGemeente);
+      setSelectedGemeente(profile.schouwingenGemeente);
     }
   }, [profile, isProfileLoading]);
 
@@ -386,7 +387,7 @@ export default function SchouwenPage() {
               </div>
           </Marker>
         )}
-        {selectedSchouwing && !isDialogOpen && (
+        {selectedSchouwing && selectedSchouwing.id && !isDialogOpen && (
           <Popup
               longitude={selectedSchouwing.longitude}
               latitude={selectedSchouwing.latitude}
@@ -419,3 +420,5 @@ export default function SchouwenPage() {
     </div>
   );
 }
+
+    
