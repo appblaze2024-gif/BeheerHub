@@ -57,7 +57,7 @@ import type { Schouwing } from '@/lib/types';
 import type { UploadedFile } from '@/lib/types';
 import { Progress } from './ui/progress';
 import { MapboxView } from './mapbox-view';
-import { format } from 'date-fns';
+import Image from 'next/image';
 
 const schouwFormSchema = z.object({
   inspecteur: z.string().min(1, 'Naam inspecteur is verplicht.'),
@@ -379,15 +379,20 @@ export function SchouwDialog({
                       </div>
                     ))}
                     {uploadedFiles.length > 0 && (
-                        <div className='border rounded-md p-2 max-h-32 overflow-auto space-y-2'>
-                            {uploadedFiles.map(file => (
-                                <div key={file.storagePath} className="flex items-center justify-between text-sm">
-                                    <a href={file.url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline flex items-center gap-2">
-                                        <FileIcon className='h-4 w-4 shrink-0'/> {file.name}
-                                    </a>
-                                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleFileDelete(file)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                                </div>
-                            ))}
+                        <div className="mt-2 space-y-2">
+                            <div className="relative aspect-video w-full rounded-md border overflow-hidden">
+                                <Image src={uploadedFiles[0].url} alt={uploadedFiles[0].name} fill className="object-cover" />
+                            </div>
+                            <div className='border rounded-md p-2 max-h-32 overflow-auto space-y-2'>
+                                {uploadedFiles.map(file => (
+                                    <div key={file.storagePath} className="flex items-center justify-between text-sm">
+                                        <a href={file.url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline flex items-center gap-2">
+                                            <FileIcon className='h-4 w-4 shrink-0'/> {file.name}
+                                        </a>
+                                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleFileDelete(file)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     )}
                 </div>
