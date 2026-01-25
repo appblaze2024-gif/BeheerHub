@@ -1,8 +1,7 @@
-
 'use client';
 
 import * as React from 'react';
-import MapGL, { Marker, Popup, Source, Layer, MapLayerMouseEvent } from 'react-map-gl';
+import MapGL, { Marker, Popup, Source, Layer, FillLayer, LineLayer, MapLayerMouseEvent } from 'react-map-gl';
 import { useFirestore, useUser } from '@/firebase';
 import { collection, getDocs, query, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -17,6 +16,7 @@ import { Plus, Layers as MapLayersIcon, LocateFixed, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import * as turf from '@turf/turf';
+import Image from 'next/image';
 
 import type { Project } from '@/app/projects/page';
 import type { Schouwing } from '@/lib/types';
@@ -24,7 +24,6 @@ import { SchouwDialog } from '@/components/schouw-dialog';
 import { useProfile } from '@/firebase/profile-provider';
 import { updateDocumentNonBlocking } from '@/firebase';
 import { cn } from '@/lib/utils';
-import type { LineLayer } from 'react-map-gl';
 import { Loader2 } from 'lucide-react';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -57,6 +56,7 @@ export default function SchouwenPage() {
   const [isLoadingSchouwingen, setIsLoadingSchouwingen] = React.useState(false);
   
   const [selectedSchouwing, setSelectedSchouwing] = React.useState<Schouwing | null>(null);
+  const [hoveredSchouwing, setHoveredSchouwing] = React.useState<Schouwing | null>(null);
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [mapStyle, setMapStyle] = React.useState('mapbox://styles/mapbox/streets-v12');
@@ -79,7 +79,7 @@ export default function SchouwenPage() {
       setMapStyle(profile.schouwenMapStyle);
     }
     if (!isProfileLoading && profile?.schouwenGemeente) {
-      setSelectedGemeente(profile.schouwingenGemeente);
+      setSelectedGemeente(profile.schouwenGemeente);
     }
   }, [profile, isProfileLoading]);
 
@@ -250,11 +250,6 @@ export default function SchouwenPage() {
     setIsPlacingMode(true);
   };
 
-  const handleMarkerClick = (event: mapboxgl.MapboxEvent<MouseEvent>, schouwing: Schouwing) => {
-    event.originalEvent.stopPropagation();
-    setSelectedSchouwing(schouwing);
-  };
-  
   const handleEditSchouwing = (schouwing: Schouwing) => {
     setSelectedSchouwing(schouwing);
     setIsDialogOpen(true);
@@ -273,7 +268,10 @@ export default function SchouwenPage() {
 
   const handleMapClick = (event: MapLayerMouseEvent) => {
     // Prevent click logic when clicking on an existing marker
-    if (event.features?.some(f => f.layer.id.startsWith('marker'))) return;
+    const clickedFeatures = event.features?.map(f => f.layer.id) || [];
+    if (clickedFeatures.some(id => id.startsWith('gl-draw') || id.startsWith('marker'))) {
+        return;
+    }
 
     if (isPlacingMode) {
       const { lng, lat } = event.lngLat;
@@ -373,7 +371,9 @@ export default function SchouwenPage() {
             key={schouwing.id}
             longitude={schouwing.longitude}
             latitude={schouwing.latitude}
-            onClick={(e) => handleMarkerClick(e, schouwing)}
+            onClick={() => handleEditSchouwing(schouwing)}
+            onMouseEnter={() => setHoveredSchouwing(schouwing)}
+            onMouseLeave={() => setHoveredSchouwing(null)}
           >
             <div className="w-3 h-3 bg-blue-600 rounded-full border-2 border-white cursor-pointer" />
           </Marker>
@@ -387,25 +387,38 @@ export default function SchouwenPage() {
               </div>
           </Marker>
         )}
-        {selectedSchouwing && selectedSchouwing.id && !isDialogOpen && (
+        {hoveredSchouwing && !isDialogOpen && (
           <Popup
-              longitude={selectedSchouwing.longitude}
-              latitude={selectedSchouwing.latitude}
-              onClose={() => setSelectedSchouwing(null)}
+              longitude={hoveredSchouwing.longitude}
+              latitude={hoveredSchouwing.latitude}
+              onClose={() => setHoveredSchouwing(null)}
+              closeButton={false}
               closeOnClick={false}
               anchor="top"
-              className='min-w-64'
+              className='min-w-64 p-0'
           >
-              <div>
-                  <h3 className="font-bold text-base mb-1">Schouwing {selectedSchouwing.id.slice(0, 6)}</h3>
-                  <p>{selectedSchouwing.opmerkingen}</p>
-                  <p className="text-sm mt-1">
-                      <strong>Status:</strong> {selectedSchouwing.status}
-                  </p>
-                   <p className="text-xs text-muted-foreground mt-1">
-                      Datum: {format(new Date(schouwingen.find(s => s.id === selectedSchouwing.id)?.datum || Date.now()), 'dd-MM-yyyy', { locale: nl })}
-                  </p>
-                  <Button size="sm" className="w-full mt-2" onClick={() => handleEditSchouwing(selectedSchouwing)}>Details</Button>
+              <div className="w-64">
+                  {hoveredSchouwing.fotos && hoveredSchouwing.fotos.length > 0 && (
+                      <div className="relative h-32 w-full rounded-t-lg overflow-hidden">
+                          <Image
+                              src={hoveredSchouwing.fotos[0].url}
+                              alt={`Foto van schouwing ${hoveredSchouwing.id}`}
+                              fill
+                              className="object-cover"
+                          />
+                      </div>
+                  )}
+                  <div className="p-2">
+                    <h3 className="font-bold text-base mb-1">Schouwing {hoveredSchouwing.id.slice(0, 6)}</h3>
+                    <p className='truncate'>{hoveredSchouwing.opmerkingen}</p>
+                    <p className="text-sm mt-1">
+                        <strong>Status:</strong> {hoveredSchouwing.status}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                        Datum: {format(new Date(hoveredSchouwing.datum), 'dd-MM-yyyy', { locale: nl })}
+                    </p>
+                    <Button size="sm" className="w-full mt-2" onClick={() => handleEditSchouwing(hoveredSchouwing)}>Details</Button>
+                  </div>
               </div>
           </Popup>
         )}
@@ -420,5 +433,3 @@ export default function SchouwenPage() {
     </div>
   );
 }
-
-    
