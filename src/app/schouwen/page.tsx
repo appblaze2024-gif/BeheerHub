@@ -1,8 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import MapGL, { Marker, Popup } from 'react-map-gl';
-import { useFirestore, useUser, updateDocumentNonBlocking } from '@/firebase';
+import MapGL, { Marker, Popup, Source, Layer, MapLayerMouseEvent } from 'react-map-gl';
+import { useFirestore, useUser } from '@/firebase';
 import { collection, getDocs, query, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,16 +12,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Layers as MapLayersIcon } from 'lucide-react';
+import { Plus, Layers as MapLayersIcon, Check, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
+import * as turf from '@turf/turf';
 
 import type { Project } from '@/app/projects/page';
 import type { Schouwing } from '@/lib/types';
 import { SchouwDialog } from '@/components/schouw-dialog';
 import { useProfile } from '@/firebase/profile-provider';
+import { updateDocumentNonBlocking } from '@/firebase';
+import { cn } from '@/lib/utils';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
+
+const selectedAreasFillLayer: FillLayer = {
+  id: 'selected-areas-fill',
+  type: 'fill',
+  paint: {
+    'fill-color': '#3b82f6', // blue-500
+    'fill-opacity': 0.5,
+  },
+};
+
+const selectedAreasOutlineLayer: LineLayer = {
+  id: 'selected-areas-outline',
+  type: 'line',
+  paint: {
+    'line-color': '#1d4ed8', // blue-700
+    'line-width': 2,
+  },
+};
+
 
 export default function SchouwenPage() {
   const firestore = useFirestore();
@@ -39,6 +61,11 @@ export default function SchouwenPage() {
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [mapStyle, setMapStyle] = React.useState('mapbox://styles/mapbox/streets-v12');
+  
+  const [isSelectionMode, setIsSelectionMode] = React.useState(false);
+  const [selectedFeatures, setSelectedFeatures] = React.useState<any[]>([]);
+
+  const mapRef = React.useRef<any>(null);
 
   React.useEffect(() => {
     if (profile?.schouwenMapStyle) {
@@ -87,22 +114,66 @@ export default function SchouwenPage() {
   React.useEffect(() => {
     fetchSchouwingen();
   }, [fetchSchouwingen]);
+  
+  const handleToggleSelectionMode = () => {
+    setIsSelectionMode(prev => {
+      if (prev) { // if turning off
+        setSelectedFeatures([]);
+      }
+      return !prev;
+    });
+  };
 
-  const handleMapClick = (event: mapboxgl.MapboxEvent & { lngLat: { lng: number, lat: number } }) => {
-    if (event.defaultPrevented) return;
-    // For now, clicking the map does nothing except close popups if any are open
-    setSelectedSchouwing(null);
+  const handleSaveSelection = () => {
+    if (selectedFeatures.length === 0) {
+      return;
+    }
+    const featureCollection = turf.featureCollection(selectedFeatures);
+    const center = turf.centerOfMass(featureCollection);
+    const [longitude, latitude] = center.geometry.coordinates;
+
+    const newSchouwingData: Partial<Schouwing> = {
+        latitude,
+        longitude,
+        gebieden: JSON.stringify(selectedFeatures)
+    };
+
+    setSelectedSchouwing(newSchouwingData as Schouwing);
+    setIsDialogOpen(true);
+    setIsSelectionMode(false);
+  };
+
+  const handleMapClick = (event: MapLayerMouseEvent) => {
+    if (!isSelectionMode) {
+      if (event.defaultPrevented) return;
+      setSelectedSchouwing(null);
+      return;
+    }
+
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+    
+    const queryableLayers = ['road', 'landuse', 'building', 'water'];
+    const features = map.queryRenderedFeatures(event.point, { layers: queryableLayers });
+    
+    if (features.length > 0) {
+      const mainFeature = features[0];
+      const featureId = mainFeature.id || JSON.stringify(mainFeature.geometry);
+
+      setSelectedFeatures(prev => {
+        const isAlreadySelected = prev.some(f => (f.id || JSON.stringify(f.geometry)) === featureId);
+        if (isAlreadySelected) {
+          return prev.filter(f => (f.id || JSON.stringify(f.geometry)) !== featureId);
+        } else {
+          return [...prev, mainFeature];
+        }
+      });
+    }
   };
 
   const handleMarkerClick = (schouwing: Schouwing, event: mapboxgl.MapboxEvent) => {
     event.preventDefault();
     setSelectedSchouwing(schouwing);
-  };
-  
-  const handleNewSchouwingClick = () => {
-    if (!selectedProjectId) return;
-    setSelectedSchouwing(null);
-    setIsDialogOpen(true);
   };
   
   const handleEditSchouwing = (schouwing: Schouwing) => {
@@ -119,7 +190,13 @@ export default function SchouwenPage() {
   const handleSuccess = () => {
       fetchSchouwingen();
       setSelectedSchouwing(null);
+      setSelectedFeatures([]);
   }
+  
+  const selectedFeaturesGeoJSON = React.useMemo(() => ({
+    type: 'FeatureCollection',
+    features: selectedFeatures,
+  }), [selectedFeatures]);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
@@ -150,19 +227,35 @@ export default function SchouwenPage() {
                 <SelectItem value="mapbox://styles/mapbox/dark-v11">Donker</SelectItem>
               </SelectContent>
             </Select>
-            <Button onClick={handleNewSchouwingClick} disabled={!selectedProjectId}>
-              <Plus className="mr-2 h-4 w-4" />
-              Nieuwe Schouwing
-            </Button>
+             {isSelectionMode ? (
+              <div className='flex gap-2'>
+                <Button onClick={handleSaveSelection} disabled={selectedFeatures.length === 0}>
+                  <Check className="mr-2 h-4 w-4" />
+                  Opslaan
+                </Button>
+                <Button variant="destructive" onClick={handleToggleSelectionMode}>
+                  <X className="mr-2 h-4 w-4" />
+                  Annuleren
+                </Button>
+              </div>
+            ) : (
+              <Button onClick={handleToggleSelectionMode} disabled={!selectedProjectId}>
+                <Plus className="mr-2 h-4 w-4" />
+                Nieuwe Schouwing
+              </Button>
+            )}
         </div>
       </header>
 
       <MapGL
+        ref={mapRef}
         initialViewState={initialViewState}
         style={{ width: '100%', height: '100%' }}
         mapStyle={mapStyle}
         mapboxAccessToken={MAPBOX_TOKEN}
         onClick={handleMapClick}
+        interactiveLayerIds={isSelectionMode ? ['road', 'landuse', 'building', 'water'] : []}
+        cursor={isSelectionMode ? 'pointer' : 'grab'}
       >
         {schouwingen.map((schouwing) => (
           <Marker
@@ -174,7 +267,7 @@ export default function SchouwenPage() {
             <div className="w-3 h-3 bg-blue-600 rounded-full border-2 border-white cursor-pointer" />
           </Marker>
         ))}
-        {selectedSchouwing && (
+        {selectedSchouwing && !isDialogOpen && (
           <Popup
               longitude={selectedSchouwing.longitude}
               latitude={selectedSchouwing.latitude}
@@ -196,6 +289,14 @@ export default function SchouwenPage() {
               </div>
           </Popup>
         )}
+        
+        {isSelectionMode && (
+          <Source id="selected-areas" type="geojson" data={selectedFeaturesGeoJSON}>
+            <Layer {...selectedAreasFillLayer} />
+            <Layer {...selectedAreasOutlineLayer} />
+          </Source>
+        )}
+
       </MapGL>
       <SchouwDialog
         open={isDialogOpen}
