@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import MapGL, { Marker, Popup, Source, Layer } from 'react-map-gl';
+import MapGL, { Marker, Popup, Source, Layer, MapLayerMouseEvent } from 'react-map-gl';
 import { useFirestore, useUser } from '@/firebase';
 import { collection, getDocs, query, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Layers as MapLayersIcon, LocateFixed } from 'lucide-react';
+import { Plus, Layers as MapLayersIcon, LocateFixed, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import * as turf from '@turf/turf';
@@ -68,6 +68,8 @@ export default function SchouwenPage() {
   const [userPosition, setUserPosition] = React.useState<[number, number] | null>(null);
   const [userHeading, setUserHeading] = React.useState<number>(0);
   const watchIdRef = React.useRef<number | null>(null);
+
+  const [isPlacingMode, setIsPlacingMode] = React.useState(false);
 
   const mapRef = React.useRef<any>(null);
 
@@ -244,8 +246,7 @@ export default function SchouwenPage() {
   }, [isFollowing, userHeading]);
   
   const handleNewSchouwing = () => {
-    setSelectedSchouwing(null);
-    setIsDialogOpen(true);
+    setIsPlacingMode(true);
   };
 
   const handleMarkerClick = (schouwing: Schouwing, event: mapboxgl.MapboxEvent) => {
@@ -268,6 +269,25 @@ export default function SchouwenPage() {
       fetchSchouwingen();
       setSelectedSchouwing(null);
   }
+
+  const handleMapClick = (event: MapLayerMouseEvent) => {
+    // Prevent click logic when clicking on an existing marker
+    if (event.features?.some(f => f.layer.id.startsWith('marker'))) return;
+
+    if (isPlacingMode) {
+      const { lng, lat } = event.lngLat;
+      const newSchouwing: Partial<Schouwing> = {
+        latitude: lat,
+        longitude: lng,
+        status: 'Open',
+        datum: new Date().toISOString(),
+        inspecteur: user?.displayName || user?.email || '',
+      };
+      setSelectedSchouwing(newSchouwing as Schouwing);
+      setIsDialogOpen(true);
+      setIsPlacingMode(false);
+    }
+  };
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
@@ -324,13 +344,23 @@ export default function SchouwenPage() {
         </div>
       </header>
 
+      {isPlacingMode && (
+          <div className="absolute top-24 left-1/2 -translate-x-1/2 z-20 bg-card p-3 rounded-lg shadow-lg flex items-center gap-4 animate-pulse">
+            <p className="text-sm font-medium">Klik op de kaart om de locatie te bepalen.</p>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsPlacingMode(false)}>
+              <X className="h-4 w-4"/>
+            </Button>
+          </div>
+      )}
+
       <MapGL
         ref={mapRef}
         initialViewState={initialViewState}
         style={{ width: '100%', height: '100%' }}
         mapStyle={mapStyle}
         mapboxAccessToken={MAPBOX_TOKEN}
-        cursor={'grab'}
+        cursor={isPlacingMode ? 'crosshair' : 'grab'}
+        onClick={handleMapClick}
       >
         {gemeenteBoundary && (
             <Source id="gemeente-boundary" type="geojson" data={gemeenteBoundary}>
