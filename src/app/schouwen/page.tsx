@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import MapGL, { Marker, Popup, Source, Layer, FillLayer, LineLayer, MapLayerMouseEvent } from 'react-map-gl';
+import MapGL, { Marker, Source, Layer, FillLayer, LineLayer, MapLayerMouseEvent } from 'react-map-gl';
 import { useFirestore, useUser } from '@/firebase';
 import { collection, getDocs, query, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,6 @@ import { Plus, Layers as MapLayersIcon, LocateFixed, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import * as turf from '@turf/turf';
-import Image from 'next/image';
 
 import type { Project } from '@/app/projects/page';
 import type { Schouwing } from '@/lib/types';
@@ -253,12 +252,6 @@ export default function SchouwenPage() {
     setSelectedSchouwing(schouwing);
     setIsDialogOpen(true);
   }
-  
-  const handleMarkerClick = (schouwing: Schouwing, event: mapboxgl.MapboxEvent) => {
-    event.originalEvent.stopPropagation();
-    setSelectedSchouwing(schouwing);
-  };
-  
 
   const initialViewState = {
     longitude: 5.2913,
@@ -378,7 +371,7 @@ export default function SchouwenPage() {
             latitude={schouwing.latitude}
             onClick={(e) => {
                 e.originalEvent.stopPropagation();
-                handleMarkerClick(schouwing, e);
+                handleEditSchouwing(schouwing);
             }}
           >
             <div className="w-3 h-3 bg-blue-600 rounded-full border-2 border-white cursor-pointer" />
@@ -392,49 +385,6 @@ export default function SchouwenPage() {
                 </svg>
               </div>
           </Marker>
-        )}
-        {selectedSchouwing && (
-            <Popup
-                longitude={selectedSchouwing.longitude}
-                latitude={selectedSchouwing.latitude}
-                onClose={() => setSelectedSchouwing(null)}
-                closeButton={true}
-                closeOnClick={false}
-                anchor="bottom"
-                offset={10}
-                className="!p-0"
-            >
-                <div className="w-72 rounded-lg shadow-lg bg-card text-card-foreground overflow-hidden">
-                    {selectedSchouwing.fotos && selectedSchouwing.fotos.length > 0 ? (
-                        <div className="relative h-40 w-full bg-muted">
-                            <Image
-                                src={selectedSchouwing.fotos[0].url}
-                                alt={`Foto van schouwing ${selectedSchouwing.id || ''}`}
-                                fill
-                                className="object-cover"
-                            />
-                        </div>
-                    ) : null}
-                    <div className="p-4">
-                        <h3 className="font-bold text-lg mb-2 leading-tight">
-                            Schouwing {selectedSchouwing.id?.slice(0, 6)}
-                        </h3>
-                        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
-                            <span className="font-semibold text-muted-foreground">Status:</span>
-                            <span className="font-medium">{selectedSchouwing.status}</span>
-
-                            <span className="font-semibold text-muted-foreground">Datum:</span>
-                            <span className="font-medium">{format(new Date(selectedSchouwing.datum), 'dd-MM-yyyy', { locale: nl })}</span>
-                            
-                            <span className="font-semibold text-muted-foreground self-start">Opmerking:</span>
-                            <p className="font-medium break-words">{selectedSchouwing.opmerkingen}</p>
-                        </div>
-                        <Button size="sm" className="w-full mt-4" onClick={() => handleEditSchouwing(selectedSchouwing)}>
-                            Details Bewerken
-                        </Button>
-                    </div>
-                </div>
-            </Popup>
         )}
       </MapGL>
       <SchouwDialog
