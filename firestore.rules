@@ -77,7 +77,7 @@ service cloud.firestore {
        }
 
        match /schouwingen/{schouwId} {
-         allow get, list: if hasPermission('schouwen', 'view');
+         allow get, list: if true;
          allow write: if hasPermission('schouwen', 'create') || hasPermission('schouwen', 'edit') || hasPermission('schouwen', 'delete');
        }
     }
