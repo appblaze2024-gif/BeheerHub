@@ -125,12 +125,12 @@ export function SchouwDialog({
     resolver: zodResolver(schouwFormSchema),
   });
 
-  const fetchAddressDetails = React.useCallback(async (lat: number, lon: number) => {
-    if (isFetchingAddressRef.current) return;
+  const fetchAddressDetails = React.useCallback(async (lat: number, lon: number): Promise<{ straatnaam: string; huisnummer: string; postcode: string; plaats: string; } | null> => {
+    if (isFetchingAddressRef.current) return null;
     isFetchingAddressRef.current = true;
     try {
         const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&addressdetails=1`
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&addressdetails=1&zoom=18`
         );
         const data = await response.json();
         if (data.address) {
@@ -142,10 +142,14 @@ export function SchouwDialog({
                 plaats: addr.city || addr.town || addr.village || '',
             };
             setAddress(fetchedAddress);
+            return fetchedAddress;
         }
+        setAddress(null);
+        return null;
     } catch (error) {
         console.error('Error fetching address details:', error);
         setAddress(null);
+        return null;
     } finally {
         isFetchingAddressRef.current = false;
     }
@@ -307,17 +311,27 @@ export function SchouwDialog({
     setIsSubmitting(true);
     const isEditing = !!schouwing?.id;
     const schouwingId = isEditing ? schouwing.id : schouwingIdRef.current;
-    if (!schouwingId) return;
+    if (!schouwingId) {
+        setIsSubmitting(false);
+        return;
+    }
+
+    const finalAddress = await fetchAddressDetails(location.latitude, location.longitude);
+    if (!finalAddress) {
+        form.setError('opmerkingen', { type: 'manual', message: 'Kon geen geldig adres vinden voor de geselecteerde locatie.' });
+        setIsSubmitting(false);
+        return;
+    }
 
     const schouwingData = {
       ...data,
       projectId,
       latitude: location.latitude,
       longitude: location.longitude,
-      straatnaam: address?.straatnaam || '',
-      huisnummer: address?.huisnummer || '',
-      postcode: address?.postcode || '',
-      plaats: address?.plaats || '',
+      straatnaam: finalAddress.straatnaam,
+      huisnummer: finalAddress.huisnummer,
+      postcode: finalAddress.postcode,
+      plaats: finalAddress.plaats,
       datum: schouwing?.datum || new Date().toISOString(),
       fotos: uploadedFiles,
       updatedAt: serverTimestamp(),
@@ -484,9 +498,14 @@ export function SchouwDialog({
                       </div>
                   </FormItem>
               </div>
-              <div className="lg:col-span-2 space-y-4 pt-4">
+              <div className="md:col-span-2 space-y-4 pt-4">
                 <FormLabel>Foto's</FormLabel>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+                    {uploadedFiles.length > 0 && (
+                        <div className="relative aspect-video w-full rounded-md border overflow-hidden bg-muted">
+                        <Image src={uploadedFiles[0].url} alt={uploadedFiles[0].name} layout="fill" className="object-cover" />
+                        </div>
+                    )}
                     <div className="space-y-2">
                         <Button type="button" variant="outline" className="w-full" disabled={isUploading || isSubmitting} onClick={() => document.getElementById('schouwing-file-input')?.click()}>
                             <Upload className="mr-2 h-4 w-4" /> Upload foto's
@@ -511,11 +530,6 @@ export function SchouwDialog({
                         </div>
                         )}
                     </div>
-                    {uploadedFiles.length > 0 && (
-                        <div className="relative aspect-video w-full rounded-md border overflow-hidden bg-muted">
-                        <Image src={uploadedFiles[0].url} alt={uploadedFiles[0].name} layout="fill" className="object-cover" />
-                        </div>
-                    )}
                 </div>
               </div>
             </form>
