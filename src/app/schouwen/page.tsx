@@ -155,8 +155,8 @@ export default function SchouwenPage() {
     
     // Use a slightly larger bounding box to query features, increasing click tolerance
     const bbox: [[number, number], [number, number]] = [
-      [event.point.x - 10, event.point.y - 10],
-      [event.point.x + 10, event.point.y + 10]
+      [event.point.x - 15, event.point.y - 15],
+      [event.point.x + 15, event.point.y + 15]
     ];
     const features = map.queryRenderedFeatures(bbox);
 
@@ -196,7 +196,7 @@ export default function SchouwenPage() {
         const lineFeature = lines[0];
         try {
             // Buffer the line to make it a selectable area
-            const buffered = turf.buffer(lineFeature, 2, { units: 'meters' });
+            const buffered = turf.buffer(lineFeature, 3, { units: 'meters' });
             selectableFeature = {
                 ...buffered,
                 properties: { ...lineFeature.properties, original_geometry_type: 'LineString' },
