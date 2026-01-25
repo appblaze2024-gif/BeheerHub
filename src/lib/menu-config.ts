@@ -15,17 +15,6 @@ import {
 import { ElementType, createElement } from 'react';
 import Image from 'next/image';
 
-// Custom icon for "Schouwen" using an external image.
-function SchouwenIcon(props: { className?: string }) {
-  return createElement(Image, {
-      src: "https://i.ibb.co/MxhkmpTh/right-10025523.png",
-      alt: "Schouwen Icoon",
-      width: 48,
-      height: 48,
-      ...props
-    });
-}
-
 // Custom icon for "Navigatiemodule"
 function NavigatieIcon(props: { className?: string }) {
   return createElement(Image, {
@@ -60,5 +49,4 @@ export const allMenuItems: MenuItem[] = [
     { href: '/navigation-module', label: 'Navigatiemodule', icon: NavigatieIcon, module: 'navigation', color: 'bg-muted hover:bg-accent' },
     { href: '/mail', label: 'Mail', icon: Mail, module: 'mail', color: 'bg-muted hover:bg-accent' },
     { href: '/spec-reports', label: 'Besteksmeldingen', icon: FileCheck, module: 'specReports', color: 'bg-muted hover:bg-accent' },
-    { href: '/schouwen', label: 'Schouwen', icon: SchouwenIcon, module: 'schouwen', color: 'bg-muted hover:bg-accent' },
 ];

@@ -43,13 +43,6 @@ service cloud.firestore {
        allow update: if hasPermission('projects', 'edit');
        allow delete: if hasPermission('projects', 'delete');
 
-       match /schouwingen/{schouwId} {
-         allow get, list: if request.auth.uid == '5l56WagvKGXxqnUJ5t4oBlnJSM73';
-         allow create: if hasPermission('schouwen', 'create');
-         allow update: if hasPermission('schouwen', 'edit');
-         allow delete: if hasPermission('schouwen', 'delete');
-       }
-
        match /diensten/{dienstId} {
          allow get, list: if hasPermission('workPlanning', 'view');
          allow write: if hasPermission('workPlanning', 'edit');

@@ -153,32 +153,3 @@ export type Project = {
   veegroutes?: any[]; // Replace with specific type if known
   prullenbakkenroutes?: any[]; // Replace with specific type if known
 };
-
-export type SchouwItem = {
-    id: string;
-    name: string;
-    status: "Goed" | "Voldoende" | "Onvoldoende" | "Niet van toepassing";
-    notes: string;
-    photos: UploadedFile[];
-    location?: {
-        latitude: number;
-        longitude: number;
-    }
-};
-
-export type Schouw = {
-    id: string;
-    projectId: string;
-    title: string;
-    date: string; // YYYY-MM-DD
-    inspectorId: string;
-    inspectorName: string;
-    status: "Nieuw" | "In uitvoering" | "Voltooid";
-    inspectionArea?: {
-        name: string;
-        geojson: string;
-    };
-    items?: SchouwItem[];
-};
-
-    

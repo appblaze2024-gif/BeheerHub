@@ -606,54 +606,6 @@
       "required": [
         "id"
       ]
-    },
-    "Schouw": {
-      "title": "Schouw",
-      "type": "object",
-      "description": "Represents an inspection of a public space.",
-      "properties": {
-        "id": { "type": "string" },
-        "projectId": { "type": "string" },
-        "title": { "type": "string" },
-        "date": { "type": "string", "format": "date" },
-        "inspectorId": { "type": "string" },
-        "inspectorName": { "type": "string" },
-        "status": { "type": "string", "enum": ["Nieuw", "In uitvoering", "Voltooid"] },
-        "inspectionArea": {
-            "type": "object",
-            "properties": {
-                "name": { "type": "string" },
-                "geojson": { "type": "string" }
-            }
-        },
-        "items": {
-          "type": "array",
-          "items": {
-            "$ref": "#/backend/entities/SchouwItem"
-          }
-        }
-      },
-      "required": ["projectId", "title", "date", "status"]
-    },
-    "SchouwItem": {
-        "title": "SchouwItem",
-        "type": "object",
-        "description": "An individual item or checkpoint within an inspection.",
-        "properties": {
-            "id": { "type": "string" },
-            "name": { "type": "string" },
-            "status": { "type": "string", "enum": ["Goed", "Voldoende", "Onvoldoende", "Niet van toepassing"] },
-            "notes": { "type": "string" },
-            "photos": { "type": "array", "items": { "$ref": "#/backend/entities/Bestand" } },
-            "location": {
-                "type": "object",
-                "properties": {
-                    "latitude": { "type": "number" },
-                    "longitude": { "type": "number" }
-                }
-            }
-        },
-        "required": ["id", "name", "status"]
     }
   },
   "auth": {
@@ -813,18 +765,6 @@
         }
       },
       {
-        "path": "/projects/{projectId}/schouwingen/{schouwId}",
-        "definition": {
-          "entityName": "Schouw",
-          "schema": { "$ref": "#/backend/entities/Schouw" },
-          "description": "Stores inspection reports for a specific project.",
-          "params": [
-            { "name": "projectId", "description": "The ID of the project." },
-            { "name": "schouwId", "description": "The ID of the inspection." }
-          ]
-        }
-      },
-      {
         "path": "/medewerkers/{medewerkerId}",
         "definition": {
             "entityName": "Medewerker",
@@ -921,6 +861,3 @@
     "reasoning": "The Firestore structure is designed to provide a secure and scalable foundation for the BizBoard application, focusing on clear ownership and authorization. Each user's data (revenues, expenses, and appointments) is stored under their respective user ID, ensuring data isolation and simplified security rules. This design avoids complex queries and `get()` calls in security rules, which aligns with the principles of Authorization Independence and facilitates easier debugging. The use of path-based ownership `/users/{userId}/revenues/{revenueId}` makes it straightforward to implement security rules that grant access only to the owner of the data.\\n\\n*   **Authorization Independence:** Achieved by structuring data under user-specific paths, eliminating the need for `get()` calls to parent documents for authorization. All data needed for authorization is implicitly available in the path.\\n*   **QAPs:** Secure list operations are supported by the path-based ownership model. Listing revenues, expenses, or appointments is always scoped to a specific user, preventing unauthorized access to other users' data.\\n\\nBy adhering to these principles, the data structure promotes a maintainable and secure application."
   }
 }
-
-
-    
