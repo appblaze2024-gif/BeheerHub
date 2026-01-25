@@ -34,9 +34,11 @@
         "status": {
           "type": "string",
           "enum": ["Open", "In behandeling", "Afgerond"]
-        }
+        },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" }
       },
-      "required": ["projectId", "datum", "inspecteur", "status"]
+      "required": ["projectId", "datum", "inspecteur", "status", "latitude", "longitude"]
     },
     "Route": {
       "title": "Route",

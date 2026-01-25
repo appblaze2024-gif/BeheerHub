@@ -132,6 +132,8 @@ export interface Schouwing {
   inspecteur: string;
   opmerkingen: string;
   status: 'Open' | 'In behandeling' | 'Afgerond';
+  latitude: number;
+  longitude: number;
 }
 
 export type Werksoort = {
