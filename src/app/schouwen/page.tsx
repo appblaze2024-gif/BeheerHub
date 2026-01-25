@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Layers as MapLayersIcon, Check, X } from 'lucide-react';
+import { Plus, Layers as MapLayersIcon, Check, X, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import * as turf from '@turf/turf';
@@ -45,11 +45,25 @@ const selectedAreasOutlineLayer: LineLayer = {
   },
 };
 
+const gemeenteBoundaryLayer: LineLayer = {
+    id: 'gemeente-boundary-outline',
+    type: 'line',
+    paint: {
+      'line-color': '#000000',
+      'line-width': 3,
+    },
+  };
+
+const gemeenten = [
+  "Amsterdam", "Rotterdam", "Den Haag", "Utrecht", "Eindhoven", 
+  "Groningen", "Tilburg", "Almere", "Breda", "Nijmegen", "Haarlemmermeer"
+];
+
 
 export default function SchouwenPage() {
   const firestore = useFirestore();
   const { user } = useUser();
-  const { profile } = useProfile();
+  const { profile, isLoading: isProfileLoading } = useProfile();
 
   const [projects, setProjects] = React.useState<Project[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = React.useState(true);
@@ -66,13 +80,20 @@ export default function SchouwenPage() {
   const [isSelectionMode, setIsSelectionMode] = React.useState(false);
   const [selectedFeatures, setSelectedFeatures] = React.useState<any[]>([]);
 
+  const [selectedGemeente, setSelectedGemeente] = React.useState<string | null>(null);
+  const [gemeenteBoundary, setGemeenteBoundary] = React.useState<any | null>(null);
+  const [isLoadingGemeente, setIsLoadingGemeente] = React.useState(false);
+
   const mapRef = React.useRef<any>(null);
 
   React.useEffect(() => {
     if (profile?.schouwenMapStyle) {
       setMapStyle(profile.schouwenMapStyle);
     }
-  }, [profile]);
+    if (!isProfileLoading && profile?.schouwenGemeente) {
+      setSelectedGemeente(profile.schouwenGemeente);
+    }
+  }, [profile, isProfileLoading]);
 
   const handleMapStyleChange = (newStyle: string) => {
     if (!user || !firestore) return;
@@ -116,6 +137,54 @@ export default function SchouwenPage() {
     fetchSchouwingen();
   }, [fetchSchouwingen]);
   
+   React.useEffect(() => {
+    if (!selectedGemeente) {
+      setGemeenteBoundary(null);
+      return;
+    };
+
+    const fetchBoundary = async () => {
+      setIsLoadingGemeente(true);
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(selectedGemeente)}&format=json&polygon_geojson=1&countrycodes=nl&limit=1`
+        );
+        const data = await response.json();
+        if (data && data.length > 0 && data[0].geojson) {
+          setGemeenteBoundary(data[0].geojson);
+        } else {
+          setGemeenteBoundary(null);
+        }
+      } catch (error) {
+        console.error("Fout bij ophalen gemeentegrens:", error);
+        setGemeenteBoundary(null);
+      } finally {
+        setIsLoadingGemeente(false);
+      }
+    };
+
+    fetchBoundary();
+
+    if (user && firestore && profile?.schouwenGemeente !== selectedGemeente) {
+        const userProfileRef = doc(firestore, 'users', user.uid);
+        updateDocumentNonBlocking(userProfileRef, { schouwenGemeente: selectedGemeente });
+    }
+
+  }, [selectedGemeente, user, firestore, profile?.schouwenGemeente]);
+
+  React.useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || !gemeenteBoundary) return;
+    
+    try {
+        const bbox = turf.bbox(gemeenteBoundary);
+        if(bbox[0] === Infinity) return;
+        map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
+    } catch (e) {
+        console.error("Error fitting bounds for gemeente:", e);
+    }
+  }, [gemeenteBoundary]);
+
   const handleToggleSelectionMode = () => {
     setIsSelectionMode(prev => {
       if (prev) { // if turning off
@@ -154,7 +223,6 @@ export default function SchouwenPage() {
     const map = mapRef.current?.getMap();
     if (!map) return;
     
-    // Explicitly query all layer IDs to override any "interactive: false" properties in the style.
     const allLayerIds = map.getStyle().layers.map((layer: any) => layer.id);
 
     const bbox: [[number, number], [number, number]] = [
@@ -257,6 +325,21 @@ export default function SchouwenPage() {
     <div className="flex-1 flex flex-col min-h-0 relative">
       <header className="absolute top-0 left-0 z-10 p-4 flex flex-col sm:flex-row gap-4 w-full items-start sm:items-center">
         <div className="flex gap-4 w-full sm:w-auto pointer-events-auto bg-card p-2 rounded-lg shadow-md">
+            <Select value={selectedGemeente || ''} onValueChange={setSelectedGemeente} disabled={isLoadingGemeente}>
+                <SelectTrigger className="w-full sm:w-48">
+                    <div className="flex items-center gap-2">
+                    {isLoadingGemeente && <Loader2 className="h-4 w-4 animate-spin" />}
+                    <SelectValue placeholder="Kies gemeente" />
+                    </div>
+                </SelectTrigger>
+                <SelectContent>
+                    {gemeenten.map((gemeente) => (
+                    <SelectItem key={gemeente} value={gemeente}>
+                        {gemeente}
+                    </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
             <Select onValueChange={setSelectedProjectId} disabled={isLoadingProjects}>
               <SelectTrigger className="w-full sm:w-72">
                 <SelectValue placeholder="Selecteer een project" />
@@ -311,6 +394,11 @@ export default function SchouwenPage() {
         onClick={handleMapClick}
         cursor={isSelectionMode ? 'pointer' : 'grab'}
       >
+        {gemeenteBoundary && (
+            <Source id="gemeente-boundary" type="geojson" data={gemeenteBoundary}>
+                <Layer {...gemeenteBoundaryLayer} />
+            </Source>
+        )}
         {schouwingen.map((schouwing) => (
           <Marker
             key={schouwing.id}

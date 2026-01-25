@@ -26,6 +26,7 @@ export type UserProfile = {
   prullenbakkenroute?: string;
   lastUsedDienstColor?: string;
   schouwenMapStyle?: string;
+  schouwenGemeente?: string;
 };
 
 export interface Medewerker {
