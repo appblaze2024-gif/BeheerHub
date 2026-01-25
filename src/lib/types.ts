@@ -137,6 +137,7 @@ export interface Schouwing {
   latitude: number;
   longitude: number;
   gebieden?: string;
+  fotos?: UploadedFile[];
 }
 
 export type Werksoort = {

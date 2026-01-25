@@ -1,9 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import MapGL, { Marker, Popup, Source, Layer, MapLayerMouseEvent } from 'react-map-gl';
-import MapboxDraw from '@mapbox/mapbox-gl-draw';
-import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
+import MapGL, { Marker, Popup, Source, Layer } from 'react-map-gl';
 import { useFirestore, useUser } from '@/firebase';
 import { collection, getDocs, query, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -14,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Layers as MapLayersIcon, Check, X, Loader2, LocateFixed, Save } from 'lucide-react';
+import { Plus, Layers as MapLayersIcon, LocateFixed } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import * as turf from '@turf/turf';
@@ -25,7 +23,8 @@ import { SchouwDialog } from '@/components/schouw-dialog';
 import { useProfile } from '@/firebase/profile-provider';
 import { updateDocumentNonBlocking } from '@/firebase';
 import { cn } from '@/lib/utils';
-import type { FillLayer, LineLayer } from 'react-map-gl';
+import type { LineLayer } from 'react-map-gl';
+import { Loader2 } from 'lucide-react';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -61,8 +60,6 @@ export default function SchouwenPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [mapStyle, setMapStyle] = React.useState('mapbox://styles/mapbox/streets-v12');
   
-  const [isDrawingMode, setIsDrawingMode] = React.useState(false);
-
   const [selectedGemeente, setSelectedGemeente] = React.useState<string | null>(null);
   const [gemeenteBoundary, setGemeenteBoundary] = React.useState<any | null>(null);
   const [isLoadingGemeente, setIsLoadingGemeente] = React.useState(false);
@@ -72,7 +69,6 @@ export default function SchouwenPage() {
   const [userHeading, setUserHeading] = React.useState<number>(0);
   const watchIdRef = React.useRef<number | null>(null);
 
-  const drawRef = React.useRef<MapboxDraw | null>(null);
   const mapRef = React.useRef<any>(null);
 
   React.useEffect(() => {
@@ -246,70 +242,10 @@ export default function SchouwenPage() {
         }
     };
   }, [isFollowing, userHeading]);
-
-  // Effect to manage MapboxDraw control
-  React.useEffect(() => {
-    const map = mapRef.current?.getMap();
-    if (!map) return;
-
-    if (isDrawingMode && !drawRef.current) {
-      const draw = new MapboxDraw({
-        displayControlsDefault: false,
-        controls: {
-          polygon: true,
-          trash: true
-        }
-      });
-      map.addControl(draw, 'top-left');
-      drawRef.current = draw;
-    } else if (!isDrawingMode && drawRef.current) {
-      map.removeControl(drawRef.current);
-      drawRef.current = null;
-    }
-  }, [isDrawingMode]);
-
-
-  const handleToggleDrawingMode = () => {
-    setIsDrawingMode(prev => !prev);
-  };
   
-  const handleCancelDrawing = () => {
-    if (drawRef.current) {
-        drawRef.current.deleteAll();
-    }
-    setIsDrawingMode(false);
-  };
-
-  const handleSaveDrawing = () => {
-    if (!drawRef.current) return;
-    const data = drawRef.current.getAll();
-    if (data.features.length === 0) {
-      // maybe show a toast
-      return;
-    }
-
-    const featureCollection = turf.featureCollection(data.features);
-    const center = turf.centerOfMass(featureCollection);
-    const [longitude, latitude] = center.geometry.coordinates;
-
-    const newSchouwingData: Partial<Schouwing> = {
-        latitude,
-        longitude,
-        gebieden: JSON.stringify(data.features)
-    };
-
-    setSelectedSchouwing(newSchouwingData as Schouwing);
-    setIsDialogOpen(true);
-    // Reset drawing mode after saving
-    setIsDrawingMode(false); 
-  };
-
-
-  const handleMapClick = (event: MapLayerMouseEvent) => {
-    if (isDrawingMode) return; // Let MapboxDraw handle clicks
-
-    if (event.defaultPrevented) return;
+  const handleNewSchouwing = () => {
     setSelectedSchouwing(null);
+    setIsDialogOpen(true);
   };
 
   const handleMarkerClick = (schouwing: Schouwing, event: mapboxgl.MapboxEvent) => {
@@ -377,29 +313,14 @@ export default function SchouwenPage() {
                 <SelectItem value="mapbox://styles/mapbox/dark-v11">Donker</SelectItem>
               </SelectContent>
             </Select>
-             {isDrawingMode ? (
-              <div className='flex gap-2'>
-                <Button onClick={handleSaveDrawing}>
-                  <Save className="mr-2 h-4 w-4" />
-                  Opslaan
-                </Button>
-                <Button variant="destructive" onClick={handleCancelDrawing}>
-                  <X className="mr-2 h-4 w-4" />
-                  Annuleren
-                </Button>
-              </div>
-            ) : (
-                <>
-                    <Button onClick={handleToggleDrawingMode} disabled={!selectedProjectId}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Nieuwe Schouwing
-                    </Button>
-                    <Button variant={isFollowing ? 'secondary' : 'outline'} onClick={() => setIsFollowing(prev => !prev)}>
-                        <LocateFixed className="mr-2 h-4 w-4" />
-                        Volg
-                    </Button>
-                </>
-            )}
+            <Button onClick={handleNewSchouwing} disabled={!selectedProjectId}>
+                <Plus className="mr-2 h-4 w-4" />
+                Nieuwe Schouwing
+            </Button>
+            <Button variant={isFollowing ? 'secondary' : 'outline'} onClick={() => setIsFollowing(prev => !prev)}>
+                <LocateFixed className="mr-2 h-4 w-4" />
+                Volg
+            </Button>
         </div>
       </header>
 
@@ -409,8 +330,7 @@ export default function SchouwenPage() {
         style={{ width: '100%', height: '100%' }}
         mapStyle={mapStyle}
         mapboxAccessToken={MAPBOX_TOKEN}
-        onClick={handleMapClick}
-        cursor={isDrawingMode ? 'crosshair' : 'grab'}
+        cursor={'grab'}
       >
         {gemeenteBoundary && (
             <Source id="gemeente-boundary" type="geojson" data={gemeenteBoundary}>

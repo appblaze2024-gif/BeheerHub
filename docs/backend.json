@@ -40,6 +40,12 @@
         "gebieden": {
           "type": "string",
           "description": "GeoJSON features representing the inspected areas."
+        },
+        "fotos": {
+            "type": "array",
+            "items": {
+                "$ref": "#/backend/entities/Bestand"
+            }
         }
       },
       "required": ["projectId", "datum", "inspecteur", "status"]
