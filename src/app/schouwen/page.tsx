@@ -19,7 +19,6 @@ import { nl } from 'date-fns/locale';
 
 import type { Project } from '@/app/projects/page';
 import type { Schouwing } from '@/lib/types';
-import { PageHeader } from '@/components/page-header';
 import { SchouwDialog } from '@/components/schouw-dialog';
 import { FirestorePermissionError, errorEmitter } from '@/firebase';
 
@@ -59,10 +58,7 @@ export default function SchouwenPage() {
     }
     setIsLoadingSchouwingen(true);
     try {
-      const q = query(
-        collection(firestore, 'projects', selectedProjectId, 'schouwingen'),
-        orderBy('datum', 'desc')
-      );
+      const q = collection(firestore, 'projects', selectedProjectId, 'schouwingen');
       const querySnapshot = await getDocs(q);
       const schouwingenData = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Schouwing));
       setSchouwingen(schouwingenData);
@@ -110,7 +106,7 @@ export default function SchouwenPage() {
   return (
     <div className="flex flex-1 min-h-0">
       <aside className="w-96 border-r bg-background p-4 flex flex-col gap-4">
-        <PageHeader title="Schouwen" description="Bekijk en maak inspecties" className="p-0" />
+        <h1 className="text-2xl font-bold">Schouwen</h1>
         <Select onValueChange={setSelectedProjectId} disabled={isLoadingProjects}>
           <SelectTrigger>
             <SelectValue placeholder="Selecteer een project" />
@@ -133,7 +129,7 @@ export default function SchouwenPage() {
                     <p className="mb-4">Wilt u op deze plek een schouwing aanmaken?</p>
                     <div className='flex gap-2'>
                         <Button variant="outline" onClick={() => setNewSchouwingLocation(null)}>Annuleren</Button>
-                        <Button onClick={handleCreateSchouwing}>Schouwing maken</Button>
+                        <Button onClick={handleCreateSchouwing}>Melding maken</Button>
                     </div>
                 </CardContent>
             </Card>
@@ -211,10 +207,7 @@ export default function SchouwenPage() {
         onOpenChange={setIsDialogOpen}
         projectId={selectedProjectId}
         location={newSchouwingLocation}
-        onSuccess={() => {
-            fetchSchouwingen();
-            setNewSchouwingLocation(null);
-        }}
+        onSuccess={fetchSchouwingen}
       />
     </div>
   );
