@@ -8,7 +8,7 @@ import {
   FileText,
   Calendar,
 } from 'lucide-react';
-import { collection, query, getDocs } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 
@@ -54,7 +54,7 @@ export default function SchouwenPage() {
     setIsLoadingSchouwingen(true);
     try {
       const schouwingenCollection = collection(firestore, 'projects', selectedProjectId, 'schouwingen');
-      const q = query(schouwingenCollection);
+      const q = query(schouwingenCollection, orderBy('date', 'desc'));
       const querySnapshot = await getDocs(q);
       const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Schouw));
       setSchouwingen(data);
@@ -72,8 +72,10 @@ export default function SchouwenPage() {
   }, [firestore, selectedProjectId]);
 
   React.useEffect(() => {
-    fetchSchouwingen();
-  }, [fetchSchouwingen]);
+    if (selectedProjectId) {
+      fetchSchouwingen();
+    }
+  }, [selectedProjectId, fetchSchouwingen]);
   
   const isSuperUser = profile?.role === 'Super admin';
   const canView = isSuperUser || !!profile?.permissions?.schouwen?.view;
