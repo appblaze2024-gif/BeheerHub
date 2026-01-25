@@ -65,8 +65,6 @@ export default function SchouwenPage() {
   
   const [isSelectionMode, setIsSelectionMode] = React.useState(false);
   const [selectedFeatures, setSelectedFeatures] = React.useState<any[]>([]);
-  const [allLayerIds, setAllLayerIds] = React.useState<string[]>([]);
-
 
   const mapRef = React.useRef<any>(null);
 
@@ -117,17 +115,6 @@ export default function SchouwenPage() {
   React.useEffect(() => {
     fetchSchouwingen();
   }, [fetchSchouwingen]);
-
-  const onMapLoad = React.useCallback(() => {
-    const map = mapRef.current?.getMap();
-    if (map) {
-        const layers = map.getStyle().layers;
-        const geometryLayerIds = layers
-            .filter(l => ['fill', 'line', 'fill-extrusion'].includes(l.type))
-            .map(l => l.id);
-        setAllLayerIds(geometryLayerIds);
-    }
-  }, []);
   
   const handleToggleSelectionMode = () => {
     setIsSelectionMode(prev => {
@@ -165,14 +152,16 @@ export default function SchouwenPage() {
     }
 
     const map = mapRef.current?.getMap();
-    if (!map || allLayerIds.length === 0) return;
+    if (!map) return;
     
-    // Use a slightly larger bounding box to query features, increasing click tolerance
+    // Query a larger area around the click to catch thin lines
     const bbox: [[number, number], [number, number]] = [
-      [event.point.x - 15, event.point.y - 15],
-      [event.point.x + 15, event.point.y + 15]
+      [event.point.x - 20, event.point.y - 20],
+      [event.point.x + 20, event.point.y + 20]
     ];
-    const features = map.queryRenderedFeatures(bbox, { layers: allLayerIds });
+    
+    // Query ALL rendered layers without specifying layer IDs
+    const features = map.queryRenderedFeatures(bbox);
 
     let selectableFeature: any | null = null;
     
@@ -185,7 +174,6 @@ export default function SchouwenPage() {
     ) as turf.Feature<turf.LineString>[];
 
     if (polygons.length > 0) {
-        // Sort by area to pick the smallest (most specific) one
         polygons.sort((a, b) => turf.area(a) - turf.area(b));
         const smallestPolygonFeature = polygons[0];
 
@@ -209,8 +197,7 @@ export default function SchouwenPage() {
     else if (lines.length > 0) {
         const lineFeature = lines[0];
         try {
-            // Buffer the line to make it a selectable area
-            const buffered = turf.buffer(lineFeature, 3, { units: 'meters' });
+            const buffered = turf.buffer(lineFeature, 5, { units: 'meters' });
             selectableFeature = {
                 ...buffered,
                 properties: { ...lineFeature.properties, original_geometry_type: 'LineString' },
@@ -221,7 +208,6 @@ export default function SchouwenPage() {
         }
     }
 
-    // If a feature is found, add it to the selection. If not, do nothing.
     if (selectableFeature) {
       const featureId = JSON.stringify(selectableFeature.geometry);
       
@@ -323,7 +309,6 @@ export default function SchouwenPage() {
         mapboxAccessToken={MAPBOX_TOKEN}
         onClick={handleMapClick}
         cursor={isSelectionMode ? 'pointer' : 'grab'}
-        onLoad={onMapLoad}
       >
         {schouwingen.map((schouwing) => (
           <Marker
