@@ -400,23 +400,24 @@ export default function SchouwenPage() {
                 onClose={() => setSelectedSchouwing(null)}
                 closeButton={true}
                 closeOnClick={false}
-                anchor="top"
-                className='min-w-64 p-0'
+                anchor="bottom"
+                offset={10}
+                className="!p-0"
             >
-                <div className="w-64">
+                <div className="w-64 rounded-lg shadow-lg bg-card text-card-foreground overflow-hidden">
                     {selectedSchouwing.fotos && selectedSchouwing.fotos.length > 0 && (
-                        <div className="relative h-32 w-full rounded-t-lg overflow-hidden">
+                        <div className="relative h-32 w-full">
                             <Image
                                 src={selectedSchouwing.fotos[0].url}
-                                alt={`Foto van schouwing ${selectedSchouwing.id}`}
+                                alt={`Foto van schouwing ${selectedSchouwing.id || ''}`}
                                 fill
                                 className="object-cover"
                             />
                         </div>
                     )}
-                    <div className="p-2">
+                    <div className="p-3">
                       <h3 className="font-bold text-base mb-2">Schouwing {selectedSchouwing.id?.slice(0, 6)}</h3>
-                      <div className="grid grid-cols-[max-content_1fr] items-center gap-x-4 gap-y-1 text-sm">
+                      <div className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-sm">
                           <span className="font-semibold text-muted-foreground">Opmerking:</span>
                           <span className="truncate">{selectedSchouwing.opmerkingen}</span>
 
