@@ -23,6 +23,7 @@ import { SchouwDialog } from '@/components/schouw-dialog';
 import { useProfile } from '@/firebase/profile-provider';
 import { updateDocumentNonBlocking } from '@/firebase';
 import { cn } from '@/lib/utils';
+import type { FillLayer, LineLayer } from 'react-map-gl';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -64,6 +65,8 @@ export default function SchouwenPage() {
   
   const [isSelectionMode, setIsSelectionMode] = React.useState(false);
   const [selectedFeatures, setSelectedFeatures] = React.useState<any[]>([]);
+  const [allLayerIds, setAllLayerIds] = React.useState<string[]>([]);
+
 
   const mapRef = React.useRef<any>(null);
 
@@ -114,6 +117,17 @@ export default function SchouwenPage() {
   React.useEffect(() => {
     fetchSchouwingen();
   }, [fetchSchouwingen]);
+
+  const onMapLoad = React.useCallback(() => {
+    const map = mapRef.current?.getMap();
+    if (map) {
+        const layers = map.getStyle().layers;
+        const geometryLayerIds = layers
+            .filter(l => ['fill', 'line', 'fill-extrusion'].includes(l.type))
+            .map(l => l.id);
+        setAllLayerIds(geometryLayerIds);
+    }
+  }, []);
   
   const handleToggleSelectionMode = () => {
     setIsSelectionMode(prev => {
@@ -151,14 +165,14 @@ export default function SchouwenPage() {
     }
 
     const map = mapRef.current?.getMap();
-    if (!map) return;
+    if (!map || allLayerIds.length === 0) return;
     
     // Use a slightly larger bounding box to query features, increasing click tolerance
     const bbox: [[number, number], [number, number]] = [
       [event.point.x - 15, event.point.y - 15],
       [event.point.x + 15, event.point.y + 15]
     ];
-    const features = map.queryRenderedFeatures(bbox);
+    const features = map.queryRenderedFeatures(bbox, { layers: allLayerIds });
 
     let selectableFeature: any | null = null;
     
@@ -309,6 +323,7 @@ export default function SchouwenPage() {
         mapboxAccessToken={MAPBOX_TOKEN}
         onClick={handleMapClick}
         cursor={isSelectionMode ? 'pointer' : 'grab'}
+        onLoad={onMapLoad}
       >
         {schouwingen.map((schouwing) => (
           <Marker
