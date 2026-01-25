@@ -157,7 +157,6 @@ export default function SchouwenPage() {
 
     let selectableFeature: any | null = null;
     
-    // Separate features into polygons and lines
     const polygons = features.filter(f => 
         (f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon')
     ) as turf.Feature<turf.Polygon | turf.MultiPolygon>[];
@@ -166,20 +165,34 @@ export default function SchouwenPage() {
         f.geometry.type === 'LineString'
     ) as turf.Feature<turf.LineString>[];
 
-    // Prioritize smallest polygon
     if (polygons.length > 0) {
         polygons.sort((a, b) => turf.area(a) - turf.area(b));
-        selectableFeature = polygons[0];
+        const smallestPolygonFeature = polygons[0];
+
+        if (smallestPolygonFeature.geometry.type === 'MultiPolygon') {
+            const clickPoint = turf.point([event.lngLat.lng, event.lngLat.lat]);
+            for (const polyCoords of smallestPolygonFeature.geometry.coordinates) {
+                const singlePolygon = turf.polygon(polyCoords);
+                if (turf.booleanPointInPolygon(clickPoint, singlePolygon)) {
+                    selectableFeature = {
+                        type: 'Feature',
+                        geometry: singlePolygon.geometry,
+                        properties: smallestPolygonFeature.properties
+                    };
+                    break;
+                }
+            }
+        } else {
+            selectableFeature = smallestPolygonFeature;
+        }
     } 
-    // If no polygons, check for lines (like sidewalks)
     else if (lines.length > 0) {
-        const lineFeature = lines[0]; // Take the topmost line feature
-        // Create a buffer around the line to make it a selectable area
+        const lineFeature = lines[0];
         try {
             const buffered = turf.buffer(lineFeature, 2, { units: 'meters' });
             selectableFeature = {
                 ...buffered,
-                properties: { ...lineFeature.properties, original_geometry_type: 'LineString' }, // Keep original props
+                properties: { ...lineFeature.properties, original_geometry_type: 'LineString' },
             };
         } catch(e) {
             console.error("Error buffering line:", e);
@@ -188,19 +201,15 @@ export default function SchouwenPage() {
     }
 
     if (selectableFeature) {
-      // Use feature's source layer and source to create a more unique ID if available
-      const sourceId = `${selectableFeature.layer?.source || ''}-${selectableFeature.layer?.id || ''}-${selectableFeature.id || ''}`;
-      const featureId = selectableFeature.id || sourceId + JSON.stringify(selectableFeature.geometry);
-
-      // Add a unique ID to the feature if it doesn't have one
-      if (!selectableFeature.id) {
-          selectableFeature.id = featureId;
-      }
+      const featureId = JSON.stringify(selectableFeature.geometry);
+      
+      if (!selectableFeature.properties) selectableFeature.properties = {};
+      selectableFeature.properties.customId = featureId;
 
       setSelectedFeatures(prev => {
-        const isAlreadySelected = prev.some(f => f.id === featureId);
+        const isAlreadySelected = prev.some(f => f.properties.customId === featureId);
         if (isAlreadySelected) {
-          return prev.filter(f => f.id !== featureId);
+          return prev.filter(f => f.properties.customId !== featureId);
         } else {
           return [...prev, selectableFeature];
         }
@@ -319,7 +328,7 @@ export default function SchouwenPage() {
                       <strong>Status:</strong> {selectedSchouwing.status}
                   </p>
                    <p className="text-xs text-muted-foreground mt-1">
-                      Datum: {format(new Date(schouwing.datum), 'dd-MM-yyyy', { locale: nl })}
+                      Datum: {format(new Date(schouwingen.find(s => s.id === selectedSchouwing.id)?.datum || Date.now()), 'dd-MM-yyyy', { locale: nl })}
                   </p>
                   <Button size="sm" className="w-full mt-2" onClick={() => handleEditSchouwing(selectedSchouwing)}>Details</Button>
               </div>
