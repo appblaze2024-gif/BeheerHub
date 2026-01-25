@@ -2,8 +2,8 @@
 
 import * as React from 'react';
 import MapGL, { Marker, Popup } from 'react-map-gl';
-import { useFirestore } from '@/firebase';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { useFirestore, useUser, updateDocumentNonBlocking } from '@/firebase';
+import { collection, getDocs, query, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -12,18 +12,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus } from 'lucide-react';
+import { Plus, Layers as MapLayersIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 
 import type { Project } from '@/app/projects/page';
 import type { Schouwing } from '@/lib/types';
 import { SchouwDialog } from '@/components/schouw-dialog';
+import { useProfile } from '@/firebase/profile-provider';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
 export default function SchouwenPage() {
   const firestore = useFirestore();
+  const { user } = useUser();
+  const { profile } = useProfile();
+
   const [projects, setProjects] = React.useState<Project[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = React.useState(true);
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
@@ -35,6 +39,20 @@ export default function SchouwenPage() {
   const [newSchouwingLocation, setNewSchouwingLocation] = React.useState<{ latitude: number, longitude: number } | null>(null);
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [mapStyle, setMapStyle] = React.useState('mapbox://styles/mapbox/streets-v12');
+
+  React.useEffect(() => {
+    if (profile?.schouwenMapStyle) {
+      setMapStyle(profile.schouwenMapStyle);
+    }
+  }, [profile]);
+
+  const handleMapStyleChange = (newStyle: string) => {
+    if (!user || !firestore) return;
+    setMapStyle(newStyle);
+    const userProfileRef = doc(firestore, 'users', user.uid);
+    updateDocumentNonBlocking(userProfileRef, { schouwenMapStyle: newStyle });
+  };
 
   React.useEffect(() => {
     const fetchProjects = async () => {
@@ -56,7 +74,7 @@ export default function SchouwenPage() {
     }
     setIsLoadingSchouwingen(true);
     try {
-      const q = collection(firestore, 'projects', selectedProjectId, 'schouwingen');
+      const q = query(collection(firestore, 'projects', selectedProjectId, 'schouwingen'));
       const querySnapshot = await getDocs(q);
       const schouwingenData = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Schouwing));
       setSchouwingen(schouwingenData);
@@ -72,14 +90,13 @@ export default function SchouwenPage() {
   }, [fetchSchouwingen]);
 
   const handleMapClick = (event: mapboxgl.MapboxEvent & { lngLat: { lng: number, lat: number } }) => {
-    // If a marker was clicked, the marker's own click handler will take care of it.
     if (event.defaultPrevented) return;
     setNewSchouwingLocation({ longitude: event.lngLat.lng, latitude: event.lngLat.lat });
     setSelectedSchouwing(null);
   };
 
   const handleMarkerClick = (schouwing: Schouwing, event: mapboxgl.MapboxEvent) => {
-    event.preventDefault(); // Prevent map click from firing
+    event.preventDefault();
     setSelectedSchouwing(schouwing);
     setNewSchouwingLocation(null);
   };
@@ -118,6 +135,19 @@ export default function SchouwenPage() {
                 ))}
               </SelectContent>
             </Select>
+            <Select onValueChange={handleMapStyleChange} value={mapStyle}>
+              <SelectTrigger className="w-full sm:w-auto">
+                <MapLayersIcon className="mr-2 h-4 w-4" />
+                <SelectValue placeholder="Kaartlaag" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="mapbox://styles/mapbox/streets-v12">Standaard</SelectItem>
+                <SelectItem value="mapbox://styles/mapbox/satellite-streets-v12">Satelliet</SelectItem>
+                <SelectItem value="mapbox://styles/mapbox/outdoors-v12">Terrein</SelectItem>
+                <SelectItem value="mapbox://styles/mapbox/light-v11">Licht</SelectItem>
+                <SelectItem value="mapbox://styles/mapbox/dark-v11">Donker</SelectItem>
+              </SelectContent>
+            </Select>
             <Button onClick={handleCreateOrEdit} disabled={!selectedProjectId || (!newSchouwingLocation && !selectedSchouwing)}>
               <Plus className="mr-2 h-4 w-4" />
               {selectedSchouwing ? 'Bekijk/Bewerk' : 'Nieuwe Schouwing'}
@@ -134,7 +164,7 @@ export default function SchouwenPage() {
       <MapGL
         initialViewState={initialViewState}
         style={{ width: '100%', height: '100%' }}
-        mapStyle="mapbox://styles/mapbox/streets-v12"
+        mapStyle={mapStyle}
         mapboxAccessToken={MAPBOX_TOKEN}
         onClick={handleMapClick}
       >
