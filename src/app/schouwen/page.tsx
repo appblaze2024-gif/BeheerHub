@@ -154,14 +154,15 @@ export default function SchouwenPage() {
     const map = mapRef.current?.getMap();
     if (!map) return;
     
-    // Query a larger area around the click to catch thin lines
+    // Explicitly query all layer IDs to override any "interactive: false" properties in the style.
+    const allLayerIds = map.getStyle().layers.map((layer: any) => layer.id);
+
     const bbox: [[number, number], [number, number]] = [
       [event.point.x - 20, event.point.y - 20],
       [event.point.x + 20, event.point.y + 20]
     ];
     
-    // Query ALL rendered layers without specifying layer IDs
-    const features = map.queryRenderedFeatures(bbox);
+    const features = map.queryRenderedFeatures(bbox, { layers: allLayerIds });
 
     let selectableFeature: any | null = null;
     
@@ -197,7 +198,7 @@ export default function SchouwenPage() {
     else if (lines.length > 0) {
         const lineFeature = lines[0];
         try {
-            const buffered = turf.buffer(lineFeature, 5, { units: 'meters' });
+            const buffered = turf.buffer(lineFeature, 8, { units: 'meters' });
             selectableFeature = {
                 ...buffered,
                 properties: { ...lineFeature.properties, original_geometry_type: 'LineString' },
