@@ -101,10 +101,17 @@ export default function SchouwenPage() {
     setNewSchouwingLocation(null);
   };
   
-  const handleCreateOrEdit = () => {
-    if (newSchouwingLocation || selectedSchouwing) {
-        setIsDialogOpen(true);
-    }
+  const handleNewSchouwingClick = () => {
+    if (!selectedProjectId) return;
+    setSelectedSchouwing(null);
+    setNewSchouwingLocation(null);
+    setIsDialogOpen(true);
+  };
+  
+  const handleEditSchouwing = (schouwing: Schouwing) => {
+    setSelectedSchouwing(schouwing);
+    setNewSchouwingLocation(null);
+    setIsDialogOpen(true);
   }
 
   const initialViewState = {
@@ -148,15 +155,15 @@ export default function SchouwenPage() {
                 <SelectItem value="mapbox://styles/mapbox/dark-v11">Donker</SelectItem>
               </SelectContent>
             </Select>
-            <Button onClick={handleCreateOrEdit} disabled={!selectedProjectId || (!newSchouwingLocation && !selectedSchouwing)}>
+            <Button onClick={handleNewSchouwingClick} disabled={!selectedProjectId}>
               <Plus className="mr-2 h-4 w-4" />
-              {selectedSchouwing ? 'Bekijk/Bewerk' : 'Nieuwe Schouwing'}
+              Nieuwe Schouwing
             </Button>
         </div>
-        {newSchouwingLocation && (
+        {newSchouwingLocation && !isDialogOpen && (
             <div className="bg-card p-3 rounded-lg shadow-lg pointer-events-auto">
                 <p className="font-semibold text-sm">Nieuwe schouwing op geselecteerde locatie.</p>
-                <p className="text-xs text-muted-foreground">Klik op 'Nieuwe Schouwing' om de details in te vullen.</p>
+                <Button size="sm" className="w-full mt-2" onClick={() => setIsDialogOpen(true)}>Maak hier een melding</Button>
             </div>
         )}
       </header>
@@ -194,9 +201,9 @@ export default function SchouwenPage() {
                       <strong>Status:</strong> {selectedSchouwing.status}
                   </p>
                    <p className="text-xs text-muted-foreground mt-1">
-                      Datum: {format(new Date(selectedSchouwing.datum), 'dd-MM-yyyy', { locale: nl })}
+                      Datum: {format(new Date(schouwing.datum), 'dd-MM-yyyy', { locale: nl })}
                   </p>
-                  <Button size="sm" className="w-full mt-2" onClick={handleCreateOrEdit}>Details</Button>
+                  <Button size="sm" className="w-full mt-2" onClick={() => handleEditSchouwing(selectedSchouwing)}>Details</Button>
               </div>
           </Popup>
         )}
