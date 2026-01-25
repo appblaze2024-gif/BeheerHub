@@ -153,10 +153,10 @@ export default function SchouwenPage() {
     const map = mapRef.current?.getMap();
     if (!map) return;
     
-    // Use a small bounding box to query features, more reliable than a single point
+    // Use a slightly larger bounding box to query features, increasing click tolerance
     const bbox: [[number, number], [number, number]] = [
-      [event.point.x - 5, event.point.y - 5],
-      [event.point.x + 5, event.point.y + 5]
+      [event.point.x - 10, event.point.y - 10],
+      [event.point.x + 10, event.point.y + 10]
     ];
     const features = map.queryRenderedFeatures(bbox);
 
@@ -171,6 +171,7 @@ export default function SchouwenPage() {
     ) as turf.Feature<turf.LineString>[];
 
     if (polygons.length > 0) {
+        // Sort by area to pick the smallest (most specific) one
         polygons.sort((a, b) => turf.area(a) - turf.area(b));
         const smallestPolygonFeature = polygons[0];
 
@@ -206,15 +207,7 @@ export default function SchouwenPage() {
         }
     }
 
-    // Fallback to creating a circle if no feature was found
-    if (!selectableFeature) {
-        const center = [event.lngLat.lng, event.lngLat.lat];
-        const radius = 10; // 10 meters
-        const options = { steps: 64, units: 'meters' as const };
-        selectableFeature = turf.circle(center, radius, options);
-    }
-
-
+    // If a feature is found, add it to the selection. If not, do nothing.
     if (selectableFeature) {
       const featureId = JSON.stringify(selectableFeature.geometry);
       
