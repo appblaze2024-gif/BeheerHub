@@ -1,9 +1,40 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // WARNING: TEMPORARY DIAGNOSTIC RULE - HIGHLY INSECURE
-    match /{document=**} {
-      allow read, write: if true;
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Users can only manage their own profile and data
+    match /users/{userId}/{document=**} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Projects, employees, and objects are generally readable by authenticated users.
+    // Specific write rules are defined below.
+    match /projects/{projectId} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /medewerkers/{medewerkerId} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /objects/{objectId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Public reports can be read and written by any authenticated user.
+    match /meldingen/{meldingId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Any authenticated user can read and write to subcollections within a project.
+    // This includes 'schouwingen', 'besteksmeldingen', etc.
+    // For a production app, you'd want more granular control here (e.g., based on user roles).
+    match /projects/{projectId}/{subcollection}/{docId} {
+      allow read, write: if isSignedIn();
     }
   }
 }
