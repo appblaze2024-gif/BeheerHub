@@ -33,6 +33,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import {
@@ -311,159 +312,155 @@ export function SchouwDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-5xl max-h-[90vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="p-6 pb-0">
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="p-6 pb-2">
           <DialogTitle>{schouwing?.id ? 'Schouwing Bewerken' : 'Nieuwe Schouwing'}</DialogTitle>
           <DialogDescription>
             Selecteer een locatie en vul de details in om een schouwing aan te maken.
           </DialogDescription>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto px-6">
-            <Form {...form}>
+          <Form {...form}>
             <form id="schouw-form" onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4">
-                <div className="space-y-4">
-                    <FormField
-                        control={form.control}
-                        name="inspecteur"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Inspecteur</FormLabel>
-                            <FormControl>
-                                <Input {...field} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField control={form.control} name="categorie" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Categorie</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+              <div className="space-y-4">
+                  <FormField
+                      control={form.control}
+                      name="inspecteur"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Inspecteur</FormLabel>
                           <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecteer een categorie" />
-                            </SelectTrigger>
+                              <Input {...field} />
                           </FormControl>
-                          <SelectContent>
-                            {categorieOptions.map(opt => (
-                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                    <FormField
-                        control={form.control}
-                        name="status"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Status</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Selecteer een status" />
-                                </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                <SelectItem value="Open">Open</SelectItem>
-                                <SelectItem value="In behandeling">In behandeling</SelectItem>
-                                <SelectItem value="Afgerond">Afgerond</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="opmerkingen"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Opmerkingen</FormLabel>
-                            <FormControl>
-                                <Textarea rows={4} {...field} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </div>
-                <div className="space-y-4">
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                  />
+                  <FormField control={form.control} name="categorie" render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Locatie*</FormLabel>
-                        <div className="relative w-full">
-                            <Input
-                                placeholder="Zoek een adres..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                autoComplete="off"
-                            />
-                            {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
-                            {suggestions.length > 0 && (
-                                <div className="absolute z-10 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
-                                    {suggestions.map((suggestion) => (
-                                    <div
-                                        key={suggestion.place_id}
-                                        onClick={() => handleSuggestionClick(suggestion)}
-                                        className="px-4 py-2 text-sm cursor-pointer hover:bg-muted"
-                                    >
-                                        {suggestion.display_name}
-                                    </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                        <div className='aspect-square w-full border rounded-md overflow-hidden mt-2'>
-                            <MapboxView
-                                longitude={location?.longitude}
-                                latitude={location?.latitude}
-                            />
-                        </div>
+                      <FormLabel>Categorie</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecteer een categorie" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {categorieOptions.map(opt => (
+                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
                     </FormItem>
-                </div>
-                <div className='lg:col-span-2 space-y-2 pt-4'>
-                    <FormLabel>Foto's</FormLabel>
-                    <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'>
-                        <div className='lg:col-span-1'>
-                            <Button type="button" variant="outline" className="w-full" disabled={isUploading || isSubmitting} onClick={() => document.getElementById('schouwing-file-input')?.click()}>
-                                <Upload className="mr-2 h-4 w-4" /> Upload foto's
-                            </Button>
-                            <input type="file" id="schouwing-file-input" onChange={handleFileChange} className="hidden" multiple accept="image/*" />
-                        </div>
-                        <div className="lg:col-span-2">
-                          {uploadedFiles.length > 0 && (
-                            <div className="relative aspect-video w-full rounded-md border overflow-hidden">
-                                <Image src={uploadedFiles[0].url} alt={uploadedFiles[0].name} fill className="object-cover" />
-                            </div>
-                           )}
-                        </div>
-                    </div>
-                    
+                  )} />
+                  <FormField
+                      control={form.control}
+                      name="status"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Status</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                              <SelectTrigger>
+                                  <SelectValue placeholder="Selecteer een status" />
+                              </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                              <SelectItem value="Open">Open</SelectItem>
+                              <SelectItem value="In behandeling">In behandeling</SelectItem>
+                              <SelectItem value="Afgerond">Afgerond</SelectItem>
+                              </SelectContent>
+                          </Select>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                  />
+                  <FormField
+                      control={form.control}
+                      name="opmerkingen"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Opmerkingen</FormLabel>
+                          <FormControl>
+                              <Textarea rows={4} {...field} />
+                          </FormControl>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                  />
+              </div>
+              <div className="space-y-4">
+                  <FormItem>
+                      <FormLabel>Locatie*</FormLabel>
+                      <div className="relative w-full">
+                          <Input
+                              placeholder="Zoek een adres..."
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              autoComplete="off"
+                          />
+                          {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
+                          {suggestions.length > 0 && (
+                              <div className="absolute z-10 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                  {suggestions.map((suggestion) => (
+                                  <div
+                                      key={suggestion.place_id}
+                                      onClick={() => handleSuggestionClick(suggestion)}
+                                      className="px-4 py-2 text-sm cursor-pointer hover:bg-muted"
+                                  >
+                                      {suggestion.display_name}
+                                  </div>
+                                  ))}
+                              </div>
+                          )}
+                      </div>
+                      <div className='aspect-square w-full border rounded-md overflow-hidden mt-2'>
+                          <MapboxView
+                              longitude={location?.longitude}
+                              latitude={location?.latitude}
+                          />
+                      </div>
+                  </FormItem>
+              </div>
+              <div className="lg:col-span-2 space-y-4 pt-4">
+                <FormLabel>Foto's</FormLabel>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1fr_2fr] gap-4">
+                  <div className="space-y-2">
+                    <Button type="button" variant="outline" className="w-full" disabled={isUploading || isSubmitting} onClick={() => document.getElementById('schouwing-file-input')?.click()}>
+                      <Upload className="mr-2 h-4 w-4" /> Upload foto's
+                    </Button>
+                    <input type="file" id="schouwing-file-input" onChange={handleFileChange} className="hidden" multiple accept="image/*" />
                     {Object.entries(uploadProgress).map(([name, progress]) => (
-                    <div key={name} className="space-y-1 mt-2">
+                      <div key={name} className="space-y-1 mt-2">
                         <p className="text-sm font-medium">{name}</p>
                         <Progress value={progress} className="w-full" />
-                    </div>
+                      </div>
                     ))}
-                    
                     {uploadedFiles.length > 0 && (
-                         <div className='border rounded-md p-2 max-h-32 overflow-auto space-y-2 mt-4'>
-                            {uploadedFiles.map(file => (
-                                <div key={file.storagePath} className="flex items-center justify-between text-sm">
-                                    <a href={file.url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline flex items-center gap-2">
-                                        <FileIcon className='h-4 w-4 shrink-0'/> {file.name}
-                                    </a>
-                                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleFileDelete(file)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                                </div>
-                            ))}
-                        </div>
+                      <div className='border rounded-md p-2 max-h-48 overflow-auto space-y-2 mt-4'>
+                        {uploadedFiles.map(file => (
+                          <div key={file.storagePath} className="flex items-center justify-between text-sm">
+                            <a href={file.url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline flex items-center gap-2">
+                              <FileIcon className='h-4 w-4 shrink-0' /> {file.name}
+                            </a>
+                            <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleFileDelete(file)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                          </div>
+                        ))}
+                      </div>
                     )}
+                  </div>
+                  {uploadedFiles.length > 0 && (
+                    <div className="relative aspect-video w-full rounded-md border overflow-hidden bg-muted">
+                      <Image src={uploadedFiles[0].url} alt={uploadedFiles[0].name} layout="fill" className="object-cover" />
+                    </div>
+                  )}
                 </div>
+              </div>
             </form>
-            </Form>
+          </Form>
         </div>
-         <DialogFooter className="p-6 pt-4 border-t flex justify-between w-full">
+        <DialogFooter className="p-6 pt-4 border-t flex justify-between w-full">
           <div>
             {schouwing && (
                 <AlertDialog>
