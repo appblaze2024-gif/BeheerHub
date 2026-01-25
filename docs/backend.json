@@ -30,6 +30,10 @@
         "projectId": { "type": "string" },
         "datum": { "type": "string", "format": "date-time" },
         "inspecteur": { "type": "string" },
+        "categorie": {
+          "type": "string",
+          "enum": ["Zwerfvuil", "Prullenbak", "Vegen", "Grofvuil", "Kadaver", "Storing"]
+        },
         "opmerkingen": { "type": "string" },
         "status": {
           "type": "string",
@@ -48,7 +52,7 @@
             }
         }
       },
-      "required": ["projectId", "datum", "inspecteur", "status"]
+      "required": ["projectId", "datum", "inspecteur", "status", "categorie"]
     },
     "Route": {
       "title": "Route",

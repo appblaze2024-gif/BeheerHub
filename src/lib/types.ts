@@ -136,6 +136,7 @@ export interface Schouwing {
   status: 'Open' | 'In behandeling' | 'Afgerond';
   latitude: number;
   longitude: number;
+  categorie: 'Zwerfvuil' | 'Prullenbak' | 'Vegen' | 'Grofvuil' | 'Kadaver' | 'Storing';
   gebieden?: string;
   fotos?: UploadedFile[];
 }
