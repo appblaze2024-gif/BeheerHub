@@ -12,6 +12,10 @@ import {
   useUser
 } from '@/firebase';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
+import MapGL from 'react-map-gl';
+import MapboxDraw from '@mapbox/mapbox-gl-draw';
+import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
+import * as turf from '@turf/turf';
 
 import {
   Dialog,
@@ -40,14 +44,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { Schouwing } from '@/lib/types';
-import { MapboxView } from './mapbox-view';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { Info } from 'lucide-react';
 
-interface Suggestion {
-  place_id: number;
-  display_name: string;
-  lon: string;
-  lat: string;
-}
+const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
+
 
 const schouwFormSchema = z.object({
   inspecteur: z.string().min(1, 'Naam inspecteur is verplicht.'),
@@ -62,7 +63,6 @@ interface SchouwDialogProps {
   onOpenChange: (open: boolean) => void;
   projectId: string | null;
   schouwing?: Schouwing | null;
-  location?: { latitude: number; longitude: number } | null;
   onSuccess: () => void;
 }
 
@@ -71,114 +71,87 @@ export function SchouwDialog({
   onOpenChange,
   projectId,
   schouwing,
-  location,
   onSuccess,
 }: SchouwDialogProps) {
   const firestore = useFirestore();
   const { user } = useUser();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const drawRef = React.useRef<MapboxDraw | null>(null);
+  const mapRef = React.useRef<any>(null);
   
-  const [internalLocation, setInternalLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const [suggestions, setSuggestions] = React.useState<Suggestion[]>([]);
-  const [isSearching, setIsSearching] = React.useState(false);
-  const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
-  const justSelectedSuggestion = React.useRef(false);
-
   const form = useForm<SchouwFormValues>({
     resolver: zodResolver(schouwFormSchema),
   });
 
+  const onMapLoad = React.useCallback(() => {
+    if (mapRef.current && !drawRef.current) {
+      const map = mapRef.current.getMap();
+      const draw = new MapboxDraw({
+        displayControlsDefault: false,
+        controls: {
+          polygon: true,
+          trash: true,
+        },
+      });
+      map.addControl(draw);
+      drawRef.current = draw;
+      
+      if (schouwing?.gebieden) {
+          try {
+              const features = JSON.parse(schouwing.gebieden);
+              draw.add({ type: 'FeatureCollection', features });
+              
+              if (features.length > 0) {
+                  const featureCollection = turf.featureCollection(features);
+                  const bbox = turf.bbox(featureCollection);
+                  if (bbox[0] !== Infinity) {
+                    map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
+                  }
+              }
+          } catch (e) {
+              console.error("Could not parse schouwing gebieden", e);
+          }
+      }
+    }
+  }, [schouwing]);
+  
   React.useEffect(() => {
     if (open) {
-      if (schouwing) {
-        form.reset({
-          inspecteur: schouwing.inspecteur,
-          opmerkingen: schouwing.opmerkingen,
-          status: schouwing.status,
-        });
-        const schouwLocation = {latitude: schouwing.latitude, longitude: schouwing.longitude};
-        setInternalLocation(schouwLocation);
-        setSearchQuery(`${schouwLocation.latitude.toFixed(6)}, ${schouwLocation.longitude.toFixed(6)}`);
-
-      } else {
-        form.reset({
-          inspecteur: user?.displayName || user?.email || '',
-          opmerkingen: '',
-          status: 'Open',
-        });
-        setInternalLocation(location || null);
-        setSearchQuery(location ? `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}` : '');
-      }
-      setSuggestions([]);
-      setIsSearching(false);
+      form.reset({
+        inspecteur: schouwing?.inspecteur || user?.displayName || user?.email || '',
+        opmerkingen: schouwing?.opmerkingen || '',
+        status: schouwing?.status || 'Open',
+      });
     } else {
-      setInternalLocation(null);
-      setSearchQuery('');
-    }
-  }, [open, schouwing, location, form, user]);
-
-  React.useEffect(() => {
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
-    if (justSelectedSuggestion.current) {
-      justSelectedSuggestion.current = false;
-      return;
-    }
-
-    if (!searchQuery.trim()) {
-      setSuggestions([]);
-      return;
-    }
-
-    setIsSearching(true);
-    searchTimeoutRef.current = setTimeout(async () => {
-      try {
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-            searchQuery
-          )}&format=json&countrycodes=nl&limit=5`
-        );
-        const data: Suggestion[] = await response.json();
-        setSuggestions(data);
-      } catch (error) {
-        console.error("Fout bij zoeken:", error);
-        setSuggestions([]);
-      } finally {
-        setIsSearching(false);
+      // Cleanup mapbox draw when dialog closes
+       if (drawRef.current) {
+        try {
+          drawRef.current.deleteAll();
+          if (mapRef.current?.getMap()?.getControl('mapbox-gl-draw')) {
+            mapRef.current.getMap().removeControl(drawRef.current);
+          }
+        } catch(e) {
+            console.warn("Could not cleanup Mapbox Draw control.");
+        }
+        drawRef.current = null;
       }
-    }, 500);
-
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-    };
-  }, [searchQuery]);
-
-  const handleSuggestionClick = (suggestion: Suggestion) => {
-    justSelectedSuggestion.current = true;
-    setSearchQuery(suggestion.display_name);
-    const lat = parseFloat(suggestion.lat);
-    const lon = parseFloat(suggestion.lon);
-
-    if (!isNaN(lat) && !isNaN(lon)) {
-        setInternalLocation({ latitude: lat, longitude: lon });
     }
-    setSuggestions([]);
-  };
+  }, [open, schouwing, form, user]);
 
   const onSubmit = async (data: SchouwFormValues) => {
     if (!firestore || !projectId) return;
-    
-    if (!internalLocation) {
-        form.setError("inspecteur", { message: "Selecteer een locatie op de kaart of via zoeken.", type: "manual" });
+
+    const drawnFeatures = drawRef.current?.getAll().features;
+    if (!drawnFeatures || drawnFeatures.length === 0) {
+        form.setError("inspecteur", { message: "Teken tenminste één gebied op de kaart.", type: "manual" });
         return;
     }
-
+    
     setIsSubmitting(true);
+    
+    const featureCollection = turf.featureCollection(drawnFeatures);
+    const center = turf.centerOfMass(featureCollection);
+    const [longitude, latitude] = center.geometry.coordinates;
 
     const schouwingenColRef = collection(firestore, 'projects', projectId, 'schouwingen');
     
@@ -186,8 +159,9 @@ export function SchouwDialog({
       ...data,
       projectId,
       updatedAt: serverTimestamp(),
-      latitude: internalLocation.latitude,
-      longitude: internalLocation.longitude,
+      latitude,
+      longitude,
+      gebieden: JSON.stringify(drawnFeatures),
     };
     
     if (!schouwing) {
@@ -220,7 +194,7 @@ export function SchouwDialog({
         <DialogHeader>
           <DialogTitle>{schouwing ? 'Schouwing Bewerken' : 'Nieuwe Schouwing'}</DialogTitle>
           <DialogDescription>
-            Vul de details voor de inspectie in en klik op opslaan.
+            Teken een of meerdere gebieden op de kaart en vul de inspectiegegevens in.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -275,38 +249,26 @@ export function SchouwDialog({
                 )}
                 />
             </div>
-            <div className='space-y-4'>
-                 <FormItem>
-                    <FormLabel>Locatie*</FormLabel>
-                     <div className="relative w-full">
-                        <Input
-                            placeholder="Zoek een adres..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            autoComplete="off"
-                        />
-                        {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
-                        {suggestions.length > 0 && (
-                            <div className="absolute z-10 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
-                                {suggestions.map((suggestion) => (
-                                <div
-                                    key={suggestion.place_id}
-                                    onClick={() => handleSuggestionClick(suggestion)}
-                                    className="px-4 py-2 text-sm cursor-pointer hover:bg-muted"
-                                >
-                                    {suggestion.display_name}
-                                </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                    <div className='aspect-video w-full border rounded-md overflow-hidden mt-2'>
-                        <MapboxView
-                            longitude={internalLocation?.longitude}
-                            latitude={internalLocation?.latitude}
-                        />
-                    </div>
-                </FormItem>
+            <div className='space-y-2'>
+                 <FormLabel>Gebied(en)</FormLabel>
+                 <div className='aspect-square w-full border rounded-md overflow-hidden'>
+                    <MapGL
+                        ref={mapRef}
+                        initialViewState={{ longitude: 5.2913, latitude: 52.1326, zoom: 7 }}
+                        style={{ width: '100%', height: '100%' }}
+                        mapStyle="mapbox://styles/mapbox/streets-v12"
+                        mapboxAccessToken={MAPBOX_TOKEN}
+                        onLoad={onMapLoad}
+                        preserveDrawingBuffer
+                    />
+                </div>
+                 <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertTitle>Handleiding</AlertTitle>
+                    <AlertDescription>
+                        Gebruik de knoppen op de kaart om een polygoon te tekenen. Klik om punten toe te voegen, en klik op het eerste punt om de polygoon te sluiten. U kunt meerdere polygonen tekenen.
+                    </AlertDescription>
+                </Alert>
             </div>
             <DialogFooter className='md:col-span-2'>
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>

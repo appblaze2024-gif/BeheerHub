@@ -36,7 +36,6 @@ export default function SchouwenPage() {
   const [isLoadingSchouwingen, setIsLoadingSchouwingen] = React.useState(false);
   
   const [selectedSchouwing, setSelectedSchouwing] = React.useState<Schouwing | null>(null);
-  const [newSchouwingLocation, setNewSchouwingLocation] = React.useState<{ latitude: number, longitude: number } | null>(null);
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [mapStyle, setMapStyle] = React.useState('mapbox://styles/mapbox/streets-v12');
@@ -91,26 +90,23 @@ export default function SchouwenPage() {
 
   const handleMapClick = (event: mapboxgl.MapboxEvent & { lngLat: { lng: number, lat: number } }) => {
     if (event.defaultPrevented) return;
-    setNewSchouwingLocation({ longitude: event.lngLat.lng, latitude: event.lngLat.lat });
+    // For now, clicking the map does nothing except close popups if any are open
     setSelectedSchouwing(null);
   };
 
   const handleMarkerClick = (schouwing: Schouwing, event: mapboxgl.MapboxEvent) => {
     event.preventDefault();
     setSelectedSchouwing(schouwing);
-    setNewSchouwingLocation(null);
   };
   
   const handleNewSchouwingClick = () => {
     if (!selectedProjectId) return;
     setSelectedSchouwing(null);
-    setNewSchouwingLocation(null);
     setIsDialogOpen(true);
   };
   
   const handleEditSchouwing = (schouwing: Schouwing) => {
     setSelectedSchouwing(schouwing);
-    setNewSchouwingLocation(null);
     setIsDialogOpen(true);
   }
 
@@ -122,7 +118,6 @@ export default function SchouwenPage() {
 
   const handleSuccess = () => {
       fetchSchouwingen();
-      setNewSchouwingLocation(null);
       setSelectedSchouwing(null);
   }
 
@@ -160,12 +155,6 @@ export default function SchouwenPage() {
               Nieuwe Schouwing
             </Button>
         </div>
-        {newSchouwingLocation && !isDialogOpen && (
-            <div className="bg-card p-3 rounded-lg shadow-lg pointer-events-auto">
-                <p className="font-semibold text-sm">Nieuwe schouwing op geselecteerde locatie.</p>
-                <Button size="sm" className="w-full mt-2" onClick={() => setIsDialogOpen(true)}>Maak hier een melding</Button>
-            </div>
-        )}
       </header>
 
       <MapGL
@@ -207,20 +196,11 @@ export default function SchouwenPage() {
               </div>
           </Popup>
         )}
-        {newSchouwingLocation && (
-            <Marker
-              longitude={newSchouwingLocation.longitude}
-              latitude={newSchouwingLocation.latitude}
-            >
-              <div className="w-5 h-5 bg-red-500 rounded-full border-2 border-white animate-pulse" />
-            </Marker>
-        )}
       </MapGL>
       <SchouwDialog
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         projectId={selectedProjectId}
-        location={newSchouwingLocation}
         schouwing={selectedSchouwing}
         onSuccess={handleSuccess}
       />

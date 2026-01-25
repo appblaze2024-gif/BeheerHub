@@ -36,9 +36,13 @@
           "enum": ["Open", "In behandeling", "Afgerond"]
         },
         "latitude": { "type": "number" },
-        "longitude": { "type": "number" }
+        "longitude": { "type": "number" },
+        "gebieden": {
+          "type": "string",
+          "description": "GeoJSON features representing the inspected areas."
+        }
       },
-      "required": ["projectId", "datum", "inspecteur", "status", "latitude", "longitude"]
+      "required": ["projectId", "datum", "inspecteur", "status"]
     },
     "Route": {
       "title": "Route",
