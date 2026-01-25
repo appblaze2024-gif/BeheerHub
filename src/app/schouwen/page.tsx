@@ -394,39 +394,42 @@ export default function SchouwenPage() {
           </Marker>
         )}
         {selectedSchouwing && (
-          <Popup
-              longitude={selectedSchouwing.longitude}
-              latitude={selectedSchouwing.latitude}
-              onClose={() => setSelectedSchouwing(null)}
-              closeButton={true}
-              closeOnClick={false}
-              anchor="top"
-              className='min-w-64 p-0'
-          >
-              <div className="w-64">
-                  {selectedSchouwing.fotos && selectedSchouwing.fotos.length > 0 && (
-                      <div className="relative h-32 w-full rounded-t-lg overflow-hidden">
-                          <Image
-                              src={selectedSchouwing.fotos[0].url}
-                              alt={`Foto van schouwing ${selectedSchouwing.id}`}
-                              fill
-                              className="object-cover"
-                          />
+            <Popup
+                longitude={selectedSchouwing.longitude}
+                latitude={selectedSchouwing.latitude}
+                onClose={() => setSelectedSchouwing(null)}
+                closeButton={true}
+                closeOnClick={false}
+                anchor="top"
+                className='min-w-64 p-0'
+            >
+                <div className="w-64">
+                    {selectedSchouwing.fotos && selectedSchouwing.fotos.length > 0 && (
+                        <div className="relative h-32 w-full rounded-t-lg overflow-hidden">
+                            <Image
+                                src={selectedSchouwing.fotos[0].url}
+                                alt={`Foto van schouwing ${selectedSchouwing.id}`}
+                                fill
+                                className="object-cover"
+                            />
+                        </div>
+                    )}
+                    <div className="p-2">
+                      <h3 className="font-bold text-base mb-2">Schouwing {selectedSchouwing.id?.slice(0, 6)}</h3>
+                      <div className="grid grid-cols-[max-content_1fr] items-center gap-x-4 gap-y-1 text-sm">
+                          <span className="font-semibold text-muted-foreground">Opmerking:</span>
+                          <span className="truncate">{selectedSchouwing.opmerkingen}</span>
+
+                          <span className="font-semibold text-muted-foreground">Status:</span>
+                          <span>{selectedSchouwing.status}</span>
+
+                          <span className="font-semibold text-muted-foreground">Datum:</span>
+                          <span>{format(new Date(selectedSchouwing.datum), 'dd-MM-yyyy', { locale: nl })}</span>
                       </div>
-                  )}
-                  <div className="p-2">
-                    <h3 className="font-bold text-base mb-1">Schouwing {selectedSchouwing.id?.slice(0, 6)}</h3>
-                    <p className='truncate text-sm mb-2'>{selectedSchouwing.opmerkingen}</p>
-                    <div className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-sm">
-                        <strong>Status:</strong>
-                        <span>{selectedSchouwing.status}</span>
-                        <strong>Datum:</strong>
-                        <span>{format(new Date(selectedSchouwing.datum), 'dd-MM-yyyy', { locale: nl })}</span>
+                      <Button size="sm" className="w-full mt-3" onClick={() => handleEditSchouwing(selectedSchouwing)}>Details</Button>
                     </div>
-                    <Button size="sm" className="w-full mt-3" onClick={() => handleEditSchouwing(selectedSchouwing)}>Details</Button>
-                  </div>
-              </div>
-          </Popup>
+                </div>
+            </Popup>
         )}
       </MapGL>
       <SchouwDialog
