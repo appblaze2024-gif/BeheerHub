@@ -37,6 +37,12 @@ service cloud.firestore {
       return userDoc.exists && userDoc.data.role in roles;
     }
 
+    // BRUTE-FORCE DIAGNOSTIC RULE: Temporarily allow all signed-in users to read/write all project data.
+    match /projects/{projectId}/{document=**} {
+      allow read, write: if isSignedIn();
+    }
+
+    /*
     match /projects/{projectId} {
        allow get, list: if isSignedIn();
        allow create: if hasPermission('projects', 'create');
@@ -81,6 +87,7 @@ service cloud.firestore {
          allow write: if hasPermission('schouwen', 'create') || hasPermission('schouwen', 'edit') || hasPermission('schouwen', 'delete');
        }
     }
+    */
 
     match /medewerkers/{medewerkerId} {
       allow get, list: if isSignedIn();
