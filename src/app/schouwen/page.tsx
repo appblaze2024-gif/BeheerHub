@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Layers as MapLayersIcon, Check, X, Loader2 } from 'lucide-react';
+import { Plus, Layers as MapLayersIcon, Check, X, Loader2, LocateFixed } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import * as turf from '@turf/turf';
@@ -83,6 +83,12 @@ export default function SchouwenPage() {
   const [selectedGemeente, setSelectedGemeente] = React.useState<string | null>(null);
   const [gemeenteBoundary, setGemeenteBoundary] = React.useState<any | null>(null);
   const [isLoadingGemeente, setIsLoadingGemeente] = React.useState(false);
+
+  const [isFollowing, setIsFollowing] = React.useState(false);
+  const [userPosition, setUserPosition] = React.useState<[number, number] | null>(null);
+  const [userHeading, setUserHeading] = React.useState<number>(0);
+  const watchIdRef = React.useRef<number | null>(null);
+
 
   const mapRef = React.useRef<any>(null);
 
@@ -185,6 +191,83 @@ export default function SchouwenPage() {
     }
   }, [gemeenteBoundary]);
 
+  // Get initial user position
+  React.useEffect(() => {
+    let isMounted = true;
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          if (isMounted) {
+            const { longitude, latitude } = position.coords;
+            setUserPosition([longitude, latitude]);
+            // Only fly to user location if no specific boundary is set
+            if (!gemeenteBoundary && mapRef.current) {
+              mapRef.current.getMap().flyTo({ center: [longitude, latitude], zoom: 14 });
+            }
+          }
+        },
+        (error) => console.error("Error getting current position:", error),
+        { enableHighAccuracy: true }
+      );
+    }
+    return () => { isMounted = false; };
+  }, [gemeenteBoundary]);
+
+  // Effect to handle location watching for follow mode
+  React.useEffect(() => {
+    if (isFollowing) {
+        if (watchIdRef.current !== null) {
+            navigator.geolocation.clearWatch(watchIdRef.current);
+        }
+
+        const watchId = navigator.geolocation.watchPosition(
+            (position) => {
+                const { longitude, latitude, heading } = position.coords;
+                setUserPosition([longitude, latitude]);
+                
+                const newHeading = heading ?? userHeading;
+                if(heading !== null) {
+                    setUserHeading(heading);
+                }
+
+                if (mapRef.current) {
+                    mapRef.current.getMap().easeTo({
+                        center: [longitude, latitude],
+                        zoom: 18,
+                        bearing: newHeading,
+                        pitch: 60,
+                        duration: 1000
+                    });
+                }
+            },
+            (error) => {
+                console.error("Error watching position:", error);
+                setIsFollowing(false);
+            },
+            { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        );
+        watchIdRef.current = watchId;
+    } else {
+        if (watchIdRef.current !== null) {
+            navigator.geolocation.clearWatch(watchIdRef.current);
+            watchIdRef.current = null;
+        }
+        if (mapRef.current?.getMap()) {
+            mapRef.current.getMap().easeTo({
+                pitch: 0,
+                bearing: 0,
+                duration: 1000
+            });
+        }
+    }
+
+    return () => {
+        if (watchIdRef.current !== null) {
+            navigator.geolocation.clearWatch(watchIdRef.current);
+        }
+    };
+  }, [isFollowing, userHeading]);
+
   const handleToggleSelectionMode = () => {
     setIsSelectionMode(prev => {
       if (prev) { // if turning off
@@ -225,12 +308,7 @@ export default function SchouwenPage() {
     
     const allLayerIds = map.getStyle().layers.map((layer: any) => layer.id);
 
-    const bbox: [[number, number], [number, number]] = [
-      [event.point.x - 20, event.point.y - 20],
-      [event.point.x + 20, event.point.y + 20]
-    ];
-    
-    const features = map.queryRenderedFeatures(bbox, { layers: allLayerIds });
+    const features = map.queryRenderedFeatures(event.point, { layers: allLayerIds });
 
     let selectableFeature: any | null = null;
     
@@ -278,7 +356,7 @@ export default function SchouwenPage() {
     }
 
     if (selectableFeature) {
-      const featureId = JSON.stringify(selectableFeature.geometry);
+      const featureId = JSON.stringify(selectableFeature.geometry.coordinates);
       
       if (!selectableFeature.properties) selectableFeature.properties = {};
       selectableFeature.properties.customId = featureId;
@@ -377,10 +455,16 @@ export default function SchouwenPage() {
                 </Button>
               </div>
             ) : (
-              <Button onClick={handleToggleSelectionMode} disabled={!selectedProjectId}>
-                <Plus className="mr-2 h-4 w-4" />
-                Nieuwe Schouwing
-              </Button>
+                <>
+                    <Button onClick={handleToggleSelectionMode} disabled={!selectedProjectId}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Nieuwe Schouwing
+                    </Button>
+                    <Button variant={isFollowing ? 'secondary' : 'outline'} onClick={() => setIsFollowing(prev => !prev)}>
+                        <LocateFixed className="mr-2 h-4 w-4" />
+                        Volg
+                    </Button>
+                </>
             )}
         </div>
       </header>
@@ -409,6 +493,15 @@ export default function SchouwenPage() {
             <div className="w-3 h-3 bg-blue-600 rounded-full border-2 border-white cursor-pointer" />
           </Marker>
         ))}
+        {userPosition && (
+          <Marker longitude={userPosition[0]} latitude={userPosition[1]}>
+             <div className="flex items-center justify-center">
+                 <svg width={isFollowing ? "32" : "16"} height={isFollowing ? "32" : "16"} viewBox="0 0 50 50" className={cn(isFollowing && 'animate-pulse')}>
+                    <circle cx="25" cy="25" r="25" fill="#3b82f6" stroke="#ffffff" strokeWidth="4" />
+                </svg>
+              </div>
+          </Marker>
+        )}
         {selectedSchouwing && !isDialogOpen && (
           <Popup
               longitude={selectedSchouwing.longitude}
