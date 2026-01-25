@@ -77,6 +77,15 @@ interface Suggestion {
   lat: string;
 }
 
+interface GeocodedAddress {
+    house_number?: string;
+    road?: string;
+    postcode?: string;
+    city?: string;
+    town?: string;
+    village?: string;
+}
+
 interface SchouwDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -99,6 +108,7 @@ export function SchouwDialog({
   const [isDeleting, setIsDeleting] = React.useState(false);
   
   const [location, setLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
+  const [address, setAddress] = React.useState<{ straatnaam: string; huisnummer: string; postcode: string; plaats: string; } | null>(null);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [suggestions, setSuggestions] = React.useState<Suggestion[]>([]);
   const [isSearching, setIsSearching] = React.useState(false);
@@ -108,17 +118,54 @@ export function SchouwDialog({
   const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
   const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
   const schouwingIdRef = React.useRef(schouwing?.id);
+  const isFetchingAddressRef = React.useRef(false);
+
 
   const form = useForm<SchouwFormValues>({
     resolver: zodResolver(schouwFormSchema),
   });
 
+  const fetchAddressDetails = React.useCallback(async (lat: number, lon: number) => {
+    if (isFetchingAddressRef.current) return;
+    isFetchingAddressRef.current = true;
+    try {
+        const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&addressdetails=1`
+        );
+        const data = await response.json();
+        if (data.address) {
+            const addr = data.address as GeocodedAddress;
+            const fetchedAddress = {
+                straatnaam: addr.road || '',
+                huisnummer: addr.house_number || '',
+                postcode: addr.postcode || '',
+                plaats: addr.city || addr.town || addr.village || '',
+            };
+            setAddress(fetchedAddress);
+        }
+    } catch (error) {
+        console.error('Error fetching address details:', error);
+        setAddress(null);
+    } finally {
+        isFetchingAddressRef.current = false;
+    }
+  }, []);
+
   React.useEffect(() => {
     if (open) {
       schouwingIdRef.current = schouwing?.id || doc(collection(firestore, 'temp')).id;
       setUploadedFiles(schouwing?.fotos || []);
-      setLocation(schouwing ? { latitude: schouwing.latitude, longitude: schouwing.longitude } : null);
-      setSearchQuery(schouwing ? `${schouwing.latitude.toFixed(6)}, ${schouwing.longitude.toFixed(6)}` : '');
+      
+      if (schouwing) {
+        setLocation({ latitude: schouwing.latitude, longitude: schouwing.longitude });
+        fetchAddressDetails(schouwing.latitude, schouwing.longitude);
+        setSearchQuery(`${schouwing.straatnaam || ''} ${schouwing.huisnummer || ''}, ${schouwing.postcode || ''} ${schouwing.plaats || ''}`.trim());
+      } else {
+        setLocation(null);
+        setSearchQuery('');
+        setAddress(null);
+      }
+
       setSuggestions([]);
       setIsSearching(false);
       form.reset({
@@ -134,8 +181,9 @@ export function SchouwDialog({
       setUploadedFiles([]);
       setUploadProgress({});
       setLocation(null);
+      setAddress(null);
     }
-  }, [open, schouwing, form, user, firestore]);
+  }, [open, schouwing, form, user, firestore, fetchAddressDetails]);
   
   React.useEffect(() => {
     if (searchTimeoutRef.current) {
@@ -185,6 +233,7 @@ export function SchouwDialog({
 
     if (!isNaN(lat) && !isNaN(lon)) {
         setLocation({ latitude: lat, longitude: lon });
+        fetchAddressDetails(lat, lon);
     }
     setSuggestions([]);
   };
@@ -265,6 +314,10 @@ export function SchouwDialog({
       projectId,
       latitude: location.latitude,
       longitude: location.longitude,
+      straatnaam: address?.straatnaam || '',
+      huisnummer: address?.huisnummer || '',
+      postcode: address?.postcode || '',
+      plaats: address?.plaats || '',
       datum: schouwing?.datum || new Date().toISOString(),
       fotos: uploadedFiles,
       updatedAt: serverTimestamp(),
@@ -321,7 +374,7 @@ export function SchouwDialog({
         </DialogHeader>
         <div className="flex-1 overflow-y-auto px-6">
           <Form {...form}>
-            <form id="schouw-form" onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4">
+            <form id="schouw-form" onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
               <div className="space-y-4">
                   <FormField
                       control={form.control}
@@ -415,6 +468,14 @@ export function SchouwDialog({
                               </div>
                           )}
                       </div>
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        <Input placeholder="Straat" value={address?.straatnaam || ''} readOnly />
+                        <Input placeholder="Nr" value={address?.huisnummer || ''} readOnly />
+                      </div>
+                       <div className="grid grid-cols-2 gap-2 mt-2">
+                        <Input placeholder="Postcode" value={address?.postcode || ''} readOnly />
+                        <Input placeholder="Plaats" value={address?.plaats || ''} readOnly />
+                      </div>
                       <div className='aspect-square w-full border rounded-md overflow-hidden mt-2'>
                           <MapboxView
                               longitude={location?.longitude}
@@ -425,36 +486,36 @@ export function SchouwDialog({
               </div>
               <div className="lg:col-span-2 space-y-4 pt-4">
                 <FormLabel>Foto's</FormLabel>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1fr_2fr] gap-4">
-                  <div className="space-y-2">
-                    <Button type="button" variant="outline" className="w-full" disabled={isUploading || isSubmitting} onClick={() => document.getElementById('schouwing-file-input')?.click()}>
-                      <Upload className="mr-2 h-4 w-4" /> Upload foto's
-                    </Button>
-                    <input type="file" id="schouwing-file-input" onChange={handleFileChange} className="hidden" multiple accept="image/*" />
-                    {Object.entries(uploadProgress).map(([name, progress]) => (
-                      <div key={name} className="space-y-1 mt-2">
-                        <p className="text-sm font-medium">{name}</p>
-                        <Progress value={progress} className="w-full" />
-                      </div>
-                    ))}
-                    {uploadedFiles.length > 0 && (
-                      <div className='border rounded-md p-2 max-h-48 overflow-auto space-y-2 mt-4'>
-                        {uploadedFiles.map(file => (
-                          <div key={file.storagePath} className="flex items-center justify-between text-sm">
-                            <a href={file.url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline flex items-center gap-2">
-                              <FileIcon className='h-4 w-4 shrink-0' /> {file.name}
-                            </a>
-                            <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleFileDelete(file)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                          </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+                    <div className="space-y-2">
+                        <Button type="button" variant="outline" className="w-full" disabled={isUploading || isSubmitting} onClick={() => document.getElementById('schouwing-file-input')?.click()}>
+                            <Upload className="mr-2 h-4 w-4" /> Upload foto's
+                        </Button>
+                        <input type="file" id="schouwing-file-input" onChange={handleFileChange} className="hidden" multiple accept="image/*" />
+                        {Object.entries(uploadProgress).map(([name, progress]) => (
+                        <div key={name} className="space-y-1 mt-2">
+                            <p className="text-sm font-medium">{name}</p>
+                            <Progress value={progress} className="w-full" />
+                        </div>
                         ))}
-                      </div>
-                    )}
-                  </div>
-                  {uploadedFiles.length > 0 && (
-                    <div className="relative aspect-video w-full rounded-md border overflow-hidden bg-muted">
-                      <Image src={uploadedFiles[0].url} alt={uploadedFiles[0].name} layout="fill" className="object-cover" />
+                        {uploadedFiles.length > 0 && (
+                        <div className='border rounded-md p-2 max-h-48 overflow-auto space-y-2 mt-4'>
+                            {uploadedFiles.map(file => (
+                            <div key={file.storagePath} className="flex items-center justify-between text-sm">
+                                <a href={file.url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline flex items-center gap-2">
+                                <FileIcon className='h-4 w-4 shrink-0'/> {file.name}
+                                </a>
+                                <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleFileDelete(file)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                            </div>
+                            ))}
+                        </div>
+                        )}
                     </div>
-                  )}
+                    {uploadedFiles.length > 0 && (
+                        <div className="relative aspect-video w-full rounded-md border overflow-hidden bg-muted">
+                        <Image src={uploadedFiles[0].url} alt={uploadedFiles[0].name} layout="fill" className="object-cover" />
+                        </div>
+                    )}
                 </div>
               </div>
             </form>

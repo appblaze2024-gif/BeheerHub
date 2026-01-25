@@ -50,6 +50,18 @@
             "items": {
                 "$ref": "#/backend/entities/Bestand"
             }
+        },
+        "straatnaam": {
+          "type": "string"
+        },
+        "huisnummer": {
+          "type": "string"
+        },
+        "postcode": {
+          "type": "string"
+        },
+        "plaats": {
+          "type": "string"
         }
       },
       "required": ["projectId", "datum", "inspecteur", "status", "categorie"]

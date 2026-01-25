@@ -139,6 +139,10 @@ export interface Schouwing {
   categorie: 'Zwerfvuil' | 'Prullenbak' | 'Vegen' | 'Grofvuil' | 'Kadaver' | 'Storing';
   gebieden?: string;
   fotos?: UploadedFile[];
+  straatnaam?: string;
+  huisnummer?: string;
+  postcode?: string;
+  plaats?: string;
 }
 
 export type Werksoort = {
