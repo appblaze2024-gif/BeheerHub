@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Layers as MapLayersIcon, LocateFixed, X, HelpCircle } from 'lucide-react';
+import { Plus, Layers as MapLayersIcon, LocateFixed, X, CircleAlert } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import * as turf from '@turf/turf';
@@ -374,7 +374,7 @@ export default function SchouwenPage() {
                 handleEditSchouwing(schouwing);
             }}
           >
-            <HelpCircle className="h-8 w-8 text-blue-600 bg-white rounded-full p-1 border-2 border-blue-600 shadow-lg cursor-pointer animate-pulse" />
+            <CircleAlert className="h-10 w-10 text-red-600 bg-white rounded-full p-1 border-2 border-red-600 shadow-lg cursor-pointer animate-pulse" />
           </Marker>
         ))}
         {userPosition && (
