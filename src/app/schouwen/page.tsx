@@ -374,13 +374,13 @@ export default function SchouwenPage() {
                 handleEditSchouwing(schouwing);
             }}
           >
-            <div className="w-3 h-3 bg-blue-600 rounded-full border-2 border-white cursor-pointer" />
+            <div className="w-5 h-5 bg-blue-600 rounded-full border-2 border-white shadow-lg cursor-pointer" />
           </Marker>
         ))}
         {userPosition && (
           <Marker longitude={userPosition[0]} latitude={userPosition[1]}>
              <div className="flex items-center justify-center">
-                 <svg width={isFollowing ? "32" : "16"} height={isFollowing ? "32" : "16"} viewBox="0 0 50 50" className={cn(isFollowing && 'animate-pulse')}>
+                 <svg width={isFollowing ? "32" : "24"} height={isFollowing ? "32" : "24"} viewBox="0 0 50 50" className={cn(isFollowing && 'animate-pulse')}>
                     <circle cx="25" cy="25" r="25" fill="#3b82f6" stroke="#ffffff" strokeWidth="4" />
                 </svg>
               </div>
