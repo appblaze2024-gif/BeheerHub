@@ -249,8 +249,8 @@ export default function SchouwenPage() {
     setIsPlacingMode(true);
   };
 
-  const handleMarkerClick = (schouwing: Schouwing, event: mapboxgl.MapboxEvent) => {
-    event.preventDefault();
+  const handleMarkerClick = (event: mapboxgl.MapboxEvent<MouseEvent>, schouwing: Schouwing) => {
+    event.originalEvent.stopPropagation();
     setSelectedSchouwing(schouwing);
   };
   
@@ -372,7 +372,7 @@ export default function SchouwenPage() {
             key={schouwing.id}
             longitude={schouwing.longitude}
             latitude={schouwing.latitude}
-            onClick={(e) => handleMarkerClick(schouwing, e)}
+            onClick={(e) => handleMarkerClick(e, schouwing)}
           >
             <div className="w-3 h-3 bg-blue-600 rounded-full border-2 border-white cursor-pointer" />
           </Marker>
