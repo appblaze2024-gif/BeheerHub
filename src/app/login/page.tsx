@@ -32,65 +32,67 @@ export default function LoginPage() {
   
 
   return (
-    <div className="flex h-screen w-screen flex-col items-center justify-center bg-gray-100 dark:bg-gray-950">
-      <div className="absolute top-8 left-8 z-10">
-         <Image
-          src="https://i.ibb.co/HLV8MBp0/Ontwerp-zonder-titel-3.png"
-          alt="Ontwerp-zonder-titel-3"
-          width={360}
-          height={90}
-          priority
-        />
-      </div>
+    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-gray-100 p-4 dark:bg-gray-950">
+      <div className="w-full max-w-md space-y-6">
+        <div className="flex justify-center">
+            <Image
+              src="https://i.ibb.co/HLV8MBp0/Ontwerp-zonder-titel-3.png"
+              alt="Ontwerp-zonder-titel-3"
+              width={360}
+              height={90}
+              priority
+            />
+        </div>
 
-      <Card className="w-full max-w-md">
-        <CardHeader className="items-center text-center">
-          <h1 className="text-2xl font-bold">Inloggen</h1>
-          <p className="text-sm text-muted-foreground">
-            Voer uw gegevens in om toegang te krijgen tot uw account.
-          </p>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="email">Email</Label>
-            <div className='relative'>
-              <Mail className='absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground' />
-              <Input
-                id="email"
-                type="email"
-                placeholder="m@example.com"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
-          <div className="grid gap-2">
-            <div className="flex items-center">
-                <Label htmlFor="password">Wachtwoord</Label>
-                <Link href="/reset-password" className="ml-auto inline-block text-xs text-primary hover:underline">
-                    Wachtwoord vergeten?
-                </Link>
-            </div>
-             <div className='relative'>
-                <Lock className='absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground' />
+        <Card>
+            <CardHeader className="items-center text-center">
+            <h1 className="text-2xl font-bold">Inloggen</h1>
+            <p className="text-sm text-muted-foreground">
+                Voer uw gegevens in om toegang te krijgen tot uw account.
+            </p>
+            </CardHeader>
+            <CardContent className="grid gap-4">
+            <div className="grid gap-2">
+                <Label htmlFor="email">Email</Label>
+                <div className='relative'>
+                <Mail className='absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground' />
                 <Input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="pl-10"
+                    id="email"
+                    type="email"
+                    placeholder="m@example.com"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10"
                 />
+                </div>
             </div>
-          </div>
-          {error && <p className="text-sm text-destructive bg-destructive/10 p-2 rounded-md border border-destructive/20">{error}</p>}
-           <Button className="w-full" onClick={handleSignIn}>
-            Inloggen
-          </Button>
-        </CardContent>
-      </Card>
+            <div className="grid gap-2">
+                <div className="flex items-center">
+                    <Label htmlFor="password">Wachtwoord</Label>
+                    <Link href="/reset-password" className="ml-auto inline-block text-xs text-primary hover:underline">
+                        Wachtwoord vergeten?
+                    </Link>
+                </div>
+                <div className='relative'>
+                    <Lock className='absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground' />
+                    <Input
+                    id="password"
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10"
+                    />
+                </div>
+            </div>
+            {error && <p className="text-sm text-destructive bg-destructive/10 p-2 rounded-md border border-destructive/20">{error}</p>}
+            <Button className="w-full" onClick={handleSignIn}>
+                Inloggen
+            </Button>
+            </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
