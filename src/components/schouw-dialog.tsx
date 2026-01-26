@@ -75,7 +75,7 @@ const schouwFormSchema = z.object({
 
 type SchouwFormValues = z.infer<typeof schouwFormSchema>;
 
-const categorieOptions = ["Zwerfvuil", "Prullenbak", "Vegen", "Grofvuil", "Kadaver", "Storing"];
+const categorieOptions = ["Onkruidbeheersing", "Zwerfvuil", "Prullenbak", "Vegen", "Grofvuil", "Kadaver", "Storing"];
 
 interface Suggestion {
   place_id: number;
@@ -100,6 +100,41 @@ interface SchouwDialogProps {
   schouwing?: Schouwing | null;
   onSuccess: () => void;
   pdfToImport?: string | null;
+}
+
+const parsePdfText = (text: string) => {
+    const result: any = {};
+
+    const extractValue = (regex: RegExp) => {
+        const match = text.match(regex);
+        return match ? match[1].trim() : null;
+    };
+    
+    const gpsMatch = text.match(/GPS locatie foto:\s*([0-9.]+),\s*([0-9.]+)/i);
+    if (gpsMatch) {
+        result.latitude = parseFloat(gpsMatch[1]);
+        result.longitude = parseFloat(gpsMatch[2]);
+    }
+
+    result.adres = extractValue(/Nabij adres:\s*(.*?)(Datum en tijdstip:|Ambitieniveau:|$)/i);
+    result.gewenstNiveau = extractValue(/Ambitieniveau:\s*(A\+|[A-D])\b/i)?.toUpperCase();
+    result.aangetroffenNiveau = extractValue(/Score:\s*([A-D]\+?)\b/i)?.toUpperCase();
+
+    const opmerkingenMatch = text.match(/^(.+?)(?=Ronde:|Type:|Periode:|Meetlocatienummer:)/is);
+    let opmerkingenText = '';
+    if(opmerkingenMatch && opmerkingenMatch[1]) {
+        opmerkingenText = opmerkingenMatch[1].replace(/\s+/g, ' ').trim();
+        result.opmerkingen = opmerkingenText;
+    }
+    
+    // Find Categorie
+    const opmerkingenLower = opmerkingenText.toLowerCase();
+    const foundCategory = categorieOptions.find(cat => opmerkingenLower.includes(cat.toLowerCase()));
+    if(foundCategory) {
+        result.categorie = foundCategory;
+    }
+
+    return result;
 }
 
 export function SchouwDialog({
@@ -324,10 +359,8 @@ export function SchouwDialog({
             for (let i = 1; i <= pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
                 const textContent = await page.getTextContent();
-                textContent.items.forEach(item => {
-                    fullText += (item as any).str + ' ';
-                });
-                fullText += '\n';
+                const pageText = textContent.items.map(item => (item as any).str).join(' ');
+                fullText += pageText + '\n';
 
                 const viewport = page.getViewport({ scale: 1.5 });
                 const canvas = document.createElement('canvas');
@@ -348,23 +381,29 @@ export function SchouwDialog({
                     }
                 }
             }
-            
-            form.setValue('opmerkingen', (form.getValues('opmerkingen') || '') + '\n\n--- Geïmporteerd uit PDF ---\n' + fullText);
-            setUploadedFilesVoor(prev => [...prev, ...images]);
 
-            const textLower = fullText.toLowerCase();
-            for (const cat of categorieOptions) {
-                if (textLower.includes(cat.toLowerCase())) {
-                    form.setValue('categorie', cat);
-                    break;
+            setUploadedFilesVoor(prev => [...prev, ...images]);
+            
+            const parsedData = parsePdfText(fullText);
+
+            form.setValue('opmerkingen', parsedData.opmerkingen || fullText);
+            if (parsedData.categorie) form.setValue('categorie', parsedData.categorie);
+            if (parsedData.gewenstNiveau) form.setValue('gewenstNiveau', parsedData.gewenstNiveau);
+            if (parsedData.aangetroffenNiveau) form.setValue('aangetroffenNiveau', parsedData.aangetroffenNiveau);
+
+            if (parsedData.latitude && parsedData.longitude) {
+                const lat = parsedData.latitude;
+                const lon = parsedData.longitude;
+                if (!isNaN(lat) && !isNaN(lon)) {
+                    setLocation({ latitude: lat, longitude: lon });
+                    fetchAddressDetails(lat, lon);
                 }
             }
             
-            const niveauRegex = /niveau:?\s*([A-D][+]?)/i;
-            const matches = textLower.match(niveauRegex);
-            if (matches && matches[1]) {
-                form.setValue('aangetroffenNiveau', matches[1].toUpperCase());
+            if (parsedData.adres) {
+                setSearchQuery(parsedData.adres);
             }
+            
         } catch (e) {
             console.error("Error processing PDF", e);
         } finally {
@@ -373,7 +412,7 @@ export function SchouwDialog({
     };
 
     processPdf();
-  }, [open, pdfToImport, projectId, form, uploadFile]);
+  }, [open, pdfToImport, projectId, form, uploadFile, fetchAddressDetails]);
 
   const handleFileChangeVoor = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
