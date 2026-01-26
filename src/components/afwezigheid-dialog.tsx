@@ -139,7 +139,7 @@ export function AfwezigheidDialog({
             description: `${count} dag(en) afwezigheid voor ${medewerker.voornaam} zijn toegevoegd aan de planning.`,
         });
         onSuccess();
-        onOpenChange(false);
+        setOpen(false);
     } catch(e) {
         console.error(e);
         toast({
@@ -159,7 +159,7 @@ export function AfwezigheidDialog({
   }, [open, form]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -266,7 +266,7 @@ export function AfwezigheidDialog({
               )}
             />
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Annuleren</Button>
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Annuleren</Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Opslaan
