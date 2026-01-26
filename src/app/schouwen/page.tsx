@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Layers as MapLayersIcon, LocateFixed, X, CircleAlert, Filter } from 'lucide-react';
+import { Plus, Layers as MapLayersIcon, LocateFixed, X, CircleAlert, Filter, Search } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import * as turf from '@turf/turf';
@@ -35,6 +35,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -75,6 +76,7 @@ export default function SchouwenPage() {
 
   const [isPlacingMode, setIsPlacingMode] = React.useState(false);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState('');
 
   const mapRef = React.useRef<any>(null);
 
@@ -292,10 +294,29 @@ export default function SchouwenPage() {
     }
   };
 
+  const filteredSchouwingen = React.useMemo(() => {
+    if (!schouwingen) return [];
+    if (!searchQuery) return schouwingen;
+
+    return schouwingen.filter(s =>
+      s.straatnaam?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [schouwingen, searchQuery]);
+
+
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
       <header className="absolute top-0 left-0 z-10 p-4 w-full">
-        <div className="flex flex-wrap gap-2 pointer-events-auto">
+        <div className="flex flex-wrap items-center gap-2 pointer-events-auto">
+            <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Zoek op straatnaam..."
+                  className="pl-9 bg-card shadow-sm"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+            </div>
             <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
                 <DialogTrigger asChild>
                     <Button variant="outline" className="bg-card shadow-sm"><Filter className="mr-2 h-4 w-4" /> Filters</Button>
@@ -388,7 +409,7 @@ export default function SchouwenPage() {
                 <Layer {...gemeenteBoundaryLayer} />
             </Source>
         )}
-        {schouwingen.map((schouwing) => (
+        {filteredSchouwingen.map((schouwing) => (
           <Marker
             key={schouwing.id}
             longitude={schouwing.longitude}
