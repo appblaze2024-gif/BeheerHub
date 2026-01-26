@@ -23,7 +23,6 @@ import {
   DialogTitle,
   DialogFooter,
   DialogDescription,
-  AlertDialogTrigger
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -33,6 +32,7 @@ import {
   AlertDialogDescription,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import {
@@ -456,7 +456,7 @@ export function SchouwDialog({
         </DialogHeader>
         <div className="flex-1 overflow-y-auto px-6">
           <Form {...form}>
-            <form id="schouw-form" onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4">
+            <form id="schouw-form" onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
               <div className="space-y-4">
                   <FormField
                       control={form.control}
