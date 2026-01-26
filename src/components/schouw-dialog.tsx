@@ -33,6 +33,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import {
@@ -440,7 +441,7 @@ export function SchouwDialog({
           
           <label htmlFor={`schouwing-file-input-${type}`} className="aspect-square flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed rounded-md cursor-pointer hover:bg-muted/50 transition-colors">
               <Upload className="h-6 w-6" />
-              <span className="text-xs mt-1">Upload</span>
+              <span className="text-xs mt-1">Upload '{type === 'voor' ? 'Voor' : 'Na'}'</span>
           </label>
         </div>
         
@@ -570,7 +571,7 @@ export function SchouwDialog({
                         <Input placeholder="Postcode" value={address?.postcode || ''} readOnly />
                         <Input placeholder="Plaats" value={address?.plaats || ''} readOnly />
                       </div>
-                      <div className='aspect-square w-full border rounded-md overflow-hidden mt-2 relative'>
+                      <div className='aspect-video w-full border rounded-md overflow-hidden mt-2 relative'>
                           <MapboxView
                               longitude={location?.longitude}
                               latitude={location?.latitude}
@@ -599,7 +600,7 @@ export function SchouwDialog({
             </form>
           </Form>
         </div>
-        <DialogFooter className="p-6 pt-4 border-t flex flex-row sm:justify-between w-full">
+        <DialogFooter className="p-6 pt-4 border-t flex flex-col-reverse sm:flex-row sm:justify-between w-full">
           <div>
             {schouwing && (
                 <AlertDialog>
@@ -622,7 +623,7 @@ export function SchouwDialog({
                 </AlertDialog>
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:gap-2">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Annuleren</Button>
             <Button type="submit" form="schouw-form" disabled={isSubmitting || isUploading || !location}>
               {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Opslaan...</> : 'Opslaan'}
