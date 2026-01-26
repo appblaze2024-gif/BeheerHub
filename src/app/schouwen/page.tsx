@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Layers as MapLayersIcon, LocateFixed, X, CircleAlert, Filter, Search, MapPin, Upload } from 'lucide-react';
+import { Plus, Layers as MapLayersIcon, LocateFixed, X, CircleAlert, Filter, Search, MapPin, Upload, List, Map as MapIcon, Bell } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import * as turf from '@turf/turf';
@@ -36,6 +36,9 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -47,6 +50,71 @@ const gemeenteBoundaryLayer: LineLayer = {
       'line-width': 3,
     },
   };
+  
+const schouwStatusConfig: Record<string, { color: string; textColor: string; borderColor: string }> = {
+  'Open': { color: '#ef4444', textColor: 'white', borderColor: '#ef4444' }, // red-500
+  'In behandeling': { color: '#f97316', textColor: 'white', borderColor: '#f97316' }, // orange-500
+  'Afgerond': { color: '#22c55e', textColor: 'white', borderColor: '#22c55e' }, // green-500
+};
+
+function SchouwingenList({ schouwingen, onSchouwingClick }: { schouwingen: Schouwing[], onSchouwingClick: (schouwing: Schouwing) => void }) {
+  if (schouwingen.length === 0) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center text-muted-foreground p-8">
+        <Bell className="h-12 w-12 mb-4" />
+        <p className="text-lg">Geen schouwingen gevonden</p>
+        <p className="text-sm">Pas de filters aan of maak een nieuwe schouwing.</p>
+      </div>
+    );
+  }
+  
+  const formatAdres = (schouwing: Schouwing) => {
+    const parts = [schouwing.straatnaam, schouwing.huisnummer, schouwing.postcode, schouwing.plaats];
+    return parts.filter(Boolean).join(' ');
+  }
+
+  return (
+    <div className="overflow-auto">
+      <div className="grid grid-cols-[120px_150px_150px_1fr_1fr_120px_100px_100px] min-w-[1200px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
+        <span>Datum</span>
+        <span>Inspecteur</span>
+        <span>Categorie</span>
+        <span>Adres</span>
+        <span>Opmerkingen</span>
+        <span>Status</span>
+        <span>Gewenst</span>
+        <span>Gevonden</span>
+      </div>
+      {schouwingen.map((schouwing) => (
+        <div
+          key={schouwing.id}
+          onClick={() => onSchouwingClick(schouwing)}
+          className="grid grid-cols-[120px_150px_150px_1fr_1fr_120px_100px_100px] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
+        >
+          <span className="truncate">{schouwing.datum ? format(new Date(schouwing.datum), 'dd-MM-yyyy') : '-'}</span>
+          <span className="truncate">{schouwing.inspecteur}</span>
+          <span className="font-medium truncate">{schouwing.categorie}</span>
+          <span className="truncate">{formatAdres(schouwing)}</span>
+          <span className="truncate">{schouwing.opmerkingen}</span>
+          <Badge
+            style={{
+              backgroundColor: schouwStatusConfig[schouwing.status]?.color || '#ccc',
+              color: schouwStatusConfig[schouwing.status]?.textColor || 'black',
+              borderColor: schouwStatusConfig[schouwing.status]?.borderColor || '#ccc'
+            }}
+            variant={schouwing.status === 'Afgerond' ? 'default' : 'destructive'}
+            className="justify-center"
+          >
+            {schouwing.status}
+          </Badge>
+          <span className="text-center">{schouwing.gewenstNiveau || '-'}</span>
+          <span className="text-center">{schouwing.aangetroffenNiveau || '-'}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 
 export default function SchouwenPage() {
   const firestore = useFirestore();
@@ -86,6 +154,7 @@ export default function SchouwenPage() {
   // State for PDF import queue
   const [pdfQueue, setPdfQueue] = React.useState<string[]>([]);
   const [currentPdf, setCurrentPdf] = React.useState<string | null>(null);
+  const [viewMode, setViewMode] = React.useState<'map' | 'list'>('map');
 
 
   React.useEffect(() => {
@@ -354,6 +423,9 @@ export default function SchouwenPage() {
   const handleSuccess = () => {
       fetchSchouwingen();
       setSelectedSchouwing(null);
+      if (pdfQueue.length > 0) {
+        setPdfQueue(prev => prev.slice(1));
+      }
   }
 
   const handleMapClick = (event: MapLayerMouseEvent) => {
@@ -475,6 +547,10 @@ export default function SchouwenPage() {
                 onChange={handlePdfFileSelect}
                 multiple
             />
+            <Button variant="outline" onClick={() => setViewMode(viewMode === 'map' ? 'list' : 'map')} className="bg-card shadow-sm">
+              {viewMode === 'map' ? <List className="mr-2 h-4 w-4" /> : <MapIcon className="mr-2 h-4 w-4" />}
+              {viewMode === 'map' ? 'Lijst' : 'Kaart'}
+            </Button>
             <Button variant={isFollowing ? 'secondary' : 'outline'} onClick={() => setIsFollowing(prev => !prev)} className="bg-card shadow-sm">
                 <LocateFixed className="mr-2 h-4 w-4" />
                 Volg
@@ -490,56 +566,70 @@ export default function SchouwenPage() {
             </Button>
           </div>
       )}
-
-      <MapGL
-        ref={mapRef}
-        initialViewState={initialViewState}
-        style={{ width: '100%', height: '100%' }}
-        mapStyle={mapStyle}
-        mapboxAccessToken={MAPBOX_TOKEN}
-        cursor={isPlacingMode ? 'crosshair' : 'grab'}
-        onClick={handleMapClick}
-      >
-        {gemeenteBoundary && (
-            <Source id="gemeente-boundary" type="geojson" data={gemeenteBoundary}>
-                <Layer {...gemeenteBoundaryLayer} />
-            </Source>
-        )}
-        {filteredSchouwingen.map((schouwing) => (
-          <Marker
-            key={schouwing.id}
-            longitude={schouwing.longitude}
-            latitude={schouwing.latitude}
-            onClick={(e) => {
-                e.originalEvent.stopPropagation();
-                handleEditSchouwing(schouwing);
-            }}
-          >
-            <CircleAlert className="h-10 w-10 text-red-600 bg-white rounded-full p-1 border-2 border-red-600 shadow-lg cursor-pointer animate-pulse" />
-          </Marker>
-        ))}
-        {userPosition && (
-          <Marker longitude={userPosition[0]} latitude={userPosition[1]}>
-             <div className="flex items-center justify-center">
-                 <svg width={isFollowing ? "32" : "24"} height={isFollowing ? "32" : "24"} viewBox="0 0 50 50" className={cn(isFollowing && 'animate-pulse')}>
-                    <circle cx="25" cy="25" r="25" fill="#3b82f6" stroke="#ffffff" strokeWidth="4" />
-                </svg>
-              </div>
-          </Marker>
-        )}
-        {searchResult && (
-            <Marker longitude={searchResult.lon} latitude={searchResult.lat}>
-                <MapPin className="h-8 w-8 text-blue-600" />
+      
+      {viewMode === 'map' ? (
+        <MapGL
+            ref={mapRef}
+            initialViewState={initialViewState}
+            style={{ width: '100%', height: '100%' }}
+            mapStyle={mapStyle}
+            mapboxAccessToken={MAPBOX_TOKEN}
+            cursor={isPlacingMode ? 'crosshair' : 'grab'}
+            onClick={handleMapClick}
+        >
+            {gemeenteBoundary && (
+                <Source id="gemeente-boundary" type="geojson" data={gemeenteBoundary}>
+                    <Layer {...gemeenteBoundaryLayer} />
+                </Source>
+            )}
+            {filteredSchouwingen.map((schouwing) => (
+            <Marker
+                key={schouwing.id}
+                longitude={schouwing.longitude}
+                latitude={schouwing.latitude}
+                onClick={(e) => {
+                    e.originalEvent.stopPropagation();
+                    handleEditSchouwing(schouwing);
+                }}
+            >
+                <CircleAlert className="h-10 w-10 text-red-600 bg-white rounded-full p-1 border-2 border-red-600 shadow-lg cursor-pointer animate-pulse" />
             </Marker>
-        )}
-      </MapGL>
+            ))}
+            {userPosition && (
+            <Marker longitude={userPosition[0]} latitude={userPosition[1]}>
+                <div className="flex items-center justify-center">
+                    <svg width={isFollowing ? "32" : "24"} height={isFollowing ? "32" : "24"} viewBox="0 0 50 50" className={cn(isFollowing && 'animate-pulse')}>
+                        <circle cx="25" cy="25" r="25" fill="#3b82f6" stroke="#ffffff" strokeWidth="4" />
+                    </svg>
+                </div>
+            </Marker>
+            )}
+            {searchResult && (
+                <Marker longitude={searchResult.lon} latitude={searchResult.lat}>
+                    <MapPin className="h-8 w-8 text-blue-600" />
+                </Marker>
+            )}
+        </MapGL>
+      ) : (
+        <div className="pt-32 px-4 pb-4 h-full">
+            <Card className='h-full flex flex-col'>
+                <CardHeader>
+                    <CardTitle>Overzicht Schouwingen ({filteredSchouwingen.length})</CardTitle>
+                </CardHeader>
+                <CardContent className='p-0 flex-1 min-h-0 overflow-auto'>
+                    <SchouwingenList schouwingen={filteredSchouwingen} onSchouwingClick={handleEditSchouwing} />
+                </CardContent>
+            </Card>
+        </div>
+      )}
+
       <SchouwDialog
         open={isDialogOpen}
         onOpenChange={(open) => {
             setIsDialogOpen(open);
             if (!open) {
                 if (currentPdf) {
-                    setPdfQueue(prev => prev.slice(1));
+                    handleSuccess();
                 }
                 setCurrentPdf(null);
                 setSelectedSchouwing(null);
