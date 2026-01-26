@@ -932,7 +932,7 @@ export default function WorkPlanningPage() {
 
   return (
     <div className="flex flex-col flex-1 h-full min-h-0" id="planning-container">
-      <header className="flex items-center justify-between p-6">
+      <header className="flex flex-col md:flex-row items-center justify-between gap-4 p-6">
         <div className="flex items-center gap-2">
           {renderActionButtons()}
           <span className="text-sm font-medium text-muted-foreground hidden lg:inline">
@@ -943,7 +943,7 @@ export default function WorkPlanningPage() {
             onValueChange={setSelectedProjectId}
             disabled={isLoadingProjects}
           >
-            <SelectTrigger className="w-[280px]">
+            <SelectTrigger className="w-full md:w-[280px]">
               <SelectValue placeholder="Selecteer een project" />
             </SelectTrigger>
             <SelectContent>

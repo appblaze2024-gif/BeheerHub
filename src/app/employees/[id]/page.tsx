@@ -52,9 +52,11 @@ import {
 import type { Medewerker, Dienst } from '@/lib/types';
 import { MedewerkerDialog } from '@/components/medewerker-dialog';
 import { cn } from '@/lib/utils';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { useProfile } from '@/firebase/profile-provider';
+import { useIsMobile } from '@/hooks/use-mobile';
+
 
 function DetailField({
   label,
@@ -456,6 +458,7 @@ function RoosterTab({ medewerker }: { medewerker: Medewerker }) {
 function ContractenTab({ canEdit }: { canEdit: boolean }) {
   // Placeholder data
   const contracts: any[] = [];
+  const isMobile = useIsMobile();
 
   return (
     <div className="p-6">
@@ -470,53 +473,92 @@ function ContractenTab({ canEdit }: { canEdit: boolean }) {
           </Button>}
         </CardHeader>
         <CardContent>
-          <div className="text-sm">
-            <div className="grid grid-cols-[repeat(10,auto)_min-content] gap-x-4 px-4 py-2 font-semibold text-muted-foreground text-xs uppercase">
-              <span>Contract</span>
-              <span>Locatie</span>
-              <span>Afdeling</span>
-              <span>Functie</span>
-              <span>Plus min</span>
-              <span>Vakantie-uren</span>
-              <span>Uren</span>
-              <span>Uurloon</span>
-              <span>Start</span>
-              <span>Eind</span>
-              <span />
-            </div>
-            <Separator />
-            {contracts.length > 0 ? (
-              contracts.map((contract) => (
-                <div
-                  key={contract.id}
-                  className="grid grid-cols-[repeat(10,auto)_min-content] items-center gap-x-4 px-4 py-3 border-b last:border-b-0"
-                >
-                  <span className="font-medium">{contract.contract}</span>
-                  <span>{contract.locatie}</span>
-                  <span>{contract.afdeling}</span>
-                  <span>{contract.functie}</span>
-                  <span>{contract.plusMin}</span>
-                  <span>{contract.vakantieUren}</span>
-                  <span>{contract.uren}</span>
-                  <span>{contract.uurloon}</span>
-                  <span>{contract.start}</span>
-                  <span>{contract.eind}</span>
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
+          {isMobile ? (
+            <div className="space-y-4">
+              {contracts.length > 0 ? (
+                contracts.map((contract) => (
+                  <Card key={contract.id} className="p-4">
+                    <div className="flex justify-between items-start mb-2">
+                       <p className="font-bold">{contract.contract}</p>
+                       <DropdownMenu>
+                         <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 -mt-2 -mr-2">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                         </DropdownMenuTrigger>
+                         <DropdownMenuContent>
+                          <DropdownMenuItem><Pencil className="mr-2 h-4 w-4" />Bewerken</DropdownMenuItem>
+                          <DropdownMenuItem><Copy className="mr-2 h-4 w-4" />Kopiëren</DropdownMenuItem>
+                         </DropdownMenuContent>
+                       </DropdownMenu>
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                      <span className="text-muted-foreground">Locatie:</span><span>{contract.locatie}</span>
+                      <span className="text-muted-foreground">Afdeling:</span><span>{contract.afdeling}</span>
+                      <span className="text-muted-foreground">Functie:</span><span>{contract.functie}</span>
+                      <span className="text-muted-foreground">Plus min:</span><span>{contract.plusMin}</span>
+                      <span className="text-muted-foreground">Vakantie-uren:</span><span>{contract.vakantieUren}</span>
+                      <span className="text-muted-foreground">Uren:</span><span>{contract.uren}</span>
+                      <span className="text-muted-foreground">Uurloon:</span><span>{contract.uurloon}</span>
+                      <span className="text-muted-foreground">Start:</span><span>{contract.start}</span>
+                      <span className="text-muted-foreground">Eind:</span><span>{contract.eind}</span>
+                    </div>
+                  </Card>
+                ))
+              ) : (
+                <div className="text-center text-muted-foreground p-8">
+                  Geen contracten gevonden.
                 </div>
-              ))
-            ) : (
-              <div className="text-center text-muted-foreground p-8">
-                Geen contracten gevonden.
+              )}
+            </div>
+          ) : (
+            <div className="text-sm border rounded-lg">
+              <div className="grid grid-cols-[repeat(10,1fr)_min-content] gap-x-4 px-4 py-2 font-semibold text-muted-foreground text-xs uppercase bg-muted/50 rounded-t-lg">
+                <span>Contract</span>
+                <span>Locatie</span>
+                <span>Afdeling</span>
+                <span>Functie</span>
+                <span>Plus min</span>
+                <span>Vakantie-uren</span>
+                <span>Uren</span>
+                <span>Uurloon</span>
+                <span>Start</span>
+                <span>Eind</span>
+                <span />
               </div>
-            )}
-          </div>
+              {contracts.length > 0 ? (
+                contracts.map((contract) => (
+                  <div
+                    key={contract.id}
+                    className="grid grid-cols-[repeat(10,1fr)_min-content] items-center gap-x-4 px-4 py-3 border-t"
+                  >
+                    <span className="font-medium">{contract.contract}</span>
+                    <span>{contract.locatie}</span>
+                    <span>{contract.afdeling}</span>
+                    <span>{contract.functie}</span>
+                    <span>{contract.plusMin}</span>
+                    <span>{contract.vakantieUren}</span>
+                    <span>{contract.uren}</span>
+                    <span>{contract.uurloon}</span>
+                    <span>{contract.start}</span>
+                    <span>{contract.eind}</span>
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center text-muted-foreground p-8">
+                  Geen contracten gevonden.
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
