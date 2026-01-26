@@ -70,6 +70,14 @@
         },
         "plaats": {
           "type": "string"
+        },
+        "gewenstNiveau": {
+          "type": "string",
+          "enum": ["A+", "A", "B", "C", "D"]
+        },
+        "aangetroffenNiveau": {
+          "type": "string",
+          "enum": ["A+", "A", "B", "C", "D"]
         }
       },
       "required": ["projectId", "datum", "inspecteur", "status", "categorie"]

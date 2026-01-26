@@ -30,9 +30,8 @@ import {
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialogFooter,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
@@ -64,6 +63,8 @@ const schouwFormSchema = z.object({
   categorie: z.string().min(1, 'Categorie is verplicht.'),
   opmerkingen: z.string().min(1, 'Opmerkingen zijn verplicht.'),
   status: z.enum(['Open', 'In behandeling', 'Afgerond']),
+  gewenstNiveau: z.string().optional(),
+  aangetroffenNiveau: z.string().optional(),
 });
 
 type SchouwFormValues = z.infer<typeof schouwFormSchema>;
@@ -183,6 +184,8 @@ export function SchouwDialog({
         categorie: schouwing?.categorie || '',
         opmerkingen: schouwing?.opmerkingen || '',
         status: schouwing?.status || 'Open',
+        gewenstNiveau: schouwing?.gewenstNiveau || '',
+        aangetroffenNiveau: schouwing?.aangetroffenNiveau || '',
       });
     } else {
       form.reset();
@@ -484,46 +487,86 @@ export function SchouwDialog({
                           </FormItem>
                       )}
                   />
-                  <FormField control={form.control} name="categorie" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Categorie</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecteer een categorie" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {categorieOptions.map(opt => (
-                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField
-                      control={form.control}
-                      name="status"
-                      render={({ field }) => (
-                          <FormItem>
-                          <FormLabel>Status</FormLabel>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField control={form.control} name="categorie" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Categorie</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
+                            <FormControl>
                               <SelectTrigger>
-                                  <SelectValue placeholder="Selecteer een status" />
+                                <SelectValue placeholder="Selecteer een categorie" />
                               </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                              <SelectItem value="Open">Open</SelectItem>
-                              <SelectItem value="In behandeling">In behandeling</SelectItem>
-                              <SelectItem value="Afgerond">Afgerond</SelectItem>
-                              </SelectContent>
+                            </FormControl>
+                            <SelectContent>
+                              {categorieOptions.map(opt => (
+                                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                              ))}
+                            </SelectContent>
                           </Select>
                           <FormMessage />
-                          </FormItem>
-                      )}
-                  />
+                        </FormItem>
+                      )} />
+                      <FormField
+                          control={form.control}
+                          name="status"
+                          render={({ field }) => (
+                              <FormItem>
+                              <FormLabel>Status</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                  <SelectTrigger>
+                                      <SelectValue placeholder="Selecteer een status" />
+                                  </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                  <SelectItem value="Open">Open</SelectItem>
+                                  <SelectItem value="In behandeling">In behandeling</SelectItem>
+                                  <SelectItem value="Afgerond">Afgerond</SelectItem>
+                                  </SelectContent>
+                              </Select>
+                              <FormMessage />
+                              </FormItem>
+                          )}
+                      />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField control={form.control} name="gewenstNiveau" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Gewenst niveau</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                <SelectValue placeholder="Selecteer niveau" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {['A+', 'A', 'B', 'C', 'D'].map(opt => (
+                                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                ))}
+                            </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                        )} />
+                        <FormField control={form.control} name="aangetroffenNiveau" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Aangetroffen niveau</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                <SelectValue placeholder="Selecteer niveau" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {['A+', 'A', 'B', 'C', 'D'].map(opt => (
+                                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                ))}
+                            </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                        )} />
+                    </div>
                   <FormField
                       control={form.control}
                       name="opmerkingen"
@@ -537,6 +580,22 @@ export function SchouwDialog({
                           </FormItem>
                       )}
                   />
+                  <div className="md:col-span-2 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {renderFileUploadSection('voor')}
+                          {renderFileUploadSection('na')}
+                    </div>
+                      {isUploading && (
+                          <div className="space-y-2">
+                          {Object.entries(uploadProgress).map(([name, progress]) => (
+                              <div key={name} className="space-y-1 mt-2">
+                                  <p className="text-sm font-medium truncate">{name}</p>
+                                  <Progress value={progress} className="w-full" />
+                              </div>
+                          ))}
+                          </div>
+                      )}
+                  </div>
               </div>
               <div className="space-y-4">
                   <FormItem>
@@ -571,7 +630,7 @@ export function SchouwDialog({
                         <Input placeholder="Postcode" value={address?.postcode || ''} readOnly />
                         <Input placeholder="Plaats" value={address?.plaats || ''} readOnly />
                       </div>
-                      <div className='aspect-video w-full border rounded-md overflow-hidden mt-2 relative'>
+                      <div className='aspect-square w-full border rounded-md overflow-hidden mt-2 relative'>
                           <MapboxView
                               longitude={location?.longitude}
                               latitude={location?.latitude}
@@ -579,23 +638,6 @@ export function SchouwDialog({
                           />
                       </div>
                   </FormItem>
-              </div>
-              
-              <div className="md:col-span-2 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {renderFileUploadSection('voor')}
-                      {renderFileUploadSection('na')}
-                </div>
-                  {isUploading && (
-                      <div className="space-y-2">
-                      {Object.entries(uploadProgress).map(([name, progress]) => (
-                          <div key={name} className="space-y-1 mt-2">
-                              <p className="text-sm font-medium truncate">{name}</p>
-                              <Progress value={progress} className="w-full" />
-                          </div>
-                      ))}
-                      </div>
-                  )}
               </div>
             </form>
           </Form>

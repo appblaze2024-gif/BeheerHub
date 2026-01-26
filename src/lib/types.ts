@@ -144,6 +144,8 @@ export interface Schouwing {
   huisnummer?: string;
   postcode?: string;
   plaats?: string;
+  gewenstNiveau?: string;
+  aangetroffenNiveau?: string;
 }
 
 export type Werksoort = {
