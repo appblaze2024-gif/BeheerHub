@@ -381,7 +381,7 @@ export function SchouwDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="md:max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0">
+      <DialogContent className="w-screen h-screen max-w-none max-h-screen top-0 left-0 rounded-none translate-x-0 translate-y-0 flex flex-col p-0 gap-0">
         <DialogHeader className="p-6 pb-2">
           <DialogTitle>{schouwing?.id ? 'Schouwing Bewerken' : 'Nieuwe Schouwing'}</DialogTitle>
           <DialogDescription>
@@ -528,7 +528,7 @@ export function SchouwDialog({
             </form>
           </Form>
         </div>
-        <DialogFooter className="p-6 pt-4 border-t flex flex-row justify-between items-center w-full">
+        <DialogFooter className="p-6 pt-4 border-t flex flex-row sm:justify-between w-full">
           <div>
             {schouwing && (
                 <AlertDialog>
