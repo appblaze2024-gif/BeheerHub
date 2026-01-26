@@ -157,7 +157,11 @@ const roadTypeTranslations: { [key: string]: string } = {
     cycleway: 'Fietspad',
     path: 'Pad',
     pedestrian: 'Voetgangersgebied',
+    track: 'Veldweg',
+    steps: 'Trappen',
+    bridleway: 'Ruiterpad',
 };
+
 
 const getTranslatedRoadType = (type: string) => {
     return roadTypeTranslations[type] || type.replace(/_/g, ' ');
@@ -245,7 +249,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   const fetchRoadsForPolygon = React.useCallback(async (polygon: turf.Feature<turf.Polygon | turf.MultiPolygon>): Promise<turf.Feature<turf.LineString>[]> => {
     const roadTypesQuery = (wijk?.roadTypes && wijk.roadTypes.length > 0) 
       ? wijk.roadTypes.join('|')
-      : 'motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|service|pedestrian|track|road|footway|cycleway|path';
+      : 'motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|service|pedestrian|track|road|footway|cycleway|path|steps|bridleway';
 
     const buildWayQueries = (geometry: turf.Polygon | turf.MultiPolygon, roadTypes: string): string => {
         if (geometry.type === 'Polygon') {
@@ -343,7 +347,8 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     const relevantRoadTypes = [
       'busway', 'living_street', 'motorway', 'motorway_link', 'primary', 'primary_link',
       'residential', 'secondary', 'secondary_link', 'service', 'services', 'tertiary',
-      'tertiary_link', 'trunk', 'trunk_link', 'unclassified', 'road', 'footway', 'cycleway', 'path', 'pedestrian'
+      'tertiary_link', 'trunk', 'trunk_link', 'unclassified', 'road', 'footway', 'cycleway', 'path', 'pedestrian',
+      'track', 'steps', 'bridleway'
     ];
     
     const filteredRoads = Array.from(allRoadTypes).filter(type => relevantRoadTypes.includes(type));
