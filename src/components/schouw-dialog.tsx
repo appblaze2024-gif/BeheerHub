@@ -59,6 +59,9 @@ import { Progress } from './ui/progress';
 import { MapboxView } from './mapbox-view';
 import Image from 'next/image';
 import * as pdfjsLib from 'pdfjs-dist';
+import { format } from 'date-fns';
+import { nl } from 'date-fns/locale';
+import * as turf from '@turf/turf';
 
 if (typeof window !== 'undefined') {
     pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
@@ -335,12 +338,10 @@ export function SchouwDialog({
           setPdfPagesData(allPagesData);
           setCurrentPageIndex(0);
         } else {
-          onSuccess();
           onOpenChange(false);
         }
       } catch (e) {
         console.error("Error processing PDF", e);
-        onSuccess();
         onOpenChange(false);
       } finally {
         setIsParsingPdf(false);
@@ -350,7 +351,7 @@ export function SchouwDialog({
     if (pdfToImport) {
         processPdfFile();
     }
-  }, [open, pdfToImport, projectId, uploadFile, firestore, onOpenChange, onSuccess, pdfPagesData]);
+  }, [open, pdfToImport, projectId, uploadFile, firestore, onOpenChange, pdfPagesData]);
 
 
   // Effect to populate form when current page changes
@@ -579,7 +580,6 @@ export function SchouwDialog({
         setCurrentPageIndex(prev => prev + 1);
         setIsSubmitting(false);
       } else {
-        onSuccess();
         onOpenChange(false);
       }
 
@@ -614,13 +614,6 @@ export function SchouwDialog({
 
   const isUploading = Object.keys(uploadProgress).length > 0;
   
-  const handleDialogClose = () => {
-    if (pdfToImport) {
-        onSuccess(); // Ensure queue in parent is advanced
-    }
-    onOpenChange(false);
-  }
-
   const renderFileUploadSection = (type: 'voor' | 'na') => {
     const files = type === 'voor' ? uploadedFilesVoor : uploadedFilesNa;
     const handleChange = type === 'voor' ? handleFileChangeVoor : handleFileChangeNa;
@@ -675,7 +668,7 @@ export function SchouwDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleDialogClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-screen h-screen max-w-none max-h-screen top-0 left-0 rounded-none translate-x-0 translate-y-0 flex flex-col p-0 gap-0">
         {(isParsingPdf) && (
             <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center z-50">
@@ -885,7 +878,7 @@ export function SchouwDialog({
             )}
           </div>
           <div className="flex gap-2">
-            <Button type="button" variant="ghost" onClick={handleDialogClose} disabled={isSubmitting}>Annuleren</Button>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Annuleren</Button>
             <Button type="submit" form="schouw-form" disabled={isSubmitting || isUploading || !location}>
               {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Opslaan...</> : 'Opslaan'}
             </Button>
