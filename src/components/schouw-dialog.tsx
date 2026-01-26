@@ -298,7 +298,9 @@ export function SchouwDialog({
     } catch (error: any) {
       console.error('Kon bestand niet verwijderen:', error);
       if (error.code === 'storage/object-not-found') {
-        setUploadedFiles((prev) => prev.filter((f) => f.storagePath !== fileToDelete.storagePath));
+        setUploadedFiles((prev) =>
+          prev.filter((f) => f.storagePath !== fileToDelete.storagePath)
+        );
       }
     }
   };
@@ -497,45 +499,36 @@ export function SchouwDialog({
                           />
                       </div>
                   </FormItem>
-              </div>
-              <div className="md:col-span-2 space-y-4 pt-4">
-                <FormLabel>Foto's</FormLabel>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+                   <div className="space-y-2">
+                    <FormLabel>Foto's</FormLabel>
+                    <Button type="button" variant="outline" className="w-full" disabled={isUploading || isSubmitting} onClick={() => document.getElementById('schouwing-file-input')?.click()}>
+                        <Upload className="mr-2 h-4 w-4" /> Upload foto's
+                    </Button>
+                    <input type="file" id="schouwing-file-input" onChange={handleFileChange} className="hidden" multiple accept="image/*" />
+                    {Object.entries(uploadProgress).map(([name, progress]) => (
+                    <div key={name} className="space-y-1 mt-2">
+                        <p className="text-sm font-medium">{name}</p>
+                        <Progress value={progress} className="w-full" />
+                    </div>
+                    ))}
                     {uploadedFiles.length > 0 && (
-                        <div className="relative aspect-video w-full rounded-md border overflow-hidden bg-muted">
-                        <Image src={uploadedFiles[0].url} alt={uploadedFiles[0].name} fill className="object-cover" />
-                        </div>
-                    )}
-                    <div className="space-y-2">
-                        <Button type="button" variant="outline" className="w-full" disabled={isUploading || isSubmitting} onClick={() => document.getElementById('schouwing-file-input')?.click()}>
-                            <Upload className="mr-2 h-4 w-4" /> Upload foto's
-                        </Button>
-                        <input type="file" id="schouwing-file-input" onChange={handleFileChange} className="hidden" multiple accept="image/*" />
-                        {Object.entries(uploadProgress).map(([name, progress]) => (
-                        <div key={name} className="space-y-1 mt-2">
-                            <p className="text-sm font-medium">{name}</p>
-                            <Progress value={progress} className="w-full" />
+                    <div className='border rounded-md p-2 max-h-32 overflow-auto space-y-2 mt-4'>
+                        {uploadedFiles.map(file => (
+                        <div key={file.storagePath} className="flex items-center justify-between text-sm">
+                            <a href={file.url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline flex items-center gap-2">
+                            <FileIcon className='h-4 w-4 shrink-0'/> {file.name}
+                            </a>
+                            <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleFileDelete(file)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                         </div>
                         ))}
-                        {uploadedFiles.length > 0 && (
-                        <div className='border rounded-md p-2 max-h-48 overflow-auto space-y-2 mt-4'>
-                            {uploadedFiles.map(file => (
-                            <div key={file.storagePath} className="flex items-center justify-between text-sm">
-                                <a href={file.url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline flex items-center gap-2">
-                                <FileIcon className='h-4 w-4 shrink-0'/> {file.name}
-                                </a>
-                                <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleFileDelete(file)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                            </div>
-                            ))}
-                        </div>
-                        )}
                     </div>
+                    )}
                 </div>
               </div>
             </form>
           </Form>
         </div>
-        <DialogFooter className="p-6 pt-4 border-t flex flex-col-reverse gap-2 sm:flex-row sm:justify-between w-full">
+        <DialogFooter className="p-6 pt-4 border-t flex flex-row justify-between items-center w-full">
           <div>
             {schouwing && (
                 <AlertDialog>
