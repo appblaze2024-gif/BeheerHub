@@ -33,7 +33,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import {
@@ -413,15 +412,38 @@ export function SchouwDialog({
     return (
       <div className="space-y-2">
         <FormLabel>Foto's {type === 'voor' ? 'Voor' : 'Na'}</FormLabel>
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full"
-          disabled={isUploading || isSubmitting}
-          onClick={() => document.getElementById(`schouwing-file-input-${type}`)?.click()}
-        >
-          <Upload className="mr-2 h-4 w-4" /> Upload '{type === 'voor' ? 'Voor' : 'Na'}'
-        </Button>
+        
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {files.map(file => (
+            <div key={file.storagePath} className="relative aspect-square group rounded-md overflow-hidden border">
+                <a href={file.url} target="_blank" rel="noopener noreferrer">
+                    <Image
+                        src={file.url}
+                        alt={file.name}
+                        fill
+                        className="object-cover transition-transform group-hover:scale-105"
+                    />
+                </a>
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleFileDelete(file, setFiles)}
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                </div>
+            </div>
+          ))}
+          
+          <label htmlFor={`schouwing-file-input-${type}`} className="aspect-square flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed rounded-md cursor-pointer hover:bg-muted/50 transition-colors">
+              <Upload className="h-6 w-6" />
+              <span className="text-xs mt-1">Upload</span>
+          </label>
+        </div>
+        
         <input
           type="file"
           id={`schouwing-file-input-${type}`}
@@ -429,19 +451,8 @@ export function SchouwDialog({
           className="hidden"
           multiple
           accept="image/*"
+          disabled={isUploading || isSubmitting}
         />
-        {files.length > 0 && (
-          <div className="border rounded-md p-2 max-h-24 overflow-auto space-y-2">
-            {files.map(file => (
-              <div key={file.storagePath} className="flex items-center justify-between text-sm">
-                <a href={file.url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline flex items-center gap-2">
-                  <FileIcon className='h-4 w-4 shrink-0'/> {file.name}
-                </a>
-                <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleFileDelete(file, setFiles)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     );
   };
@@ -559,7 +570,7 @@ export function SchouwDialog({
                         <Input placeholder="Postcode" value={address?.postcode || ''} readOnly />
                         <Input placeholder="Plaats" value={address?.plaats || ''} readOnly />
                       </div>
-                      <div className='h-40 w-full border rounded-md overflow-hidden mt-2'>
+                      <div className='aspect-square w-full border rounded-md overflow-hidden mt-2 relative'>
                           <MapboxView
                               longitude={location?.longitude}
                               latitude={location?.latitude}
@@ -567,20 +578,23 @@ export function SchouwDialog({
                           />
                       </div>
                   </FormItem>
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {renderFileUploadSection('voor')}
-                        {renderFileUploadSection('na')}
-                    </div>
-                     {isUploading && (
-                        <div className="space-y-2">
-                        {Object.entries(uploadProgress).map(([name, progress]) => (
-                            <div key={name} className="space-y-1 mt-2">
-                                <p className="text-sm font-medium truncate">{name}</p>
-                                <Progress value={progress} className="w-full" />
-                            </div>
-                        ))}
-                        </div>
-                    )}
+              </div>
+              
+              <div className="md:col-span-2 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {renderFileUploadSection('voor')}
+                      {renderFileUploadSection('na')}
+                </div>
+                  {isUploading && (
+                      <div className="space-y-2">
+                      {Object.entries(uploadProgress).map(([name, progress]) => (
+                          <div key={name} className="space-y-1 mt-2">
+                              <p className="text-sm font-medium truncate">{name}</p>
+                              <Progress value={progress} className="w-full" />
+                          </div>
+                      ))}
+                      </div>
+                  )}
               </div>
             </form>
           </Form>
