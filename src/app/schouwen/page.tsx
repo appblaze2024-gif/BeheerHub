@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Layers as MapLayersIcon, LocateFixed, X, CircleAlert, Filter, Search } from 'lucide-react';
+import { Plus, Layers as MapLayersIcon, LocateFixed, X, CircleAlert, Filter, Search, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import * as turf from '@turf/turf';
@@ -77,8 +77,54 @@ export default function SchouwenPage() {
   const [isPlacingMode, setIsPlacingMode] = React.useState(false);
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
+  const [searchResult, setSearchResult] = React.useState<{lat: number, lon: number} | null>(null);
+  const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const mapRef = React.useRef<any>(null);
+
+  React.useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    if (!searchQuery.trim()) {
+      setSearchResult(null);
+      return;
+    }
+
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+            searchQuery
+          )}&format=json&countrycodes=nl&limit=1`
+        );
+        const data = await response.json();
+        if (data && data.length > 0) {
+          const result = data[0];
+          const lat = parseFloat(result.lat);
+          const lon = parseFloat(result.lon);
+          if (!isNaN(lat) && !isNaN(lon)) {
+            setSearchResult({ lat, lon });
+            if (mapRef.current) {
+              mapRef.current.getMap().flyTo({ center: [lon, lat], zoom: 16 });
+            }
+          }
+        } else {
+          setSearchResult(null);
+        }
+      } catch (error) {
+        console.error("Fout bij zoeken:", error);
+        setSearchResult(null);
+      }
+    }, 500); // 500ms debounce
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]);
 
   React.useEffect(() => {
     if (profile?.schouwenMapStyle) {
@@ -430,6 +476,11 @@ export default function SchouwenPage() {
                 </svg>
               </div>
           </Marker>
+        )}
+        {searchResult && (
+            <Marker longitude={searchResult.lon} latitude={searchResult.lat}>
+                <MapPin className="h-8 w-8 text-blue-600" />
+            </Marker>
         )}
       </MapGL>
       <SchouwDialog
