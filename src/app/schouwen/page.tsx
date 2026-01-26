@@ -24,6 +24,7 @@ import { useProfile } from '@/firebase/profile-provider';
 import { updateDocumentNonBlocking } from '@/firebase';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
+import { GemeenteSelect } from '@/components/gemeente-select';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -35,12 +36,6 @@ const gemeenteBoundaryLayer: LineLayer = {
       'line-width': 3,
     },
   };
-
-const gemeenten = [
-  "Amsterdam", "Rotterdam", "Den Haag", "Utrecht", "Eindhoven", 
-  "Groningen", "Tilburg", "Almere", "Breda", "Nijmegen", "Haarlemmermeer"
-];
-
 
 export default function SchouwenPage() {
   const firestore = useFirestore();
@@ -77,7 +72,7 @@ export default function SchouwenPage() {
       setMapStyle(profile.schouwenMapStyle);
     }
     if (!isProfileLoading && profile?.schouwenGemeente) {
-      setSelectedGemeente(profile.schouwingenGemeente);
+      setSelectedGemeente(profile.schouwenGemeente);
     }
   }, [profile, isProfileLoading]);
 
@@ -290,21 +285,11 @@ export default function SchouwenPage() {
     <div className="flex-1 flex flex-col min-h-0 relative">
       <header className="absolute top-0 left-0 z-10 p-4 flex flex-col sm:flex-row gap-4 w-full items-start sm:items-center">
         <div className="flex gap-4 w-full sm:w-auto pointer-events-auto bg-card p-2 rounded-lg shadow-md">
-            <Select value={selectedGemeente || ''} onValueChange={setSelectedGemeente} disabled={isLoadingGemeente}>
-                <SelectTrigger className="w-full sm:w-48">
-                    <div className="flex items-center gap-2">
-                    {isLoadingGemeente && <Loader2 className="h-4 w-4 animate-spin" />}
-                    <SelectValue placeholder="Kies gemeente" />
-                    </div>
-                </SelectTrigger>
-                <SelectContent>
-                    {gemeenten.map((gemeente) => (
-                    <SelectItem key={gemeente} value={gemeente}>
-                        {gemeente}
-                    </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
+            <GemeenteSelect 
+              value={selectedGemeente}
+              onValueChange={setSelectedGemeente}
+              disabled={isLoadingGemeente}
+            />
             <Select onValueChange={setSelectedProjectId} disabled={isLoadingProjects}>
               <SelectTrigger className="w-full sm:w-72">
                 <SelectValue placeholder="Selecteer een project" />
