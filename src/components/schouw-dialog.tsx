@@ -32,7 +32,7 @@ import {
   AlertDialogDescription,
   AlertDialogHeader,
   AlertDialogFooter,
-  AlertDialogTrigger,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import {
@@ -630,7 +630,7 @@ export function SchouwDialog({
                         <Input placeholder="Postcode" value={address?.postcode || ''} readOnly />
                         <Input placeholder="Plaats" value={address?.plaats || ''} readOnly />
                       </div>
-                      <div className='aspect-square w-full border rounded-md overflow-hidden mt-2 relative'>
+                      <div className='aspect-[4/3] w-full border rounded-md overflow-hidden mt-2 relative'>
                           <MapboxView
                               longitude={location?.longitude}
                               latitude={location?.latitude}
