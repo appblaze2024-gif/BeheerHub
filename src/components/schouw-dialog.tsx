@@ -23,6 +23,7 @@ import {
   DialogTitle,
   DialogFooter,
   DialogDescription,
+  AlertDialogTrigger
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -30,10 +31,8 @@ import {
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import {
@@ -114,6 +113,8 @@ export function SchouwDialog({
   const [isSearching, setIsSearching] = React.useState(false);
   const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const justSelectedSuggestion = React.useRef(false);
+  const isInitialEditLoadRef = React.useRef(false);
+
 
   const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
   const [uploadedFilesVoor, setUploadedFilesVoor] = React.useState<UploadedFile[]>([]);
@@ -163,10 +164,12 @@ export function SchouwDialog({
       setUploadedFilesNa(schouwing?.fotosNa || []);
       
       if (schouwing) {
+        isInitialEditLoadRef.current = true;
         setLocation({ latitude: schouwing.latitude, longitude: schouwing.longitude });
         fetchAddressDetails(schouwing.latitude, schouwing.longitude);
         setSearchQuery(`${schouwing.straatnaam || ''} ${schouwing.huisnummer || ''}, ${schouwing.postcode || ''} ${schouwing.plaats || ''}`.trim());
       } else {
+        isInitialEditLoadRef.current = false;
         setLocation(null);
         setSearchQuery('');
         setAddress(null);
@@ -195,6 +198,11 @@ export function SchouwDialog({
   React.useEffect(() => {
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
+    }
+
+    if (isInitialEditLoadRef.current) {
+        isInitialEditLoadRef.current = false;
+        return;
     }
 
     if (justSelectedSuggestion.current) {
@@ -448,7 +456,7 @@ export function SchouwDialog({
         </DialogHeader>
         <div className="flex-1 overflow-y-auto px-6">
           <Form {...form}>
-            <form id="schouw-form" onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+            <form id="schouw-form" onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4">
               <div className="space-y-4">
                   <FormField
                       control={form.control}
@@ -550,7 +558,7 @@ export function SchouwDialog({
                         <Input placeholder="Postcode" value={address?.postcode || ''} readOnly />
                         <Input placeholder="Plaats" value={address?.plaats || ''} readOnly />
                       </div>
-                      <div className='h-64 w-full border rounded-md overflow-hidden mt-2'>
+                      <div className='h-40 w-full border rounded-md overflow-hidden mt-2'>
                           <MapboxView
                               longitude={location?.longitude}
                               latitude={location?.latitude}
