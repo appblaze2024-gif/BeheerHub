@@ -128,27 +128,6 @@ export interface Besteksmelding {
   status: 'Nieuw' | 'In behandeling' | 'Afgerond';
 }
 
-export interface Schouwing {
-  id: string;
-  projectId: string;
-  datum: any; // or string/Timestamp
-  inspecteur: string;
-  opmerkingen: string;
-  status: 'Open' | 'In behandeling' | 'Afgerond';
-  latitude: number;
-  longitude: number;
-  categorie: 'Zwerfvuil' | 'Prullenbak' | 'Vegen' | 'Grofvuil' | 'Kadaver' | 'Storing';
-  gebieden?: string;
-  fotosVoor?: UploadedFile[];
-  fotosNa?: UploadedFile[];
-  straatnaam?: string;
-  huisnummer?: string;
-  postcode?: string;
-  plaats?: string;
-  gewenstNiveau?: string;
-  aangetroffenNiveau?: string;
-}
-
 export type Werksoort = {
   id: string;
   postnummer: string;
