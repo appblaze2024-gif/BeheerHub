@@ -637,6 +637,7 @@ function RoosterTab({ medewerker, refreshId }: { medewerker: Medewerker; refresh
                                   {dayDiensten.map(dienst => {
                                       const isZiek = dienst.werksoort === 'Ziek';
                                       const isVerlof = dienst.werksoort === 'Verlof' || dienst.werksoort === 'ADV';
+                                      const isPending = (isVerlof || isZiek) && (dienst.goedkeuringStatus === 'In behandeling' || typeof dienst.goedkeuringStatus === 'undefined');
                                       return (
                                           <div key={dienst.id} className={cn(
                                               "rounded-md p-1.5 text-sm leading-snug",
@@ -646,7 +647,8 @@ function RoosterTab({ medewerker, refreshId }: { medewerker: Medewerker; refresh
                                                   ? "bg-orange-200 text-orange-900 dark:bg-orange-900/50 dark:text-white"
                                               : isVisuallyNonWorkingDay
                                                   ? 'border border-gray-600 text-gray-200 bg-transparent'
-                                                  : "bg-blue-100 text-blue-900 dark:bg-blue-900/50 dark:text-white"
+                                                  : "bg-blue-100 text-blue-900 dark:bg-blue-900/50 dark:text-white",
+                                              isPending && "ring-2 ring-yellow-500"
                                           )}>
                                               <p className="font-semibold">{dienst.werksoort}</p>
                                               <p>{dienst.starttijd}-{dienst.eindtijd}</p>
