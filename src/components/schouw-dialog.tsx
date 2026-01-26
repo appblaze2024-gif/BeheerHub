@@ -93,6 +93,12 @@ interface GeocodedAddress {
     village?: string;
 }
 
+type PageData = {
+  text: string;
+  images: UploadedFile[];
+  tempSchouwingId: string;
+};
+
 interface SchouwDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -133,9 +139,9 @@ const parsePdfText = (text: string) => {
     
     if (opmerkingenText) {
         const opmerkingenLower = opmerkingenText.toLowerCase();
-        const foundCategory = [...categorieOptions, "Onkruidbeheersing elementverharding"].find(cat => opmerkingenLower.startsWith(cat.toLowerCase()));
+        const foundCategory = ["Onkruidbeheersing elementverharding", ...categorieOptions].find(cat => opmerkingenLower.startsWith(cat.toLowerCase()));
         if(foundCategory) {
-            result.categorie = "Onkruidbeheersing"; // Map to the correct one
+            result.categorie = "Onkruidbeheersing"; 
             const regex = new RegExp(`^${foundCategory}`, 'i');
             result.opmerkingen = opmerkingenText.replace(regex, '').trim();
         } else {
@@ -176,6 +182,9 @@ export function SchouwDialog({
   const [uploadedFilesNa, setUploadedFilesNa] = React.useState<UploadedFile[]>([]);
   const schouwingIdRef = React.useRef(schouwing?.id);
   const isFetchingAddressRef = React.useRef(false);
+  
+  const [pdfPagesData, setPdfPagesData] = React.useState<PageData[] | null>(null);
+  const [currentPageIndex, setCurrentPageIndex] = React.useState(0);
   const [isParsingPdf, setIsParsingPdf] = React.useState(false);
 
 
@@ -212,47 +221,216 @@ export function SchouwDialog({
         isFetchingAddressRef.current = false;
     }
   }, []);
+  
+  const uploadFile = React.useCallback((file: File, schouwingId: string, projectId: string, type: 'voor' | 'na'): Promise<UploadedFile> => {
+    return new Promise((resolve, reject) => {
+        if (!app || !projectId) {
+            reject(new Error("Firebase app of project ID niet beschikbaar"));
+            return;
+        }
+        const storage = getStorage(app);
+        const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const uniqueFileName = `${new Date().getTime()}-${sanitizedFileName}`;
+        const storagePath = `projects/${projectId}/schouwingen/${schouwingId}/${type}/${uniqueFileName}`;
+        const storageRef = ref(storage, storagePath);
+        const uploadTask = uploadBytesResumable(storageRef, file);
 
+        uploadTask.on('state_changed',
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                setUploadProgress(prev => ({...prev, [uniqueFileName]: progress}));
+            },
+            (error) => {
+                console.error('Upload mislukt:', error);
+                setUploadProgress(prev => { const newProgress = {...prev}; delete newProgress[uniqueFileName]; return newProgress; });
+                reject(error);
+            },
+            () => {
+                getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+                    const newFile: UploadedFile = { name: file.name, url: downloadURL, size: file.size, type: file.type, uploadedAt: new Date().toISOString(), storagePath: storagePath };
+                    resolve(newFile);
+                    setUploadProgress(prev => { const newProgress = {...prev}; delete newProgress[uniqueFileName]; return newProgress; });
+                });
+            }
+        );
+    });
+  }, [app]);
+  
+  const resetAllState = React.useCallback(() => {
+    form.reset();
+    setIsSubmitting(false);
+    setIsDeleting(false);
+    setUploadedFilesVoor([]);
+    setUploadedFilesNa([]);
+    setUploadProgress({});
+    setLocation(null);
+    setAddress(null);
+    setSearchQuery('');
+    setSuggestions([]);
+    setIsSearching(false);
+    setPdfPagesData(null);
+    setCurrentPageIndex(0);
+    setIsParsingPdf(false);
+  }, [form]);
+
+  // Effect to process a new PDF file
   React.useEffect(() => {
-    if (open) {
-      schouwingIdRef.current = schouwing?.id || doc(collection(firestore, 'temp')).id;
-      setUploadedFilesVoor(schouwing?.fotosVoor || []);
-      setUploadedFilesNa(schouwing?.fotosNa || []);
+    const processPdfFile = async () => {
+      if (!open || !pdfToImport || !projectId || pdfPagesData) return;
+
+      setIsParsingPdf(true);
       
+      try {
+        const pdfBase64 = pdfToImport.substring(pdfToImport.indexOf(',') + 1);
+        const pdfBinary = atob(pdfBase64);
+        const len = pdfBinary.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          bytes[i] = pdfBinary.charCodeAt(i);
+        }
+
+        const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+        const pagesToProcess = [];
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items.map(item => (item as any).str).join(' ');
+          if (pageText.includes('GPS locatie foto:')) {
+            pagesToProcess.push(page);
+          }
+        }
+        
+        const allPagesData = await Promise.all(
+          pagesToProcess.map(async (page) => {
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map(item => (item as any).str).join(' ');
+            const images: UploadedFile[] = [];
+            const tempSchouwingId = doc(collection(firestore, 'temp')).id;
+            
+            const viewport = page.getViewport({ scale: 1.5 });
+            const canvas = document.createElement('canvas');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            const context = canvas.getContext('2d');
+
+            if (context) {
+              await page.render({ canvasContext: context, viewport }).promise;
+              const dataUrl = canvas.toDataURL('image/jpeg');
+              const blob = await (await fetch(dataUrl)).blob();
+              const imageFile = new File([blob], `from-pdf-page-${page.pageNumber}.jpg`, { type: 'image/jpeg' });
+              
+              try {
+                const uploadedImageFile = await uploadFile(imageFile, tempSchouwingId, projectId, 'voor');
+                images.push(uploadedImageFile);
+              } catch (uploadError) {
+                console.error(`Error uploading image for page ${page.pageNumber}:`, uploadError);
+              }
+            }
+            return { text: pageText, images, tempSchouwingId };
+          })
+        );
+        
+        if (allPagesData.length > 0) {
+          setPdfPagesData(allPagesData);
+          setCurrentPageIndex(0);
+        } else {
+          onSuccess();
+          onOpenChange(false);
+        }
+      } catch (e) {
+        console.error("Error processing PDF", e);
+        onSuccess();
+        onOpenChange(false);
+      } finally {
+        setIsParsingPdf(false);
+      }
+    };
+
+    if (pdfToImport) {
+        processPdfFile();
+    }
+  }, [open, pdfToImport, projectId, uploadFile, firestore, onOpenChange, onSuccess, pdfPagesData]);
+
+
+  // Effect to populate form when current page changes
+  React.useEffect(() => {
+    const populateFormForPage = async () => {
+      if (!pdfPagesData || currentPageIndex >= pdfPagesData.length) return;
+      
+      const currentPage = pdfPagesData[currentPageIndex];
+      schouwingIdRef.current = currentPage.tempSchouwingId;
+
+      const parsedData = parsePdfText(currentPage.text);
+
+      form.reset({
+        inspecteur: user?.displayName || user?.email || '',
+        categorie: parsedData.categorie || '',
+        opmerkingen: parsedData.opmerkingen || '',
+        status: 'Open',
+        gewenstNiveau: parsedData.gewenstNiveau || '',
+        aangetroffenNiveau: parsedData.aangetroffenNiveau || '',
+      });
+      
+      setUploadedFilesVoor(currentPage.images);
+      setUploadedFilesNa([]);
+      setAddress(null);
+      setSearchQuery(parsedData.adres || '');
+
+      if (parsedData.latitude && parsedData.longitude) {
+        const lat = parsedData.latitude;
+        const lon = parsedData.longitude;
+        if (!isNaN(lat) && !isNaN(lon)) {
+          setLocation({ latitude: lat, longitude: lon });
+          const fetchedAddress = await fetchAddressDetails(lat, lon);
+          if (fetchedAddress) {
+            setSearchQuery(`${fetchedAddress.straatnaam || ''} ${fetchedAddress.huisnummer || ''}, ${fetchedAddress.postcode || ''} ${fetchedAddress.plaats || ''}`.trim());
+          }
+        }
+      } else {
+        setLocation(null);
+      }
+    };
+
+    if(pdfPagesData) {
+        populateFormForPage();
+    }
+  }, [pdfPagesData, currentPageIndex, form, user, fetchAddressDetails]);
+
+  
+  React.useEffect(() => {
+    if (open && !pdfToImport) {
       if (schouwing) {
         isInitialEditLoadRef.current = true;
         setLocation({ latitude: schouwing.latitude, longitude: schouwing.longitude });
         fetchAddressDetails(schouwing.latitude, schouwing.longitude);
         setSearchQuery(`${schouwing.straatnaam || ''} ${schouwing.huisnummer || ''}, ${schouwing.postcode || ''} ${schouwing.plaats || ''}`.trim());
-      } else {
-        isInitialEditLoadRef.current = false;
-        setLocation(null);
-        setSearchQuery('');
-        setAddress(null);
-      }
+        
+        setUploadedFilesVoor(schouwing.fotosVoor || []);
+        setUploadedFilesNa(schouwing.fotosNa || []);
 
-      setSuggestions([]);
-      setIsSearching(false);
-      setIsParsingPdf(false);
-      form.reset({
-        inspecteur: schouwing?.inspecteur || user?.displayName || user?.email || '',
-        categorie: schouwing?.categorie || '',
-        opmerkingen: schouwing?.opmerkingen || '',
-        status: schouwing?.status || 'Open',
-        gewenstNiveau: schouwing?.gewenstNiveau || '',
-        aangetroffenNiveau: schouwing?.aangetroffenNiveau || '',
-      });
-    } else {
-      form.reset();
-      setIsSubmitting(false);
-      setIsDeleting(false);
-      setUploadedFilesVoor([]);
-      setUploadedFilesNa([]);
-      setUploadProgress({});
-      setLocation(null);
-      setAddress(null);
+        form.reset({
+            inspecteur: schouwing.inspecteur || user?.displayName || user?.email || '',
+            categorie: schouwing.categorie || '',
+            opmerkingen: schouwing.opmerkingen || '',
+            status: schouwing.status || 'Open',
+            gewenstNiveau: schouwing.gewenstNiveau || '',
+            aangetroffenNiveau: schouwing.aangetroffenNiveau || '',
+        });
+      } else {
+         form.reset({
+            inspecteur: user?.displayName || user?.email || '',
+            categorie: '',
+            opmerkingen: '',
+            status: 'Open',
+            gewenstNiveau: '',
+            aangetroffenNiveau: '',
+        });
+      }
+    } else if (!open) {
+      resetAllState();
     }
-  }, [open, schouwing, pdfToImport, form, user, firestore, fetchAddressDetails]);
+  }, [open, schouwing, pdfToImport, form, user, fetchAddressDetails, resetAllState]);
   
   React.useEffect(() => {
     if (searchTimeoutRef.current) {
@@ -312,120 +490,6 @@ export function SchouwDialog({
     setSuggestions([]);
   };
 
-  const uploadFile = React.useCallback((file: File, schouwingId: string, projectId: string, type: 'voor' | 'na'): Promise<UploadedFile> => {
-    return new Promise((resolve, reject) => {
-        if (!app || !projectId) {
-            reject(new Error("Firebase app of project ID niet beschikbaar"));
-            return;
-        }
-        const storage = getStorage(app);
-        const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-        const uniqueFileName = `${new Date().getTime()}-${sanitizedFileName}`;
-        const storagePath = `projects/${projectId}/schouwingen/${schouwingId}/${type}/${uniqueFileName}`;
-        const storageRef = ref(storage, storagePath);
-        const uploadTask = uploadBytesResumable(storageRef, file);
-
-        uploadTask.on('state_changed',
-            (snapshot) => {
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                setUploadProgress(prev => ({...prev, [uniqueFileName]: progress}));
-            },
-            (error) => {
-                console.error('Upload mislukt:', error);
-                setUploadProgress(prev => { const newProgress = {...prev}; delete newProgress[uniqueFileName]; return newProgress; });
-                reject(error);
-            },
-            () => {
-                getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-                    const newFile: UploadedFile = { name: file.name, url: downloadURL, size: file.size, type: file.type, uploadedAt: new Date().toISOString(), storagePath: storagePath };
-                    resolve(newFile);
-                    setUploadProgress(prev => { const newProgress = {...prev}; delete newProgress[uniqueFileName]; return newProgress; });
-                });
-            }
-        );
-    });
-  }, [app]);
-  
-  React.useEffect(() => {
-    const processPdf = async () => {
-        if (!open || !pdfToImport || !schouwingIdRef.current || !projectId) return;
-
-        setIsParsingPdf(true);
-        
-        try {
-            const pdfBase64 = pdfToImport.substring(pdfToImport.indexOf(',') + 1);
-            const pdfBinary = atob(pdfBase64);
-            const len = pdfBinary.length;
-            const bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) {
-                bytes[i] = pdfBinary.charCodeAt(i);
-            }
-
-            const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
-            
-            let fullText = '';
-            const images: UploadedFile[] = [];
-
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                const textContent = await page.getTextContent();
-                const pageText = textContent.items.map(item => (item as any).str).join(' ');
-                fullText += pageText + '\n';
-
-                const viewport = page.getViewport({ scale: 1.5 });
-                const canvas = document.createElement('canvas');
-                const context = canvas.getContext('2d');
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-                if(context){
-                    await page.render({ canvasContext: context, viewport: viewport }).promise;
-                    const dataUrl = canvas.toDataURL('image/jpeg');
-                    const blob = await (await fetch(dataUrl)).blob();
-                    const imageFile = new File([blob], `from-pdf-page-${i}.jpg`, { type: 'image/jpeg' });
-                    
-                    try {
-                        const uploadedImageFile = await uploadFile(imageFile, schouwingIdRef.current!, projectId!, 'voor');
-                        images.push(uploadedImageFile);
-                    } catch(uploadError) {
-                        console.error("Error uploading image from PDF:", uploadError);
-                    }
-                }
-            }
-
-            setUploadedFilesVoor(images);
-            setUploadedFilesNa([]);
-            
-            const parsedData = parsePdfText(fullText);
-
-            form.setValue('opmerkingen', parsedData.opmerkingen || '');
-            if (parsedData.categorie) form.setValue('categorie', parsedData.categorie);
-            if (parsedData.gewenstNiveau) form.setValue('gewenstNiveau', parsedData.gewenstNiveau);
-            if (parsedData.aangetroffenNiveau) form.setValue('aangetroffenNiveau', parsedData.aangetroffenNiveau);
-
-            if (parsedData.latitude && parsedData.longitude) {
-                const lat = parsedData.latitude;
-                const lon = parsedData.longitude;
-                if (!isNaN(lat) && !isNaN(lon)) {
-                    setLocation({ latitude: lat, longitude: lon });
-                    const fetchedAddress = await fetchAddressDetails(lat, lon);
-                    if (fetchedAddress) {
-                        setSearchQuery(`${fetchedAddress.straatnaam || ''} ${fetchedAddress.huisnummer || ''}, ${fetchedAddress.postcode || ''} ${fetchedAddress.plaats || ''}`.trim());
-                    }
-                }
-            } else if (parsedData.adres) {
-                setSearchQuery(parsedData.adres);
-            }
-            
-        } catch (e) {
-            console.error("Error processing PDF", e);
-        } finally {
-            setIsParsingPdf(false);
-        }
-    };
-
-    processPdf();
-  }, [open, pdfToImport, projectId, form, uploadFile, fetchAddressDetails]);
-
   const handleFileChangeVoor = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || !schouwingIdRef.current || !projectId) return;
@@ -441,7 +505,8 @@ export function SchouwDialog({
   
   const handleFileChangeNa = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files || !schouwingIdRef.current || !projectId) return;
+    if (!schouwingIdRef.current || !projectId) return;
+    if (!files) return;
     for (const file of Array.from(files)) {
       try {
         const uploadedFile = await uploadFile(file, schouwingIdRef.current, projectId, 'na');
@@ -509,11 +574,17 @@ export function SchouwDialog({
       } else {
         await setDocumentNonBlocking(schouwingRef, { ...schouwingData, createdAt: serverTimestamp() }, {});
       }
-      onSuccess();
-      onOpenChange(false);
+      
+      if (pdfPagesData && currentPageIndex < pdfPagesData.length - 1) {
+        setCurrentPageIndex(prev => prev + 1);
+        setIsSubmitting(false);
+      } else {
+        onSuccess();
+        onOpenChange(false);
+      }
+
     } catch (error) {
       console.error('Fout bij opslaan schouwing:', error);
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -543,6 +614,13 @@ export function SchouwDialog({
 
   const isUploading = Object.keys(uploadProgress).length > 0;
   
+  const handleDialogClose = () => {
+    if (pdfToImport) {
+        onSuccess(); // Ensure queue in parent is advanced
+    }
+    onOpenChange(false);
+  }
+
   const renderFileUploadSection = (type: 'voor' | 'na') => {
     const files = type === 'voor' ? uploadedFilesVoor : uploadedFilesNa;
     const handleChange = type === 'voor' ? handleFileChangeVoor : handleFileChangeNa;
@@ -597,16 +675,16 @@ export function SchouwDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogClose}>
       <DialogContent className="w-screen h-screen max-w-none max-h-screen top-0 left-0 rounded-none translate-x-0 translate-y-0 flex flex-col p-0 gap-0">
-        {isParsingPdf && (
+        {(isParsingPdf) && (
             <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center z-50">
                 <Loader2 className="h-8 w-8 animate-spin" />
-                <p className="mt-2">PDF verwerken...</p>
+                <p className="mt-2">PDF verwerken... {pdfPagesData ? `(${currentPageIndex + 1}/${pdfPagesData.length})` : ''}</p>
             </div>
         )}
         <DialogHeader className="p-6 pb-2">
-          <DialogTitle>{schouwing?.id ? 'Schouwing Bewerken' : 'Nieuwe Schouwing'}</DialogTitle>
+          <DialogTitle>{schouwing?.id ? 'Schouwing Bewerken' : 'Nieuwe Schouwing'} {pdfPagesData ? `(${currentPageIndex + 1}/${pdfPagesData.length})` : ''}</DialogTitle>
           <DialogDescription>
             Selecteer een locatie en vul de details in om een schouwing aan te maken.
           </DialogDescription>
@@ -807,7 +885,7 @@ export function SchouwDialog({
             )}
           </div>
           <div className="flex gap-2">
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Annuleren</Button>
+            <Button type="button" variant="ghost" onClick={handleDialogClose} disabled={isSubmitting}>Annuleren</Button>
             <Button type="submit" form="schouw-form" disabled={isSubmitting || isUploading || !location}>
               {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Opslaan...</> : 'Opslaan'}
             </Button>
