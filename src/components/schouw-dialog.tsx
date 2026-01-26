@@ -99,6 +99,7 @@ interface SchouwDialogProps {
   projectId: string | null;
   schouwing?: Schouwing | null;
   onSuccess: () => void;
+  pdfToImport?: string | null;
 }
 
 export function SchouwDialog({
@@ -107,6 +108,7 @@ export function SchouwDialog({
   projectId,
   schouwing,
   onSuccess,
+  pdfToImport,
 }: SchouwDialogProps) {
   const firestore = useFirestore();
   const app = useFirebaseApp();
@@ -130,7 +132,6 @@ export function SchouwDialog({
   const schouwingIdRef = React.useRef(schouwing?.id);
   const isFetchingAddressRef = React.useRef(false);
   const [isParsingPdf, setIsParsingPdf] = React.useState(false);
-  const pdfInputRef = React.useRef<HTMLInputElement>(null);
 
 
   const form = useForm<SchouwFormValues>({
@@ -187,6 +188,7 @@ export function SchouwDialog({
 
       setSuggestions([]);
       setIsSearching(false);
+      setIsParsingPdf(false);
       form.reset({
         inspecteur: schouwing?.inspecteur || user?.displayName || user?.email || '',
         categorie: schouwing?.categorie || '',
@@ -265,7 +267,7 @@ export function SchouwDialog({
     setSuggestions([]);
   };
 
-  const uploadFile = (file: File, schouwingId: string, projectId: string, type: 'voor' | 'na'): Promise<UploadedFile> => {
+  const uploadFile = React.useCallback((file: File, schouwingId: string, projectId: string, type: 'voor' | 'na'): Promise<UploadedFile> => {
     return new Promise((resolve, reject) => {
         if (!app || !projectId) {
             reject(new Error("Firebase app of project ID niet beschikbaar"));
@@ -297,7 +299,81 @@ export function SchouwDialog({
             }
         );
     });
-  };
+  }, [app]);
+  
+  React.useEffect(() => {
+    const processPdf = async () => {
+        if (!open || !pdfToImport || !schouwingIdRef.current || !projectId) return;
+
+        setIsParsingPdf(true);
+        
+        try {
+            const pdfBase64 = pdfToImport.substring(pdfToImport.indexOf(',') + 1);
+            const pdfBinary = atob(pdfBase64);
+            const len = pdfBinary.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = pdfBinary.charCodeAt(i);
+            }
+
+            const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+            
+            let fullText = '';
+            const images: UploadedFile[] = [];
+
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                textContent.items.forEach(item => {
+                    fullText += (item as any).str + ' ';
+                });
+                fullText += '\n';
+
+                const viewport = page.getViewport({ scale: 1.5 });
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                if(context){
+                    await page.render({ canvasContext: context, viewport: viewport }).promise;
+                    const dataUrl = canvas.toDataURL('image/jpeg');
+                    const blob = await (await fetch(dataUrl)).blob();
+                    const imageFile = new File([blob], `from-pdf-page-${i}.jpg`, { type: 'image/jpeg' });
+                    
+                    try {
+                        const uploadedImageFile = await uploadFile(imageFile, schouwingIdRef.current!, projectId!, 'voor');
+                        images.push(uploadedImageFile);
+                    } catch(uploadError) {
+                        console.error("Error uploading image from PDF:", uploadError);
+                    }
+                }
+            }
+            
+            form.setValue('opmerkingen', (form.getValues('opmerkingen') || '') + '\n\n--- Geïmporteerd uit PDF ---\n' + fullText);
+            setUploadedFilesVoor(prev => [...prev, ...images]);
+
+            const textLower = fullText.toLowerCase();
+            for (const cat of categorieOptions) {
+                if (textLower.includes(cat.toLowerCase())) {
+                    form.setValue('categorie', cat);
+                    break;
+                }
+            }
+            
+            const niveauRegex = /niveau:?\s*([A-D][+]?)/i;
+            const matches = textLower.match(niveauRegex);
+            if (matches && matches[1]) {
+                form.setValue('aangetroffenNiveau', matches[1].toUpperCase());
+            }
+        } catch (e) {
+            console.error("Error processing PDF", e);
+        } finally {
+            setIsParsingPdf(false);
+        }
+    };
+
+    processPdf();
+  }, [open, pdfToImport, projectId, form, uploadFile]);
 
   const handleFileChangeVoor = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -312,72 +388,6 @@ export function SchouwDialog({
     }
   };
   
-  const handlePdfImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !schouwingIdRef.current || !projectId) return;
-
-    setIsParsingPdf(true);
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-        const typedArray = new Uint8Array(e.target.result as ArrayBuffer);
-        const pdf = await pdfjsLib.getDocument(typedArray).promise;
-        
-        let fullText = '';
-        const images: UploadedFile[] = [];
-
-        for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            textContent.items.forEach(item => {
-                fullText += (item as any).str + ' ';
-            });
-            fullText += '\n';
-
-            const viewport = page.getViewport({ scale: 1.5 });
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
-            if(context){
-                await page.render({ canvasContext: context, viewport: viewport }).promise;
-                const dataUrl = canvas.toDataURL('image/jpeg');
-                const blob = await (await fetch(dataUrl)).blob();
-                const imageFile = new File([blob], `from-pdf-page-${i}.jpg`, { type: 'image/jpeg' });
-                
-                try {
-                    const uploadedImageFile = await uploadFile(imageFile, schouwingIdRef.current!, projectId!, 'voor');
-                    images.push(uploadedImageFile);
-                } catch(uploadError) {
-                    console.error("Error uploading image from PDF:", uploadError);
-                }
-            }
-        }
-        
-        form.setValue('opmerkingen', form.getValues('opmerkingen') + '\n\n--- Geïmporteerd uit PDF ---\n' + fullText);
-        setUploadedFilesVoor(prev => [...prev, ...images]);
-
-        const textLower = fullText.toLowerCase();
-        for (const cat of categorieOptions) {
-            if (textLower.includes(cat.toLowerCase())) {
-                form.setValue('categorie', cat);
-                break;
-            }
-        }
-        
-        const niveauRegex = /niveau:?\s*([A-D][+]?)/i;
-        const matches = textLower.match(niveauRegex);
-        if (matches && matches[1]) {
-            form.setValue('aangetroffenNiveau', matches[1].toUpperCase());
-        }
-
-        setIsParsingPdf(false);
-    };
-    reader.readAsArrayBuffer(file);
-    if(pdfInputRef.current) pdfInputRef.current.value = '';
-  };
-
-
   const handleFileChangeNa = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || !schouwingIdRef.current || !projectId) return;
@@ -554,16 +564,6 @@ export function SchouwDialog({
           <Form {...form}>
             <form id="schouw-form" onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
               <div className="space-y-4">
-                  <Button type="button" variant="outline" className='w-full' onClick={() => pdfInputRef.current?.click()}>
-                    <Upload className="mr-2 h-4 w-4"/> Importeer van PDF
-                  </Button>
-                   <input
-                        ref={pdfInputRef}
-                        type="file"
-                        className="hidden"
-                        accept="application/pdf"
-                        onChange={handlePdfImport}
-                    />
                   <FormField
                       control={form.control}
                       name="inspecteur"

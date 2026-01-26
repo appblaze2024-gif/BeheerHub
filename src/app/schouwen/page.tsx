@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Layers as MapLayersIcon, LocateFixed, X, CircleAlert, Filter, Search, MapPin } from 'lucide-react';
+import { Plus, Layers as MapLayersIcon, LocateFixed, X, CircleAlert, Filter, Search, MapPin, Upload } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import * as turf from '@turf/turf';
@@ -81,6 +81,9 @@ export default function SchouwenPage() {
   const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const mapRef = React.useRef<any>(null);
+  const pdfInputRef = React.useRef<HTMLInputElement>(null);
+  const [pdfToImport, setPdfToImport] = React.useState<string | null>(null);
+
 
   React.useEffect(() => {
     if (searchTimeoutRef.current) {
@@ -299,10 +302,28 @@ export default function SchouwenPage() {
   }, [isFollowing, userHeading]);
   
   const handleNewSchouwing = () => {
+    setPdfToImport(null);
     setIsPlacingMode(true);
   };
+  
+  const handlePdfFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !selectedProjectId) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        setPdfToImport(dataUrl);
+        setSelectedSchouwing(null);
+        setIsDialogOpen(true);
+    };
+    reader.readAsDataURL(file);
+    event.target.value = '';
+  };
+
 
   const handleEditSchouwing = (schouwing: Schouwing) => {
+    setPdfToImport(null);
     setSelectedSchouwing(schouwing);
     setIsDialogOpen(true);
   }
@@ -334,6 +355,7 @@ export default function SchouwenPage() {
         datum: new Date().toISOString(),
         inspecteur: user?.displayName || user?.email || '',
       };
+      setPdfToImport(null);
       setSelectedSchouwing(newSchouwing as Schouwing);
       setIsDialogOpen(true);
       setIsPlacingMode(false);
@@ -425,6 +447,16 @@ export default function SchouwenPage() {
                 <Plus className="mr-2 h-4 w-4" />
                 Nieuwe Schouwing
             </Button>
+            <Button variant="outline" className="bg-card shadow-sm" onClick={() => pdfInputRef.current?.click()} disabled={!selectedProjectId}>
+                <Upload className="mr-2 h-4 w-4" /> Importeer van PDF
+            </Button>
+            <input
+                ref={pdfInputRef}
+                type="file"
+                className="hidden"
+                accept="application/pdf"
+                onChange={handlePdfFileSelect}
+            />
             <Button variant={isFollowing ? 'secondary' : 'outline'} onClick={() => setIsFollowing(prev => !prev)} className="bg-card shadow-sm">
                 <LocateFixed className="mr-2 h-4 w-4" />
                 Volg
@@ -485,10 +517,17 @@ export default function SchouwenPage() {
       </MapGL>
       <SchouwDialog
         open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
+        onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) {
+                setPdfToImport(null);
+                setSelectedSchouwing(null);
+            }
+        }}
         projectId={selectedProjectId}
         schouwing={selectedSchouwing}
         onSuccess={handleSuccess}
+        pdfToImport={pdfToImport}
       />
     </div>
   );
