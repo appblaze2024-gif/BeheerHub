@@ -392,7 +392,7 @@ export default function SchouwenPage() {
     });
 
     Promise.all(promises).then(dataUrls => {
-      setPdfQueue(dataUrls);
+      setPdfQueue(prev => [...prev, ...dataUrls]);
     });
 
     event.target.value = '';
@@ -420,13 +420,20 @@ export default function SchouwenPage() {
     zoom: 7,
   };
 
-  const handleSuccess = () => {
-      fetchSchouwingen();
+  const handleSuccess = React.useCallback(() => {
+    fetchSchouwingen();
+  }, [fetchSchouwingen]);
+
+  const handleDialogStateChange = React.useCallback((open: boolean) => {
+    setIsDialogOpen(open);
+    if (!open) {
+      // When dialog closes, we're done with the current PDF file.
+      // Move to the next one in the queue.
+      setPdfQueue(prev => prev.slice(1));
+      setCurrentPdf(null);
       setSelectedSchouwing(null);
-      if (pdfQueue.length > 0) {
-        setPdfQueue(prev => prev.slice(1));
-      }
-  }
+    }
+  }, []);
 
   const handleMapClick = (event: MapLayerMouseEvent) => {
     // Prevent click logic when clicking on an existing marker
@@ -625,16 +632,7 @@ export default function SchouwenPage() {
 
       <SchouwDialog
         open={isDialogOpen}
-        onOpenChange={(open) => {
-            setIsDialogOpen(open);
-            if (!open) {
-                if (currentPdf) {
-                    handleSuccess();
-                }
-                setCurrentPdf(null);
-                setSelectedSchouwing(null);
-            }
-        }}
+        onOpenChange={handleDialogStateChange}
         projectId={selectedProjectId}
         schouwing={selectedSchouwing}
         onSuccess={handleSuccess}

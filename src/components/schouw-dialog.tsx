@@ -348,7 +348,7 @@ export function SchouwDialog({
       }
     };
 
-    if (pdfToImport) {
+    if (open && pdfToImport) {
         processPdfFile();
     }
   }, [open, pdfToImport, projectId, uploadFile, firestore, onOpenChange, pdfPagesData]);
@@ -576,6 +576,8 @@ export function SchouwDialog({
         await setDocumentNonBlocking(schouwingRef, { ...schouwingData, createdAt: serverTimestamp() }, {});
       }
       
+      onSuccess();
+
       if (pdfPagesData && currentPageIndex < pdfPagesData.length - 1) {
         setCurrentPageIndex(prev => prev + 1);
         setIsSubmitting(false);
