@@ -685,15 +685,13 @@ export default function WorkPlanningPage() {
     
     let finalY = (doc as any).lastAutoTable.finalY;
     if (finalY === undefined) {
-      finalY = 30; // Fallback if table is empty
+      finalY = 30;
     }
-    
-    // Add some space after the table
-    finalY += 8;
+    finalY += 6;
     
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.text('Beschikbaar materieel:', 14, finalY);
+    doc.text('Beschikbare voertuigen:', 14, finalY);
 
     doc.setFont('helvetica', 'normal');
     doc.text(availableEquipmentText, 14, finalY + 5, { maxWidth: 180 });
@@ -701,7 +699,7 @@ export default function WorkPlanningPage() {
     finalY += 10;
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Onbeschikbaar materieel:', 14, finalY);
+    doc.text('Onbeschikbare voertuigen:', 14, finalY);
 
     doc.setFont('helvetica', 'normal');
     doc.text(unavailableEquipmentNames, 14, finalY + 5, { maxWidth: 180 });
