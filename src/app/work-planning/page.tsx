@@ -305,6 +305,16 @@ export default function WorkPlanningPage() {
     });
   }, [voertuigen, machines]);
 
+  const equipmentMap = React.useMemo(() => {
+    const map = new Map<string, (Voertuig & {__type: 'voertuig'}) | (Machine & {__type: 'machine'})>();
+    if (allEquipment) {
+        for (const item of allEquipment) {
+            map.set(item.id, item);
+        }
+    }
+    return map;
+  }, [allEquipment]);
+
   const isSuperUser = profile?.role === 'Super admin';
   const canView = isSuperUser || !!profile?.permissions?.workPlanning?.view;
   const canEdit = isSuperUser || !!profile?.permissions?.workPlanning?.edit;
@@ -1017,7 +1027,7 @@ export default function WorkPlanningPage() {
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline" size="xs" className="w-full h-auto text-xs justify-start text-left mt-0.5 truncate p-1" disabled={!canEdit}>
-                                {(unavailableVehicles[format(day, 'yyyy-MM-dd')] || []).length > 0 ? (unavailableVehicles[format(day, 'yyyy-MM-dd')] || []).join(', ') : "Geen"}
+                                {(unavailableVehicles[format(day, 'yyyy-MM-dd')] || []).length > 0 ? (unavailableVehicles[format(day, 'yyyy-MM-dd')] || []).map(id => { const item = equipmentMap.get(id); if (!item) return id; return (item as Voertuig).voertuignummer || (item as Machine).machinenummer || id; }).join(', ') : "Geen"}
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="w-64 max-h-80 overflow-y-auto">
@@ -1058,7 +1068,7 @@ export default function WorkPlanningPage() {
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline" size="xs" className="w-full h-auto text-xs justify-start text-left mt-0.5 truncate p-1" disabled={!canEdit}>
-                                 {(availableVehicles[format(day, 'yyyy-MM-dd')] || []).length > 0 ? (availableVehicles[format(day, 'yyyy-MM-dd')] || []).join(', ') : "Alle"}
+                                 {(availableVehicles[format(day, 'yyyy-MM-dd')] || []).length > 0 ? (availableVehicles[format(day, 'yyyy-MM-dd')] || []).map(id => { const item = equipmentMap.get(id); if (!item) return id; return (item as Voertuig).voertuignummer || (item as Machine).machinenummer || id; }).join(', ') : "Alle"}
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="w-64 max-h-80 overflow-y-auto">
