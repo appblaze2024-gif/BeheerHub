@@ -652,6 +652,9 @@ function RoosterTab({ medewerker, refreshId }: { medewerker: Medewerker; refresh
                                           )}>
                                               <p className="font-semibold">{dienst.werksoort}</p>
                                               <p>{dienst.starttijd}-{dienst.eindtijd}</p>
+                                              {(isVerlof || isZiek) && (
+                                                <p className="text-xs italic capitalize pt-1">{dienst.goedkeuringStatus || 'In behandeling'}</p>
+                                              )}
                                           </div>
                                       )
                                   })}
