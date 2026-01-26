@@ -80,7 +80,7 @@ function Calendar({
   const defaultClassNames = {
     months: "relative flex flex-col sm:flex-row gap-4",
     month: "w-full",
-    month_caption: "relative mx-10 mb-1 flex h-9 items-center justify-center z-10",
+    month_caption: "relative mx-10 mb-1 flex h-9 items-center justify-center",
     caption_dropdowns: "flex items-center gap-2",
     caption_label: "text-sm font-medium",
     nav: "absolute top-0 flex w-full justify-between z-20",
