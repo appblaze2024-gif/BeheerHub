@@ -19,6 +19,7 @@ import {
   Info,
   Copy,
   GanttChart,
+  Trash2,
 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 import { collection, doc, getDocs, query, where } from 'firebase/firestore';
@@ -36,6 +37,7 @@ import {
   endOfMonth,
   eachWeekOfInterval,
   isSameMonth,
+  startOfDay,
 } from 'date-fns';
 import { nl } from 'date-fns/locale';
 
@@ -48,6 +50,7 @@ import {
   useDoc,
   useFirestore,
   updateDocumentNonBlocking,
+  deleteDocumentNonBlocking,
 } from '@/firebase';
 import type { Medewerker, Dienst } from '@/lib/types';
 import { MedewerkerDialog } from '@/components/medewerker-dialog';
@@ -56,6 +59,8 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { Separator } from '@/components/ui/separator';
 import { useProfile } from '@/firebase/profile-provider';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { AfwezigheidDialog } from '@/components/afwezigheid-dialog';
+import { Loader2 } from 'lucide-react';
 
 
 function DetailField({
@@ -134,9 +139,12 @@ function DetailField({
   );
 }
 
-function AfwezigheidTab({ canEdit }: { canEdit: boolean}) {
+function AfwezigheidTab({ canEdit, medewerker, onSuccess, refreshId }: { canEdit: boolean, medewerker: Medewerker, onSuccess: () => void, refreshId: number }) {
   const [currentDate, setCurrentDate] = React.useState(new Date());
   const [selectedDate, setSelectedDate] = React.useState<Date>(new Date());
+  const firestore = useFirestore();
+  const [absences, setAbsences] = React.useState<Dienst[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
 
   const start = startOfWeek(currentDate, { weekStartsOn: 1 });
   const end = endOfWeek(currentDate, { weekStartsOn: 1 });
@@ -146,6 +154,45 @@ function AfwezigheidTab({ canEdit }: { canEdit: boolean}) {
   const prevWeek = () => setCurrentDate(sub(currentDate, { weeks: 1 }));
   const nextWeek = () => setCurrentDate(add(currentDate, { weeks: 1 }));
   const goToToday = () => setCurrentDate(new Date());
+
+  React.useEffect(() => {
+    const fetchAbsences = async () => {
+      if (!firestore) return;
+      setIsLoading(true);
+      const projectsCol = collection(firestore, 'projects');
+      const projectsSnapshot = await getDocs(projectsCol);
+
+      const allAbsences: Dienst[] = [];
+
+      for (const projectDoc of projectsSnapshot.docs) {
+        const dienstenCol = collection(firestore, 'projects', projectDoc.id, 'diensten');
+        const q = query(
+          dienstenCol,
+          where('medewerkerId', '==', medewerker.id),
+          where('werksoort', 'in', ['Verlof', 'ADV', 'Ziek'])
+        );
+        const dienstenSnapshot = await getDocs(q);
+        dienstenSnapshot.forEach(dienstDoc => {
+          allAbsences.push({ ...dienstDoc.data(), id: dienstDoc.id, projectId: projectDoc.id } as Dienst);
+        });
+      }
+      setAbsences(allAbsences.sort((a,b) => new Date(a.datum).getTime() - new Date(b.datum).getTime()));
+      setIsLoading(false);
+    };
+
+    fetchAbsences();
+  }, [firestore, medewerker.id, refreshId]);
+  
+  const upcomingAbsences = absences.filter(a => new Date(a.datum) >= startOfDay(new Date()));
+  const pastAbsences = absences.filter(a => new Date(a.datum) < startOfDay(new Date()));
+  
+  const handleDelete = async (dienst: Dienst) => {
+    if (!firestore || !dienst.projectId) return;
+    const dienstRef = doc(firestore, 'projects', dienst.projectId, 'diensten', dienst.id);
+    await deleteDocumentNonBlocking(dienstRef);
+    onSuccess();
+  }
+
 
   return (
     <div className="p-6">
@@ -220,14 +267,55 @@ function AfwezigheidTab({ canEdit }: { canEdit: boolean}) {
                     <TabsTrigger value="nagekeken">Nagekeken</TabsTrigger>
                     <TabsTrigger value="verleden">Verleden</TabsTrigger>
                   </TabsList>
-                  {canEdit && <Button><Plus className="h-4 w-4 mr-2" />Afwezigheid toevoegen</Button>}
+                  {canEdit && (
+                    <AfwezigheidDialog medewerker={medewerker} onSuccess={onSuccess}>
+                      <Button><Plus className="h-4 w-4 mr-2" />Afwezigheid toevoegen</Button>
+                    </AfwezigheidDialog>
+                  )}
                 </div>
                 <TabsContent value="aanvragen" className="mt-6">
-                  <div className="text-center text-muted-foreground py-12">
-                    <CalendarDays className="h-12 w-12 mx-auto mb-2" />
-                    <p>Geen verzoeken</p>
-                    <Button variant="link" size="sm">Nagekeken afwezigheden bekijken</Button>
-                  </div>
+                  {isLoading ? (
+                    <div className='flex justify-center items-center py-12'><Loader2 className='h-8 w-8 animate-spin' /></div>
+                  ) : upcomingAbsences.length > 0 ? (
+                     <div className="space-y-2">
+                      {upcomingAbsences.map(absence => (
+                        <div key={absence.id} className="flex justify-between items-center p-3 border rounded-md bg-muted/50">
+                          <div>
+                            <p className="font-semibold">{absence.werksoort}</p>
+                            <p className="text-sm text-muted-foreground">{format(new Date(absence.datum), 'eeee d MMMM yyyy', { locale: nl })}</p>
+                          </div>
+                          {canEdit && <Button variant="ghost" size="icon" onClick={() => handleDelete(absence)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center text-muted-foreground py-12">
+                      <CalendarDays className="h-12 w-12 mx-auto mb-2" />
+                      <p>Geen geplande afwezigheid</p>
+                    </div>
+                  )}
+                </TabsContent>
+                <TabsContent value="verleden" className="mt-6">
+                    {isLoading ? (
+                         <div className='flex justify-center items-center py-12'><Loader2 className='h-8 w-8 animate-spin' /></div>
+                    ) : pastAbsences.length > 0 ? (
+                        <div className="space-y-2">
+                        {pastAbsences.map(absence => (
+                            <div key={absence.id} className="flex justify-between items-center p-3 border rounded-md bg-muted/50">
+                            <div>
+                                <p className="font-semibold">{absence.werksoort}</p>
+                                <p className="text-sm text-muted-foreground">{format(new Date(absence.datum), 'eeee d MMMM yyyy', { locale: nl })}</p>
+                            </div>
+                             {canEdit && <Button variant="ghost" size="icon" onClick={() => handleDelete(absence)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+                            </div>
+                        ))}
+                        </div>
+                    ) : (
+                        <div className="text-center text-muted-foreground py-12">
+                            <CalendarDays className="h-12 w-12 mx-auto mb-2" />
+                            <p>Geen afwezigheid in het verleden</p>
+                        </div>
+                    )}
                 </TabsContent>
               </Tabs>
             </CardContent>
@@ -264,7 +352,7 @@ function AfwezigheidTab({ canEdit }: { canEdit: boolean}) {
   );
 }
 
-function RoosterTab({ medewerker }: { medewerker: Medewerker }) {
+function RoosterTab({ medewerker, refreshId }: { medewerker: Medewerker; refreshId: number; }) {
   const firestore = useFirestore();
   const [currentDate, setCurrentDate] = React.useState(new Date());
   const [diensten, setDiensten] = React.useState<Record<string, Dienst[]>>({});
@@ -313,7 +401,7 @@ function RoosterTab({ medewerker }: { medewerker: Medewerker }) {
     };
 
     fetchDiensten();
-  }, [firestore, currentDate, medewerker.id]);
+  }, [firestore, currentDate, medewerker.id, refreshId]);
 
   const firstDayOfMonth = startOfMonth(currentDate);
   const lastDayOfMonth = endOfMonth(currentDate);
@@ -572,7 +660,10 @@ export default function EmployeeDetailPage() {
   const id = params.id as string;
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const { profile, isLoading: isProfileLoading } = useProfile();
+  const [refreshId, setRefreshId] = React.useState(0);
   
+  const handleAbsenceSuccess = () => setRefreshId(id => id + 1);
+
   const isSuperUser = profile?.role === 'Super admin';
   const canEdit = isSuperUser || !!profile?.permissions?.employees?.edit;
 
@@ -722,10 +813,10 @@ export default function EmployeeDetailPage() {
             </div>
           </TabsContent>}
           {canViewTab('afwezigheid') && <TabsContent value="afwezigheid" className="flex-1 overflow-y-auto">
-            <AfwezigheidTab canEdit={canEdit} />
+            {medewerker && <AfwezigheidTab canEdit={canEdit} medewerker={medewerker} onSuccess={handleAbsenceSuccess} refreshId={refreshId} />}
           </TabsContent>}
           {canViewTab('rooster') && <TabsContent value="rooster" className="flex-1 overflow-y-auto">
-            <RoosterTab medewerker={medewerker} />
+            <RoosterTab medewerker={medewerker} refreshId={refreshId} />
           </TabsContent>}
           {canViewTab('contracten') && <TabsContent value="contracten" className="flex-1 overflow-y-auto">
              <ContractenTab canEdit={canEdit}/>
