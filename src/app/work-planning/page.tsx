@@ -257,7 +257,7 @@ export default function WorkPlanningPage() {
   const isFirestoreDataLoaded = React.useRef(false);
 
   const { profile, isLoading: isProfileLoading } = useProfile();
-
+  const isMobile = useIsMobile();
   const firestore = useFirestore();
 
   const medewerkersCollection = React.useMemo(() => {
@@ -738,14 +738,14 @@ export default function WorkPlanningPage() {
       <Button key="print-week" variant="outline" onClick={handlePrintWeek}><Printer className="mr-2 h-4 w-4" /> Print Week</Button>
     ];
 
-    if (isTablet) {
+    if (isMobile) {
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="icon"><MoreHorizontal className="h-4 w-4"/></Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            {buttons.map((btn, i) => <DropdownMenuItem key={i} asChild>{btn}</DropdownMenuItem>)}
+            {buttons.map((btn, i) => <DropdownMenuItem key={i}>{btn}</DropdownMenuItem>)}
           </DropdownMenuContent>
         </DropdownMenu>
       )

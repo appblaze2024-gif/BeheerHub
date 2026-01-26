@@ -101,7 +101,7 @@ export default function DashboardPage() {
   if (isProfileLoading) {
       return (
           <div className="flex flex-col flex-1 p-6">
-              <div className="flex-1 grid grid-cols-5 gap-4 content-start">
+              <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 content-start">
                   {Array.from({ length: 12 }).map((_, index) => (
                       <Skeleton key={index} className="h-40" />
                   ))}
@@ -112,7 +112,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col flex-1 p-6">
-      <div className="flex-1 grid grid-cols-5 gap-4 content-start">
+      <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 content-start">
           {gridItems.map((item) => {
             let badgeCount: number | undefined = undefined;
             if (item.href === '/issues') {

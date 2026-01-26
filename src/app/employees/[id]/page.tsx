@@ -362,89 +362,91 @@ function RoosterTab({ medewerker }: { medewerker: Medewerker }) {
             </Button>
         </div>
       </div>
-      <div className="flex-1 grid grid-rows-[auto_1fr] border rounded-lg overflow-hidden">
-        <div className="grid grid-cols-7 text-xs font-semibold text-center border-b">
-           {daysOfWeek.map((day) => (
-             <div key={day} className="p-2 border-r last:border-r-0">{day}</div>
-           ))}
-        </div>
-        <div className="grid grid-cols-1 grid-rows-5 flex-1 bg-gray-200">
-           {weeks.map((weekStart, weekIndex) => {
-              const daysInWeek = eachDayOfInterval({start: weekStart, end: endOfWeek(weekStart, {weekStartsOn: 1})})
-              return (
-                <div key={weekIndex} className="grid grid-cols-7 border-t first:border-t-0 bg-white">
-                  {daysInWeek.map((day) => {
-                    const dateKey = format(day, 'yyyy-MM-dd');
-                    const dayDiensten = diensten[dateKey] || [];
-                    
-                    const dayName = format(day, 'eeee', { locale: nl }).toLowerCase() as keyof NonNullable<Medewerker['urenPerDag']>;
-                    const isWeekend = dayName === 'zaterdag' || dayName === 'zondag';
-                    const defaultUren = {
-                        maandag: { start: '07:00', eind: '15:30' },
-                        dinsdag: { start: '07:00', eind: '15:30' },
-                        woensdag: { start: '07:00', eind: '15:30' },
-                        donderdag: { start: '07:00', eind: '15:30' },
-                        vrijdag: { start: '07:00', eind: '15:30' },
-                        zaterdag: { start: '', eind: '' },
-                        zondag: { start: '', eind: '' }
-                    };
-                    const urenPerDag = { ...defaultUren };
-                    if (medewerker.urenPerDag) {
-                        for (const d of Object.keys(defaultUren)) {
-                            const dayKey = d as keyof typeof defaultUren;
-                            if (medewerker.urenPerDag[dayKey]) {
-                                urenPerDag[dayKey] = { ...urenPerDag[dayKey], ...medewerker.urenPerDag[dayKey] };
-                            }
-                        }
-                    }
+      <div className="flex-1 border rounded-lg overflow-x-auto">
+        <div className="grid grid-rows-[auto_1fr] min-w-[900px]">
+          <div className="grid grid-cols-7 text-xs font-semibold text-center border-b">
+            {daysOfWeek.map((day) => (
+              <div key={day} className="p-2 border-r last:border-r-0">{day}</div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 grid-rows-5 flex-1 bg-gray-200">
+            {weeks.map((weekStart, weekIndex) => {
+                const daysInWeek = eachDayOfInterval({start: weekStart, end: endOfWeek(weekStart, {weekStartsOn: 1})})
+                return (
+                  <div key={weekIndex} className="grid grid-cols-7 border-t first:border-t-0 bg-white">
+                    {daysInWeek.map((day) => {
+                      const dateKey = format(day, 'yyyy-MM-dd');
+                      const dayDiensten = diensten[dateKey] || [];
+                      
+                      const dayName = format(day, 'eeee', { locale: nl }).toLowerCase() as keyof NonNullable<Medewerker['urenPerDag']>;
+                      const isWeekend = dayName === 'zaterdag' || dayName === 'zondag';
+                      const defaultUren = {
+                          maandag: { start: '07:00', eind: '15:30' },
+                          dinsdag: { start: '07:00', eind: '15:30' },
+                          woensdag: { start: '07:00', eind: '15:30' },
+                          donderdag: { start: '07:00', eind: '15:30' },
+                          vrijdag: { start: '07:00', eind: '15:30' },
+                          zaterdag: { start: '', eind: '' },
+                          zondag: { start: '', eind: '' }
+                      };
+                      const urenPerDag = { ...defaultUren };
+                      if (medewerker.urenPerDag) {
+                          for (const d of Object.keys(defaultUren)) {
+                              const dayKey = d as keyof typeof defaultUren;
+                              if (medewerker.urenPerDag[dayKey]) {
+                                  urenPerDag[dayKey] = { ...urenPerDag[dayKey], ...medewerker.urenPerDag[dayKey] };
+                              }
+                          }
+                      }
 
-                    const dagUren = urenPerDag[dayName];
-                    const isNonWorkingDay = !dagUren || !dagUren.start || !dagUren.eind;
-                    const isVisuallyNonWorkingDay = isNonWorkingDay && !isWeekend;
+                      const dagUren = urenPerDag[dayName];
+                      const isNonWorkingDay = !dagUren || !dagUren.start || !dagUren.eind;
+                      const isVisuallyNonWorkingDay = isNonWorkingDay && !isWeekend;
 
-                    return (
-                        <div key={day.toISOString()} className={cn(
-                          "p-1 border-r min-h-[100px]",
-                          isVisuallyNonWorkingDay
-                            ? 'bg-black' 
-                            : !isSameMonth(day, currentDate) && 'bg-muted/30'
-                        )}>
-                            <span className={cn(
-                              'text-xs font-semibold',
-                              isVisuallyNonWorkingDay ? 'text-white' : (!isSameMonth(day, currentDate) && 'text-muted-foreground/50'),
-                              isToday(day) && 'flex items-center justify-center h-5 w-5 rounded-full',
-                              isToday(day) && !isNonWorkingDay && 'bg-blue-600 text-white',
-                              isToday(day) && isVisuallyNonWorkingDay && 'ring-2 ring-offset-2 ring-offset-black ring-white'
-                            )}>
-                              {format(day, 'd')}
-                            </span>
-                            <div className="mt-1 space-y-1">
-                                {dayDiensten.map(dienst => {
-                                    const isZiek = dienst.werksoort === 'Ziek';
-                                    const isVerlof = dienst.werksoort === 'Verlof' || dienst.werksoort === 'ADV';
-                                    return (
-                                        <div key={dienst.id} className={cn(
-                                            "rounded-md p-1.5 text-sm leading-snug",
-                                            isZiek 
-                                                ? "bg-yellow-200 text-yellow-900 dark:bg-yellow-900/50 dark:text-white"
-                                            : isVerlof
-                                                ? "bg-orange-200 text-orange-900 dark:bg-orange-900/50 dark:text-white"
-                                            : isVisuallyNonWorkingDay
-                                                ? 'border border-gray-600 text-gray-200 bg-transparent'
-                                                : "bg-blue-100 text-blue-900 dark:bg-blue-900/50 dark:text-white"
-                                        )}>
-                                            <p className="font-semibold">{dienst.werksoort}</p>
-                                            <p>{dienst.starttijd}-{dienst.eindtijd}</p>
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        </div>
-                    )
-                  })}
-                </div>
-              )
-           })}
+                      return (
+                          <div key={day.toISOString()} className={cn(
+                            "p-1 border-r min-h-[100px]",
+                            isVisuallyNonWorkingDay
+                              ? 'bg-black' 
+                              : !isSameMonth(day, currentDate) && 'bg-muted/30'
+                          )}>
+                              <span className={cn(
+                                'text-xs font-semibold',
+                                isVisuallyNonWorkingDay ? 'text-white' : (!isSameMonth(day, currentDate) && 'text-muted-foreground/50'),
+                                isToday(day) && 'flex items-center justify-center h-5 w-5 rounded-full',
+                                isToday(day) && !isNonWorkingDay && 'bg-blue-600 text-white',
+                                isToday(day) && isVisuallyNonWorkingDay && 'ring-2 ring-offset-2 ring-offset-black ring-white'
+                              )}>
+                                {format(day, 'd')}
+                              </span>
+                              <div className="mt-1 space-y-1">
+                                  {dayDiensten.map(dienst => {
+                                      const isZiek = dienst.werksoort === 'Ziek';
+                                      const isVerlof = dienst.werksoort === 'Verlof' || dienst.werksoort === 'ADV';
+                                      return (
+                                          <div key={dienst.id} className={cn(
+                                              "rounded-md p-1.5 text-sm leading-snug",
+                                              isZiek 
+                                                  ? "bg-yellow-200 text-yellow-900 dark:bg-yellow-900/50 dark:text-white"
+                                              : isVerlof
+                                                  ? "bg-orange-200 text-orange-900 dark:bg-orange-900/50 dark:text-white"
+                                              : isVisuallyNonWorkingDay
+                                                  ? 'border border-gray-600 text-gray-200 bg-transparent'
+                                                  : "bg-blue-100 text-blue-900 dark:bg-blue-900/50 dark:text-white"
+                                          )}>
+                                              <p className="font-semibold">{dienst.werksoort}</p>
+                                              <p>{dienst.starttijd}-{dienst.eindtijd}</p>
+                                          </div>
+                                      )
+                                  })}
+                              </div>
+                          </div>
+                      )
+                    })}
+                  </div>
+                )
+            })}
+          </div>
         </div>
       </div>
     </div>

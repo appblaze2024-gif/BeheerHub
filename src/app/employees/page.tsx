@@ -132,7 +132,7 @@ export default function EmployeesPage() {
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <header className="flex items-center justify-end p-6">
+      <header className="flex flex-col md:flex-row items-center justify-between gap-4 p-6">
         <div className="flex items-center gap-2">
           <Button variant="outline">
             <Filter className="mr-2 h-4 w-4" />
@@ -143,7 +143,9 @@ export default function EmployeesPage() {
               <Plus className="mr-2 h-4 w-4" /> Medewerker toevoegen
             </Button>
           )}
-          <div className="relative w-64">
+        </div>
+        <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
+          <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Zoek een medewerker"
@@ -155,7 +157,7 @@ export default function EmployeesPage() {
           {canDelete && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline">
+                <Button variant="outline" className="w-full sm:w-auto">
                   Bulkacties <ChevronDown className="ml-2 h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -170,10 +172,10 @@ export default function EmployeesPage() {
       </header>
       <div className="flex-1 px-6 pb-6 min-h-0">
         <Card className="h-full flex flex-col">
-          <CardContent className="p-0 flex-1 overflow-hidden">
-            <div className="h-full overflow-y-auto">
-              <div className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
-                <div className="grid grid-cols-[40px_3fr_3fr_2fr_2fr_2fr_50px] px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider sticky top-0 bg-card z-10">
+          <CardContent className="p-0 flex-1 overflow-auto">
+            <div className="h-full">
+              <div className="min-w-[800px] divide-y divide-gray-200 dark:divide-gray-800">
+                <div className="grid grid-cols-[40px_1fr_1fr_1fr_1fr_1fr_50px] px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider sticky top-0 bg-card z-10">
                   <Checkbox 
                     onCheckedChange={handleSelectAll}
                     checked={isAllSelected}
@@ -196,7 +198,7 @@ export default function EmployeesPage() {
                     <div
                       key={medewerker.id}
                       onClick={() => handleRowClick(medewerker.id)}
-                      className="grid grid-cols-[40px_3fr_3fr_2fr_2fr_2fr_50px] items-center px-4 py-3 text-sm cursor-pointer hover:bg-muted/50"
+                      className="grid grid-cols-[40px_1fr_1fr_1fr_1fr_1fr_50px] items-center px-4 py-3 text-sm cursor-pointer hover:bg-muted/50"
                     >
                       <Checkbox
                         onCheckedChange={(checked) => {

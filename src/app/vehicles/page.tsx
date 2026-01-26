@@ -455,7 +455,7 @@ export default function MaterieelBeheerPage() {
   return (
     <div className="grid grid-rows-[auto_1fr] flex-1 min-h-0">
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as MaterieelType)} className="flex-1 flex flex-col min-h-0">
-        <header className="flex items-center justify-between p-6">
+        <header className="flex flex-col sm:flex-row items-center justify-between gap-4 p-6">
             <TabsList>
                 <TabsTrigger value="voertuigen">Voertuigen</TabsTrigger>
                 <TabsTrigger value="machines">Machines</TabsTrigger>

@@ -23,6 +23,7 @@ import {
   Bookmark,
   MoreVertical,
   ChevronRight,
+  ArrowLeft,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -58,6 +59,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { LabelManagerDialog } from '@/components/label-manager-dialog';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 
 // --- UPDATED TYPE ---
@@ -189,6 +191,8 @@ export default function MailPage() {
   const [labels, setLabels] = React.useState(initialLabels);
   const [isLabelManagerOpen, setIsLabelManagerOpen] = React.useState(false);
   const [mailLabels, setMailLabels] = React.useState<Record<string, string>>({});
+  
+  const isMobile = useIsMobile();
 
   const selectedMailRef = React.useRef(selectedMail);
   selectedMailRef.current = selectedMail;
@@ -361,10 +365,10 @@ export default function MailPage() {
   return (
     <div className="flex flex-col flex-1 min-h-0 h-full">
       <div className="flex-1 overflow-hidden p-6 h-full">
-        <div className="grid grid-cols-[250px_400px_1fr] h-full border rounded-lg">
+        <div className="grid h-full border rounded-lg lg:grid-cols-[250px_400px_1fr]">
           
           {/* Panel 1: Folders */}
-          <div className="border-r p-3 flex flex-col">
+          <div className={cn("border-r p-3 flex-col", isMobile && selectedMail ? "hidden" : "flex")}>
             <Button className="w-full" onClick={() => { setComposeInitialData({}); setIsComposeOpen(true); }}>
                 <PenSquare className="mr-2 h-4 w-4" />
                 Nieuw Bericht
@@ -396,7 +400,7 @@ export default function MailPage() {
           </div>
 
           {/* Panel 2: Mail list */}
-          <div className="border-r flex flex-col min-h-0">
+          <div className={cn("border-r flex flex-col min-h-0", isMobile && selectedMail ? "hidden" : "flex")}>
             <div className="p-3 border-b flex items-center gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -481,10 +485,15 @@ export default function MailPage() {
           </div>
           
           {/* Panel 3: Mail content */}
-          <div className="flex flex-col min-h-0">
+          <div className={cn("flex flex-col min-h-0", isMobile && !selectedMail ? "hidden" : "flex")}>
             {selectedMail ? (
                 <>
-                <div className="flex items-center p-4 border-b">
+                <div className="flex items-center p-2 lg:p-4 border-b">
+                    {isMobile && (
+                        <Button variant="ghost" size="icon" className="mr-2" onClick={() => setSelectedMail(null)}>
+                            <ArrowLeft className="h-4 w-4" />
+                        </Button>
+                    )}
                     <h1 className="text-xl font-bold flex-1 truncate">{selectedMail.subject}</h1>
                 </div>
 
