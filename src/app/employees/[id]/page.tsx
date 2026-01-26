@@ -23,6 +23,7 @@ import {
   ThumbsUp,
   ThumbsDown,
   XCircle,
+  Users,
 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 import { collection, doc, getDocs, query, where, writeBatch } from 'firebase/firestore';
@@ -41,6 +42,7 @@ import {
   eachWeekOfInterval,
   isSameMonth,
   startOfDay,
+  endOfDay,
   addDays,
   isAfter,
 } from 'date-fns';
@@ -157,6 +159,8 @@ function AfwezigheidTab({ canEdit, medewerker, onSuccess, refreshId }: { canEdit
   const [selectedDate, setSelectedDate] = React.useState<Date>(new Date());
   const firestore = useFirestore();
   const [absences, setAbsences] = React.useState<Dienst[]>([]);
+  const [allCompanyAbsences, setAllCompanyAbsences] = React.useState<Dienst[]>([]);
+  const [allMedewerkers, setAllMedewerkers] = React.useState<Medewerker[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
 
   const start = startOfWeek(currentDate, { weekStartsOn: 1 });
@@ -169,31 +173,53 @@ function AfwezigheidTab({ canEdit, medewerker, onSuccess, refreshId }: { canEdit
   const goToToday = () => setCurrentDate(new Date());
 
   React.useEffect(() => {
-    const fetchAbsences = async () => {
+    const fetchData = async () => {
       if (!firestore) return;
       setIsLoading(true);
+
       const projectsCol = collection(firestore, 'projects');
-      const projectsSnapshot = await getDocs(projectsCol);
+      const medewerkersCol = collection(firestore, 'medewerkers');
+      
+      try {
+        const [projectsSnapshot, medewerkersSnapshot] = await Promise.all([
+          getDocs(projectsCol),
+          getDocs(medewerkersCol)
+        ]);
+        
+        const medewerkersList = medewerkersSnapshot.docs.map(d => ({id: d.id, ...d.data()} as Medewerker));
+        setAllMedewerkers(medewerkersList);
 
-      const allAbsences: Dienst[] = [];
-
-      for (const projectDoc of projectsSnapshot.docs) {
-        const dienstenCol = collection(firestore, 'projects', projectDoc.id, 'diensten');
-        const q = query(
-          dienstenCol,
-          where('medewerkerId', '==', medewerker.id),
-          where('werksoort', 'in', ['Verlof', 'ADV', 'Ziek'])
-        );
-        const dienstenSnapshot = await getDocs(q);
-        dienstenSnapshot.forEach(dienstDoc => {
-          allAbsences.push({ ...dienstDoc.data(), id: dienstDoc.id, projectId: projectDoc.id } as Dienst);
+        const allAbsencesPromises = projectsSnapshot.docs.map(projectDoc => {
+          const dienstenCol = collection(firestore, 'projects', projectDoc.id, 'diensten');
+          const q = query(
+            dienstenCol,
+            where('werksoort', 'in', ['Verlof', 'ADV', 'Ziek'])
+          );
+          return getDocs(q);
         });
+
+        const allDienstenSnapshots = await Promise.all(allAbsencesPromises);
+        
+        const companyAbsences: Dienst[] = [];
+        allDienstenSnapshots.forEach((dienstenSnapshot, i) => {
+          const projectId = projectsSnapshot.docs[i].id;
+          dienstenSnapshot.forEach(dienstDoc => {
+            companyAbsences.push({ ...dienstDoc.data(), id: dienstDoc.id, projectId: projectId } as Dienst);
+          });
+        });
+
+        const employeeAbsences = companyAbsences.filter(d => d.medewerkerId === medewerker.id);
+
+        setAbsences(employeeAbsences.sort((a, b) => new Date(a.datum).getTime() - new Date(b.datum).getTime()));
+        setAllCompanyAbsences(companyAbsences);
+      } catch (e) {
+        console.error("Failed to fetch absence data:", e);
+      } finally {
+        setIsLoading(false);
       }
-      setAbsences(allAbsences.sort((a,b) => new Date(a.datum).getTime() - new Date(b.datum).getTime()));
-      setIsLoading(false);
     };
 
-    fetchAbsences();
+    fetchData();
   }, [firestore, medewerker.id, refreshId]);
 
   const groupedAbsences = React.useMemo((): AbsencePeriod[] => {
@@ -300,22 +326,53 @@ function AfwezigheidTab({ canEdit, medewerker, onSuccess, refreshId }: { canEdit
         statusBadge = <Badge variant={variant} className="capitalize">{icon} {period.status}</Badge>;
     }
 
+    const medewerkersMap = new Map(allMedewerkers.map(m => [m.id, m]));
+
+    const overlappingAbsences = allCompanyAbsences.filter(absence => {
+        if (absence.medewerkerId === medewerker.id) return false;
+        
+        const absenceDate = new Date(absence.datum);
+        const periodStartDate = startOfDay(period.startDate);
+        const periodEndDate = endOfDay(period.endDate);
+
+        return absenceDate >= periodStartDate && absenceDate <= periodEndDate;
+    });
+
+    const otherEmployeesWithAbsence = [...new Set(overlappingAbsences.map(a => a.medewerkerId))];
+
     return (
-        <div key={period.id} className="flex justify-between items-center p-3 border rounded-md bg-muted/50">
-            <div className="flex-1">
-                <p className="font-semibold">{period.type}</p>
-                <p className="text-sm text-muted-foreground">{dateString}</p>
-                <div className="mt-1">{statusBadge}</div>
+        <div key={period.id} className="flex flex-col p-3 border rounded-md bg-muted/50 gap-3">
+            <div className="flex justify-between items-center">
+                <div className="flex-1">
+                    <p className="font-semibold">{period.type}</p>
+                    <p className="text-sm text-muted-foreground">{dateString}</p>
+                    <div className="mt-1">{statusBadge}</div>
+                </div>
+                <div className="flex items-center gap-2">
+                {canEdit && period.status === 'In behandeling' && (
+                    <>
+                        <Button variant="ghost" size="icon" onClick={() => handleUpdateStatus(period, 'Goedgekeurd')}><ThumbsUp className="h-5 w-5 text-green-600" /></Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleUpdateStatus(period, 'Afgekeurd')}><ThumbsDown className="h-5 w-5 text-red-600" /></Button>
+                    </>
+                )}
+                {canEdit && <Button variant="ghost" size="icon" onClick={() => handleDeletePeriod(period)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+                </div>
             </div>
-            <div className="flex items-center gap-2">
-            {canEdit && period.status === 'In behandeling' && (
-                <>
-                    <Button variant="ghost" size="icon" onClick={() => handleUpdateStatus(period, 'Goedgekeurd')}><ThumbsUp className="h-5 w-5 text-green-600" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleUpdateStatus(period, 'Afgekeurd')}><ThumbsDown className="h-5 w-5 text-red-600" /></Button>
-                </>
+            {otherEmployeesWithAbsence.length > 0 && (
+                <div className="mt-2 pt-2 border-t">
+                    <p className="text-xs font-semibold mb-2 flex items-center gap-1.5"><Users className="h-4 w-4" />Ook afwezig in deze periode:</p>
+                    <div className="flex flex-wrap gap-1">
+                        {otherEmployeesWithAbsence.map(medewerkerId => {
+                            const otherMedewerker = medewerkersMap.get(medewerkerId);
+                            return (
+                                <Badge key={medewerkerId} variant="secondary" className="font-normal">
+                                    {otherMedewerker ? `${otherMedewerker.voornaam} ${otherMedewerker.achternaam?.[0] || ''}.` : 'Onbekend'}
+                                </Badge>
+                            );
+                        })}
+                    </div>
+                </div>
             )}
-            {canEdit && <Button variant="ghost" size="icon" onClick={() => handleDeletePeriod(period)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
-            </div>
         </div>
     );
   }
