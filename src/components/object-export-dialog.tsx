@@ -19,7 +19,7 @@ import type { Wijk } from '@/app/projects/page';
 import * as turf from '@turf/turf';
 import * as XLSX from 'xlsx';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import MapGL from 'react-map-gl';
+import MapGL, { Marker } from 'react-map-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 
@@ -238,7 +238,17 @@ export function ObjectExportDialog({
                     mapStyle="mapbox://styles/mapbox/streets-v12"
                     mapboxAccessToken={MAPBOX_TOKEN}
                     onLoad={onMapLoad}
-                />
+                >
+                  {objects?.map(obj => (
+                    <Marker
+                      key={obj.id}
+                      longitude={obj.longitude}
+                      latitude={obj.latitude}
+                    >
+                      <div className="h-2 w-2 rounded-full bg-blue-600" />
+                    </Marker>
+                  ))}
+                </MapGL>
             </div>
           </TabsContent>
         </Tabs>
