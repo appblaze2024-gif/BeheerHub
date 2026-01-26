@@ -284,7 +284,7 @@ export default function SchouwenPage() {
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
       <header className="absolute top-0 left-0 z-10 p-4 flex flex-col sm:flex-row gap-4 w-full items-start sm:items-center">
-        <div className="flex gap-4 w-full sm:w-auto pointer-events-auto bg-card p-2 rounded-lg shadow-md">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 w-full sm:w-auto pointer-events-auto bg-card p-2 rounded-lg shadow-md">
             <GemeenteSelect 
               value={selectedGemeente}
               onValueChange={setSelectedGemeente}
