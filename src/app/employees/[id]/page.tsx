@@ -366,7 +366,7 @@ function AfwezigheidTab({ canEdit, medewerker, onSuccess, refreshId }: { canEdit
                             const otherMedewerker = medewerkersMap.get(medewerkerId);
                             return (
                                 <Badge key={medewerkerId} variant="secondary" className="font-normal">
-                                    {otherMedewerker ? `${otherMedewerker.voornaam} ${otherMedewerker.achternaam?.[0] || ''}.` : 'Onbekend'}
+                                    {otherMedewerker ? `${otherMedewerker.voornaam || ''} ${otherMedewerker.achternaam || ''}`.trim() : 'Onbekend'}
                                 </Badge>
                             );
                         })}
