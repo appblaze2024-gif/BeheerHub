@@ -379,7 +379,7 @@ export function SchouwDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0">
+      <DialogContent className="md:max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0">
         <DialogHeader className="p-6 pb-2">
           <DialogTitle>{schouwing?.id ? 'Schouwing Bewerken' : 'Nieuwe Schouwing'}</DialogTitle>
           <DialogDescription>
@@ -503,7 +503,7 @@ export function SchouwDialog({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
                     {uploadedFiles.length > 0 && (
                         <div className="relative aspect-video w-full rounded-md border overflow-hidden bg-muted">
-                        <Image src={uploadedFiles[0].url} alt={uploadedFiles[0].name} layout="fill" className="object-cover" />
+                        <Image src={uploadedFiles[0].url} alt={uploadedFiles[0].name} fill className="object-cover" />
                         </div>
                     )}
                     <div className="space-y-2">
