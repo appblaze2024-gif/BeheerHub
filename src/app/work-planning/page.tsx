@@ -690,7 +690,7 @@ export default function WorkPlanningPage() {
     } else {
         availableEquipmentText = 'Alle (m.u.v. onbeschikbaar)';
     }
-
+    
     let finalY = (doc as any).lastAutoTable.finalY;
     if (!finalY || finalY < 36) { // If table was empty or very short
         const headerHeight = 22;
@@ -701,11 +701,6 @@ export default function WorkPlanningPage() {
 
     finalY += 10; // Add some margin
 
-    if (finalY > 260) { // Check if we need a new page
-      doc.addPage();
-      finalY = 20;
-    }
-
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.text('Beschikbaar materieel:', 14, finalY);
@@ -714,11 +709,6 @@ export default function WorkPlanningPage() {
     doc.text(availableEquipmentText, 14, finalY + 5, { maxWidth: 180 });
 
     finalY += 15;
-
-    if (finalY > 260) { // Check if we need a new page
-      doc.addPage();
-      finalY = 20;
-    }
 
     doc.setFont('helvetica', 'bold');
     doc.text('Onbeschikbaar materieel:', 14, finalY);
