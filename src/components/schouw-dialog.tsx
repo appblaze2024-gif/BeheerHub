@@ -116,14 +116,10 @@ const parsePdfText = (text: string) => {
         result.longitude = parseFloat(gpsMatch[2]);
     }
 
-    // More robust address extraction (takes the rest of the line)
     result.adres = extractValue(/Nabij adres:\s*([^\r\n]+)/i);
-    
-    // Improved level extraction
     result.gewenstNiveau = extractValue(/Ambitieniveau:\s*([A-D]\+?)\b/i)?.toUpperCase();
     result.aangetroffenNiveau = extractValue(/Score:\s*([A-D]\+?)\b/i)?.toUpperCase();
 
-    // More robust opmerkingen extraction with a fallback
     const opmerkingenMatch = text.match(/^(.+?)(?=Ronde:|Type:|Periode:|Meetlocatienummer:)/is);
     let opmerkingenText = '';
     if(opmerkingenMatch && opmerkingenMatch[1]) {
@@ -135,13 +131,11 @@ const parsePdfText = (text: string) => {
         }
     }
     
-    // Find Categorie from opmerkingen
     if (opmerkingenText) {
         const opmerkingenLower = opmerkingenText.toLowerCase();
-        const foundCategory = categorieOptions.find(cat => opmerkingenLower.startsWith(cat.toLowerCase()));
+        const foundCategory = [...categorieOptions, "Onkruidbeheersing elementverharding"].find(cat => opmerkingenLower.startsWith(cat.toLowerCase()));
         if(foundCategory) {
-            result.categorie = foundCategory;
-            // Remove the category from the opmerkingen to leave the sub-details
+            result.categorie = "Onkruidbeheersing"; // Map to the correct one
             const regex = new RegExp(`^${foundCategory}`, 'i');
             result.opmerkingen = opmerkingenText.replace(regex, '').trim();
         } else {
@@ -398,11 +392,12 @@ export function SchouwDialog({
                 }
             }
 
-            setUploadedFilesVoor(prev => [...prev, ...images]);
+            setUploadedFilesVoor(images);
+            setUploadedFilesNa([]);
             
             const parsedData = parsePdfText(fullText);
 
-            form.setValue('opmerkingen', parsedData.opmerkingen || fullText);
+            form.setValue('opmerkingen', parsedData.opmerkingen || '');
             if (parsedData.categorie) form.setValue('categorie', parsedData.categorie);
             if (parsedData.gewenstNiveau) form.setValue('gewenstNiveau', parsedData.gewenstNiveau);
             if (parsedData.aangetroffenNiveau) form.setValue('aangetroffenNiveau', parsedData.aangetroffenNiveau);
@@ -412,11 +407,12 @@ export function SchouwDialog({
                 const lon = parsedData.longitude;
                 if (!isNaN(lat) && !isNaN(lon)) {
                     setLocation({ latitude: lat, longitude: lon });
-                    fetchAddressDetails(lat, lon);
+                    const fetchedAddress = await fetchAddressDetails(lat, lon);
+                    if (fetchedAddress) {
+                        setSearchQuery(`${fetchedAddress.straatnaam || ''} ${fetchedAddress.huisnummer || ''}, ${fetchedAddress.postcode || ''} ${fetchedAddress.plaats || ''}`.trim());
+                    }
                 }
-            }
-            
-            if (parsedData.adres) {
+            } else if (parsedData.adres) {
                 setSearchQuery(parsedData.adres);
             }
             
