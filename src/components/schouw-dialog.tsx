@@ -30,6 +30,7 @@ import {
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
+  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
@@ -529,7 +530,7 @@ export function SchouwDialog({
                           )}
                       />
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField control={form.control} name="gewenstNiveau" render={({ field }) => (
                         <FormItem>
                             <FormLabel>Gewenst niveau</FormLabel>
