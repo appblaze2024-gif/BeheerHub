@@ -30,6 +30,7 @@ import {
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
+  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
@@ -584,7 +585,7 @@ export function SchouwDialog({
             </form>
           </Form>
         </div>
-        <DialogFooter className="p-6 pt-4 border-t flex flex-row justify-between w-full">
+        <DialogFooter className="p-6 pt-4 border-t flex flex-row sm:justify-between w-full">
           <div>
             {schouwing && (
                 <AlertDialog>
