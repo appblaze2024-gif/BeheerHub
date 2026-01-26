@@ -323,7 +323,6 @@ export function SchouwDialog({
 
   const onSubmit = async (data: SchouwFormValues) => {
     if (!firestore || !projectId || !location) {
-        // Here you might want to show a toast message to the user to select a location
         return;
     }
     setIsSubmitting(true);
@@ -551,10 +550,11 @@ export function SchouwDialog({
                         <Input placeholder="Postcode" value={address?.postcode || ''} readOnly />
                         <Input placeholder="Plaats" value={address?.plaats || ''} readOnly />
                       </div>
-                      <div className='aspect-square w-full border rounded-md overflow-hidden mt-2'>
+                      <div className='h-64 w-full border rounded-md overflow-hidden mt-2'>
                           <MapboxView
                               longitude={location?.longitude}
                               latitude={location?.latitude}
+                              interactive={false}
                           />
                       </div>
                   </FormItem>
@@ -576,7 +576,7 @@ export function SchouwDialog({
             </form>
           </Form>
         </div>
-        <DialogFooter className="p-6 pt-4 border-t flex flex-col-reverse sm:flex-row sm:justify-between w-full">
+        <DialogFooter className="p-6 pt-4 border-t flex flex-row justify-between w-full">
           <div>
             {schouwing && (
                 <AlertDialog>

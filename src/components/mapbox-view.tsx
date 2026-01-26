@@ -24,6 +24,7 @@ interface MapboxViewProps {
   onObjectSelect?: (object: MapObject, selected: boolean) => void;
   wijkPolygons?: turf.Feature<turf.Polygon | turf.MultiPolygon>[];
   showHeatmap?: boolean;
+  interactive?: boolean;
 }
 
 const polygonFillLayer: FillLayer = {
@@ -54,7 +55,7 @@ const getHeatmapColor = (vulgraad: number | undefined): string => {
     return `hsl(${hue}, 80%, 50%)`;
 };
 
-export function MapboxView({ longitude, latitude, objects, selectedObjects = [], onObjectSelect, wijkPolygons = [], showHeatmap = true }: MapboxViewProps) {
+export function MapboxView({ longitude, latitude, objects, selectedObjects = [], onObjectSelect, wijkPolygons = [], showHeatmap = true, interactive = true }: MapboxViewProps) {
   const [selectedPin, setSelectedPin] = React.useState<MapObject | null>(null);
   const [hoveredPin, setHoveredPin] = React.useState<MapObject | null>(null);
 
@@ -165,6 +166,12 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
         style={{ width: '100%', height: '100%' }}
         mapStyle="mapbox://styles/mapbox/streets-v12"
         mapboxAccessToken={MAPBOX_TOKEN}
+        dragPan={interactive}
+        dragRotate={interactive}
+        scrollZoom={interactive}
+        touchZoom={interactive}
+        touchRotate={interactive}
+        doubleClickZoom={interactive}
       >
         {wijkPolygons.length > 0 && (
             <Source id="wijk-polygons" type="geojson" data={geojson}>
