@@ -4,11 +4,10 @@ import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { CalendarIcon, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { addDays, format, isWeekend } from 'date-fns';
 import { nl } from 'date-fns/locale';
-import { DateRange } from 'react-day-picker';
-import { useFirestore, addDocumentNonBlocking, useCollection } from '@/firebase';
+import { useFirestore, useCollection } from '@/firebase';
 import { collection, writeBatch, doc } from 'firebase/firestore';
 
 import {
@@ -36,25 +35,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import type { Medewerker, Project } from '@/lib/types';
-import { cn } from '@/lib/utils';
 import { useToast } from './ui/use-toast';
 
 const afwezigheidFormSchema = z.object({
-  dateRange: z.object({
-    from: z.date({ required_error: 'Een startdatum is verplicht.' }),
-    to: z.date().optional(),
-  }),
+  from: z.coerce.date({ required_error: 'Een startdatum is verplicht.' }),
+  to: z.coerce.date().optional().nullable(),
   type: z.string().min(1, 'Type is verplicht.'),
   projectId: z.string().min(1, 'Project is verplicht.'),
   notities: z.string().optional(),
+}).refine(data => !data.to || data.to >= data.from, {
+  message: "Einddatum kan niet voor de startdatum zijn.",
+  path: ["to"],
 });
 
 type AfwezigheidFormValues = z.infer<typeof afwezigheidFormSchema>;
@@ -84,15 +78,21 @@ export function AfwezigheidDialog({
 
   const form = useForm<AfwezigheidFormValues>({
     resolver: zodResolver(afwezigheidFormSchema),
+    defaultValues: {
+        to: undefined,
+        type: '',
+        projectId: '',
+        notities: '',
+    }
   });
 
   const onSubmit = async (data: AfwezigheidFormValues) => {
-    if (!firestore || !data.dateRange.from) {
+    if (!firestore || !data.from) {
       return;
     }
     setIsSubmitting(true);
     
-    const { from, to } = data.dateRange;
+    const { from, to } = data;
     const endDate = to || from;
     let currentDate = from;
 
@@ -170,54 +170,45 @@ export function AfwezigheidDialog({
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="dateRange"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Periode</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          id="date"
-                          variant={"outline"}
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !field.value?.from && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {field.value?.from ? (
-                            field.value.to ? (
-                              <>
-                                {format(field.value.from, "LLL dd, y", { locale: nl })} -{" "}
-                                {format(field.value.to, "LLL dd, y", { locale: nl })}
-                              </>
-                            ) : (
-                              format(field.value.from, "LLL dd, y", { locale: nl })
-                            )
-                          ) : (
-                            <span>Kies een periode</span>
-                          )}
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        initialFocus
-                        mode="range"
-                        defaultMonth={field.value?.from}
-                        selected={field.value as DateRange}
-                        onSelect={field.onChange}
-                        numberOfMonths={2}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="from"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Van</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        {...field}
+                        value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''}
+                        onChange={(e) => field.onChange(e.target.valueAsDate)}
                       />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="to"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tot</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        {...field}
+                        value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''}
+                        onChange={(e) => field.onChange(e.target.valueAsDate)}
+                        min={form.getValues('from') ? format(form.getValues('from'), 'yyyy-MM-dd') : undefined}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             <FormField
               control={form.control}
               name="type"
