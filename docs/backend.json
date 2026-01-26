@@ -45,11 +45,19 @@
           "type": "string",
           "description": "GeoJSON features representing the inspected areas."
         },
-        "fotos": {
+        "fotosVoor": {
             "type": "array",
             "items": {
                 "$ref": "#/backend/entities/Bestand"
-            }
+            },
+            "description": "Photos taken before the work is done."
+        },
+        "fotosNa": {
+            "type": "array",
+            "items": {
+                "$ref": "#/backend/entities/Bestand"
+            },
+            "description": "Photos taken after the work is done."
         },
         "straatnaam": {
           "type": "string"

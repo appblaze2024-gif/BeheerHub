@@ -138,7 +138,8 @@ export interface Schouwing {
   longitude: number;
   categorie: 'Zwerfvuil' | 'Prullenbak' | 'Vegen' | 'Grofvuil' | 'Kadaver' | 'Storing';
   gebieden?: string;
-  fotos?: UploadedFile[];
+  fotosVoor?: UploadedFile[];
+  fotosNa?: UploadedFile[];
   straatnaam?: string;
   huisnummer?: string;
   postcode?: string;

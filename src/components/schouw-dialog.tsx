@@ -116,7 +116,8 @@ export function SchouwDialog({
   const justSelectedSuggestion = React.useRef(false);
 
   const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
-  const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
+  const [uploadedFilesVoor, setUploadedFilesVoor] = React.useState<UploadedFile[]>([]);
+  const [uploadedFilesNa, setUploadedFilesNa] = React.useState<UploadedFile[]>([]);
   const schouwingIdRef = React.useRef(schouwing?.id);
   const isFetchingAddressRef = React.useRef(false);
 
@@ -158,7 +159,8 @@ export function SchouwDialog({
   React.useEffect(() => {
     if (open) {
       schouwingIdRef.current = schouwing?.id || doc(collection(firestore, 'temp')).id;
-      setUploadedFiles(schouwing?.fotos || []);
+      setUploadedFilesVoor(schouwing?.fotosVoor || []);
+      setUploadedFilesNa(schouwing?.fotosNa || []);
       
       if (schouwing) {
         setLocation({ latitude: schouwing.latitude, longitude: schouwing.longitude });
@@ -182,7 +184,8 @@ export function SchouwDialog({
       form.reset();
       setIsSubmitting(false);
       setIsDeleting(false);
-      setUploadedFiles([]);
+      setUploadedFilesVoor([]);
+      setUploadedFilesNa([]);
       setUploadProgress({});
       setLocation(null);
       setAddress(null);
@@ -242,7 +245,7 @@ export function SchouwDialog({
     setSuggestions([]);
   };
 
-  const uploadFile = (file: File, schouwingId: string, projectId: string): Promise<UploadedFile> => {
+  const uploadFile = (file: File, schouwingId: string, projectId: string, type: 'voor' | 'na'): Promise<UploadedFile> => {
     return new Promise((resolve, reject) => {
         if (!app || !projectId) {
             reject(new Error("Firebase app of project ID niet beschikbaar"));
@@ -251,7 +254,7 @@ export function SchouwDialog({
         const storage = getStorage(app);
         const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
         const uniqueFileName = `${new Date().getTime()}-${sanitizedFileName}`;
-        const storagePath = `projects/${projectId}/schouwingen/${schouwingId}/${uniqueFileName}`;
+        const storagePath = `projects/${projectId}/schouwingen/${schouwingId}/${type}/${uniqueFileName}`;
         const storageRef = ref(storage, storagePath);
         const uploadTask = uploadBytesResumable(storageRef, file);
 
@@ -276,29 +279,42 @@ export function SchouwDialog({
     });
   };
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChangeVoor = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || !schouwingIdRef.current || !projectId) return;
     for (const file of Array.from(files)) {
       try {
-        const uploadedFile = await uploadFile(file, schouwingIdRef.current, projectId);
-        setUploadedFiles(prev => [...prev, uploadedFile]);
+        const uploadedFile = await uploadFile(file, schouwingIdRef.current, projectId, 'voor');
+        setUploadedFilesVoor(prev => [...prev, uploadedFile]);
       } catch (error) { 
         console.error(`Kon ${file.name} niet uploaden.`, error); 
       }
     }
   };
 
-  const handleFileDelete = async (fileToDelete: UploadedFile) => {
+  const handleFileChangeNa = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || !schouwingIdRef.current || !projectId) return;
+    for (const file of Array.from(files)) {
+      try {
+        const uploadedFile = await uploadFile(file, schouwingIdRef.current, projectId, 'na');
+        setUploadedFilesNa(prev => [...prev, uploadedFile]);
+      } catch (error) { 
+        console.error(`Kon ${file.name} niet uploaden.`, error); 
+      }
+    }
+  };
+
+  const handleFileDelete = async (fileToDelete: UploadedFile, setFiles: React.Dispatch<React.SetStateAction<UploadedFile[]>>) => {
     if (!app) return;
     const storage = getStorage(app);
     try {
       await deleteObject(ref(storage, fileToDelete.storagePath));
-      setUploadedFiles((prev) => prev.filter((f) => f.storagePath !== fileToDelete.storagePath));
+      setFiles((prev) => prev.filter((f) => f.storagePath !== fileToDelete.storagePath));
     } catch (error: any) {
       console.error('Kon bestand niet verwijderen:', error);
       if (error.code === 'storage/object-not-found') {
-        setUploadedFiles((prev) =>
+        setFiles((prev) =>
           prev.filter((f) => f.storagePath !== fileToDelete.storagePath)
         );
       }
@@ -335,7 +351,8 @@ export function SchouwDialog({
       postcode: finalAddress.postcode,
       plaats: finalAddress.plaats,
       datum: schouwing?.datum || new Date().toISOString(),
-      fotos: uploadedFiles,
+      fotosVoor: uploadedFilesVoor,
+      fotosNa: uploadedFilesNa,
       updatedAt: serverTimestamp(),
     };
 
@@ -359,9 +376,10 @@ export function SchouwDialog({
     if (!firestore || !projectId || !schouwing?.id) return;
     setIsDeleting(true);
     try {
-      if (schouwing.fotos && schouwing.fotos.length > 0) {
+      const allFiles = [...(schouwing.fotosVoor || []), ...(schouwing.fotosNa || [])];
+      if (allFiles.length > 0) {
         const storage = getStorage(app);
-        for (const file of schouwing.fotos) {
+        for (const file of allFiles) {
           if (file.storagePath) {
             await deleteObject(ref(storage, file.storagePath)).catch((error) => console.error(`Kon bestand ${file.storagePath} niet verwijderen:`, error));
           }
@@ -378,6 +396,47 @@ export function SchouwDialog({
   };
 
   const isUploading = Object.keys(uploadProgress).length > 0;
+  
+  const renderFileUploadSection = (type: 'voor' | 'na') => {
+    const files = type === 'voor' ? uploadedFilesVoor : uploadedFilesNa;
+    const handleChange = type === 'voor' ? handleFileChangeVoor : handleFileChangeNa;
+    const setFiles = type === 'voor' ? setUploadedFilesVoor : setUploadedFilesNa;
+
+    return (
+      <div className="space-y-2">
+        <FormLabel>Foto's {type === 'voor' ? 'Voor' : 'Na'}</FormLabel>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          disabled={isUploading || isSubmitting}
+          onClick={() => document.getElementById(`schouwing-file-input-${type}`)?.click()}
+        >
+          <Upload className="mr-2 h-4 w-4" /> Upload '{type === 'voor' ? 'Voor' : 'Na'}'
+        </Button>
+        <input
+          type="file"
+          id={`schouwing-file-input-${type}`}
+          onChange={handleChange}
+          className="hidden"
+          multiple
+          accept="image/*"
+        />
+        {files.length > 0 && (
+          <div className="border rounded-md p-2 max-h-24 overflow-auto space-y-2">
+            {files.map(file => (
+              <div key={file.storagePath} className="flex items-center justify-between text-sm">
+                <a href={file.url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline flex items-center gap-2">
+                  <FileIcon className='h-4 w-4 shrink-0'/> {file.name}
+                </a>
+                <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleFileDelete(file, setFiles)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -499,36 +558,25 @@ export function SchouwDialog({
                           />
                       </div>
                   </FormItem>
-                   <div className="space-y-2">
-                    <FormLabel>Foto's</FormLabel>
-                    <Button type="button" variant="outline" className="w-full" disabled={isUploading || isSubmitting} onClick={() => document.getElementById('schouwing-file-input')?.click()}>
-                        <Upload className="mr-2 h-4 w-4" /> Upload foto's
-                    </Button>
-                    <input type="file" id="schouwing-file-input" onChange={handleFileChange} className="hidden" multiple accept="image/*" />
-                    {Object.entries(uploadProgress).map(([name, progress]) => (
-                    <div key={name} className="space-y-1 mt-2">
-                        <p className="text-sm font-medium">{name}</p>
-                        <Progress value={progress} className="w-full" />
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {renderFileUploadSection('voor')}
+                        {renderFileUploadSection('na')}
                     </div>
-                    ))}
-                    {uploadedFiles.length > 0 && (
-                    <div className='border rounded-md p-2 max-h-32 overflow-auto space-y-2 mt-4'>
-                        {uploadedFiles.map(file => (
-                        <div key={file.storagePath} className="flex items-center justify-between text-sm">
-                            <a href={file.url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline flex items-center gap-2">
-                            <FileIcon className='h-4 w-4 shrink-0'/> {file.name}
-                            </a>
-                            <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleFileDelete(file)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                        </div>
+                     {isUploading && (
+                        <div className="space-y-2">
+                        {Object.entries(uploadProgress).map(([name, progress]) => (
+                            <div key={name} className="space-y-1 mt-2">
+                                <p className="text-sm font-medium truncate">{name}</p>
+                                <Progress value={progress} className="w-full" />
+                            </div>
                         ))}
-                    </div>
+                        </div>
                     )}
-                </div>
               </div>
             </form>
           </Form>
         </div>
-        <DialogFooter className="p-6 pt-4 border-t flex flex-row sm:justify-between w-full">
+        <DialogFooter className="p-6 pt-4 border-t flex flex-col-reverse sm:flex-row sm:justify-between w-full">
           <div>
             {schouwing && (
                 <AlertDialog>
