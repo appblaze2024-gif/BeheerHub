@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Layers as MapLayersIcon, LocateFixed, X, CircleAlert } from 'lucide-react';
+import { Plus, Layers as MapLayersIcon, LocateFixed, X, CircleAlert, Filter } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import * as turf from '@turf/turf';
@@ -25,6 +25,16 @@ import { updateDocumentNonBlocking } from '@/firebase';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 import { GemeenteSelect } from '@/components/gemeente-select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -64,6 +74,7 @@ export default function SchouwenPage() {
   const watchIdRef = React.useRef<number | null>(null);
 
   const [isPlacingMode, setIsPlacingMode] = React.useState(false);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
 
   const mapRef = React.useRef<any>(null);
 
@@ -283,43 +294,71 @@ export default function SchouwenPage() {
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
-      <header className="absolute top-0 left-0 z-10 p-4 flex flex-col sm:flex-row gap-4 w-full items-start sm:items-center">
-        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 w-full sm:w-auto pointer-events-auto bg-card p-2 rounded-lg shadow-md">
-            <GemeenteSelect 
-              value={selectedGemeente}
-              onValueChange={setSelectedGemeente}
-              disabled={isLoadingGemeente}
-            />
-            <Select onValueChange={setSelectedProjectId} disabled={isLoadingProjects}>
-              <SelectTrigger className="w-full sm:w-72">
-                <SelectValue placeholder="Selecteer een project" />
-              </SelectTrigger>
-              <SelectContent>
-                {projects.map((project) => (
-                  <SelectItem key={project.id} value={project.id}>
-                    {project.projectnaam}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select onValueChange={handleMapStyleChange} value={mapStyle}>
-              <SelectTrigger className="w-full sm:w-auto">
-                <MapLayersIcon className="mr-2 h-4 w-4" />
-                <SelectValue placeholder="Kaartlaag" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="mapbox://styles/mapbox/streets-v12">Standaard</SelectItem>
-                <SelectItem value="mapbox://styles/mapbox/satellite-streets-v12">Satelliet</SelectItem>
-                <SelectItem value="mapbox://styles/mapbox/outdoors-v12">Terrein</SelectItem>
-                <SelectItem value="mapbox://styles/mapbox/light-v11">Licht</SelectItem>
-                <SelectItem value="mapbox://styles/mapbox/dark-v11">Donker</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button onClick={handleNewSchouwing} disabled={!selectedProjectId}>
+      <header className="absolute top-0 left-0 z-10 p-4 w-full">
+        <div className="flex flex-wrap gap-2 pointer-events-auto">
+            <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                <DialogTrigger asChild>
+                    <Button variant="outline" className="bg-card shadow-sm"><Filter className="mr-2 h-4 w-4" /> Filters</Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Filters en Weergave</DialogTitle>
+                        <DialogDescription>
+                            Filter de schouwingen op project, gemeente en pas de kaartstijl aan.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className='space-y-2'>
+                            <Label>Gemeente</Label>
+                            <GemeenteSelect 
+                              value={selectedGemeente}
+                              onValueChange={setSelectedGemeente}
+                              disabled={isLoadingGemeente}
+                            />
+                        </div>
+                        <div className='space-y-2'>
+                            <Label>Project</Label>
+                            <Select onValueChange={setSelectedProjectId} disabled={isLoadingProjects} value={selectedProjectId || ''}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecteer een project" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {projects.map((project) => (
+                                  <SelectItem key={project.id} value={project.id}>
+                                    {project.projectnaam}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                        </div>
+                        <div className='space-y-2'>
+                            <Label>Kaartstijl</Label>
+                            <Select onValueChange={handleMapStyleChange} value={mapStyle}>
+                              <SelectTrigger>
+                                <MapLayersIcon className="mr-2 h-4 w-4" />
+                                <SelectValue placeholder="Kaartlaag" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="mapbox://styles/mapbox/streets-v12">Standaard</SelectItem>
+                                <SelectItem value="mapbox://styles/mapbox/satellite-streets-v12">Satelliet</SelectItem>
+                                <SelectItem value="mapbox://styles/mapbox/outdoors-v12">Terrein</SelectItem>
+                                <SelectItem value="mapbox://styles/mapbox/light-v11">Licht</SelectItem>
+                                <SelectItem value="mapbox://styles/mapbox/dark-v11">Donker</SelectItem>
+                              </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                     <DialogFooter>
+                        <Button onClick={() => setIsFilterOpen(false)}>Toepassen</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Button onClick={handleNewSchouwing} disabled={!selectedProjectId} className="shadow-sm">
                 <Plus className="mr-2 h-4 w-4" />
                 Nieuwe Schouwing
             </Button>
-            <Button variant={isFollowing ? 'secondary' : 'outline'} onClick={() => setIsFollowing(prev => !prev)}>
+            <Button variant={isFollowing ? 'secondary' : 'outline'} onClick={() => setIsFollowing(prev => !prev)} className="bg-card shadow-sm">
                 <LocateFixed className="mr-2 h-4 w-4" />
                 Volg
             </Button>
