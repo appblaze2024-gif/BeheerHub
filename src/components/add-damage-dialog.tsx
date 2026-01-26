@@ -435,7 +435,7 @@ export function AddDamageDialog({
               )}
             </div>
 
-            <DialogFooter className='flex justify-between w-full'>
+            <DialogFooter className='flex flex-col-reverse gap-2 sm:flex-row sm:justify-between w-full'>
               <div>
                 {damage && canDelete && (
                    <AlertDialog>

@@ -535,7 +535,7 @@ export function SchouwDialog({
             </form>
           </Form>
         </div>
-        <DialogFooter className="p-6 pt-4 border-t flex justify-between w-full">
+        <DialogFooter className="p-6 pt-4 border-t flex flex-col-reverse gap-2 sm:flex-row sm:justify-between w-full">
           <div>
             {schouwing && (
                 <AlertDialog>

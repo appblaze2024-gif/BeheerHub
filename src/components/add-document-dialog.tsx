@@ -49,7 +49,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Textarea } from '@/components/ui/textarea';
+import { Textarea } from './ui/textarea';
 import { Progress } from './ui/progress';
 import { Input } from './ui/input';
 
@@ -402,7 +402,7 @@ export function AddDocumentDialog({
               )}
             </div>
 
-            <DialogFooter className='flex justify-between w-full'>
+            <DialogFooter className='flex flex-col-reverse gap-2 sm:flex-row sm:justify-between w-full'>
               <div>
                 {docToEdit && canDelete && (
                    <AlertDialog>
