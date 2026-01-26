@@ -354,9 +354,6 @@ export default function SchouwenPage() {
   const handleSuccess = () => {
       fetchSchouwingen();
       setSelectedSchouwing(null);
-      if (currentPdf) {
-        setPdfQueue(prev => prev.slice(1));
-      }
   }
 
   const handleMapClick = (event: MapLayerMouseEvent) => {
