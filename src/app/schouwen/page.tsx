@@ -82,7 +82,10 @@ export default function SchouwenPage() {
 
   const mapRef = React.useRef<any>(null);
   const pdfInputRef = React.useRef<HTMLInputElement>(null);
-  const [pdfToImport, setPdfToImport] = React.useState<string | null>(null);
+  
+  // State for PDF import queue
+  const [pdfQueue, setPdfQueue] = React.useState<string[]>([]);
+  const [currentPdf, setCurrentPdf] = React.useState<string | null>(null);
 
 
   React.useEffect(() => {
@@ -302,28 +305,42 @@ export default function SchouwenPage() {
   }, [isFollowing, userHeading]);
   
   const handleNewSchouwing = () => {
-    setPdfToImport(null);
+    setCurrentPdf(null);
     setIsPlacingMode(true);
   };
   
   const handlePdfFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !selectedProjectId) return;
+    const files = event.target.files;
+    if (!files || files.length === 0 || !selectedProjectId) return;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const dataUrl = e.target?.result as string;
-        setPdfToImport(dataUrl);
-        setSelectedSchouwing(null);
-        setIsDialogOpen(true);
-    };
-    reader.readAsDataURL(file);
+    const fileList = Array.from(files);
+    const promises = fileList.map(file => {
+      return new Promise<string>(resolve => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target?.result as string);
+        reader.readAsDataURL(file);
+      });
+    });
+
+    Promise.all(promises).then(dataUrls => {
+      setPdfQueue(dataUrls);
+    });
+
     event.target.value = '';
   };
-
+  
+  React.useEffect(() => {
+    if (pdfQueue.length > 0 && !isDialogOpen) {
+      setCurrentPdf(pdfQueue[0]);
+      setSelectedSchouwing(null);
+      setIsDialogOpen(true);
+    } else if (pdfQueue.length === 0) {
+      setCurrentPdf(null);
+    }
+  }, [pdfQueue, isDialogOpen]);
 
   const handleEditSchouwing = (schouwing: Schouwing) => {
-    setPdfToImport(null);
+    setCurrentPdf(null);
     setSelectedSchouwing(schouwing);
     setIsDialogOpen(true);
   }
@@ -337,6 +354,9 @@ export default function SchouwenPage() {
   const handleSuccess = () => {
       fetchSchouwingen();
       setSelectedSchouwing(null);
+      if (currentPdf) {
+        setPdfQueue(prev => prev.slice(1));
+      }
   }
 
   const handleMapClick = (event: MapLayerMouseEvent) => {
@@ -355,7 +375,7 @@ export default function SchouwenPage() {
         datum: new Date().toISOString(),
         inspecteur: user?.displayName || user?.email || '',
       };
-      setPdfToImport(null);
+      setCurrentPdf(null);
       setSelectedSchouwing(newSchouwing as Schouwing);
       setIsDialogOpen(true);
       setIsPlacingMode(false);
@@ -456,6 +476,7 @@ export default function SchouwenPage() {
                 className="hidden"
                 accept="application/pdf"
                 onChange={handlePdfFileSelect}
+                multiple
             />
             <Button variant={isFollowing ? 'secondary' : 'outline'} onClick={() => setIsFollowing(prev => !prev)} className="bg-card shadow-sm">
                 <LocateFixed className="mr-2 h-4 w-4" />
@@ -520,14 +541,17 @@ export default function SchouwenPage() {
         onOpenChange={(open) => {
             setIsDialogOpen(open);
             if (!open) {
-                setPdfToImport(null);
+                if (currentPdf) {
+                    setPdfQueue(prev => prev.slice(1));
+                }
+                setCurrentPdf(null);
                 setSelectedSchouwing(null);
             }
         }}
         projectId={selectedProjectId}
         schouwing={selectedSchouwing}
         onSuccess={handleSuccess}
-        pdfToImport={pdfToImport}
+        pdfToImport={currentPdf}
       />
     </div>
   );
