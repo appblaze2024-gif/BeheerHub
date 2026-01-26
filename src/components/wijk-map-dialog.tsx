@@ -263,14 +263,14 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
 
     const wayQueries = buildWayQueries(polygon.geometry, roadTypesQuery);
     if (!wayQueries) {
-        console.error("Invalid polygon geometry, cannot build Overpass query.");
-        return [];
+      console.error("Invalid polygon geometry, cannot build Overpass query.");
+      return [];
     }
 
     const overpassQuery = `
         [out:json][timeout:90];
         (
-          ${wayQueries}
+            ${wayQueries}
         );
         (._;>;);
         out geom;
@@ -287,7 +287,6 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         const responseText = await response.text();
         
         if (!response.ok || responseText.trim().startsWith('<?xml')) {
-            console.error("Overpass API error or unexpected XML response:", responseText);
             return [];
         }
         
@@ -299,7 +298,6 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         ).features;
 
     } catch (error) {
-        console.error("Error fetching or processing roads from Overpass:", error);
         return [];
     }
   }, [wijk?.roadTypes]);
