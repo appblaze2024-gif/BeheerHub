@@ -252,7 +252,7 @@ export function SchouwDialog({
       setLocation(null);
       setAddress(null);
     }
-  }, [open, schouwing, form, user, firestore, fetchAddressDetails]);
+  }, [open, schouwing, pdfToImport, form, user, firestore, fetchAddressDetails]);
   
   React.useEffect(() => {
     if (searchTimeoutRef.current) {
