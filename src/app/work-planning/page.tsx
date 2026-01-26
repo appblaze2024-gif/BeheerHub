@@ -684,24 +684,13 @@ export default function WorkPlanningPage() {
     }
     
     let finalY = (doc as any).lastAutoTable.finalY;
-    if (!finalY || finalY < 36) { 
-        const headerHeight = 22;
-        const dateStrHeight = 8;
-        const margin = 14;
-        finalY = headerHeight + dateStrHeight + margin; 
+    if (finalY === undefined) {
+      finalY = 30; // Fallback if table is empty
     }
     
-    const pageHeight = doc.internal.pageSize.height;
-    const pageMargin = 20;
-
+    // Add some space after the table
+    finalY += 8;
     
-    if (finalY > pageHeight - pageMargin - 40) { 
-      doc.addPage();
-      finalY = 20;
-    }
-
-    finalY += 10;
-
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.text('Beschikbaar materieel:', 14, finalY);
@@ -709,18 +698,14 @@ export default function WorkPlanningPage() {
     doc.setFont('helvetica', 'normal');
     doc.text(availableEquipmentText, 14, finalY + 5, { maxWidth: 180 });
 
-    finalY += 15;
-    
-    if (finalY > pageHeight - pageMargin - 20) { 
-      doc.addPage();
-      finalY = 20;
-    }
+    finalY += 10;
 
     doc.setFont('helvetica', 'bold');
     doc.text('Onbeschikbaar materieel:', 14, finalY);
 
     doc.setFont('helvetica', 'normal');
     doc.text(unavailableEquipmentNames, 14, finalY + 5, { maxWidth: 180 });
+
 
     doc.save(`dagplanning_${format(dayToPrint, 'yyyy-MM-dd')}.pdf`);
   };
