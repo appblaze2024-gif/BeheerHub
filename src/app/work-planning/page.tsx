@@ -635,15 +635,7 @@ export default function WorkPlanningPage() {
                     })
             }
         });
-        
-        if (body.length > 0) {
-           body.push(['', '', '', '']); // Spacer
-        }
     });
-
-    if(body.length > 0 && body[body.length - 1].every((cell: string) => cell === '')) {
-        body.pop();
-    }
 
 
     (doc as any).autoTable({
@@ -692,23 +684,23 @@ export default function WorkPlanningPage() {
     }
     
     let finalY = (doc as any).lastAutoTable.finalY;
-    if (!finalY || finalY < 36) { // If table was empty or very short
+    if (!finalY || finalY < 36) { 
         const headerHeight = 22;
         const dateStrHeight = 8;
         const margin = 14;
-        finalY = headerHeight + dateStrHeight + margin; // Estimate where table would have ended
+        finalY = headerHeight + dateStrHeight + margin; 
     }
     
     const pageHeight = doc.internal.pageSize.height;
     const pageMargin = 20;
 
-    // Check if there is enough space for the equipment section
-    if (finalY > pageHeight - pageMargin - 40) { // estimate 40mm for the section
+    
+    if (finalY > pageHeight - pageMargin - 40) { 
       doc.addPage();
-      finalY = 20; // Start on new page
+      finalY = 20;
     }
 
-    finalY += 10; // Add some margin
+    finalY += 10;
 
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
@@ -718,6 +710,11 @@ export default function WorkPlanningPage() {
     doc.text(availableEquipmentText, 14, finalY + 5, { maxWidth: 180 });
 
     finalY += 15;
+    
+    if (finalY > pageHeight - pageMargin - 20) { 
+      doc.addPage();
+      finalY = 20;
+    }
 
     doc.setFont('helvetica', 'bold');
     doc.text('Onbeschikbaar materieel:', 14, finalY);
