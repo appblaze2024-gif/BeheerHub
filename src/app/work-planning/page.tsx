@@ -698,6 +698,15 @@ export default function WorkPlanningPage() {
         const margin = 14;
         finalY = headerHeight + dateStrHeight + margin; // Estimate where table would have ended
     }
+    
+    const pageHeight = doc.internal.pageSize.height;
+    const pageMargin = 20;
+
+    // Check if there is enough space for the equipment section
+    if (finalY > pageHeight - pageMargin - 40) { // estimate 40mm for the section
+      doc.addPage();
+      finalY = 20; // Start on new page
+    }
 
     finalY += 10; // Add some margin
 
