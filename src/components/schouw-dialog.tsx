@@ -116,26 +116,42 @@ const parsePdfText = (text: string) => {
         result.longitude = parseFloat(gpsMatch[2]);
     }
 
-    result.adres = extractValue(/Nabij adres:\s*(.*?)(Datum en tijdstip:|Ambitieniveau:|$)/i);
-    result.gewenstNiveau = extractValue(/Ambitieniveau:\s*(A\+|[A-D])\b/i)?.toUpperCase();
+    // More robust address extraction (takes the rest of the line)
+    result.adres = extractValue(/Nabij adres:\s*([^\r\n]+)/i);
+    
+    // Improved level extraction
+    result.gewenstNiveau = extractValue(/Ambitieniveau:\s*([A-D]\+?)\b/i)?.toUpperCase();
     result.aangetroffenNiveau = extractValue(/Score:\s*([A-D]\+?)\b/i)?.toUpperCase();
 
+    // More robust opmerkingen extraction with a fallback
     const opmerkingenMatch = text.match(/^(.+?)(?=Ronde:|Type:|Periode:|Meetlocatienummer:)/is);
     let opmerkingenText = '';
     if(opmerkingenMatch && opmerkingenMatch[1]) {
         opmerkingenText = opmerkingenMatch[1].replace(/\s+/g, ' ').trim();
-        result.opmerkingen = opmerkingenText;
+    } else {
+        const firstLine = text.split(/[\r\n]+/).find(line => line.trim() !== '');
+        if (firstLine) {
+            opmerkingenText = firstLine.trim();
+        }
     }
     
-    // Find Categorie
-    const opmerkingenLower = opmerkingenText.toLowerCase();
-    const foundCategory = categorieOptions.find(cat => opmerkingenLower.includes(cat.toLowerCase()));
-    if(foundCategory) {
-        result.categorie = foundCategory;
+    // Find Categorie from opmerkingen
+    if (opmerkingenText) {
+        const opmerkingenLower = opmerkingenText.toLowerCase();
+        const foundCategory = categorieOptions.find(cat => opmerkingenLower.startsWith(cat.toLowerCase()));
+        if(foundCategory) {
+            result.categorie = foundCategory;
+            // Remove the category from the opmerkingen to leave the sub-details
+            const regex = new RegExp(`^${foundCategory}`, 'i');
+            result.opmerkingen = opmerkingenText.replace(regex, '').trim();
+        } else {
+            result.opmerkingen = opmerkingenText;
+        }
     }
 
     return result;
-}
+};
+
 
 export function SchouwDialog({
   open,
