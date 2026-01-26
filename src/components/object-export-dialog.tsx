@@ -181,7 +181,12 @@ export function ObjectExportDialog({
       setSelectedWijken([]);
       setActiveTab('wijken');
       if (drawRef.current) {
-        drawRef.current.deleteAll();
+        try {
+          drawRef.current.deleteAll();
+        } catch (e) {
+          // It's safe to ignore this error.
+          // It can happen if the map unmounts before this cleanup effect runs.
+        }
       }
     }
   }, [open]);
@@ -218,7 +223,7 @@ export function ObjectExportDialog({
                   <div key={wijk.id} className="flex items-center space-x-2">
                     <Checkbox
                       id={`wijk-${wijk.id}`}
-                      checked={selectedWijken.some(w => w.id === wijk.id)}
+                      checked={selectedWijken.some(w => w.id === w.id)}
                       onCheckedChange={(checked) => handleWijkSelection(wijk, !!checked)}
                     />
                     <Label htmlFor={`wijk-${wijk.id}`} className="font-normal">
