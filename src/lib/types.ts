@@ -79,6 +79,7 @@ export interface Dienst {
   voertuignummer?: string | null;
   notities?: string;
   celkleur?: string;
+  goedkeuringStatus?: 'In behandeling' | 'Goedgekeurd' | 'Afgekeurd';
 }
 
 export interface Voertuig {

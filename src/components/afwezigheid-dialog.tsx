@@ -114,6 +114,7 @@ export function AfwezigheidDialog({
           eindtijd: defaultTimes?.eind && defaultTimes.eind !== '' ? defaultTimes.eind : '00:00',
           onbetaaldePauze: 0,
           notities: data.notities || '',
+          goedkeuringStatus: 'In behandeling',
         };
         const newDienstRef = doc(dienstenColRef);
         batch.set(newDienstRef, dienstData);

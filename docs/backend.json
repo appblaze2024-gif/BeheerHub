@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "Besteksmelding": {
@@ -564,7 +563,12 @@
         "herhaalDienst": { "type": "boolean" },
         "goedkeuringVereist": { "type": "boolean" },
         "informeerMedewerkers": { "type": "boolean" },
-        "voertuigId": { "type": ["string", "null"] }
+        "voertuigId": { "type": ["string", "null"] },
+        "goedkeuringStatus": {
+          "type": "string",
+          "enum": ["In behandeling", "Goedgekeurd", "Afgekeurd"],
+          "description": "The approval status of the shift, especially for leave requests."
+        }
       },
       "required": ["medewerkerId", "projectId", "boekingregelId", "starttijd", "eindtijd", "datum"]
     },

@@ -20,9 +20,12 @@ import {
   Copy,
   GanttChart,
   Trash2,
+  ThumbsUp,
+  ThumbsDown,
+  XCircle,
 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
-import { collection, doc, getDocs, query, where } from 'firebase/firestore';
+import { collection, doc, getDocs, query, where, writeBatch } from 'firebase/firestore';
 import {
   startOfWeek,
   endOfWeek,
@@ -38,6 +41,8 @@ import {
   eachWeekOfInterval,
   isSameMonth,
   startOfDay,
+  addDays,
+  isAfter,
 } from 'date-fns';
 import { nl } from 'date-fns/locale';
 
@@ -50,13 +55,12 @@ import {
   useDoc,
   useFirestore,
   updateDocumentNonBlocking,
-  deleteDocumentNonBlocking,
 } from '@/firebase';
 import type { Medewerker, Dienst } from '@/lib/types';
 import { MedewerkerDialog } from '@/components/medewerker-dialog';
 import { cn } from '@/lib/utils';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import { useProfile } from '@/firebase/profile-provider';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AfwezigheidDialog } from '@/components/afwezigheid-dialog';
@@ -139,6 +143,15 @@ function DetailField({
   );
 }
 
+type AbsencePeriod = {
+  id: string;
+  type: string;
+  status: 'In behandeling' | 'Goedgekeurd' | 'Afgekeurd' | undefined;
+  startDate: Date;
+  endDate: Date;
+  diensten: Dienst[];
+};
+
 function AfwezigheidTab({ canEdit, medewerker, onSuccess, refreshId }: { canEdit: boolean, medewerker: Medewerker, onSuccess: () => void, refreshId: number }) {
   const [currentDate, setCurrentDate] = React.useState(new Date());
   const [selectedDate, setSelectedDate] = React.useState<Date>(new Date());
@@ -182,17 +195,130 @@ function AfwezigheidTab({ canEdit, medewerker, onSuccess, refreshId }: { canEdit
 
     fetchAbsences();
   }, [firestore, medewerker.id, refreshId]);
-  
-  const upcomingAbsences = absences.filter(a => new Date(a.datum) >= startOfDay(new Date()));
-  const pastAbsences = absences.filter(a => new Date(a.datum) < startOfDay(new Date()));
-  
-  const handleDelete = async (dienst: Dienst) => {
-    if (!firestore || !dienst.projectId) return;
-    const dienstRef = doc(firestore, 'projects', dienst.projectId, 'diensten', dienst.id);
-    await deleteDocumentNonBlocking(dienstRef);
-    onSuccess();
-  }
 
+  const groupedAbsences = React.useMemo((): AbsencePeriod[] => {
+    if (!absences || absences.length === 0) return [];
+    
+    const sorted = [...absences].sort((a, b) => new Date(a.datum).getTime() - new Date(b.datum).getTime());
+    
+    const periods: AbsencePeriod[] = [];
+    let currentPeriod: AbsencePeriod | null = null;
+    
+    sorted.forEach(absence => {
+      const absenceDate = new Date(absence.datum);
+      if (!currentPeriod) {
+        currentPeriod = {
+          id: absence.id,
+          type: absence.werksoort,
+          status: absence.goedkeuringStatus,
+          startDate: absenceDate,
+          endDate: absenceDate,
+          diensten: [absence],
+        };
+      } else {
+        const nextDay = addDays(currentPeriod.endDate, 1);
+        if (
+          isSameDay(absenceDate, nextDay) &&
+          absence.werksoort === currentPeriod.type &&
+          absence.goedkeuringStatus === currentPeriod.status
+        ) {
+          currentPeriod.endDate = absenceDate;
+          currentPeriod.diensten.push(absence);
+        } else {
+          periods.push(currentPeriod);
+          currentPeriod = {
+            id: absence.id,
+            type: absence.werksoort,
+            status: absence.goedkeuringStatus,
+            startDate: absenceDate,
+            endDate: absenceDate,
+            diensten: [absence],
+          };
+        }
+      }
+    });
+
+    if (currentPeriod) {
+      periods.push(currentPeriod);
+    }
+    
+    return periods;
+  }, [absences]);
+  
+  const today = startOfDay(new Date());
+  
+  const aanvragenPeriods = groupedAbsences.filter(p => (p.status === 'In behandeling' || p.status === undefined));
+  const nagekekenPeriods = groupedAbsences.filter(p => (p.status === 'Goedgekeurd' || p.status === 'Afgekeurd') && !isAfter(today, p.endDate));
+  const verledenPeriods = groupedAbsences.filter(p => isAfter(today, p.endDate));
+
+  const handleDeletePeriod = async (period: AbsencePeriod) => {
+    if (!firestore) return;
+    const batch = writeBatch(firestore);
+    period.diensten.forEach(dienst => {
+      if (dienst.projectId) {
+        const dienstRef = doc(firestore, 'projects', dienst.projectId, 'diensten', dienst.id);
+        batch.delete(dienstRef);
+      }
+    });
+    await batch.commit();
+    onSuccess();
+  };
+
+  const handleUpdateStatus = async (period: AbsencePeriod, status: 'Goedgekeurd' | 'Afgekeurd') => {
+    if (!firestore) return;
+    const batch = writeBatch(firestore);
+    period.diensten.forEach(dienst => {
+        if (dienst.projectId) {
+            const dienstRef = doc(firestore, 'projects', dienst.projectId, 'diensten', dienst.id);
+            batch.update(dienstRef, { goedkeuringStatus: status });
+        }
+    });
+    await batch.commit();
+    onSuccess();
+  };
+  
+  const renderPeriod = (period: AbsencePeriod) => {
+    const isSingleDay = isSameDay(period.startDate, period.endDate);
+    const dateString = isSingleDay
+      ? format(period.startDate, 'eeee d MMMM yyyy', { locale: nl })
+      : `${format(period.startDate, 'd MMM')} - ${format(period.endDate, 'd MMM yyyy', { locale: nl })}`;
+
+    let statusBadge: React.ReactNode = null;
+    if(period.status) {
+        let variant: 'default' | 'secondary' | 'destructive' = 'secondary';
+        let icon: React.ReactNode = null;
+        if(period.status === 'Goedgekeurd') {
+            variant = 'default';
+            icon = <CheckCircle className="h-3 w-3 mr-1.5" />
+        } else if (period.status === 'Afgekeurd') {
+            variant = 'destructive';
+            icon = <XCircle className="h-3 w-3 mr-1.5" />
+        } else if (period.status === 'In behandeling') {
+            variant = 'secondary';
+            icon = <Clock className="h-3 w-3 mr-1.5" />
+        }
+        statusBadge = <Badge variant={variant} className="capitalize">{icon} {period.status}</Badge>;
+    }
+
+    return (
+        <div key={period.id} className="flex justify-between items-center p-3 border rounded-md bg-muted/50">
+            <div className="flex-1">
+                <p className="font-semibold">{period.type}</p>
+                <p className="text-sm text-muted-foreground">{dateString}</p>
+                <div className="mt-1">{statusBadge}</div>
+            </div>
+            <div className="flex items-center gap-2">
+            {canEdit && period.status === 'In behandeling' && (
+                <>
+                    <Button variant="ghost" size="icon" onClick={() => handleUpdateStatus(period, 'Goedgekeurd')}><ThumbsUp className="h-5 w-5 text-green-600" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleUpdateStatus(period, 'Afgekeurd')}><ThumbsDown className="h-5 w-5 text-red-600" /></Button>
+                </>
+            )}
+            {canEdit && <Button variant="ghost" size="icon" onClick={() => handleDeletePeriod(period)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+            </div>
+        </div>
+    );
+  }
 
   return (
     <div className="p-6">
@@ -276,39 +402,37 @@ function AfwezigheidTab({ canEdit, medewerker, onSuccess, refreshId }: { canEdit
                 <TabsContent value="aanvragen" className="mt-6">
                   {isLoading ? (
                     <div className='flex justify-center items-center py-12'><Loader2 className='h-8 w-8 animate-spin' /></div>
-                  ) : upcomingAbsences.length > 0 ? (
+                  ) : aanvragenPeriods.length > 0 ? (
                      <div className="space-y-2">
-                      {upcomingAbsences.map(absence => (
-                        <div key={absence.id} className="flex justify-between items-center p-3 border rounded-md bg-muted/50">
-                          <div>
-                            <p className="font-semibold">{absence.werksoort}</p>
-                            <p className="text-sm text-muted-foreground">{format(new Date(absence.datum), 'eeee d MMMM yyyy', { locale: nl })}</p>
-                          </div>
-                          {canEdit && <Button variant="ghost" size="icon" onClick={() => handleDelete(absence)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
-                        </div>
-                      ))}
+                      {aanvragenPeriods.map(renderPeriod)}
                     </div>
                   ) : (
                     <div className="text-center text-muted-foreground py-12">
                       <CalendarDays className="h-12 w-12 mx-auto mb-2" />
-                      <p>Geen geplande afwezigheid</p>
+                      <p>Geen openstaande aanvragen</p>
+                    </div>
+                  )}
+                </TabsContent>
+                 <TabsContent value="nagekeken" className="mt-6">
+                  {isLoading ? (
+                    <div className='flex justify-center items-center py-12'><Loader2 className='h-8 w-8 animate-spin' /></div>
+                  ) : nagekekenPeriods.length > 0 ? (
+                     <div className="space-y-2">
+                      {nagekekenPeriods.map(renderPeriod)}
+                    </div>
+                  ) : (
+                    <div className="text-center text-muted-foreground py-12">
+                      <CalendarDays className="h-12 w-12 mx-auto mb-2" />
+                      <p>Geen nagekeken afwezigheid</p>
                     </div>
                   )}
                 </TabsContent>
                 <TabsContent value="verleden" className="mt-6">
                     {isLoading ? (
                          <div className='flex justify-center items-center py-12'><Loader2 className='h-8 w-8 animate-spin' /></div>
-                    ) : pastAbsences.length > 0 ? (
+                    ) : verledenPeriods.length > 0 ? (
                         <div className="space-y-2">
-                        {pastAbsences.map(absence => (
-                            <div key={absence.id} className="flex justify-between items-center p-3 border rounded-md bg-muted/50">
-                            <div>
-                                <p className="font-semibold">{absence.werksoort}</p>
-                                <p className="text-sm text-muted-foreground">{format(new Date(absence.datum), 'eeee d MMMM yyyy', { locale: nl })}</p>
-                            </div>
-                             {canEdit && <Button variant="ghost" size="icon" onClick={() => handleDelete(absence)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
-                            </div>
-                        ))}
+                           {verledenPeriods.map(renderPeriod)}
                         </div>
                     ) : (
                         <div className="text-center text-muted-foreground py-12">
