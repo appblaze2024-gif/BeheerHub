@@ -31,7 +31,6 @@ import {
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogHeader,
-  AlertDialogFooter,
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
@@ -631,7 +630,7 @@ export function SchouwDialog({
                         <Input placeholder="Postcode" value={address?.postcode || ''} readOnly />
                         <Input placeholder="Plaats" value={address?.plaats || ''} readOnly />
                       </div>
-                      <div className='aspect-square w-full border rounded-md overflow-hidden mt-2 relative'>
+                      <div className='h-64 w-full border rounded-md overflow-hidden mt-2 relative'>
                           <MapboxView
                               longitude={location?.longitude}
                               latitude={location?.latitude}
@@ -666,7 +665,7 @@ export function SchouwDialog({
                 </AlertDialog>
             )}
           </div>
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:gap-2">
+          <div className="flex gap-2">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Annuleren</Button>
             <Button type="submit" form="schouw-form" disabled={isSubmitting || isUploading || !location}>
               {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Opslaan...</> : 'Opslaan'}
