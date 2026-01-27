@@ -40,7 +40,7 @@ export function ProjectBestandenDialog({ open, onOpenChange, projectId, folderId
       return new Promise<void>((resolve, reject) => {
         const storage = getStorage(app);
         const uniqueFileName = `${Date.now()}-${file.name}`;
-        const storagePath = `projects/${projectId}/${folderId || 'root'}/${uniqueFileName}`;
+        const storagePath = `projects/${projectId}/bestanden/${folderId || 'root'}/${uniqueFileName}`;
         const storageRef = ref(storage, storagePath);
         const uploadTask = uploadBytesResumable(storageRef, file);
 
