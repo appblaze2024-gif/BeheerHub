@@ -13,6 +13,7 @@ import {
   ChevronDown,
   Download,
   File as FileIcon,
+  FolderPlus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -240,11 +241,6 @@ export default function BestandenPage() {
       {selectedProjectId ? (
         <div className="flex-1 flex gap-6 min-h-0">
             <aside className="w-72 bg-card rounded-lg border flex flex-col">
-                <div className="p-3 border-b">
-                    <FolderCreateDialog projectId={selectedProjectId} folderId={selectedFolderId === 'root' ? null : selectedFolderId} onSuccess={() => {}}>
-                        <Button className="w-full"><Plus className="mr-2 h-4 w-4" /> Nieuwe Map</Button>
-                    </FolderCreateDialog>
-                </div>
                 <div className="flex items-center gap-1 text-sm text-muted-foreground p-2 border-b flex-wrap">
                     {folderPath.map((folder, index) => (
                         <React.Fragment key={folder.id}>
@@ -293,7 +289,10 @@ export default function BestandenPage() {
             <main className="flex-1 bg-card rounded-lg border flex flex-col min-h-0">
                 <div className="p-3 border-b flex flex-wrap gap-2 justify-between items-center">
                     <div className="flex items-center gap-2 flex-wrap">
-                        <Button onClick={() => setIsUploadDialogOpen(true)}><Plus className="mr-2 h-4 w-4" /> Toevoegen</Button>
+                        <Button onClick={() => setIsUploadDialogOpen(true)}><Plus className="mr-2 h-4 w-4" /> Toevoegen Bestand</Button>
+                        <FolderCreateDialog projectId={selectedProjectId} folderId={selectedFolderId === 'root' ? null : selectedFolderId} onSuccess={() => {}}>
+                           <Button variant="outline"><FolderPlus className="mr-2 h-4 w-4" /> Nieuwe Map</Button>
+                        </FolderCreateDialog>
                         <Button variant="outline" disabled>Kopiëren</Button>
                         <Button variant="outline" disabled>Verplaatsen</Button>
                         <DropdownMenu>
