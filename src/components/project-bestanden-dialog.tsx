@@ -1,257 +1,128 @@
-
 'use client';
 
 import * as React from 'react';
-import { Upload, Trash2, File as FileIcon, Loader2 } from 'lucide-react';
-import { format } from 'date-fns';
-import {
-  collection,
-  doc,
-} from 'firebase/firestore';
-import {
-  getStorage,
-  ref,
-  uploadBytesResumable,
-  getDownloadURL,
-  deleteObject,
-} from 'firebase/storage';
-
-import { useFirestore, useFirebaseApp, useCollection, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import type { Bestand } from '@/app/projects/page';
-
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from '@/components/ui/dialog';
+import { useFirebaseApp, useFirestore, setDocumentNonBlocking } from '@/firebase';
+import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { collection, doc } from 'firebase/firestore';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Progress } from './ui/progress';
-
-type UploadedFile = {
-  id: string;
-  name: string;
-  url: string;
-  size: number;
-  type: string;
-  uploadedAt: string;
-  storagePath: string;
-};
+import { Input } from '@/components/ui/input';
+import { Progress } from '@/components/ui/progress';
+import { Upload, Loader2 } from 'lucide-react';
+import type { Bestand } from '@/lib/types';
+import { Label } from '@/components/ui/label';
 
 interface ProjectBestandenDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  projectId: string;
+  projectId: string | null;
+  folderId: string | null;
 }
 
-export function ProjectBestandenDialog({
-  open,
-  onOpenChange,
-  projectId,
-}: ProjectBestandenDialogProps) {
-  const firestore = useFirestore();
+export function ProjectBestandenDialog({ open, onOpenChange, projectId, folderId }: ProjectBestandenDialogProps) {
   const app = useFirebaseApp();
-  const [isUploading, setIsUploading] = React.useState(false);
+  const firestore = useFirestore();
+  const [filesToUpload, setFilesToUpload] = React.useState<FileList | null>(null);
   const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
+  const [isUploading, setIsUploading] = React.useState(false);
 
-  const bestandenCollectionRef = React.useMemo(() => {
-    if (!firestore || !projectId) return null;
-    return collection(firestore, 'projects', projectId, 'bestanden');
-  }, [firestore, projectId]);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFilesToUpload(e.target.files);
+  };
 
-  const { data: uploadedFiles, isLoading } = useCollection<UploadedFile>(bestandenCollectionRef);
+  const handleUpload = async () => {
+    if (!filesToUpload || !projectId || !app || !firestore) return;
 
-  const uploadFile = (file: File): Promise<void> => {
-    return new Promise((resolve, reject) => {
-        if (!app || !firestore) {
-            reject(new Error("Firebase services not available"));
-            return;
-        }
-        const uniqueFileName = `${new Date().getTime()}-${file.name}`;
-        const storagePath = `projects/${projectId}/bestanden/${uniqueFileName}`;
-        const storageRef = ref(getStorage(app), storagePath);
+    setIsUploading(true);
+    setUploadProgress({});
+
+    const uploadPromises = Array.from(filesToUpload).map(file => {
+      return new Promise<void>((resolve, reject) => {
+        const storage = getStorage(app);
+        const uniqueFileName = `${Date.now()}-${file.name}`;
+        const storagePath = `projects/${projectId}/${folderId || 'root'}/${uniqueFileName}`;
+        const storageRef = ref(storage, storagePath);
         const uploadTask = uploadBytesResumable(storageRef, file);
 
-        setIsUploading(true);
-        setUploadProgress(prev => ({...prev, [uniqueFileName]: 0}));
-
         uploadTask.on(
-            'state_changed',
-            (snapshot) => {
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                setUploadProgress(prev => ({...prev, [uniqueFileName]: progress}));
-            },
-            (error) => {
-                console.error('Upload mislukt:', error);
-                setUploadProgress(prev => {
-                    const newProgress = {...prev};
-                    delete newProgress[uniqueFileName];
-                    return newProgress;
-                });
-                setIsUploading(Object.keys(uploadProgress).length > 1);
+          'state_changed',
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
+          },
+          (error) => {
+            console.error(`Upload failed for ${file.name}:`, error);
+            reject(error);
+          },
+          async () => {
+            try {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              const bestandenColRef = collection(firestore, 'projects', projectId, 'bestanden');
+              const fileDocRef = doc(bestandenColRef);
+              
+              const fileData: Omit<Bestand, 'id'> = {
+                name: file.name,
+                type: file.type,
+                size: file.size,
+                url: downloadURL,
+                uploadedAt: new Date().toISOString(),
+                storagePath: storagePath,
+                folderId: folderId,
+              };
+
+              await setDocumentNonBlocking(fileDocRef, fileData, {});
+              resolve();
+            } catch (error) {
                 reject(error);
-            },
-            async () => {
-                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                const fileId = doc(collection(firestore, 'temp')).id;
-                const fileDocRef = doc(firestore, 'projects', projectId, 'bestanden', fileId);
-                
-                const newFile: UploadedFile = {
-                    id: fileId,
-                    name: file.name,
-                    url: downloadURL,
-                    size: file.size,
-                    type: file.type,
-                    uploadedAt: new Date().toISOString(),
-                    storagePath: storagePath,
-                };
-
-                await setDocumentNonBlocking(fileDocRef, newFile, {});
-
-                setUploadProgress(prev => {
-                    const newProgress = {...prev};
-                    delete newProgress[uniqueFileName];
-                    return newProgress;
-                });
-                setIsUploading(Object.keys(uploadProgress).length > 1);
-                resolve();
             }
+          }
         );
+      });
     });
-  };
-
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
-    
-    const uploadPromises = Array.from(files).map(file => uploadFile(file));
-    
-    await Promise.all(uploadPromises);
-  };
-
-  const handleFileDelete = async (fileToDelete: UploadedFile) => {
-    if (!app || !firestore) return;
-    
-    const fileDocRef = doc(firestore, 'projects', projectId, 'bestanden', fileToDelete.id);
-    const storageRef = ref(getStorage(app), fileToDelete.storagePath);
 
     try {
-      await deleteObject(storageRef);
-      await deleteDocumentNonBlocking(fileDocRef);
-    } catch (error: any) {
-      console.error('Kon bestand niet verwijderen:', error);
-      if (error.code === 'storage/object-not-found') {
-        await deleteDocumentNonBlocking(fileDocRef); // Remove from firestore even if not in storage
-      }
+        await Promise.all(uploadPromises);
+    } catch (error) {
+        console.error("One or more uploads failed", error);
     }
-  };
 
-  const formatBytes = (bytes: number, decimals = 2) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-  }
+    setIsUploading(false);
+    setFilesToUpload(null);
+    onOpenChange(false);
+  };
   
+  React.useEffect(() => {
+    if(!open) {
+        setFilesToUpload(null);
+        setUploadProgress({});
+        setIsUploading(false);
+    }
+  }, [open]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle>Bestanden voor Project</DialogTitle>
-          <DialogDescription>
-            Upload en beheer bestanden die bij dit project horen.
-          </DialogDescription>
+          <DialogTitle>Bestanden Toevoegen</DialogTitle>
+          <DialogDescription>Selecteer een of meerdere bestanden om te uploaden.</DialogDescription>
         </DialogHeader>
-        
-        <div className='py-4 space-y-4'>
-            <div>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={isUploading}
-                onClick={() => document.getElementById('project-file-input')?.click()}
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                Kies bestanden
-              </Button>
-              <input
-                type="file"
-                id="project-file-input"
-                onChange={handleFileChange}
-                className="hidden"
-                multiple
-              />
-            </div>
-            
-             {isUploading && Object.entries(uploadProgress).map(([name, progress]) => (
-              <div key={name} className="space-y-1 mt-2">
-                <p className="text-sm font-medium truncate">{name}</p>
-                <Progress value={progress} className="w-full" />
-              </div>
+        <div className="py-4 space-y-4">
+            <Label htmlFor="file-upload">Bestanden</Label>
+            <Input id="file-upload" type="file" multiple onChange={handleFileChange} />
+
+            {filesToUpload && Array.from(filesToUpload).map(file => (
+                <div key={file.name}>
+                    <p className="text-sm font-medium">{file.name}</p>
+                    {uploadProgress[file.name] !== undefined && <Progress value={uploadProgress[file.name]} className="h-2 mt-1" />}
+                </div>
             ))}
 
-            <div className="border rounded-md">
-              <div className="text-sm">
-                <div className="grid grid-cols-[3fr_1fr_1fr_1fr_auto] gap-4 px-4 py-2 font-medium bg-muted rounded-t-md">
-                  <span>Bestandsnaam</span>
-                  <span>Type</span>
-                  <span>Grootte</span>
-                  <span>Datum</span>
-                  <span className="text-right">Acties</span>
-                </div>
-              </div>
-              {isLoading ? (
-                <div className="flex items-center justify-center text-muted-foreground h-24">
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Laden...
-                </div>
-              ) : uploadedFiles && uploadedFiles.length > 0 ? (
-                <div className="max-h-64 overflow-y-auto">
-                  {uploadedFiles.map((file) => (
-                    <div
-                      key={file.id}
-                      className="grid grid-cols-[3fr_1fr_1fr_1fr_auto] gap-4 items-center px-4 py-2 border-b last:border-b-0"
-                    >
-                      <a href={file.url} target="_blank" rel="noopener noreferrer" className="truncate flex items-center gap-2 hover:underline text-blue-600">
-                        <FileIcon className="h-4 w-4 shrink-0" /> {file.name}
-                      </a>
-                      <span className='truncate'>{file.type}</span>
-                      <span>{formatBytes(file.size)}</span>
-                      <span>{format(new Date(file.uploadedAt), 'dd-MM-yy')}</span>
-                      <div className="flex justify-end">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handleFileDelete(file)}
-                          disabled={isUploading}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex items-center justify-center text-muted-foreground h-24">
-                  Nog geen bestanden geüpload.
-                </div>
-              )}
-            </div>
         </div>
-
         <DialogFooter>
-            <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-            >
-                Sluiten
-            </Button>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isUploading}>Annuleren</Button>
+          <Button onClick={handleUpload} disabled={!filesToUpload || isUploading}>
+            {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploaden...</> : <><Upload className="mr-2 h-4 w-4" /> Uploaden</>}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

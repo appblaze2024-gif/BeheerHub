@@ -1,5 +1,16 @@
 {
   "entities": {
+    "Folder": {
+        "title": "Folder",
+        "type": "object",
+        "description": "Represents a folder to organize files.",
+        "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string" },
+            "createdAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["name", "createdAt"]
+    },
     "Besteksmelding": {
       "title": "Besteksmelding",
       "type": "object",
@@ -251,6 +262,10 @@
         },
         "storagePath": {
           "type": "string"
+        },
+        "folderId": {
+          "type": ["string", "null"],
+          "description": "The ID of the folder this file belongs to. Null if in root."
         }
       }
     },
@@ -724,6 +739,26 @@
             {
               "name": "bestandId",
               "description": "The ID of the file."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/projects/{projectId}/folders/{folderId}",
+        "definition": {
+          "entityName": "Folder",
+          "schema": {
+            "$ref": "#/backend/entities/Folder"
+          },
+          "description": "Stores folders for a specific project.",
+          "params": [
+            {
+              "name": "projectId",
+              "description": "The ID of the project."
+            },
+            {
+              "name": "folderId",
+              "description": "The ID of the folder."
             }
           ]
         }

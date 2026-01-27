@@ -165,4 +165,11 @@ export type Bestand = {
     url: string;
     uploadedAt: string;
     storagePath: string;
+    folderId?: string | null;
 };
+
+export interface Folder {
+  id: string;
+  name: string;
+  createdAt: any;
+}
