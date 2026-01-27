@@ -30,7 +30,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { useCollection, useFirestore, useFirebaseApp } from '@/firebase';
-import { collection, doc, query, where, getDocs, writeBatch, deleteDoc, getDoc } from 'firebase/firestore';
+import { collection, doc, query, where, getDocs, writeBatch, deleteDoc } from 'firebase/firestore';
 import { getStorage, ref, deleteObject } from 'firebase/storage';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -45,11 +45,11 @@ interface FolderWithChildren extends Folder {
     children: FolderWithChildren[];
 }
 
-const FolderTreeItem = ({ folder, selectedFolderId, onSelectFolder, level }: { folder: FolderWithChildren, selectedFolderId: string, onSelectFolder: (folderId: string) => void, level: number }) => {
+const FolderTreeItem = ({ folder, selectedFolderId, onSelectFolder, level, handleDeleteFolder }: { folder: FolderWithChildren, selectedFolderId: string, onSelectFolder: (folderId: string) => void, level: number, handleDeleteFolder: (e: React.MouseEvent, folder: Folder) => Promise<void> }) => {
     const [isOpen, setIsOpen] = React.useState(true);
     
     return (
-        <div className="flex flex-col">
+        <div className="flex flex-col group/tree-item">
             <div
                 className={cn('flex items-center gap-1 rounded-md p-1 cursor-pointer hover:bg-muted', selectedFolderId === folder.id && 'bg-secondary')}
                 style={{ paddingLeft: `${level * 16}px` }}
@@ -60,11 +60,21 @@ const FolderTreeItem = ({ folder, selectedFolderId, onSelectFolder, level }: { f
                 </Button>
                 <FolderIcon className="h-4 w-4 text-primary" />
                 <span className="flex-1 truncate text-sm">{folder.name}</span>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover/tree-item:opacity-100"><MoreHorizontal className="h-4 w-4"/></Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent onClick={e => e.stopPropagation()}>
+                        <DropdownMenuItem onClick={(e) => handleDeleteFolder(e, folder)} className="text-destructive focus:text-destructive cursor-pointer">
+                            <Trash2 className="mr-2 h-4 w-4" /> Verwijderen
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
             {isOpen && folder.children.length > 0 && (
                 <div className="flex flex-col">
                     {folder.children.map(child => (
-                        <FolderTreeItem key={child.id} folder={child} selectedFolderId={selectedFolderId} onSelectFolder={onSelectFolder} level={level + 1} />
+                        <FolderTreeItem key={child.id} folder={child} selectedFolderId={selectedFolderId} onSelectFolder={onSelectFolder} level={level + 1} handleDeleteFolder={handleDeleteFolder} />
                     ))}
                 </div>
             )}
@@ -115,17 +125,6 @@ export default function BestandenPage() {
   }, [allFolders]);
 
 
-  const subFoldersQuery = React.useMemo(() => {
-    if (!firestore || !selectedProjectId) return null;
-    const q = collection(firestore, 'projects', selectedProjectId, 'folders');
-    if (selectedFolderId === 'root') {
-        return query(q, where('folderId', 'in', [null, '']));
-    }
-    return query(q, where('folderId', '==', selectedFolderId));
-  }, [firestore, selectedProjectId, selectedFolderId]);
-
-  const { data: subFolders, isLoading: isLoadingFolders } = useCollection<Folder>(subFoldersQuery);
-  
   const bestandenCollection = React.useMemo(() => {
     if (!firestore || !selectedProjectId) return null;
     const q = collection(firestore, 'projects', selectedProjectId, 'bestanden');
@@ -138,14 +137,10 @@ export default function BestandenPage() {
   const { data: bestanden, isLoading: isLoadingBestanden } = useCollection<Bestand>(bestandenCollection);
   
   const items = React.useMemo(() => {
-    const foldersWithType = (subFolders || []).map(f => ({ ...f, itemType: 'folder' as const }));
     const filesWithType = (bestanden || []).map(b => ({ ...b, itemType: 'file' as const }));
-    
-    foldersWithType.sort((a, b) => a.name.localeCompare(b.name));
     filesWithType.sort((a, b) => a.name.localeCompare(b.name));
-
-    return [...foldersWithType, ...filesWithType];
-  }, [subFolders, bestanden]);
+    return filesWithType;
+  }, [bestanden]);
   
 
   const formatBytes = (bytes: number, decimals = 2) => {
@@ -271,7 +266,12 @@ export default function BestandenPage() {
       {selectedProjectId ? (
         <div className="flex-1 flex gap-6 min-h-0">
             <aside className='w-64 bg-card rounded-lg border p-2 flex flex-col'>
-                <div className='flex-1 overflow-y-auto space-y-0.5 pr-1'>
+                 <div className="p-1">
+                    <FolderCreateDialog projectId={selectedProjectId} folderId={selectedFolderId === 'root' ? null : selectedFolderId} onSuccess={() => {}}>
+                        <Button variant="outline" className="w-full"><FolderPlus className="mr-2 h-4 w-4" /> Nieuwe Map</Button>
+                    </FolderCreateDialog>
+                </div>
+                <div className='flex-1 overflow-y-auto space-y-0.5 pr-1 pt-2 border-t mt-2'>
                     <div
                         className={cn('flex items-center gap-1 rounded-md p-1 cursor-pointer hover:bg-muted', selectedFolderId === 'root' && 'bg-secondary')}
                         onClick={() => setSelectedFolderId('root')}
@@ -287,7 +287,7 @@ export default function BestandenPage() {
                        </div>
                     ) : (
                         folderTree.map(folder => (
-                           <FolderTreeItem key={folder.id} folder={folder} selectedFolderId={selectedFolderId} onSelectFolder={setSelectedFolderId} level={0} />
+                           <FolderTreeItem key={folder.id} folder={folder} selectedFolderId={selectedFolderId} onSelectFolder={setSelectedFolderId} level={0} handleDeleteFolder={handleDeleteFolder} />
                         ))
                     )}
                 </div>
@@ -295,9 +295,6 @@ export default function BestandenPage() {
             <main className="flex-1 bg-card rounded-lg border flex flex-col min-h-0">
                 <div className="p-3 border-b flex flex-wrap gap-2 justify-between items-center">
                     <div className="flex items-center gap-2 flex-wrap">
-                        <FolderCreateDialog projectId={selectedProjectId} folderId={selectedFolderId === 'root' ? null : selectedFolderId} onSuccess={() => {}}>
-                           <Button variant="outline"><FolderPlus className="mr-2 h-4 w-4" /> Nieuwe Map</Button>
-                        </FolderCreateDialog>
                         <Button onClick={() => setIsUploadDialogOpen(true)}><Plus className="mr-2 h-4 w-4" /> Toevoegen Bestand</Button>
                     </div>
                 </div>
@@ -315,79 +312,49 @@ export default function BestandenPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {isLoadingFolders || isLoadingBestanden ? (
+                            {isLoadingBestanden ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center h-24">Bestanden en mappen laden...</TableCell>
+                                    <TableCell colSpan={6} className="text-center h-24">Bestanden laden...</TableCell>
                                 </TableRow>
                             ) : items && items.length > 0 ? (
                                 items.map(item => {
-                                    if (item.itemType === 'folder') {
-                                        const folder = item as Folder;
-                                        return (
-                                            <TableRow key={`folder-${folder.id}`} onDoubleClick={() => setSelectedFolderId(folder.id)} className="cursor-pointer group">
-                                                <TableCell><Checkbox /></TableCell>
-                                                <TableCell className="font-medium">
-                                                    <div className="flex items-center gap-2 text-primary cursor-pointer" onClick={(e) => { e.stopPropagation(); setSelectedFolderId(folder.id)}}>
-                                                        <FolderIcon className="h-4 w-4" />
-                                                        <span>{folder.name}</span>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>Map</TableCell>
-                                                <TableCell></TableCell>
-                                                <TableCell>{new Date(folder.createdAt).toLocaleDateString('nl-NL')}</TableCell>
-                                                <TableCell>
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent>
-                                                            <DropdownMenuItem onClick={(e) => handleDeleteFolder(e, folder)} className="text-destructive focus:text-destructive cursor-pointer">
-                                                                <Trash2 className="mr-2 h-4 w-4" /> Verwijderen
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </TableCell>
-                                            </TableRow>
-                                        );
-                                    } else {
-                                        const bestand = item as Bestand;
-                                        return (
-                                            <TableRow key={`file-${bestand.id}`}>
-                                                <TableCell><Checkbox /></TableCell>
-                                                <TableCell className="font-medium">
-                                                    <a href={bestand.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-primary hover:underline">
-                                                        <FileIcon className="h-4 w-4" />
-                                                        {bestand.name}
-                                                    </a>
-                                                </TableCell>
-                                                <TableCell className="truncate">{bestand.type}</TableCell>
-                                                <TableCell>{formatBytes(bestand.size)}</TableCell>
-                                                <TableCell>{new Date(bestand.uploadedAt).toLocaleDateString('nl-NL')}</TableCell>
-                                                <TableCell>
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent>
-                                                            <DropdownMenuItem asChild>
-                                                            <a href={bestand.url} download={bestand.name} className="flex items-center cursor-pointer">
-                                                                <Download className="mr-2 h-4 w-4" /> Downloaden
-                                                            </a>
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuSeparator />
-                                                            <DropdownMenuItem onClick={(e) => handleDeleteBestand(e, bestand)} className="text-destructive focus:text-destructive cursor-pointer">
-                                                            <Trash2 className="mr-2 h-4 w-4" /> Verwijderen
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </TableCell>
-                                            </TableRow>
-                                        );
-                                    }
+                                    const bestand = item as Bestand;
+                                    return (
+                                        <TableRow key={`file-${bestand.id}`}>
+                                            <TableCell><Checkbox /></TableCell>
+                                            <TableCell className="font-medium">
+                                                <a href={bestand.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-primary hover:underline">
+                                                    <FileIcon className="h-4 w-4" />
+                                                    {bestand.name}
+                                                </a>
+                                            </TableCell>
+                                            <TableCell className="truncate">{bestand.type}</TableCell>
+                                            <TableCell>{formatBytes(bestand.size)}</TableCell>
+                                            <TableCell>{new Date(bestand.uploadedAt).toLocaleDateString('nl-NL')}</TableCell>
+                                            <TableCell>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent>
+                                                        <DropdownMenuItem asChild>
+                                                        <a href={bestand.url} download={bestand.name} className="flex items-center cursor-pointer">
+                                                            <Download className="mr-2 h-4 w-4" /> Downloaden
+                                                        </a>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem onClick={(e) => handleDeleteBestand(e, bestand)} className="text-destructive focus:text-destructive cursor-pointer">
+                                                        <Trash2 className="mr-2 h-4 w-4" /> Verwijderen
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
                                 })
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center h-24">Geen bestanden of mappen gevonden in deze map.</TableCell>
+                                    <TableCell colSpan={6} className="text-center h-24">Geen bestanden gevonden in deze map.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
