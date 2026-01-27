@@ -57,7 +57,7 @@ interface FolderWithChildren extends Folder {
 }
 
 const FolderTreeItem = ({ folder, selectedFolderId, onSelectFolder, level, handleDeleteFolder }: { folder: FolderWithChildren, selectedFolderId: string, onSelectFolder: (folderId: string) => void, level: number, handleDeleteFolder: (folder: Folder) => Promise<void> }) => {
-    const [isOpen, setIsOpen] = React.useState(true);
+    const [isOpen, setIsOpen] = React.useState(false);
     
     return (
         <div className="flex flex-col group/tree-item">
@@ -213,7 +213,7 @@ export default function BestandenPage() {
     findSubfolderIds(folder.id);
     
     try {
-      // 2. Collect all file documents and folder documents to be deleted
+      // 2. Collect all file documents to be deleted
       const filesToDelete: { docRef: DocumentReference, storagePath?: string }[] = [];
       
       // Firestore 'in' queries are limited to 30 items. We need to chunk the query.
