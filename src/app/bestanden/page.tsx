@@ -2,16 +2,7 @@
 
 import * as React from 'react';
 import {
-  Home,
-  Mail,
-  Cog,
-  BarChart,
-  HardDrive,
-  ShieldCheck,
-  Users,
-  UserCircle,
   Folder,
-  File as FileIcon,
   Plus,
   Copy,
   Move,
@@ -48,19 +39,6 @@ const files = [
   { type: 'file', name: 'index.html', modified: 'April 28, 2021 11:07 AM', size: '4.0 KB', permissions: 'rw-r--r--', user: 'sysuser_d', group: 'psacln' },
 ];
 
-const sidebarNavItems = [
-    { icon: Home, label: "Websites & Domains" },
-    { icon: Mail, label: "Mail" },
-    { icon: Cog, label: "Applications" },
-    { icon: Folder, label: "Files", active: true },
-    { icon: HardDrive, label: "Databases" },
-    { icon: BarChart, label: "Statistics" },
-    { icon: Cog, label: "Tools & Settings" },
-    { icon: ShieldCheck, label: "Advanced Monitoring" },
-    { icon: Users, label: "Users" },
-    { icon: UserCircle, label: "My Profile" },
-];
-
 export default function BestandenPage() {
     const { setIsHeaderVisible } = useNavigationUI();
     
@@ -71,22 +49,6 @@ export default function BestandenPage() {
     
   return (
     <div className="flex h-full bg-gray-100 dark:bg-gray-900">
-      <aside className="w-64 bg-gray-800 text-white flex-col hidden md:flex">
-        <div className="p-4 font-bold text-xl border-b border-gray-700">Plesk</div>
-        <nav className="flex-1 p-2 space-y-1">
-          {sidebarNavItems.map(item => (
-            <Button
-              key={item.label}
-              variant={item.active ? "secondary" : "ghost"}
-              className="w-full justify-start gap-2"
-            >
-              <item.icon className="h-5 w-5" />
-              <span>{item.label}</span>
-            </Button>
-          ))}
-        </nav>
-      </aside>
-
       <main className="flex-1 flex flex-col">
         <header className="bg-white dark:bg-gray-800 p-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex justify-between items-center">
