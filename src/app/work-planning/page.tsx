@@ -518,11 +518,58 @@ export default function WorkPlanningPage() {
     return totalMinutes / 60;
   };
   
- const handlePrintWeek = () => {
-    document.body.classList.add('print-week-view');
-    document.body.classList.remove('print-day-view');
-    window.print();
- };
+ const generateWeekPdfAndDownload = () => {
+    if (!selectedProject || !medewerkers) return;
+
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    
+    doc.setFontSize(18);
+    doc.text(`Weekplanning: ${selectedProject.projectnaam || ''}`, 14, 22);
+    doc.setFontSize(11);
+    doc.text(`Week ${getISOWeek(currentDate)} - ${getYear(currentDate)}`, 14, 30);
+
+    const head = [['Medewerker', ...weekDays.map(d => format(d, 'eee dd-MM', { locale: nl }))]];
+
+    const body = (medewerkers || [])
+      .filter(m => m.status === 'Actief')
+      .map(medewerker => {
+        const rowData = [`${medewerker.voornaam || ''} ${medewerker.achternaam || ''}`.trim()];
+        weekDays.forEach(day => {
+            const dienstenForCell = (diensten || []).filter(d => 
+                d.medewerkerId === medewerker.id && isSameDay(new Date(d.datum), day)
+            );
+            const cellText = dienstenForCell.map(d => `${d.starttijd}-${d.eindtijd} ${d.werksoort}`).join('\n');
+            rowData.push(cellText);
+        });
+        return rowData;
+    });
+
+    (doc as any).autoTable({
+      startY: 36,
+      head: head,
+      body: body,
+      theme: 'grid',
+      styles: {
+        fontSize: 8,
+        cellPadding: 1.5,
+        valign: 'middle',
+      },
+      headStyles: {
+        fillColor: [228, 228, 231],
+        textColor: [0, 0, 0],
+        fontStyle: 'bold',
+      },
+      columnStyles: {
+        0: { cellWidth: 40 },
+      },
+    });
+
+    doc.save(`Weekplanning_WK${getISOWeek(currentDate)}_${getYear(currentDate)}.pdf`);
+  };
+
+  const handlePrintWeek = () => {
+    generateWeekPdfAndDownload();
+  };
 
   const generateDayPdf = (dayToPrint: Date) => {
     if (!selectedProject || !medewerkers || !diensten) return;
