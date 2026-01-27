@@ -30,7 +30,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { useCollection, useFirestore, useFirebaseApp } from '@/firebase';
-import { collection, doc, query, where, getDocs, writeBatch, type DocumentReference, type WriteBatch, type Firestore, deleteDoc } from 'firebase/firestore';
+import { collection, doc, query, where, getDocs, writeBatch, type DocumentReference, deleteDoc } from 'firebase/firestore';
 import { getStorage, ref, deleteObject } from 'firebase/storage';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -40,12 +40,23 @@ import { Card, CardContent } from '@/components/ui/card';
 import { FolderCreateDialog } from '@/components/folder-create-dialog';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface FolderWithChildren extends Folder {
     children: FolderWithChildren[];
 }
 
-const FolderTreeItem = ({ folder, selectedFolderId, onSelectFolder, level, handleDeleteFolder }: { folder: FolderWithChildren, selectedFolderId: string, onSelectFolder: (folderId: string) => void, level: number, handleDeleteFolder: (e: React.MouseEvent, folder: Folder) => Promise<void> }) => {
+const FolderTreeItem = ({ folder, selectedFolderId, onSelectFolder, level, handleDeleteFolder }: { folder: FolderWithChildren, selectedFolderId: string, onSelectFolder: (folderId: string) => void, level: number, handleDeleteFolder: (folder: Folder) => Promise<void> }) => {
     const [isOpen, setIsOpen] = React.useState(true);
     
     return (
@@ -65,9 +76,27 @@ const FolderTreeItem = ({ folder, selectedFolderId, onSelectFolder, level, handl
                         <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover/tree-item:opacity-100"><MoreHorizontal className="h-4 w-4"/></Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent onClick={e => e.stopPropagation()}>
-                        <DropdownMenuItem onClick={(e) => handleDeleteFolder(e, folder)} className="text-destructive focus:text-destructive cursor-pointer">
-                            <Trash2 className="mr-2 h-4 w-4" /> Verwijderen
-                        </DropdownMenuItem>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive cursor-pointer">
+                                    <Trash2 className="mr-2 h-4 w-4" /> Verwijderen
+                                </DropdownMenuItem>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Weet u zeker dat u de map "{folder.name}" en alle inhoud (inclusief submappen) wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.
+                                </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteFolder(folder)}>
+                                    Doorgaan
+                                </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>
@@ -152,9 +181,7 @@ export default function BestandenPage() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
   };
 
-  const handleDeleteBestand = async (e: React.MouseEvent, bestand: Bestand) => {
-    e.stopPropagation();
-    e.preventDefault();
+  const handleDeleteBestand = async (bestand: Bestand) => {
     if (!firestore || !app || !selectedProjectId || !bestand.id) return;
 
     const bestandDocRef = doc(firestore, 'projects', selectedProjectId, 'bestanden', bestand.id);
@@ -173,17 +200,8 @@ export default function BestandenPage() {
     await deleteDoc(bestandDocRef);
   };
 
-  const handleDeleteFolder = async (e: React.MouseEvent, folder: Folder) => {
-    e.stopPropagation();
+  const handleDeleteFolder = async (folder: Folder) => {
     if (!firestore || !app || !selectedProjectId || !allFolders) return;
-  
-    if (
-      !window.confirm(
-        `Weet u zeker dat u de map "${folder.name}" en alle inhoud (inclusief submappen) wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.`
-      )
-    ) {
-      return;
-    }
   
     // 1. Recursively find all nested folder IDs from the in-memory state
     const folderIdsToDelete: string[] = [];
@@ -366,9 +384,27 @@ export default function BestandenPage() {
                                                         </a>
                                                         </DropdownMenuItem>
                                                         <DropdownMenuSeparator />
-                                                        <DropdownMenuItem onClick={(e) => handleDeleteBestand(e, bestand)} className="text-destructive focus:text-destructive cursor-pointer">
-                                                        <Trash2 className="mr-2 h-4 w-4" /> Verwijderen
-                                                        </DropdownMenuItem>
+                                                         <AlertDialog>
+                                                            <AlertDialogTrigger asChild>
+                                                                <DropdownMenuItem onSelect={e => e.preventDefault()} className="text-destructive focus:text-destructive cursor-pointer">
+                                                                    <Trash2 className="mr-2 h-4 w-4" /> Verwijderen
+                                                                </DropdownMenuItem>
+                                                            </AlertDialogTrigger>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
+                                                                    <AlertDialogDescription>
+                                                                        Weet u zeker dat u het bestand "{bestand.name}" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.
+                                                                    </AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                                                                    <AlertDialogAction onClick={() => handleDeleteBestand(bestand)}>
+                                                                        Doorgaan
+                                                                    </AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             </TableCell>
