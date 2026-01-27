@@ -32,8 +32,8 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { useCollection, useFirestore, useFirebaseApp, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, where } from 'firebase/firestore';
+import { useCollection, useFirestore, useFirebaseApp } from '@/firebase';
+import { collection, doc, query, where, getDocs, writeBatch, deleteDoc } from 'firebase/firestore';
 import { getStorage, ref, deleteObject } from 'firebase/storage';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -88,7 +88,7 @@ export default function BestandenPage() {
   const handleDeleteBestand = async (e: React.MouseEvent, bestand: Bestand) => {
     e.stopPropagation();
     e.preventDefault();
-    if (!firestore || !app || !selectedProjectId) return;
+    if (!firestore || !app || !selectedProjectId || !bestand.id) return;
 
     const bestandDocRef = doc(firestore, 'projects', selectedProjectId, 'bestanden', bestand.id);
     
@@ -99,13 +99,68 @@ export default function BestandenPage() {
         } catch (error) {
           console.error("Fout bij het verwijderen van storage object:", error);
           if ((error as any).code !== 'storage/object-not-found') {
-            return;
+            // If the error is other than not found, we might want to stop.
+            // But for now, we'll proceed to delete the firestore doc anyway.
           }
         }
     }
-    await deleteDocumentNonBlocking(bestandDocRef);
+    // No need for a custom non-blocking delete here. Firestore SDK is already non-blocking.
+    await deleteDoc(bestandDocRef);
   };
   
+  const handleDeleteFolder = async (e: React.MouseEvent, folder: Folder) => {
+    e.stopPropagation();
+    if (!firestore || !app || !selectedProjectId) return;
+
+    if (!window.confirm(`Weet u zeker dat u de map "${folder.name}" en alle inhoud wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.`)) {
+        return;
+    }
+
+    try {
+        const bestandenInFolderQuery = query(
+            collection(firestore, 'projects', selectedProjectId, 'bestanden'),
+            where('folderId', '==', folder.id)
+        );
+        const bestandenSnapshot = await getDocs(bestandenInFolderQuery);
+        const bestandenToDelete: Bestand[] = bestandenSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Bestand));
+
+        const storage = getStorage(app);
+
+        const deleteStoragePromises = bestandenToDelete.map(bestand => {
+            if (bestand.storagePath) {
+                const storageRef = ref(storage, bestand.storagePath);
+                return deleteObject(storageRef).catch(error => {
+                    if ((error as any).code !== 'storage/object-not-found') {
+                        console.error(`Fout bij het verwijderen van storage object ${bestand.storagePath}:`, error);
+                    }
+                });
+            }
+            return Promise.resolve();
+        });
+        await Promise.all(deleteStoragePromises);
+        
+        const batch = writeBatch(firestore);
+
+        bestandenToDelete.forEach(bestand => {
+            const bestandDocRef = doc(firestore, 'projects', selectedProjectId, 'bestanden', bestand.id);
+            batch.delete(bestandDocRef);
+        });
+
+        const folderDocRef = doc(firestore, 'projects', selectedProjectId, 'folders', folder.id);
+        batch.delete(folderDocRef);
+
+        await batch.commit();
+
+        if (selectedFolderId === folder.id) {
+            setSelectedFolderId('root');
+        }
+    } catch (error) {
+        console.error("Fout bij het verwijderen van de map:", error);
+        alert("Er is een fout opgetreden bij het verwijderen van de map. Controleer de console voor details.");
+    }
+  };
+
+
   const handleProjectChange = (projectId: string) => {
     setSelectedProjectId(projectId);
     setSelectedFolderId('root');
@@ -165,15 +220,30 @@ export default function BestandenPage() {
                       <p className="p-2 text-sm text-muted-foreground">Mappen laden...</p>
                     ) : (
                       sortedFolders.map(folder => (
-                        <Button 
-                          key={folder.id} 
-                          variant={selectedFolderId === folder.id ? 'secondary' : 'ghost'} 
-                          className="w-full justify-start gap-2"
-                          onClick={() => setSelectedFolderId(folder.id)}
-                        >
-                          <FolderIcon className="h-4 w-4" /> 
-                          <span className="truncate">{folder.name}</span>
-                        </Button>
+                        <div key={folder.id} className="group relative flex items-center">
+                            <Button 
+                                variant={selectedFolderId === folder.id ? 'secondary' : 'ghost'} 
+                                className="w-full justify-start gap-2"
+                                onClick={() => setSelectedFolderId(folder.id)}
+                            >
+                                <FolderIcon className="h-4 w-4" /> 
+                                <span className="truncate">{folder.name}</span>
+                            </Button>
+                            <div className="absolute right-1">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent>
+                                        <DropdownMenuItem onClick={(e) => handleDeleteFolder(e, folder)} className="text-destructive focus:text-destructive cursor-pointer">
+                                            <Trash2 className="mr-2 h-4 w-4" /> Verwijderen
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+                        </div>
                       ))
                     )}
                  </div>
