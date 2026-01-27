@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { ChevronLeft, ChevronRight, Clock, MoreHorizontal, Plus, Printer, Trash2, Copy, ClipboardCopy, FileText } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, MoreHorizontal, Plus, Printer, Trash2, Copy, ClipboardCopy, FileText, Save } from 'lucide-react';
 import {
   startOfWeek,
   endOfWeek,
@@ -12,6 +12,8 @@ import {
   isSameDay,
   parse,
   isToday,
+  getISOWeek,
+  getYear,
 } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { collection, query, where, doc, getDocs, writeBatch } from 'firebase/firestore';
@@ -42,6 +44,7 @@ import { DienstToevoegenDialog } from '@/components/dienst-toevoegen-dialog';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PrintDayDialog } from '@/components/print-day-dialog';
+import { SaveWeekPdfDialog } from '@/components/save-week-pdf-dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -230,6 +233,7 @@ const DienstItem = ({ dienst, onEdit, onDelete, onContextMenu, isNonWorkingDay, 
 export default function WorkPlanningPage() {
   const [currentDate, setCurrentDate] = React.useState(new Date());
   const [isPrintDayDialogOpen, setIsPrintDayDialogOpen] = React.useState(false);
+  const [isSaveWeekDialogOpen, setIsSaveWeekDialogOpen] = React.useState(false);
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | undefined>();
   
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
@@ -724,7 +728,8 @@ export default function WorkPlanningPage() {
   const renderActionButtons = () => {
     const buttons = [
       <Button key="print-day" variant="outline" onClick={() => setIsPrintDayDialogOpen(true)}><Printer className="mr-2 h-4 w-4" /> Print Dag</Button>,
-      <Button key="print-week" variant="outline" onClick={handlePrintWeek}><Printer className="mr-2 h-4 w-4" /> Print Week</Button>
+      <Button key="print-week" variant="outline" onClick={handlePrintWeek}><Printer className="mr-2 h-4 w-4" /> Print Week</Button>,
+      <Button key="save-pdf" variant="outline" onClick={() => setIsSaveWeekDialogOpen(true)} disabled={!selectedProjectId}><Save className="mr-2 h-4 w-4" /> Opslaan als PDF</Button>,
     ];
 
     if (isMobile) {
@@ -734,7 +739,7 @@ export default function WorkPlanningPage() {
             <Button variant="outline" size="icon"><MoreHorizontal className="h-4 w-4"/></Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            {buttons.map((btn, i) => <DropdownMenuItem key={i}>{btn}</DropdownMenuItem>)}
+            {buttons.map((btn, i) => <DropdownMenuItem key={i}>{React.cloneElement(btn, { variant: 'ghost', className: 'w-full justify-start' })}</DropdownMenuItem>)}
           </DropdownMenuContent>
         </DropdownMenu>
       )
@@ -1263,6 +1268,16 @@ export default function WorkPlanningPage() {
             onOpenChange={setIsPrintDayDialogOpen}
             weekDays={weekDays}
             onPrint={generateDayPdf}
+        />
+        <SaveWeekPdfDialog 
+            open={isSaveWeekDialogOpen}
+            onOpenChange={setIsSaveWeekDialogOpen}
+            project={selectedProject}
+            medewerkers={medewerkers}
+            diensten={diensten}
+            weekDays={weekDays}
+            weekNumber={getISOWeek(currentDate)}
+            currentYear={getYear(currentDate)}
         />
     </div>
   );
