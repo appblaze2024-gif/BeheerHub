@@ -61,7 +61,7 @@ export default function BestandenPage() {
 
   const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsCollection);
 
-  const foldersCollection = React.useMemo(() => {
+  const subFoldersQuery = React.useMemo(() => {
     if (!firestore || !selectedProjectId) return null;
     const q = collection(firestore, 'projects', selectedProjectId, 'folders');
     if (selectedFolderId === 'root') {
@@ -70,7 +70,7 @@ export default function BestandenPage() {
     return query(q, where('folderId', '==', selectedFolderId));
   }, [firestore, selectedProjectId, selectedFolderId]);
 
-  const { data: folders, isLoading: isLoadingFolders } = useCollection<Folder>(foldersCollection);
+  const { data: subFolders, isLoading: isLoadingFolders } = useCollection<Folder>(subFoldersQuery);
   
   const bestandenCollection = React.useMemo(() => {
     if (!firestore || !selectedProjectId) return null;
@@ -111,17 +111,6 @@ export default function BestandenPage() {
     buildPath(selectedFolderId);
   }, [selectedFolderId, firestore, selectedProjectId]);
 
-
-  const combinedItems = React.useMemo(() => {
-    const folderItems = (folders || []).map(f => ({ ...f, itemType: 'folder' as const, uploadedAt: f.createdAt?.toDate() || new Date() }));
-    const fileItems = (bestanden || []).map(b => ({ ...b, itemType: 'file' as const }));
-    
-    return [...folderItems, ...fileItems].sort((a, b) => {
-      if (a.itemType === 'folder' && b.itemType !== 'folder') return -1;
-      if (a.itemType !== 'folder' && b.itemType === 'folder') return 1;
-      return a.name.localeCompare(b.name);
-    });
-  }, [folders, bestanden]);
 
   const formatBytes = (bytes: number, decimals = 2) => {
     if (bytes === 0) return '0 Bytes';
@@ -249,135 +238,138 @@ export default function BestandenPage() {
       </div>
       
       {selectedProjectId ? (
-        <div className="flex-1 bg-card rounded-lg border flex flex-col min-h-0">
-            <div className="p-3 border-b flex flex-wrap gap-2 justify-between items-center">
-                <div className="flex items-center gap-2 flex-wrap">
-                    <Button onClick={() => setIsUploadDialogOpen(true)}><Plus className="mr-2 h-4 w-4" /> Toevoegen</Button>
+        <div className="flex-1 flex gap-6 min-h-0">
+            <aside className="w-72 bg-card rounded-lg border flex flex-col">
+                <div className="p-3 border-b">
                     <FolderCreateDialog projectId={selectedProjectId} folderId={selectedFolderId === 'root' ? null : selectedFolderId} onSuccess={() => {}}>
-                      <Button variant="outline"><Plus className="mr-2 h-4 w-4" /> Nieuwe map</Button>
+                        <Button className="w-full"><Plus className="mr-2 h-4 w-4" /> Nieuwe Map</Button>
                     </FolderCreateDialog>
-                    <Button variant="outline" disabled>Kopiëren</Button>
-                    <Button variant="outline" disabled>Verplaatsen</Button>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button variant="outline" disabled>Archiveren <ChevronDown className="ml-2 h-4 w-4" /></Button></DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                            <DropdownMenuItem>Toevoegen aan archief</DropdownMenuItem>
-                            <DropdownMenuItem>Archief uitpakken</DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                    <Button variant="destructive" disabled>Verwijderen</Button>
                 </div>
-                <div className="relative w-full sm:w-64">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Bestandsnaam zoeken" className="pl-9" />
+                <div className="flex items-center gap-1 text-sm text-muted-foreground p-2 border-b flex-wrap">
+                    {folderPath.map((folder, index) => (
+                        <React.Fragment key={folder.id}>
+                            {index > 0 && <span className="text-xs">/</span>}
+                            <button 
+                                onClick={() => setSelectedFolderId(folder.id)}
+                                className={cn('hover:underline text-xs p-1 rounded', index === folderPath.length - 1 && 'font-semibold text-foreground bg-muted')}
+                            >
+                                {folder.name}
+                            </button>
+                        </React.Fragment>
+                    ))}
                 </div>
-            </div>
+                <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                    {isLoadingFolders ? (
+                        <p className="p-2 text-sm text-muted-foreground">Mappen laden...</p>
+                    ) : subFolders && subFolders.length > 0 ? (
+                        subFolders.map(folder => (
+                            <div key={folder.id} className="flex items-center group">
+                                <Button variant="ghost" className="w-full justify-start" onDoubleClick={() => setSelectedFolderId(folder.id)}>
+                                    <div className="flex items-center gap-2 text-primary" onClick={(e) => { e.stopPropagation(); setSelectedFolderId(folder.id)}}>
+                                        <FolderIcon className="h-4 w-4" />
+                                        <span>{folder.name}</span>
+                                    </div>
+                                </Button>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent>
+                                        <DropdownMenuItem onClick={(e) => handleDeleteFolder(e, folder)} className="text-destructive focus:text-destructive cursor-pointer">
+                                            <Trash2 className="mr-2 h-4 w-4" /> Verwijderen
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="p-2 text-sm text-muted-foreground">Geen submappen.</p>
+                    )}
+                </div>
+            </aside>
 
-            <div className="flex items-center gap-2 text-sm text-muted-foreground p-3 border-b">
-              {folderPath.map((folder, index) => (
-                  <React.Fragment key={folder.id}>
-                      {index > 0 && <span>/</span>}
-                      <button 
-                          onClick={() => setSelectedFolderId(folder.id)}
-                          className={cn('hover:underline', index === folderPath.length - 1 && 'font-semibold text-foreground')}
-                      >
-                          {folder.name}
-                      </button>
-                  </React.Fragment>
-              ))}
-            </div>
+            <main className="flex-1 bg-card rounded-lg border flex flex-col min-h-0">
+                <div className="p-3 border-b flex flex-wrap gap-2 justify-between items-center">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <Button onClick={() => setIsUploadDialogOpen(true)}><Plus className="mr-2 h-4 w-4" /> Toevoegen</Button>
+                        <Button variant="outline" disabled>Kopiëren</Button>
+                        <Button variant="outline" disabled>Verplaatsen</Button>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild><Button variant="outline" disabled>Archiveren <ChevronDown className="ml-2 h-4 w-4" /></Button></DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                                <DropdownMenuItem>Toevoegen aan archief</DropdownMenuItem>
+                                <DropdownMenuItem>Archief uitpakken</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        <Button variant="destructive" disabled>Verwijderen</Button>
+                    </div>
+                    <div className="relative w-full sm:w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input placeholder="Bestandsnaam zoeken" className="pl-9" />
+                    </div>
+                </div>
 
-
-            <div className="flex-1 overflow-auto">
-                <Table>
-                    <TableHeader className="sticky top-0 bg-card">
-                        <TableRow>
-                            <TableHead className="w-[50px]"><Checkbox /></TableHead>
-                            <TableHead>Naam</TableHead>
-                            <TableHead>Type</TableHead>
-                            <TableHead>Grootte</TableHead>
-                            <TableHead>Datum</TableHead>
-                            <TableHead className="w-[50px]"></TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {isLoadingBestanden || isLoadingFolders ? (
+                <div className="flex-1 overflow-auto">
+                    <Table>
+                        <TableHeader className="sticky top-0 bg-card">
                             <TableRow>
-                                <TableCell colSpan={6} className="text-center h-24">Bestanden laden...</TableCell>
+                                <TableHead className="w-[50px]"><Checkbox /></TableHead>
+                                <TableHead>Naam</TableHead>
+                                <TableHead>Type</TableHead>
+                                <TableHead>Grootte</TableHead>
+                                <TableHead>Datum</TableHead>
+                                <TableHead className="w-[50px]"></TableHead>
                             </TableRow>
-                        ) : combinedItems && combinedItems.length > 0 ? (
-                            combinedItems.map(item => {
-                                if (item.itemType === 'folder') {
-                                    return (
-                                        <TableRow key={item.id} onDoubleClick={() => setSelectedFolderId(item.id)} className="cursor-pointer">
-                                            <TableCell><Checkbox /></TableCell>
-                                            <TableCell className="font-medium">
-                                                <div className="flex items-center gap-2 text-primary hover:underline" onClick={() => setSelectedFolderId(item.id)}>
-                                                    <FolderIcon className="h-4 w-4" />
-                                                    {item.name}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>Map</TableCell>
-                                            <TableCell>-</TableCell>
-                                            <TableCell>{new Date(item.uploadedAt).toLocaleDateString('nl-NL')}</TableCell>
-                                            <TableCell>
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent>
-                                                        <DropdownMenuItem onClick={(e) => handleDeleteFolder(e, item)} className="text-destructive focus:text-destructive cursor-pointer">
-                                                            <Trash2 className="mr-2 h-4 w-4" /> Verwijderen
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </TableCell>
-                                        </TableRow>
-                                    )
-                                } else {
-                                    const bestand = item as Bestand & { itemType: 'file' };
-                                    return (
-                                        <TableRow key={bestand.id}>
-                                            <TableCell><Checkbox /></TableCell>
-                                            <TableCell className="font-medium">
-                                                <a href={bestand.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-primary hover:underline">
-                                                    <FileIcon className="h-4 w-4" />
-                                                    {bestand.name}
-                                                </a>
-                                            </TableCell>
-                                            <TableCell className="truncate">{bestand.type}</TableCell>
-                                            <TableCell>{formatBytes(bestand.size)}</TableCell>
-                                            <TableCell>{new Date(bestand.uploadedAt).toLocaleDateString('nl-NL')}</TableCell>
-                                            <TableCell>
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent>
-                                                        <DropdownMenuItem asChild>
-                                                          <a href={bestand.url} download={bestand.name} className="flex items-center cursor-pointer">
-                                                            <Download className="mr-2 h-4 w-4" /> Downloaden
-                                                          </a>
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuSeparator />
-                                                        <DropdownMenuItem onClick={(e) => handleDeleteBestand(e, bestand)} className="text-destructive focus:text-destructive cursor-pointer">
-                                                          <Trash2 className="mr-2 h-4 w-4" /> Verwijderen
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </TableCell>
-                                        </TableRow>
-                                    )
-                                }
-                            })
-                        ) : (
-                            <TableRow>
-                                <TableCell colSpan={6} className="text-center h-24">Geen bestanden gevonden in deze map.</TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
+                        </TableHeader>
+                        <TableBody>
+                            {isLoadingBestanden ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="text-center h-24">Bestanden laden...</TableCell>
+                                </TableRow>
+                            ) : bestanden && bestanden.length > 0 ? (
+                                bestanden.map(bestand => (
+                                    <TableRow key={bestand.id}>
+                                        <TableCell><Checkbox /></TableCell>
+                                        <TableCell className="font-medium">
+                                            <a href={bestand.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-primary hover:underline">
+                                                <FileIcon className="h-4 w-4" />
+                                                {bestand.name}
+                                            </a>
+                                        </TableCell>
+                                        <TableCell className="truncate">{bestand.type}</TableCell>
+                                        <TableCell>{formatBytes(bestand.size)}</TableCell>
+                                        <TableCell>{new Date(bestand.uploadedAt).toLocaleDateString('nl-NL')}</TableCell>
+                                        <TableCell>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent>
+                                                    <DropdownMenuItem asChild>
+                                                    <a href={bestand.url} download={bestand.name} className="flex items-center cursor-pointer">
+                                                        <Download className="mr-2 h-4 w-4" /> Downloaden
+                                                    </a>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem onClick={(e) => handleDeleteBestand(e, bestand)} className="text-destructive focus:text-destructive cursor-pointer">
+                                                    <Trash2 className="mr-2 h-4 w-4" /> Verwijderen
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="text-center h-24">Geen bestanden gevonden in deze map.</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+            </main>
             <ProjectBestandenDialog
                 open={isUploadDialogOpen}
                 onOpenChange={setIsUploadDialogOpen}
