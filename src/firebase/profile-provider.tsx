@@ -78,10 +78,10 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   }, [user, profileFromDb, isProfileLoadingFromDoc, userProfileRef, firestore]);
 
 
-  // Grant Super Admin role to a specific user and ensure permissions are up-to-date
+  // Grant Super Admin role and ensure permissions are up-to-date
   useEffect(() => {
     const grantAdminRole = async () => {
-      if (user && profile && user.email === 'dstoutenburg@meerlanden.nl' && userProfileRef) {
+      if (user && profile && profile.role === 'Super admin' && userProfileRef) {
         
         const allTruePermissions: { [key: string]: any } = {};
         permissionConfig.forEach(mod => {
