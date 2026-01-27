@@ -118,6 +118,7 @@ export default function BestandenPage() {
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
   const [selectedFolderId, setSelectedFolderId] = React.useState<string>('root');
   const [isUploadDialogOpen, setIsUploadDialogOpen] = React.useState(false);
+  const [treeKey, setTreeKey] = React.useState(Date.now());
 
   const projectsCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -137,10 +138,13 @@ export default function BestandenPage() {
     const tree: FolderWithChildren[] = [];
 
     allFolders.forEach(f => {
-        if (f.folderId && folderMap.has(f.folderId)) {
-            folderMap.get(f.folderId)?.children.push(folderMap.get(f.id)!);
-        } else {
-            tree.push(folderMap.get(f.id)!);
+        const node = folderMap.get(f.id);
+        if (node) {
+            if (f.folderId && folderMap.has(f.folderId)) {
+                folderMap.get(f.folderId)!.children.push(node);
+            } else {
+                tree.push(node);
+            }
         }
     });
 
@@ -312,10 +316,13 @@ export default function BestandenPage() {
                         <Button variant="outline" className="w-full"><FolderPlus className="mr-2 h-4 w-4" /> Nieuwe Map</Button>
                     </FolderCreateDialog>
                 </div>
-                <div className='flex-1 overflow-y-auto space-y-0.5 pr-1 pt-2 border-t mt-2'>
+                <div key={treeKey} className='flex-1 overflow-y-auto space-y-0.5 pr-1 pt-2 border-t mt-2'>
                     <div
                         className={cn('flex items-center gap-1 rounded-md p-1 cursor-pointer hover:bg-muted', selectedFolderId === 'root' && 'bg-secondary')}
-                        onClick={() => setSelectedFolderId('root')}
+                        onClick={() => {
+                            setSelectedFolderId('root');
+                            setTreeKey(Date.now());
+                        }}
                     >
                         <FolderIcon className="h-5 w-5 text-primary" />
                         <span className="flex-1 truncate text-sm font-semibold">Root</span>
