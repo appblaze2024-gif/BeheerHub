@@ -175,8 +175,8 @@ export default function BestandenPage() {
 
   const handleDeleteFolder = async (e: React.MouseEvent, folder: Folder) => {
     e.stopPropagation();
-    if (!firestore || !app || !selectedProjectId) return;
-
+    if (!firestore || !app || !selectedProjectId || !allFolders) return;
+  
     if (
       !window.confirm(
         `Weet u zeker dat u de map "${folder.name}" en alle inhoud (inclusief submappen) wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.`
@@ -184,59 +184,70 @@ export default function BestandenPage() {
     ) {
       return;
     }
-    
-    // Helper function to recursively gather all items to delete
-    const collectItemsToDelete = async (
-        folderId: string, 
-        items: { folders: DocumentReference[], files: { docRef: DocumentReference, storagePath?: string }[] }
-    ) => {
-        // 1. Add current folder to deletion list
-        items.folders.push(doc(firestore, 'projects', selectedProjectId, 'folders', folderId));
-
-        // 2. Find and collect files in the current folder
-        const filesQuery = query(collection(firestore, 'projects', selectedProjectId, 'bestanden'), where('folderId', '==', folderId));
-        const filesSnapshot = await getDocs(filesQuery);
-        filesSnapshot.forEach(fileDoc => {
-            items.files.push({
-                docRef: fileDoc.ref,
-                storagePath: fileDoc.data().storagePath
-            });
-        });
-
-        // 3. Find subfolders and recurse
-        const subfoldersQuery = query(collection(firestore, 'projects', selectedProjectId, 'folders'), where('folderId', '==', folderId));
-        const subfoldersSnapshot = await getDocs(subfoldersQuery);
-        for (const subfolderDoc of subfoldersSnapshot.docs) {
-            await collectItemsToDelete(subfolderDoc.id, items);
-        }
+  
+    const folderIdsToDelete: string[] = [];
+  
+    // Recursive function to find all nested folder IDs from the in-memory state
+    const findSubfolderIds = (folderId: string) => {
+      folderIdsToDelete.push(folderId);
+      const children = allFolders.filter(f => f.folderId === folderId);
+      children.forEach(child => findSubfolderIds(child.id));
     };
-
+  
+    // Start the recursion with the clicked folder
+    findSubfolderIds(folder.id);
+    
     try {
-        const itemsToDelete: { folders: DocumentReference[], files: { docRef: DocumentReference, storagePath?: string }[] } = { folders: [], files: [] };
-        await collectItemsToDelete(folder.id, itemsToDelete);
-
-        // Delete files from storage
-        const storage = getStorage(app);
-        const deleteStoragePromises = itemsToDelete.files
-            .filter(f => f.storagePath)
-            .map(f => deleteObject(ref(storage, f.storagePath!)).catch(err => {
-                if ((err as any).code !== 'storage/object-not-found') console.error(`Failed to delete storage object ${f.storagePath}:`, err);
-            }));
-        
-        await Promise.all(deleteStoragePromises);
-
-        // Batch delete all Firestore documents
+      const itemsToDelete: { folders: DocumentReference[], files: { docRef: DocumentReference, storagePath?: string }[] } = { folders: [], files: [] };
+  
+      // Get all files from all folders to be deleted.
+      // Firestore 'in' queries are limited to 30 items. We need to chunk the query.
+      if (folderIdsToDelete.length > 0) {
+        const chunks = [];
+        for (let i = 0; i < folderIdsToDelete.length; i += 30) {
+          chunks.push(folderIdsToDelete.slice(i, i + 30));
+        }
+  
+        for (const chunk of chunks) {
+          const filesQuery = query(collection(firestore, 'projects', selectedProjectId, 'bestanden'), where('folderId', 'in', chunk));
+          const filesSnapshot = await getDocs(filesQuery);
+          filesSnapshot.forEach(fileDoc => {
+            itemsToDelete.files.push({
+              docRef: fileDoc.ref,
+              storagePath: fileDoc.data().storagePath
+            });
+          });
+        }
+      }
+      
+      // Get all folder documents to be deleted
+      folderIdsToDelete.forEach(id => {
+        itemsToDelete.folders.push(doc(firestore, 'projects', selectedProjectId, 'folders', id));
+      });
+  
+      // Delete files from storage
+      const storage = getStorage(app);
+      const deleteStoragePromises = itemsToDelete.files
+        .filter(f => f.storagePath)
+        .map(f => deleteObject(ref(storage, f.storagePath!)).catch(err => {
+            if ((err as any).code !== 'storage/object-not-found') console.error(`Failed to delete storage object ${f.storagePath}:`, err);
+        }));
+      
+      await Promise.all(deleteStoragePromises);
+  
+      // Batch delete all Firestore documents. Batches are limited to 500 operations.
+      const allFirestoreDeletions = [...itemsToDelete.folders, ...itemsToDelete.files.map(f => f.docRef)];
+      for (let i = 0; i < allFirestoreDeletions.length; i += 500) {
+        const firestoreChunk = allFirestoreDeletions.slice(i, i + 500);
         const batch = writeBatch(firestore);
-        itemsToDelete.folders.forEach(ref => batch.delete(ref));
-        itemsToDelete.files.forEach(f => batch.delete(f.docRef));
-
-        if (itemsToDelete.folders.length + itemsToDelete.files.length > 0) {
-            await batch.commit();
-        }
-
-        if (selectedFolderId === folder.id) {
-            setSelectedFolderId(folder.folderId || 'root');
-        }
+        firestoreChunk.forEach(refToDelete => batch.delete(refToDelete));
+        await batch.commit();
+      }
+  
+      if (folderIdsToDelete.includes(selectedFolderId)) {
+        setSelectedFolderId(folder.folderId || 'root');
+      }
+  
     } catch (error) {
       console.error("Fout bij het verwijderen van de map en de inhoud:", error);
       alert(
