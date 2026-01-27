@@ -38,12 +38,14 @@ type FolderFormValues = z.infer<typeof folderFormSchema>;
 interface FolderCreateDialogProps {
   children: React.ReactNode;
   projectId: string;
+  folderId: string | null;
   onSuccess: () => void;
 }
 
 export function FolderCreateDialog({
   children,
   projectId,
+  folderId,
   onSuccess,
 }: FolderCreateDialogProps) {
   const firestore = useFirestore();
@@ -66,6 +68,7 @@ export function FolderCreateDialog({
     try {
       await addDocumentNonBlocking(foldersColRef, {
         ...data,
+        folderId: folderId || null,
         createdAt: serverTimestamp(),
       });
       onSuccess();

@@ -172,4 +172,5 @@ export interface Folder {
   id: string;
   name: string;
   createdAt: any;
+  folderId?: string | null;
 }
