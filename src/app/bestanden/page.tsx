@@ -1,12 +1,187 @@
-import { PageHeader } from "@/components/page-header";
+'use client';
+
+import * as React from 'react';
+import {
+  Home,
+  Mail,
+  Cog,
+  BarChart,
+  HardDrive,
+  ShieldCheck,
+  Users,
+  UserCircle,
+  Folder,
+  File as FileIcon,
+  Plus,
+  Copy,
+  Move,
+  Archive,
+  MoreVertical,
+  Trash2,
+  Search,
+  ChevronRight,
+  ArrowUp,
+  FileCode,
+  FileImage,
+  FolderOpen,
+  ChevronDown,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useNavigationUI } from '@/context/navigation-ui-context';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+
+const files = [
+  { type: 'dir', name: '..', modified: 'April 28, 2021 11:07 AM', size: '', permissions: 'rwx--x--', user: 'sysuser_d', group: 'psaserv' },
+  { type: 'folder', name: 'css', modified: 'April 28, 2021 11:19 AM', size: '', permissions: 'rwxr-xr-x', user: 'sysuser_d', group: 'psacln' },
+  { type: 'folder', name: 'img', modified: 'April 28, 2021 11:19 AM', size: '', permissions: 'rwxr-xr-x', user: 'sysuser_d', group: 'psacln' },
+  { type: 'folder', name: 'test', modified: 'April 28, 2021 11:19 AM', size: '', permissions: 'rwxr-xr-x', user: 'sysuser_d', group: 'psacln' },
+  { type: 'file', name: 'index.html', modified: 'April 28, 2021 11:07 AM', size: '4.0 KB', permissions: 'rw-r--r--', user: 'sysuser_d', group: 'psacln' },
+];
+
+const sidebarNavItems = [
+    { icon: Home, label: "Websites & Domains" },
+    { icon: Mail, label: "Mail" },
+    { icon: Cog, label: "Applications" },
+    { icon: Folder, label: "Files", active: true },
+    { icon: HardDrive, label: "Databases" },
+    { icon: BarChart, label: "Statistics" },
+    { icon: Cog, label: "Tools & Settings" },
+    { icon: ShieldCheck, label: "Advanced Monitoring" },
+    { icon: Users, label: "Users" },
+    { icon: UserCircle, label: "My Profile" },
+];
 
 export default function BestandenPage() {
+    const { setIsHeaderVisible } = useNavigationUI();
+    
+    React.useEffect(() => {
+        setIsHeaderVisible(false);
+        return () => setIsHeaderVisible(true);
+    }, [setIsHeaderVisible]);
+    
   return (
-    <div className="flex flex-col flex-1 p-6 min-h-0">
-      <PageHeader title="Bestanden" />
-      <div className="flex-1 mt-6">
-        {/* Page content goes here */}
-      </div>
+    <div className="flex h-full bg-gray-100 dark:bg-gray-900">
+      <aside className="w-64 bg-gray-800 text-white flex-col hidden md:flex">
+        <div className="p-4 font-bold text-xl border-b border-gray-700">Plesk</div>
+        <nav className="flex-1 p-2 space-y-1">
+          {sidebarNavItems.map(item => (
+            <Button
+              key={item.label}
+              variant={item.active ? "secondary" : "ghost"}
+              className="w-full justify-start gap-2"
+            >
+              <item.icon className="h-5 w-5" />
+              <span>{item.label}</span>
+            </Button>
+          ))}
+        </nav>
+      </aside>
+
+      <main className="flex-1 flex flex-col">
+        <header className="bg-white dark:bg-gray-800 p-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex justify-between items-center">
+                <h1 className="text-2xl font-semibold">File Manager for <span className="text-blue-600">example.com</span></h1>
+            </div>
+        </header>
+
+        <div className="p-4 flex-1 flex flex-col md:flex-row gap-4 min-h-0">
+            <div className="w-full md:w-64 bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                <h2 className="font-semibold mb-4">Home directory</h2>
+                 <ul className="space-y-2 text-sm">
+                    <li><button className="flex items-center gap-2 w-full text-left"><ChevronRight size={16} /> <Folder size={16} className="text-yellow-500"/> error_docs</button></li>
+                    <li className="bg-blue-100 dark:bg-blue-900/50 rounded-md -ml-2 pl-2"><button className="flex items-center gap-2 w-full text-left font-semibold"><ChevronRight size={16} /> <FolderOpen size={16} className="text-yellow-500"/> httpdocs</button></li>
+                    <li><button className="flex items-center gap-2 w-full text-left"><ChevronRight size={16} /> <Folder size={16} className="text-yellow-500"/> logs</button></li>
+                 </ul>
+            </div>
+            
+            <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex flex-col">
+                <div className="p-3 border-b flex flex-wrap gap-2 justify-between items-center">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <Button variant="outline"><Plus className="mr-2 h-4 w-4" /> Toevoegen</Button>
+                        <Button variant="outline">Kopiëren</Button>
+                        <Button variant="outline">Verplaatsen</Button>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild><Button variant="outline">Archiveren <ChevronDown className="ml-2 h-4 w-4" /></Button></DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                                <DropdownMenuItem>Toevoegen aan archief</DropdownMenuItem>
+                                <DropdownMenuItem>Archief uitpakken</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild><Button variant="outline">Meer <ChevronDown className="ml-2 h-4 w-4" /></Button></DropdownMenuTrigger>
+                             <DropdownMenuContent>
+                                <DropdownMenuItem>Rechten wijzigen</DropdownMenuItem>
+                             </DropdownMenuContent>
+                        </DropdownMenu>
+                        <Button variant="destructive">Verwijderen</Button>
+                    </div>
+                     <div className="relative w-full sm:w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input placeholder="Bestandsnaam zoeken" className="pl-9" />
+                    </div>
+                </div>
+
+                <div className="p-3 text-sm text-muted-foreground">
+                    <span>Home directory</span> &gt; <span>httpdocs</span>
+                </div>
+
+                <div className="flex-1 overflow-auto">
+                    <Table>
+                        <TableHeader className="sticky top-0 bg-white dark:bg-gray-800">
+                            <TableRow>
+                                <TableHead className="w-[50px]"><Checkbox /></TableHead>
+                                <TableHead>Naam</TableHead>
+                                <TableHead>Gewijzigd</TableHead>
+                                <TableHead>Grootte</TableHead>
+                                <TableHead>Rechten</TableHead>
+                                <TableHead>Gebruiker</TableHead>
+                                <TableHead>Groep</TableHead>
+                                <TableHead className="w-[50px]"></TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {files.map(file => (
+                                <TableRow key={file.name}>
+                                    <TableCell><Checkbox /></TableCell>
+                                    <TableCell className="flex items-center gap-2 font-medium">
+                                        {file.type === 'dir' && <ArrowUp className="h-5 w-5 text-blue-500" />}
+                                        {file.type === 'folder' && <Folder className="h-5 w-5 text-yellow-500" />}
+                                        {file.type === 'file' && <FileCode className="h-5 w-5 text-gray-500" />}
+                                        <span>{file.name}</span>
+                                    </TableCell>
+                                    <TableCell>{file.modified}</TableCell>
+                                    <TableCell>{file.size}</TableCell>
+                                    <TableCell className="font-mono text-xs">{file.permissions}</TableCell>
+                                    <TableCell>{file.user}</TableCell>
+                                    <TableCell>{file.group}</TableCell>
+                                    <TableCell>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent>
+                                                <DropdownMenuItem>Bewerken</DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            </div>
+        </div>
+      </main>
     </div>
   );
 }
