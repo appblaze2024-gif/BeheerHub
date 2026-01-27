@@ -1098,7 +1098,6 @@ export default function ProjectsPage() {
             {canViewTab('boekingregels') && <TabsTrigger value="boekingregels">Boekingregels</TabsTrigger>}
             {canViewTab('afspraken') && <TabsTrigger value="afspraken">Afspraken</TabsTrigger>}
             {canViewTab('organisatie') && <TabsTrigger value="organisatie">Organisatie</TabsTrigger>}
-            {canViewTab('bestanden') && <TabsTrigger value="bestanden">Bestanden</TabsTrigger>}
             {canViewTab('wijken') && <TabsTrigger value="wijken">Wijken</TabsTrigger>}
             {canViewTab('veegroutes') && <TabsTrigger value="veegroutes">Veegroutes</TabsTrigger>}
             {canViewTab('prullenbakkenroutes') && <TabsTrigger value="prullenbakkenroutes">Prullenbakkenroutes</TabsTrigger>}
@@ -1233,9 +1232,6 @@ export default function ProjectsPage() {
         </TabsContent>}
         {canViewTab('organisatie') && <TabsContent value="organisatie" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
           <OrganisatieTab projectId={selectedProjectId} wijken={currentProject.wijken} canEdit={canEdit} canDelete={canDelete} />
-        </TabsContent>}
-         {canViewTab('bestanden') && <TabsContent value="bestanden" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
-          <BestandenTab projectId={selectedProjectId} canEdit={canEdit} canDelete={canDelete}/>
         </TabsContent>}
         {canViewTab('wijken') && <TabsContent value="wijken" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
           <WijkenTab wijken={currentProject.wijken || []} setCurrentProject={setCurrentProject} allAreas={allAreas} canEdit={canEdit} projectId={currentProject.id} firestore={firestore}/>

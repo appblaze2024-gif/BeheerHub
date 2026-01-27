@@ -9,7 +9,6 @@ export const permissionConfig = [
             { id: 'boekingregels', label: 'Boekingregels' },
             { id: 'afspraken', label: 'Afspraken' },
             { id: 'organisatie', label: 'Organisatie' },
-            { id: 'bestanden', label: 'Bestanden' },
             { id: 'wijken', label: 'Wijken' },
             { id: 'veegroutes', label: 'Veegroutes' },
             { id: 'prullenbakkenroutes', label: 'Prullenbakkenroutes' },
