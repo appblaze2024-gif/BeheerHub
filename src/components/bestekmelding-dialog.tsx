@@ -26,6 +26,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -334,7 +335,7 @@ export function BestekmeldingDialog({ open, onOpenChange, melding, projectId, ca
                      {Object.entries(uploadProgress).map(([name, progress]) => (
                       <div key={name} className="space-y-1 mt-2">
                         <p className="text-sm font-medium">{name}</p>
-                        <Progress value={progress} className="w-full" />
+                        <Progress value={progress} className="h-2 mt-1" />
                       </div>
                     ))}
                     {uploadedFiles.length > 0 && (
