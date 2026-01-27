@@ -29,6 +29,7 @@ export const permissionConfig = [
     { module: 'workPlanning', label: 'Werkplanning', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'edit', label: 'Bewerken' }] },
     { module: 'weeklyReports', label: 'Weekstaten', actions: [{ id: 'view', label: 'Bekijken' }] },
     { module: 'reports', label: 'Rapportages', actions: [{ id: 'view', label: 'Bekijken' }] },
+    { module: 'bestanden', label: 'Bestanden', actions: [{ id: 'view', label: 'Bekijken' }] },
     { 
         module: 'vehicles', 
         label: 'Wagenpark', 

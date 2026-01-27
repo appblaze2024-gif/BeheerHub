@@ -14,6 +14,7 @@ import {
   FileCheck,
   MapPin,
   ClipboardCheck,
+  File,
 } from 'lucide-react';
 import { ElementType, createElement } from 'react';
 import Image from 'next/image';
@@ -45,6 +46,7 @@ export const allMenuItems: MenuItem[] = [
     { href: '/work-planning', label: 'Werkplanning', icon: CalendarCheck, module: 'workPlanning', color: 'bg-muted hover:bg-accent' },
     { href: '/weekly-reports', label: 'Weekstaten', icon: Newspaper, module: 'weeklyReports', color: 'bg-muted hover:bg-accent' },
     { href: '/reports', label: 'Rapportages', icon: FileText, module: 'reports', color: 'bg-muted hover:bg-accent' },
+    { href: '/bestanden', label: 'Bestanden', icon: File, module: 'bestanden', color: 'bg-muted hover:bg-accent' },
     { href: '/vehicles', label: 'Wagenpark', icon: Truck, module: 'vehicles', color: 'bg-muted hover:bg-accent' },
     { href: '/objects', label: 'Objecten', icon: MapPin, module: 'objects', color: 'bg-muted hover:bg-accent' },
     { href: '/inventory', label: 'Voorraadbeheer', icon: Package, module: 'inventory', color: 'bg-muted hover:bg-accent' },
