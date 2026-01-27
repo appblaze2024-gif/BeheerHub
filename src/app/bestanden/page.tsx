@@ -4,19 +4,15 @@ import * as React from 'react';
 import {
   Folder as FolderIcon,
   Plus,
-  Copy,
-  Move,
-  Archive,
-  MoreHorizontal,
-  Trash2,
-  Search,
   ChevronDown,
   Download,
   File as FileIcon,
   FolderPlus,
+  Trash2,
+  ChevronRight,
+  MoreHorizontal,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -43,7 +39,38 @@ import type { Bestand, Project, Folder } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { FolderCreateDialog } from '@/components/folder-create-dialog';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 
+interface FolderWithChildren extends Folder {
+    children: FolderWithChildren[];
+}
+
+const FolderTreeItem = ({ folder, selectedFolderId, onSelectFolder, level }: { folder: FolderWithChildren, selectedFolderId: string, onSelectFolder: (folderId: string) => void, level: number }) => {
+    const [isOpen, setIsOpen] = React.useState(true);
+    
+    return (
+        <div className="flex flex-col">
+            <div
+                className={cn('flex items-center gap-1 rounded-md p-1 cursor-pointer hover:bg-muted', selectedFolderId === folder.id && 'bg-secondary')}
+                style={{ paddingLeft: `${level * 16}px` }}
+                onClick={() => onSelectFolder(folder.id)}
+            >
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}>
+                    {folder.children.length > 0 && (isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />)}
+                </Button>
+                <FolderIcon className="h-4 w-4 text-primary" />
+                <span className="flex-1 truncate text-sm">{folder.name}</span>
+            </div>
+            {isOpen && folder.children.length > 0 && (
+                <div className="flex flex-col">
+                    {folder.children.map(child => (
+                        <FolderTreeItem key={child.id} folder={child} selectedFolderId={selectedFolderId} onSelectFolder={onSelectFolder} level={level + 1} />
+                    ))}
+                </div>
+            )}
+        </div>
+    )
+}
 
 export default function BestandenPage() {
   const firestore = useFirestore();
@@ -52,15 +79,41 @@ export default function BestandenPage() {
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
   const [selectedFolderId, setSelectedFolderId] = React.useState<string>('root');
   const [isUploadDialogOpen, setIsUploadDialogOpen] = React.useState(false);
-  const [folderPath, setFolderPath] = React.useState<{id: string, name: string}[]>([{id: 'root', name: 'Root'}]);
-
 
   const projectsCollection = React.useMemo(() => {
     if (!firestore) return null;
     return collection(firestore, 'projects');
   }, [firestore]);
-
   const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsCollection);
+
+  const allFoldersQuery = React.useMemo(() => {
+    if (!firestore || !selectedProjectId) return null;
+    return collection(firestore, 'projects', selectedProjectId, 'folders');
+  }, [firestore, selectedProjectId]);
+  const { data: allFolders, isLoading: isLoadingAllFolders } = useCollection<Folder>(allFoldersQuery);
+  
+  const folderTree = React.useMemo(() => {
+    if (!allFolders) return [];
+    const folderMap = new Map<string, FolderWithChildren>(allFolders.map(f => [f.id, { ...f, children: [] }]));
+    const tree: FolderWithChildren[] = [];
+
+    allFolders.forEach(f => {
+        if (f.folderId && folderMap.has(f.folderId)) {
+            folderMap.get(f.folderId)?.children.push(folderMap.get(f.id)!);
+        } else {
+            tree.push(folderMap.get(f.id)!);
+        }
+    });
+
+    const sortFolders = (folders: FolderWithChildren[]) => {
+        folders.sort((a, b) => a.name.localeCompare(b.name));
+        folders.forEach(f => sortFolders(f.children));
+    }
+    sortFolders(tree);
+
+    return tree;
+  }, [allFolders]);
+
 
   const subFoldersQuery = React.useMemo(() => {
     if (!firestore || !selectedProjectId) return null;
@@ -88,41 +141,12 @@ export default function BestandenPage() {
     const foldersWithType = (subFolders || []).map(f => ({ ...f, itemType: 'folder' as const }));
     const filesWithType = (bestanden || []).map(b => ({ ...b, itemType: 'file' as const }));
     
-    // Sort folders first, then files, both alphabetically
     foldersWithType.sort((a, b) => a.name.localeCompare(b.name));
     filesWithType.sort((a, b) => a.name.localeCompare(b.name));
 
     return [...foldersWithType, ...filesWithType];
   }, [subFolders, bestanden]);
   
-  React.useEffect(() => {
-    if (selectedFolderId === 'root') {
-        setFolderPath([{id: 'root', name: 'Root'}]);
-        return;
-    }
-    
-    if (!firestore || !selectedProjectId) return;
-
-    const buildPath = async (folderId: string) => {
-        const path: {id: string, name: string}[] = [];
-        let currentId: string | null = folderId;
-        while(currentId && currentId !== 'root') {
-            const folderRef = doc(firestore, 'projects', selectedProjectId, 'folders', currentId);
-            const folderSnap = await getDoc(folderRef);
-            if (folderSnap.exists()) {
-                const folderData = folderSnap.data() as Folder;
-                path.unshift({ id: folderSnap.id, name: folderData.name });
-                currentId = folderData.folderId || null;
-            } else {
-                break;
-            }
-        }
-        setFolderPath([{id: 'root', name: 'Root'}, ...path]);
-    }
-    
-    buildPath(selectedFolderId);
-  }, [selectedFolderId, firestore, selectedProjectId]);
-
 
   const formatBytes = (bytes: number, decimals = 2) => {
     if (bytes === 0) return '0 Bytes';
@@ -148,7 +172,6 @@ export default function BestandenPage() {
           console.error("Fout bij het verwijderen van storage object:", error);
           if ((error as any).code !== 'storage/object-not-found') {
             // If the error is other than not found, we might want to stop.
-            // But for now, we'll proceed to delete the firestore doc anyway.
           }
         }
     }
@@ -158,7 +181,6 @@ export default function BestandenPage() {
   const deleteFolderAndContents = async (folderId: string) => {
     if (!firestore || !selectedProjectId || !app) return;
   
-    // Get subfolders first to recurse
     const subfoldersQuery = query(collection(firestore, 'projects', selectedProjectId, 'folders'), where('folderId', '==', folderId));
     const subfoldersSnapshot = await getDocs(subfoldersQuery);
   
@@ -166,11 +188,9 @@ export default function BestandenPage() {
       await deleteFolderAndContents(subfolderDoc.id); // Recursion
     }
   
-    // Now delete this folder's files and the folder itself
     const batch = writeBatch(firestore);
     const storage = getStorage(app);
   
-    // Delete files in the current folder
     const filesQuery = query(collection(firestore, 'projects', selectedProjectId, 'bestanden'), where('folderId', '==', folderId));
     const filesSnapshot = await getDocs(filesQuery);
   
@@ -190,7 +210,6 @@ export default function BestandenPage() {
   
     await Promise.all(deleteStoragePromises);
   
-    // Delete the folder document itself
     const folderRef = doc(firestore, 'projects', selectedProjectId, 'folders', folderId);
     batch.delete(folderRef);
   
@@ -251,6 +270,28 @@ export default function BestandenPage() {
       
       {selectedProjectId ? (
         <div className="flex-1 flex gap-6 min-h-0">
+            <aside className='w-64 bg-card rounded-lg border p-2 flex flex-col'>
+                <div className='flex-1 overflow-y-auto space-y-0.5 pr-1'>
+                    <div
+                        className={cn('flex items-center gap-1 rounded-md p-1 cursor-pointer hover:bg-muted', selectedFolderId === 'root' && 'bg-secondary')}
+                        onClick={() => setSelectedFolderId('root')}
+                    >
+                        <FolderIcon className="h-5 w-5 text-primary" />
+                        <span className="flex-1 truncate text-sm font-semibold">Root</span>
+                    </div>
+                    {isLoadingAllFolders ? (
+                       <div className="space-y-2 mt-2">
+                            <Skeleton className="h-8 w-full" />
+                            <Skeleton className="h-8 w-full" />
+                            <Skeleton className="h-8 w-full" />
+                       </div>
+                    ) : (
+                        folderTree.map(folder => (
+                           <FolderTreeItem key={folder.id} folder={folder} selectedFolderId={selectedFolderId} onSelectFolder={setSelectedFolderId} level={0} />
+                        ))
+                    )}
+                </div>
+            </aside>
             <main className="flex-1 bg-card rounded-lg border flex flex-col min-h-0">
                 <div className="p-3 border-b flex flex-wrap gap-2 justify-between items-center">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -258,29 +299,6 @@ export default function BestandenPage() {
                            <Button variant="outline"><FolderPlus className="mr-2 h-4 w-4" /> Nieuwe Map</Button>
                         </FolderCreateDialog>
                         <Button onClick={() => setIsUploadDialogOpen(true)}><Plus className="mr-2 h-4 w-4" /> Toevoegen Bestand</Button>
-                        <Button variant="outline" disabled>Kopiëren</Button>
-                        <Button variant="outline" disabled>Verplaatsen</Button>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild><Button variant="outline" disabled>Archiveren <ChevronDown className="ml-2 h-4 w-4" /></Button></DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                                <DropdownMenuItem>Toevoegen aan archief</DropdownMenuItem>
-                                <DropdownMenuItem>Archief uitpakken</DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                        <Button variant="destructive" disabled>Verwijderen</Button>
-                    </div>
-                     <div className="flex items-center gap-1 text-sm text-muted-foreground p-2 flex-wrap">
-                        {folderPath.map((folder, index) => (
-                            <React.Fragment key={folder.id}>
-                                {index > 0 && <span className="text-xs">/</span>}
-                                <button 
-                                    onClick={() => setSelectedFolderId(folder.id)}
-                                    className={cn('hover:underline text-sm p-1 rounded', index === folderPath.length - 1 && 'font-semibold text-foreground bg-muted')}
-                                >
-                                    {folder.name}
-                                </button>
-                            </React.Fragment>
-                        ))}
                     </div>
                 </div>
 
