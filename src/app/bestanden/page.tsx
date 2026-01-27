@@ -221,9 +221,6 @@ export default function BestandenPage() {
         doc(firestore, 'projects', selectedProjectId, 'folders', id)
       );
 
-      // Diagnostic Alert
-      alert(`${folderDocsToDelete.length} map(pen) en ${filesToDelete.length} bestand(en) worden verwijderd.`);
-
       // 3. Delete files from Storage
       const storage = getStorage(app);
       const deleteStoragePromises = filesToDelete
