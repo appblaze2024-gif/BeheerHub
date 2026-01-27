@@ -156,3 +156,13 @@ export type Project = {
   veegroutes?: any[]; // Replace with specific type if known
   prullenbakkenroutes?: any[]; // Replace with specific type if known
 };
+
+export type Bestand = {
+    id: string;
+    name: string;
+    type: string;
+    size: number;
+    url: string;
+    uploadedAt: string;
+    storagePath: string;
+};
