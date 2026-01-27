@@ -97,15 +97,18 @@ export function SaveWeekPdfDialog({ open, onOpenChange, project, medewerkers, di
   
   const folderTree = React.useMemo(() => {
     if (!allFolders) return [];
-    const folderMap = new Map<string, FolderWithChildren>(allFolders.map(f => ({ ...f, children: [] })));
+    const folderMap = new Map<string, FolderWithChildren>(allFolders.map(f => [f.id, { ...f, children: [] }]));
     const tree: FolderWithChildren[] = [];
 
     allFolders.forEach(f => {
+      const node = folderMap.get(f.id);
+      if (node) {
         if (f.folderId && folderMap.has(f.folderId)) {
-            folderMap.get(f.folderId)?.children.push(folderMap.get(f.id)!);
+          folderMap.get(f.folderId)!.children.push(node);
         } else {
-            tree.push(folderMap.get(f.id)!);
+          tree.push(node);
         }
+      }
     });
 
     const sortFolders = (folders: FolderWithChildren[]) => {
@@ -176,7 +179,7 @@ export function SaveWeekPdfDialog({ open, onOpenChange, project, medewerkers, di
     const storage = getStorage(app);
     const storagePath = `projects/${project.id}/bestanden/${selectedFolderId || 'root'}/${fileName}`;
     const storageRef = ref(storage, storagePath);
-    const uploadTask = uploadBytesResumable(storageRef, file);
+    const uploadTask = uploadBytesResumable(storageRef, pdfFile);
 
     uploadTask.on(
       'state_changed',
