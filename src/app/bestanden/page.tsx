@@ -30,7 +30,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { useCollection, useFirestore, useFirebaseApp } from '@/firebase';
-import { collection, doc, query, where, getDocs, writeBatch, deleteDoc } from 'firebase/firestore';
+import { collection, doc, query, where, getDocs, writeBatch, deleteDoc, type DocumentReference, type WriteBatch, type Firestore } from 'firebase/firestore';
 import { getStorage, ref, deleteObject } from 'firebase/storage';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -173,60 +173,78 @@ export default function BestandenPage() {
     await deleteDoc(bestandDocRef);
   };
 
-  const deleteFolderAndContents = async (folderId: string) => {
-    if (!firestore || !selectedProjectId || !app) return;
-  
-    const subfoldersQuery = query(collection(firestore, 'projects', selectedProjectId, 'folders'), where('folderId', '==', folderId));
-    const subfoldersSnapshot = await getDocs(subfoldersQuery);
-  
-    for (const subfolderDoc of subfoldersSnapshot.docs) {
-      await deleteFolderAndContents(subfolderDoc.id); // Recursion
-    }
-  
-    const batch = writeBatch(firestore);
-    const storage = getStorage(app);
-  
-    const filesQuery = query(collection(firestore, 'projects', selectedProjectId, 'bestanden'), where('folderId', '==', folderId));
-    const filesSnapshot = await getDocs(filesQuery);
-  
-    const deleteStoragePromises = filesSnapshot.docs.map(docSnapshot => {
-      const bestand = docSnapshot.data() as Bestand;
-      batch.delete(docSnapshot.ref);
-      if (bestand.storagePath) {
-        const storageRef = ref(storage, bestand.storagePath);
-        return deleteObject(storageRef).catch(error => {
-          if ((error as any).code !== 'storage/object-not-found') {
-            console.error(`Failed to delete storage object ${bestand.storagePath}:`, error);
-          }
-        });
-      }
-      return Promise.resolve();
-    });
-  
-    await Promise.all(deleteStoragePromises);
-  
-    const folderRef = doc(firestore, 'projects', selectedProjectId, 'folders', folderId);
-    batch.delete(folderRef);
-  
-    await batch.commit();
-  };
-  
   const handleDeleteFolder = async (e: React.MouseEvent, folder: Folder) => {
     e.stopPropagation();
     if (!firestore || !app || !selectedProjectId) return;
-  
-    if (!window.confirm(`Weet u zeker dat u de map "${folder.name}" en alle inhoud (inclusief submappen) wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.`)) {
+
+    if (
+      !window.confirm(
+        `Weet u zeker dat u de map "${folder.name}" en alle inhoud (inclusief submappen) wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.`
+      )
+    ) {
       return;
     }
-  
+    
+    const getAllDeletions = async (folderId: string, projectId: string, db: Firestore) => {
+        const folderRefsToDelete: DocumentReference[] = [];
+        const filesToDelete: { docRef: DocumentReference; storagePath?: string }[] = [];
+        const foldersToScan = [folderId];
+    
+        while (foldersToScan.length > 0) {
+            const currentFolderId = foldersToScan.pop()!;
+            
+            folderRefsToDelete.push(doc(db, 'projects', projectId, 'folders', currentFolderId));
+    
+            const subfoldersQuery = query(collection(db, 'projects', projectId, 'folders'), where('folderId', '==', currentFolderId));
+            const subfoldersSnapshot = await getDocs(subfoldersQuery);
+            subfoldersSnapshot.forEach(subDoc => foldersToScan.push(subDoc.id));
+    
+            const filesQuery = query(collection(db, 'projects', projectId, 'bestanden'), where('folderId', '==', currentFolderId));
+            const filesSnapshot = await getDocs(filesQuery);
+            filesSnapshot.forEach(fileDoc => {
+                filesToDelete.push({
+                    docRef: fileDoc.ref,
+                    storagePath: fileDoc.data().storagePath
+                });
+            });
+        }
+    
+        return { folderRefsToDelete, filesToDelete };
+    };
+
     try {
-      await deleteFolderAndContents(folder.id);
+      const { folderRefsToDelete, filesToDelete } = await getAllDeletions(folder.id, selectedProjectId, firestore);
+
+      const storage = getStorage(app);
+      const deleteStoragePromises = filesToDelete
+        .filter((f) => f.storagePath)
+        .map((f) => {
+          const storageRef = ref(storage, f.storagePath!);
+          return deleteObject(storageRef).catch((error) => {
+            if ((error as any).code !== 'storage/object-not-found') {
+              console.error(`Failed to delete storage object ${f.storagePath}:`, error);
+            }
+          });
+        });
+      await Promise.all(deleteStoragePromises);
+
+      const allDocRefs = [...folderRefsToDelete, ...filesToDelete.map(f => f.docRef)];
+      const batchSize = 500;
+      for (let i = 0; i < allDocRefs.length; i += batchSize) {
+        const batch = writeBatch(firestore);
+        const chunk = allDocRefs.slice(i, i + batchSize);
+        chunk.forEach(docRef => batch.delete(docRef));
+        await batch.commit();
+      }
+
       if (selectedFolderId === folder.id) {
         setSelectedFolderId(folder.folderId || 'root');
       }
     } catch (error) {
       console.error("Fout bij het verwijderen van de map:", error);
-      alert("Er is een fout opgetreden bij het verwijderen van de map. Controleer de console voor details.");
+      alert(
+        'Er is een fout opgetreden bij het verwijderen van de map. Controleer de console voor details.'
+      );
     }
   };
 
