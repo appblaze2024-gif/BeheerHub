@@ -30,9 +30,21 @@ import {
 } from './ui/dropdown-menu';
 import { Checkbox } from './ui/checkbox';
 import { useProfile } from '@/firebase/profile-provider';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
+
+const mapStyles = [
+    { name: 'Standaard', url: 'mapbox://styles/mapbox/streets-v12' },
+    { name: 'Buiten', url: 'mapbox://styles/mapbox/outdoors-v12' },
+    { name: 'Licht', url: 'mapbox://styles/mapbox/light-v11' },
+    { name: 'Donker', url: 'mapbox://styles/mapbox/dark-v11' },
+    { name: 'Satelliet', url: 'mapbox://styles/mapbox/satellite-v9' },
+    { name: 'Satelliet met straten', url: 'mapbox://styles/mapbox/satellite-streets-v12' },
+    { name: 'Navigatie (dag)', url: 'mapbox://styles/mapbox/navigation-day-v1' },
+    { name: 'Navigatie (nacht)', url: 'mapbox://styles/mapbox/navigation-night-v1' },
+];
 
 interface AreaLike {
   id: string;
@@ -188,6 +200,9 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   const [availableRoads, setAvailableRoads] = React.useState<string[]>([]);
   const [selectedRoads, setSelectedRoads] = React.useState<string[]>([]);
   const [allRoadFeatures, setAllRoadFeatures] = React.useState<turf.Feature<turf.LineString>[]>([]);
+  
+  const { profile } = useProfile();
+  const [currentMapStyle, setCurrentMapStyle] = React.useState(profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12');
 
   const isFillModeRef = React.useRef(isFillMode);
   isFillModeRef.current = isFillMode;
@@ -200,8 +215,6 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   
   const initialFeaturesRef = React.useRef<any[]>([]);
 
-  const { profile } = useProfile();
-  const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
 
   const geojson = React.useMemo(() => {
     if (!wijk?.subGebieden) return null;
@@ -241,14 +254,15 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   }, [referenceAreas]);
 
   React.useEffect(() => {
-    if (open && wijk) {
-        if (showRoadTypes) {
+    if (open) {
+        setCurrentMapStyle(profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12');
+        if (wijk && showRoadTypes) {
             setSelectedRoads(wijk.roadTypes || []);
         } else {
             setSelectedRoads([]);
         }
     }
-  }, [open, wijk, showRoadTypes]);
+  }, [open, wijk, showRoadTypes, profile?.schouwenMapStyle]);
 
   const fetchRoadsForPolygon = React.useCallback(async (polygon: turf.Feature<turf.Polygon | turf.MultiPolygon>): Promise<turf.Feature<turf.LineString>[]> => {
     const roadTypesQuery = (wijk?.roadTypes && wijk.roadTypes.length > 0) 
@@ -964,6 +978,21 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                       </Button>
                   </div>
               </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="map-style-select" className="text-xs font-semibold">Kaartstijl</Label>
+                  <Select value={currentMapStyle} onValueChange={setCurrentMapStyle}>
+                      <SelectTrigger id="map-style-select" className="mt-1">
+                          <SelectValue placeholder="Kies een stijl" />
+                      </SelectTrigger>
+                      <SelectContent>
+                          {mapStyles.map(style => (
+                              <SelectItem key={style.url} value={style.url}>{style.name}</SelectItem>
+                          ))}
+                      </SelectContent>
+                  </Select>
+                </div>
+              </div>
               {showRoadTypes && !readOnly && (
                 <div className="space-y-2">
                     <div className='flex justify-between items-center'>
@@ -1003,7 +1032,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
           <MapGL
             ref={mapRef}
             initialViewState={initialViewState}
-            mapStyle={mapStyle}
+            mapStyle={currentMapStyle}
             mapboxAccessToken={MAPBOX_TOKEN}
             onLoad={onMapLoad}
             preserveDrawingBuffer
