@@ -92,8 +92,8 @@ export function AppSidebar() {
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
-                <span className="font-semibold text-base">{profile?.displayName || 'Gebruiker'}</span>
-                <span className="text-sm text-muted-foreground capitalize">{profile?.role}</span>
+                <span className="font-semibold text-base capitalize">{profile?.role || 'Rol Onbekend'}</span>
+                <span className="text-sm text-muted-foreground">{user?.email}</span>
             </div>
           </div>
         </SidebarHeader>
