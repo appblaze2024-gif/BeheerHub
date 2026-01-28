@@ -19,7 +19,7 @@ import { NavigationUIProvider, useNavigationUI } from '@/context/navigation-ui-c
 import { signOut } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Menu, Search, Bell, Plus, User, Settings } from 'lucide-react';
+import { Menu, Search, Bell, User, Settings } from 'lucide-react';
 import { AppSidebar } from '@/components/app-sidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
@@ -38,8 +38,8 @@ function Header() {
   const auth = useAuth();
   const { user } = useUser();
   const { profile } = useProfile();
-  const [isSearchOpen, setIsSearchOpen] = React.useState(false);
-  const searchInputRef = React.useRef<HTMLInputElement>(null);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const getInitials = (firstName?: string, lastName?: string) => {
     const firstInitial = firstName?.[0] || '';
