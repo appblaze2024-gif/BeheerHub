@@ -1,13 +1,23 @@
 'use client';
 
 import {
-  List,
+  LayoutDashboard,
+  ClipboardList,
   MapPin,
-  Route,
   Users,
   Users2,
   Camera,
   Newspaper,
+  Folder,
+  Truck,
+  FileText,
+  Warehouse,
+  Bell,
+  Navigation,
+  Mail,
+  Settings,
+  User,
+  FileWarning,
 } from 'lucide-react';
 import { ElementType } from 'react';
 
@@ -19,11 +29,23 @@ export interface MenuItem {
 }
 
 export const allMenuItems: MenuItem[] = [
-    { href: '/work-planning', label: 'Werklijsten', icon: List, module: 'workPlanning' },
-    { href: '/objects', label: 'Locaties', icon: MapPin, module: 'objects' },
-    { href: '/navigation-module', label: 'Routes', icon: Route, module: 'navigation' },
-    { href: '/employees', label: 'Gebruikers', icon: Users, module: 'employees' },
+    { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/projects', label: 'Projecten', icon: Folder, module: 'projects' },
+    { href: '/employees', label: 'Medewerkers', icon: Users, module: 'employees' },
+    { href: '/work-planning', label: 'Werkplanning', icon: ClipboardList, module: 'workPlanning' },
+    { href: '/weekly-reports', label: 'Weekstaten', icon: FileText, module: 'weeklyReports' },
+    { href: '/reports', label: 'Rapporten', icon: FileText, module: 'reports' },
+    { href: '/bestanden', label: 'Bestanden', icon: Folder, module: 'bestanden' },
+    { href: '/vehicles', label: 'Wagenpark', icon: Truck, module: 'vehicles' },
+    { href: '/objects', label: 'Objecten', icon: MapPin, module: 'objects' },
+    { href: '/inventory', label: 'Voorraadbeheer', icon: Warehouse, module: 'inventory' },
+    { href: '/issues', label: 'Meldingen', icon: Bell, module: 'issues' },
+    { href: '/spec-reports', label: 'Besteksmeldingen', icon: FileWarning, module: 'specReports' },
+    { href: '/navigation-module', label: 'Navigatiemodule', icon: Navigation, module: 'navigation' },
     { href: '/teams', label: 'Teams', icon: Users2, module: 'teams' },
     { href: '/photo-review', label: 'Foto beoordeling', icon: Camera, module: 'photo-review' },
+    { href: '/mail', label: 'Mail', icon: Mail, module: 'mail' },
     { href: '/news', label: 'Nieuws berichten', icon: Newspaper, module: 'news' },
+    { href: '/profile', label: 'Mijn Profiel', icon: User, module: 'users' },
+    { href: '/settings', label: 'Instellingen', icon: Settings },
 ];

@@ -65,7 +65,7 @@ export function AppSidebar() {
 
     return allMenuItems.filter(item => {
       if (item.href === '/') {
-        return false;
+        return true;
       }
       if (!item.module) {
         return true;
