@@ -19,36 +19,102 @@ import { NavigationUIProvider, useNavigationUI } from '@/context/navigation-ui-c
 import { signOut } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Menu, Search, Trees, Crosshair, Wifi, Send, ListFilter } from 'lucide-react';
+import { Menu, Search, Bell, Plus, User, Settings } from 'lucide-react';
 import { AppSidebar } from '@/components/app-sidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Input } from '@/components/ui/input';
 
 
 function Header() {
-    return (
-        <header className="bg-background flex h-16 shrink-0 items-center justify-between border-b border-border px-4 shadow-sm z-10">
-            <div className="flex items-center gap-1">
-                <Sheet>
-                    <SheetTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                            <Menu className="h-6 w-6" />
-                        </Button>
-                    </SheetTrigger>
-                    <SheetContent side="left" className="p-0 w-80">
-                        <AppSidebar />
-                    </SheetContent>
-                </Sheet>
-                <Button variant="ghost" size="icon"><Trees className="h-6 w-6" /></Button>
-                <Button variant="ghost" size="icon"><Crosshair className="h-6 w-6" /></Button>
-                <Button variant="ghost" size="icon"><Search className="h-6 w-6" /></Button>
-            </div>
-            <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon"><Wifi className="h-6 w-6" /></Button>
-                <Button variant="ghost" size="icon"><Send className="h-6 w-6" /></Button>
-                <Button variant="ghost" size="icon"><ListFilter className="h-6 w-6" /></Button>
-            </div>
-        </header>
-    );
+  const auth = useAuth();
+  const { user } = useUser();
+  const { profile } = useProfile();
+
+  const getInitials = (firstName?: string, lastName?: string) => {
+    const firstInitial = firstName?.[0] || '';
+    const lastInitial = lastName?.[0] || '';
+    return `${firstInitial}${lastInitial}`.toUpperCase();
+  };
+
+  return (
+    <header className="bg-background flex h-16 shrink-0 items-center justify-between border-b border-border px-4 md:px-6 shadow-sm z-10">
+      <div className="flex items-center gap-2">
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <Menu className="h-6 w-6" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="p-0 w-80">
+            <AppSidebar />
+          </SheetContent>
+        </Sheet>
+        <div className="relative flex-1 max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Zoeken..." className="pl-9" />
+        </div>
+      </div>
+
+      <div className="flex items-center gap-4">
+        <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Nieuw
+        </Button>
+        <Button variant="ghost" size="icon">
+          <Bell className="h-5 w-5" />
+        </Button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={user?.photoURL || undefined} alt={profile?.displayName || ''} />
+                <AvatarFallback>
+                  {getInitials(profile?.firstName, profile?.lastName)}
+                </AvatarFallback>
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56" align="end" forceMount>
+            <DropdownMenuLabel className="font-normal">
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium leading-none">{profile?.displayName}</p>
+                <p className="text-xs leading-none text-muted-foreground">
+                  {user?.email}
+                </p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+                <Link href="/profile">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Mijn Profiel</span>
+                </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+                <Link href="/settings">
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Instellingen</span>
+                </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => signOut(auth)}>
+              Log uit
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </header>
+  );
 }
 
 
