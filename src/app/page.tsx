@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -25,13 +26,16 @@ const boundaryLayer: Layer = {
   },
 };
 
-const LayerToggle = ({ label, checked, onCheckedChange, color }: { label: string, checked: boolean, onCheckedChange: (checked: boolean) => void, color: string }) => (
-    <div className="flex items-center space-x-2">
-      <Checkbox id={label} checked={checked} onCheckedChange={onCheckedChange} />
-      <Label htmlFor={label} className="flex items-center gap-2 text-sm font-medium">
-        <div className={cn("h-3 w-3 rounded-full", color)} />
-        {label}
-      </Label>
+const LayerToggle = ({ label, count, checked, onCheckedChange, color }: { label: string, count: number, checked: boolean, onCheckedChange: (checked: boolean) => void, color: string }) => (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center space-x-2">
+        <Checkbox id={label} checked={checked} onCheckedChange={onCheckedChange} />
+        <Label htmlFor={label} className="flex cursor-pointer items-center gap-2 text-sm font-medium">
+          <div className={cn("h-3 w-3 rounded-full", color)} />
+          {label}
+        </Label>
+      </div>
+      <Badge variant="secondary" className="font-mono text-xs">{count}</Badge>
     </div>
 );
 
@@ -47,7 +51,6 @@ export default function DashboardPage() {
     zoom: 7,
   });
 
-  // Layer visibility state
   const [visibleLayers, setVisibleLayers] = React.useState({
     objects: false,
     meldingen: false,
@@ -56,16 +59,14 @@ export default function DashboardPage() {
 
   const [selectedPin, setSelectedPin] = React.useState<any>(null);
 
-  // Fetching data
-  const { data: objects, isLoading: isLoadingObjects } = useCollection<MapObject>(
-    firestore ? collection(firestore, 'objects') : null
-  );
-  const { data: meldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(
-    firestore ? collection(firestore, 'meldingen') : null
-  );
-  const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(
-    firestore ? collection(firestore, 'projects') : null
-  );
+  // Memoize Firestore queries to prevent re-renders
+  const objectsQuery = React.useMemo(() => firestore ? collection(firestore, 'objects') : null, [firestore]);
+  const meldingenQuery = React.useMemo(() => firestore ? collection(firestore, 'meldingen') : null, [firestore]);
+  const projectsQuery = React.useMemo(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
+
+  const { data: objects, isLoading: isLoadingObjects } = useCollection<MapObject>(objectsQuery);
+  const { data: meldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenQuery);
+  const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
   
   const [allBesteksmeldingen, setAllBesteksmeldingen] = React.useState<Besteksmelding[]>([]);
   const [isLoadingBesteksmeldingen, setIsLoadingBesteksmeldingen] = React.useState(true);
@@ -238,18 +239,21 @@ export default function DashboardPage() {
             <CardContent className="p-3 space-y-2">
                 <LayerToggle 
                     label="Objecten" 
+                    count={objects?.length || 0}
                     checked={visibleLayers.objects} 
                     onCheckedChange={(checked) => setVisibleLayers(v => ({...v, objects: !!checked}))}
                     color="bg-blue-600"
                 />
                  <LayerToggle 
                     label="Meldingen" 
+                    count={meldingen?.length || 0}
                     checked={visibleLayers.meldingen} 
                     onCheckedChange={(checked) => setVisibleLayers(v => ({...v, meldingen: !!checked}))}
                     color="bg-red-600"
                 />
                  <LayerToggle 
                     label="Besteksmeldingen" 
+                    count={allBesteksmeldingen?.length || 0}
                     checked={visibleLayers.besteksmeldingen} 
                     onCheckedChange={(checked) => setVisibleLayers(v => ({...v, besteksmeldingen: !!checked}))}
                     color="bg-orange-500"
