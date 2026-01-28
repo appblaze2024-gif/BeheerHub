@@ -152,18 +152,6 @@ export default function StartNavigationPage() {
         )}
       </MapGL>
         
-      {locationError && (
-          <div className="absolute top-4 right-4 z-10">
-            <Alert variant="destructive" className="max-w-md">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Locatie Fout</AlertTitle>
-                <AlertDescription>
-                    {locationError}
-                </AlertDescription>
-            </Alert>
-          </div>
-      )}
-
       <Card className="absolute top-4 left-4 z-10 w-full max-w-sm">
         <CardHeader>
           <div className="flex items-center gap-2">
