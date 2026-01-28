@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import * as React from 'react';
 import MapGL, { Source, Layer, type MapRef, Marker, Popup } from 'react-map-gl';
@@ -13,6 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -58,6 +59,7 @@ export default function DashboardPage() {
   });
 
   const [selectedPin, setSelectedPin] = React.useState<any>(null);
+  const [isLayersPanelOpen, setIsLayersPanelOpen] = React.useState(false);
 
   // Memoize Firestore queries to prevent re-renders
   const objectsQuery = React.useMemo(() => firestore ? collection(firestore, 'objects') : null, [firestore]);
@@ -232,34 +234,46 @@ export default function DashboardPage() {
         {renderPopup()}
 
       </MapGL>
-        <Card className="absolute top-4 right-4 z-10 w-64">
-            <CardHeader className="flex flex-row items-center justify-between p-3 border-b">
-                <CardTitle className="text-base flex items-center gap-2"><Layers className="h-4 w-4" /> Kaartlagen</CardTitle>
-            </CardHeader>
-            <CardContent className="p-3 space-y-2">
-                <LayerToggle 
-                    label="Objecten" 
-                    count={objects?.length || 0}
-                    checked={visibleLayers.objects} 
-                    onCheckedChange={(checked) => setVisibleLayers(v => ({...v, objects: !!checked}))}
-                    color="bg-blue-600"
-                />
-                 <LayerToggle 
-                    label="Meldingen" 
-                    count={meldingen?.length || 0}
-                    checked={visibleLayers.meldingen} 
-                    onCheckedChange={(checked) => setVisibleLayers(v => ({...v, meldingen: !!checked}))}
-                    color="bg-red-600"
-                />
-                 <LayerToggle 
-                    label="Besteksmeldingen" 
-                    count={allBesteksmeldingen?.length || 0}
-                    checked={visibleLayers.besteksmeldingen} 
-                    onCheckedChange={(checked) => setVisibleLayers(v => ({...v, besteksmeldingen: !!checked}))}
-                    color="bg-orange-500"
-                />
-            </CardContent>
-        </Card>
+      <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
+            <Button
+                variant="secondary"
+                size="icon"
+                className="rounded-full h-12 w-12 shadow-lg"
+                onClick={() => setIsLayersPanelOpen(!isLayersPanelOpen)}
+            >
+                <Layers className="h-6 w-6" />
+            </Button>
+            {isLayersPanelOpen && (
+                <Card className="w-64">
+                    <CardHeader className="flex flex-row items-center justify-between p-3 border-b">
+                        <CardTitle className="text-base">Kaartlagen</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-3 space-y-2">
+                        <LayerToggle 
+                            label="Objecten" 
+                            count={objects?.length || 0}
+                            checked={visibleLayers.objects} 
+                            onCheckedChange={(checked) => setVisibleLayers(v => ({...v, objects: !!checked}))}
+                            color="bg-blue-600"
+                        />
+                        <LayerToggle 
+                            label="Meldingen" 
+                            count={meldingen?.length || 0}
+                            checked={visibleLayers.meldingen} 
+                            onCheckedChange={(checked) => setVisibleLayers(v => ({...v, meldingen: !!checked}))}
+                            color="bg-red-600"
+                        />
+                        <LayerToggle 
+                            label="Besteksmeldingen" 
+                            count={allBesteksmeldingen?.length || 0}
+                            checked={visibleLayers.besteksmeldingen} 
+                            onCheckedChange={(checked) => setVisibleLayers(v => ({...v, besteksmeldingen: !!checked}))}
+                            color="bg-orange-500"
+                        />
+                    </CardContent>
+                </Card>
+            )}
+        </div>
     </div>
   );
 }
