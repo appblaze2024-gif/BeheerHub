@@ -55,6 +55,9 @@ export const permissionConfig = [
         ]
     },
     { module: 'specReports', label: 'Besteksmeldingen', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }] },
+    { module: 'teams', label: 'Teams', actions: [{ id: 'view', label: 'Bekijken' }] },
+    { module: 'photo-review', label: 'Foto beoordeling', actions: [{ id: 'view', label: 'Bekijken' }] },
+    { module: 'news', label: 'Nieuws berichten', actions: [{ id: 'view', label: 'Bekijken' }] },
 ];
 
 export const getDefaultPermissions = () => {

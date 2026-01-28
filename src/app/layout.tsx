@@ -18,35 +18,44 @@ import { Toaster } from '@/components/ui/toaster';
 import { NavigationUIProvider, useNavigationUI } from '@/context/navigation-ui-context';
 import { signOut } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LogOut, Settings, ChevronDown } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Menu, Search, Trees, Crosshair, Wifi, Send, ListFilter } from 'lucide-react';
+import { AppSidebar } from '@/components/app-sidebar';
+import { useIsMobile } from '@/hooks/use-mobile';
+
+
+function Header() {
+    return (
+        <header className="bg-background flex h-16 shrink-0 items-center justify-between border-b border-border px-4 shadow-sm z-10">
+            <div className="flex items-center gap-1">
+                <Sheet>
+                    <SheetTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                            <Menu className="h-6 w-6" />
+                        </Button>
+                    </SheetTrigger>
+                    <SheetContent side="left" className="p-0 w-80">
+                        <AppSidebar />
+                    </SheetContent>
+                </Sheet>
+                <Button variant="ghost" size="icon"><Trees className="h-6 w-6" /></Button>
+                <Button variant="ghost" size="icon"><Crosshair className="h-6 w-6" /></Button>
+                <Button variant="ghost" size="icon"><Search className="h-6 w-6" /></Button>
+            </div>
+            <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon"><Wifi className="h-6 w-6" /></Button>
+                <Button variant="ghost" size="icon"><Send className="h-6 w-6" /></Button>
+                <Button variant="ghost" size="icon"><ListFilter className="h-6 w-6" /></Button>
+            </div>
+        </header>
+    );
+}
 
 
 function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
-  const { user, isUserLoading } = useUser();
-  const auth = useAuth();
-  const { profile, isLoading: isProfileLoading } = useProfile();
   const { isHeaderVisible } = useNavigationUI();
-  
-  const handleLogout = async () => {
-    if(auth) {
-      await signOut(auth);
-    }
-  };
-  
-  const getInitials = (firstName?: string, lastName?: string) => {
-    const firstInitial = firstName?.[0] || '';
-    const lastInitial = lastName?.[0] || '';
-    return `${firstInitial}${lastInitial}`.toUpperCase();
-  };
+  const { isUserLoading } = useUser();
+  const { isLoading: isProfileLoading } = useProfile();
   
   if (isUserLoading || isProfileLoading) {
       return (
@@ -58,45 +67,8 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={cn('font-body antialiased flex flex-col h-svh overflow-hidden')}>
-      {isHeaderVisible && (
-        <header className="bg-background flex h-24 shrink-0 items-center justify-between border-b border-border px-6 shadow-sm z-30">
-            <Link href="/" className="mr-4 flex items-center">
-              <Image
-                src="https://i.ibb.co/5gvYFDLC/BEHEERHUB.png"
-                alt="BEHEERHUB"
-                width={250}
-                height={62}
-              />
-            </Link>
-            
-            <div className="flex items-center gap-4">
-              <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="flex items-center gap-2">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={user?.photoURL || undefined} />
-                          <AvatarFallback>{getInitials(profile?.firstName, profile?.lastName)}</AvatarFallback>
-                        </Avatar>
-                        <span className="hidden md:inline">{profile?.displayName || profile?.email}</span>
-                        <ChevronDown className="h-4 w-4 hidden md:inline" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Mijn Account</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <Link href="/profile" passHref><DropdownMenuItem>Profiel</DropdownMenuItem></Link>
-                    <Link href="/settings" passHref><DropdownMenuItem>Instellingen</DropdownMenuItem></Link>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleLogout}>
-                        <LogOut className="mr-2 h-4 w-4" />
-                        <span>Uitloggen</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-        </header>
-      )}
-      <main className="flex-1 flex flex-col overflow-auto bg-background">
+      {isHeaderVisible && <Header />}
+      <main className="flex-1 flex flex-col overflow-auto bg-gray-100 dark:bg-gray-900">
         {children}
       </main>
       <Toaster />

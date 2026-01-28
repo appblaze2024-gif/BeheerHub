@@ -104,7 +104,10 @@ export function SaveWeekPdfDialog({ open, onOpenChange, project, medewerkers, di
       const node = folderMap.get(f.id);
       if (node) {
         if (f.folderId && folderMap.has(f.folderId)) {
-          folderMap.get(f.folderId)!.children.push(node);
+          const parent = folderMap.get(f.folderId);
+          if (parent) {
+            parent.children.push(node);
+          }
         } else {
           tree.push(node);
         }
@@ -112,8 +115,13 @@ export function SaveWeekPdfDialog({ open, onOpenChange, project, medewerkers, di
     });
 
     const sortFolders = (folders: FolderWithChildren[]) => {
-        folders.sort((a, b) => a.name.localeCompare(b.name));
-        folders.forEach(f => sortFolders(f.children));
+      if (!folders) return;
+      folders.sort((a, b) => (a?.name || '').localeCompare(b?.name || ''));
+      folders.forEach(f => {
+        if (f?.children) {
+          sortFolders(f.children);
+        }
+      });
     }
     sortFolders(tree);
 
