@@ -174,3 +174,50 @@ export interface Folder {
   createdAt: any;
   folderId?: string | null;
 }
+
+export interface Object {
+  id: string;
+  latitude: number;
+  longitude: number;
+  locatieType?: string;
+  locatieSubType?: string;
+  kwaliteit?: string;
+  isActief?: boolean;
+  straatnaam?: string;
+  huisnummer?: string;
+  waarschuwing?: string;
+  vulgraad?: number;
+  locatieWerkgebieden?: string[];
+}
+
+export type Melding = {
+  id: string;
+  intakenummer: string;
+  extern_meldingsnummer?: string;
+  latitude: number;
+  longitude: number;
+  subcategorie: string;
+  hoofdcategorie: string;
+  extra_informatie: string;
+  status:
+    | 'Nieuw'
+    | 'Intern doorgezet'
+    | 'In behandeling'
+    | 'Gepland op korte termijn'
+    | 'Gepland op langere termijn'
+    | 'Dubbel gemeld'
+    | 'Afgerond'
+    | 'Niet in beheer';
+  datum: string; // Creation date yyyy-MM-dd
+  tijdstip: string;
+  melder: string;
+  aangenomen_door?: string;
+  afgehandeld_door?: string;
+  afhandeling_datum?: string; // Completion date yyyy-MM-dd
+  straatnaam?: string;
+  huisnummer?: string;
+  postcode?: string;
+  plaats?: string;
+  wijk?: string;
+  files?: UploadedFile[];
+};
