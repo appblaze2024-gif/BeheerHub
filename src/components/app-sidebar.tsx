@@ -93,12 +93,12 @@ export function AppSidebar() {
             </Avatar>
             <div className="flex flex-col">
                 <span className="font-semibold text-base">{profile?.displayName || 'Gebruiker'}</span>
-                <span className="text-sm text-muted-foreground">{profile?.email}</span>
+                <span className="text-sm text-muted-foreground capitalize">{profile?.role}</span>
             </div>
           </div>
         </SidebarHeader>
 
-        <SidebarContent className="p-2">
+        <SidebarContent className="p-2 no-scrollbar">
           <div className="px-2 pb-2">
             <Select
               value={selectedProjectId}
