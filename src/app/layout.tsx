@@ -12,7 +12,7 @@ import {
 } from '@/firebase';
 import { ProfileProvider, useProfile } from '@/firebase/profile-provider';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import { NavigationUIProvider, useNavigationUI } from '@/context/navigation-ui-context';
@@ -38,6 +38,8 @@ function Header() {
   const auth = useAuth();
   const { user } = useUser();
   const { profile } = useProfile();
+  const [isSearchOpen, setIsSearchOpen] = React.useState(false);
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
 
   const getInitials = (firstName?: string, lastName?: string) => {
     const firstInitial = firstName?.[0] || '';
@@ -58,10 +60,22 @@ function Header() {
             <AppSidebar />
           </SheetContent>
         </Sheet>
-        <div className="relative flex-1 max-w-xs">
+        {isSearchOpen ? (
+          <div className="relative flex-1 max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Zoeken..." className="pl-9" />
-        </div>
+            <Input
+              ref={searchInputRef}
+              placeholder="Zoeken..."
+              className="pl-9"
+              autoFocus
+              onBlur={() => setIsSearchOpen(false)}
+            />
+          </div>
+        ) : (
+          <Button variant="ghost" size="icon" onClick={() => setIsSearchOpen(true)}>
+            <Search className="h-5 w-5" />
+          </Button>
+        )}
       </div>
 
       <div className="flex items-center gap-4">
