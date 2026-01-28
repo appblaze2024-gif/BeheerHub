@@ -261,7 +261,7 @@ export default function SpecReportsPage() {
             )}
         </MapGL>
       ) : (
-        <div className="pt-48 px-4 pb-4 h-full">
+        <div className="pt-36 px-4 pb-4 h-full">
             <Card className='h-full flex flex-col'>
                 <CardHeader>
                     <CardTitle>Overzicht Besteksmeldingen ({filteredMeldingen?.length || 0})</CardTitle>
