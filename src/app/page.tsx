@@ -49,9 +49,9 @@ export default function DashboardPage() {
 
   // Layer visibility state
   const [visibleLayers, setVisibleLayers] = React.useState({
-    objects: true,
-    meldingen: true,
-    besteksmeldingen: true,
+    objects: false,
+    meldingen: false,
+    besteksmeldingen: false,
   });
 
   const [selectedPin, setSelectedPin] = React.useState<any>(null);
