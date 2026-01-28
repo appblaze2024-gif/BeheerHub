@@ -1,9 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import MapGL, { Marker } from 'react-map-gl';
+import MapGL, { Marker, Source, Layer, type MapRef } from 'react-map-gl';
 import { useCollection, useFirestore, useUser } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -13,15 +13,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, X, ArrowUp, Compass } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
-import { useRouter } from 'next/navigation';
-import type { Project, Route, Veegroute, Prullenbakkenroute } from '@/lib/types';
+import { useRouter, useSearchParams } from 'next/navigation';
+import type { Project, Route, Veegroute, Prullenbakkenroute, Object as MapObject } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import * as turf from '@turf/turf';
+import { Progress } from '@/components/ui/progress';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -30,6 +31,181 @@ type ProjectWithRoutes = Project & {
   prullenbakkenroutes?: Prullenbakkenroute[];
 };
 
+const routeLayer: Layer = {
+  id: 'route',
+  type: 'line',
+  source: 'route',
+  layout: {
+    'line-join': 'round',
+    'line-cap': 'round',
+  },
+  paint: {
+    'line-color': '#3b82f6',
+    'line-width': 6,
+    'line-opacity': 0.8,
+  },
+};
+
+function NavigatingView({ 
+    objectsOnRoute, 
+    onExit,
+    initialUserLocation 
+}: { 
+    objectsOnRoute: MapObject[], 
+    onExit: () => void,
+    initialUserLocation: { latitude: number; longitude: number; } | null
+}) {
+  const mapRef = React.useRef<MapRef>(null);
+  const [userLocation, setUserLocation] = React.useState<{ latitude: number, longitude: number, speed: number | null } | null>(initialUserLocation ? { ...initialUserLocation, speed: 0 } : null);
+  const [currentObjectIndex, setCurrentObjectIndex] = React.useState(0);
+  const [completedObjects, setCompletedObjects] = React.useState<string[]>([]);
+  const [currentRoute, setCurrentRoute] = React.useState<any>(null);
+  const [currentLeg, setCurrentLeg] = React.useState<any>(null);
+  const [viewState, setViewState] = React.useState({
+    pitch: 60,
+    bearing: 0,
+    zoom: 17,
+    latitude: initialUserLocation?.latitude || 52.1326,
+    longitude: initialUserLocation?.longitude || 5.2913,
+  });
+
+  const nextObject = objectsOnRoute[currentObjectIndex];
+
+  // Effect for Geolocation
+  React.useEffect(() => {
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        setUserLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          speed: position.coords.speed,
+        });
+        mapRef.current?.flyTo({ center: [position.coords.longitude, position.coords.latitude], duration: 1000 });
+      },
+      (error) => console.error("Error watching position:", error),
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+    );
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
+
+  // Effect to fetch route
+  React.useEffect(() => {
+    if (!userLocation || !nextObject) return;
+
+    const fetchRoute = async () => {
+      const { longitude, latitude } = userLocation;
+      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${longitude},${latitude};${nextObject.longitude},${nextObject.latitude}?steps=true&geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+        if (data.routes && data.routes.length > 0) {
+          setCurrentRoute(data.routes[0].geometry);
+          setCurrentLeg(data.routes[0].legs[0]);
+        }
+      } catch (error) {
+        console.error("Error fetching directions:", error);
+      }
+    };
+
+    fetchRoute();
+  }, [userLocation, nextObject]);
+  
+  // Effect to check for arrival
+  React.useEffect(() => {
+    if (!userLocation || !nextObject) return;
+
+    const userPoint = turf.point([userLocation.longitude, userLocation.latitude]);
+    const objectPoint = turf.point([nextObject.longitude, nextObject.latitude]);
+    const distance = turf.distance(userPoint, objectPoint, { units: 'meters' });
+
+    if (distance < 20) { // 20 meters threshold
+      setCompletedObjects(prev => [...prev, nextObject.id]);
+      setCurrentObjectIndex(prev => prev + 1);
+    }
+  }, [userLocation, nextObject]);
+
+  if (currentObjectIndex >= objectsOnRoute.length) {
+    return (
+        <div className="flex flex-col items-center justify-center h-full gap-4">
+            <h1 className="text-2xl font-bold">Route Voltooid!</h1>
+            <p>{completedObjects.length} van de {objectsOnRoute.length} objecten afgerond.</p>
+            <Button onClick={onExit}>Terug naar start</Button>
+        </div>
+    )
+  }
+
+  const speedKmh = userLocation?.speed ? (userLocation.speed * 3.6).toFixed(0) : 0;
+  const firstStep = currentLeg?.steps?.[0];
+  const distance = currentLeg?.distance || 0;
+
+  return (
+    <div className="w-full h-full relative">
+      <MapGL
+        ref={mapRef}
+        {...viewState}
+        onMove={evt => setViewState(evt.viewState)}
+        style={{ width: '100%', height: '100%' }}
+        mapStyle="mapbox://styles/mapbox/streets-v12"
+        mapboxAccessToken={MAPBOX_TOKEN}
+      >
+        {userLocation && (
+          <Marker longitude={userLocation.longitude} latitude={userLocation.latitude} anchor="center">
+            <Compass className="h-8 w-8 text-blue-600 bg-white rounded-full p-1 shadow-lg" />
+          </Marker>
+        )}
+        {objectsOnRoute.map(obj => (
+            <Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude} anchor="center">
+                <div className="w-3 h-3 bg-purple-500 rounded-full border-2 border-white" />
+            </Marker>
+        ))}
+        {currentRoute && (
+          <Source id="route-line" type="geojson" data={currentRoute}>
+            <Layer {...routeLayer} />
+          </Source>
+        )}
+      </MapGL>
+      
+      {/* UI Overlays */}
+      <div className="absolute top-4 left-4 z-10 flex flex-col gap-4">
+        {firstStep && (
+            <Card className="bg-primary text-primary-foreground w-72">
+                <CardContent className="p-4 flex items-center gap-4">
+                    <ArrowUp className="h-10 w-10 shrink-0"/>
+                    <div>
+                        <p className="text-3xl font-bold">{distance > 1000 ? `${(distance/1000).toFixed(1)} km` : `${Math.round(distance)} m`}</p>
+                        <p className="text-sm">{firstStep.maneuver.instruction}</p>
+                    </div>
+                </CardContent>
+            </Card>
+        )}
+         <Card className="w-72">
+            <CardHeader className="p-4">
+                <CardTitle className="text-base">Voortgang</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+                <div className="flex justify-between items-center mb-2">
+                    <p className="text-sm">{completedObjects.length} / {objectsOnRoute.length} objecten</p>
+                </div>
+                <Progress value={(completedObjects.length / objectsOnRoute.length) * 100} />
+                <div className="flex items-center justify-center gap-2 mt-4">
+                    <span className="text-5xl font-bold">{speedKmh}</span>
+                    <span className="text-lg text-muted-foreground">km/h</span>
+                </div>
+            </CardContent>
+        </Card>
+      </div>
+
+       <div className="absolute bottom-6 left-6 z-10">
+            <Button variant="destructive" size="icon" className="h-14 w-14 rounded-full shadow-lg" onClick={onExit}>
+                <X className="h-8 w-8" />
+            </Button>
+      </div>
+
+    </div>
+  );
+}
+
+
 export default function StartNavigationPage() {
   const firestore = useFirestore();
   const router = useRouter();
@@ -37,11 +213,20 @@ export default function StartNavigationPage() {
   const { setIsHeaderVisible } = useNavigationUI();
   const { user } = useUser();
   
-  const [locationError, setLocationError] = React.useState<string | null>(null);
   const [userLocation, setUserLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
-
   const [routeType, setRouteType] = React.useState<'veeg' | 'prullenbak' | null>(null);
   const [selectedRouteId, setSelectedRouteId] = React.useState<string>('--nieuwe-route--');
+  
+  const [navigationState, setNavigationState] = React.useState<'setup' | 'navigating'>('setup');
+  const [objectsOnRoute, setObjectsOnRoute] = React.useState<MapObject[]>([]);
+  const [isStarting, setIsStarting] = React.useState(false);
+
+  const objectsCollection = React.useMemo(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'objects');
+  }, [firestore]);
+
+  const { data: allObjects, isLoading: isLoadingObjects } = useCollection<MapObject>(objectsCollection);
 
   const projectsCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -72,49 +257,88 @@ export default function StartNavigationPage() {
   }, [selectedProject, routeType]);
 
   React.useEffect(() => {
-    setIsHeaderVisible(false);
+    setIsHeaderVisible(navigationState !== 'navigating');
     
-    if (!navigator.geolocation) {
-      setLocationError("Geolocatie wordt niet ondersteund door uw browser.");
-      return;
+    if (navigationState === 'setup') {
+      navigator.geolocation.getCurrentPosition(
+        (position) => setUserLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+        }),
+        (error) => console.error("Error getting location:", error),
+        { enableHighAccuracy: true }
+      );
+    }
+    
+    return () => setIsHeaderVisible(true);
+  }, [setIsHeaderVisible, navigationState]);
+
+  const handleStartRoute = async () => {
+    if (!userLocation || !selectedProjectId || !routeType || !selectedRouteId || !allObjects || !projects || !user) return;
+
+    setIsStarting(true);
+    const project = projects.find(p => p.id === selectedProjectId);
+    if (!project) {
+        setIsStarting(false);
+        return;
+    }
+    const routes = routeType === 'veeg' ? project.veegroutes : project.prullenbakkenroutes;
+    const routeDef = routes?.find(r => r.id === selectedRouteId);
+    if (!routeDef) {
+        setIsStarting(false);
+        return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setUserLocation({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
+    const routePolygons = JSON.parse(routeDef.subGebieden);
+    let filteredObjects: MapObject[] = [];
+
+    if (Array.isArray(routePolygons) && routePolygons.length > 0) {
+        filteredObjects = allObjects.filter(obj => {
+            if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
+            const point = turf.point([obj.longitude, obj.latitude]);
+            for (const polygon of routePolygons) {
+                if (turf.booleanPointInPolygon(point, polygon)) return true;
+            }
+            return false;
         });
-        setLocationError(null);
-      },
-      (error) => {
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            setLocationError("Kon uw locatie niet ophalen. Zorg ervoor dat u locatietoestemming heeft gegeven.");
-            break;
-          case error.POSITION_UNAVAILABLE:
-            setLocationError("Locatie-informatie is niet beschikbaar.");
-            break;
-          case error.TIMEOUT:
-            setLocationError("Het verzoek om de gebruikerslocatie is verlopen.");
-            break;
-          default:
-            setLocationError("Er is een onbekende fout opgetreden bij het ophalen van uw locatie.");
-            break;
-        }
-      },
-      { timeout: 10000, enableHighAccuracy: true }
-    );
+    }
 
-    return () => setIsHeaderVisible(true);
-  }, [setIsHeaderVisible]);
+    if (filteredObjects.length === 0) {
+        alert("Geen objecten gevonden voor deze route.");
+        setIsStarting(false);
+        return;
+    }
 
-  const handleStartRoute = () => {
-    console.log({
-        projectId: selectedProjectId,
-        routeType,
-        selectedRouteId
+    const sortedObjects = filteredObjects.sort((a, b) => {
+        const distA = turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([a.longitude, a.latitude]));
+        const distB = turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([b.longitude, b.latitude]));
+        return distA - distB;
     });
+
+    try {
+        const routeHistoryCol = collection(firestore, 'users', user.uid, 'routes');
+        await addDoc(routeHistoryCol, {
+            userId: user.uid,
+            projectId: selectedProjectId,
+            originalRouteId: selectedRouteId,
+            routeName: routeDef.naam,
+            date: new Date().toISOString().split('T')[0],
+            startTime: new Date().toISOString(),
+            allObjectIds: sortedObjects.map(o => o.id),
+            totalObjects: sortedObjects.length,
+        });
+    } catch (e) {
+        console.error("Error saving route history:", e);
+    }
+    
+    setObjectsOnRoute(sortedObjects);
+    setNavigationState('navigating');
+    setIsStarting(false);
+  };
+  
+   const handleExitNavigation = () => {
+    setNavigationState('setup');
+    setObjectsOnRoute([]);
   };
 
   const initialViewState = {
@@ -127,6 +351,10 @@ export default function StartNavigationPage() {
     initialViewState.longitude = userLocation.longitude;
     initialViewState.latitude = userLocation.latitude;
     initialViewState.zoom = 12;
+  }
+  
+  if (navigationState === 'navigating') {
+    return <NavigatingView objectsOnRoute={objectsOnRoute} onExit={handleExitNavigation} initialUserLocation={userLocation} />;
   }
 
   return (
@@ -243,8 +471,8 @@ export default function StartNavigationPage() {
             </Select>
           </div>
           
-          <Button className="w-full" onClick={handleStartRoute} disabled={!selectedProjectId || !routeType}>
-            Start Route
+          <Button className="w-full" onClick={handleStartRoute} disabled={!selectedProjectId || !routeType || !selectedRouteId || selectedRouteId === '--nieuwe-route--' || isLoadingObjects || isStarting}>
+            {isStarting ? "Route starten..." : "Start Route"}
           </Button>
         </CardContent>
       </Card>
