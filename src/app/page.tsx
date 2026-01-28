@@ -7,7 +7,7 @@ import * as turf from '@turf/turf';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import type { Object as MapObject, Melding, Besteksmelding, Project } from '@/lib/types';
-import { Layers } from 'lucide-react';
+import { Layers, LocateFixed } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -60,8 +60,10 @@ export default function DashboardPage() {
 
   const [selectedPin, setSelectedPin] = React.useState<any>(null);
   const [isLayersPanelOpen, setIsLayersPanelOpen] = React.useState(false);
+  const [isTrackingLocation, setIsTrackingLocation] = React.useState(false);
+  const [userLocation, setUserLocation] = React.useState<{ latitude: number, longitude: number } | null>(null);
+  const locationWatcherId = React.useRef<number | null>(null);
 
-  // Memoize Firestore queries to prevent re-renders
   const objectsQuery = React.useMemo(() => firestore ? collection(firestore, 'objects') : null, [firestore]);
   const meldingenQuery = React.useMemo(() => firestore ? collection(firestore, 'meldingen') : null, [firestore]);
   const projectsQuery = React.useMemo(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
@@ -132,6 +134,41 @@ export default function DashboardPage() {
           });
       }
   }, [boundary]);
+
+  React.useEffect(() => {
+    if (isTrackingLocation) {
+      if (!navigator.geolocation) {
+        console.error("Geolocation is not supported by your browser.");
+        setIsTrackingLocation(false);
+        return;
+      }
+      
+      locationWatcherId.current = navigator.geolocation.watchPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setUserLocation({ latitude, longitude });
+          mapRef.current?.flyTo({ center: [longitude, latitude], zoom: 15 });
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+          setIsTrackingLocation(false); // Turn off if there's an error
+        },
+        { enableHighAccuracy: true }
+      );
+    } else {
+      if (locationWatcherId.current !== null) {
+        navigator.geolocation.clearWatch(locationWatcherId.current);
+        locationWatcherId.current = null;
+      }
+      setUserLocation(null); // Clear location when tracking is off
+    }
+
+    return () => {
+      if (locationWatcherId.current !== null) {
+        navigator.geolocation.clearWatch(locationWatcherId.current);
+      }
+    };
+  }, [isTrackingLocation]);
 
   const renderMarkers = (items: any[] | null, color: string, type: string) => {
       if (!items) return null;
@@ -231,6 +268,15 @@ export default function DashboardPage() {
         {visibleLayers.meldingen && renderMarkers(meldingen, 'bg-red-600', 'melding')}
         {visibleLayers.besteksmeldingen && renderMarkers(allBesteksmeldingen, 'bg-orange-500', 'besteksmelding')}
 
+        {userLocation && (
+          <Marker longitude={userLocation.longitude} latitude={userLocation.latitude}>
+            <div className="relative flex h-4 w-4 items-center justify-center">
+              <div className="absolute h-6 w-6 rounded-full bg-blue-500/50 animate-pulse" />
+              <div className="relative h-3 w-3 rounded-full bg-blue-600 border-2 border-white" />
+            </div>
+          </Marker>
+        )}
+
         {renderPopup()}
 
       </MapGL>
@@ -242,6 +288,14 @@ export default function DashboardPage() {
                 onClick={() => setIsLayersPanelOpen(!isLayersPanelOpen)}
             >
                 <Layers className="h-6 w-6" />
+            </Button>
+            <Button
+                variant={isTrackingLocation ? "default" : "secondary"}
+                size="icon"
+                className="rounded-full h-12 w-12 shadow-lg"
+                onClick={() => setIsTrackingLocation(!isTrackingLocation)}
+            >
+                <LocateFixed className="h-6 w-6" />
             </Button>
             {isLayersPanelOpen && (
                 <Card className="w-64">
