@@ -1,5 +1,16 @@
 {
   "entities": {
+    "AppSettings": {
+        "title": "Application Settings",
+        "type": "object",
+        "description": "Stores global application settings like version number.",
+        "properties": {
+            "version": {
+                "type": "string",
+                "description": "The application version string."
+            }
+        }
+    },
     "Folder": {
         "title": "Folder",
         "type": "object",
@@ -647,6 +658,22 @@
   },
   "firestore": {
     "structure": [
+      {
+        "path": "/settings/{docId}",
+        "definition": {
+          "entityName": "AppSettings",
+          "schema": {
+            "$ref": "#/backend/entities/AppSettings"
+          },
+          "description": "Stores global application settings. Use a specific document ID like 'main' for specific settings.",
+          "params": [
+            {
+              "name": "docId",
+              "description": "The ID of the setting document (e.g., 'main')."
+            }
+          ]
+        }
+      },
       {
         "path": "/users/{userId}",
         "definition": {

@@ -21,13 +21,23 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { allMenuItems } from '@/lib/menu-config';
-import { useUser, useCollection, useFirestore } from '@/firebase';
+import { useUser, useCollection, useFirestore, useDoc, setDocumentNonBlocking } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
-import { collection } from 'firebase/firestore';
+import { collection, doc } from 'firebase/firestore';
 import { Button } from './ui/button';
 import { Settings, Camera } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 type Project = {
   id: string;
@@ -46,6 +56,33 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const firestore = useFirestore();
   const [selectedProjectId, setSelectedProjectId] = React.useState<string | undefined>();
   const isMobile = useIsMobile();
+  const [isVersionDialogOpen, setIsVersionDialogOpen] = React.useState(false);
+
+  const settingsRef = React.useMemo(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'settings', 'main');
+  }, [firestore]);
+
+  const { data: settings } = useDoc<{version: string}>(settingsRef);
+  const version = settings?.version || 'V 1.8.1 P (176)';
+
+  const [newVersion, setNewVersion] = React.useState(version);
+
+  React.useEffect(() => {
+    if (settings?.version) {
+        setNewVersion(settings.version);
+    } else {
+        setNewVersion('V 1.8.1 P (176)');
+    }
+  }, [settings]);
+
+
+  const handleVersionSave = async () => {
+    if (!firestore) return;
+    const settingsDocRef = doc(firestore, 'settings', 'main');
+    await setDocumentNonBlocking(settingsDocRef, { version: newVersion }, { merge: true });
+    setIsVersionDialogOpen(false);
+  };
   
   const projectsCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -86,64 +123,92 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   }, [profile, isSuperUser]);
   
   return (
-    <Sidebar isCollapsed={false} className="w-full">
-        <SidebarHeader>
-          <div className="flex items-center gap-3 w-full p-2">
-            <Avatar className="h-14 w-14 border-2 border-green-500 relative">
-              <AvatarImage src={user?.photoURL || undefined} />
-              <AvatarFallback>
-                {!user?.photoURL && <Camera className="h-6 w-6 text-muted-foreground" />}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col">
-                <span className="font-semibold text-base capitalize">{profile?.role || 'Rol Onbekend'}</span>
-                <span className="text-sm text-muted-foreground">{user?.email}</span>
+    <>
+      <Sidebar isCollapsed={false} className="w-full">
+          <SidebarHeader>
+            <div className="flex items-center gap-3 w-full p-2">
+              <Avatar className="h-14 w-14 border-2 border-green-500 relative">
+                <AvatarImage src={user?.photoURL || undefined} />
+                <AvatarFallback>
+                  {!user?.photoURL && <Camera className="h-6 w-6 text-muted-foreground" />}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col">
+                  <span className="font-semibold text-base capitalize">{profile?.role || 'Rol Onbekend'}</span>
+                  <span className="text-sm text-muted-foreground">{user?.email}</span>
+              </div>
             </div>
-          </div>
-        </SidebarHeader>
+          </SidebarHeader>
 
-        <SidebarContent className="p-2 no-scrollbar">
-          <div className="px-2 pb-2">
-            <Select
-              value={selectedProjectId}
-              onValueChange={setSelectedProjectId}
-              disabled={isLoadingProjects}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecteer project" />
-              </SelectTrigger>
-              <SelectContent>
-                {projects?.map((project) => (
-                  <SelectItem key={project.id} value={project.id!}>
-                    {project.projectnaam}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <SidebarMenu>
-            {menuItems.map((item) => (
-              <SidebarMenuItem key={item.href} onClick={onNavigate}>
-                <Link href={item.href} passHref>
-                    <SidebarMenuButton
-                        isActive={pathname === item.href}
-                        className="h-12 text-base"
-                    >
-                        <item.icon className="h-6 w-6 text-primary" />
-                        <span>{item.label}</span>
-                    </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarContent>
-
-        <SidebarFooter>
-            <div className='p-4 text-center text-muted-foreground text-sm flex items-center justify-center gap-2'>
-                <span>V 1.8.1 P (176)</span>
-                <Settings className="h-4 w-4" />
+          <SidebarContent className="p-2 no-scrollbar">
+            <div className="px-2 pb-2">
+              <Select
+                value={selectedProjectId}
+                onValueChange={setSelectedProjectId}
+                disabled={isLoadingProjects}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecteer project" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects?.map((project) => (
+                    <SelectItem key={project.id} value={project.id!}>
+                      {project.projectnaam}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-        </SidebarFooter>
-    </Sidebar>
+            <SidebarMenu>
+              {menuItems.map((item) => (
+                <SidebarMenuItem key={item.href} onClick={onNavigate}>
+                  <Link href={item.href} passHref>
+                      <SidebarMenuButton
+                          isActive={pathname === item.href}
+                          className="h-12 text-base"
+                      >
+                          <item.icon className="h-6 w-6 text-primary" />
+                          <span>{item.label}</span>
+                      </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarContent>
+
+          <SidebarFooter>
+              <div className='p-4 text-center text-muted-foreground text-sm flex items-center justify-center gap-2'>
+                  <span>{version}</span>
+                  {isSuperUser && (
+                    <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setIsVersionDialogOpen(true)}>
+                      <Settings className="h-4 w-4" />
+                    </Button>
+                  )}
+              </div>
+          </SidebarFooter>
+      </Sidebar>
+      <Dialog open={isVersionDialogOpen} onOpenChange={setIsVersionDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Versiebeheer</DialogTitle>
+                <DialogDescription>
+                    Pas het versienummer van de applicatie aan.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+                <Label htmlFor="version-input">Versienummer</Label>
+                <Input
+                    id="version-input"
+                    value={newVersion}
+                    onChange={(e) => setNewVersion(e.target.value)}
+                />
+            </div>
+            <DialogFooter>
+                <Button variant="ghost" onClick={() => setIsVersionDialogOpen(false)}>Annuleren</Button>
+                <Button onClick={handleVersionSave}>Opslaan</Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
