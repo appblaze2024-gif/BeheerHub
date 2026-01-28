@@ -18,7 +18,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { NavigationUIProvider, useNavigationUI } from '@/context/navigation-ui-context';
 import { signOut } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from '@/components/ui/sheet';
 import { Menu, Search, Bell, User, Settings } from 'lucide-react';
 import { AppSidebar } from '@/components/app-sidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -57,6 +57,9 @@ function Header() {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="p-0 w-80">
+            <SheetHeader>
+                <SheetTitle className="sr-only">Zijmenu</SheetTitle>
+            </SheetHeader>
             <AppSidebar />
           </SheetContent>
         </Sheet>
