@@ -64,18 +64,35 @@ export default function DashboardPage() {
   const [userLocation, setUserLocation] = React.useState<{ latitude: number, longitude: number } | null>(null);
   const locationWatcherId = React.useRef<number | null>(null);
 
-  const objectsQuery = React.useMemo(() => firestore ? collection(firestore, 'objects') : null, [firestore]);
-  const meldingenQuery = React.useMemo(() => firestore ? collection(firestore, 'meldingen') : null, [firestore]);
-  const projectsQuery = React.useMemo(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
+  const objectsQuery = React.useMemo(() => {
+    if (!firestore || !visibleLayers.objects) return null;
+    return collection(firestore, 'objects');
+  }, [firestore, visibleLayers.objects]);
+  
+  const meldingenQuery = React.useMemo(() => {
+    if (!firestore || !visibleLayers.meldingen) return null;
+    return collection(firestore, 'meldingen');
+  }, [firestore, visibleLayers.meldingen]);
+  
+  const projectsQuery = React.useMemo(() => {
+    if (!firestore || !visibleLayers.besteksmeldingen) return null;
+    return collection(firestore, 'projects');
+  }, [firestore, visibleLayers.besteksmeldingen]);
 
   const { data: objects, isLoading: isLoadingObjects } = useCollection<MapObject>(objectsQuery);
   const { data: meldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenQuery);
   const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
   
   const [allBesteksmeldingen, setAllBesteksmeldingen] = React.useState<Besteksmelding[]>([]);
-  const [isLoadingBesteksmeldingen, setIsLoadingBesteksmeldingen] = React.useState(true);
+  const [isLoadingBesteksmeldingen, setIsLoadingBesteksmeldingen] = React.useState(false);
 
   React.useEffect(() => {
+    if (!visibleLayers.besteksmeldingen) {
+      setAllBesteksmeldingen([]);
+      setIsLoadingBesteksmeldingen(false);
+      return;
+    }
+    
     if (!projects || !firestore) {
       if (!isLoadingProjects) {
         setIsLoadingBesteksmeldingen(false);
@@ -95,7 +112,7 @@ export default function DashboardPage() {
       setIsLoadingBesteksmeldingen(false);
     }
     fetchAll();
-  }, [projects, firestore, isLoadingProjects]);
+  }, [projects, firestore, isLoadingProjects, visibleLayers.besteksmeldingen]);
 
 
   React.useEffect(() => {
