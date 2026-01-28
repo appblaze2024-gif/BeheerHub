@@ -6,7 +6,6 @@ import {
   MapPin,
   Users,
   Users2,
-  Camera,
   Newspaper,
   Folder,
   Truck,
@@ -44,7 +43,6 @@ export const allMenuItems: MenuItem[] = [
     { href: '/navigation-module', label: 'Navigatiemodule', icon: Navigation, module: 'navigation' },
     { href: '/teams', label: 'Teams', icon: Users2, module: 'teams' },
     { href: '/mail', label: 'Mail', icon: Mail, module: 'mail' },
-    { href: '/news', label: 'Nieuws berichten', icon: Newspaper, module: 'news' },
     { href: '/profile', label: 'Mijn Profiel', icon: User, module: 'users' },
     { href: '/settings', label: 'Instellingen', icon: Settings },
 ];
