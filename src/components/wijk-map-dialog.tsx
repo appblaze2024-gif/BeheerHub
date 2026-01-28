@@ -322,7 +322,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     } catch (error) {
         return [];
     }
-  }, [wijk?.roadTypes]);
+  }, [wijk]);
 
   const fetchAllRoadsForCurrentDrawState = React.useCallback(async () => {
     if (readOnly || !showRoadTypes || !drawRef.current) {
@@ -874,125 +874,122 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
 
         {!readOnly && (
             <div className="px-6 pb-4 flex flex-col gap-4">
-              <div className="flex flex-col md:flex-row gap-4 justify-between md:items-end">
-                  <div className="flex flex-col sm:flex-row gap-4 flex-1">
-                      <div className="flex-1 min-w-0">
-                          <Label htmlFor="search-input" className="text-xs font-semibold">Zoek gebied op naam</Label>
-                          <div className='relative mt-1'>
-                              <Input
-                                  id="search-input"
-                                  type="text"
-                                  placeholder="Plaatsnaam, wijk of buurt..."
-                                  value={searchQuery}
-                                  onChange={handleSearchQueryChange}
-                                  disabled={!isDrawReady}
-                              />
-                              {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
-                              {suggestions.length > 0 && (
-                                  <div className="absolute z-10 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
-                                      {suggestions.map((suggestion) => (
-                                      <div
-                                          key={suggestion.place_id}
-                                          onClick={() => handleSuggestionClick(suggestion)}
-                                          className="px-4 py-2 text-sm cursor-pointer hover:bg-muted"
-                                      >
-                                          {suggestion.display_name}
-                                      </div>
-                                      ))}
+               <div className="flex flex-col md:flex-row gap-4 justify-between md:items-start">
+                  <div className="flex-1 min-w-0">
+                      <Label htmlFor="search-input" className="text-xs font-semibold">Zoek gebied op naam</Label>
+                      <div className='relative mt-1'>
+                          <Input
+                              id="search-input"
+                              type="text"
+                              placeholder="Plaatsnaam, wijk of buurt..."
+                              value={searchQuery}
+                              onChange={handleSearchQueryChange}
+                              disabled={!isDrawReady}
+                          />
+                          {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
+                          {suggestions.length > 0 && (
+                              <div className="absolute z-10 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                  {suggestions.map((suggestion) => (
+                                  <div
+                                      key={suggestion.place_id}
+                                      onClick={() => handleSuggestionClick(suggestion)}
+                                      className="px-4 py-2 text-sm cursor-pointer hover:bg-muted"
+                                  >
+                                      {suggestion.display_name}
                                   </div>
-                              )}
-                          </div>
-                      </div>
-                       <div className="flex-1 min-w-0">
-                          <Label className="text-xs font-semibold">Referentiegebied (voor opvullen)</Label>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="outline" className="w-full justify-between mt-1">
-                                <span>
-                                  {referenceAreaIds.length === 0
-                                    ? 'Selecteer gebieden...'
-                                    : referenceAreaIds.length === 1
-                                    ? '1 gebied geselecteerd'
-                                    : `${referenceAreaIds.length} gebieden geselecteerd`}
-                                </span>
-                                <ChevronDown className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
-                              <DropdownMenuLabel>Selecteer referentiegebieden</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              {allAreas.filter(a => a.id !== wijk?.id && a.type === 'wijk').map(a => (
-                                <DropdownMenuCheckboxItem
-                                  key={a.id}
-                                  checked={referenceAreaIds.includes(a.id)}
-                                  onCheckedChange={(checked) => {
-                                    setReferenceAreaIds(prev => 
-                                      checked ? [...prev, a.id] : prev.filter(id => id !== a.id)
-                                    );
-                                  }}
-                                >
-                                  {a.projectName} - {a.naam}
-                                </DropdownMenuCheckboxItem>
-                              ))}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                                  ))}
+                              </div>
+                          )}
                       </div>
                   </div>
-                  
-                  <div className="flex items-center gap-2 flex-wrap">
-                     <Button 
-                        variant={isFillMode ? 'secondary' : 'outline'}
-                        onClick={toggleFillMode}
-                        disabled={!isDrawReady || isBulkDeleting}
-                        title="Vul de vrije ruimte binnen een getekend gebied"
-                      >
-                          <BoxSelect className="mr-2 h-4 w-4"/>
-                          Vul vrije ruimte
-                      </Button>
-                      <Button
-                          variant="outline"
-                          onClick={handleBulkDeleteClick}
-                          disabled={!hasPolygonSelection || hasVertexSelection || isBulkDeleting}
-                          title="Verwijder punten binnen een getekend gebied"
-                      >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Verwijder met vlak
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={handleDeleteSelectedPolygons}
-                        disabled={!hasPolygonSelection || hasVertexSelection}
-                        title="Verwijder de geselecteerde polygoon"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-                        Verwijder Polygoon
-                      </Button>
-                      <Button
-                          variant="outline"
-                          onClick={() => drawRef.current?.trash()}
-                          disabled={!hasVertexSelection}
-                          title="Verwijder geselecteerde punten"
-                      >
-                          <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-                          Verwijder punt(en)
-                      </Button>
-                  </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="map-style-select" className="text-xs font-semibold">Kaartstijl</Label>
-                  <Select value={currentMapStyle} onValueChange={setCurrentMapStyle}>
-                      <SelectTrigger id="map-style-select" className="mt-1">
-                          <SelectValue placeholder="Kies een stijl" />
-                      </SelectTrigger>
-                      <SelectContent>
-                          {mapStyles.map(style => (
-                              <SelectItem key={style.url} value={style.url}>{style.name}</SelectItem>
+                   <div className="flex-1 min-w-0">
+                      <Label className="text-xs font-semibold">Referentiegebied (voor opvullen)</Label>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" className="w-full justify-between mt-1">
+                            <span>
+                              {referenceAreaIds.length === 0
+                                ? 'Selecteer gebieden...'
+                                : referenceAreaIds.length === 1
+                                ? '1 gebied geselecteerd'
+                                : `${referenceAreaIds.length} gebieden geselecteerd`}
+                            </span>
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
+                          <DropdownMenuLabel>Selecteer referentiegebieden</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          {allAreas.filter(a => a.id !== wijk?.id && a.type === 'wijk').map(a => (
+                            <DropdownMenuCheckboxItem
+                              key={a.id}
+                              checked={referenceAreaIds.includes(a.id)}
+                              onCheckedChange={(checked) => {
+                                setReferenceAreaIds(prev => 
+                                  checked ? [...prev, a.id] : prev.filter(id => id !== a.id)
+                                );
+                              }}
+                            >
+                              {a.projectName} - {a.naam}
+                            </DropdownMenuCheckboxItem>
                           ))}
-                      </SelectContent>
-                  </Select>
-                </div>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                  </div>
+                   <div>
+                        <Label htmlFor="map-style-select" className="text-xs font-semibold">Kaartstijl</Label>
+                        <Select value={currentMapStyle} onValueChange={setCurrentMapStyle}>
+                            <SelectTrigger id="map-style-select" className="mt-1">
+                                <SelectValue placeholder="Kies een stijl" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {mapStyles.map(style => (
+                                    <SelectItem key={style.url} value={style.url}>{style.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
               </div>
+              
+              <div className='flex items-center gap-2 flex-wrap'>
+                  <Button 
+                    variant={isFillMode ? 'secondary' : 'outline'}
+                    onClick={toggleFillMode}
+                    disabled={!isDrawReady || isBulkDeleting}
+                    title="Vul de vrije ruimte binnen een getekend gebied"
+                  >
+                      <BoxSelect className="mr-2 h-4 w-4"/>
+                      Vul vrije ruimte
+                  </Button>
+                  <Button
+                      variant="outline"
+                      onClick={handleBulkDeleteClick}
+                      disabled={!hasPolygonSelection || hasVertexSelection || isBulkDeleting}
+                      title="Verwijder punten binnen een getekend gebied"
+                  >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Verwijder met vlak
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleDeleteSelectedPolygons}
+                    disabled={!hasPolygonSelection || hasVertexSelection}
+                    title="Verwijder de geselecteerde polygoon"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+                    Verwijder Polygoon
+                  </Button>
+                  <Button
+                      variant="outline"
+                      onClick={() => drawRef.current?.trash()}
+                      disabled={!hasVertexSelection}
+                      title="Verwijder geselecteerde punten"
+                  >
+                      <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+                      Verwijder punt(en)
+                  </Button>
+              </div>
+              
               {showRoadTypes && !readOnly && (
                 <div className="space-y-2">
                     <div className='flex justify-between items-center'>
