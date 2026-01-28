@@ -624,6 +624,14 @@
         "prullenbakkenroute": {
             "type": "string",
             "description": "The trash can route the user is associated with."
+        },
+        "schouwenGemeente": {
+          "type": "string",
+          "description": "The municipality the user is associated with for inspections (schouwen)."
+        },
+        "schouwenMapStyle": {
+            "type": "string",
+            "description": "The user's preferred map style for the inspection map."
         }
       },
       "required": [

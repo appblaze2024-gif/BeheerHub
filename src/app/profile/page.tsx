@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { useUser, useFirestore, useDoc, setDocumentNonBlocking } from '@/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/components/ui/use-toast';
@@ -16,11 +16,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { UserManagement } from '@/components/user-management';
 import type { UserProfile } from '@/lib/types';
 import { useProfile } from '@/firebase/profile-provider';
+import { GemeenteSelect } from '@/components/gemeente-select';
 
 
 const profileFormSchema = z.object({
   firstName: z.string().min(1, 'Voornaam is verplicht.'),
   lastName: z.string().min(1, 'Achternaam is verplicht.'),
+  schouwenGemeente: z.string().nullable(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -46,6 +48,7 @@ export default function ProfilePage() {
     defaultValues: {
       firstName: '',
       lastName: '',
+      schouwenGemeente: null,
     },
   });
 
@@ -56,6 +59,7 @@ export default function ProfilePage() {
         reset({
           firstName: userProfile.firstName || '',
           lastName: userProfile.lastName || '',
+          schouwenGemeente: userProfile.schouwenGemeente || null,
         });
     }
   }, [userProfile, reset]);
@@ -69,11 +73,12 @@ export default function ProfilePage() {
       await setDoc(userProfileRef, { 
         firstName: data.firstName,
         lastName: data.lastName,
-        displayName: displayName 
+        displayName: displayName,
+        schouwenGemeente: data.schouwenGemeente,
       }, { merge: true });
       toast({
         title: 'Profiel opgeslagen',
-        description: 'Uw weergavenaam is succesvol bijgewerkt.',
+        description: 'Uw gegevens zijn succesvol bijgewerkt.',
       });
     } catch (error) {
       console.error(error);
@@ -148,6 +153,25 @@ export default function ProfilePage() {
                         )}
                       />
                     </div>
+                     <FormField
+                        control={form.control}
+                        name="schouwenGemeente"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Standaard Gemeente (Schouwen)</FormLabel>
+                            <FormControl>
+                                <GemeenteSelect
+                                    value={field.value}
+                                    onValueChange={field.onChange}
+                                />
+                            </FormControl>
+                            <FormDescription>
+                                Stel de standaardgemeente in die op het dashboard wordt getoond.
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     <div className="flex justify-end">
                       <Button type="submit" disabled={isSaving}>
                         {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

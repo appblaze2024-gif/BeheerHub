@@ -25,8 +25,8 @@ export type UserProfile = {
   veegroute?: string;
   prullenbakkenroute?: string;
   lastUsedDienstColor?: string;
-  schouwenMapStyle?: string;
   schouwenGemeente?: string;
+  schouwenMapStyle?: string;
 };
 
 export interface Medewerker {
