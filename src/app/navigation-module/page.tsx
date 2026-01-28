@@ -16,7 +16,7 @@ import {
 import { ArrowLeft, X, ArrowUp, Compass } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import type { Project, Route, Veegroute, Prullenbakkenroute, Object as MapObject } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
@@ -45,6 +45,25 @@ const routeLayer: Layer = {
     'line-opacity': 0.8,
   },
 };
+
+const routeAreaFillLayer: Layer = {
+    id: 'route-area-fill',
+    type: 'fill',
+    paint: {
+        'fill-color': '#3b82f6',
+        'fill-opacity': 0.1,
+    },
+};
+
+const routeAreaOutlineLayer: Layer = {
+    id: 'route-area-outline',
+    type: 'line',
+    paint: {
+        'line-color': '#3b82f6',
+        'line-width': 1.5,
+    },
+};
+
 
 function NavigatingView({ 
     objectsOnRoute, 
@@ -220,6 +239,9 @@ export default function StartNavigationPage() {
   const [navigationState, setNavigationState] = React.useState<'setup' | 'navigating'>('setup');
   const [objectsOnRoute, setObjectsOnRoute] = React.useState<MapObject[]>([]);
   const [isStarting, setIsStarting] = React.useState(false);
+  
+  const [objectsOnMap, setObjectsOnMap] = React.useState<MapObject[]>([]);
+  const mapRef = React.useRef<MapRef>(null);
 
   const objectsCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -256,6 +278,79 @@ export default function StartNavigationPage() {
       return [];
   }, [selectedProject, routeType]);
 
+  const selectedRouteDef = React.useMemo(() => {
+    if (!selectedRouteId || selectedRouteId === '--nieuwe-route--' || !selectedProject) return null;
+
+    const historyItem = routeHistory?.find(r => r.id === selectedRouteId);
+    const originalId = historyItem ? historyItem.originalRouteId : selectedRouteId;
+
+    const allRoutes = [...(selectedProject.veegroutes || []), ...(selectedProject.prullenbakkenroutes || [])];
+    return allRoutes.find(r => r.id === originalId) ?? null;
+  }, [selectedRouteId, routeHistory, selectedProject]);
+
+  React.useEffect(() => {
+    if (!selectedRouteDef || !allObjects) {
+      setObjectsOnMap([]);
+      return;
+    }
+
+    try {
+        const routePolygons = JSON.parse(selectedRouteDef.subGebieden);
+        if (Array.isArray(routePolygons) && routePolygons.length > 0) {
+            const filteredObjects = allObjects.filter(obj => {
+                if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
+                const point = turf.point([obj.longitude, obj.latitude]);
+                for (const polygon of routePolygons) {
+                    if (turf.booleanPointInPolygon(point, polygon)) return true;
+                }
+                return false;
+            });
+            setObjectsOnMap(filteredObjects);
+        } else {
+            setObjectsOnMap([]);
+        }
+    } catch (e) {
+        console.error("Error parsing route polygons", e);
+        setObjectsOnMap([]);
+    }
+  }, [selectedRouteDef, allObjects]);
+
+  const routeGeoJSON = React.useMemo(() => {
+    if (!selectedRouteDef) return null;
+    try {
+      const features = JSON.parse(selectedRouteDef.subGebieden);
+      if (Array.isArray(features)) {
+        return {
+          type: 'FeatureCollection',
+          features: features.map((feature: any) => ({
+            type: 'Feature',
+            properties: {},
+            geometry: feature.geometry,
+          })),
+        };
+      }
+    } catch (e) {
+      console.error('Invalid GeoJSON for wijk(en)', e);
+    }
+    return null;
+  }, [selectedRouteDef]);
+
+  React.useEffect(() => {
+      if (routeGeoJSON && mapRef.current) {
+          try {
+              const map = mapRef.current.getMap();
+              if (map.isStyleLoaded()) {
+                  const bbox = turf.bbox(routeGeoJSON);
+                  if (bbox[0] !== Infinity) {
+                      map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
+                  }
+              }
+          } catch(e) {
+              console.error("Error fitting bounds", e);
+          }
+      }
+  }, [routeGeoJSON]);
+
   React.useEffect(() => {
     setIsHeaderVisible(navigationState !== 'navigating');
     
@@ -274,22 +369,11 @@ export default function StartNavigationPage() {
   }, [setIsHeaderVisible, navigationState]);
 
   const handleStartRoute = async () => {
-    if (!userLocation || !selectedProjectId || !routeType || !selectedRouteId || !allObjects || !projects || !user) return;
+    if (!userLocation || !selectedProjectId || !selectedRouteDef || !allObjects || !user) return;
 
     setIsStarting(true);
-    const project = projects.find(p => p.id === selectedProjectId);
-    if (!project) {
-        setIsStarting(false);
-        return;
-    }
-    const routes = routeType === 'veeg' ? project.veegroutes : project.prullenbakkenroutes;
-    const routeDef = routes?.find(r => r.id === selectedRouteId);
-    if (!routeDef) {
-        setIsStarting(false);
-        return;
-    }
-
-    const routePolygons = JSON.parse(routeDef.subGebieden);
+    
+    const routePolygons = JSON.parse(selectedRouteDef.subGebieden);
     let filteredObjects: MapObject[] = [];
 
     if (Array.isArray(routePolygons) && routePolygons.length > 0) {
@@ -320,8 +404,8 @@ export default function StartNavigationPage() {
         await addDoc(routeHistoryCol, {
             userId: user.uid,
             projectId: selectedProjectId,
-            originalRouteId: selectedRouteId,
-            routeName: routeDef.naam,
+            originalRouteId: selectedRouteDef.id,
+            routeName: selectedRouteDef.naam,
             date: new Date().toISOString().split('T')[0],
             startTime: new Date().toISOString(),
             allObjectIds: sortedObjects.map(o => o.id),
@@ -360,6 +444,7 @@ export default function StartNavigationPage() {
   return (
     <div className="w-full h-full relative">
       <MapGL
+        ref={mapRef}
         initialViewState={initialViewState}
         style={{ width: '100%', height: '100%' }}
         mapStyle="mapbox://styles/mapbox/streets-v12"
@@ -378,6 +463,19 @@ export default function StartNavigationPage() {
             </div>
           </Marker>
         )}
+
+        {routeGeoJSON && (
+            <Source id="route-area" type="geojson" data={routeGeoJSON}>
+                <Layer {...routeAreaFillLayer} />
+                <Layer {...routeAreaOutlineLayer} />
+            </Source>
+        )}
+        {objectsOnMap.map(obj => (
+            <Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude}>
+                <div className="w-2 h-2 bg-purple-600 rounded-full" />
+            </Marker>
+        ))}
+
       </MapGL>
         
       <Card className="absolute top-4 left-4 z-10 w-full max-w-sm">
