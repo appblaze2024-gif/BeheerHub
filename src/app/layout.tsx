@@ -16,6 +16,7 @@ import { useEffect, useState, Suspense, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import { NavigationUIProvider, useNavigationUI } from '@/context/navigation-ui-context';
+import { ProjectProvider } from '@/context/project-context';
 import { signOut } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from '@/components/ui/sheet';
@@ -262,11 +263,13 @@ export default function RootLayout({
       <body>
         <FirebaseClientProvider>
           <ProfileProvider>
-            <NavigationUIProvider>
-              <Suspense fallback={<AppLayoutFallback />}>
-                <AppLayout>{children}</AppLayout>
-              </Suspense>
-            </NavigationUIProvider>
+            <ProjectProvider>
+              <NavigationUIProvider>
+                <Suspense fallback={<AppLayoutFallback />}>
+                  <AppLayout>{children}</AppLayout>
+                </Suspense>
+              </NavigationUIProvider>
+            </ProjectProvider>
           </ProfileProvider>
         </FirebaseClientProvider>
       </body>

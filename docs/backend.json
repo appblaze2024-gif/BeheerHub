@@ -643,6 +643,10 @@
         "schouwenMapStyle": {
             "type": "string",
             "description": "The user's preferred map style for the inspection map."
+        },
+        "lastSelectedProjectId": {
+            "type": "string",
+            "description": "The ID of the last project the user selected."
         }
       },
       "required": [
