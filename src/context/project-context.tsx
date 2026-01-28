@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useMemo, useRef } from 'react';
 import { useProfile } from '@/firebase/profile-provider';
 import { useUser, useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -19,20 +19,18 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const firestore = useFirestore();
 
   const [selectedProjectId, setSelectedProjectIdState] = useState<string | null>(null);
-  // This flag ensures we only set the initial project ID once.
-  const [isInitialProjectLoaded, setIsInitialProjectLoaded] = useState(false);
+  const isInitialProjectSetRef = useRef(false);
 
   useEffect(() => {
-    // Wait until the profile is fully loaded and we haven't loaded the initial project yet.
-    if (!isProfileLoading && !isInitialProjectLoaded) {
-      if (profile && profile.lastSelectedProjectId) {
+    // Only run if the profile is loaded, and we haven't set the initial project ID yet.
+    if (profile && !isInitialProjectSetRef.current) {
+      if (profile.lastSelectedProjectId) {
         setSelectedProjectIdState(profile.lastSelectedProjectId);
       }
-      // Mark that we have attempted to load the initial project.
-      // This prevents this effect from running again and overwriting user selections.
-      setIsInitialProjectLoaded(true);
+      // Mark that we have set the initial project.
+      isInitialProjectSetRef.current = true;
     }
-  }, [isProfileLoading, profile, isInitialProjectLoaded]);
+  }, [profile]); // Depend only on the profile object.
 
   const handleSetSelectedProjectId = (projectId: string | null) => {
     setSelectedProjectIdState(projectId);
@@ -42,13 +40,13 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // The context is considered "loading" until the initial project ID has been loaded from the profile.
-  const isLoading = !isInitialProjectLoaded;
+  // The context is "loading" if the profile is still loading and we haven't had a chance to set the project from it.
+  const isLoading = isProfileLoading && !isInitialProjectSetRef.current;
 
   const value = useMemo(() => ({
-    selectedProjectId, 
+    selectedProjectId,
     setSelectedProjectId: handleSetSelectedProjectId,
-    isLoading: isLoading,
+    isLoading,
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [selectedProjectId, isLoading]);
 
