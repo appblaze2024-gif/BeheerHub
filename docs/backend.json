@@ -645,7 +645,7 @@
             "description": "The user's preferred map style for the inspection map."
         },
         "lastSelectedProjectId": {
-            "type": "string",
+            "type": ["string", "null"],
             "description": "The ID of the last project the user selected."
         }
       },

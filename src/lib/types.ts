@@ -183,6 +183,10 @@ export type Project = {
   wijken?: Wijk[];
   veegroutes?: Veegroute[];
   prullenbakkenroutes?: Prullenbakkenroute[];
+  vehicleAvailability?: {
+    unavailable: Record<string, string[]>;
+    available: Record<string, string[]>;
+  };
 };
 
 export type Bestand = {

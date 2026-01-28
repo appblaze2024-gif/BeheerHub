@@ -55,7 +55,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const { user } = useUser();
   const { profile } = useProfile();
   const firestore = useFirestore();
-  const { selectedProjectId, setSelectedProjectId } = useProject();
+  const { selectedProjectId, setSelectedProjectId, isLoading: isLoadingProject } = useProject();
   const isMobile = useIsMobile();
   const [isVersionDialogOpen, setIsVersionDialogOpen] = React.useState(false);
 
@@ -146,7 +146,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
               <Select
                 value={selectedProjectId || ''}
                 onValueChange={(value) => setSelectedProjectId(value === '' ? null : value)}
-                disabled={isLoadingProjects}
+                disabled={isLoadingProjects || isLoadingProject}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecteer project" />
