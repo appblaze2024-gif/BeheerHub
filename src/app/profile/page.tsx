@@ -24,11 +24,14 @@ import MapGL from 'react-map-gl';
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
 const mapStyles = [
-  { name: 'Standaard', url: 'mapbox://styles/mapbox/streets-v12' },
-  { name: 'Satelliet', url: 'mapbox://styles/mapbox/satellite-streets-v12' },
-  { name: 'Donker', url: 'mapbox://styles/mapbox/dark-v11' },
-  { name: 'Licht', url: 'mapbox://styles/mapbox/light-v11' },
-  { name: 'Buiten', url: 'mapbox://styles/mapbox/outdoors-v12' },
+    { name: 'Standaard', url: 'mapbox://styles/mapbox/streets-v12' },
+    { name: 'Buiten', url: 'mapbox://styles/mapbox/outdoors-v12' },
+    { name: 'Licht', url: 'mapbox://styles/mapbox/light-v11' },
+    { name: 'Donker', url: 'mapbox://styles/mapbox/dark-v11' },
+    { name: 'Satelliet', url: 'mapbox://styles/mapbox/satellite-v9' },
+    { name: 'Satelliet met straten', url: 'mapbox://styles/mapbox/satellite-streets-v12' },
+    { name: 'Navigatie (dag)', url: 'mapbox://styles/mapbox/navigation-day-v1' },
+    { name: 'Navigatie (nacht)', url: 'mapbox://styles/mapbox/navigation-night-v1' },
 ];
 
 const profileFormSchema = z.object({
