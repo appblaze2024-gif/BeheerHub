@@ -449,7 +449,7 @@ export default function StartNavigationPage() {
         style={{ width: '100%', height: '100%' }}
         mapStyle="mapbox://styles/mapbox/streets-v12"
         mapboxAccessToken={MAPBOX_TOKEN}
-        interactive={false}
+        interactive={true}
       >
         {userLocation && (
           <Marker
