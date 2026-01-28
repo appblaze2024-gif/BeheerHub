@@ -40,7 +40,7 @@ function BestekmeldingenList({ meldingen, onMeldingClick }: { meldingen: Besteks
 
   return (
     <div className="overflow-y-auto">
-      <div className="grid grid-cols-[1fr_2fr_1fr_1fr_auto] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
+      <div className="grid grid-cols-[1fr_2fr_1fr_120px_auto] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
         <span>Datum</span>
         <span>Werksoort</span>
         <span>Omschrijving</span>
@@ -51,7 +51,7 @@ function BestekmeldingenList({ meldingen, onMeldingClick }: { meldingen: Besteks
         <div
           key={melding.id}
           onClick={() => onMeldingClick(melding)}
-          className="grid grid-cols-[1fr_2fr_1fr_1fr_auto] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
+          className="grid grid-cols-[1fr_2fr_1fr_120px_auto] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
         >
           <span className="truncate">{melding.datum ? format(new Date(melding.datum), 'dd-MM-yyyy') : '-'}</span>
           <span className="font-medium truncate">{melding.werksoort || 'Onbekend'}</span>
@@ -63,7 +63,7 @@ function BestekmeldingenList({ meldingen, onMeldingClick }: { meldingen: Besteks
               borderColor: statusConfig[melding.status]?.borderColor || '#ccc'
             }}
             variant={melding.status === 'Afgerond' ? 'default' : 'destructive'}
-            className="justify-center"
+            className="justify-center w-fit"
           >
             {melding.status}
           </Badge>
