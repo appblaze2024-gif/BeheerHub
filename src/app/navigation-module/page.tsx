@@ -23,6 +23,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
+import { useProfile } from '@/firebase/profile-provider';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -80,6 +81,8 @@ function NavigatingView({
   const [completedObjects, setCompletedObjects] = React.useState<string[]>([]);
   const [currentRoute, setCurrentRoute] = React.useState<any>(null);
   const [currentLeg, setCurrentLeg] = React.useState<any>(null);
+  const { profile } = useProfile();
+  const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
   const [viewState, setViewState] = React.useState({
     pitch: 60,
     bearing: 0,
@@ -164,7 +167,7 @@ function NavigatingView({
         {...viewState}
         onMove={evt => setViewState(evt.viewState)}
         style={{ width: '100%', height: '100%' }}
-        mapStyle="mapbox://styles/mapbox/streets-v12"
+        mapStyle={mapStyle}
         mapboxAccessToken={MAPBOX_TOKEN}
       >
         {userLocation && (
@@ -231,6 +234,8 @@ export default function StartNavigationPage() {
   const { selectedProjectId, setSelectedProjectId } = useProject();
   const { setIsHeaderVisible } = useNavigationUI();
   const { user } = useUser();
+  const { profile } = useProfile();
+  const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
   
   const [userLocation, setUserLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
   const [routeType, setRouteType] = React.useState<'veeg' | 'prullenbak' | null>(null);
@@ -447,7 +452,7 @@ export default function StartNavigationPage() {
         ref={mapRef}
         initialViewState={initialViewState}
         style={{ width: '100%', height: '100%' }}
-        mapStyle="mapbox://styles/mapbox/streets-v12"
+        mapStyle={mapStyle}
         mapboxAccessToken={MAPBOX_TOKEN}
         interactive={true}
       >

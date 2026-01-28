@@ -17,12 +17,25 @@ import { UserManagement } from '@/components/user-management';
 import type { UserProfile } from '@/lib/types';
 import { useProfile } from '@/firebase/profile-provider';
 import { GemeenteSelect } from '@/components/gemeente-select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import MapGL from 'react-map-gl';
 
+
+const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
+
+const mapStyles = [
+  { name: 'Standaard', url: 'mapbox://styles/mapbox/streets-v12' },
+  { name: 'Satelliet', url: 'mapbox://styles/mapbox/satellite-streets-v12' },
+  { name: 'Donker', url: 'mapbox://styles/mapbox/dark-v11' },
+  { name: 'Licht', url: 'mapbox://styles/mapbox/light-v11' },
+  { name: 'Buiten', url: 'mapbox://styles/mapbox/outdoors-v12' },
+];
 
 const profileFormSchema = z.object({
   firstName: z.string().min(1, 'Voornaam is verplicht.'),
   lastName: z.string().min(1, 'Achternaam is verplicht.'),
   schouwenGemeente: z.string().nullable(),
+  schouwenMapStyle: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -49,10 +62,12 @@ export default function ProfilePage() {
       firstName: '',
       lastName: '',
       schouwenGemeente: null,
+      schouwenMapStyle: 'mapbox://styles/mapbox/streets-v12',
     },
   });
 
-  const { reset } = form;
+  const { reset, watch } = form;
+  const watchedMapStyle = watch('schouwenMapStyle');
 
   React.useEffect(() => {
     if (userProfile) {
@@ -60,6 +75,7 @@ export default function ProfilePage() {
           firstName: userProfile.firstName || '',
           lastName: userProfile.lastName || '',
           schouwenGemeente: userProfile.schouwenGemeente || null,
+          schouwenMapStyle: userProfile.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12',
         });
     }
   }, [userProfile, reset]);
@@ -75,6 +91,7 @@ export default function ProfilePage() {
         lastName: data.lastName,
         displayName: displayName,
         schouwenGemeente: data.schouwenGemeente,
+        schouwenMapStyle: data.schouwenMapStyle,
       }, { merge: true });
       toast({
         title: 'Profiel opgeslagen',
@@ -107,11 +124,11 @@ export default function ProfilePage() {
         </TabsList>
         
         {canViewTab('profile') && <TabsContent value="profile">
-          <Card className="max-w-2xl">
+          <Card className="max-w-4xl">
             <CardHeader>
               <CardTitle>Mijn Profiel</CardTitle>
               <CardDescription>
-                Deze naam wordt gebruikt als afzender bij het versturen van e-mails.
+                Deze naam wordt gebruikt als afzender bij het versturen van e-mails. Pas hier ook uw kaartvoorkeuren aan.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -172,6 +189,45 @@ export default function ProfilePage() {
                           </FormItem>
                         )}
                       />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+                         <FormField
+                            control={form.control}
+                            name="schouwenMapStyle"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Standaard Kaartstijl</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Selecteer een kaartstijl" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {mapStyles.map(style => (
+                                      <SelectItem key={style.url} value={style.url}>{style.name}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormDescription>
+                                    Kies de kaartstijl die standaard in de applicatie wordt gebruikt.
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <div className="aspect-video w-full rounded-md overflow-hidden border">
+                              <MapGL
+                                initialViewState={{
+                                  latitude: 52.1326,
+                                  longitude: 5.2913,
+                                  zoom: 5
+                                }}
+                                mapStyle={watchedMapStyle}
+                                mapboxAccessToken={MAPBOX_TOKEN}
+                                style={{width: '100%', height: '100%'}}
+                              />
+                          </div>
+                      </div>
                     <div className="flex justify-end">
                       <Button type="submit" disabled={isSaving}>
                         {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
