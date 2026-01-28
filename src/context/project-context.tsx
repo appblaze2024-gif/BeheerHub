@@ -19,27 +19,19 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const firestore = useFirestore();
 
   const [selectedProjectId, setSelectedProjectIdState] = useState<string | null>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [initialProjectSet, setInitialProjectSet] = useState(false);
 
   useEffect(() => {
-    // Don't do anything until the profile has finished loading and we haven't initialized.
-    if (isProfileLoading || isInitialized) {
-      return;
-    }
-    
-    // At this point, `isProfileLoading` is guaranteed to be false.
-    // The `profile` object is now in its final initial state (either an object or null).
-    // We can now initialize our own state.
-    if (profile) {
+    // Only set the initial project ID if the profile is loaded and we haven't set it yet.
+    if (!isProfileLoading && profile && !initialProjectSet) {
       setSelectedProjectIdState(profile.lastSelectedProjectId || null);
-    } else {
-      setSelectedProjectIdState(null);
+      setInitialProjectSet(true); // Mark as set
     }
-
-    // Mark as initialized so this logic doesn't run on subsequent re-renders.
-    setIsInitialized(true);
-
-  }, [profile, isProfileLoading, isInitialized]);
+     // If profile loading is done, but there's no profile, we can also mark as initialized.
+    if (!isProfileLoading && !profile && !initialProjectSet) {
+      setInitialProjectSet(true);
+    }
+  }, [isProfileLoading, profile, initialProjectSet]);
 
   const handleSetSelectedProjectId = (projectId: string | null) => {
     setSelectedProjectIdState(projectId);
@@ -53,8 +45,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const value = useMemo(() => ({
     selectedProjectId, 
     setSelectedProjectId: handleSetSelectedProjectId,
-    isLoading: isProfileLoading || !isInitialized,
-  }), [selectedProjectId, isProfileLoading, isInitialized]);
+    isLoading: isProfileLoading || !initialProjectSet,
+  }), [selectedProjectId, isProfileLoading, initialProjectSet]);
 
   return (
     <ProjectContext.Provider value={value}>
