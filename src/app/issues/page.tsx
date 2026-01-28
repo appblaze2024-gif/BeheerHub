@@ -23,6 +23,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { useProfile } from '@/firebase/profile-provider';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useProject } from '@/context/project-context';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -178,7 +179,7 @@ export default function IssuesPage() {
   const [meldingToMail, setMeldingToMail] = React.useState<Melding | null>(null);
   const [isMailDialogOpen, setIsMailDialogOpen] = React.useState(false);
 
-  const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
+  const { selectedProjectId, setSelectedProjectId } = useProject();
   const [selectedWijkId, setSelectedWijkId] = React.useState<string | null>(null);
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(new Date());
   const [viewMode, setViewMode] = React.useState<'map' | 'list'>('map');
@@ -186,19 +187,19 @@ export default function IssuesPage() {
   const { profile } = useProfile();
 
   React.useEffect(() => {
-    const projectId = searchParams.get('projectId');
-    const wijkId = searchParams.get('wijkId');
-    const view = searchParams.get('view');
-    if (projectId) {
-      setSelectedProjectId(projectId);
+    const projectIdFromParam = searchParams.get('projectId');
+    if (projectIdFromParam && projectIdFromParam !== selectedProjectId) {
+      setSelectedProjectId(projectIdFromParam);
     }
+    const wijkId = searchParams.get('wijkId');
     if (wijkId) {
       setSelectedWijkId(wijkId);
     }
+    const view = searchParams.get('view');
     if (view === 'list' || view === 'map') {
         setViewMode(view);
     }
-  }, [searchParams]);
+  }, [searchParams, selectedProjectId, setSelectedProjectId]);
 
   const meldingenCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -520,7 +521,7 @@ export default function IssuesPage() {
                                     <Select
                                     value={selectedProjectId || ''}
                                     onValueChange={(value) => {
-                                        setSelectedProjectId(value);
+                                        setSelectedProjectId(value || null);
                                         setSelectedWijkId('all');
                                     }}
                                     disabled={isLoadingProjects}

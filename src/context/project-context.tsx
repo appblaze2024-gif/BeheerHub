@@ -22,13 +22,15 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    // Initialize from profile only once, when profile is loaded
-    if (!isProfileLoading && profile && !isInitialized) {
-      setSelectedProjectIdState(profile.lastSelectedProjectId || null);
-      setIsInitialized(true);
+    if (isInitialized) {
+      return;
     }
-    // If profile is loaded but there is no profile (e.g. error), we also count as initialized
-    if (!isProfileLoading && !profile && !isInitialized) {
+
+    if (!isProfileLoading) { // Profile loading is complete
+        if (profile) { // And we have a profile
+            setSelectedProjectIdState(profile.lastSelectedProjectId || null);
+        }
+        // Whether we have a profile or not, initialization is now complete.
         setIsInitialized(true);
     }
   }, [profile, isProfileLoading, isInitialized]);

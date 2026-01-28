@@ -49,6 +49,7 @@ import { Wijk } from '@/app/projects/page';
 import * as turf from '@turf/turf';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useProject } from '@/context/project-context';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -132,7 +133,7 @@ export default function ObjectsPage() {
   const [showHeatmap, setShowHeatmap] = React.useState(false);
 
   // State for map view filtering
-  const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
+  const { selectedProjectId, setSelectedProjectId } = useProject();
   const [selectedAreaIds, setSelectedAreaIds] = React.useState<string[]>([]);
 
   const objectsCollection = React.useMemo(() => {
@@ -569,7 +570,7 @@ export default function ObjectsPage() {
                 <Select
                   value={selectedProjectId || ''}
                   onValueChange={(value) => {
-                    setSelectedProjectId(value);
+                    setSelectedProjectId(value || null);
                     setSelectedAreaIds([]);
                   }}
                   disabled={isLoadingProjects}
@@ -578,7 +579,7 @@ export default function ObjectsPage() {
                     <SelectValue placeholder="Selecteer een project" />
                   </SelectTrigger>
                   <SelectContent>
-                    {projects?.map(p => <SelectItem key={p.id} value={p.id}>{p.projectnaam}</SelectItem>)}
+                    {projects?.map(p => <SelectItem key={p.id} value={p.id!}>{p.projectnaam}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
