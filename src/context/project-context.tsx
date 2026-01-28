@@ -22,20 +22,20 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const [initialProjectSet, setInitialProjectSet] = useState(false);
 
   useEffect(() => {
-    // Wait until the profile is no longer loading.
-    if (isProfileLoading) {
+    // Don't do anything until the profile is loaded and we haven't performed the initial set.
+    if (isProfileLoading || initialProjectSet) {
       return;
     }
 
-    // Once loading is complete, perform the initial project ID set if it hasn't been done yet.
-    if (!initialProjectSet) {
-      if (profile && profile.lastSelectedProjectId) {
-        setSelectedProjectIdState(profile.lastSelectedProjectId);
-      }
-      // Mark as set regardless of whether a project ID was found,
-      // to prevent re-running this logic on subsequent re-renders.
-      setInitialProjectSet(true);
+    // Profile is now loaded (or we know it doesn't exist).
+    // We can now attempt to set the initial project ID from the profile data.
+    if (profile && profile.lastSelectedProjectId) {
+      setSelectedProjectIdState(profile.lastSelectedProjectId);
     }
+    
+    // Mark that the initial setup has been performed.
+    // This prevents the logic from running again on subsequent re-renders.
+    setInitialProjectSet(true);
   }, [isProfileLoading, profile, initialProjectSet]);
 
   const handleSetSelectedProjectId = (projectId: string | null) => {
