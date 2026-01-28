@@ -43,7 +43,6 @@ export const allMenuItems: MenuItem[] = [
     { href: '/spec-reports', label: 'Besteksmeldingen', icon: FileWarning, module: 'specReports' },
     { href: '/navigation-module', label: 'Navigatiemodule', icon: Navigation, module: 'navigation' },
     { href: '/teams', label: 'Teams', icon: Users2, module: 'teams' },
-    { href: '/photo-review', label: 'Foto beoordeling', icon: Camera, module: 'photo-review' },
     { href: '/mail', label: 'Mail', icon: Mail, module: 'mail' },
     { href: '/news', label: 'Nieuws berichten', icon: Newspaper, module: 'news' },
     { href: '/profile', label: 'Mijn Profiel', icon: User, module: 'users' },
