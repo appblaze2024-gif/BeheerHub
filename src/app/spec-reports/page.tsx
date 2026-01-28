@@ -82,7 +82,7 @@ export default function SpecReportsPage() {
   const [selectedMelding, setSelectedMelding] = React.useState<Besteksmelding | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const { selectedProjectId, setSelectedProjectId } = useProject();
-  const [viewMode, setViewMode] = React.useState<'map' | 'list'>('map');
+  const [viewMode, setViewMode] = React.useState<'map' | 'list'>('list');
   const [searchQuery, setSearchQuery] = React.useState('');
   const { profile } = useProfile();
 
@@ -261,11 +261,9 @@ export default function SpecReportsPage() {
             )}
         </MapGL>
       ) : (
-        <div className="pt-24 px-4 pb-4 h-full">
-            <Card className='h-full flex flex-col'>
-                <CardHeader className="p-4">
-                    <CardTitle>Overzicht Besteksmeldingen ({filteredMeldingen?.length || 0})</CardTitle>
-                </CardHeader>
+        <div className="pt-36 px-4 pb-4 h-full flex flex-col">
+            <h1 className="text-xl font-bold mb-4">Overzicht Besteksmeldingen ({filteredMeldingen?.length || 0})</h1>
+            <Card className='flex-1 flex flex-col min-h-0'>
                 <CardContent className='p-0 flex-1 min-h-0'>
                     <BestekmeldingenList meldingen={filteredMeldingen || []} onMeldingClick={handleMeldingClickFromList} />
                 </CardContent>
