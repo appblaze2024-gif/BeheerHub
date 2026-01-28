@@ -61,6 +61,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { useProfile } from '@/firebase/profile-provider';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { useProject } from '@/context/project-context';
 
 
 const getInitials = (firstName?: string, lastName?: string) => {
@@ -234,7 +235,7 @@ export default function WorkPlanningPage() {
   const [currentDate, setCurrentDate] = React.useState(new Date());
   const [isPrintDayDialogOpen, setIsPrintDayDialogOpen] = React.useState(false);
   const [isSaveWeekDialogOpen, setIsSaveWeekDialogOpen] = React.useState(false);
-  const [selectedProjectId, setSelectedProjectId] = React.useState<string | undefined>();
+  const { selectedProjectId, setSelectedProjectId } = useProject();
   
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
   const [selectedMedewerker, setSelectedMedewerker] = React.useState<Medewerker | undefined>();
@@ -980,8 +981,8 @@ export default function WorkPlanningPage() {
             Project:
           </span>
           <Select
-            value={selectedProjectId}
-            onValueChange={setSelectedProjectId}
+            value={selectedProjectId || ''}
+            onValueChange={(value) => setSelectedProjectId(value || null)}
             disabled={isLoadingProjects}
           >
             <SelectTrigger className="w-full md:w-[280px]">
@@ -989,7 +990,7 @@ export default function WorkPlanningPage() {
             </SelectTrigger>
             <SelectContent>
               {projects?.map((project) => (
-                <SelectItem key={project.id} value={project.id}>
+                <SelectItem key={project.id} value={project.id!}>
                   {project.projectnaam} [{project.projectnummer}]
                 </SelectItem>
               ))}

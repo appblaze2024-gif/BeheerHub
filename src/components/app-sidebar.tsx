@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useProject } from '@/context/project-context';
 
 type Project = {
   id: string;
@@ -54,7 +55,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const { user } = useUser();
   const { profile } = useProfile();
   const firestore = useFirestore();
-  const [selectedProjectId, setSelectedProjectId] = React.useState<string | undefined>();
+  const { selectedProjectId, setSelectedProjectId } = useProject();
   const isMobile = useIsMobile();
   const [isVersionDialogOpen, setIsVersionDialogOpen] = React.useState(false);
 
@@ -143,8 +144,8 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
           <SidebarContent className="p-2 no-scrollbar">
             <div className="px-2 pb-2">
               <Select
-                value={selectedProjectId}
-                onValueChange={setSelectedProjectId}
+                value={selectedProjectId || ''}
+                onValueChange={(value) => setSelectedProjectId(value === '' ? null : value)}
                 disabled={isLoadingProjects}
               >
                 <SelectTrigger>

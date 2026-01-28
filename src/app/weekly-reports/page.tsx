@@ -38,6 +38,7 @@ import { nl } from 'date-fns/locale';
 import type { Dienst } from '@/lib/types';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { useProject } from '@/context/project-context';
 
 
 type Werksoort = {
@@ -73,7 +74,7 @@ type ReportRow = {
 
 export default function WeeklyReportsPage() {
   const firestore = useFirestore();
-  const [selectedProjectId, setSelectedProjectId] = React.useState<string | undefined>();
+  const { selectedProjectId, setSelectedProjectId } = useProject();
   const [currentDate, setCurrentDate] = React.useState(new Date());
   const isMobile = useIsMobile(1024);
 
@@ -235,8 +236,8 @@ export default function WeeklyReportsPage() {
           </div>
           <div className="flex flex-col md:flex-row items-center justify-end gap-2 flex-1 min-w-0 w-full">
             <Select
-                value={selectedProjectId}
-                onValueChange={setSelectedProjectId}
+                value={selectedProjectId || ''}
+                onValueChange={(value) => setSelectedProjectId(value || null)}
                 disabled={isLoadingProjects}
             >
               <SelectTrigger className="w-full md:w-auto md:max-w-xs">
@@ -244,7 +245,7 @@ export default function WeeklyReportsPage() {
               </SelectTrigger>
               <SelectContent>
                 {projects?.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>
+                    <SelectItem key={project.id} value={project.id!}>
                     {project.projectnaam} [{project.projectnummer}]
                     </SelectItem>
                 ))}

@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Besteksmelding } from '@/lib/types';
 import type { Project } from '@/app/projects/page';
 import { useProfile } from '@/firebase/profile-provider';
+import { useProject } from '@/context/project-context';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -80,7 +81,7 @@ export default function SpecReportsPage() {
   const firestore = useFirestore();
   const [selectedMelding, setSelectedMelding] = React.useState<Besteksmelding | null>(null);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-  const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
+  const { selectedProjectId, setSelectedProjectId } = useProject();
   const [viewMode, setViewMode] = React.useState<'map' | 'list'>('map');
   const [searchQuery, setSearchQuery] = React.useState('');
   const { profile } = useProfile();
@@ -184,14 +185,14 @@ export default function SpecReportsPage() {
                 <Label htmlFor='project-select' className='text-sm font-medium sr-only'>Project</Label>
                 <Select
                   value={selectedProjectId || ''}
-                  onValueChange={setSelectedProjectId}
+                  onValueChange={(value) => setSelectedProjectId(value || null)}
                   disabled={isLoadingProjects}
                 >
                   <SelectTrigger id="project-select" className="w-full md:w-72 bg-card">
                     <SelectValue placeholder="Selecteer een project" />
                   </SelectTrigger>
                   <SelectContent>
-                    {projects?.map(p => <SelectItem key={p.id} value={p.id}>{p.projectnaam}</SelectItem>)}
+                    {projects?.map(p => <SelectItem key={p.id} value={p.id!}>{p.projectnaam}</SelectItem>)}
                   </SelectContent>
                 </Select>
             </div>

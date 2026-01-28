@@ -44,6 +44,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useProject } from '@/context/project-context';
 
 type Werksoort = {
   id: string;
@@ -950,9 +951,7 @@ function PrullenbakkenroutesTab({
 export default function ProjectsPage() {
   const firestore = useFirestore();
   const { profile, isLoading: isProfileLoading } = useProfile();
-  const [selectedProjectId, setSelectedProjectId] = React.useState<
-    string | undefined
-  >();
+  const { selectedProjectId, setSelectedProjectId } = useProject();
   const [currentProject, setCurrentProject] = React.useState<Project>(EMPTY_PROJECT);
   const [isEndDateHeden, setIsEndDateHeden] = React.useState(false);
   const [isGlobalWijkMapOpen, setIsGlobalWijkMapOpen] = React.useState(false);
@@ -999,6 +998,11 @@ export default function ProjectsPage() {
     });
   }, [allAreas]);
 
+  const generateProjectNumber = () => {
+    const year = new Date().getFullYear();
+    const randomNumber = Math.floor(10000 + Math.random() * 90000);
+    return `${year}-${randomNumber}`;
+  };
 
   React.useEffect(() => {
     if (selectedProjectId) {
@@ -1017,29 +1021,23 @@ export default function ProjectsPage() {
             setIsEndDateHeden(false);
         }
       } else {
-        setCurrentProject(EMPTY_PROJECT);
-        setSelectedProjectId(undefined);
-        setIsEndDateHeden(false);
+        // This can happen if a project is deleted while it's selected.
+        // We should clear the selection.
+        if (projects) { // Only clear if projects have loaded
+             setSelectedProjectId(null);
+        }
       }
     } else {
-        setCurrentProject(EMPTY_PROJECT);
+        setCurrentProject({
+            ...EMPTY_PROJECT,
+            projectnummer: generateProjectNumber(),
+        });
         setIsEndDateHeden(false);
     }
-  }, [selectedProjectId, projects]);
-
-  const generateProjectNumber = () => {
-    const year = new Date().getFullYear();
-    const randomNumber = Math.floor(10000 + Math.random() * 90000);
-    return `${year}-${randomNumber}`;
-  };
+  }, [selectedProjectId, projects, setSelectedProjectId]);
 
   const handleNew = () => {
-    setSelectedProjectId(undefined);
-    setCurrentProject({
-      ...EMPTY_PROJECT,
-      projectnummer: generateProjectNumber(),
-    });
-    setIsEndDateHeden(false);
+    setSelectedProjectId(null);
   };
   
   const handleProjectSelect = (projectId: string) => {
@@ -1112,7 +1110,7 @@ export default function ProjectsPage() {
             Selecteer Project:
           </Label>
           <Select
-            value={selectedProjectId}
+            value={selectedProjectId || 'new'}
             onValueChange={handleProjectSelect}
             disabled={isLoading}
           >
@@ -1122,7 +1120,7 @@ export default function ProjectsPage() {
             <SelectContent>
               {canCreate && <SelectItem value="new">-- Nieuw Project --</SelectItem>}
               {projects?.map((project) => (
-                <SelectItem key={project.id} value={project.id}>
+                <SelectItem key={project.id} value={project.id!}>
                   {project.projectnaam} [{project.projectnummer}]
                 </SelectItem>
               ))}

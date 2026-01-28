@@ -51,6 +51,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { useProject } from '@/context/project-context';
 
 interface FolderWithChildren extends Folder {
     children: FolderWithChildren[];
@@ -114,8 +115,7 @@ const FolderTreeItem = ({ folder, selectedFolderId, onSelectFolder, level, handl
 export default function BestandenPage() {
   const firestore = useFirestore();
   const app = useFirebaseApp();
-
-  const [selectedProjectId, setSelectedProjectId] = React.useState<string | null>(null);
+  const { selectedProjectId, setSelectedProjectId } = useProject();
   const [selectedFolderId, setSelectedFolderId] = React.useState<string>('root');
   const [isUploadDialogOpen, setIsUploadDialogOpen] = React.useState(false);
   const [treeKey, setTreeKey] = React.useState(Date.now());
@@ -276,7 +276,7 @@ export default function BestandenPage() {
   };
 
 
-  const handleProjectChange = (projectId: string) => {
+  const handleProjectChange = (projectId: string | null) => {
     setSelectedProjectId(projectId);
     setSelectedFolderId('root');
   }
@@ -292,7 +292,7 @@ export default function BestandenPage() {
           </Label>
           <Select
             value={selectedProjectId || ''}
-            onValueChange={handleProjectChange}
+            onValueChange={(value) => handleProjectChange(value || null)}
             disabled={isLoadingProjects}
           >
             <SelectTrigger className="w-full max-w-lg">

@@ -27,7 +27,7 @@ export type UserProfile = {
   lastUsedDienstColor?: string;
   schouwenGemeente?: string;
   schouwenMapStyle?: string;
-  lastSelectedProjectId?: string;
+  lastSelectedProjectId?: string | null;
 };
 
 export interface Medewerker {
