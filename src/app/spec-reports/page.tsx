@@ -85,6 +85,7 @@ export default function SpecReportsPage() {
   const [viewMode, setViewMode] = React.useState<'map' | 'list'>('list');
   const [searchQuery, setSearchQuery] = React.useState('');
   const { profile } = useProfile();
+  const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
 
   const isSuperUser = profile?.role === 'Super admin';
   const canCreate = isSuperUser || !!profile?.permissions?.specReports?.create;
@@ -216,7 +217,7 @@ export default function SpecReportsPage() {
             ref={mapRef}
             initialViewState={initialViewState}
             style={{ width: '100%', height: '100%' }}
-            mapStyle="mapbox://styles/mapbox/streets-v12"
+            mapStyle={mapStyle}
             mapboxAccessToken={MAPBOX_TOKEN}
             cursor="default"
         >

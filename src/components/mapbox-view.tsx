@@ -4,6 +4,7 @@ import * as React from 'react';
 import MapGL, { Marker, Popup, Source, Layer } from 'react-map-gl';
 import type { FillLayer, LineLayer, SymbolLayer, MapLayerMouseEvent } from 'react-map-gl';
 import * as turf from '@turf/turf';
+import { useProfile } from '@/firebase/profile-provider';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -58,6 +59,8 @@ const getHeatmapColor = (vulgraad: number | undefined): string => {
 export function MapboxView({ longitude, latitude, objects, selectedObjects = [], onObjectSelect, wijkPolygons = [], showHeatmap = true, interactive = true }: MapboxViewProps) {
   const [selectedPin, setSelectedPin] = React.useState<MapObject | null>(null);
   const [hoveredPin, setHoveredPin] = React.useState<MapObject | null>(null);
+  const { profile } = useProfile();
+  const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
 
   const geojson: turf.FeatureCollection<turf.Geometry> = React.useMemo(() => {
     return {
@@ -164,7 +167,7 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
         ref={mapRef}
         initialViewState={initialViewState}
         style={{ width: '100%', height: '100%' }}
-        mapStyle="mapbox://styles/mapbox/streets-v12"
+        mapStyle={mapStyle}
         mapboxAccessToken={MAPBOX_TOKEN}
         dragPan={interactive}
         dragRotate={interactive}

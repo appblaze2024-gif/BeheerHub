@@ -29,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { Checkbox } from './ui/checkbox';
+import { useProfile } from '@/firebase/profile-provider';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -198,6 +199,9 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   referenceAreaIdsRef.current = referenceAreaIds;
   
   const initialFeaturesRef = React.useRef<any[]>([]);
+
+  const { profile } = useProfile();
+  const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
 
   const geojson = React.useMemo(() => {
     if (!wijk?.subGebieden) return null;
@@ -999,7 +1003,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
           <MapGL
             ref={mapRef}
             initialViewState={initialViewState}
-            mapStyle="mapbox://styles/mapbox/streets-v12"
+            mapStyle={mapStyle}
             mapboxAccessToken={MAPBOX_TOKEN}
             onLoad={onMapLoad}
             preserveDrawingBuffer

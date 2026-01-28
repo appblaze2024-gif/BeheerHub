@@ -64,6 +64,8 @@ export default function DashboardPage() {
   const [userLocation, setUserLocation] = React.useState<{ latitude: number, longitude: number } | null>(null);
   const locationWatcherId = React.useRef<number | null>(null);
 
+  const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
+
   const objectsQuery = React.useMemo(() => {
     if (!firestore || !visibleLayers.objects) return null;
     return collection(firestore, 'objects');
@@ -272,7 +274,7 @@ export default function DashboardPage() {
         onMove={evt => setViewState(evt.viewState)}
         onLoad={onMapLoad}
         style={{ width: '100%', height: '100%' }}
-        mapStyle="mapbox://styles/mapbox/streets-v12"
+        mapStyle={mapStyle}
         mapboxAccessToken={MAPBOX_TOKEN}
       >
         {boundary && (

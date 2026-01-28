@@ -185,6 +185,7 @@ export default function IssuesPage() {
   const [viewMode, setViewMode] = React.useState<'map' | 'list'>('map');
   const [searchQuery, setSearchQuery] = React.useState('');
   const { profile } = useProfile();
+  const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
 
   React.useEffect(() => {
     const projectIdFromParam = searchParams.get('projectId');
@@ -598,7 +599,7 @@ export default function IssuesPage() {
             ref={mapRef}
             initialViewState={initialViewState}
             style={{ width: '100%', height: '100%' }}
-            mapStyle="mapbox://styles/mapbox/streets-v12"
+            mapStyle={mapStyle}
             mapboxAccessToken={MAPBOX_TOKEN}
             cursor="default"
         >
