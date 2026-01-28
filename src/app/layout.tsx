@@ -40,6 +40,7 @@ function Header() {
   const { profile } = useProfile();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const getInitials = (firstName?: string, lastName?: string) => {
     const firstInitial = firstName?.[0] || '';
@@ -50,17 +51,17 @@ function Header() {
   return (
     <header className="bg-background flex h-16 shrink-0 items-center justify-between border-b border-border px-4 md:px-6 shadow-sm z-10">
       <div className="flex items-center gap-2">
-        <Sheet>
+        <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon">
               <Menu className="h-6 w-6" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="p-0 w-80">
+          <SheetContent side="left" className="inset-y-4 left-4 h-[calc(100svh-2rem)] w-80 rounded-lg p-0">
             <SheetHeader>
                 <SheetTitle className="sr-only">Zijmenu</SheetTitle>
             </SheetHeader>
-            <AppSidebar />
+            <AppSidebar onNavigate={() => setIsSidebarOpen(false)} />
           </SheetContent>
         </Sheet>
         {isSearchOpen ? (

@@ -35,7 +35,11 @@ type Project = {
   projectnummer: string;
 };
 
-export function AppSidebar() {
+export interface AppSidebarProps {
+  onNavigate?: () => void;
+}
+
+export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const pathname = usePathname();
   const { user } = useUser();
   const { profile } = useProfile();
@@ -119,7 +123,7 @@ export function AppSidebar() {
           </div>
           <SidebarMenu>
             {menuItems.map((item) => (
-              <SidebarMenuItem key={item.href}>
+              <SidebarMenuItem key={item.href} onClick={onNavigate}>
                 <Link href={item.href} passHref>
                     <SidebarMenuButton
                         isActive={pathname === item.href}
