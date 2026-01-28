@@ -138,6 +138,33 @@ export type Werksoort = {
   uurprijs: string;
 };
 
+export interface Boekingregel {
+  id: string;
+  naam: string;
+}
+
+export type Wijk = {
+  id: string;
+  naam: string;
+  locatie: string;
+  subGebieden: string;
+};
+
+export interface Veegroute {
+  id: string;
+  naam: string;
+  locatie: string;
+  subGebieden: string;
+  roadTypes?: string[];
+}
+
+export interface Prullenbakkenroute {
+  id: string;
+  naam: string;
+  locatie: string;
+  subGebieden: string;
+}
+
 export type Project = {
   id?: string;
   projectnummer: string;
@@ -152,10 +179,10 @@ export type Project = {
   datum: string;
   omschrijving: string;
   werksoorten: Werksoort[];
-  boekingregels?: any[]; // Replace with specific type if known
-  wijken?: any[]; // Replace with specific type if known
-  veegroutes?: any[]; // Replace with specific type if known
-  prullenbakkenroutes?: any[]; // Replace with specific type if known
+  boekingregels?: Boekingregel[];
+  wijken?: Wijk[];
+  veegroutes?: Veegroute[];
+  prullenbakkenroutes?: Prullenbakkenroute[];
 };
 
 export type Bestand = {
@@ -222,3 +249,18 @@ export type Melding = {
   wijk?: string;
   files?: UploadedFile[];
 };
+
+export interface Route {
+  id: string;
+  userId: string;
+  projectId: string;
+  originalRouteId: string;
+  routeName: string;
+  date: string;
+  startTime: string;
+  endTime?: string;
+  allObjectIds?: string[];
+  completedObjects?: string[];
+  skippedObjects?: string[];
+  totalObjects?: number;
+}

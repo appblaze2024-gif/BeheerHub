@@ -2,8 +2,8 @@
 
 import * as React from 'react';
 import MapGL, { Marker } from 'react-map-gl';
-import { useCollection, useFirestore } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useCollection, useFirestore, useUser } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -18,14 +18,16 @@ import { AlertCircle, ArrowLeft } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter } from 'next/navigation';
+import type { Project, Route, Veegroute, Prullenbakkenroute } from '@/lib/types';
+import { cn } from '@/lib/utils';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
-type Project = {
-  id: string;
-  projectnaam: string;
-  projectnummer: string;
-  wijken?: any[]; // Simplified for this component
+type ProjectWithRoutes = Project & {
+  veegroutes?: Veegroute[];
+  prullenbakkenroutes?: Prullenbakkenroute[];
 };
 
 export default function StartNavigationPage() {
@@ -33,27 +35,50 @@ export default function StartNavigationPage() {
   const router = useRouter();
   const { selectedProjectId, setSelectedProjectId } = useProject();
   const { setIsHeaderVisible } = useNavigationUI();
+  const { user } = useUser();
   
   const [locationError, setLocationError] = React.useState<string | null>(null);
   const [userLocation, setUserLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
+
+  const [routeType, setRouteType] = React.useState<'veeg' | 'prullenbak' | null>(null);
+  const [selectedRouteId, setSelectedRouteId] = React.useState<string>('--nieuwe-route--');
 
   const projectsCollection = React.useMemo(() => {
     if (!firestore) return null;
     return collection(firestore, 'projects');
   }, [firestore]);
 
-  const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsCollection);
+  const { data: projects, isLoading: isLoadingProjects } = useCollection<ProjectWithRoutes>(projectsCollection);
+
+  const routeHistoryQuery = React.useMemo(() => {
+      if (!firestore || !user || !selectedProjectId) return null;
+      return query(
+          collection(firestore, 'users', user.uid, 'routes'),
+          where('projectId', '==', selectedProjectId)
+      );
+  }, [firestore, user, selectedProjectId]);
+
+  const { data: routeHistory, isLoading: isLoadingRouteHistory } = useCollection<Route>(routeHistoryQuery);
+  
+  const selectedProject = React.useMemo(() => {
+    return projects?.find(p => p.id === selectedProjectId) ?? null;
+  }, [projects, selectedProjectId]);
+
+  const availableRoutes = React.useMemo(() => {
+      if (!selectedProject) return [];
+      if (routeType === 'veeg') return selectedProject.veegroutes || [];
+      if (routeType === 'prullenbak') return selectedProject.prullenbakkenroutes || [];
+      return [];
+  }, [selectedProject, routeType]);
 
   React.useEffect(() => {
     setIsHeaderVisible(false);
     
-    // Check for Geolocation support
     if (!navigator.geolocation) {
       setLocationError("Geolocatie wordt niet ondersteund door uw browser.");
       return;
     }
 
-    // Try to get current position
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setUserLocation({
@@ -85,10 +110,11 @@ export default function StartNavigationPage() {
   }, [setIsHeaderVisible]);
 
   const handleStartRoute = () => {
-    // Placeholder for navigation logic
-    if (selectedProjectId) {
-      console.log('Starting route for project:', selectedProjectId);
-    }
+    console.log({
+        projectId: selectedProjectId,
+        routeType,
+        selectedRouteId
+    });
   };
 
   const initialViewState = {
@@ -125,9 +151,9 @@ export default function StartNavigationPage() {
           </Marker>
         )}
       </MapGL>
-
-      <div className="absolute top-4 left-4 z-10">
-        {locationError && (
+        
+      {locationError && (
+          <div className="absolute top-4 right-4 z-10">
             <Alert variant="destructive" className="max-w-md">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Locatie Fout</AlertTitle>
@@ -135,43 +161,105 @@ export default function StartNavigationPage() {
                     {locationError}
                 </AlertDescription>
             </Alert>
-        )}
+          </div>
+      )}
 
-        <Card className="mt-4 w-full max-w-sm">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" onClick={() => router.back()}>
-                    <ArrowLeft className="h-5 w-5" />
-                </Button>
-                <CardTitle>Start een nieuwe route</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Project</label>
-              <Select
-                value={selectedProjectId || ''}
-                onValueChange={(value) => setSelectedProjectId(value || null)}
-                disabled={isLoadingProjects}
+      <Card className="absolute top-4 left-4 z-10 w-full max-w-sm">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => router.back()}>
+                <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <CardTitle>Start een nieuwe route</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Project</Label>
+            <Select
+              value={selectedProjectId || ''}
+              onValueChange={(value) => {
+                setSelectedProjectId(value || null);
+                setRouteType(null);
+                setSelectedRouteId('--nieuwe-route--');
+              }}
+              disabled={isLoadingProjects}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecteer een project" />
+              </SelectTrigger>
+              <SelectContent>
+                {projects?.map((project) => (
+                  <SelectItem key={project.id} value={project.id!}>
+                    {project.projectnaam} [{project.projectnummer}]
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-2">
+            <Label>Route Type</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <Button 
+                variant={routeType === 'veeg' ? 'default' : 'outline'} 
+                onClick={() => { setRouteType('veeg'); setSelectedRouteId('--nieuwe-route--'); }}
+                disabled={!selectedProjectId}
               >
+                Veegwagenroutes
+              </Button>
+              <Button 
+                variant={routeType === 'prullenbak' ? 'default' : 'outline'} 
+                onClick={() => { setRouteType('prullenbak'); setSelectedRouteId('--nieuwe-route--'); }}
+                disabled={!selectedProjectId}
+              >
+                Prullenbakkenroutes
+              </Button>
+            </div>
+          </div>
+          
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">OF</span>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Kies uit routegeschiedenis</Label>
+            <Select onValueChange={setSelectedRouteId} value={selectedRouteId} disabled={!routeType}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecteer een project" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {projects?.map((project) => (
-                    <SelectItem key={project.id} value={project.id!}>
-                      {project.projectnaam} [{project.projectnummer}]
-                    </SelectItem>
-                  ))}
+                    <SelectItem value="--nieuwe-route--">-- Nieuwe Route --</SelectItem>
+                    {availableRoutes.map((route: Veegroute | Prullenbakkenroute) => (
+                        <SelectItem key={route.id} value={route.id}>
+                            {route.naam}
+                        </SelectItem>
+                    ))}
+                    {routeHistory && routeHistory.length > 0 && (
+                        <>
+                            <Separator className='my-1' />
+                            <Label className="px-2 py-1.5 text-xs text-muted-foreground font-normal">Recent</Label>
+                            {routeHistory.map((route: Route) => (
+                                <SelectItem key={route.id} value={route.id}>
+                                    {route.routeName}
+                                </SelectItem>
+                            ))}
+                        </>
+                    )}
                 </SelectContent>
-              </Select>
-            </div>
-            <Button className="w-full" onClick={handleStartRoute} disabled={!selectedProjectId}>
-              Start Route
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+            </Select>
+          </div>
+          
+          <Button className="w-full" onClick={handleStartRoute} disabled={!selectedProjectId || !routeType}>
+            Start Route
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
