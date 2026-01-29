@@ -32,7 +32,7 @@ import {
 import { Checkbox } from './ui/checkbox';
 import { useProfile } from '@/firebase/profile-provider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { useFirestore, useCollection } from '@/firebase';
+import { useFirestore, useCollection, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import type { Object as MapObject } from '@/lib/types';
 
@@ -90,9 +90,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   }, [firestore]);
 
   const { data: allObjects } = useCollection<MapObject>(objectsCollection);
-  const allObjectsRef = React.useRef(allObjects);
-  allObjectsRef.current = allObjects;
-
+  
   const [selectedObjectIds, setSelectedObjectIds] = React.useState<string[]>([]);
   const [isSaving, setIsSaving] = React.useState(false);
 
@@ -117,10 +115,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
       const map = mapRef.current.getMap();
       const draw = new MapboxDraw({
         displayControlsDefault: false,
-        controls: {
-          polygon: false,
-          trash: false,
-        },
+        controls: {}, // Controls are handled by our custom buttons
         styles: [
             { 'id': 'gl-draw-polygon-fill-inactive', 'type': 'fill', 'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon'], ['!=', 'mode', 'static']], 'paint': { 'fill-color': '#3b82f6', 'fill-outline-color': '#3b82f6', 'fill-opacity': 0.1 } },
             { 'id': 'gl-draw-polygon-stroke-inactive', 'type': 'line', 'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon'], ['!=', 'mode', 'static']], 'layout': { 'line-cap': 'round', 'line-join': 'round' }, 'paint': { 'line-color': '#3b82f6', 'line-width': 2 } },
@@ -147,7 +142,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
       const selectionPolygon = e.features[0];
       if (!selectionPolygon) return;
       
-      const newlySelectedIds = (allObjectsRef.current || [])
+      const newlySelectedIds = (allObjects || [])
         .filter(obj => {
           if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
           const pt = turf.point([obj.longitude, obj.latitude]);
@@ -172,7 +167,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         }
       }
     };
-  }, [readOnly]); // Dependency array is now stable
+  }, [readOnly, allObjects]);
 
 
   const handleObjectAssignment = async (assign: boolean) => {
