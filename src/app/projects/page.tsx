@@ -48,6 +48,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useProject } from '@/context/project-context';
 import * as turf from '@turf/turf';
+import { Separator } from '@/components/ui/separator';
 
 type Werksoort = {
   id: string;
@@ -861,6 +862,10 @@ function PrullenbakkenroutesTab({
     );
   }, [prullenbakkenroutes]);
 
+  const totalObjectsInRoutes = React.useMemo(() => {
+    return Object.values(objectCounts).reduce((sum, count) => sum + count, 0);
+  }, [objectCounts]);
+
   const setPrullenbakkenroutes = (updater: Prullenbakkenroute[] | ((prev: Prullenbakkenroute[]) => Prullenbakkenroute[])) => {
     setCurrentProject(prevProject => ({
       ...prevProject,
@@ -904,7 +909,7 @@ function PrullenbakkenroutesTab({
 
   return (
     <div className="space-y-4">
-       <div className="flex justify-end text-sm text-muted-foreground">
+      <div className="flex justify-end text-sm text-muted-foreground">
         Totaal objecten: <span className="font-bold text-foreground ml-1">{totalObjects}</span>
       </div>
       <div className="grid grid-cols-[1fr_1fr_100px_auto_auto] gap-x-4 px-1 text-sm font-semibold">
@@ -934,7 +939,15 @@ function PrullenbakkenroutesTab({
         </div>
       ))}
       {canEdit && <Button variant="outline" onClick={addRow}>Prullenbakkenroute toevoegen</Button>}
-      
+      <div className="border-t pt-4 mt-4">
+        <div className="grid grid-cols-[1fr_1fr_100px_auto_auto] gap-x-4 px-1 text-sm">
+            <span className="font-semibold">Totaal</span>
+            <span/>
+            <div className="text-center font-semibold">{totalObjectsInRoutes}</div>
+            <span/>
+            <span/>
+        </div>
+      </div>
       {mapRoute && (
         <PrullenbakkenrouteMapDialog
           open={!!mapRoute}
