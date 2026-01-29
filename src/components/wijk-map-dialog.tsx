@@ -32,7 +32,7 @@ import {
 import { Checkbox } from './ui/checkbox';
 import { useProfile } from '@/firebase/profile-provider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { useFirestore, useCollection, updateDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useCollection } from '@/firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import type { Object as MapObject } from '@/lib/types';
 
@@ -79,6 +79,7 @@ interface Suggestion {
 export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = false, allAreas = [], showRoadTypes = false }: WijkMapDialogProps) {
   const drawRef = React.useRef<MapboxDraw | null>(null);
   const mapRef = React.useRef<any>(null);
+  const allObjectsRef = React.useRef<MapObject[] | null>(null);
   
   const { profile } = useProfile();
   const [currentMapStyle, setCurrentMapStyle] = React.useState(profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12');
@@ -91,6 +92,10 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
 
   const { data: allObjects } = useCollection<MapObject>(objectsCollection);
   
+  React.useEffect(() => {
+    allObjectsRef.current = allObjects;
+  }, [allObjects]);
+
   const [selectedObjectIds, setSelectedObjectIds] = React.useState<string[]>([]);
   const [isSaving, setIsSaving] = React.useState(false);
 
@@ -142,7 +147,10 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
       const selectionPolygon = e.features[0];
       if (!selectionPolygon) return;
       
-      const newlySelectedIds = (allObjects || [])
+      const objects = allObjectsRef.current;
+      if (!objects) return;
+
+      const newlySelectedIds = objects
         .filter(obj => {
           if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
           const pt = turf.point([obj.longitude, obj.latitude]);
@@ -176,7 +184,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
 
     const batch = writeBatch(firestore);
     selectedObjectIds.forEach(objId => {
-        const fullObject = allObjects?.find(o => o.id === objId);
+        const fullObject = allObjectsRef.current?.find(o => o.id === objId);
         if (fullObject) {
             const docRef = doc(firestore, 'objects', objId);
             const currentWerkgebieden = (fullObject.locatieWerkgebieden || []) as string[];
@@ -196,6 +204,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         console.error("Error updating objects:", error);
     } finally {
         setSelectedObjectIds([]);
+        drawRef.current?.deleteAll();
         setIsSaving(false);
     }
   };
@@ -281,6 +290,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                   size="icon"
                   onClick={() => {
                       drawRef.current?.deleteAll();
+                      setSelectedObjectIds([]);
                   }}
               >
                   <Trash2 className="h-4 w-4" />
@@ -300,7 +310,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                         {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : `Verwijder van ${wijk?.naam}`}
                     </Button>
                 )}
-                <Button variant="ghost" size="sm" onClick={() => setSelectedObjectIds([])}>Annuleren</Button>
+                <Button variant="ghost" size="sm" onClick={() => { setSelectedObjectIds([]); drawRef.current?.deleteAll(); }}>Annuleren</Button>
             </div>
           )}
         </div>
