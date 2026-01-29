@@ -69,7 +69,9 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     if (drawRef.current) {
         try {
             if (mapRef.current?.getMap()?.isStyleLoaded()) {
-                mapRef.current.getMap().removeControl(drawRef.current);
+                 if (drawRef.current) {
+                    mapRef.current.getMap().removeControl(drawRef.current);
+                }
             }
         } catch (e) {
             console.warn("Could not remove draw control during cleanup", e);
@@ -86,15 +88,20 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
       return;
     }
     
-    // Only add control if it's not already there
-    if (!drawRef.current) {
-        const draw = new MapboxDraw({
-            displayControlsDefault: false,
-            controls: {},
-        });
-        map.addControl(draw);
-        drawRef.current = draw;
+    if (drawRef.current) {
+        try {
+            map.removeControl(drawRef.current);
+        } catch (e) {
+            // ignore
+        }
     }
+
+    const draw = new MapboxDraw({
+        displayControlsDefault: false,
+        controls: {},
+    });
+    map.addControl(draw);
+    drawRef.current = draw;
     
     const handleDrawCreate = (e: { features: turf.Feature[] }) => {
         const selectionPolygon = e.features[0];
@@ -129,49 +136,6 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     };
 }, [readOnly]);
   
-    // Effect to handle draw interactions
-  React.useEffect(() => {
-    const map = mapRef.current?.getMap();
-    const draw = drawRef.current;
-
-    if (!map || !draw || readOnly) {
-      return;
-    }
-
-    const handleDrawCreate = (e: { features: turf.Feature[] }) => {
-      const selectionPolygon = e.features[0];
-      if (!selectionPolygon) return;
-      
-      const currentObjects = allObjectsRef.current;
-      if (!currentObjects) return;
-
-      const newlySelectedIds = currentObjects
-        .filter(obj => {
-          if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
-          const pt = turf.point([obj.longitude, obj.latitude]);
-          return turf.booleanPointInPolygon(pt, selectionPolygon as any);
-        })
-        .map(obj => obj.id);
-
-      if (newlySelectedIds.length > 0) {
-        setSelectedObjectIds(prev => [...new Set([...prev, ...newlySelectedIds])]);
-      }
-    };
-
-    map.on('draw.create', handleDrawCreate);
-
-    // Cleanup
-    return () => {
-      if (map?.isStyleLoaded()) {
-        try {
-          map.off('draw.create', handleDrawCreate);
-        } catch(e) {
-          // ignore error on cleanup
-        }
-      }
-    };
-  }, [readOnly, allObjectsRef]);
-
   const handleObjectAssignment = async (assign: boolean) => {
     if (!firestore || selectedObjectIds.length === 0 || !wijk?.naam) return;
     setIsSaving(true);
@@ -243,7 +207,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
             </Button>
         </div>
 
-        <div className="flex-1 min-h-0 relative">
+        <div className="flex-1 min-h-0 relative w-full">
           <MapGL
             ref={mapRef}
             initialViewState={initialViewState}
