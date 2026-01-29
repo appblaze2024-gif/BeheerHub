@@ -16,8 +16,8 @@ import { Button } from './ui/button';
 import { Loader2, BoxSelect, Trash2 } from 'lucide-react';
 import * as turf from '@turf/turf';
 import { cn } from '@/lib/utils';
-import { useFirestore, useCollection } from '@/firebase';
-import { collection, doc, writeBatch } from 'firebase/firestore';
+import { useFirestore, useCollection, updateDocumentNonBlocking } from '@/firebase';
+import { writeBatch, collection, doc } from 'firebase/firestore';
 import type { Object as MapObject } from '@/lib/types';
 import { useProfile } from '@/firebase/profile-provider';
 
@@ -55,6 +55,11 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   }, [firestore]);
 
   const { data: allObjects } = useCollection<MapObject>(objectsCollection);
+  const allObjectsRef = React.useRef(allObjects);
+
+  React.useEffect(() => {
+    allObjectsRef.current = allObjects;
+  }, [allObjects]);
 
   const [selectedObjectIds, setSelectedObjectIds] = React.useState<string[]>([]);
   const [isSaving, setIsSaving] = React.useState(false);
@@ -62,10 +67,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   const cleanup = React.useCallback(() => {
     if (drawRef.current && mapRef.current?.getMap()?.isStyleLoaded()) {
       try {
-         // Check if control exists before removing
-         if (mapRef.current.getMap().getControl('mapbox-gl-draw')) {
-            mapRef.current.getMap().removeControl(drawRef.current);
-         }
+         mapRef.current.getMap().removeControl(drawRef.current);
       } catch (e) {
         console.warn("Could not remove draw control during cleanup", e);
       }
@@ -76,28 +78,52 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   }, []);
 
   const onMapLoad = React.useCallback(() => {
-    if (mapRef.current && !drawRef.current && !readOnly) {
-      const map = mapRef.current.getMap();
-      const draw = new MapboxDraw({
-        displayControlsDefault: false,
-        controls: {
-        },
-        styles: [
-            { 'id': 'gl-draw-polygon-fill-inactive', 'type': 'fill', 'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon'], ['!=', 'mode', 'static']], 'paint': { 'fill-color': '#3b82f6', 'fill-outline-color': '#3b82f6', 'fill-opacity': 0.1 } },
-            { 'id': 'gl-draw-polygon-stroke-inactive', 'type': 'line', 'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon'], ['!=', 'mode', 'static']], 'layout': { 'line-cap': 'round', 'line-join': 'round' }, 'paint': { 'line-color': '#3b82f6', 'line-width': 2 } },
-            { 'id': 'gl-draw-polygon-fill-active', 'type': 'fill', 'filter': ['all', ['==', 'active', 'true'], ['==', '$type', 'Polygon']], 'paint': { 'fill-color': '#ef4444', 'fill-outline-color': '#ef4444', 'fill-opacity': 0.1 } },
-            { 'id': 'gl-draw-polygon-stroke-active', 'type': 'line', 'filter': ['all', ['==', 'active', 'true'], ['==', '$type', 'Polygon']], 'layout': { 'line-cap': 'round', 'line-join': 'round' }, 'paint': { 'line-color': '#ef4444', 'line-dasharray': [0.2, 2], 'line-width': 2 } },
-        ]
-      });
-
-      // Avoid adding control if it already exists
-      if (!map.getControl('mapbox-gl-draw')) {
-          map.addControl(draw);
-      }
-      drawRef.current = draw;
+    const map = mapRef.current?.getMap();
+    if (!map || drawRef.current || readOnly) {
+      return;
     }
-  }, [readOnly]);
+    
+    const draw = new MapboxDraw({
+        displayControlsDefault: false,
+        controls: {},
+    });
+    
+    map.addControl(draw);
+    drawRef.current = draw;
 
+    const handleDrawCreate = (e: { features: turf.Feature[] }) => {
+        const selectionPolygon = e.features[0];
+        if (!selectionPolygon) return;
+        
+        const currentObjects = allObjectsRef.current;
+        if (!currentObjects) return;
+
+        const newlySelectedIds = currentObjects
+            .filter(obj => {
+                if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
+                const pt = turf.point([obj.longitude, obj.latitude]);
+                return turf.booleanPointInPolygon(pt, selectionPolygon as any);
+            })
+            .map(obj => obj.id);
+
+        if (newlySelectedIds.length > 0) {
+            setSelectedObjectIds(prev => [...new Set([...prev, ...newlySelectedIds])]);
+        }
+    };
+
+    map.on('draw.create', handleDrawCreate);
+
+    return () => {
+        if (map.isStyleLoaded()) {
+            try {
+                map.off('draw.create', handleDrawCreate);
+            } catch (e) {
+                // ignore
+            }
+        }
+    };
+}, [readOnly]);
+  
     // Effect to handle draw interactions
   React.useEffect(() => {
     const map = mapRef.current?.getMap();
@@ -111,9 +137,10 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
       const selectionPolygon = e.features[0];
       if (!selectionPolygon) return;
       
-      if (!allObjects) return;
+      const currentObjects = allObjectsRef.current;
+      if (!currentObjects) return;
 
-      const newlySelectedIds = allObjects
+      const newlySelectedIds = currentObjects
         .filter(obj => {
           if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
           const pt = turf.point([obj.longitude, obj.latitude]);
@@ -138,7 +165,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         }
       }
     };
-  }, [readOnly, allObjects]);
+  }, [readOnly]);
 
   const handleObjectAssignment = async (assign: boolean) => {
     if (!firestore || selectedObjectIds.length === 0 || !wijk?.naam) return;
@@ -165,10 +192,10 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     } catch (error) {
         console.error("Error updating objects:", error);
     } finally {
-        setSelectedObjectIds([]);
-        if (drawRef.current) {
+        if(drawRef.current) {
             drawRef.current.deleteAll();
         }
+        setSelectedObjectIds([]);
         setIsSaving(false);
     }
   };
