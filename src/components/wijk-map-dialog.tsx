@@ -11,6 +11,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogClose,
 } from '@/components/ui/dialog';
 import { Button } from './ui/button';
 import { Loader2, BoxSelect, Trash2, Maximize, Minimize, X } from 'lucide-react';
@@ -126,7 +127,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     if (drawRef.current) {
         try {
             const map = mapRef.current.getMap();
-            if (map && map.isStyleLoaded()) {
+            if (map && map.isStyleLoaded() && map.getControl) {
                  map.removeControl(drawRef.current);
             }
         } catch (e) {
@@ -160,7 +161,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     
     if (drawRef.current) {
         try {
-            if (map.isStyleLoaded()) {
+            if (map.isStyleLoaded() && map.getControl) {
                  map.removeControl(drawRef.current);
             }
         } catch (e) {
@@ -286,17 +287,17 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
             Zoek een gebied, teken handmatig, of selecteer objecten om toe te wijzen.
           </DialogDescription>
         </DialogHeader>
-        <div className="absolute top-4 right-16 z-20 flex items-center gap-2">
+        <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
             <Button variant="secondary" size="icon" className="h-9 w-9" onClick={() => setIsMaximized(!isMaximized)}>
                 {isMaximized ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
                 <span className="sr-only">{isMaximized ? 'Minimaliseren' : 'Maximaliseren'}</span>
             </Button>
-            <Dialog.Close asChild>
+            <DialogClose asChild>
               <Button variant="secondary" size="icon" className="h-9 w-9">
                   <X className="h-5 w-5" />
                   <span className="sr-only">Sluiten</span>
               </Button>
-            </Dialog.Close>
+            </DialogClose>
         </div>
 
         <div ref={mapContainerRef} className="flex-1 min-h-0 relative w-full">
