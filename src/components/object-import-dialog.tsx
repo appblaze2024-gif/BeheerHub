@@ -319,11 +319,11 @@ export function ObjectImportDialog({
           case 1:
               return (
                 <div className="py-8">
-                    <Label htmlFor="csv-file" className="sr-only">CSV/XLSX Bestand</Label>
+                    <Label htmlFor="csv-file" className="sr-only">Bestand</Label>
                     <Input
                     id="csv-file"
                     type="file"
-                    accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                    accept=".csv,.xlsx,.xls,.dbf,.prj,.shp,.shx"
                     onChange={handleFileChange}
                     ref={fileInputRef}
                     className="w-full h-12 text-base"
@@ -390,9 +390,9 @@ export function ObjectImportDialog({
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-[650px]">
         <DialogHeader>
-          <DialogTitle>Objecten Importeren (CSV/XLSX)</DialogTitle>
+          <DialogTitle>Objecten Importeren</DialogTitle>
           <DialogDescription>
-            {step === 1 && 'Selecteer een CSV of XLSX-bestand om te importeren.'}
+            {step === 1 && 'Selecteer een CSV, XLSX of Shapefile (.shp, .shx, .dbf, .prj) om te importeren.'}
             {step === 2 && 'Koppel uw kolommen aan de databasevelden.'}
             {step === 3 && 'De import is succesvol afgerond.'}
           </DialogDescription>
