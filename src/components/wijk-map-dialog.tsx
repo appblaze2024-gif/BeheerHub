@@ -21,6 +21,8 @@ import { collection, doc, writeBatch } from 'firebase/firestore';
 import type { Object as MapObject } from '@/lib/types';
 import { useProfile } from '@/firebase/profile-provider';
 
+const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
+
 interface AreaLike {
   id: string;
   naam: string;
@@ -53,6 +55,11 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   }, [firestore]);
 
   const { data: allObjects } = useCollection<MapObject>(objectsCollection);
+  const allObjectsRef = React.useRef(allObjects);
+  
+  React.useEffect(() => {
+    allObjectsRef.current = allObjects;
+  }, [allObjects]);
 
   const [selectedObjectIds, setSelectedObjectIds] = React.useState<string[]>([]);
   const [isSaving, setIsSaving] = React.useState(false);
@@ -104,7 +111,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
       const selectionPolygon = e.features[0];
       if (!selectionPolygon) return;
       
-      const objects = allObjects;
+      const objects = allObjectsRef.current;
       if (!objects) return;
 
       const newlySelectedIds = objects
@@ -132,7 +139,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         }
       }
     };
-  }, [readOnly, allObjects]);
+  }, [readOnly, allObjectsRef]);
 
 
   const handleObjectAssignment = async (assign: boolean) => {
