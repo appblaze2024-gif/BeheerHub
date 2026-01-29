@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import MapGL, { Popup } from 'react-map-gl';
+import MapGL, { Popup, Marker } from 'react-map-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import {
@@ -31,6 +31,9 @@ import {
 import { Checkbox } from './ui/checkbox';
 import { useProfile } from '@/firebase/profile-provider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { useFirestore, useCollection } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import type { Object as MapObject } from '@/lib/types';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -204,6 +207,14 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   const { profile } = useProfile();
   const [currentMapStyle, setCurrentMapStyle] = React.useState(profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12');
 
+  const firestore = useFirestore();
+  const objectsCollection = React.useMemo(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'objects');
+  }, [firestore]);
+
+  const { data: allObjects } = useCollection<MapObject>(objectsCollection);
+
   const isFillModeRef = React.useRef(isFillMode);
   isFillModeRef.current = isFillMode;
   const isBulkDeletingRef = React.useRef(isBulkDeleting);
@@ -229,6 +240,23 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     }
   }, [wijk?.subGebieden]);
   
+  const objectsInArea = React.useMemo(() => {
+    if (!allObjects || !geojson?.features || geojson.features.length === 0) return [];
+
+    return allObjects.filter(obj => {
+        if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') {
+            return false;
+        }
+        const pt = turf.point([obj.longitude, obj.latitude]);
+        for (const feature of geojson.features) {
+            if (feature.geometry && turf.booleanPointInPolygon(pt, feature as any)) {
+                return true;
+            }
+        }
+        return false;
+    });
+  }, [allObjects, geojson]);
+
   const referenceAreas = React.useMemo(() => {
     if (referenceAreaIds.length === 0) return [];
     return allAreas.filter(a => referenceAreaIds.includes(a.id) && a.type === 'wijk');
@@ -716,8 +744,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     }
 
   }, [readOnly]);
-
-
+  
   const handleSave = async () => {
     if (drawRef.current && wijk) {
       const data = drawRef.current.getAll();
@@ -1055,6 +1082,15 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                     <Layer {...selectedRoadsLayerStyle} />
                 </Source>
             )}
+            {objectsInArea.map(obj => (
+              <Marker
+                key={obj.id}
+                longitude={obj.longitude}
+                latitude={obj.latitude}
+              >
+                <div className="h-2 w-2 rounded-full bg-purple-600" />
+              </Marker>
+            ))}
              {clickPopupInfo && (
                 <Popup
                     longitude={clickPopupInfo.longitude}
