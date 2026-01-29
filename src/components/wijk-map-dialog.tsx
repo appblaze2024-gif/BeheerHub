@@ -13,7 +13,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from './ui/button';
-import { Loader2, BoxSelect, Trash2 } from 'lucide-react';
+import { Loader2, BoxSelect, Trash2, Maximize, Minimize } from 'lucide-react';
 import * as turf from '@turf/turf';
 import { cn } from '@/lib/utils';
 import { useFirestore, useCollection, updateDocumentNonBlocking } from '@/firebase';
@@ -47,6 +47,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   
   const { profile } = useProfile();
   const [currentMapStyle, setCurrentMapStyle] = React.useState(profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12');
+  const [isMaximized, setIsMaximized] = React.useState(false);
 
   const firestore = useFirestore();
   const objectsCollection = React.useMemo(() => {
@@ -65,12 +66,14 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   const [isSaving, setIsSaving] = React.useState(false);
 
   const cleanup = React.useCallback(() => {
-    if (drawRef.current && mapRef.current?.getMap()?.isStyleLoaded()) {
-      try {
-         mapRef.current.getMap().removeControl(drawRef.current);
-      } catch (e) {
-        console.warn("Could not remove draw control during cleanup", e);
-      }
+    if (drawRef.current) {
+        try {
+            if (mapRef.current?.getMap()?.isStyleLoaded()) {
+                mapRef.current.getMap().removeControl(drawRef.current);
+            }
+        } catch (e) {
+            console.warn("Could not remove draw control during cleanup", e);
+        }
     }
     drawRef.current = null;
     setSelectedObjectIds([]);
@@ -83,19 +86,16 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
       return;
     }
     
-    // Avoid adding control if it already exists
-    if (drawRef.current) {
-        return;
+    // Only add control if it's not already there
+    if (!drawRef.current) {
+        const draw = new MapboxDraw({
+            displayControlsDefault: false,
+            controls: {},
+        });
+        map.addControl(draw);
+        drawRef.current = draw;
     }
     
-    const draw = new MapboxDraw({
-        displayControlsDefault: false,
-        controls: {},
-    });
-    
-    map.addControl(draw);
-    drawRef.current = draw;
-
     const handleDrawCreate = (e: { features: turf.Feature[] }) => {
         const selectionPolygon = e.features[0];
         if (!selectionPolygon) return;
@@ -162,7 +162,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
 
     // Cleanup
     return () => {
-      if (map.isStyleLoaded()) {
+      if (map?.isStyleLoaded()) {
         try {
           map.off('draw.create', handleDrawCreate);
         } catch(e) {
@@ -170,7 +170,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         }
       }
     };
-  }, [readOnly]);
+  }, [readOnly, allObjectsRef]);
 
   const handleObjectAssignment = async (assign: boolean) => {
     if (!firestore || selectedObjectIds.length === 0 || !wijk?.naam) return;
@@ -223,13 +223,25 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[80vw] h-[80vh] min-w-[600px] min-h-[480px] flex flex-col p-0 gap-0 resize overflow-auto">
+      <DialogContent className={cn(
+          "flex flex-col p-0 gap-0 transition-all duration-300 ease-in-out",
+          "min-w-[600px] min-h-[480px]", // Minimum size
+          isMaximized 
+            ? "w-screen h-screen !max-w-full !top-0 !left-0 !translate-x-0 !translate-y-0 !rounded-none" 
+            : "w-[80vw] h-[80vh] sm:rounded-lg resize overflow-auto"
+      )}>
         <DialogHeader className="p-6 pb-2">
           <DialogTitle>Teken gebied voor: {wijk?.naam}</DialogTitle>
           <DialogDescription>
             Zoek een gebied, teken handmatig, of selecteer objecten om toe te wijzen.
           </DialogDescription>
         </DialogHeader>
+        <div className="absolute top-4 right-12 z-20 flex items-center">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsMaximized(!isMaximized)}>
+                {isMaximized ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+                <span className="sr-only">{isMaximized ? 'Minimaliseren' : 'Maximaliseren'}</span>
+            </Button>
+        </div>
 
         <div className="flex-1 min-h-0 relative">
           <MapGL
@@ -285,8 +297,10 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                   variant="outline"
                   size="icon"
                   onClick={() => {
-                      drawRef.current?.deleteAll();
-                      setSelectedObjectIds([]);
+                      if (drawRef.current) {
+                        drawRef.current.deleteAll();
+                        setSelectedObjectIds([]);
+                      }
                   }}
               >
                   <Trash2 className="h-4 w-4" />
