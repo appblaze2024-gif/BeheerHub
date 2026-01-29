@@ -842,6 +842,7 @@ function PrullenbakkenroutesTab({
   projectId,
   firestore,
   objectCounts,
+  totalObjects,
 }: {
   prullenbakkenroutes: Prullenbakkenroute[];
   setCurrentProject: React.Dispatch<React.SetStateAction<Project>>;
@@ -849,6 +850,7 @@ function PrullenbakkenroutesTab({
   projectId?: string;
   firestore: any;
   objectCounts: { [routeId: string]: number };
+  totalObjects: number;
 }) {
   const [mapRoute, setMapRoute] = React.useState<Prullenbakkenroute | null>(null);
 
@@ -902,6 +904,9 @@ function PrullenbakkenroutesTab({
 
   return (
     <div className="space-y-4">
+       <div className="flex justify-end text-sm text-muted-foreground">
+        Totaal objecten: <span className="font-bold text-foreground ml-1">{totalObjects}</span>
+      </div>
       <div className="grid grid-cols-[1fr_1fr_100px_auto_auto] gap-x-4 px-1 text-sm font-semibold">
         <Label>Prullenbakkenroute</Label>
         <Label>Locatie</Label>
@@ -1256,6 +1261,7 @@ export default function ProjectsPage() {
             projectId={currentProject.id} 
             firestore={firestore}
             objectCounts={objectCountsPerPrullenbakkenroute}
+            totalObjects={allObjects?.length || 0}
           />
         </TabsContent>}
       </Tabs>
