@@ -45,6 +45,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   const drawRef = React.useRef<MapboxDraw | null>(null);
   const mapRef = React.useRef<any>(null);
   const mapContainerRef = React.useRef<HTMLDivElement>(null);
+  const allObjectsRef = React.useRef<MapObject[] | null>(null);
 
   const { profile } = useProfile();
   const [currentMapStyle, setCurrentMapStyle] = React.useState(profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12');
@@ -57,7 +58,6 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   }, [firestore]);
 
   const { data: allObjects } = useCollection<MapObject>(objectsCollection);
-  const allObjectsRef = React.useRef(allObjects);
 
   React.useEffect(() => {
     allObjectsRef.current = allObjects;
@@ -77,6 +77,20 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     observer.observe(mapContainerRef.current);
     return () => observer.disconnect();
   }, []);
+
+  React.useEffect(() => {
+    if (open) {
+      // When isMaximized state changes, trigger a resize.
+      // A small timeout can help ensure the resize happens after the container has settled from CSS transitions.
+      const timer = setTimeout(() => {
+        if (mapRef.current) {
+          mapRef.current.getMap().resize();
+        }
+      }, 350); // Corresponds with the transition duration
+
+      return () => clearTimeout(timer);
+    }
+  }, [isMaximized, open]);
 
 
   const cleanup = React.useCallback(() => {
@@ -116,7 +130,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
 
     let controlExists = false;
     try {
-      if ((map as any)._controls.some((ctrl: any) => ctrl instanceof MapboxDraw)) {
+      if (map._controls.some((ctrl: any) => ctrl instanceof MapboxDraw)) {
         controlExists = true;
       }
     } catch(e) {
