@@ -23,6 +23,7 @@ import { useProfile } from '@/firebase/profile-provider';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
+
 interface AreaLike {
   id: string;
   naam: string;
@@ -96,8 +97,9 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   const cleanup = React.useCallback(() => {
     if (drawRef.current) {
         try {
-            if (mapRef.current?.getMap()?.isStyleLoaded()) {
-                 mapRef.current.getMap().removeControl(drawRef.current);
+            const map = mapRef.current.getMap();
+            if (map && map.isStyleLoaded()) {
+                 map.removeControl(drawRef.current);
             }
         } catch (e) {
             // It's safe to ignore this error.
@@ -117,7 +119,9 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     
     if (drawRef.current) {
         try {
-            map.removeControl(drawRef.current);
+            if (map && map.isStyleLoaded()) {
+                map.removeControl(drawRef.current);
+            }
         } catch (e) {
             // ignore
         }
@@ -128,16 +132,12 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         controls: {},
     });
 
-    let controlExists = false;
     try {
-      if (map._controls.some((ctrl: any) => ctrl instanceof MapboxDraw)) {
-        controlExists = true;
-      }
+        if (map && !map._controls.some((ctrl: any) => ctrl instanceof MapboxDraw)) {
+          map.addControl(draw);
+        }
     } catch(e) {
-        //
-    }
-    if (!controlExists) {
-        map.addControl(draw);
+        // ignore
     }
     
     drawRef.current = draw;
@@ -239,9 +239,9 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
             Zoek een gebied, teken handmatig, of selecteer objecten om toe te wijzen.
           </DialogDescription>
         </DialogHeader>
-        <div className="absolute top-4 right-12 z-20 flex items-center">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsMaximized(!isMaximized)}>
-                {isMaximized ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+        <div className="absolute top-4 right-16 z-20">
+            <Button variant="secondary" size="icon" onClick={() => setIsMaximized(!isMaximized)}>
+                {isMaximized ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
                 <span className="sr-only">{isMaximized ? 'Minimaliseren' : 'Maximaliseren'}</span>
             </Button>
         </div>
