@@ -228,12 +228,8 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   const initialFeaturesRef = React.useRef<any[]>([]);
 
   // New state for object selection
-  const [isObjectSelectionMode, setIsObjectSelectionMode] = React.useState(false);
   const [selectedObjectIds, setSelectedObjectIds] = React.useState<string[]>([]);
-  const [targetRoute, setTargetRoute] = React.useState<string | null>(null);
   const [isSavingMove, setIsSavingMove] = React.useState(false);
-  const isObjectSelectionModeRef = React.useRef(isObjectSelectionMode);
-  isObjectSelectionModeRef.current = isObjectSelectionMode;
 
 
   const geojson = React.useMemo(() => {
@@ -248,23 +244,6 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
       return null;
     }
   }, [wijk?.subGebieden]);
-  
-  const objectsInArea = React.useMemo(() => {
-    if (!allObjects || !geojson || !geojson.features || geojson.features.length === 0) return [];
-    
-    return allObjects.filter(obj => {
-        if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') {
-            return false;
-        }
-        const pt = turf.point([obj.longitude, obj.latitude]);
-        for (const feature of geojson.features) {
-            if (turf.booleanPointInPolygon(pt, feature as any)) {
-                return true;
-            }
-        }
-        return false;
-    });
-  }, [allObjects, geojson]);
 
   const allPrullenbakkenroutes = React.useMemo(() => {
     return allAreas.filter(a => a.type === 'prullenbakkenroute');
@@ -442,9 +421,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     setAvailableRoads([]);
     setSelectedRoads([]);
     setAllRoadFeatures([]);
-    setIsObjectSelectionMode(false);
     setSelectedObjectIds([]);
-    setTargetRoute(null);
     setIsSavingMove(false);
   }, []);
 
@@ -585,20 +562,6 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         if (!drawInstance) return;
 
         if (e.type === 'draw.create') {
-            if (isObjectSelectionModeRef.current) {
-                const selectionPolygon = e.features[0];
-                const objectsToSelect = (allObjects || []).filter(obj => {
-                    if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
-                    const pt = turf.point([obj.longitude, obj.latitude]);
-                    return turf.booleanPointInPolygon(pt, selectionPolygon as any);
-                });
-                const objectIdsToSelect = objectsToSelect.map(o => o.id);
-                setSelectedObjectIds(prev => [...new Set([...prev, ...objectIdsToSelect])]);
-
-                drawInstance.delete(selectionPolygon.id as string);
-                drawInstance.changeMode('simple_select'); 
-                return;
-            }
             if (isBulkDeletingRef.current) {
                 const editId = editingFeatureIdRef.current;
                 if (!editId) return;
@@ -888,8 +851,8 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     drawRef.current.changeMode('draw_polygon');
   };
   
-  const handleMoveObjects = async () => {
-    if (!firestore || !targetRoute || selectedObjectIds.length === 0 || !wijk) return;
+  const handleAssignObjects = async () => {
+    if (!firestore || selectedObjectIds.length === 0 || !wijk?.naam) return;
 
     setIsSavingMove(true);
 
@@ -900,27 +863,21 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
             const docRef = doc(firestore, 'objects', objId);
             const currentWerkgebieden = (fullObject.locatieWerkgebieden || []) as string[];
             
-            const newWerkgebieden = currentWerkgebieden.filter(gebied => gebied !== wijk.naam);
-            if (!newWerkgebieden.includes(targetRoute)) {
-                newWerkgebieden.push(targetRoute);
-            }
+            const newWerkgebieden = [...new Set([...currentWerkgebieden, wijk.naam])];
+
             batch.update(docRef, { locatieWerkgebieden: newWerkgebieden });
         }
     });
 
     try {
         await batch.commit();
-        // Here you might want to show a success toast
     } catch (error) {
-        console.error("Error moving objects:", error);
-        // Here you might want to show an error toast
+        console.error("Error assigning objects:", error);
     } finally {
         setSelectedObjectIds([]);
-        setTargetRoute(null);
-        setIsObjectSelectionMode(false);
         setIsSavingMove(false);
     }
-  };
+};
   
   const displayedRoadsGeoJSON = React.useMemo(() => {
     if (selectedRoads.length === 0 || allRoadFeatures.length === 0) {
@@ -1080,21 +1037,6 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                       <Trash2 className="mr-2 h-4 w-4 text-destructive" />
                       Verwijder punt(en)
                   </Button>
-                  <Button
-                      variant={isObjectSelectionMode ? 'secondary' : 'outline'}
-                      onClick={() => {
-                          setIsObjectSelectionMode(prev => !prev);
-                          setSelectedObjectIds([]);
-                          if (drawRef.current) {
-                              drawRef.current.changeMode('simple_select');
-                          }
-                      }}
-                      disabled={!isDrawReady}
-                      title="Selecteer objecten om te verplaatsen"
-                  >
-                      <Move className="mr-2 h-4 w-4" />
-                      Verplaats Objecten
-                  </Button>
               </div>
               
               {showRoadTypes && !readOnly && (
@@ -1162,7 +1104,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                     <Layer {...selectedRoadsLayerStyle} />
                 </Source>
             )}
-            {(isObjectSelectionMode ? allObjects : objectsInArea)?.map(obj => {
+            {allObjects?.map(obj => {
               const isSelected = selectedObjectIds.includes(obj.id);
               const isInCurrentArea = Array.isArray(obj.locatieWerkgebieden) && obj.locatieWerkgebieden.includes(wijk?.naam || '');
               return (
@@ -1171,7 +1113,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                   longitude={obj.longitude}
                   latitude={obj.latitude}
                    onClick={(e) => {
-                    if (isObjectSelectionMode) {
+                    if (!readOnly) {
                         e.originalEvent.stopPropagation();
                         setSelectedObjectIds(prev => 
                             isSelected ? prev.filter(id => id !== obj.id) : [...prev, obj.id]
@@ -1183,7 +1125,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                       className={cn(
                           "h-2.5 w-2.5 rounded-full border border-white transition-all",
                           isSelected ? 'bg-yellow-400 ring-2 ring-yellow-500 scale-150' : (isInCurrentArea ? 'bg-purple-600' : 'bg-gray-400'),
-                          isObjectSelectionMode ? 'cursor-pointer' : 'cursor-default'
+                          !readOnly ? 'cursor-pointer' : 'cursor-default'
                       )}
                   />
                 </Marker>
@@ -1224,19 +1166,11 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                 </Popup>
             )}
           </MapGL>
-          {selectedObjectIds.length > 0 && (
+          {selectedObjectIds.length > 0 && !readOnly && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 bg-background p-2 rounded-lg shadow-lg flex items-center gap-2">
                 <p className="text-sm font-medium">{selectedObjectIds.length} objecten geselecteerd.</p>
-                <Select onValueChange={setTargetRoute} value={targetRoute || ''}>
-                    <SelectTrigger className="w-48 h-9">
-                        <SelectValue placeholder="Verplaats naar route..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {allPrullenbakkenroutes.map(r => <SelectItem key={r.id} value={r.naam}>{r.naam}</SelectItem>)}
-                    </SelectContent>
-                </Select>
-                <Button onClick={handleMoveObjects} disabled={!targetRoute || isSavingMove} size="sm">
-                  {isSavingMove ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verplaats"}
+                <Button onClick={handleAssignObjects} disabled={isSavingMove} size="sm">
+                  {isSavingMove ? <Loader2 className="h-4 w-4 animate-spin" /> : `Wijs toe aan ${wijk?.naam}`}
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => setSelectedObjectIds([])}>Annuleer</Button>
             </div>
