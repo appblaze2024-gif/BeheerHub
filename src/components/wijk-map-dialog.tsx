@@ -116,8 +116,8 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
       const draw = new MapboxDraw({
         displayControlsDefault: false,
         controls: {
-          polygon: true,
-          trash: true,
+          polygon: false,
+          trash: false,
         },
         styles: [
             { 'id': 'gl-draw-polygon-fill-inactive', 'type': 'fill', 'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon'], ['!=', 'mode', 'static']], 'paint': { 'fill-color': '#3b82f6', 'fill-outline-color': '#3b82f6', 'fill-opacity': 0.1 } },
@@ -152,7 +152,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         } catch (err) {
           // It might have been deleted already, ignore.
         }
-      }, 0);
+      }, 10);
 
       const newlySelectedIds = (allObjects || [])
         .filter(obj => {
@@ -165,8 +165,6 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
       if (newlySelectedIds.length > 0) {
         setSelectedObjectIds(prev => [...new Set([...prev, ...newlySelectedIds])]);
       }
-
-      draw.changeMode('simple_select');
     };
 
     map.on('draw.create', handleDrawCreate);
@@ -177,7 +175,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         map.off('draw.create', handleDrawCreate);
       }
     };
-  }, [allObjects, readOnly]); // This effect now correctly depends on `allObjects`
+  }, [allObjects, readOnly]);
 
 
   const handleObjectAssignment = async (assign: boolean) => {
@@ -276,16 +274,28 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
               );
             })}
           </MapGL>
-          <div className="absolute top-4 left-4 z-10 bg-background p-2 rounded-lg shadow-lg flex items-center gap-2">
-            <Button
-                variant="outline"
-                size="sm"
-                onClick={() => drawRef.current?.changeMode('draw_polygon')}
-            >
-                <BoxSelect className="h-4 w-4 mr-2" />
-                Selecteer met vlak
-            </Button>
-          </div>
+          {!readOnly && (
+            <div className="absolute top-4 left-4 z-10 bg-background p-2 rounded-lg shadow-lg flex items-center gap-2">
+              <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => drawRef.current?.changeMode('draw_polygon')}
+              >
+                  <BoxSelect className="h-4 w-4 mr-2" />
+                  Selecteer met vlak
+              </Button>
+              <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                      drawRef.current?.deleteAll();
+                      setSelectedObjectIds([]);
+                  }}
+              >
+                  <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
           {selectedObjectIds.length > 0 && !readOnly && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 bg-background p-2 rounded-lg shadow-lg flex items-center gap-2">
                 <p className="text-sm font-medium">{selectedObjectIds.length} objecten geselecteerd.</p>
