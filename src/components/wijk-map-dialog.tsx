@@ -31,8 +31,8 @@ import {
 import { Checkbox } from './ui/checkbox';
 import { useProfile } from '@/firebase/profile-provider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { useFirestore, useCollection, writeBatch } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { useFirestore, useCollection } from '@/firebase';
+import { collection, doc, writeBatch } from 'firebase/firestore';
 import type { Object as MapObject } from '@/lib/types';
 
 
