@@ -1,8 +1,7 @@
-
 'use client';
 
 import * as React from 'react';
-import MapGL, { Popup, Marker } from 'react-map-gl';
+import MapGL, { Marker } from 'react-map-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import {
@@ -10,45 +9,17 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
   DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Loader2, BoxSelect, Trash2, ChevronDown, Map, Check, Copy, GripVertical, Settings, Search } from 'lucide-react';
+import { Loader2, BoxSelect, Trash2 } from 'lucide-react';
 import * as turf from '@turf/turf';
-import type { FillLayer, LineLayer, SymbolLayer, MapLayerMouseEvent } from 'react-map-gl';
-import { Layer, Source } from 'react-map-gl';
 import { cn } from '@/lib/utils';
-import { Label } from './ui/label';
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from './ui/dropdown-menu';
-import { Checkbox } from './ui/checkbox';
-import { useProfile } from '@/firebase/profile-provider';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useFirestore, useCollection } from '@/firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import type { Object as MapObject } from '@/lib/types';
-
-
-const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
-
-const mapStyles = [
-    { name: 'Standaard', url: 'mapbox://styles/mapbox/streets-v12' },
-    { name: 'Buiten', url: 'mapbox://styles/mapbox/outdoors-v12' },
-    { name: 'Licht', url: 'mapbox://styles/mapbox/light-v11' },
-    { name: 'Donker', url: 'mapbox://styles/mapbox/dark-v11' },
-    { name: 'Satelliet', url: 'mapbox://styles/mapbox/satellite-v9' },
-    { name: 'Satelliet met straten', url: 'mapbox://styles/mapbox/satellite-streets-v12' },
-    { name: 'Navigatie (dag)', url: 'mapbox://styles/mapbox/navigation-day-v1' },
-    { name: 'Navigatie (nacht)', url: 'mapbox://styles/mapbox/navigation-night-v1' },
-];
+import { useProfile } from '@/firebase/profile-provider';
 
 interface AreaLike {
   id: string;
@@ -68,18 +39,9 @@ interface WijkMapDialogProps {
   showRoadTypes?: boolean;
 }
 
-interface Suggestion {
-  place_id: number;
-  display_name: string;
-  geojson: any;
-  lon: string;
-  lat: string;
-}
-
 export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = false, allAreas = [], showRoadTypes = false }: WijkMapDialogProps) {
   const drawRef = React.useRef<MapboxDraw | null>(null);
   const mapRef = React.useRef<any>(null);
-  const allObjectsRef = React.useRef<MapObject[] | null>(null);
   
   const { profile } = useProfile();
   const [currentMapStyle, setCurrentMapStyle] = React.useState(profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12');
@@ -91,14 +53,9 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   }, [firestore]);
 
   const { data: allObjects } = useCollection<MapObject>(objectsCollection);
-  
-  React.useEffect(() => {
-    allObjectsRef.current = allObjects;
-  }, [allObjects]);
 
   const [selectedObjectIds, setSelectedObjectIds] = React.useState<string[]>([]);
   const [isSaving, setIsSaving] = React.useState(false);
-
 
   const cleanup = React.useCallback(() => {
     if (drawRef.current && mapRef.current?.getMap()?.isStyleLoaded()) {
@@ -147,7 +104,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
       const selectionPolygon = e.features[0];
       if (!selectionPolygon) return;
       
-      const objects = allObjectsRef.current;
+      const objects = allObjects;
       if (!objects) return;
 
       const newlySelectedIds = objects
@@ -184,7 +141,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
 
     const batch = writeBatch(firestore);
     selectedObjectIds.forEach(objId => {
-        const fullObject = allObjectsRef.current?.find(o => o.id === objId);
+        const fullObject = allObjects?.find(o => o.id === objId);
         if (fullObject) {
             const docRef = doc(firestore, 'objects', objId);
             const currentWerkgebieden = (fullObject.locatieWerkgebieden || []) as string[];
@@ -204,7 +161,9 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         console.error("Error updating objects:", error);
     } finally {
         setSelectedObjectIds([]);
-        drawRef.current?.deleteAll();
+        if (drawRef.current) {
+            drawRef.current.deleteAll();
+        }
         setIsSaving(false);
     }
   };
