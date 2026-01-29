@@ -227,10 +227,10 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
           "flex flex-col p-0 gap-0 transition-all duration-300 ease-in-out",
           "min-w-[600px] min-h-[480px]", // Minimum size
           isMaximized 
-            ? "w-screen h-screen !max-w-full !top-0 !left-0 !translate-x-0 !translate-y-0 !rounded-none" 
-            : "w-[80vw] h-[80vh] sm:rounded-lg resize overflow-auto"
+            ? "w-screen h-screen max-w-full top-0 left-0 translate-x-0 translate-y-0 rounded-none" 
+            : "w-[80vw] max-w-[80vw] h-[80vh] rounded-lg resize overflow-auto"
       )}>
-        <DialogHeader className="p-6 pb-2">
+        <DialogHeader className={cn("p-6 pb-2", isMaximized && "hidden")}>
           <DialogTitle>Teken gebied voor: {wijk?.naam}</DialogTitle>
           <DialogDescription>
             Zoek een gebied, teken handmatig, of selecteer objecten om toe te wijzen.
@@ -324,7 +324,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
             </div>
           )}
         </div>
-        <DialogFooter className="p-6 pt-4 border-t">
+        <DialogFooter className={cn("p-6 pt-4 border-t", isMaximized && "hidden")}>
             <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Sluiten
             </Button>
