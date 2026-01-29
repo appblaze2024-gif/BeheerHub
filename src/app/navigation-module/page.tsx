@@ -1,4 +1,5 @@
-'use client';
+
+      'use client';
 
 import * as React from 'react';
 import MapGL, { Marker, Source, Layer, type MapRef } from 'react-map-gl';
@@ -47,7 +48,7 @@ const routeLayer: Layer = {
   },
 };
 
-const routeAreaFillLayer: Layer = {
+const routeAreaFillLayer: FillLayer = {
     id: 'route-area-fill',
     type: 'fill',
     paint: {
@@ -56,7 +57,7 @@ const routeAreaFillLayer: Layer = {
     },
 };
 
-const routeAreaOutlineLayer: Layer = {
+const routeAreaOutlineLayer: LineLayer = {
     id: 'route-area-outline',
     type: 'line',
     paint: {
@@ -245,7 +246,6 @@ export default function StartNavigationPage() {
   const [objectsOnRoute, setObjectsOnRoute] = React.useState<MapObject[]>([]);
   const [isStarting, setIsStarting] = React.useState(false);
   
-  const [objectsOnMap, setObjectsOnMap] = React.useState<MapObject[]>([]);
   const mapRef = React.useRef<MapRef>(null);
 
   const objectsCollection = React.useMemo(() => {
@@ -293,31 +293,17 @@ export default function StartNavigationPage() {
     return allRoutes.find(r => r.id === originalId) ?? null;
   }, [selectedRouteId, routeHistory, selectedProject]);
 
-  React.useEffect(() => {
+  const objectsOnMap = React.useMemo(() => {
     if (!selectedRouteDef || !allObjects) {
-      setObjectsOnMap([]);
-      return;
+      return [];
     }
+    
+    const routeName = selectedRouteDef.naam;
+    if (!routeName) return [];
 
-    try {
-        const routePolygons = JSON.parse(selectedRouteDef.subGebieden);
-        if (Array.isArray(routePolygons) && routePolygons.length > 0) {
-            const filteredObjects = allObjects.filter(obj => {
-                if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
-                const point = turf.point([obj.longitude, obj.latitude]);
-                for (const polygon of routePolygons) {
-                    if (turf.booleanPointInPolygon(point, polygon)) return true;
-                }
-                return false;
-            });
-            setObjectsOnMap(filteredObjects);
-        } else {
-            setObjectsOnMap([]);
-        }
-    } catch (e) {
-        console.error("Error parsing route polygons", e);
-        setObjectsOnMap([]);
-    }
+    return allObjects.filter(obj => 
+      obj.locatieWerkgebieden && obj.locatieWerkgebieden.includes(routeName)
+    );
   }, [selectedRouteDef, allObjects]);
 
   const routeGeoJSON = React.useMemo(() => {
@@ -378,19 +364,7 @@ export default function StartNavigationPage() {
 
     setIsStarting(true);
     
-    const routePolygons = JSON.parse(selectedRouteDef.subGebieden);
-    let filteredObjects: MapObject[] = [];
-
-    if (Array.isArray(routePolygons) && routePolygons.length > 0) {
-        filteredObjects = allObjects.filter(obj => {
-            if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
-            const point = turf.point([obj.longitude, obj.latitude]);
-            for (const polygon of routePolygons) {
-                if (turf.booleanPointInPolygon(point, polygon)) return true;
-            }
-            return false;
-        });
-    }
+    const filteredObjects = objectsOnMap;
 
     if (filteredObjects.length === 0) {
         alert("Geen objecten gevonden voor deze route.");
@@ -582,3 +556,5 @@ export default function StartNavigationPage() {
     </div>
   );
 }
+
+    

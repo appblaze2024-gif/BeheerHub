@@ -1,4 +1,5 @@
-'use client';
+
+      'use client';
 
 import * as React from 'react';
 import {
@@ -206,6 +207,18 @@ export default function ObjectsPage() {
       return projectAreas.filter(area => selectedAreaIds.includes(area.id));
   }, [projectAreas, selectedAreaIds]);
 
+  const objectsOnMap = React.useMemo(() => {
+    if (!objects) return [];
+    if (selectedAreaIds.length === 0) {
+      return objects;
+    }
+
+    const selectedAreaNames = selectedAreas.map(area => area.naam);
+
+    return objects.filter(obj => 
+        obj.locatieWerkgebieden && Array.isArray(obj.locatieWerkgebieden) && obj.locatieWerkgebieden.some((gebied: string) => selectedAreaNames.includes(gebied))
+    );
+  }, [objects, selectedAreaIds, selectedAreas]);
 
  const areaPolygons = React.useMemo(() => {
     return selectedAreas.flatMap(area => {
@@ -224,28 +237,6 @@ export default function ObjectsPage() {
       }
     });
   }, [selectedAreas]);
-
-  const objectsOnMap = React.useMemo(() => {
-    if (!objects) return [];
-    if (areaPolygons.length === 0) {
-      // If no districts are selected, show all objects.
-      return objects;
-    }
-
-    return objects.filter(obj => {
-      if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') {
-        return false;
-      }
-      const point = turf.point([obj.longitude, obj.latitude]);
-      
-      for (const polygon of areaPolygons) {
-          if (turf.booleanPointInPolygon(point, polygon)) {
-              return true;
-          }
-      }
-      return false;
-    });
-  }, [objects, areaPolygons]);
 
   const objectCountsPerArea = React.useMemo(() => {
     if (!objects || !projectAreas) return {};
@@ -615,3 +606,5 @@ export default function ObjectsPage() {
     </div>
   );
 }
+
+    

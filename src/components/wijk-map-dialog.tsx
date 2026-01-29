@@ -1,4 +1,5 @@
-'use client';
+
+      'use client';
 
 import * as React from 'react';
 import MapGL, { Popup, Marker } from 'react-map-gl';
@@ -249,21 +250,12 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   }, [wijk?.subGebieden]);
   
   const objectsInArea = React.useMemo(() => {
-    if (!allObjects || !geojson?.features || geojson.features.length === 0) return [];
+    if (!allObjects || !wijk) return [];
 
     return allObjects.filter(obj => {
-        if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') {
-            return false;
-        }
-        const pt = turf.point([obj.longitude, obj.latitude]);
-        for (const feature of geojson.features) {
-            if (feature.geometry && turf.booleanPointInPolygon(pt, feature as any)) {
-                return true;
-            }
-        }
-        return false;
+        return Array.isArray(obj.locatieWerkgebieden) && obj.locatieWerkgebieden.includes(wijk.naam);
     });
-  }, [allObjects, geojson]);
+  }, [allObjects, wijk]);
 
   const allPrullenbakkenroutes = React.useMemo(() => {
     return allAreas.filter(a => a.type === 'prullenbakkenroute');
@@ -1253,3 +1245,5 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     </Dialog>
   );
 }
+
+    
