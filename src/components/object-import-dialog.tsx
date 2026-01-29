@@ -26,6 +26,8 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import * as shapefile from 'shapefile';
+import * as turf from '@turf/turf';
 
 interface ObjectImportDialogProps {
   children: React.ReactNode;
@@ -129,71 +131,95 @@ export function ObjectImportDialog({
     }
   }, [open]);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = event.target.files?.[0];
-    if (!selectedFile) return;
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
-    setFile(selectedFile);
+    setFile(files[0]); // Keep one file for UI state for now
     setError(null);
 
-    const reader = new FileReader();
+    const shpFile = Array.from(files).find(f => f.name.toLowerCase().endsWith('.shp'));
+    const dbfFile = Array.from(files).find(f => f.name.toLowerCase().endsWith('.dbf'));
+    const xlsxFile = Array.from(files).find(f => f.name.toLowerCase().endsWith('.xlsx'));
+    const csvFile = Array.from(files).find(f => f.name.toLowerCase().endsWith('.csv'));
 
-    reader.onload = (e) => {
-        try {
-            const fileContent = e.target?.result;
-            if (!fileContent) {
-                setError("Kon het bestand niet lezen.");
+    try {
+        let parsedHeaders: string[] = [];
+        let parsedData: any[][] = [];
+
+        if (shpFile) {
+            if (!dbfFile) {
+                setError("Selecteer alstublieft zowel een .shp als een .dbf bestand voor shapefile import.");
                 return;
             }
+            const shpBuffer = await shpFile.arrayBuffer();
+            const dbfBuffer = await dbfFile.arrayBuffer();
+            const geojson = await shapefile.read(shpBuffer, dbfBuffer);
 
-            let parsedData: { headers: string[], data: string[][] };
-            if (selectedFile.name.endsWith('.xlsx')) {
-                parsedData = parseXLSX(fileContent as ArrayBuffer);
-            } else {
-                parsedData = parseCSV(fileContent as string);
-            }
-            
-            const { headers: fileHeaders, data: fileData } = parsedData;
-
-            if (fileHeaders.length === 0) {
-                setError("Kon geen headers vinden in het bestand.");
-                return;
-            }
-
-            setHeaders(fileHeaders);
-            setData(fileData);
-
-            // Auto-map based on header name similarity
-            const newMapping: Record<string, string> = {};
-            objectFields.forEach(field => {
-                const lowerField = field.toLowerCase().replace(/ /g, '');
-                const foundHeader = fileHeaders.find(header => {
-                    const lowerHeader = header.toLowerCase().replace(/ /g, '');
-                    if (lowerHeader === lowerField) return true;
-                    if (lowerField === 'latitude' && (lowerHeader === 'lat' || lowerHeader === 'latitude')) return true;
-                    if (lowerField === 'longitude' && (lowerHeader === 'lon' || lowerHeader === 'long' || lowerHeader === 'longitude')) return true;
-                    return false;
+            if (geojson && Array.isArray(geojson.features) && geojson.features.length > 0) {
+                const firstFeatureProps = geojson.features[0].properties || {};
+                parsedHeaders = ['longitude', 'latitude', ...Object.keys(firstFeatureProps)];
+                
+                parsedData = geojson.features.map(feature => {
+                    const props = feature.properties || {};
+                    const coords = (feature.geometry as any)?.coordinates;
+                    const row: any[] = [];
+                    row.push(coords ? coords[0] : null);
+                    row.push(coords ? coords[1] : null);
+                    Object.keys(firstFeatureProps).forEach(header => {
+                        row.push(props[header]);
+                    });
+                    return row;
                 });
-                if (foundHeader) {
-                    newMapping[field] = foundHeader;
-                }
-            });
-            setMapping(newMapping);
-            setStep(2);
-        } catch (err) {
-            console.error("Fout bij het parsen van bestand:", err);
-            setError("Fout bij het verwerken van het bestand. Controleer het formaat.");
+            } else {
+                 setError("Shapefile is leeg of kon niet worden gelezen.");
+                return;
+            }
+
+        } else if (xlsxFile) {
+            const fileContent = await xlsxFile.arrayBuffer();
+            const { headers, data } = parseXLSX(fileContent);
+            parsedHeaders = headers;
+            parsedData = data;
+        } else if (csvFile) {
+            const fileContent = await csvFile.text();
+            const { headers, data } = parseCSV(fileContent);
+            parsedHeaders = headers;
+            parsedData = data;
+        } else {
+            setError("Selecteer een ondersteund bestandstype: .csv, .xlsx, of .shp + .dbf.");
+            return;
         }
-    };
 
-    reader.onerror = () => {
-        setError("Fout bij het lezen van het bestand.");
-    }
+        if (parsedHeaders.length === 0) {
+            setError("Kon geen headers of data vinden in het bestand.");
+            return;
+        }
 
-    if (selectedFile.name.endsWith('.xlsx')) {
-        reader.readAsArrayBuffer(selectedFile);
-    } else {
-        reader.readAsText(selectedFile, 'UTF-8');
+        setHeaders(parsedHeaders);
+        setData(parsedData.map(row => row.map(val => val !== null && val !== undefined ? String(val) : '')));
+
+        const newMapping: Record<string, string> = {};
+        objectFields.forEach(field => {
+            const lowerField = field.toLowerCase().replace(/ /g, '');
+            const foundHeader = parsedHeaders.find(header => {
+                if (typeof header !== 'string') return false;
+                const lowerHeader = header.toLowerCase().replace(/ /g, '');
+                if (lowerHeader === lowerField) return true;
+                if (lowerField === 'latitude' && (lowerHeader === 'lat' || lowerHeader === 'y' || lowerHeader === 'y-coordinaat' || lowerHeader === 'latitude')) return true;
+                if (lowerField === 'longitude' && (lowerHeader === 'lon' || lowerHeader === 'long' || lowerHeader === 'x' || lowerHeader === 'x-coordinaat' || lowerHeader === 'longitude')) return true;
+                return false;
+            });
+            if (foundHeader) {
+                newMapping[field] = foundHeader;
+            }
+        });
+        setMapping(newMapping);
+        setStep(2);
+
+    } catch (err) {
+        console.error("Fout bij het parsen van bestand:", err);
+        setError("Fout bij het verwerken van het bestand. Controleer het formaat.");
     }
   };
 
@@ -327,6 +353,7 @@ export function ObjectImportDialog({
                     onChange={handleFileChange}
                     ref={fileInputRef}
                     className="w-full h-12 text-base"
+                    multiple
                     />
                      {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
                 </div>
