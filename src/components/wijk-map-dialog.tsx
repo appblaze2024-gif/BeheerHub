@@ -90,6 +90,8 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   }, [firestore]);
 
   const { data: allObjects } = useCollection<MapObject>(objectsCollection);
+  const allObjectsRef = React.useRef(allObjects);
+  allObjectsRef.current = allObjects;
 
   const [selectedObjectIds, setSelectedObjectIds] = React.useState<string[]>([]);
   const [isSaving, setIsSaving] = React.useState(false);
@@ -110,7 +112,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     setIsSaving(false);
   }, []);
 
- const onMapLoad = React.useCallback(() => {
+  const onMapLoad = React.useCallback(() => {
     if (mapRef.current && !drawRef.current && !readOnly) {
       const map = mapRef.current.getMap();
       const draw = new MapboxDraw({
@@ -127,7 +129,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         ]
       });
 
-      map.addControl(draw, 'top-left');
+      map.addControl(draw);
       drawRef.current = draw;
     }
   }, [readOnly]);
@@ -144,17 +146,8 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     const handleDrawCreate = (e: { features: turf.Feature[] }) => {
       const selectionPolygon = e.features[0];
       if (!selectionPolygon) return;
-
-      // Use a short timeout to allow the draw UI to finish, then delete the polygon
-      setTimeout(() => {
-        try {
-          draw.delete(selectionPolygon.id as string);
-        } catch (err) {
-          // It might have been deleted already, ignore.
-        }
-      }, 10);
-
-      const newlySelectedIds = (allObjects || [])
+      
+      const newlySelectedIds = (allObjectsRef.current || [])
         .filter(obj => {
           if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
           const pt = turf.point([obj.longitude, obj.latitude]);
@@ -172,10 +165,14 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     // Cleanup
     return () => {
       if (map.isStyleLoaded()) {
-        map.off('draw.create', handleDrawCreate);
+        try {
+          map.off('draw.create', handleDrawCreate);
+        } catch(e) {
+          // ignore error on cleanup
+        }
       }
     };
-  }, [allObjects, readOnly]);
+  }, [readOnly]); // Dependency array is now stable
 
 
   const handleObjectAssignment = async (assign: boolean) => {
@@ -289,7 +286,6 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                   size="icon"
                   onClick={() => {
                       drawRef.current?.deleteAll();
-                      setSelectedObjectIds([]);
                   }}
               >
                   <Trash2 className="h-4 w-4" />
