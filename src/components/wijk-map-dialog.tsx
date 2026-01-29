@@ -55,11 +55,6 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   }, [firestore]);
 
   const { data: allObjects } = useCollection<MapObject>(objectsCollection);
-  const allObjectsRef = React.useRef(allObjects);
-  
-  React.useEffect(() => {
-    allObjectsRef.current = allObjects;
-  }, [allObjects]);
 
   const [selectedObjectIds, setSelectedObjectIds] = React.useState<string[]>([]);
   const [isSaving, setIsSaving] = React.useState(false);
@@ -67,6 +62,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   const cleanup = React.useCallback(() => {
     if (drawRef.current && mapRef.current?.getMap()?.isStyleLoaded()) {
       try {
+         // Check if control exists before removing
          if (mapRef.current.getMap().getControl('mapbox-gl-draw')) {
             mapRef.current.getMap().removeControl(drawRef.current);
          }
@@ -84,7 +80,8 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
       const map = mapRef.current.getMap();
       const draw = new MapboxDraw({
         displayControlsDefault: false,
-        controls: {}, // Controls are handled by our custom buttons
+        controls: {
+        },
         styles: [
             { 'id': 'gl-draw-polygon-fill-inactive', 'type': 'fill', 'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon'], ['!=', 'mode', 'static']], 'paint': { 'fill-color': '#3b82f6', 'fill-outline-color': '#3b82f6', 'fill-opacity': 0.1 } },
             { 'id': 'gl-draw-polygon-stroke-inactive', 'type': 'line', 'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon'], ['!=', 'mode', 'static']], 'layout': { 'line-cap': 'round', 'line-join': 'round' }, 'paint': { 'line-color': '#3b82f6', 'line-width': 2 } },
@@ -93,7 +90,10 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         ]
       });
 
-      map.addControl(draw);
+      // Avoid adding control if it already exists
+      if (!map.getControl('mapbox-gl-draw')) {
+          map.addControl(draw);
+      }
       drawRef.current = draw;
     }
   }, [readOnly]);
@@ -111,10 +111,9 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
       const selectionPolygon = e.features[0];
       if (!selectionPolygon) return;
       
-      const objects = allObjectsRef.current;
-      if (!objects) return;
+      if (!allObjects) return;
 
-      const newlySelectedIds = objects
+      const newlySelectedIds = allObjects
         .filter(obj => {
           if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
           const pt = turf.point([obj.longitude, obj.latitude]);
@@ -139,8 +138,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         }
       }
     };
-  }, [readOnly, allObjectsRef]);
-
+  }, [readOnly, allObjects]);
 
   const handleObjectAssignment = async (assign: boolean) => {
     if (!firestore || selectedObjectIds.length === 0 || !wijk?.naam) return;
