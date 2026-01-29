@@ -110,11 +110,11 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     setIsSaving(false);
   }, []);
 
-  const onMapLoad = React.useCallback(() => {
+ const onMapLoad = React.useCallback(() => {
     if (mapRef.current && !drawRef.current && !readOnly) {
       const map = mapRef.current.getMap();
       const draw = new MapboxDraw({
-        displayControlsDefault: true,
+        displayControlsDefault: false,
         controls: {
           polygon: true,
           trash: true,
@@ -127,33 +127,57 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         ]
       });
 
-      map.addControl(draw);
+      map.addControl(draw, 'top-left');
       drawRef.current = draw;
-      
-      const onDrawAction = (e: { features: turf.Feature[], type: string }) => {
-        const drawInstance = drawRef.current;
-        if (!drawInstance || e.type !== 'draw.create') return;
-
-        const selectionPolygon = e.features[0];
-        if (!selectionPolygon) return;
-        
-        drawInstance.delete(selectionPolygon.id as string);
-        
-        const newlySelectedIds = (allObjects || [])
-            .filter(obj => {
-                if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
-                const pt = turf.point([obj.longitude, obj.latitude]);
-                return turf.booleanPointInPolygon(pt, selectionPolygon as any);
-            })
-            .map(obj => obj.id);
-
-        setSelectedObjectIds(prev => [...new Set([...prev, ...newlySelectedIds])]);
-        drawInstance.changeMode('simple_select');
-      };
-      
-      map.on('draw.create', onDrawAction);
     }
-  }, [open, readOnly, allObjects]);
+  }, [readOnly]);
+
+    // Effect to handle draw interactions
+  React.useEffect(() => {
+    const map = mapRef.current?.getMap();
+    const draw = drawRef.current;
+
+    if (!map || !draw || readOnly) {
+      return;
+    }
+
+    const handleDrawCreate = (e: { features: turf.Feature[] }) => {
+      const selectionPolygon = e.features[0];
+      if (!selectionPolygon) return;
+
+      // Use a short timeout to allow the draw UI to finish, then delete the polygon
+      setTimeout(() => {
+        try {
+          draw.delete(selectionPolygon.id as string);
+        } catch (err) {
+          // It might have been deleted already, ignore.
+        }
+      }, 0);
+
+      const newlySelectedIds = (allObjects || [])
+        .filter(obj => {
+          if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
+          const pt = turf.point([obj.longitude, obj.latitude]);
+          return turf.booleanPointInPolygon(pt, selectionPolygon as any);
+        })
+        .map(obj => obj.id);
+
+      if (newlySelectedIds.length > 0) {
+        setSelectedObjectIds(prev => [...new Set([...prev, ...newlySelectedIds])]);
+      }
+
+      draw.changeMode('simple_select');
+    };
+
+    map.on('draw.create', handleDrawCreate);
+
+    // Cleanup
+    return () => {
+      if (map.isStyleLoaded()) {
+        map.off('draw.create', handleDrawCreate);
+      }
+    };
+  }, [allObjects, readOnly]); // This effect now correctly depends on `allObjects`
 
 
   const handleObjectAssignment = async (assign: boolean) => {
@@ -206,9 +230,9 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[80vw] h-[80vh] flex flex-col p-0 gap-0">
         <DialogHeader className="p-6 pb-2">
-          <DialogTitle>Objecten beheren voor: {wijk?.naam}</DialogTitle>
+          <DialogTitle>Teken gebied voor: {wijk?.naam}</DialogTitle>
           <DialogDescription>
-            Selecteer objecten op de kaart om ze toe te wijzen of te verwijderen van deze route. Gebruik de tekentools op de kaart om meerdere objecten tegelijk te selecteren.
+            Zoek een gebied, teken handmatig, of selecteer objecten om toe te wijzen.
           </DialogDescription>
         </DialogHeader>
 
@@ -252,6 +276,16 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
               );
             })}
           </MapGL>
+          <div className="absolute top-4 left-4 z-10 bg-background p-2 rounded-lg shadow-lg flex items-center gap-2">
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={() => drawRef.current?.changeMode('draw_polygon')}
+            >
+                <BoxSelect className="h-4 w-4 mr-2" />
+                Selecteer met vlak
+            </Button>
+          </div>
           {selectedObjectIds.length > 0 && !readOnly && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 bg-background p-2 rounded-lg shadow-lg flex items-center gap-2">
                 <p className="text-sm font-medium">{selectedObjectIds.length} objecten geselecteerd.</p>
