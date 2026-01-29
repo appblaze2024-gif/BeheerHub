@@ -24,24 +24,6 @@ import { useProfile } from '@/firebase/profile-provider';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
-const polygonFillLayer: FillLayer = {
-    id: 'route-polygon-fill',
-    type: 'fill',
-    paint: {
-        'fill-color': '#9333ea', // purple-600
-        'fill-opacity': 0.2,
-    },
-};
-
-const polygonOutlineLayer: LineLayer = {
-    id: 'route-polygon-outline',
-    type: 'line',
-    paint: {
-        'line-color': '#9333ea', // purple-600
-        'line-width': 2,
-    },
-};
-
 interface AreaLike {
   id: string;
   naam: string;
@@ -81,19 +63,6 @@ export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, onSave,
 
   const [selectedObjectIds, setSelectedObjectIds] = React.useState<string[]>([]);
   const [isSaving, setIsSaving] = React.useState(false);
-
-  const routeGeoJSONFeatures = React.useMemo(() => {
-    if (!route?.subGebieden) return null;
-    try {
-      const features = JSON.parse(route.subGebieden);
-      if (Array.isArray(features) && features.length > 0) {
-        return features;
-      }
-    } catch (e) {
-      console.error('Invalid GeoJSON for route', e);
-    }
-    return null;
-  }, [route]);
 
   React.useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -139,15 +108,22 @@ export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, onSave,
     const map = mapRef.current?.getMap();
     if (!map) return;
 
-    if (routeGeoJSONFeatures) {
-        try {
-            const featureCollection = turf.featureCollection(routeGeoJSONFeatures);
-            const bbox = turf.bbox(featureCollection);
-            if (bbox[0] !== Infinity) {
-                map.fitBounds(bbox as [number, number, number, number], { padding: 60, duration: 0 });
+    if (allObjectsRef.current && route) {
+        const objectsInRoute = allObjectsRef.current.filter(obj => 
+            Array.isArray(obj.locatieWerkgebieden) && obj.locatieWerkgebieden.includes(route.naam)
+        );
+
+        if (objectsInRoute.length > 0) {
+            const points = objectsInRoute.map(obj => turf.point([obj.longitude, obj.latitude]));
+            const featureCollection = turf.featureCollection(points);
+            try {
+                const bbox = turf.bbox(featureCollection);
+                if (bbox[0] !== Infinity) {
+                    map.fitBounds(bbox as [number, number, number, number], { padding: 60, duration: 0 });
+                }
+            } catch(e) {
+                console.error("Error fitting bounds to objects:", e);
             }
-        } catch (e) {
-            console.error("Error fitting bounds:", e);
         }
     }
     
@@ -179,14 +155,7 @@ export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, onSave,
     }
     
     drawRef.current = draw;
-    
-    if (routeGeoJSONFeatures) {
-        draw.add({
-            type: 'FeatureCollection',
-            features: routeGeoJSONFeatures,
-        });
-    }
-    
+        
     const handleDrawCreate = (e: { features: turf.Feature[] }) => {
         const selectionPolygon = e.features[0];
         if (!selectionPolygon) return;
@@ -218,7 +187,7 @@ export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, onSave,
             }
         }
     };
-  }, [readOnly, routeGeoJSONFeatures]);
+  }, [readOnly, route]);
   
   const handleObjectAssignment = async (assign: boolean) => {
     if (!firestore || selectedObjectIds.length === 0 || !route?.naam) return;
@@ -287,7 +256,7 @@ export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, onSave,
         <DialogHeader className={cn("p-6 pb-2", isMaximized && "hidden")}>
           <DialogTitle>Teken gebied voor: {route?.naam}</DialogTitle>
           <DialogDescription>
-            Teken een gebied of selecteer objecten om toe te wijzen.
+            Zoek een gebied, teken handmatig, of selecteer objecten om toe te wijzen.
           </DialogDescription>
         </DialogHeader>
         <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
