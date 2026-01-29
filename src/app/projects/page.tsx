@@ -36,6 +36,8 @@ import { ProjectBestandenDialog } from '@/components/project-bestanden-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
 import { WijkMapDialog } from '@/components/wijk-map-dialog';
+import { VeegrouteMapDialog } from '@/components/veegroute-map-dialog';
+import { PrullenbakkenrouteMapDialog } from '@/components/prullenbakkenroute-map-dialog';
 import { useProfile } from '@/firebase/profile-provider';
 import {
   DropdownMenu,
@@ -569,6 +571,7 @@ function BestandenTab({ projectId, canEdit, canDelete }: { projectId: string | u
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         projectId={projectId}
+        folderId={null} // Default to root for this simplified tab
       />}
     </Card>
   );
@@ -577,14 +580,12 @@ function BestandenTab({ projectId, canEdit, canDelete }: { projectId: string | u
 function WijkenTab({
   wijken,
   setCurrentProject,
-  allAreas,
   canEdit,
   projectId,
   firestore
 }: {
   wijken: Wijk[];
   setCurrentProject: React.Dispatch<React.SetStateAction<Project>>;
-  allAreas: any[];
   canEdit: boolean;
   projectId?: string;
   firestore: any;
@@ -721,9 +722,7 @@ function WijkenTab({
           onOpenChange={(open) => !open && setMapWijk(null)}
           wijk={mapWijk}
           onSave={handleSaveCoordinates}
-          allAreas={allAreas}
           readOnly={!canEdit}
-          showRoadTypes={false}
         />
       )}
     </div>
@@ -733,14 +732,12 @@ function WijkenTab({
 function VeegroutesTab({
   veegroutes,
   setCurrentProject,
-  allAreas,
   canEdit,
   projectId,
   firestore
 }: {
   veegroutes: Veegroute[];
   setCurrentProject: React.Dispatch<React.SetStateAction<Project>>;
-  allAreas: any[];
   canEdit: boolean;
   projectId?: string;
   firestore: any;
@@ -825,14 +822,12 @@ function VeegroutesTab({
       {canEdit && <Button variant="outline" onClick={addRow}>Veegroute toevoegen</Button>}
       
       {mapRoute && (
-        <WijkMapDialog
+        <VeegrouteMapDialog
           open={!!mapRoute}
           onOpenChange={(open) => !open && setMapRoute(null)}
-          wijk={mapRoute}
+          route={mapRoute}
           onSave={handleSaveCoordinates}
-          allAreas={allAreas}
           readOnly={!canEdit}
-          showRoadTypes={true}
         />
       )}
     </div>
@@ -842,14 +837,12 @@ function VeegroutesTab({
 function PrullenbakkenroutesTab({
   prullenbakkenroutes,
   setCurrentProject,
-  allAreas,
   canEdit,
   projectId,
   firestore
 }: {
   prullenbakkenroutes: Prullenbakkenroute[];
   setCurrentProject: React.Dispatch<React.SetStateAction<Project>>;
-  allAreas: any[],
   canEdit: boolean;
   projectId?: string;
   firestore: any;
@@ -933,14 +926,12 @@ function PrullenbakkenroutesTab({
       {canEdit && <Button variant="outline" onClick={addRow}>Prullenbakkenroute toevoegen</Button>}
       
       {mapRoute && (
-        <WijkMapDialog
+        <PrullenbakkenrouteMapDialog
           open={!!mapRoute}
           onOpenChange={(open) => !open && setMapRoute(null)}
-          wijk={mapRoute}
+          route={mapRoute}
           onSave={handleSaveCoordinates}
-          allAreas={allAreas}
           readOnly={!canEdit}
-          showRoadTypes={false}
         />
       )}
     </div>
@@ -970,33 +961,22 @@ export default function ProjectsPage() {
     projectsCollection
   );
   
-  const allAreas = React.useMemo(() => {
-    if (!projects) return [];
-    const wijken = projects.flatMap(p => 
-      (p.wijken || []).map(w => ({ ...w, projectName: p.projectnaam, type: 'wijk' }))
-    );
-    const veegroutes = projects.flatMap(p => 
-      (p.veegroutes || []).map(r => ({ ...r, projectName: p.projectnaam, type: 'veegroute' }))
-    );
-    const prullenbakkenroutes = projects.flatMap(p => 
-      (p.prullenbakkenroutes || []).map(r => ({ ...r, projectName: p.projectnaam, type: 'prullenbakkenroute' }))
-    );
-    return [...wijken, ...veegroutes, ...prullenbakkenroutes];
-  }, [projects]);
-  
   const allWijkenFeatures = React.useMemo(() => {
-    return allAreas.filter(a => a.type === 'wijk').flatMap(wijk => {
-      try {
-        const features = JSON.parse(wijk.subGebieden);
-        return features.map((feature: any) => ({
-          ...feature,
-          properties: { ...feature.properties, wijkNaam: wijk.naam },
-        }));
-      } catch {
-        return [];
-      }
-    });
-  }, [allAreas]);
+    if (!projects) return [];
+    return projects.flatMap(p => 
+      (p.wijken || []).flatMap(wijk => {
+        try {
+          const features = JSON.parse(wijk.subGebieden);
+          return features.map((feature: any) => ({
+            ...feature,
+            properties: { ...feature.properties, wijkNaam: wijk.naam },
+          }));
+        } catch {
+          return [];
+        }
+      })
+    );
+  }, [projects]);
 
   const generateProjectNumber = () => {
     const year = new Date().getFullYear();
@@ -1232,13 +1212,13 @@ export default function ProjectsPage() {
           <OrganisatieTab projectId={selectedProjectId} wijken={currentProject.wijken} canEdit={canEdit} canDelete={canDelete} />
         </TabsContent>}
         {canViewTab('wijken') && <TabsContent value="wijken" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
-          <WijkenTab wijken={currentProject.wijken || []} setCurrentProject={setCurrentProject} allAreas={allAreas} canEdit={canEdit} projectId={currentProject.id} firestore={firestore}/>
+          <WijkenTab wijken={currentProject.wijken || []} setCurrentProject={setCurrentProject} canEdit={canEdit} projectId={currentProject.id} firestore={firestore}/>
         </TabsContent>}
         {canViewTab('veegroutes') && <TabsContent value="veegroutes" className="flex-1 overflow-y-auto p-6">
-          <VeegroutesTab veegroutes={currentProject.veegroutes || []} setCurrentProject={setCurrentProject} allAreas={allAreas} canEdit={canEdit} projectId={currentProject.id} firestore={firestore}/>
+          <VeegroutesTab veegroutes={currentProject.veegroutes || []} setCurrentProject={setCurrentProject} canEdit={canEdit} projectId={currentProject.id} firestore={firestore}/>
         </TabsContent>}
         {canViewTab('prullenbakkenroutes') && <TabsContent value="prullenbakkenroutes" className="flex-1 overflow-y-auto p-6">
-          <PrullenbakkenroutesTab prullenbakkenroutes={currentProject.prullenbakkenroutes || []} setCurrentProject={setCurrentProject} allAreas={allAreas} canEdit={canEdit} projectId={currentProject.id} firestore={firestore}/>
+          <PrullenbakkenroutesTab prullenbakkenroutes={currentProject.prullenbakkenroutes || []} setCurrentProject={setCurrentProject} canEdit={canEdit} projectId={currentProject.id} firestore={firestore}/>
         </TabsContent>}
       </Tabs>
       
@@ -1247,7 +1227,7 @@ export default function ProjectsPage() {
           open={isGlobalWijkMapOpen}
           onOpenChange={setIsGlobalWijkMapOpen}
           wijk={{ id: 'global', naam: 'Alle Wijken', locatie: '', subGebieden: JSON.stringify(allWijkenFeatures)}}
-          onSave={() => {}}
+          onSave={async () => {}}
           readOnly={true}
         />
       )}

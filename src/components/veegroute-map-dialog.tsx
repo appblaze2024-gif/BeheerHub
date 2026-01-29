@@ -18,62 +18,59 @@ import { Maximize, Minimize, X } from 'lucide-react';
 import * as turf from '@turf/turf';
 import { cn } from '@/lib/utils';
 import { useProfile } from '@/firebase/profile-provider';
+import { Checkbox } from './ui/checkbox';
+import { Label } from './ui/label';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
-const polygonFillLayer: FillLayer = {
-    id: 'wijk-polygon-fill',
-    type: 'fill',
-    paint: {
-        'fill-color': '#9333ea', // purple-600
-        'fill-opacity': 0.2,
-    },
-};
-
-const polygonOutlineLayer: LineLayer = {
-    id: 'wijk-polygon-outline',
-    type: 'line',
-    paint: {
-        'line-color': '#9333ea', // purple-600
-        'line-width': 2,
-    },
-};
+const roadTypesAvailable = [
+    'Autosnelweg', 'Provinciale weg', 'Hoofdweg', 'Lokale weg', 
+    'Fietspad', 'Voetpad', 'Woonerf', 'Industrieterrein'
+];
 
 interface AreaLike {
   id: string;
   naam: string;
   locatie: string;
   subGebieden: string;
+  roadTypes?: string[];
 }
 
-interface WijkMapDialogProps {
+interface VeegrouteMapDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  wijk: AreaLike | null;
-  onSave: (wijkId: string, coordinates: string) => Promise<void>;
+  route: AreaLike | null;
+  onSave: (routeId: string, coordinates: string, roadTypes: string[]) => Promise<void>;
   readOnly?: boolean;
 }
 
-export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = false }: WijkMapDialogProps) {
+export function VeegrouteMapDialog({ open, onOpenChange, route, onSave, readOnly = false }: VeegrouteMapDialogProps) {
   const drawRef = React.useRef<MapboxDraw | null>(null);
   const mapRef = React.useRef<any>(null);
   const mapContainerRef = React.useRef<HTMLDivElement>(null);
   const { profile } = useProfile();
   const [currentMapStyle, setCurrentMapStyle] = React.useState(profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12');
   const [isMaximized, setIsMaximized] = React.useState(false);
+  const [selectedRoadTypes, setSelectedRoadTypes] = React.useState<string[]>([]);
 
-  const wijkGeoJSONFeatures = React.useMemo(() => {
-    if (!wijk?.subGebieden) return null;
+  const routeGeoJSONFeatures = React.useMemo(() => {
+    if (!route?.subGebieden) return null;
     try {
-      const features = JSON.parse(wijk.subGebieden);
+      const features = JSON.parse(route.subGebieden);
       if (Array.isArray(features) && features.length > 0) {
         return features;
       }
     } catch (e) {
-      console.error('Invalid GeoJSON for wijk', e);
+      console.error('Invalid GeoJSON for route', e);
     }
     return null;
-  }, [wijk]);
+  }, [route]);
+
+  React.useEffect(() => {
+    if (open && route) {
+        setSelectedRoadTypes(route.roadTypes || []);
+    }
+  }, [open, route]);
 
   React.useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -89,15 +86,14 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     }
   }, [isMaximized, open]);
 
-
   const cleanup = React.useCallback(() => {
     if (drawRef.current) {
-        try {
-            const map = mapRef.current.getMap();
-            if (map && map.isStyleLoaded() && map._controls.some((ctrl: any) => ctrl === drawRef.current)) {
-                 map.removeControl(drawRef.current);
-            }
-        } catch (e) { /* ignore */ }
+      try {
+        const map = mapRef.current.getMap();
+        if (map && map.isStyleLoaded() && map._controls.some((ctrl: any) => ctrl === drawRef.current)) {
+          map.removeControl(drawRef.current);
+        }
+      } catch (e) { /* ignore */ }
     }
     drawRef.current = null;
   }, []);
@@ -106,14 +102,14 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     const map = mapRef.current?.getMap();
     if (!map) return;
 
-    if (wijkGeoJSONFeatures) {
-        try {
-            const featureCollection = turf.featureCollection(wijkGeoJSONFeatures);
-            const bbox = turf.bbox(featureCollection);
-            if (bbox[0] !== Infinity) {
-                map.fitBounds(bbox as [number, number, number, number], { padding: 60, duration: 0 });
-            }
-        } catch (e) { /* ignore */ }
+    if (routeGeoJSONFeatures) {
+      try {
+        const featureCollection = turf.featureCollection(routeGeoJSONFeatures);
+        const bbox = turf.bbox(featureCollection);
+        if (bbox[0] !== Infinity) {
+          map.fitBounds(bbox as [number, number, number, number], { padding: 60, duration: 0 });
+        }
+      } catch (e) { /* ignore */ }
     }
     
     if (readOnly) return;
@@ -135,16 +131,22 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     
     drawRef.current = draw;
     
-    if (wijkGeoJSONFeatures) {
-      draw.add({ type: 'FeatureCollection', features: wijkGeoJSONFeatures });
+    if (routeGeoJSONFeatures) {
+      draw.add({ type: 'FeatureCollection', features: routeGeoJSONFeatures });
     }
-  }, [readOnly, wijkGeoJSONFeatures]);
+  }, [readOnly, routeGeoJSONFeatures]);
   
   const handleSaveArea = async () => {
-    if (readOnly || !wijk || !drawRef.current) return;
+    if (readOnly || !route || !drawRef.current) return;
     const data = drawRef.current.getAll();
-    await onSave(wijk.id, JSON.stringify(data.features));
+    await onSave(route.id, JSON.stringify(data.features), selectedRoadTypes);
     onOpenChange(false);
+  };
+  
+  const handleRoadTypeChange = (roadType: string, checked: boolean) => {
+    setSelectedRoadTypes(prev => 
+        checked ? [...prev, roadType] : prev.filter(rt => rt !== roadType)
+    );
   };
 
   React.useEffect(() => {
@@ -162,8 +164,8 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
             : "w-[80vw] max-w-[80vw] h-[80vh] sm:rounded-lg min-w-[600px] min-h-[480px] resize overflow-auto"
       )}>
         <DialogHeader className={cn("p-6 pb-2", isMaximized && "hidden")}>
-          <DialogTitle>Teken gebied voor: {wijk?.naam}</DialogTitle>
-          <DialogDescription>Teken een polygoon op de kaart om het gebied voor deze wijk te definiëren.</DialogDescription>
+          <DialogTitle>Teken gebied voor veegroute: {route?.naam}</DialogTitle>
+          <DialogDescription>Teken een polygoon op de kaart om het gebied voor deze veegroute te definiëren.</DialogDescription>
         </DialogHeader>
         <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
             <Button variant="secondary" size="icon" className="h-9 w-9" onClick={() => setIsMaximized(!isMaximized)}>
@@ -175,14 +177,21 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         </div>
 
         <div ref={mapContainerRef} className="flex-1 min-h-0 relative w-full">
-          <MapGL ref={mapRef} initialViewState={initialViewState} mapStyle={currentMapStyle} mapboxAccessToken={MAPBOX_TOKEN} onLoad={onMapLoad} preserveDrawingBuffer cursor={readOnly ? 'default' : 'grab'}>
-             {wijkGeoJSONFeatures && (
-                <Source id="wijk-polygon-readonly" type="geojson" data={{type: 'FeatureCollection', features: wijkGeoJSONFeatures}}>
-                    <Layer {...polygonFillLayer} />
-                    <Layer {...polygonOutlineLayer} />
-                </Source>
-            )}
-          </MapGL>
+          <MapGL ref={mapRef} initialViewState={initialViewState} mapStyle={currentMapStyle} mapboxAccessToken={MAPBOX_TOKEN} onLoad={onMapLoad} preserveDrawingBuffer cursor={readOnly ? 'default' : 'grab'} />
+          <div className="absolute top-4 left-4 z-10 bg-background p-3 rounded-lg shadow-lg space-y-2">
+            <h3 className="font-semibold text-sm">Wegtypes</h3>
+            {roadTypesAvailable.map(roadType => (
+                <div key={roadType} className="flex items-center space-x-2">
+                    <Checkbox
+                        id={`road-type-${roadType}`}
+                        checked={selectedRoadTypes.includes(roadType)}
+                        onCheckedChange={(checked) => handleRoadTypeChange(roadType, !!checked)}
+                        disabled={readOnly}
+                    />
+                    <Label htmlFor={`road-type-${roadType}`} className="font-normal text-sm">{roadType}</Label>
+                </div>
+            ))}
+          </div>
         </div>
         <DialogFooter className={cn("p-6 pt-4 border-t", isMaximized && "hidden")}>
             <Button variant="ghost" onClick={() => onOpenChange(false)}>Sluiten</Button>
