@@ -1,5 +1,5 @@
 
-      'use client';
+'use client';
 
 import * as React from 'react';
 import MapGL, { Popup, Marker } from 'react-map-gl';
@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Loader2, BoxSelect, Trash2, ChevronDown, Move } from 'lucide-react';
+import { Loader2, BoxSelect, Trash2, ChevronDown } from 'lucide-react';
 import * as turf from '@turf/turf';
 import type { FillLayer, LineLayer, SymbolLayer, MapLayerMouseEvent } from 'react-map-gl';
 import { Layer, Source } from 'react-map-gl';
@@ -84,24 +84,6 @@ interface ClickPopupInfo {
   canDraw: boolean;
 }
 
-const polygonFillLayer: FillLayer = {
-    id: 'wijk-polygon-fill',
-    type: 'fill',
-    paint: {
-        'fill-color': '#000000',
-        'fill-opacity': 0.3
-    },
-};
-
-const polygonOutlineLayer: LineLayer = {
-    id: 'wijk-polygon-outline',
-    type: 'line',
-    paint: {
-        'line-color': '#000000',
-        'line-width': 2
-    },
-};
-
 const referencePolygonFillLayer: FillLayer = {
     id: 'reference-polygon-fill',
     type: 'fill',
@@ -130,27 +112,6 @@ const selectedRoadsLayerStyle: LineLayer = {
         'line-opacity': 0.8
     },
   };
-
-
-const polygonLabelLayer: SymbolLayer = {
-  id: 'wijk-polygon-labels',
-  type: 'symbol',
-  source: 'wijk-polygons',
-  layout: {
-    'text-field': ['get', 'wijkNaam'],
-    'text-variable-anchor': ['top', 'bottom', 'left', 'right'],
-    'text-radial-offset': 0.5,
-    'text-justify': 'auto',
-    'text-size': 14,
-    'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
-  },
-  paint: {
-    'text-color': '#FFFFFF',
-    'text-halo-color': 'hsl(0, 0%, 0%)',
-    'text-halo-width': 2,
-    'text-halo-blur': 1,
-  }
-};
 
 const roadTypeTranslations: { [key: string]: string } = {
     busway: 'Busbaan',
@@ -194,9 +155,6 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   const [clickPopupInfo, setClickPopupInfo] = React.useState<ClickPopupInfo | null>(null);
   const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const [isFillMode, setIsFillMode] = React.useState(false);
-  const [hasVertexSelection, setHasVertexSelection] = React.useState(false);
-  const [hasPolygonSelection, setHasPolygonSelection] = React.useState(false);
-  const [isBulkDeleting, setIsBulkDeleting] = React.useState(false);
   const [editingFeatureId, setEditingFeatureId] = React.useState<string | null>(null);
   const [referenceAreaIds, setReferenceAreaIds] = React.useState<string[]>([]);
   
@@ -218,8 +176,6 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
 
   const isFillModeRef = React.useRef(isFillMode);
   isFillModeRef.current = isFillMode;
-  const isBulkDeletingRef = React.useRef(isBulkDeleting);
-  isBulkDeletingRef.current = isBulkDeleting;
   const editingFeatureIdRef = React.useRef(editingFeatureId);
   editingFeatureIdRef.current = editingFeatureId;
   const referenceAreaIdsRef = React.useRef(referenceAreaIds);
@@ -227,27 +183,11 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   
   const initialFeaturesRef = React.useRef<any[]>([]);
 
-  // New state for object selection
+  // State for object selection
   const [selectedObjectIds, setSelectedObjectIds] = React.useState<string[]>([]);
   const [isSavingMove, setIsSavingMove] = React.useState(false);
+  const [isDrawSelectMode, setIsDrawSelectMode] = React.useState(false);
 
-
-  const geojson = React.useMemo(() => {
-    if (!wijk?.subGebieden) return null;
-    try {
-      const features = JSON.parse(wijk.subGebieden);
-      return {
-        type: 'FeatureCollection',
-        features: Array.isArray(features) ? features : [],
-      };
-    } catch {
-      return null;
-    }
-  }, [wijk?.subGebieden]);
-
-  const allPrullenbakkenroutes = React.useMemo(() => {
-    return allAreas.filter(a => a.type === 'prullenbakkenroute');
-  }, [allAreas]);
 
   const referenceAreas = React.useMemo(() => {
     if (referenceAreaIds.length === 0) return [];
@@ -413,9 +353,6 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     setClickPopupInfo(null);
     initialFeaturesRef.current = [];
     setIsFillMode(false);
-    setHasVertexSelection(false);
-    setHasPolygonSelection(false);
-    setIsBulkDeleting(false);
     setEditingFeatureId(null);
     setReferenceAreaIds([]);
     setAvailableRoads([]);
@@ -423,6 +360,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     setAllRoadFeatures([]);
     setSelectedObjectIds([]);
     setIsSavingMove(false);
+    setIsDrawSelectMode(false);
   }, []);
 
   const onMapLoad = React.useCallback(() => {
@@ -430,126 +368,22 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
       const map = mapRef.current.getMap();
       const draw = new MapboxDraw({
         displayControlsDefault: false,
-        controls: readOnly ? {} : {
-          polygon: true,
+        controls: {
+          polygon: false,
           trash: false,
         },
         styles: [
-            // INACTIVE
-            {
-              'id': 'gl-draw-polygon-fill-inactive',
-              'type': 'fill',
-              'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon'], ['!=', 'mode', 'static']],
-              'paint': {
-                'fill-color': '#000000',
-                'fill-outline-color': '#000000',
-                'fill-opacity': 0.3
-              }
-            },
-            {
-              'id': 'gl-draw-polygon-stroke-inactive',
-              'type': 'line',
-              'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon'], ['!=', 'mode', 'static']],
-              'layout': {
-                'line-cap': 'round',
-                'line-join': 'round'
-              },
-              'paint': {
-                'line-color': '#000000',
-                'line-width': 2
-              }
-            },
-            // ACTIVE
-            {
-              'id': 'gl-draw-polygon-fill-active',
-              'type': 'fill',
-              'filter': ['all', ['==', 'active', 'true'], ['==', '$type', 'Polygon']],
-              'paint': {
-                'fill-color': '#ef4444',
-                'fill-outline-color': '#ef4444',
-                'fill-opacity': 0.1
-              }
-            },
-            {
-              'id': 'gl-draw-polygon-stroke-active',
-              'type': 'line',
-              'filter': ['all', ['==', 'active', 'true'], ['==', '$type', 'Polygon']],
-              'layout': {
-                'line-cap': 'round',
-                'line-join': 'round'
-              },
-              'paint': {
-                'line-color': '#ef4444',
-                'line-dasharray': [0.2, 2],
-                'line-width': 2
-              }
-            },
-            // VERTEX
-            {
-              'id': 'gl-draw-polygon-and-line-vertex-stroke-inactive',
-              'type': 'circle',
-              'filter': ['all', ['==', 'meta', 'vertex'], ['==', '$type', 'Point'], ['!=', 'mode', 'static']],
-              'paint': {
-                'circle-radius': 5,
-                'circle-color': '#fff'
-              }
-            },
-            {
-              'id': 'gl-draw-polygon-and-line-vertex-inactive',
-              'type': 'circle',
-              'filter': ['all', ['==', 'meta', 'vertex'], ['==', '$type', 'Point'], ['!=', 'mode', 'static']],
-              'paint': {
-                'circle-radius': 3,
-                'circle-color': '#ef4444'
-              }
-            },
-            // Point
-            {
-              'id': 'gl-draw-point-point-stroke-inactive',
-              'type': 'circle',
-              'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Point'], ['==', 'meta', 'feature'], ['!=', 'mode', 'static']],
-              'paint': {
-                'circle-radius': 5,
-                'circle-opacity': 1,
-                'circle-color': '#fff'
-              }
-            },
-            {
-              'id': 'gl-draw-point-inactive',
-              'type': 'circle',
-              'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Point'], ['==', 'meta', 'feature'], ['!=', 'mode', 'static']],
-              'paint': {
-                'circle-radius': 3,
-                'circle-color': '#ef4444'
-              }
-            },
-            {
-              'id': 'gl-draw-point-stroke-active',
-              'type': 'circle',
-              'filter': ['all', ['==', '$type', 'Point'], ['==', 'active', 'true'], ['!=', 'mode', 'static']],
-              'paint': {
-                'circle-radius': 7,
-                'circle-color': '#fff'
-              }
-            },
-            {
-              'id': 'gl-draw-point-active',
-              'type': 'circle',
-              'filter': ['all', ['==', '$type', 'Point'], ['!=', 'meta', 'midpoint'], ['==', 'active', 'true']],
-              'paint': {
-                'circle-radius': 5,
-                'circle-color': '#ef4444'
-              }
-            },
-             {
-              'id': 'gl-draw-polygon-midpoint',
-              'type': 'circle',
-              'filter': ['all', ['==', '$type', 'Point'], ['==', 'meta', 'midpoint']],
-              'paint': {
-                'circle-radius': 3,
-                'circle-color': '#ef4444'
-              }
-            }
+            { 'id': 'gl-draw-polygon-fill-inactive', 'type': 'fill', 'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon'], ['!=', 'mode', 'static']], 'paint': { 'fill-color': '#000000', 'fill-outline-color': '#000000', 'fill-opacity': 0.3 } },
+            { 'id': 'gl-draw-polygon-stroke-inactive', 'type': 'line', 'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon'], ['!=', 'mode', 'static']], 'layout': { 'line-cap': 'round', 'line-join': 'round' }, 'paint': { 'line-color': '#000000', 'line-width': 2 } },
+            { 'id': 'gl-draw-polygon-fill-active', 'type': 'fill', 'filter': ['all', ['==', 'active', 'true'], ['==', '$type', 'Polygon']], 'paint': { 'fill-color': '#ef4444', 'fill-outline-color': '#ef4444', 'fill-opacity': 0.1 } },
+            { 'id': 'gl-draw-polygon-stroke-active', 'type': 'line', 'filter': ['all', ['==', 'active', 'true'], ['==', '$type', 'Polygon']], 'layout': { 'line-cap': 'round', 'line-join': 'round' }, 'paint': { 'line-color': '#ef4444', 'line-dasharray': [0.2, 2], 'line-width': 2 } },
+            { 'id': 'gl-draw-polygon-and-line-vertex-stroke-inactive', 'type': 'circle', 'filter': ['all', ['==', 'meta', 'vertex'], ['==', '$type', 'Point'], ['!=', 'mode', 'static']], 'paint': { 'circle-radius': 5, 'circle-color': '#fff' } },
+            { 'id': 'gl-draw-polygon-and-line-vertex-inactive', 'type': 'circle', 'filter': ['all', ['==', 'meta', 'vertex'], ['==', '$type', 'Point'], ['!=', 'mode', 'static']], 'paint': { 'circle-radius': 3, 'circle-color': '#ef4444' } },
+            { 'id': 'gl-draw-point-point-stroke-inactive', 'type': 'circle', 'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Point'], ['==', 'meta', 'feature'], ['!=', 'mode', 'static']], 'paint': { 'circle-radius': 5, 'circle-opacity': 1, 'circle-color': '#fff' } },
+            { 'id': 'gl-draw-point-inactive', 'type': 'circle', 'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Point'], ['==', 'meta', 'feature'], ['!=', 'mode', 'static']], 'paint': { 'circle-radius': 3, 'circle-color': '#ef4444' } },
+            { 'id': 'gl-draw-point-stroke-active', 'type': 'circle', 'filter': ['all', ['==', '$type', 'Point'], ['==', 'active', 'true'], ['!=', 'mode', 'static']], 'paint': { 'circle-radius': 7, 'circle-color': '#fff' } },
+            { 'id': 'gl-draw-point-active', 'type': 'circle', 'filter': ['all', ['==', '$type', 'Point'], ['!=', 'meta', 'midpoint'], ['==', 'active', 'true']], 'paint': { 'circle-radius': 5, 'circle-color': '#ef4444' } },
+            { 'id': 'gl-draw-polygon-midpoint', 'type': 'circle', 'filter': ['all', ['==', '$type', 'Point'], ['==', 'meta', 'midpoint']], 'paint': { 'circle-radius': 3, 'circle-color': '#ef4444' } }
         ]
       });
 
@@ -562,36 +396,25 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         if (!drawInstance) return;
 
         if (e.type === 'draw.create') {
-            if (isBulkDeletingRef.current) {
-                const editId = editingFeatureIdRef.current;
-                if (!editId) return;
+            if (isDrawSelectMode) {
+                 const selectionPolygon = e.features[0];
+                 drawInstance.delete(selectionPolygon.id as string); // Remove the drawn polygon
+        
+                const newlySelectedIds = (allObjects || [])
+                    .filter(obj => {
+                        if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
+                        const pt = turf.point([obj.longitude, obj.latitude]);
+                        return turf.booleanPointInPolygon(pt, selectionPolygon as any);
+                    })
+                    .map(obj => obj.id);
 
-                const deletionArea = e.features[0];
-                drawInstance.delete(deletionArea.id as string);
+                setSelectedObjectIds(prev => [...new Set([...prev, ...newlySelectedIds])]);
+                setIsDrawSelectMode(false); // Exit draw mode after selection
+                drawInstance.changeMode('simple_select');
+                return;
+            }
 
-                const targetFeature = drawInstance.get(editId);
-                if (targetFeature && targetFeature.geometry.type === 'Polygon') {
-                    const newCoordinates = targetFeature.geometry.coordinates.map(ring => {
-                        const filteredRing = ring.filter(point => !turf.booleanPointInPolygon(point, deletionArea.geometry as any));
-                        if (filteredRing.length < 3) return ring;
-                        
-                        const firstPointStr = JSON.stringify(filteredRing[0]);
-                        const lastPointStr = JSON.stringify(filteredRing[filteredRing.length - 1]);
-                        if (firstPointStr !== lastPointStr) {
-                            filteredRing.push(filteredRing[0]);
-                        }
-                        if (filteredRing.length < 4) return ring;
-                        return filteredRing;
-                    });
-                    
-                    targetFeature.geometry.coordinates = newCoordinates;
-                    drawInstance.add(targetFeature as any);
-                }
-                
-                setIsBulkDeleting(false);
-                setEditingFeatureId(null);
-                drawInstance.changeMode('direct_select', { featureId: editId });
-            } else if (isFillModeRef.current) {
+            if (isFillModeRef.current) {
                 const newBoundary = e.features[0] as turf.Feature<turf.Polygon | turf.MultiPolygon>;
                 if (!newBoundary) return;
                 drawInstance.delete(newBoundary.id as string);
@@ -643,100 +466,25 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
       map.on('draw.update', onDrawAction);
       map.on('draw.delete', onDrawAction);
       
-      const onSelectionChange = (e: { features: turf.Feature[] }) => {
-        if (readOnly) return;
-        const drawInstance = drawRef.current;
-        if (!drawInstance) return;
-        
-        const selectedFeatures = e.features;
-        const mode = drawInstance.getMode();
-
-        const verticesSelected = mode === 'direct_select' && selectedFeatures.some(
-          (f) => f.geometry.type === 'Point' && f.properties?.meta === 'vertex'
-        );
-        setHasVertexSelection(verticesSelected);
-
-        const polygonSelected = selectedFeatures.length > 0 && selectedFeatures.every(f => f.geometry.type.includes('Polygon'));
-        setHasPolygonSelection(polygonSelected);
-        
-        if (polygonSelected && selectedFeatures.length === 1 && mode === 'simple_select') {
-          drawInstance.changeMode('direct_select', { featureId: selectedFeatures[0].id as string });
-        }
-      };
-
-      map.on('draw.selectionchange', onSelectionChange);
-      
-      if (geojson && geojson.features.length > 0) {
-        initialFeaturesRef.current = geojson.features; // Store initial features
-        draw.add(geojson as any);
+      const geojsonFeatures = wijk?.subGebieden ? JSON.parse(wijk.subGebieden) : [];
+      if (geojsonFeatures && geojsonFeatures.length > 0) {
+        initialFeaturesRef.current = geojsonFeatures;
+        draw.add({ type: 'FeatureCollection', features: geojsonFeatures } as any);
         fetchAllRoadsForCurrentDrawState();
 
-        const bbox = turf.bbox(geojson);
+        const bbox = turf.bbox({ type: 'FeatureCollection', features: geojsonFeatures });
         if (bbox[0] !== Infinity) {
           map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
         }
       }
-    } else if (mapRef.current && readOnly) {
-       const map = mapRef.current.getMap();
-       if (geojson && geojson.features.length > 0) {
-           const bbox = turf.bbox(geojson);
-           if (bbox[0] !== Infinity) {
-               map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
-           }
-       }
     }
-  }, [open, geojson, readOnly, allAreas, fetchAllRoadsForCurrentDrawState]);
+  }, [open, readOnly, allAreas, allObjects, fetchAllRoadsForCurrentDrawState, wijk?.subGebieden, isDrawSelectMode]);
   
   const handleMapClick = React.useCallback(async (event: MapLayerMouseEvent) => {
-    if (!readOnly) {
-      const drawMode = drawRef.current?.getMode();
-      if (drawMode !== 'simple_select' || event.features?.some(f => f.layer.id.startsWith('gl-draw'))) {
-        return;
-      }
-    }
-    if (readOnly && event.features?.some(f => f.layer.id === 'wijk-polygon-fill')) {
-        const wijkFeature = event.features.find(f => f.layer.id === 'wijk-polygon-fill');
-        if (wijkFeature?.properties?.wijkNaam) {
-            setClickPopupInfo({
-                longitude: event.lngLat.lng,
-                latitude: event.lngLat.lat,
-                name: wijkFeature.properties.wijkNaam,
-                isLoading: false,
-                canDraw: false,
-            });
-        }
+    if (readOnly) return;
+    if (event.features?.some(f => f.layer.id.startsWith('gl-draw'))) {
         return;
     }
-
-    const { lng, lat } = event.lngLat;
-    setClickPopupInfo({ longitude: lng, latitude: lat, name: 'Laden...', isLoading: true, canDraw: false });
-
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=16`
-      );
-      const data = await response.json();
-      
-      let displayName: string;
-      let canDraw = false;
-      
-      const areaName = data.address?.neighbourhood || data.address?.suburb || data.address?.city_district || data.name;
-
-      if (areaName) {
-        displayName = areaName;
-        canDraw = true;
-      } else if (data.display_name) {
-        displayName = data.display_name.split(',')[0];
-      } else {
-        displayName = "Onbekend gebied";
-      }
-
-      setClickPopupInfo({ longitude: lng, latitude: lat, name: displayName, isLoading: false, canDraw });
-    } catch (error) {
-      console.error("Reverse geocoding error:", error);
-      setClickPopupInfo({ longitude: lng, latitude: lat, name: "Fout bij ophalen", isLoading: false, canDraw: false });
-    }
-
   }, [readOnly]);
   
   const handleSave = async () => {
@@ -747,22 +495,15 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     }
   };
   
-  const handleDeleteSelectedPolygons = () => {
+  const handleDeletePolygon = () => {
     const draw = drawRef.current;
     if (!draw) return;
-
     const selectedIds = draw.getSelectedIds();
-    const polygonIdsToDelete = selectedIds.filter(id => {
-        const feature = draw.get(id);
-        return feature && feature.geometry.type.includes('Polygon');
-    });
-
-    if (polygonIdsToDelete.length > 0) {
-        draw.delete(polygonIdsToDelete);
-        setHasPolygonSelection(false);
+    if (selectedIds.length > 0) {
+      draw.delete(selectedIds);
     }
   };
-
+  
   const handleSearchQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     setSearchQuery(query);
@@ -838,22 +579,21 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     }
   };
   
-  const handleBulkDeleteClick = () => {
-    if (!drawRef.current) return;
-    const selectedIds = drawRef.current.getSelectedIds();
-    if (selectedIds.length !== 1) return;
+  const toggleDrawSelectMode = () => {
+    const draw = drawRef.current;
+    if (!draw) return;
 
-    const feature = drawRef.current.get(selectedIds[0]);
-    if (!feature || !feature.geometry.type.includes('Polygon')) return;
-
-    setEditingFeatureId(selectedIds[0]);
-    setIsBulkDeleting(true);
-    drawRef.current.changeMode('draw_polygon');
+    const newMode = !isDrawSelectMode;
+    setIsDrawSelectMode(newMode);
+    if (newMode) {
+        draw.changeMode('draw_polygon');
+    } else {
+        draw.changeMode('simple_select');
+    }
   };
-  
+
   const handleAssignObjects = async () => {
     if (!firestore || selectedObjectIds.length === 0 || !wijk?.naam) return;
-
     setIsSavingMove(true);
 
     const batch = writeBatch(firestore);
@@ -862,9 +602,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         if (fullObject) {
             const docRef = doc(firestore, 'objects', objId);
             const currentWerkgebieden = (fullObject.locatieWerkgebieden || []) as string[];
-            
             const newWerkgebieden = [...new Set([...currentWerkgebieden, wijk.naam])];
-
             batch.update(docRef, { locatieWerkgebieden: newWerkgebieden });
         }
     });
@@ -877,7 +615,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         setSelectedObjectIds([]);
         setIsSavingMove(false);
     }
-};
+  };
   
   const displayedRoadsGeoJSON = React.useMemo(() => {
     if (selectedRoads.length === 0 || allRoadFeatures.length === 0) {
@@ -913,164 +651,26 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[80vw] h-[80vh] flex flex-col p-0 gap-0">
         <DialogHeader className="p-6 pb-2">
-          <DialogTitle>{readOnly ? wijk?.naam : `Teken gebied voor wijk: ${wijk?.naam}`}</DialogTitle>
+          <DialogTitle>{readOnly ? `Gebied: ${wijk?.naam}` : `Teken gebied voor: ${wijk?.naam}`}</DialogTitle>
           {!readOnly && (
             <DialogDescription>
-              Zoek een gebied op naam, teken handmatig, of klik op de kaart om een gebied te identificeren en de grenzen te tekenen.
+              Zoek een gebied, teken handmatig, of selecteer objecten om toe te wijzen.
             </DialogDescription>
           )}
         </DialogHeader>
 
         {!readOnly && (
             <div className="px-6 pb-4 flex flex-col gap-4">
-               <div className="flex flex-col md:flex-row gap-4 justify-between md:items-start">
-                  <div className="flex-1 min-w-0">
-                      <Label htmlFor="search-input" className="text-xs font-semibold">Zoek gebied op naam</Label>
-                      <div className='relative mt-1'>
-                          <Input
-                              id="search-input"
-                              type="text"
-                              placeholder="Plaatsnaam, wijk of buurt..."
-                              value={searchQuery}
-                              onChange={handleSearchQueryChange}
-                              disabled={!isDrawReady}
-                          />
-                          {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
-                          {suggestions.length > 0 && (
-                              <div className="absolute z-10 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
-                                  {suggestions.map((suggestion) => (
-                                  <div
-                                      key={suggestion.place_id}
-                                      onClick={() => handleSuggestionClick(suggestion)}
-                                      className="px-4 py-2 text-sm cursor-pointer hover:bg-muted"
-                                  >
-                                      {suggestion.display_name}
-                                  </div>
-                                  ))}
-                              </div>
-                          )}
-                      </div>
-                  </div>
-                   <div className="flex-1 min-w-0">
-                      <Label className="text-xs font-semibold">Referentiegebied (voor opvullen)</Label>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" className="w-full justify-between mt-1">
-                            <span>
-                              {referenceAreaIds.length === 0
-                                ? 'Selecteer gebieden...'
-                                : referenceAreaIds.length === 1
-                                ? '1 gebied geselecteerd'
-                                : `${referenceAreaIds.length} gebieden geselecteerd`}
-                            </span>
-                            <ChevronDown className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
-                          <DropdownMenuLabel>Selecteer referentiegebieden</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          {allAreas.filter(a => a.id !== wijk?.id && a.type === 'wijk').map(a => (
-                            <DropdownMenuCheckboxItem
-                              key={a.id}
-                              checked={referenceAreaIds.includes(a.id)}
-                              onCheckedChange={(checked) => {
-                                setReferenceAreaIds(prev => 
-                                  checked ? [...prev, a.id] : prev.filter(id => id !== a.id)
-                                );
-                              }}
-                            >
-                              {a.projectName} - {a.naam}
-                            </DropdownMenuCheckboxItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                  </div>
-                   <div>
-                        <Label htmlFor="map-style-select" className="text-xs font-semibold">Kaartstijl</Label>
-                        <Select value={currentMapStyle} onValueChange={setCurrentMapStyle}>
-                            <SelectTrigger id="map-style-select" className="mt-1">
-                                <SelectValue placeholder="Kies een stijl" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {mapStyles.map(style => (
-                                    <SelectItem key={style.url} value={style.url}>{style.name}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-              </div>
-              
-              <div className='flex items-center gap-2 flex-wrap'>
+               <div className='flex items-center gap-2 flex-wrap'>
                   <Button 
-                    variant={isFillMode ? 'secondary' : 'outline'}
-                    onClick={toggleFillMode}
-                    disabled={!isDrawReady || isBulkDeleting}
-                    title="Vul de vrije ruimte binnen een getekend gebied"
+                    variant={isDrawSelectMode ? 'secondary' : 'outline'}
+                    onClick={toggleDrawSelectMode}
+                    disabled={!isDrawReady}
                   >
                       <BoxSelect className="mr-2 h-4 w-4"/>
-                      Vul vrije ruimte
+                      Selecteer met vlak
                   </Button>
-                  <Button
-                      variant="outline"
-                      onClick={handleBulkDeleteClick}
-                      disabled={!hasPolygonSelection || hasVertexSelection || isBulkDeleting}
-                      title="Verwijder punten binnen een getekend gebied"
-                  >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Verwijder met vlak
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleDeleteSelectedPolygons}
-                    disabled={!hasPolygonSelection || hasVertexSelection}
-                    title="Verwijder de geselecteerde polygoon"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-                    Verwijder Polygoon
-                  </Button>
-                  <Button
-                      variant="outline"
-                      onClick={() => drawRef.current?.trash()}
-                      disabled={!hasVertexSelection}
-                      title="Verwijder geselecteerde punten"
-                  >
-                      <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-                      Verwijder punt(en)
-                  </Button>
-              </div>
-              
-              {showRoadTypes && !readOnly && (
-                <div className="space-y-2">
-                    <div className='flex justify-between items-center'>
-                      <Label className="text-xs font-semibold">Selecteer wegtypes</Label>
-                      <div className='flex items-center gap-2'>
-                          <Button size="xs" variant="outline" onClick={() => handleSetDefaultRoads('veeg')}>Standaard Veeg</Button>
-                          <Button size="xs" variant="outline" onClick={() => handleSetDefaultRoads('borstel')}>Standaard Borstel</Button>
-                      </div>
-                    </div>
-                    {isFetchingRoads ? (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Wegtypes analyseren...</div>
-                    ) : availableRoads.length > 0 ? (
-                        <div className="border rounded-md p-2 max-h-32 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                            {availableRoads.map(roadType => (
-                                <div key={roadType} className="flex items-center space-x-2">
-                                    <Checkbox
-                                        id={`road-${roadType}`}
-                                        checked={selectedRoads.includes(roadType)}
-                                        onCheckedChange={(checked) => handleRoadTypeChange(roadType, !!checked)}
-                                    />
-                                    <Label htmlFor={`road-${roadType}`} className="font-normal capitalize text-sm">
-                                        {getTranslatedRoadType(roadType)}
-                                    </Label>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="text-sm text-muted-foreground">Geen wegtypes gevonden voor dit gebied. Teken een polygoon om te beginnen.</div>
-                    )}
-                </div>
-              )}
-              {!isDrawReady && <p className='text-xs text-muted-foreground'>Kaart laden...</p>}
+               </div>
             </div>
         )}
 
@@ -1082,38 +682,20 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
             mapboxAccessToken={MAPBOX_TOKEN}
             onLoad={onMapLoad}
             preserveDrawingBuffer
-            interactiveLayerIds={readOnly ? ['wijk-polygon-fill'] : []}
             onClick={handleMapClick}
-            cursor={readOnly ? 'pointer' : 'grab'}
+            cursor={readOnly ? 'default' : (isDrawSelectMode ? 'crosshair' : 'grab')}
           >
-            {readOnly && geojson && (
-              <Source id="wijk-polygons" type="geojson" data={geojson}>
-                <Layer {...polygonFillLayer} />
-                <Layer {...polygonOutlineLayer} />
-                <Layer {...polygonLabelLayer} />
-              </Source>
-            )}
-             {referenceGeojson && !readOnly && (
-              <Source id="reference-wijk-polygons" type="geojson" data={referenceGeojson}>
-                <Layer {...referencePolygonFillLayer} />
-                <Layer {...referencePolygonOutlineLayer} />
-              </Source>
-            )}
-            {displayedRoadsGeoJSON && (
-                <Source id="selected-roads" type="geojson" data={displayedRoadsGeoJSON}>
-                    <Layer {...selectedRoadsLayerStyle} />
-                </Source>
-            )}
             {allObjects?.map(obj => {
-              const isSelected = selectedObjectIds.includes(obj.id);
               const isInCurrentArea = Array.isArray(obj.locatieWerkgebieden) && obj.locatieWerkgebieden.includes(wijk?.naam || '');
+              const isSelected = selectedObjectIds.includes(obj.id);
+              
               return (
                 <Marker
                   key={obj.id}
                   longitude={obj.longitude}
                   latitude={obj.latitude}
-                   onClick={(e) => {
-                    if (!readOnly) {
+                  onClick={(e) => {
+                    if (!readOnly && !isInCurrentArea) {
                         e.originalEvent.stopPropagation();
                         setSelectedObjectIds(prev => 
                             isSelected ? prev.filter(id => id !== obj.id) : [...prev, obj.id]
@@ -1124,47 +706,14 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                   <div
                       className={cn(
                           "h-2.5 w-2.5 rounded-full border border-white transition-all",
-                          isSelected ? 'bg-yellow-400 ring-2 ring-yellow-500 scale-150' : (isInCurrentArea ? 'bg-purple-600' : 'bg-gray-400'),
-                          !readOnly ? 'cursor-pointer' : 'cursor-default'
+                          isSelected ? 'bg-yellow-400 ring-2 ring-yellow-500 scale-150' 
+                                     : (isInCurrentArea ? 'bg-purple-600' : 'bg-gray-400'),
+                          !readOnly && !isInCurrentArea ? 'cursor-pointer' : 'cursor-default'
                       )}
                   />
                 </Marker>
               );
             })}
-             {clickPopupInfo && (
-                <Popup
-                    longitude={clickPopupInfo.longitude}
-                    latitude={clickPopupInfo.latitude}
-                    onClose={() => setClickPopupInfo(null)}
-                    closeOnClick={false}
-                    anchor="bottom"
-                >
-                    <div className='p-1 font-semibold max-w-xs'>
-                      {clickPopupInfo.isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
-                        <>
-                          <p>{clickPopupInfo.name}</p>
-                           {!readOnly && clickPopupInfo.canDraw && (
-                            <Button 
-                              size="sm" 
-                              className='mt-2 w-full'
-                              onClick={() => {
-                                handleSuggestionClick({ 
-                                  display_name: clickPopupInfo.name, 
-                                  lat: clickPopupInfo.latitude.toString(),
-                                  lon: clickPopupInfo.longitude.toString(),
-                                  geojson: { type: 'Polygon', coordinates: [] } // Dummy geojson
-                                } as Suggestion)
-                                setClickPopupInfo(null);
-                              }}
-                            >
-                              Teken grenzen
-                            </Button>
-                          )}
-                        </>
-                      )}
-                    </div>
-                </Popup>
-            )}
           </MapGL>
           {selectedObjectIds.length > 0 && !readOnly && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 bg-background p-2 rounded-lg shadow-lg flex items-center gap-2">
@@ -1172,17 +721,14 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
                 <Button onClick={handleAssignObjects} disabled={isSavingMove} size="sm">
                   {isSavingMove ? <Loader2 className="h-4 w-4 animate-spin" /> : `Wijs toe aan ${wijk?.naam}`}
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => setSelectedObjectIds([])}>Annuleer</Button>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedObjectIds([])}>Annuleren</Button>
             </div>
           )}
         </div>
         <DialogFooter className="p-6 pt-4 border-t">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
-                {readOnly ? 'Sluiten' : 'Annuleren'}
+                Sluiten
             </Button>
-            {!readOnly && (
-              <Button onClick={handleSave}>Gebieden opslaan</Button>
-            )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
