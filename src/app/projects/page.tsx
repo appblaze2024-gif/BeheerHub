@@ -584,14 +584,12 @@ function WijkenTab({
   canEdit,
   projectId,
   firestore,
-  objectCounts,
 }: {
   wijken: Wijk[];
   setCurrentProject: React.Dispatch<React.SetStateAction<Project>>;
   canEdit: boolean;
   projectId?: string;
   firestore: any;
-  objectCounts: { [wijkId: string]: number };
 }) {
   const [mapWijk, setMapWijk] = React.useState<Wijk | null>(null);
 
@@ -672,21 +670,19 @@ function WijkenTab({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-[1fr_1fr_100px_auto_auto] gap-x-4 px-1 text-sm font-semibold">
+      <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-x-4 px-1 text-sm font-semibold">
         <Label>Wijk</Label>
         <Label>Locatie</Label>
-        <Label>Objecten</Label>
         <Label>Gebied</Label>
         <span />
       </div>
       {sortedWijken.map((wijk) => (
         <div
           key={wijk.id}
-          className="grid grid-cols-[1fr_1fr_100px_auto_auto] items-center gap-x-4"
+          className="grid grid-cols-[1fr_1fr_auto_auto] items-center gap-x-4"
         >
           <Input value={wijk.naam} onChange={(e) => handleInputChange(wijk.id, 'naam', e.target.value)} disabled={!canEdit}/>
           <Input value={wijk.locatie} onChange={(e) => handleInputChange(wijk.id, 'locatie', e.target.value)} disabled={!canEdit} />
-          <div className="text-center text-sm">{objectCounts[wijk.id] ?? 0}</div>
           <Button variant="outline" onClick={() => setMapWijk(wijk)}>
             <MapPin className="mr-2 h-4 w-4" />
             Gebied {canEdit ? 'tekenen/bewerken' : 'bekijken'}
@@ -978,34 +974,6 @@ export default function ProjectsPage() {
 
   const { data: allObjects } = useCollection<any>(objectsCollection);
 
-  const objectCountsPerWijk = React.useMemo(() => {
-    if (!allObjects || !currentProject.wijken) return {};
-    const counts: { [wijkId: string]: number } = {};
-    for (const wijk of currentProject.wijken) {
-      let objectCount = 0;
-      try {
-        const features = JSON.parse(wijk.subGebieden);
-        if (Array.isArray(features)) {
-          for (const obj of allObjects) {
-            if (typeof obj.latitude === 'number' && typeof obj.longitude === 'number') {
-              const point = turf.point([obj.longitude, obj.latitude]);
-              for (const polygon of features) {
-                if (turf.booleanPointInPolygon(point, polygon)) {
-                  objectCount++;
-                  break; 
-                }
-              }
-            }
-          }
-        }
-      } catch (e) {
-        // ignore
-      }
-      counts[wijk.id] = objectCount;
-    }
-    return counts;
-  }, [allObjects, currentProject.wijken]);
-
   const objectCountsPerPrullenbakkenroute = React.useMemo(() => {
     if (!allObjects || !currentProject.prullenbakkenroutes) return {};
     const counts: { [routeId: string]: number } = {};
@@ -1275,7 +1243,6 @@ export default function ProjectsPage() {
             canEdit={canEdit} 
             projectId={currentProject.id} 
             firestore={firestore}
-            objectCounts={objectCountsPerWijk}
           />
         </TabsContent>}
         {canViewTab('veegroutes') && <TabsContent value="veegroutes" className="flex-1 overflow-y-auto p-6">
