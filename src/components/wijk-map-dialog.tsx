@@ -250,12 +250,21 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   }, [wijk?.subGebieden]);
   
   const objectsInArea = React.useMemo(() => {
-    if (!allObjects || !wijk) return [];
-
+    if (!allObjects || !geojson || !geojson.features || geojson.features.length === 0) return [];
+    
     return allObjects.filter(obj => {
-        return Array.isArray(obj.locatieWerkgebieden) && obj.locatieWerkgebieden.includes(wijk.naam);
+        if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') {
+            return false;
+        }
+        const pt = turf.point([obj.longitude, obj.latitude]);
+        for (const feature of geojson.features) {
+            if (turf.booleanPointInPolygon(pt, feature as any)) {
+                return true;
+            }
+        }
+        return false;
     });
-  }, [allObjects, wijk]);
+  }, [allObjects, geojson]);
 
   const allPrullenbakkenroutes = React.useMemo(() => {
     return allAreas.filter(a => a.type === 'prullenbakkenroute');
@@ -1155,7 +1164,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
             )}
             {(isObjectSelectionMode ? allObjects : objectsInArea)?.map(obj => {
               const isSelected = selectedObjectIds.includes(obj.id);
-              const isInCurrentArea = geojson?.features.some(feature => turf.booleanPointInPolygon([obj.longitude, obj.latitude], feature as any));
+              const isInCurrentArea = Array.isArray(obj.locatieWerkgebieden) && obj.locatieWerkgebieden.includes(wijk?.naam || '');
               return (
                 <Marker
                   key={obj.id}
@@ -1245,5 +1254,3 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     </Dialog>
   );
 }
-
-    
