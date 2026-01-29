@@ -44,7 +44,8 @@ interface WijkMapDialogProps {
 export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = false, allAreas = [], showRoadTypes = false }: WijkMapDialogProps) {
   const drawRef = React.useRef<MapboxDraw | null>(null);
   const mapRef = React.useRef<any>(null);
-  
+  const mapContainerRef = React.useRef<HTMLDivElement>(null);
+
   const { profile } = useProfile();
   const [currentMapStyle, setCurrentMapStyle] = React.useState(profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12');
   const [isMaximized, setIsMaximized] = React.useState(false);
@@ -65,16 +66,28 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   const [selectedObjectIds, setSelectedObjectIds] = React.useState<string[]>([]);
   const [isSaving, setIsSaving] = React.useState(false);
 
+  React.useEffect(() => {
+    if (!mapContainerRef.current) return;
+    
+    const observer = new ResizeObserver(() => {
+      if (mapRef.current) {
+        mapRef.current.getMap().resize();
+      }
+    });
+    observer.observe(mapContainerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+
   const cleanup = React.useCallback(() => {
     if (drawRef.current) {
         try {
             if (mapRef.current?.getMap()?.isStyleLoaded()) {
-                 if (drawRef.current) {
-                    mapRef.current.getMap().removeControl(drawRef.current);
-                }
+                 mapRef.current.getMap().removeControl(drawRef.current);
             }
         } catch (e) {
-            console.warn("Could not remove draw control during cleanup", e);
+            // It's safe to ignore this error.
+            // It can happen if the map unmounts before this cleanup effect runs.
         }
     }
     drawRef.current = null;
@@ -100,7 +113,19 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
         displayControlsDefault: false,
         controls: {},
     });
-    map.addControl(draw);
+
+    let controlExists = false;
+    try {
+      if ((map as any)._controls.some((ctrl: any) => ctrl instanceof MapboxDraw)) {
+        controlExists = true;
+      }
+    } catch(e) {
+        //
+    }
+    if (!controlExists) {
+        map.addControl(draw);
+    }
+    
     drawRef.current = draw;
     
     const handleDrawCreate = (e: { features: turf.Feature[] }) => {
@@ -158,12 +183,12 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
 
     try {
         await batch.commit();
-    } catch (error) {
-        console.error("Error updating objects:", error);
-    } finally {
         if(drawRef.current) {
             drawRef.current.deleteAll();
         }
+    } catch (error) {
+        console.error("Error updating objects:", error);
+    } finally {
         setSelectedObjectIds([]);
         setIsSaving(false);
     }
@@ -189,10 +214,10 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={cn(
           "flex flex-col p-0 gap-0 transition-all duration-300 ease-in-out",
-          "min-w-[600px] min-h-[480px]", // Minimum size
+          "min-w-[600px] min-h-[480px]",
           isMaximized 
             ? "w-screen h-screen max-w-full top-0 left-0 translate-x-0 translate-y-0 rounded-none" 
-            : "w-[80vw] max-w-[80vw] h-[80vh] rounded-lg resize overflow-auto"
+            : "w-[80vw] max-w-[80vw] h-[80vh] sm:rounded-lg resize overflow-auto"
       )}>
         <DialogHeader className={cn("p-6 pb-2", isMaximized && "hidden")}>
           <DialogTitle>Teken gebied voor: {wijk?.naam}</DialogTitle>
@@ -207,7 +232,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
             </Button>
         </div>
 
-        <div className="flex-1 min-h-0 relative w-full">
+        <div ref={mapContainerRef} className="flex-1 min-h-0 relative w-full">
           <MapGL
             ref={mapRef}
             initialViewState={initialViewState}
