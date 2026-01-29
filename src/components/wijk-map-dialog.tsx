@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import MapGL, { Marker } from 'react-map-gl';
+import MapGL, { Marker, Layer, Source, type FillLayer, type LineLayer } from 'react-map-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import {
@@ -13,7 +13,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from './ui/button';
-import { Loader2, BoxSelect, Trash2, Maximize, Minimize } from 'lucide-react';
+import { Loader2, BoxSelect, Trash2, Maximize, Minimize, X } from 'lucide-react';
 import * as turf from '@turf/turf';
 import { cn } from '@/lib/utils';
 import { useFirestore, useCollection, updateDocumentNonBlocking } from '@/firebase';
@@ -23,6 +23,23 @@ import { useProfile } from '@/firebase/profile-provider';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
+const polygonFillLayer: FillLayer = {
+    id: 'wijk-polygon-fill',
+    type: 'fill',
+    paint: {
+        'fill-color': '#9333ea', // purple-600
+        'fill-opacity': 0.2,
+    },
+};
+
+const polygonOutlineLayer: LineLayer = {
+    id: 'wijk-polygon-outline',
+    type: 'line',
+    paint: {
+        'line-color': '#9333ea', // purple-600
+        'line-width': 2,
+    },
+};
 
 interface AreaLike {
   id: string;
@@ -67,6 +84,19 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
   const [selectedObjectIds, setSelectedObjectIds] = React.useState<string[]>([]);
   const [isSaving, setIsSaving] = React.useState(false);
 
+  const wijkGeoJSONFeatures = React.useMemo(() => {
+    if (!wijk?.subGebieden) return null;
+    try {
+      const features = JSON.parse(wijk.subGebieden);
+      if (Array.isArray(features) && features.length > 0) {
+        return features;
+      }
+    } catch (e) {
+      console.error('Invalid GeoJSON for wijk', e);
+    }
+    return null;
+  }, [wijk]);
+
   React.useEffect(() => {
     if (!mapContainerRef.current) return;
     
@@ -81,13 +111,11 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
 
   React.useEffect(() => {
     if (open) {
-      // When isMaximized state changes, trigger a resize.
-      // A small timeout can help ensure the resize happens after the container has settled from CSS transitions.
       const timer = setTimeout(() => {
         if (mapRef.current) {
           mapRef.current.getMap().resize();
         }
-      }, 350); // Corresponds with the transition duration
+      }, 350); 
 
       return () => clearTimeout(timer);
     }
@@ -103,7 +131,6 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
             }
         } catch (e) {
             // It's safe to ignore this error.
-            // It can happen if the map unmounts before this cleanup effect runs.
         }
     }
     drawRef.current = null;
@@ -113,17 +140,31 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
 
   const onMapLoad = React.useCallback(() => {
     const map = mapRef.current?.getMap();
-    if (!map || readOnly) {
+    if (!map) return;
+
+    if (wijkGeoJSONFeatures) {
+        try {
+            const featureCollection = turf.featureCollection(wijkGeoJSONFeatures);
+            const bbox = turf.bbox(featureCollection);
+            if (bbox[0] !== Infinity) {
+                map.fitBounds(bbox as [number, number, number, number], { padding: 60, duration: 0 });
+            }
+        } catch (e) {
+            console.error("Error fitting bounds:", e);
+        }
+    }
+    
+    if (readOnly) {
       return;
     }
     
     if (drawRef.current) {
         try {
-            if (map && map.isStyleLoaded()) {
-                map.removeControl(drawRef.current);
+            if (map.isStyleLoaded()) {
+                 map.removeControl(drawRef.current);
             }
         } catch (e) {
-            // ignore
+            // Safe to ignore
         }
     }
 
@@ -133,14 +174,21 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     });
 
     try {
-        if (map && !map._controls.some((ctrl: any) => ctrl instanceof MapboxDraw)) {
-          map.addControl(draw);
-        }
+      if (!map._controls.some((ctrl: any) => ctrl instanceof MapboxDraw)) {
+        map.addControl(draw);
+      }
     } catch(e) {
         // ignore
     }
     
     drawRef.current = draw;
+    
+    if (wijkGeoJSONFeatures) {
+        draw.add({
+            type: 'FeatureCollection',
+            features: wijkGeoJSONFeatures,
+        });
+    }
     
     const handleDrawCreate = (e: { features: turf.Feature[] }) => {
         const selectionPolygon = e.features[0];
@@ -173,7 +221,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
             }
         }
     };
-}, [readOnly]);
+  }, [readOnly, wijkGeoJSONFeatures]);
   
   const handleObjectAssignment = async (assign: boolean) => {
     if (!firestore || selectedObjectIds.length === 0 || !wijk?.naam) return;
@@ -228,10 +276,9 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={cn(
           "flex flex-col p-0 gap-0 transition-all duration-300 ease-in-out",
-          "min-w-[600px] min-h-[480px]",
           isMaximized 
             ? "w-screen h-screen max-w-full top-0 left-0 translate-x-0 translate-y-0 rounded-none" 
-            : "w-[80vw] max-w-[80vw] h-[80vh] sm:rounded-lg resize overflow-auto"
+            : "w-[80vw] max-w-[80vw] h-[80vh] sm:rounded-lg min-w-[600px] min-h-[480px] resize overflow-auto"
       )}>
         <DialogHeader className={cn("p-6 pb-2", isMaximized && "hidden")}>
           <DialogTitle>Teken gebied voor: {wijk?.naam}</DialogTitle>
@@ -239,11 +286,17 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
             Zoek een gebied, teken handmatig, of selecteer objecten om toe te wijzen.
           </DialogDescription>
         </DialogHeader>
-        <div className="absolute top-4 right-16 z-20">
-            <Button variant="secondary" size="icon" onClick={() => setIsMaximized(!isMaximized)}>
+        <div className="absolute top-4 right-16 z-20 flex items-center gap-2">
+            <Button variant="secondary" size="icon" className="h-9 w-9" onClick={() => setIsMaximized(!isMaximized)}>
                 {isMaximized ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
                 <span className="sr-only">{isMaximized ? 'Minimaliseren' : 'Maximaliseren'}</span>
             </Button>
+            <Dialog.Close asChild>
+              <Button variant="secondary" size="icon" className="h-9 w-9">
+                  <X className="h-5 w-5" />
+                  <span className="sr-only">Sluiten</span>
+              </Button>
+            </Dialog.Close>
         </div>
 
         <div ref={mapContainerRef} className="flex-1 min-h-0 relative w-full">
@@ -256,6 +309,12 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
             preserveDrawingBuffer
             cursor={readOnly ? 'default' : 'grab'}
           >
+            {readOnly && wijkGeoJSONFeatures && (
+                <Source id="wijk-polygon-readonly" type="geojson" data={{type: 'FeatureCollection', features: wijkGeoJSONFeatures}}>
+                    <Layer {...polygonFillLayer} />
+                    <Layer {...polygonOutlineLayer} />
+                </Source>
+            )}
             {allObjects?.map(obj => {
               const isInCurrentArea = Array.isArray(obj.locatieWerkgebieden) && obj.locatieWerkgebieden.includes(wijk?.naam || '');
               const isSelected = selectedObjectIds.includes(obj.id);
