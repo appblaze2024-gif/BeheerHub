@@ -79,8 +79,13 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
 
   const onMapLoad = React.useCallback(() => {
     const map = mapRef.current?.getMap();
-    if (!map || drawRef.current || readOnly) {
+    if (!map || readOnly) {
       return;
+    }
+    
+    // Avoid adding control if it already exists
+    if (drawRef.current) {
+        return;
     }
     
     const draw = new MapboxDraw({
@@ -218,7 +223,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[80vw] h-[80vh] flex flex-col p-0 gap-0">
+      <DialogContent className="w-[80vw] h-[80vh] min-w-[600px] min-h-[480px] flex flex-col p-0 gap-0 resize overflow-auto">
         <DialogHeader className="p-6 pb-2">
           <DialogTitle>Teken gebied voor: {wijk?.naam}</DialogTitle>
           <DialogDescription>
