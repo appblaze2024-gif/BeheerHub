@@ -162,7 +162,7 @@ export function WijkMapDialog({ open, onOpenChange, wijk, onSave, readOnly = fal
             : "w-[80vw] max-w-[80vw] h-[80vh] sm:rounded-lg min-w-[600px] min-h-[480px] resize overflow-auto"
       )}>
         <DialogHeader className={cn("p-6 pb-2", isMaximized && "hidden")}>
-          <DialogTitle>Teken gebied voor: {wijk?.naam}</DialogTitle>
+          <DialogTitle>{wijk?.id === 'global' ? 'Overzicht Wijken' : `Teken gebied voor: ${wijk?.naam}`}</DialogTitle>
           <DialogDescription>Teken een polygoon op de kaart om het gebied voor deze wijk te definiëren.</DialogDescription>
         </DialogHeader>
         <div className="absolute top-4 right-4 z-20 flex items-center gap-2">

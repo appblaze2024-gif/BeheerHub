@@ -1006,7 +1006,9 @@ export default function ProjectsPage() {
 
   const allWijkenFeatures = React.useMemo(() => {
     if (!projects) return [];
-    return projects.flatMap(p => 
+    const projectsToUse = selectedProjectId ? projects.filter(p => p.id === selectedProjectId) : projects;
+
+    return projectsToUse.flatMap(p => 
       (p.wijken || []).flatMap(wijk => {
         try {
           const features = JSON.parse(wijk.subGebieden);
@@ -1019,7 +1021,7 @@ export default function ProjectsPage() {
         }
       })
     );
-  }, [projects]);
+  }, [projects, selectedProjectId]);
 
   const generateProjectNumber = () => {
     const year = new Date().getFullYear();
@@ -1151,7 +1153,7 @@ export default function ProjectsPage() {
           </Select>
           <Button variant="outline" onClick={() => setIsGlobalWijkMapOpen(true)}>
             <MapIcon className="mr-2 h-4 w-4" />
-            Alle Wijken op Kaart
+            {selectedProjectId ? 'Toon Project Wijken' : 'Toon Alle Wijken'}
           </Button>
         </div>
 
