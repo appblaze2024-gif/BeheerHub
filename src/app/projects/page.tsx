@@ -930,6 +930,7 @@ function PrullenbakkenroutesTab({
           open={!!mapRoute}
           onOpenChange={(open) => !open && setMapRoute(null)}
           route={mapRoute}
+          allPrullenbakkenroutes={prullenbakkenroutes}
           onSave={handleSaveCoordinates}
           readOnly={!canEdit}
         />

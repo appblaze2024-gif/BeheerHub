@@ -35,11 +35,12 @@ interface PrullenbakkenrouteMapDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   route: AreaLike | null;
+  allPrullenbakkenroutes: AreaLike[];
   onSave: (routeId: string, coordinates: string) => Promise<void>;
   readOnly?: boolean;
 }
 
-export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, onSave, readOnly = false }: PrullenbakkenrouteMapDialogProps) {
+export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, allPrullenbakkenroutes, onSave, readOnly = false }: PrullenbakkenrouteMapDialogProps) {
   const drawRef = React.useRef<MapboxDraw | null>(null);
   const mapRef = React.useRef<any>(null);
   const mapContainerRef = React.useRef<HTMLDivElement>(null);
@@ -283,8 +284,15 @@ export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, onSave,
             cursor={readOnly ? 'default' : 'grab'}
           >
             {allObjects?.map(obj => {
-              const isInCurrentArea = Array.isArray(obj.locatieWerkgebieden) && obj.locatieWerkgebieden.includes(route?.naam || '');
+              const isInCurrentRoute = Array.isArray(obj.locatieWerkgebieden) && obj.locatieWerkgebieden.includes(route?.naam || '');
               const isSelected = selectedObjectIds.includes(obj.id);
+              
+              const otherRouteNames = (allPrullenbakkenroutes || [])
+                  .filter(r => r.id !== route?.id)
+                  .map(r => r.naam);
+
+              const isInAnotherRoute = Array.isArray(obj.locatieWerkgebieden) &&
+                  obj.locatieWerkgebieden.some(gebied => otherRouteNames.includes(gebied));
               
               return (
                 <Marker
@@ -304,7 +312,9 @@ export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, onSave,
                       className={cn(
                           "h-2.5 w-2.5 rounded-full border border-white transition-all",
                           isSelected ? 'bg-yellow-400 ring-2 ring-yellow-500 scale-150' 
-                                     : (isInCurrentArea ? 'bg-purple-600' : 'bg-gray-400'),
+                                     : (isInCurrentRoute ? 'bg-purple-600' 
+                                                         : (isInAnotherRoute ? 'bg-green-500' 
+                                                                             : 'bg-gray-400')),
                           !readOnly && 'cursor-pointer'
                       )}
                   />
