@@ -2,7 +2,7 @@
       'use client';
 
 import * as React from 'react';
-import MapGL, { Marker, Source, Layer, type MapRef } from 'react-map-gl';
+import MapGL, { Marker, Source, Layer, type MapRef, FillLayer, LineLayer } from 'react-map-gl';
 import { useCollection, useFirestore, useUser } from '@/firebase';
 import { collection, query, where, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -111,27 +111,43 @@ function NavigatingView({
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
-  // Effect to fetch route
+  const fetchRouteTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Debounced effect to fetch the route
   React.useEffect(() => {
     if (!userLocation || !nextObject) return;
-
-    const fetchRoute = async () => {
-      const { longitude, latitude } = userLocation;
-      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${longitude},${latitude};${nextObject.longitude},${nextObject.latitude}?steps=true&geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
-      try {
-        const response = await fetch(url);
-        const data = await response.json();
-        if (data.routes && data.routes.length > 0) {
-          setCurrentRoute(data.routes[0].geometry);
-          setCurrentLeg(data.routes[0].legs[0]);
+    
+    // If a timeout is already scheduled, clear it
+    if (fetchRouteTimeoutRef.current) {
+      clearTimeout(fetchRouteTimeoutRef.current);
+    }
+    
+    // Schedule a new fetch after a delay
+    fetchRouteTimeoutRef.current = setTimeout(() => {
+      const fetchRoute = async () => {
+        const { longitude, latitude } = userLocation;
+        const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${longitude},${latitude};${nextObject.longitude},${nextObject.latitude}?steps=true&geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
+        try {
+          const response = await fetch(url);
+          const data = await response.json();
+          if (data.routes && data.routes.length > 0) {
+            setCurrentRoute(data.routes[0].geometry);
+            setCurrentLeg(data.routes[0].legs[0]);
+          }
+        } catch (error) {
+          console.error("Error fetching directions:", error);
         }
-      } catch (error) {
-        console.error("Error fetching directions:", error);
+      };
+      fetchRoute();
+    }, 1500); // 1.5-second debounce
+
+    // Cleanup function to clear the timeout if the component unmounts
+    return () => {
+      if (fetchRouteTimeoutRef.current) {
+        clearTimeout(fetchRouteTimeoutRef.current);
       }
     };
-
-    fetchRoute();
-  }, [userLocation, nextObject]);
+  }, [userLocation, nextObject]); // Re-run effect when location or destination changes
   
   // Effect to check for arrival
   React.useEffect(() => {
@@ -556,5 +572,3 @@ export default function StartNavigationPage() {
     </div>
   );
 }
-
-    

@@ -184,8 +184,20 @@ export default function IssuesPage() {
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(new Date());
   const [viewMode, setViewMode] = React.useState<'map' | 'list'>('map');
   const [searchQuery, setSearchQuery] = React.useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = React.useState('');
   const { profile } = useProfile();
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 500); // 500ms delay
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [searchQuery]);
+
 
   React.useEffect(() => {
     const projectIdFromParam = searchParams.get('projectId');
@@ -304,10 +316,10 @@ export default function IssuesPage() {
         });
     }
 
-    const searchedMeldingen = searchQuery
+    const searchedMeldingen = debouncedSearchQuery
       ? timeFilteredMeldingen.filter(
           (m) => {
-            const query = searchQuery.toLowerCase();
+            const query = debouncedSearchQuery.toLowerCase();
             return (
                 m.intakenummer?.toLowerCase().includes(query) ||
                 m.extern_meldingsnummer?.toLowerCase().includes(query) ||
@@ -383,7 +395,7 @@ export default function IssuesPage() {
         return false;
     });
 
-  }, [meldingen, selectedProjectId, selectedWijkId, projects, selectedDate, searchQuery]);
+  }, [meldingen, selectedProjectId, selectedWijkId, projects, selectedDate, debouncedSearchQuery]);
 
   const openMeldingenCountPerWijk = React.useMemo(() => {
     if (!meldingen || !selectedProject?.wijken) return {};
