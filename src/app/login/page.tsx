@@ -20,6 +20,7 @@ export default function LoginPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [nfcStatus, setNfcStatus] = React.useState<'idle' | 'scanning' | 'error' | 'success'>('idle');
   const [nfcError, setNfcError] = React.useState<string | null>(null);
+  const [showPasswordLogin, setShowPasswordLogin] = React.useState(false);
 
   const handleSignIn = async () => {
     localStorage.removeItem('impersonatedUserProfileId');
@@ -121,69 +122,90 @@ export default function LoginPage() {
         <Card>
             <CardHeader className="items-center text-center">
             <h1 className="text-2xl font-bold">Inloggen</h1>
-            <p className="text-sm text-muted-foreground">
-                Voer uw gegevens in om toegang te krijgen tot uw account.
+             <p className="text-sm text-muted-foreground">
+                {showPasswordLogin ? "Voer uw gegevens in om in te loggen." : "Scan uw NFC-tag om snel in te loggen."}
             </p>
             </CardHeader>
             <CardContent className="grid gap-4">
-            <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <div className='relative'>
-                <Mail className='absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground' />
-                <Input
-                    id="email"
-                    type="email"
-                    placeholder="m@example.com"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10"
-                />
-                </div>
-            </div>
-            <div className="grid gap-2">
-                <div className="flex items-center">
-                    <Label htmlFor="password">Wachtwoord</Label>
-                    <Link href="/reset-password" className="ml-auto inline-block text-xs text-primary hover:underline">
-                        Wachtwoord vergeten?
-                    </Link>
-                </div>
-                <div className='relative'>
-                    <Lock className='absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground' />
+            
+            {showPasswordLogin ? (
+              <>
+                <div className="grid gap-2">
+                    <Label htmlFor="email">Email</Label>
+                    <div className='relative'>
+                    <Mail className='absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground' />
                     <Input
-                    id="password"
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10"
+                        id="email"
+                        type="email"
+                        placeholder="m@example.com"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="pl-10"
                     />
+                    </div>
                 </div>
-            </div>
-            {error && <p className="text-sm text-destructive bg-destructive/10 p-2 rounded-md border border-destructive/20">{error}</p>}
-            <Button className="w-full" onClick={handleSignIn}>
-                Inloggen
-            </Button>
-            <div className="relative my-2">
-              <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">Of</span>
-              </div>
-            </div>
-            <Button variant="outline" className="w-full" onClick={handleNfcLogin} disabled={nfcStatus === 'scanning'}>
-              {nfcStatus === 'scanning' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Nfc className="mr-2 h-4 w-4" />}
-              {nfcStatus === 'scanning' ? 'NFC Tag Scannen...' : 'Inloggen met NFC'}
-            </Button>
-            {nfcStatus === 'scanning' && <p className="text-sm text-muted-foreground mt-2 text-center">Houd de NFC-tag tegen uw apparaat.</p>}
-            {nfcStatus === 'error' && <p className="text-sm text-destructive mt-2">{nfcError}</p>}
-            {nfcStatus === 'success' && <p className="text-sm text-green-600 mt-2">Inloggen gelukt! U wordt doorgestuurd...</p>}
+                <div className="grid gap-2">
+                    <div className="flex items-center">
+                        <Label htmlFor="password">Wachtwoord</Label>
+                        <Link href="/reset-password" className="ml-auto inline-block text-xs text-primary hover:underline">
+                            Wachtwoord vergeten?
+                        </Link>
+                    </div>
+                    <div className='relative'>
+                        <Lock className='absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground' />
+                        <Input
+                        id="password"
+                        type="password"
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="pl-10"
+                        />
+                    </div>
+                </div>
+                {error && <p className="text-sm text-destructive bg-destructive/10 p-2 rounded-md border border-destructive/20">{error}</p>}
+                <Button className="w-full" onClick={handleSignIn}>
+                    Inloggen
+                </Button>
+                 <div className="relative my-2">
+                    <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-card px-2 text-muted-foreground">Of</span>
+                    </div>
+                </div>
+                <Button variant="outline" className="w-full" onClick={() => setShowPasswordLogin(false)}>
+                    Inloggen met NFC
+                </Button>
+              </>
+            ) : (
+                <>
+                    <Button variant="default" className="w-full h-16 text-lg" onClick={handleNfcLogin} disabled={nfcStatus === 'scanning'}>
+                    {nfcStatus === 'scanning' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Nfc className="mr-2 h-4 w-4" />}
+                    {nfcStatus === 'scanning' ? 'NFC Tag Scannen...' : 'Inloggen met NFC'}
+                    </Button>
+                    {nfcStatus === 'scanning' && <p className="text-sm text-muted-foreground mt-2 text-center">Houd de NFC-tag tegen uw apparaat.</p>}
+                    {nfcStatus === 'error' && <p className="text-sm text-destructive mt-2">{nfcError}</p>}
+                    {nfcStatus === 'success' && <p className="text-sm text-green-600 mt-2">Inloggen gelukt! U wordt doorgestuurd...</p>}
+
+                    <div className="relative my-2">
+                        <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-card px-2 text-muted-foreground">Of</span>
+                        </div>
+                    </div>
+                    <Button variant="outline" className="w-full" onClick={() => setShowPasswordLogin(true)}>
+                        Inloggen met wachtwoord
+                    </Button>
+                </>
+            )}
             </CardContent>
         </Card>
       </div>
     </div>
   );
 }
-
-    
