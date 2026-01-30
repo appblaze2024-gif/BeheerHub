@@ -742,9 +742,11 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
       <DialogContent className="p-0 h-screen w-screen max-w-full flex flex-col">
          <DialogHeader className="p-4 border-b bg-gray-100 dark:bg-gray-800 flex-row items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" className="text-gray-700 dark:text-gray-300" onClick={() => onOpenChange(false)}>
-                <ChevronLeft className="h-6 w-6" />
-            </Button>
+            <DialogClose asChild>
+                <Button variant="ghost" size="icon" className="text-gray-700 dark:text-gray-300">
+                    <ChevronLeft className="h-6 w-6" />
+                </Button>
+            </DialogClose>
           </div>
           <DialogTitle className="text-xl font-semibold absolute left-1/2 -translate-x-1/2">{activeTab}</DialogTitle>
           <Button
@@ -756,22 +758,10 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
           </Button>
         </DialogHeader>
 
-        <div className={cn("flex-1 grid grid-cols-1 min-h-0 bg-slate-50 dark:bg-slate-900/50", activeTab === 'Locatiegegevens' ? 'md:grid-cols-[auto_1fr]' : 'md:grid-cols-[360px_1fr]')}>
-            <aside className="bg-white dark:bg-card p-6 flex flex-col gap-6 border-r overflow-y-auto">
-                <div className="flex items-center justify-between gap-4">
+        <div className={cn("flex-1 grid grid-cols-1 min-h-0 bg-slate-50 dark:bg-slate-900/50", activeTab === 'Locatiegegevens' ? 'grid-rows-1' : 'md:grid-cols-[360px_1fr]')}>
+            <aside className={cn("bg-white dark:bg-card p-6 flex flex-col gap-6 border-r overflow-y-auto", activeTab === 'Locatiegegevens' && 'hidden')}>
+                <div className="flex items-start justify-between gap-4">
                     <h3 className="font-bold text-lg">{`Werkbon: ${melding.intakenummer}`}</h3>
-                    {melding && (
-                        <Link
-                            href={`/navigation-module?projectId=${selectedProjectId}&lat=${melding.latitude}&lng=${melding.longitude}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title="Navigeer naar locatie"
-                        >
-                            <Button variant="outline" size="icon">
-                                <Navigation className="h-5 w-5 text-primary" />
-                            </Button>
-                        </Link>
-                    )}
                 </div>
                 <nav className="flex flex-col gap-1">
                     {werkbonNavItems.map(item => (
@@ -853,9 +843,10 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                     <MapboxView
                       longitude={melding.longitude}
                       latitude={melding.latitude}
+                      objects={nearbyObjects}
                     />
                      <div className="absolute top-4 left-4 z-10 space-y-2 w-80">
-                        <Collapsible>
+                        <Collapsible defaultOpen={false}>
                             <CollapsibleTrigger asChild>
                                 <Button className="w-full justify-start shadow-md">
                                     <Info className="mr-2 h-4 w-4" />
@@ -877,7 +868,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                                 </Card>
                             </CollapsibleContent>
                         </Collapsible>
-                        <Collapsible>
+                        <Collapsible defaultOpen={false}>
                             <CollapsibleTrigger asChild>
                                 <Button className="w-full justify-start shadow-md">
                                     <Trash2 className="mr-2 h-4 w-4" />
