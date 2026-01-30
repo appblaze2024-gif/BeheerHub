@@ -45,7 +45,7 @@ import { useUser } from '@/firebase';
 import { nl } from 'date-fns/locale';
 import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { useToast } from './ui/use-toast';
 import { cn } from '@/lib/utils';
@@ -755,11 +755,26 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
         <div className="flex-1 grid grid-cols-1 md:grid-cols-[360px_1fr] min-h-0 bg-slate-50 dark:bg-slate-900/50">
             <aside className="bg-white dark:bg-card p-6 flex flex-col gap-6 border-r overflow-y-auto">
                 <div>
-                    <h3 className="font-bold text-lg">{`Werkbon: ${melding.intakenummer}`}</h3>
+                    <div className="flex items-center justify-between gap-4">
+                        <h3 className="font-bold text-lg">{`Werkbon: ${melding.intakenummer}`}</h3>
+                        {melding && (
+                            <Link
+                                href={`/navigation-module?projectId=${selectedProjectId}&lat=${melding.latitude}&lng=${melding.longitude}`}
+                                passHref
+                                legacyBehavior
+                            >
+                                <a target="_blank" rel="noopener noreferrer" title="Navigeer naar locatie">
+                                    <Button variant="outline" size="icon">
+                                        <Navigation className="h-5 w-5 text-primary" />
+                                    </Button>
+                                </a>
+                            </Link>
+                        )}
+                    </div>
                     <div className="space-y-1 text-sm text-muted-foreground mt-2">
                          <div className="flex items-start gap-2">
                             <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
-                            <span>{melding.straatnaam}, {melding.postcode} {melding.plaats}</span>
+                            <span>{`${melding.straatnaam || ''}, ${melding.postcode || ''} ${melding.plaats || ''}`}</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <User className="h-4 w-4 shrink-0" />
@@ -792,17 +807,6 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                                 <Badge variant="secondary">{uploadedPhotos.length}</Badge>
                             )}
                             {item.label === 'Werkzaamheden' && tasks.length > 0 && <Badge variant="secondary">{tasks.filter(t => !t.completed).length}</Badge>}
-                            {item.label === 'Locatiegegevens' && melding && selectedProjectId && (
-                                <Link
-                                    href={`/navigation-module?projectId=${selectedProjectId}&lat=${melding.latitude}&lng=${melding.longitude}`}
-                                    passHref
-                                    legacyBehavior
-                                >
-                                    <a target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} title="Navigeer naar locatie" className="p-2 -mr-2">
-                                        <Navigation className="h-5 w-5 text-primary hover:text-primary/80" />
-                                    </a>
-                                </Link>
-                            )}
                           </div>
                         </Button>
                     ))}
