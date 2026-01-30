@@ -44,8 +44,7 @@ export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, allPrul
   const drawRef = React.useRef<MapboxDraw | null>(null);
   const mapRef = React.useRef<any>(null);
   const mapContainerRef = React.useRef<HTMLDivElement>(null);
-  const allObjectsRef = React.useRef<MapObject[] | null>(null);
-
+  
   const { profile } = useProfile();
   const [currentMapStyle, setCurrentMapStyle] = React.useState(profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12');
   const [isMaximized, setIsMaximized] = React.useState(false);
@@ -58,32 +57,31 @@ export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, allPrul
 
   const { data: allObjects } = useCollection<MapObject>(objectsCollection);
 
-  React.useEffect(() => {
-    allObjectsRef.current = allObjects;
-  }, [allObjects]);
-
   const [selectedObjectIds, setSelectedObjectIds] = React.useState<string[]>([]);
   const [isSaving, setIsSaving] = React.useState(false);
+  const [initialViewState, setInitialViewState] = React.useState({ longitude: 5.2913, latitude: 52.1326, zoom: 7 });
+
+  const routeGeoJSONFeatures = React.useMemo(() => {
+    if (!route?.subGebieden) return [];
+    try {
+      const features = JSON.parse(route.subGebieden);
+      return Array.isArray(features) && features.length > 0 ? features : [];
+    } catch (e) {
+      console.error('Invalid GeoJSON for route', e);
+      return [];
+    }
+  }, [route]);
 
   React.useEffect(() => {
     if (!mapContainerRef.current) return;
-    
-    const observer = new ResizeObserver(() => {
-      if (mapRef.current) {
-        mapRef.current.getMap().resize();
-      }
-    });
+    const observer = new ResizeObserver(() => { if (mapRef.current) mapRef.current.getMap().resize(); });
     observer.observe(mapContainerRef.current);
     return () => observer.disconnect();
   }, []);
   
   React.useEffect(() => {
     if (open) {
-      const timer = setTimeout(() => {
-        if (mapRef.current) {
-          mapRef.current.getMap().resize();
-        }
-      }, 350); 
+      const timer = setTimeout(() => { if (mapRef.current) mapRef.current.getMap().resize(); }, 350); 
       return () => clearTimeout(timer);
     }
   }, [isMaximized, open]);
@@ -96,75 +94,94 @@ export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, allPrul
             if (map && map.isStyleLoaded() && map._controls.some((ctrl: any) => ctrl === drawRef.current)) {
                  map.removeControl(drawRef.current);
             }
-        } catch (e) {
-            // It's safe to ignore this error.
-        }
+        } catch (e) { /* ignore */ }
     }
     drawRef.current = null;
     setSelectedObjectIds([]);
     setIsSaving(false);
   }, []);
+  
+  const fitMapToBounds = React.useCallback((map: any) => {
+    if (!map) return;
+    
+    // Priority 1: Drawn area from subGebieden
+    if (routeGeoJSONFeatures && routeGeoJSONFeatures.length > 0) {
+      try {
+        const featureCollection = turf.featureCollection(routeGeoJSONFeatures);
+        const bbox = turf.bbox(featureCollection);
+        if (bbox[0] !== Infinity) {
+          map.fitBounds(bbox as [number, number, number, number], { padding: 60, duration: 0 });
+          return;
+        }
+      } catch (e) { /* ignore */ }
+    }
+    
+    // Priority 2: Objects already in the route
+    if (allObjects && route) {
+        const objectsInRoute = allObjects.filter(obj => 
+            Array.isArray(obj.locatieWerkgebieden) && obj.locatieWerkgebieden.includes(route.naam)
+        );
+        if (objectsInRoute.length > 0) {
+             const points = objectsInRoute.map(obj => turf.point([obj.longitude, obj.latitude]));
+             const featureCollection = turf.featureCollection(points);
+             try {
+                const bbox = turf.bbox(featureCollection);
+                if (bbox[0] !== Infinity) {
+                    map.fitBounds(bbox as [number, number, number, number], { padding: 60, duration: 0 });
+                    return;
+                }
+             } catch (e) { /* ignore */ }
+        }
+    }
+    
+    // Priority 3: All objects
+    if (allObjects && allObjects.length > 0) {
+       const points = allObjects.map(obj => turf.point([obj.longitude, obj.latitude]));
+       const featureCollection = turf.featureCollection(points);
+       try {
+           const bbox = turf.bbox(featureCollection);
+            if (bbox[0] !== Infinity) {
+                map.fitBounds(bbox as [number, number, number, number], { padding: 60, duration: 0 });
+                return;
+            }
+       } catch(e) { /* ignore */ }
+    }
+    
+    // Fallback to default
+    map.flyTo({ center: [5.2913, 52.1326], zoom: 7 });
+
+  }, [routeGeoJSONFeatures, allObjects, route]);
 
   const onMapLoad = React.useCallback(() => {
     const map = mapRef.current?.getMap();
     if (!map) return;
-
-    if (allObjectsRef.current && route) {
-        const objectsInRoute = allObjectsRef.current.filter(obj => 
-            Array.isArray(obj.locatieWerkgebieden) && obj.locatieWerkgebieden.includes(route.naam)
-        );
-
-        if (objectsInRoute.length > 0) {
-            const points = objectsInRoute.map(obj => turf.point([obj.longitude, obj.latitude]));
-            const featureCollection = turf.featureCollection(points);
-            try {
-                const bbox = turf.bbox(featureCollection);
-                if (bbox[0] !== Infinity) {
-                    map.fitBounds(bbox as [number, number, number, number], { padding: 60, duration: 0 });
-                }
-            } catch(e) {
-                console.error("Error fitting bounds to objects:", e);
-            }
-        }
-    }
     
-    if (readOnly) {
-      return;
-    }
+    fitMapToBounds(map);
+    
+    if (readOnly) return;
     
     if (drawRef.current) {
         try {
             if (map.isStyleLoaded() && map._controls.some((ctrl: any) => ctrl === drawRef.current)) {
                  map.removeControl(drawRef.current);
             }
-        } catch (e) {
-            // Safe to ignore
-        }
+        } catch (e) { /* ignore */ }
     }
 
-    const draw = new MapboxDraw({
-        displayControlsDefault: false,
-        controls: {},
-    });
-
+    const draw = new MapboxDraw({ displayControlsDefault: false, controls: {} });
     try {
       if (!map._controls.some((ctrl: any) => ctrl instanceof MapboxDraw)) {
         map.addControl(draw);
       }
-    } catch(e) {
-        // ignore
-    }
+    } catch(e) { /* ignore */ }
     
     drawRef.current = draw;
         
     const handleDrawCreate = (e: { features: turf.Feature[] }) => {
         const selectionPolygon = e.features[0];
-        if (!selectionPolygon) return;
+        if (!selectionPolygon || !allObjects) return;
         
-        const currentObjects = allObjectsRef.current;
-        if (!currentObjects) return;
-
-        const newlySelectedIds = currentObjects
+        const newlySelectedIds = allObjects
             .filter(obj => {
                 if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
                 const pt = turf.point([obj.longitude, obj.latitude]);
@@ -183,12 +200,10 @@ export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, allPrul
         if (map.isStyleLoaded()) {
             try {
                 map.off('draw.create', handleDrawCreate);
-            } catch (e) {
-                // ignore
-            }
+            } catch (e) { /* ignore */ }
         }
     };
-  }, [readOnly, route]);
+  }, [readOnly, fitMapToBounds, allObjects]);
   
   const handleObjectAssignment = async (assign: boolean) => {
     if (!firestore || selectedObjectIds.length === 0 || !route?.naam) return;
@@ -240,12 +255,6 @@ export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, allPrul
     }
   }, [open, cleanup]);
 
-  const initialViewState = {
-    longitude: 5.2913,
-    latitude: 52.1326,
-    zoom: 7,
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={cn(
@@ -294,6 +303,14 @@ export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, allPrul
               const isInAnotherRoute = Array.isArray(obj.locatieWerkgebieden) &&
                   obj.locatieWerkgebieden.some(gebied => otherRouteNames.includes(gebied));
               
+              const colorClass = isSelected 
+                ? 'bg-yellow-400 ring-2 ring-yellow-500 scale-150' 
+                : isInCurrentRoute 
+                ? 'bg-purple-600' 
+                : isInAnotherRoute 
+                ? 'bg-green-500' 
+                : 'bg-black';
+              
               return (
                 <Marker
                   key={obj.id}
@@ -311,10 +328,7 @@ export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, allPrul
                   <div
                       className={cn(
                           "h-2.5 w-2.5 rounded-full border border-white transition-all",
-                          isSelected ? 'bg-yellow-400 ring-2 ring-yellow-500 scale-150' 
-                                     : (isInCurrentRoute ? 'bg-purple-600' 
-                                                         : (isInAnotherRoute ? 'bg-green-500' 
-                                                                             : 'bg-gray-400')),
+                          colorClass,
                           !readOnly && 'cursor-pointer'
                       )}
                   />
@@ -362,6 +376,25 @@ export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, allPrul
                 <Button variant="ghost" size="sm" onClick={() => { setSelectedObjectIds([]); drawRef.current?.deleteAll(); }}>Annuleren</Button>
             </div>
           )}
+           <div className="absolute bottom-4 left-4 z-10 bg-background/80 p-3 rounded-lg shadow-lg space-y-2 backdrop-blur-sm">
+              <h3 className="font-semibold text-sm">Legenda</h3>
+              <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full bg-purple-600 border border-black/20" />
+                  <span className="text-xs">Huidige route</span>
+              </div>
+              <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full bg-green-500 border border-black/20" />
+                  <span className="text-xs">Andere route</span>
+              </div>
+              <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full bg-black border border-black/20" />
+                  <span className="text-xs">Niet toegewezen</span>
+              </div>
+              <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full bg-yellow-400 ring-1 ring-yellow-500" />
+                  <span className="text-xs">Geselecteerd</span>
+              </div>
+          </div>
         </div>
         <DialogFooter className={cn("p-6 pt-4 border-t", isMaximized && "hidden")}>
             <Button variant="ghost" onClick={() => onOpenChange(false)}>
