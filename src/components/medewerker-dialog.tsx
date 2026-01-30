@@ -4,7 +4,7 @@ import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Info, Loader2, CalendarIcon } from 'lucide-react';
+import { Info, Loader2, CalendarIcon, Nfc } from 'lucide-react';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 
@@ -64,6 +64,7 @@ const medewerkerFormSchema = z.object({
     zondag: z.object({ start: z.string().optional(), eind: z.string().optional() }).optional(),
   }).optional(),
   notities: z.string().optional(),
+  nfcTagId: z.string().optional(),
 });
 
 type MedewerkerFormValues = z.infer<typeof medewerkerFormSchema>;
@@ -92,6 +93,8 @@ export function MedewerkerDialog({
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [addAnother, setAddAnother] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState("Basis");
+  const [isNfcScanning, setIsNfcScanning] = React.useState(false);
+  const [nfcScanError, setNfcScanError] = React.useState<string | null>(null);
   
   const defaultUren = {
       maandag: { start: '07:00', eind: '15:30' },
@@ -121,6 +124,7 @@ export function MedewerkerDialog({
       contractType: '',
       urenPerDag: defaultUren,
       notities: '',
+      nfcTagId: '',
     }
   });
 
@@ -165,6 +169,7 @@ export function MedewerkerDialog({
           notities: '',
           indiensttreding: '',
           uitdiensttreding: '',
+          nfcTagId: '',
       };
 
       if (medewerker) {
@@ -181,13 +186,40 @@ export function MedewerkerDialog({
             ...medewerker,
             indiensttreding: dateToInputString(medewerker.indiensttreding),
             uitdiensttreding: dateToInputString(medewerker.uitdiensttreding),
-            urenPerDag: mergedUren
+            urenPerDag: mergedUren,
+            nfcTagId: medewerker.nfcTagId || '',
           });
       } else {
           form.reset(defaultValues);
       }
     }
   }, [open, medewerker, form]);
+
+  const handleNfcScan = async () => {
+    if (!('NDEFReader' in window)) {
+      setNfcScanError('Web NFC wordt niet ondersteund op dit apparaat.');
+      return;
+    }
+    setIsNfcScanning(true);
+    setNfcScanError(null);
+    try {
+      const ndef = new NDEFReader();
+      await ndef.scan();
+      ndef.onreading = ({ serialNumber }) => {
+        if (serialNumber) {
+          form.setValue('nfcTagId', serialNumber, { shouldValidate: true, shouldDirty: true });
+        }
+        setIsNfcScanning(false);
+      };
+      ndef.onreadingerror = () => {
+        setNfcScanError('Kan NFC-tag niet lezen.');
+        setIsNfcScanning(false);
+      };
+    } catch (error) {
+      setNfcScanError('Kon NFC-scanner niet starten.');
+      setIsNfcScanning(false);
+    }
+  };
 
   const onSubmit = async (data: MedewerkerFormValues) => {
     if (!firestore) return;
@@ -227,6 +259,7 @@ export function MedewerkerDialog({
             notities: '',
             indiensttreding: '',
             uitdiensttreding: '',
+            nfcTagId: '',
         });
         setActiveTab("Basis");
         setIsSubmitting(false);
@@ -438,6 +471,27 @@ export function MedewerkerDialog({
                   )}
               />
             </div>
+            <FormField
+              control={form.control}
+              name="nfcTagId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>NFC Tag ID</FormLabel>
+                  <div className="flex items-center gap-2">
+                    <FormControl>
+                      <Input placeholder="Scan of voer ID in" {...field} value={field.value || ''} />
+                    </FormControl>
+                    <Button type="button" variant="outline" onClick={handleNfcScan} disabled={isNfcScanning}>
+                      {isNfcScanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Nfc className="h-4 w-4" />}
+                      <span className="ml-2 hidden sm:inline">Scan</span>
+                    </Button>
+                  </div>
+                  {isNfcScanning && <p className="text-sm text-muted-foreground">Wachten op NFC-tag...</p>}
+                  {nfcScanError && <FormMessage>{nfcScanError}</FormMessage>}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
         )
       case 'Contract':
@@ -631,3 +685,5 @@ export function MedewerkerDialog({
     </Dialog>
   );
 }
+
+    
