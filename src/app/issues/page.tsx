@@ -108,7 +108,8 @@ function MeldingenList({ meldingen, onMeldingClick, projectId }: { meldingen: Me
 
   return (
     <div className="overflow-auto">
-      <div className="grid grid-cols-[140px_120px_100px_80px_120px_200px_1fr_auto] min-w-[1200px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
+      {/* Header for large screens */}
+      <div className="hidden lg:grid grid-cols-[140px_120px_100px_80px_120px_200px_1fr_auto] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
         <span>Status</span>
         <span>Wijk</span>
         <span>Datum</span>
@@ -118,40 +119,85 @@ function MeldingenList({ meldingen, onMeldingClick, projectId }: { meldingen: Me
         <span>Omschrijving</span>
         <span />
       </div>
-      {meldingen.map((melding) => (
-        <div
-          key={melding.id}
-          onClick={() => onMeldingClick(melding)}
-          className="grid grid-cols-[140px_120px_100px_80px_120px_200px_1fr_auto] min-w-[1200px] items-center gap-x-4 px-4 py-3 border-b border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-muted/50"
-        >
-          <Badge
-            style={{
-              backgroundColor: statusConfig[melding.status]?.color || '#ccc',
-              color: statusConfig[melding.status]?.textColor || 'black',
-              borderColor: statusConfig[melding.status]?.borderColor || '#ccc'
-            }}
-            variant={melding.status === 'Afgerond' ? 'default' : 'destructive'}
-            className="justify-center w-fit"
+
+      {/* Rows for both mobile and desktop */}
+      <div className="lg:divide-y lg:divide-slate-200 dark:lg:divide-slate-700">
+        {meldingen.map((melding) => (
+          <div
+            key={melding.id}
+            onClick={() => onMeldingClick(melding)}
+            className="cursor-pointer hover:bg-muted/50 border-b lg:border-b-0"
           >
-            {melding.status}
-          </Badge>
-          <span className="truncate">{melding.wijk || '-'}</span>
-          <span className="truncate">{melding.datum ? format(new Date(melding.datum), 'dd-MM-yyyy') : '-'}</span>
-          <span className="truncate">{melding.tijdstip || '-'}</span>
-          <span className="font-medium truncate">{melding.intakenummer}</span>
-          <span className="truncate">{melding.subcategorie}</span>
-          <span className="truncate">{melding.extra_informatie}</span>
-          <div className="flex justify-end">
-            {projectId && (
-                <Link href={`/navigation-module?projectId=${projectId}&lat=${melding.latitude}&lng=${melding.longitude}&straat=${encodeURIComponent(melding.straatnaam || '')}`} passHref>
-                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
-                        <Navigation className="h-4 w-4" />
-                    </Button>
-                </Link>
-            )}
+            {/* Desktop Row */}
+            <div className="hidden lg:grid grid-cols-[140px_120px_100px_80px_120px_200px_1fr_auto] items-center gap-x-4 px-4 py-3">
+              <Badge
+                style={{
+                  backgroundColor: statusConfig[melding.status]?.color || '#ccc',
+                  color: statusConfig[melding.status]?.textColor || 'black',
+                  borderColor: statusConfig[melding.status]?.borderColor || '#ccc'
+                }}
+                variant={melding.status === 'Afgerond' ? 'default' : 'destructive'}
+                className="justify-center w-fit"
+              >
+                {melding.status}
+              </Badge>
+              <span className="truncate">{melding.wijk || '-'}</span>
+              <span className="truncate">{melding.datum ? format(new Date(melding.datum), 'dd-MM-yyyy') : '-'}</span>
+              <span className="truncate">{melding.tijdstip || '-'}</span>
+              <span className="font-medium truncate">{melding.intakenummer}</span>
+              <span className="truncate">{melding.subcategorie}</span>
+              <span className="truncate">{melding.extra_informatie}</span>
+              <div className="flex justify-end">
+                {projectId && (
+                    <Link href={`/navigation-module?projectId=${projectId}&lat=${melding.latitude}&lng=${melding.longitude}&straat=${encodeURIComponent(melding.straatnaam || '')}`} passHref>
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                            <Navigation className="h-4 w-4" />
+                        </Button>
+                    </Link>
+                )}
+              </div>
+            </div>
+            
+            {/* Mobile/Tablet "Row" */}
+            <div className="block lg:hidden p-4">
+                <div className="flex justify-between items-start gap-4">
+                  <div>
+                    <Badge
+                       style={{
+                          backgroundColor: statusConfig[melding.status]?.color || '#ccc',
+                          color: statusConfig[melding.status]?.textColor || 'black',
+                          borderColor: statusConfig[melding.status]?.borderColor || '#ccc'
+                        }}
+                        variant={melding.status === 'Afgerond' ? 'default' : 'destructive'}
+                        className="justify-center w-fit"
+                    >
+                      {melding.status}
+                    </Badge>
+                    <p className="font-semibold truncate mt-2">{melding.subcategorie}</p>
+                    <p className="text-sm text-muted-foreground truncate">{melding.extra_informatie}</p>
+                  </div>
+                  <div className="flex-shrink-0 flex flex-col items-end gap-2">
+                     <div className="text-xs text-muted-foreground text-right">
+                        <div>{melding.datum ? format(new Date(melding.datum), 'dd-MM-yyyy') : '-'}</div>
+                        <div>{melding.tijdstip || '-'}</div>
+                    </div>
+                     {projectId && (
+                        <Link href={`/navigation-module?projectId=${projectId}&lat=${melding.latitude}&lng=${melding.longitude}&straat=${encodeURIComponent(melding.straatnaam || '')}`} passHref>
+                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                                <Navigation className="h-4 w-4" />
+                            </Button>
+                        </Link>
+                    )}
+                  </div>
+                </div>
+                 <div className="text-xs text-muted-foreground mt-2 pt-2 border-t flex justify-between">
+                    <span>Intake: <span className="font-medium text-foreground">{melding.intakenummer}</span></span>
+                    <span>Wijk: <span className="font-medium text-foreground">{melding.wijk || '-'}</span></span>
+                </div>
+              </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
@@ -636,7 +682,7 @@ export default function IssuesPage() {
                 <CardHeader>
                     <CardTitle>Overzicht Meldingen ({filteredMeldingen.length})</CardTitle>
                 </CardHeader>
-                <CardContent className='p-0 flex-1 min-h-0 overflow-auto'>
+                <CardContent className='p-0 flex-1 min-h-0'>
                     <MeldingenList meldingen={filteredMeldingen} onMeldingClick={handleMeldingClickFromList} projectId={selectedProjectId} />
                 </CardContent>
             </Card>
