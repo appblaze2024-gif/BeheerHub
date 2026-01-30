@@ -399,7 +399,9 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
     } catch (error: any) {
       console.error('Kon bestand niet verwijderen:', error);
       if (error.code === 'storage/object-not-found') {
-        setUploadedFiles((prev) => prev.filter((f) => f.storagePath !== fileToDelete.storagePath));
+        setUploadedFiles((prev) =>
+          prev.filter((f) => f.storagePath !== fileToDelete.storagePath)
+        );
       }
     }
   };
@@ -413,7 +415,9 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
     } catch (error: any) {
       console.error('Kon foto niet verwijderen:', error);
       if (error.code === 'storage/object-not-found') {
-        setUploadedPhotos((prev) => prev.filter((f) => f.storagePath !== fileToDelete.storagePath));
+        setUploadedPhotos((prev) =>
+          prev.filter((f) => f.storagePath !== fileToDelete.storagePath)
+        );
       }
     }
   };
@@ -863,63 +867,63 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                     </div>
                 )}
                 {activeTab === 'Locatiegegevens' && (
-                    <div className="flex flex-col h-full gap-6">
-                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-lg">Locatie Details</CardTitle>
-                                </CardHeader>
-                                <CardContent className="pt-0">
-                                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                                        <div className="font-semibold text-muted-foreground">Straat & Huisnummer</div>
-                                        <div className="font-medium">{`${melding.straatnaam || ''} ${melding.huisnummer || ''}`.trim() || '-'}</div>
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 h-full">
+                      <div className="flex flex-col gap-6 overflow-y-auto pr-2">
+                          <Card>
+                              <CardHeader>
+                                  <CardTitle className="text-lg">Locatie Details</CardTitle>
+                              </CardHeader>
+                              <CardContent className="pt-0">
+                                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                                      <div className="font-semibold text-muted-foreground">Straat & Huisnummer</div>
+                                      <div className="font-medium">{`${melding.straatnaam || ''} ${melding.huisnummer || ''}`.trim() || '-'}</div>
 
-                                        <div className="font-semibold text-muted-foreground">Postcode & Plaats</div>
-                                        <div className="font-medium">{`${melding.postcode || ''} ${melding.plaats || ''}`.trim() || '-'}</div>
+                                      <div className="font-semibold text-muted-foreground">Postcode & Plaats</div>
+                                      <div className="font-medium">{`${melding.postcode || ''} ${melding.plaats || ''}`.trim() || '-'}</div>
 
-                                        <div className="font-semibold text-muted-foreground">Wijk</div>
-                                        <div className="font-medium">{melding.wijk || '-'}</div>
+                                      <div className="font-semibold text-muted-foreground">Wijk</div>
+                                      <div className="font-medium">{melding.wijk || '-'}</div>
 
-                                        <div className="font-semibold text-muted-foreground">Coördinaten</div>
-                                        <div className="font-medium">{melding.latitude?.toFixed(6)}, {melding.longitude?.toFixed(6)}</div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-lg">Objecten in de buurt (100m)</CardTitle>
-                                </CardHeader>
-                                <CardContent className="pt-0">
-                                    <div className="max-h-32 overflow-y-auto pr-2">
-                                        {isLoadingObjects ? (
-                                            <p className="text-sm text-muted-foreground">Objecten laden...</p>
-                                        ) : nearbyObjects.length > 0 ? (
-                                            <ul className="space-y-2">
-                                                {nearbyObjects.map(obj => (
-                                                    <li key={obj.id} className="text-sm flex items-center justify-between">
-                                                        <div className="flex items-center gap-2">
-                                                            <Trash2 className="h-4 w-4 text-muted-foreground"/>
-                                                            <span>{obj.id} ({obj.locatieSubType || 'Onbekend type'})</span>
-                                                        </div>
-                                                        <Badge variant="outline">{Math.round(turf.distance(turf.point([melding.longitude, melding.latitude]), turf.point([obj.longitude, obj.latitude]), { units: 'meters' }))}m</Badge>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        ) : (
-                                            <p className="text-sm text-muted-foreground">Geen objecten gevonden.</p>
-                                        )}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
-                        <div className="flex-1 min-h-0 rounded-lg overflow-hidden border">
-                            <MapboxView
-                                longitude={melding.longitude}
-                                latitude={melding.latitude}
-                                objects={nearbyObjects}
-                            />
-                        </div>
-                    </div>
+                                      <div className="font-semibold text-muted-foreground">Coördinaten</div>
+                                      <div className="font-medium">{melding.latitude?.toFixed(6)}, {melding.longitude?.toFixed(6)}</div>
+                                  </div>
+                              </CardContent>
+                          </Card>
+                          <Card>
+                              <CardHeader>
+                                  <CardTitle className="text-lg">Objecten in de buurt (100m)</CardTitle>
+                              </CardHeader>
+                              <CardContent className="pt-0">
+                                  <div className="max-h-48 overflow-y-auto pr-2">
+                                      {isLoadingObjects ? (
+                                          <p className="text-sm text-muted-foreground">Objecten laden...</p>
+                                      ) : nearbyObjects.length > 0 ? (
+                                          <ul className="space-y-2">
+                                              {nearbyObjects.map(obj => (
+                                                  <li key={obj.id} className="text-sm flex items-center justify-between">
+                                                      <div className="flex items-center gap-2">
+                                                          <Trash2 className="h-4 w-4 text-muted-foreground"/>
+                                                          <span>{obj.id} ({obj.locatieSubType || 'Onbekend type'})</span>
+                                                      </div>
+                                                      <Badge variant="outline">{Math.round(turf.distance(turf.point([melding.longitude, melding.latitude]), turf.point([obj.longitude, obj.latitude]), { units: 'meters' }))}m</Badge>
+                                                  </li>
+                                              ))}
+                                          </ul>
+                                      ) : (
+                                          <p className="text-sm text-muted-foreground">Geen objecten gevonden.</p>
+                                      )}
+                                  </div>
+                              </CardContent>
+                          </Card>
+                      </div>
+                      <div className="rounded-lg overflow-hidden border h-full min-h-0">
+                          <MapboxView
+                              longitude={melding.longitude}
+                              latitude={melding.latitude}
+                              objects={nearbyObjects}
+                          />
+                      </div>
+                  </div>
                 )}
                 {activeTab === 'Documenten' && (
                     <Card>
