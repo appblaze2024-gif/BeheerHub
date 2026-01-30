@@ -25,6 +25,7 @@ import { Separator } from '@/components/ui/separator';
 import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
 import { useProfile } from '@/firebase/profile-provider';
+import { useToast } from '@/components/ui/use-toast';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -84,6 +85,7 @@ function NavigatingView({
   const [currentLeg, setCurrentLeg] = React.useState<any>(null);
   const { profile } = useProfile();
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
+  const { toast } = useToast();
   const [viewState, setViewState] = React.useState({
     pitch: 60,
     bearing: 0,
@@ -105,11 +107,18 @@ function NavigatingView({
         });
         mapRef.current?.flyTo({ center: [position.coords.longitude, position.coords.latitude], duration: 1000 });
       },
-      (error) => console.error("Error watching position:", error),
+      (error) => {
+        console.error("Error watching position:", error.code, error.message);
+        toast({
+            title: "Locatiefout",
+            description: "Kon uw locatie niet volgen. Zorg ervoor dat locatietoegang is ingeschakeld.",
+            variant: "destructive",
+        })
+      },
       { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
     );
     return () => navigator.geolocation.clearWatch(watchId);
-  }, []);
+  }, [toast]);
 
   const fetchRouteTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
