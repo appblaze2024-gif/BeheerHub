@@ -4,7 +4,7 @@ import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Loader2, Trash2, File as FileIcon, Upload, MapPin, Camera, Package, Clock, Car, Plus, X, Pencil, FileText, ChevronLeft, User, Phone, Paperclip, PlusCircle } from 'lucide-react';
+import { Loader2, Trash2, File as FileIcon, Upload, MapPin, Camera, Package, Clock, Car, Plus, X, Pencil, FileText, ChevronLeft, User, Phone, Paperclip, PlusCircle, AlertCircle, Info } from 'lucide-react';
 import { useFirestore, useFirebaseApp, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -142,6 +142,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
       setSuggestions([]);
       setIsSearching(false);
       setTasks(melding?.tasks || []);
+      setActiveTab('Werkzaamheden');
       form.reset(
         melding
           ? {
@@ -551,7 +552,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                         </div>
                          <div className="flex items-center gap-2">
                             <span className='font-semibold'>Categorie:</span>
-                            <span>{melding.hoofdcategorie} > {melding.subcategorie}</span>
+                            <span>{melding.hoofdcategorie} {'>'} {melding.subcategorie}</span>
                         </div>
                     </div>
                 </div>
@@ -635,5 +636,3 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
     </Dialog>
   );
 }
-
-    
