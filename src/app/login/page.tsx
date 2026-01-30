@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth, useFirestore } from '@/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, signInAnonymously } from 'firebase/auth';
 import { Mail, Lock, Nfc, Loader2 } from 'lucide-react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 
@@ -22,6 +22,7 @@ export default function LoginPage() {
   const [nfcError, setNfcError] = React.useState<string | null>(null);
 
   const handleSignIn = async () => {
+    localStorage.removeItem('impersonatedUserProfileId');
     setError(null);
     try {
       await signInWithEmailAndPassword(auth, email, password);
@@ -42,6 +43,7 @@ export default function LoginPage() {
     }
     setNfcStatus('scanning');
     setNfcError(null);
+    localStorage.removeItem('impersonatedUserProfileId');
     try {
         const ndef = new NDEFReader();
         await ndef.scan();
@@ -59,30 +61,55 @@ export default function LoginPage() {
                 return;
             }
             
+            if (!firestore || !auth) {
+              setNfcError('Database of authenticatie niet beschikbaar.');
+              setNfcStatus('error');
+              return;
+            }
+            
             try {
-                if (!firestore) {
-                  setNfcError('Database niet beschikbaar.');
-                  setNfcStatus('error');
-                  return;
-                }
+                // 1. Find Medewerker by NFC tag
                 const medewerkersRef = collection(firestore, 'medewerkers');
-                const q = query(medewerkersRef, where('nfcTagId', '==', serialNumber));
-                const querySnapshot = await getDocs(q);
+                const qMedewerker = query(medewerkersRef, where('nfcTagId', '==', serialNumber));
+                const medewerkerSnapshot = await getDocs(qMedewerker);
 
-                if (querySnapshot.empty) {
+                if (medewerkerSnapshot.empty) {
                     setNfcError('Geen gebruiker gevonden voor deze NFC-tag.');
                     setNfcStatus('error');
-                } else {
-                    const userDoc = querySnapshot.docs[0].data();
-                    if (userDoc.email) {
-                        setEmail(userDoc.email);
-                        setNfcStatus('success');
-                        // Optional: focus password input
-                    } else {
-                        setNfcError('Gebruiker gevonden, maar er is geen e-mailadres gekoppeld.');
-                        setNfcStatus('error');
-                    }
+                    return;
                 }
+                
+                const medewerkerDoc = medewerkerSnapshot.docs[0].data();
+                if (!medewerkerDoc.email) {
+                     setNfcError('Gebruiker gevonden, maar er is geen e-mailadres gekoppeld.');
+                     setNfcStatus('error');
+                     return;
+                }
+
+                // 2. Find the UserProfile using the email from Medewerker
+                const usersRef = collection(firestore, 'users');
+                const qUser = query(usersRef, where('email', '==', medewerkerDoc.email));
+                const userSnapshot = await getDocs(qUser);
+                
+                if (userSnapshot.empty) {
+                    setNfcError('Geen gebruikersprofiel gevonden met de juiste rechten.');
+                    setNfcStatus('error');
+                    return;
+                }
+
+                const userProfile = userSnapshot.docs[0];
+
+                // 3. Sign in anonymously
+                await signInAnonymously(auth);
+
+                // 4. Store the ID of the user profile we want to impersonate in localStorage.
+                // The ProfileProvider will read this and fetch the correct profile data.
+                localStorage.setItem('impersonatedUserProfileId', userProfile.id);
+
+                setNfcStatus('success');
+                // The main AppLayout will handle the redirection to the home page
+                // because the auth state has changed.
+
             } catch (e) {
                 console.error("Firestore query error:", e);
                 setNfcError('Fout bij het zoeken naar gebruiker.');
@@ -170,12 +197,10 @@ export default function LoginPage() {
             </Button>
             {nfcStatus === 'scanning' && <p className="text-sm text-muted-foreground mt-2 text-center">Houd de NFC-tag tegen uw apparaat.</p>}
             {nfcStatus === 'error' && <p className="text-sm text-destructive mt-2">{nfcError}</p>}
-            {nfcStatus === 'success' && <p className="text-sm text-green-600 mt-2">Gebruiker gevonden! Voer uw wachtwoord in.</p>}
+            {nfcStatus === 'success' && <p className="text-sm text-green-600 mt-2">Inloggen gelukt! U wordt doorgestuurd...</p>}
             </CardContent>
         </Card>
       </div>
     </div>
   );
 }
-
-    

@@ -122,7 +122,10 @@ function Header() {
                 </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => signOut(auth)}>
+            <DropdownMenuItem onClick={() => {
+              localStorage.removeItem('impersonatedUserProfileId');
+              signOut(auth);
+            }}>
               Log uit
             </DropdownMenuItem>
           </DropdownMenuContent>

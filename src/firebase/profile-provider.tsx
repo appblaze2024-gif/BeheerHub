@@ -2,7 +2,7 @@
 
 import { useUser, useDoc, useFirestore, updateDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { doc, getDocFromServer } from 'firebase/firestore';
-import React, { createContext, useContext, ReactNode, useMemo, useEffect } from 'react';
+import React, { createContext, useContext, ReactNode, useMemo, useEffect, useState } from 'react';
 import type { UserProfile } from '@/lib/types';
 import { getDefaultPermissions, permissionConfig } from '@/lib/permissions';
 
@@ -16,11 +16,27 @@ const ProfileContext = createContext<ProfileContextValue | undefined>(undefined)
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const [profileId, setProfileId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isUserLoading) return;
+
+    if (user?.isAnonymous) {
+      const impersonatedId = localStorage.getItem('impersonatedUserProfileId');
+      setProfileId(impersonatedId);
+    } else if (user) {
+      localStorage.removeItem('impersonatedUserProfileId');
+      setProfileId(user.uid);
+    } else {
+      localStorage.removeItem('impersonatedUserProfileId');
+      setProfileId(null);
+    }
+  }, [user, isUserLoading]);
 
   const userProfileRef = useMemo(() => {
-    if (!user) return null;
-    return doc(firestore, 'users', user.uid);
-  }, [user, firestore]);
+    if (!profileId || !firestore) return null;
+    return doc(firestore, 'users', profileId);
+  }, [profileId, firestore]);
 
   const { data: profileFromDb, isLoading: isProfileLoadingFromDoc } = useDoc<UserProfile>(userProfileRef);
 
@@ -52,6 +68,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     const createProfile = async () => {
       if (
         user &&
+        !user.isAnonymous &&
         !isProfileLoadingFromDoc &&
         !profileFromDb && // `profile` from useDoc is null, indicating it might not exist
         userProfileRef
