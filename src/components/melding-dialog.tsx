@@ -51,6 +51,7 @@ import { useToast } from './ui/use-toast';
 import { cn } from '@/lib/utils';
 import { useProject } from '@/context/project-context';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
 interface Suggestion {
@@ -740,64 +741,50 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="p-0 h-screen w-screen max-w-full flex flex-col">
-         <DialogHeader className="p-4 border-b bg-gray-100 dark:bg-gray-800 flex-row items-center justify-between shrink-0">
+        <DialogHeader className="p-4 border-b bg-gray-100 dark:bg-gray-800 flex-row items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
             <DialogClose asChild>
                 <Button variant="ghost" size="icon" className="text-gray-700 dark:text-gray-300">
                     <ChevronLeft className="h-6 w-6" />
                 </Button>
             </DialogClose>
+            <h2 className="font-bold text-lg">{`Werkbon: ${melding.intakenummer}`}</h2>
           </div>
-          <DialogTitle className="text-xl font-semibold absolute left-1/2 -translate-x-1/2">{activeTab}</DialogTitle>
-          <Button
-              className="bg-orange-500 hover:bg-orange-600 text-white font-bold"
-              onClick={handleAfronden}
-              disabled={isSubmitting}
-          >
-              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'WERKBON AFRONDEN'}
-          </Button>
+          <div className="flex items-center gap-2">
+            {melding && selectedProjectId && (
+              <Link href={`/navigation-module?projectId=${selectedProjectId}&lat=${melding.latitude}&lng=${melding.longitude}&straat=${encodeURIComponent(melding.straatnaam || '')}`}>
+                  <Button variant="outline" size="icon" className="h-8 w-8">
+                      <Navigation className="h-4 w-4" />
+                  </Button>
+              </Link>
+            )}
+            <Button
+                className="bg-orange-500 hover:bg-orange-600 text-white font-bold"
+                onClick={handleAfronden}
+                disabled={isSubmitting}
+            >
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'WERKBON AFRONDEN'}
+            </Button>
+          </div>
         </DialogHeader>
 
-        <div className={cn("flex-1 grid grid-cols-1 min-h-0 bg-slate-50 dark:bg-slate-900/50", activeTab === 'Locatiegegevens' ? 'grid-rows-1' : 'md:grid-cols-[360px_1fr]')}>
-            <aside className={cn("bg-white dark:bg-card p-6 flex-col gap-6 border-r overflow-y-auto hidden", activeTab !== 'Locatiegegevens' && 'md:flex')}>
-                <div className="flex items-start justify-between gap-4">
-                    <h2 className="font-bold text-lg">{`Werkbon: ${melding.intakenummer}`}</h2>
-                     {melding && selectedProjectId && (
-                        <Link href={`/navigation-module?projectId=${selectedProjectId}&lat=${melding.latitude}&lng=${melding.longitude}&straat=${encodeURIComponent(melding.straatnaam || '')}`}>
-                            <Button variant="outline" size="icon" className="h-8 w-8">
-                                <Navigation className="h-4 w-4" />
-                            </Button>
-                        </Link>
-                    )}
-                </div>
-                <nav className="flex flex-col gap-1">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 bg-slate-50 dark:bg-slate-900/50">
+            <div className="px-6 pt-4 overflow-x-auto">
+                <TabsList>
                     {werkbonNavItems.map(item => (
-                        <Button 
-                            key={item.label}
-                            variant={activeTab === item.label ? 'secondary' : 'ghost'}
-                            className="justify-between items-center h-12 text-base"
-                            onClick={() => setActiveTab(item.label)}
-                        >
-                          <div className="flex items-center gap-3">
-                              <item.icon className="h-5 w-5 text-primary" />
-                              <span>{item.label}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {item.label === 'Documenten' && uploadedFiles.length > 0 && (
-                                <Badge variant="secondary">{uploadedFiles.length}</Badge>
-                            )}
-                            {item.label === 'Foto\'s' && uploadedPhotos.length > 0 && (
-                                <Badge variant="secondary">{uploadedPhotos.length}</Badge>
-                            )}
-                            {item.label === 'Werkzaamheden' && tasks.length > 0 && <Badge variant="secondary">{tasks.filter(t => !t.completed).length}</Badge>}
-                          </div>
-                        </Button>
+                        <TabsTrigger key={item.label} value={item.label} className="gap-2">
+                            <item.icon className="h-4 w-4 shrink-0" />
+                            <span>{item.label}</span>
+                            {item.label === 'Documenten' && uploadedFiles.length > 0 && <Badge variant="secondary" className="ml-1">{uploadedFiles.length}</Badge>}
+                            {item.label === "Foto's" && uploadedPhotos.length > 0 && <Badge variant="secondary" className="ml-1">{uploadedPhotos.length}</Badge>}
+                            {item.label === 'Werkzaamheden' && tasks.length > 0 && tasks.filter(t => !t.completed).length > 0 && <Badge variant="secondary" className="ml-1">{tasks.filter(t => !t.completed).length}</Badge>}
+                        </TabsTrigger>
                     ))}
-                </nav>
-            </aside>
+                </TabsList>
+            </div>
             
-             <main className={cn("p-6 flex flex-col", activeTab !== 'Locatiegegevens' && "overflow-y-auto")}>
-                {activeTab === 'Werkzaamheden' && (
+            <div className="flex-1 overflow-y-auto p-6">
+                <TabsContent value="Werkzaamheden" className="mt-0">
                     <div className="space-y-6">
                         <div>
                             <Label className="text-sm font-semibold text-gray-500">Werkomschrijving / Melding</Label>
@@ -844,82 +831,84 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                             Voeg taak toe
                         </Button>
                     </div>
-                )}
-                {activeTab === 'Locatiegegevens' && (
-                  <div className="grid md:grid-cols-[400px_1fr] gap-0 h-full -m-6">
-                    <div className="p-6 space-y-4 overflow-y-auto bg-background border-r">
-                      <Collapsible>
-                        <CollapsibleTrigger asChild>
-                          <Button className="w-full justify-between shadow-md" type="button">
-                            <div className="flex items-center gap-2">
-                              <Info className="h-4 w-4" />
-                              Locatie Details
-                            </div>
-                            <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:rotate-180" />
-                          </Button>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <Card className="mt-0 shadow-none border-t-0 rounded-t-none">
-                            <CardContent className="p-4 pt-4">
-                              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                                <div className="font-semibold text-muted-foreground col-span-2">Adres</div>
-                                <div className="font-medium col-span-2">{`${melding.straatnaam || ''}, ${melding.postcode || ''} ${melding.plaats || ''}`}</div>
-                                <div className="font-semibold text-muted-foreground">Wijk</div>
-                                <div className="font-medium">{melding.wijk || '-'}</div>
-                                <div className="font-semibold text-muted-foreground">Coördinaten</div>
-                                <div className="font-medium">{melding.latitude?.toFixed(5)}, {melding.longitude?.toFixed(5)}</div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </CollapsibleContent>
-                      </Collapsible>
-                      <Collapsible>
-                        <CollapsibleTrigger asChild>
-                          <Button className="w-full justify-between shadow-md" type="button">
-                            <div className="flex items-center gap-2">
-                              <Trash2 className="h-4 w-4" />
-                              Objecten in de buurt ({nearbyObjects.length})
-                            </div>
-                             <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:rotate-180" />
-                          </Button>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <Card className="mt-0 shadow-none border-t-0 rounded-t-none">
-                            <CardContent className="pt-4 p-4">
-                              <div className="max-h-64 overflow-y-auto pr-2">
-                                {isLoadingObjects ? (
-                                  <p className="text-sm text-muted-foreground">Objecten laden...</p>
-                                ) : nearbyObjects.length > 0 ? (
-                                  <ul className="space-y-2">
-                                    {nearbyObjects.map(obj => (
-                                      <li key={obj.id} className="text-sm flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                          <Trash2 className="h-4 w-4 text-muted-foreground" />
-                                          <span>{obj.id} ({obj.locatieSubType || 'Onbekend type'})</span>
-                                        </div>
-                                        <Badge variant="outline">{Math.round(turf.distance(turf.point([melding.longitude, melding.latitude]), turf.point([obj.longitude, obj.latitude]), { units: 'meters' }))}m</Badge>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                ) : (
-                                  <p className="text-sm text-muted-foreground">Geen objecten gevonden.</p>
-                                )}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </CollapsibleContent>
-                      </Collapsible>
+                </TabsContent>
+
+                <TabsContent value="Locatiegegevens" className="mt-0 h-full">
+                     <div className="grid md:grid-cols-[400px_1fr] gap-0 h-full -m-6">
+                        <div className="p-6 space-y-4 overflow-y-auto bg-background border-r">
+                        <Collapsible defaultOpen>
+                            <CollapsibleTrigger asChild>
+                            <Button className="w-full justify-between shadow-md" type="button">
+                                <div className="flex items-center gap-2">
+                                <Info className="h-4 w-4" />
+                                Locatie Details
+                                </div>
+                                <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:rotate-180" />
+                            </Button>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                            <Card className="mt-0 shadow-none border-t-0 rounded-t-none">
+                                <CardContent className="p-4 pt-4">
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                                    <div className="font-semibold text-muted-foreground col-span-2">Adres</div>
+                                    <div className="font-medium col-span-2">{`${melding.straatnaam || ''}, ${melding.postcode || ''} ${melding.plaats || ''}`}</div>
+                                    <div className="font-semibold text-muted-foreground">Wijk</div>
+                                    <div className="font-medium">{melding.wijk || '-'}</div>
+                                    <div className="font-semibold text-muted-foreground">Coördinaten</div>
+                                    <div className="font-medium">{melding.latitude?.toFixed(5)}, {melding.longitude?.toFixed(5)}</div>
+                                </div>
+                                </CardContent>
+                            </Card>
+                            </CollapsibleContent>
+                        </Collapsible>
+                        <Collapsible defaultOpen>
+                            <CollapsibleTrigger asChild>
+                            <Button className="w-full justify-between shadow-md" type="button">
+                                <div className="flex items-center gap-2">
+                                <Trash2 className="h-4 w-4" />
+                                Objecten in de buurt ({nearbyObjects.length})
+                                </div>
+                                <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:rotate-180" />
+                            </Button>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                            <Card className="mt-0 shadow-none border-t-0 rounded-t-none">
+                                <CardContent className="pt-4 p-4">
+                                <div className="max-h-64 overflow-y-auto pr-2">
+                                    {isLoadingObjects ? (
+                                    <p className="text-sm text-muted-foreground">Objecten laden...</p>
+                                    ) : nearbyObjects.length > 0 ? (
+                                    <ul className="space-y-2">
+                                        {nearbyObjects.map(obj => (
+                                        <li key={obj.id} className="text-sm flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                            <Trash2 className="h-4 w-4 text-muted-foreground" />
+                                            <span>{obj.id} ({obj.locatieSubType || 'Onbekend type'})</span>
+                                            </div>
+                                            <Badge variant="outline">{Math.round(turf.distance(turf.point([melding.longitude, melding.latitude]), turf.point([obj.longitude, obj.latitude]), { units: 'meters' }))}m</Badge>
+                                        </li>
+                                        ))}
+                                    </ul>
+                                    ) : (
+                                    <p className="text-sm text-muted-foreground">Geen objecten gevonden.</p>
+                                    )}
+                                </div>
+                                </CardContent>
+                            </Card>
+                            </CollapsibleContent>
+                        </Collapsible>
+                        </div>
+                        <div className="h-full w-full">
+                        <MapboxView
+                            longitude={melding.longitude}
+                            latitude={melding.latitude}
+                            objects={nearbyObjects}
+                        />
+                        </div>
                     </div>
-                    <div className="h-full w-full">
-                      <MapboxView
-                        longitude={melding.longitude}
-                        latitude={melding.latitude}
-                        objects={nearbyObjects}
-                      />
-                    </div>
-                  </div>
-                )}
-                {activeTab === 'Documenten' && (
+                </TabsContent>
+                
+                <TabsContent value="Documenten" className="mt-0">
                     <Card>
                         <CardHeader className="flex-row items-center justify-between">
                             <CardTitle>Documenten</CardTitle>
@@ -970,9 +959,10 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                             </div>
                         </CardContent>
                     </Card>
-                )}
-                 {activeTab === 'Foto\'s' && (
-                    <Card>
+                </TabsContent>
+
+                <TabsContent value="Foto's" className="mt-0">
+                     <Card>
                         <CardHeader className="flex-row items-center justify-between">
                             <CardTitle>Foto's</CardTitle>
                             <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('melding-photo-input')?.click()} disabled={isUploading}>
@@ -1019,8 +1009,9 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                             </div>
                         </CardContent>
                     </Card>
-                )}
-                 {activeTab === 'Hoeveelheid' && (
+                </TabsContent>
+
+                <TabsContent value="Hoeveelheid" className="mt-0">
                     <Card>
                         <CardHeader>
                             <CardTitle>Geregistreerde Hoeveelheden</CardTitle>
@@ -1076,8 +1067,9 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                             </div>
                         </CardContent>
                     </Card>
-                )}
-                 {activeTab === 'Uren' && (
+                </TabsContent>
+
+                 <TabsContent value="Uren" className="mt-0">
                     <Card>
                         <CardHeader>
                             <CardTitle>Urenregistratie</CardTitle>
@@ -1099,9 +1091,9 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                             </div>
                         </CardContent>
                     </Card>
-                )}
-            </main>
-        </div>
+                </TabsContent>
+            </div>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
