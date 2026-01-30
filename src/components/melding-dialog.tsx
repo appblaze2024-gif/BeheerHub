@@ -756,7 +756,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
           </Button>
         </DialogHeader>
 
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-[360px_1fr] min-h-0 bg-slate-50 dark:bg-slate-900/50">
+        <div className={cn("flex-1 grid grid-cols-1 min-h-0 bg-slate-50 dark:bg-slate-900/50", activeTab === 'Locatiegegevens' ? 'md:grid-cols-[auto_1fr]' : 'md:grid-cols-[360px_1fr]')}>
             <aside className="bg-white dark:bg-card p-6 flex flex-col gap-6 border-r overflow-y-auto">
                 <div className="flex items-center justify-between gap-4">
                     <h3 className="font-bold text-lg">{`Werkbon: ${melding.intakenummer}`}</h3>
@@ -853,64 +853,63 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                     <MapboxView
                       longitude={melding.longitude}
                       latitude={melding.latitude}
-                      objects={nearbyObjects}
                     />
-                    <div className="absolute top-4 left-4 z-10 space-y-2 w-80">
-                      <Collapsible defaultOpen>
-                        <CollapsibleTrigger asChild>
-                          <Button className="w-full justify-start shadow-md">
-                            <Info className="mr-2 h-4 w-4" />
-                            Locatie Details
-                          </Button>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <Card className="mt-2 shadow-lg">
-                            <CardContent className="p-4 pt-4">
-                              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                                <div className="font-semibold text-muted-foreground col-span-2">Adres</div>
-                                <div className="font-medium col-span-2">{`${melding.straatnaam || ''}, ${melding.postcode || ''} ${melding.plaats || ''}`}</div>
-                                <div className="font-semibold text-muted-foreground">Wijk</div>
-                                <div className="font-medium">{melding.wijk || '-'}</div>
-                                <div className="font-semibold text-muted-foreground">Coördinaten</div>
-                                <div className="font-medium">{melding.latitude?.toFixed(5)}, {melding.longitude?.toFixed(5)}</div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </CollapsibleContent>
-                      </Collapsible>
-                      <Collapsible defaultOpen>
-                        <CollapsibleTrigger asChild>
-                          <Button className="w-full justify-start shadow-md">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Objecten in de buurt ({nearbyObjects.length})
-                          </Button>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <Card className="mt-2 shadow-lg">
-                            <CardContent className="pt-4 p-4">
-                              <div className="max-h-48 overflow-y-auto pr-2">
-                                {isLoadingObjects ? (
-                                  <p className="text-sm text-muted-foreground">Objecten laden...</p>
-                                ) : nearbyObjects.length > 0 ? (
-                                  <ul className="space-y-2">
-                                    {nearbyObjects.map(obj => (
-                                      <li key={obj.id} className="text-sm flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                          <Trash2 className="h-4 w-4 text-muted-foreground" />
-                                          <span>{obj.id} ({obj.locatieSubType || 'Onbekend type'})</span>
-                                        </div>
-                                        <Badge variant="outline">{Math.round(turf.distance(turf.point([melding.longitude, melding.latitude]), turf.point([obj.longitude, obj.latitude]), { units: 'meters' }))}m</Badge>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                ) : (
-                                  <p className="text-sm text-muted-foreground">Geen objecten gevonden.</p>
-                                )}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </CollapsibleContent>
-                      </Collapsible>
+                     <div className="absolute top-4 left-4 z-10 space-y-2 w-80">
+                        <Collapsible>
+                            <CollapsibleTrigger asChild>
+                                <Button className="w-full justify-start shadow-md">
+                                    <Info className="mr-2 h-4 w-4" />
+                                    Locatie Details
+                                </Button>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                                <Card className="mt-2 shadow-lg">
+                                <CardContent className="p-4 pt-4">
+                                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                                    <div className="font-semibold text-muted-foreground col-span-2">Adres</div>
+                                    <div className="font-medium col-span-2">{`${melding.straatnaam || ''}, ${melding.postcode || ''} ${melding.plaats || ''}`}</div>
+                                    <div className="font-semibold text-muted-foreground">Wijk</div>
+                                    <div className="font-medium">{melding.wijk || '-'}</div>
+                                    <div className="font-semibold text-muted-foreground">Coördinaten</div>
+                                    <div className="font-medium">{melding.latitude?.toFixed(5)}, {melding.longitude?.toFixed(5)}</div>
+                                    </div>
+                                </CardContent>
+                                </Card>
+                            </CollapsibleContent>
+                        </Collapsible>
+                        <Collapsible>
+                            <CollapsibleTrigger asChild>
+                                <Button className="w-full justify-start shadow-md">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Objecten in de buurt ({nearbyObjects.length})
+                                </Button>
+                            </CollapsibleTrigger>
+                             <CollapsibleContent>
+                                <Card className="mt-2 shadow-lg">
+                                <CardContent className="pt-4 p-4">
+                                    <div className="max-h-48 overflow-y-auto pr-2">
+                                    {isLoadingObjects ? (
+                                        <p className="text-sm text-muted-foreground">Objecten laden...</p>
+                                    ) : nearbyObjects.length > 0 ? (
+                                        <ul className="space-y-2">
+                                        {nearbyObjects.map(obj => (
+                                            <li key={obj.id} className="text-sm flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <Trash2 className="h-4 w-4 text-muted-foreground" />
+                                                <span>{obj.id} ({obj.locatieSubType || 'Onbekend type'})</span>
+                                            </div>
+                                            <Badge variant="outline">{Math.round(turf.distance(turf.point([melding.longitude, melding.latitude]), turf.point([obj.longitude, obj.latitude]), { units: 'meters' }))}m</Badge>
+                                            </li>
+                                        ))}
+                                        </ul>
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground">Geen objecten gevonden.</p>
+                                    )}
+                                    </div>
+                                </CardContent>
+                                </Card>
+                            </CollapsibleContent>
+                        </Collapsible>
                     </div>
                   </div>
                 )}
