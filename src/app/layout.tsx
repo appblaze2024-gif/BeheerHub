@@ -18,6 +18,8 @@ import { Toaster } from '@/components/ui/toaster';
 import { NavigationUIProvider, useNavigationUI } from '@/context/navigation-ui-context';
 import { ProjectProvider, useProject } from '@/context/project-context';
 import { signOut } from 'firebase/auth';
+import { format } from 'date-fns';
+import { nl } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from '@/components/ui/sheet';
 import { Menu, Search, Bell, User, Settings } from 'lucide-react';
@@ -139,7 +141,51 @@ function Header() {
 function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
   const { isHeaderVisible } = useNavigationUI();
   const { isUserLoading } = useUser();
-  const { isLoading: isProfileLoading } = useProfile();
+  const { profile, isLoading: isProfileLoading } = useProfile();
+  const auth = useAuth();
+
+  useEffect(() => {
+    if (isProfileLoading || !profile || profile.role !== 'medewerkers' || !profile.urenPerDag) {
+      return;
+    }
+
+    const checkLogoutTime = () => {
+      const now = new Date();
+      const dayName = format(now, 'eeee', { locale: nl }).toLowerCase() as keyof NonNullable<typeof profile.urenPerDag>;
+      
+      const shift = profile.urenPerDag?.[dayName];
+
+      if (shift && shift.eind) {
+        try {
+          const [hours, minutes] = shift.eind.split(':').map(Number);
+          
+          if (isNaN(hours) || isNaN(minutes)) {
+              console.error("Invalid time format in user profile:", shift.eind);
+              return;
+          }
+
+          const endTimeToday = new Date();
+          endTimeToday.setHours(hours, minutes, 0, 0);
+
+          if (now > endTimeToday) {
+            if (auth.currentUser?.metadata.lastSignInTime) {
+                const lastLoginTime = new Date(auth.currentUser.metadata.lastSignInTime).getTime();
+                if (lastLoginTime > endTimeToday.getTime()) {
+                    return; 
+                }
+            }
+            signOut(auth);
+          }
+        } catch (e) {
+          console.error("Error parsing shift end time for auto-logout:", e);
+        }
+      }
+    };
+
+    const intervalId = setInterval(checkLogoutTime, 60 * 1000);
+
+    return () => clearInterval(intervalId);
+  }, [profile, isProfileLoading, auth]);
   
   if (isUserLoading || isProfileLoading) {
       return (
