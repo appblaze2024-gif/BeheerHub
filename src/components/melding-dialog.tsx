@@ -46,6 +46,7 @@ import { Label } from './ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from './ui/badge';
 import { useToast } from './ui/use-toast';
+import { cn } from '@/lib/utils';
 
 
 interface Suggestion {
@@ -739,7 +740,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                         </div>
                          <div className="flex items-center gap-2">
                             <span className='font-semibold'>Categorie:</span>
-                            <span>{melding.hoofdcategorie} &gt; {melding.subcategorie}</span>
+                            <span>{melding.hoofdcategorie} {'>'} {melding.subcategorie}</span>
                         </div>
                     </div>
                 </div>
@@ -766,7 +767,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                 </nav>
             </aside>
             
-            <main className="p-6 overflow-y-auto">
+            <main className={cn("p-6", activeTab !== 'Locatiegegevens' && "overflow-y-auto")}>
                 {activeTab === 'Werkzaamheden' && (
                     <div className="space-y-6">
                         <div>
@@ -816,7 +817,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                     </div>
                 )}
                 {activeTab === 'Locatiegegevens' && (
-                    <div className="space-y-6">
+                    <div className="flex flex-col h-full gap-6">
                         <Card>
                             <CardHeader>
                                 <CardTitle className="text-lg">Locatie Details</CardTitle>
@@ -837,7 +838,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                                 </div>
                             </CardContent>
                         </Card>
-                        <div className="aspect-video w-full rounded-lg overflow-hidden border">
+                        <div className="flex-1 min-h-0 rounded-lg overflow-hidden border">
                             <MapboxView
                                 longitude={melding.longitude}
                                 latitude={melding.latitude}
