@@ -101,7 +101,6 @@ const werkbonNavItems = [
     { label: 'Foto\'s', icon: Camera },
     { label: 'Hoeveelheid', icon: Package },
     { label: 'Uren', icon: Clock },
-    { label: 'Kilometers / parkeerkosten', icon: Car },
 ]
 
 
@@ -706,14 +705,14 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="p-0 h-screen w-screen max-w-full flex flex-col">
-         <DialogHeader className="p-4 border-b bg-slate-100 dark:bg-slate-900 flex-row items-center justify-between shrink-0">
+         <DialogHeader className="p-4 border-b bg-gray-100 dark:bg-gray-900/50 flex-row items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" className="text-slate-800 dark:text-slate-200" onClick={() => onOpenChange(false)}>
+            <Button variant="ghost" size="icon" className="text-gray-700 dark:text-gray-300" onClick={() => onOpenChange(false)}>
                 <ChevronLeft className="h-6 w-6" />
             </Button>
-            <DialogTitle className="text-xl font-bold text-slate-800 dark:text-slate-200">Werkbon</DialogTitle>
+            <DialogTitle className="text-xl font-bold">Werkbon</DialogTitle>
           </div>
-          <h2 className="text-xl font-semibold absolute left-1/2 -translate-x-1/2 text-slate-800 dark:text-slate-200">{activeTab}</h2>
+          <h2 className="text-xl font-semibold absolute left-1/2 -translate-x-1/2">{activeTab}</h2>
           <div/>
         </DialogHeader>
 
@@ -732,7 +731,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                         </div>
                          <div className="flex items-center gap-2">
                             <span className='font-semibold'>Categorie:</span>
-                            <span>{melding.hoofdcategorie} {'&gt;'} {melding.subcategorie}</span>
+                            <span>{melding.hoofdcategorie} {'>'} {melding.subcategorie}</span>
                         </div>
                     </div>
                 </div>
@@ -1019,13 +1018,10 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                         </CardContent>
                     </Card>
                 )}
-                {activeTab === 'Kilometers / parkeerkosten' && (
-                    <div className="text-center text-muted-foreground p-8">Kilometer- en kostenregistratie komt hier.</div>
-                )}
             </main>
         </div>
 
-         <DialogFooter className="bg-slate-100 dark:bg-slate-900 p-4 shrink-0 border-t">
+         <DialogFooter className="bg-slate-100 dark:bg-slate-800 p-4 shrink-0 border-t">
             <Button
                 size="lg"
                 className="w-full bg-orange-500 hover:bg-orange-600 text-white text-lg font-bold"
