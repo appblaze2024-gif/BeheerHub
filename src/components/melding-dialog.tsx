@@ -28,7 +28,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -41,7 +40,6 @@ import { Input } from '@/components/ui/input';
 import { useUser } from '@/firebase';
 import { nl } from 'date-fns/locale';
 import { Checkbox } from './ui/checkbox';
-import { Separator } from './ui/separator';
 import { Label } from './ui/label';
 
 interface Suggestion {
@@ -392,10 +390,111 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
   };
 
   const isUploading = Object.keys(uploadProgress).length > 0;
-  const isReadOnly = !!melding && false; // Future use for read-only roles
-  const [activeTab, setActiveTab] = React.useState('Werkzaamheden');
 
+  if (!melding) {
+    // --- RENDER CREATION FORM DIALOG ---
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-4xl">
+                <DialogHeader>
+                    <DialogTitle>Nieuwe Melding</DialogTitle>
+                    <DialogDescription>
+                      Selecteer een locatie op de kaart en vul de details in.
+                    </DialogDescription>
+                </DialogHeader>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                    <div className="space-y-4">
+                        <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (
+                          <FormItem>
+                              <FormLabel>Hoofdcategorie*</FormLabel>
+                              <Select onValueChange={(value) => { field.onChange(value); form.setValue('subcategorie', ''); }} value={field.value}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Selecteer een hoofdcategorie" /></SelectTrigger></FormControl>
+                                <SelectContent>{hoofdcategorieOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                              </Select>
+                              <FormMessage />
+                          </FormItem>
+                        )} />
+                        
+                        <FormField control={form.control} name="subcategorie" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Subcategorie*</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value} disabled={!hoofdcategorie}>
+                              <FormControl><SelectTrigger><SelectValue placeholder="Selecteer een subcategorie" /></SelectTrigger></FormControl>
+                              <SelectContent>{(subcategorieOptions[hoofdcategorie] || []).map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
 
+                        <FormField control={form.control} name="extra_informatie" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Omschrijving*</FormLabel>
+                                <FormControl><Textarea rows={5} placeholder="Omschrijf de melding..." {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        
+                        <div className='space-y-2'>
+                            <FormLabel>Foto's</FormLabel>
+                            <Button type="button" variant="outline" disabled={isUploading || isSubmitting} onClick={() => document.getElementById('melding-file-input')?.click()}>
+                                <Upload className="mr-2 h-4 w-4" /> Upload een foto
+                            </Button>
+                            <input type="file" id="melding-file-input" onChange={handleFileChange} className="hidden" multiple accept="image/*" />
+                             {Object.entries(uploadProgress).map(([name, progress]) => (
+                              <div key={name} className="space-y-1 mt-2">
+                                <p className="text-sm font-medium">{name}</p>
+                                <Progress value={progress} className="h-2 mt-1" />
+                              </div>
+                            ))}
+                            {uploadedFiles.length > 0 && (
+                                <div className='border rounded-md p-2 max-h-32 overflow-auto space-y-2'>
+                                    {uploadedFiles.map(file => (
+                                        <div key={file.storagePath} className="flex items-center justify-between text-sm">
+                                            <a href={file.url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline flex items-center gap-2">
+                                                <FileIcon className='h-4 w-4 shrink-0'/> {file.name}
+                                            </a>
+                                            <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleFileDelete(file)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        <FormItem>
+                            <FormLabel>Locatie*</FormLabel>
+                            <div className="relative w-full">
+                                <Input placeholder="Zoek een adres..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} autoComplete="off" />
+                                {isSearching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
+                                {suggestions.length > 0 && (
+                                    <div className="absolute z-10 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                        {suggestions.map((suggestion) => (
+                                        <div key={suggestion.place_id} onClick={() => handleSuggestionClick(suggestion)} className="px-4 py-2 text-sm cursor-pointer hover:bg-muted">{suggestion.display_name}</div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            <div className='aspect-video w-full border rounded-md overflow-hidden mt-2'>
+                                <MapboxView longitude={location?.longitude} latitude={location?.latitude} />
+                            </div>
+                        </FormItem>
+                    </div>
+                    <DialogFooter className="md:col-span-2">
+                        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Annuleren</Button>
+                        <Button type="submit" disabled={isSubmitting || isUploading || !location}>
+                          {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Aanmaken...</> : 'Melding Aanmaken'}
+                        </Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+            </DialogContent>
+        </Dialog>
+    )
+  }
+
+  // --- RENDER WERKBON VIEW ---
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="p-0 h-screen w-screen max-w-full top-0 left-0 translate-x-0 translate-y-0 rounded-none flex flex-col">
@@ -405,9 +504,14 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
             {melding?.straatnaam}, {melding?.plaats} | Melder: {melding?.melder} | Categorie: {melding?.hoofdcategorie} &gt; {melding?.subcategorie}
           </DialogDescription>
         </DialogHeader>
+        <DialogClose asChild>
+            <Button variant="ghost" size="icon" className="absolute right-4 top-4 h-8 w-8">
+                <X className="h-5 w-5" />
+                <span className="sr-only">Sluiten</span>
+            </Button>
+        </DialogClose>
         
         <div className="flex-1 grid grid-cols-1 md:grid-cols-[250px_1fr] min-h-0">
-            {/* Sidebar */}
             <aside className='p-4 border-r flex flex-col justify-between'>
                 <nav className="flex flex-col gap-1">
                     {werkbonNavItems.map(item => (
@@ -425,7 +529,6 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                 <Button size="lg">Werkbon afronden</Button>
             </aside>
             
-            {/* Main Content */}
             <main className="p-6 overflow-y-auto">
                  <h3 className="text-xl font-semibold mb-4">{melding?.extra_informatie}</h3>
                 
