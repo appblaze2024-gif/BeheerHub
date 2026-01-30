@@ -761,7 +761,14 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
         <div className={cn("flex-1 grid grid-cols-1 min-h-0 bg-slate-50 dark:bg-slate-900/50", activeTab === 'Locatiegegevens' ? 'grid-rows-1' : 'md:grid-cols-[360px_1fr]')}>
             <aside className={cn("bg-white dark:bg-card p-6 flex flex-col gap-6 border-r overflow-y-auto", activeTab === 'Locatiegegevens' && 'hidden')}>
                 <div className="flex items-start justify-between gap-4">
-                    <h3 className="font-bold text-lg">{`Werkbon: ${melding.intakenummer}`}</h3>
+                    <h2 className="font-bold text-lg">{`Werkbon: ${melding.intakenummer}`}</h2>
+                     {melding && selectedProjectId && (
+                        <Link href={`/navigation-module?projectId=${selectedProjectId}&lat=${melding.latitude}&lng=${melding.longitude}&straat=${encodeURIComponent(melding.straatnaam || '')}`}>
+                            <Button variant="outline" size="icon" className="h-8 w-8">
+                                <Navigation className="h-4 w-4" />
+                            </Button>
+                        </Link>
+                    )}
                 </div>
                 <nav className="flex flex-col gap-1">
                     {werkbonNavItems.map(item => (
@@ -840,12 +847,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                 )}
                 {activeTab === 'Locatiegegevens' && (
                   <div className="h-full w-full relative">
-                    <MapboxView
-                      longitude={melding.longitude}
-                      latitude={melding.latitude}
-                      objects={nearbyObjects}
-                    />
-                     <div className="absolute top-4 left-4 z-10 space-y-2 w-80">
+                    <div className="absolute top-4 left-4 z-10 space-y-2 w-80">
                         <Collapsible defaultOpen={false}>
                             <CollapsibleTrigger asChild>
                                 <Button className="w-full justify-start shadow-md">
@@ -902,6 +904,11 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                             </CollapsibleContent>
                         </Collapsible>
                     </div>
+                    <MapboxView
+                      longitude={melding.longitude}
+                      latitude={melding.latitude}
+                      objects={nearbyObjects}
+                    />
                   </div>
                 )}
                 {activeTab === 'Documenten' && (

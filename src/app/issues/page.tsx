@@ -140,7 +140,7 @@ function MeldingenList({ meldingen, onMeldingClick, projectId }: { meldingen: Me
                          <div className="flex items-center gap-2">
                              <span className="text-xs text-muted-foreground">{melding.wijk || '-'}</span>
                              {projectId && (
-                                 <Link href={`/navigation-module?projectId=${projectId}&lat=${melding.latitude}&lng=${melding.longitude}`} passHref>
+                                 <Link href={`/navigation-module?projectId=${projectId}&lat=${melding.latitude}&lng=${melding.longitude}&straat=${encodeURIComponent(melding.straatnaam || '')}`} passHref>
                                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
                                          <Navigation className="h-4 w-4" />
                                      </Button>

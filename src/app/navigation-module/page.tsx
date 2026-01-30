@@ -71,11 +71,13 @@ const routeAreaOutlineLayer: LineLayer = {
 function NavigatingView({ 
     objectsOnRoute, 
     onExit,
-    initialUserLocation 
+    initialUserLocation,
+    destinationAddress
 }: { 
     objectsOnRoute: MapObject[], 
     onExit: () => void,
     initialUserLocation: { latitude: number; longitude: number; } | null
+    destinationAddress?: string | null;
 }) {
   const mapRef = React.useRef<MapRef>(null);
   const [userLocation, setUserLocation] = React.useState<{ latitude: number, longitude: number, speed: number | null } | null>(initialUserLocation ? { ...initialUserLocation, speed: 0 } : null);
@@ -95,6 +97,8 @@ function NavigatingView({
   });
 
   const nextObject = objectsOnRoute[currentObjectIndex];
+  const isSinglePointNavigation = objectsOnRoute.length === 1 && destinationAddress;
+
 
   // Effect for Geolocation
   React.useEffect(() => {
@@ -228,13 +232,19 @@ function NavigatingView({
         )}
          <Card className="w-72">
             <CardHeader className="p-4">
-                <CardTitle className="text-base">Voortgang</CardTitle>
+                <CardTitle className="text-base">
+                    {isSinglePointNavigation ? "Bestemming" : "Voortgang"}
+                </CardTitle>
             </CardHeader>
             <CardContent className="p-4 pt-0">
-                <div className="flex justify-between items-center mb-2">
-                    <p className="text-sm">{completedObjects.length} / {objectsOnRoute.length} objecten</p>
+                <div className="flex justify-between items-center mb-2 min-h-[20px]">
+                    {isSinglePointNavigation ? (
+                        <p className="text-sm font-medium">{destinationAddress}</p>
+                    ) : (
+                        <p className="text-sm">{completedObjects.length} / {objectsOnRoute.length} objecten</p>
+                    )}
                 </div>
-                <Progress value={(completedObjects.length / objectsOnRoute.length) * 100} />
+                {!isSinglePointNavigation && <Progress value={(completedObjects.length / objectsOnRoute.length) * 100} />}
                 <div className="flex items-center justify-center gap-2 mt-4">
                     <span className="text-5xl font-bold">{speedKmh}</span>
                     <span className="text-lg text-muted-foreground">km/h</span>
@@ -271,12 +281,14 @@ export default function StartNavigationPage() {
   const [navigationState, setNavigationState] = React.useState<'setup' | 'navigating'>('setup');
   const [objectsOnRoute, setObjectsOnRoute] = React.useState<MapObject[]>([]);
   const [isStarting, setIsStarting] = React.useState(false);
+  const [destinationAddress, setDestinationAddress] = React.useState<string | null>(null);
   
   const mapRef = React.useRef<MapRef>(null);
 
   React.useEffect(() => {
     const lat = searchParams.get('lat');
     const lng = searchParams.get('lng');
+    const straat = searchParams.get('straat');
     const projectIdFromUrl = searchParams.get('projectId');
     
     if (projectIdFromUrl && selectedProjectId !== projectIdFromUrl) {
@@ -288,8 +300,10 @@ export default function StartNavigationPage() {
         id: `destination-${lat}-${lng}`,
         latitude: parseFloat(lat),
         longitude: parseFloat(lng),
+        straatnaam: straat ? decodeURIComponent(straat) : undefined,
       };
       setObjectsOnRoute([meldingObject]);
+      setDestinationAddress(straat ? decodeURIComponent(straat) : null);
       setNavigationState('navigating');
     }
   }, [searchParams, selectedProjectId, setSelectedProjectId, navigationState]);
@@ -448,6 +462,7 @@ export default function StartNavigationPage() {
    const handleExitNavigation = () => {
     setNavigationState('setup');
     setObjectsOnRoute([]);
+    setDestinationAddress(null);
     router.push('/navigation-module');
   };
 
@@ -464,7 +479,7 @@ export default function StartNavigationPage() {
   }
   
   if (navigationState === 'navigating') {
-    return <NavigatingView objectsOnRoute={objectsOnRoute} onExit={handleExitNavigation} initialUserLocation={userLocation} />;
+    return <NavigatingView objectsOnRoute={objectsOnRoute} onExit={handleExitNavigation} initialUserLocation={userLocation} destinationAddress={destinationAddress} />;
   }
 
   return (
