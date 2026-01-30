@@ -763,12 +763,10 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                 <div className="flex items-start justify-between gap-4">
                     <h2 className="font-bold text-lg">{`Werkbon: ${melding.intakenummer}`}</h2>
                      {melding && selectedProjectId && (
-                        <Link href={`/navigation-module?projectId=${selectedProjectId}&lat=${melding.latitude}&lng=${melding.longitude}&straat=${encodeURIComponent(melding.straatnaam || '')}`} legacyBehavior>
-                            <a target="_blank" rel="noopener noreferrer">
-                                <Button variant="outline" size="icon" className="h-8 w-8">
-                                    <Navigation className="h-4 w-4" />
-                                </Button>
-                            </a>
+                        <Link href={`/navigation-module?projectId=${selectedProjectId}&lat=${melding.latitude}&lng=${melding.longitude}&straat=${encodeURIComponent(melding.straatnaam || '')}`}>
+                            <Button variant="outline" size="icon" className="h-8 w-8">
+                                <Navigation className="h-4 w-4" />
+                            </Button>
                         </Link>
                     )}
                 </div>
@@ -850,7 +848,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                 {activeTab === 'Locatiegegevens' && (
                   <div className="grid md:grid-cols-[400px_1fr] gap-0 h-full -m-6">
                     <div className="p-6 space-y-4 overflow-y-auto bg-background border-r">
-                      <Collapsible defaultOpen>
+                      <Collapsible>
                         <CollapsibleTrigger asChild>
                           <Button className="w-full justify-between shadow-md" type="button">
                             <div className="flex items-center gap-2">
@@ -875,7 +873,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                           </Card>
                         </CollapsibleContent>
                       </Collapsible>
-                      <Collapsible defaultOpen>
+                      <Collapsible>
                         <CollapsibleTrigger asChild>
                           <Button className="w-full justify-between shadow-md" type="button">
                             <div className="flex items-center gap-2">
