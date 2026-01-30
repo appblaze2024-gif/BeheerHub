@@ -746,7 +746,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                 <ChevronLeft className="h-6 w-6" />
             </Button>
           </div>
-          <h2 className="text-xl font-semibold absolute left-1/2 -translate-x-1/2">{activeTab}</h2>
+          <DialogTitle className="text-xl font-semibold absolute left-1/2 -translate-x-1/2">{activeTab}</DialogTitle>
           <Button
               className="bg-orange-500 hover:bg-orange-600 text-white font-bold"
               onClick={handleAfronden}
