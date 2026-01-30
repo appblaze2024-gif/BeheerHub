@@ -141,6 +141,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
   const [newHoeveelheidType, setNewHoeveelheidType] = React.useState('');
   const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
   const [newHoeveelheidEenheid, setNewHoeveelheidEenheid] = React.useState('zak');
+  const [gewerkteMinuten, setGewerkteMinuten] = React.useState<number>(0);
 
 
   const form = useForm<MeldingFormValues>({
@@ -160,6 +161,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
       setIsSearching(false);
       setTasks(melding?.tasks || []);
       setHoeveelheden(melding?.hoeveelheden || []);
+      setGewerkteMinuten(melding?.gewerkteMinuten || 0);
       setActiveTab('Werkzaamheden');
       form.reset(
         melding
@@ -197,6 +199,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
       setNewHoeveelheidType('');
       setNewHoeveelheidAantal('');
       setNewHoeveelheidEenheid('zak');
+      setGewerkteMinuten(0);
       setActiveTab('Werkzaamheden');
       setIsDraggingDocument(false);
     }
@@ -512,6 +515,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
       fotos: uploadedPhotos,
       tasks: tasks,
       hoeveelheden: hoeveelheden,
+      gewerkteMinuten: gewerkteMinuten,
       updatedAt: serverTimestamp(),
     };
 
@@ -553,6 +557,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
             fotos: uploadedPhotos,
             tasks: tasks,
             hoeveelheden: hoeveelheden,
+            gewerkteMinuten: gewerkteMinuten,
         });
         onOpenChange(false);
     } catch (error) {
@@ -727,7 +732,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                         </div>
                          <div className="flex items-center gap-2">
                             <span className='font-semibold'>Categorie:</span>
-                            <span>{melding.hoofdcategorie} {'>'} {melding.subcategorie}</span>
+                            <span>{melding.hoofdcategorie} {'&gt;'} {melding.subcategorie}</span>
                         </div>
                     </div>
                 </div>
@@ -991,10 +996,36 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                         </CardContent>
                     </Card>
                 )}
+                 {activeTab === 'Uren' && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Urenregistratie</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div>
+                                <Label htmlFor="gewerkte-minuten">Totaal gewerkte minuten</Label>
+                                <Input
+                                    id="gewerkte-minuten"
+                                    type="number"
+                                    value={gewerkteMinuten}
+                                    onChange={e => setGewerkteMinuten(Number(e.target.value))}
+                                    placeholder="Voer minuten in"
+                                    className="mt-1"
+                                />
+                                <p className="text-sm text-muted-foreground mt-2">
+                                    Voer het totale aantal minuten in dat aan deze melding is besteed.
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+                {activeTab === 'Kilometers / parkeerkosten' && (
+                    <div className="text-center text-muted-foreground p-8">Kilometer- en kostenregistratie komt hier.</div>
+                )}
             </main>
         </div>
 
-         <DialogFooter className="bg-slate-200 dark:bg-slate-800 p-4 shrink-0 border-t">
+         <DialogFooter className="bg-slate-100 dark:bg-slate-900 p-4 shrink-0 border-t">
             <Button
                 size="lg"
                 className="w-full bg-orange-500 hover:bg-orange-600 text-white text-lg font-bold"

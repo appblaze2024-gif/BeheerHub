@@ -269,6 +269,7 @@ export type Melding = {
   fotos?: UploadedFile[];
   tasks?: MeldingTask[];
   hoeveelheden?: Hoeveelheid[];
+  gewerkteMinuten?: number;
 };
 
 export interface Route {
