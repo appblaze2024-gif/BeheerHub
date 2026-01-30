@@ -42,6 +42,7 @@ import { useUser } from '@/firebase';
 import { nl } from 'date-fns/locale';
 import { Checkbox } from './ui/checkbox';
 import { Separator } from './ui/separator';
+import { Label } from './ui/label';
 
 interface Suggestion {
   place_id: number;
@@ -470,3 +471,5 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
     </Dialog>
   );
 }
+
+    
