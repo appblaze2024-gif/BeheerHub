@@ -23,7 +23,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { useProfile } from '@/firebase/profile-provider';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useProject } from '@/context/project-context';
-import { useIsMobile } from '@/hooks/use-mobile';
 import Link from 'next/link';
 
 
@@ -97,8 +96,6 @@ const polygonOutlineLayer: LineLayer = {
 };
 
 function MeldingenList({ meldingen, onMeldingClick, projectId }: { meldingen: Melding[], onMeldingClick: (melding: Melding) => void, projectId: string | null }) {
-  const isMobile = useIsMobile(1024);
-
   if (meldingen.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center text-muted-foreground p-8">
@@ -109,54 +106,9 @@ function MeldingenList({ meldingen, onMeldingClick, projectId }: { meldingen: Me
     );
   }
 
-  if (isMobile) {
-    return (
-        <div className="overflow-auto p-2 sm:p-4 space-y-2 sm:space-y-3">
-            {meldingen.map((melding) => (
-                <Card key={melding.id} className="hover:bg-muted/50">
-                    <div onClick={() => onMeldingClick(melding)} className="cursor-pointer p-3 sm:p-4">
-                        <div className="flex justify-between items-start gap-2">
-                            <Badge
-                                style={{
-                                    backgroundColor: statusConfig[melding.status]?.color || '#ccc',
-                                    color: statusConfig[melding.status]?.textColor || 'black',
-                                    borderColor: statusConfig[melding.status]?.borderColor || '#ccc'
-                                }}
-                                variant={melding.status === 'Afgerond' ? 'default' : 'destructive'}
-                                className="justify-center text-xs"
-                            >
-                                {melding.status}
-                            </Badge>
-                            <div className="text-right text-xs text-muted-foreground">
-                                <div>{melding.datum ? format(new Date(melding.datum), 'dd-MM-yyyy') : '-'}</div>
-                                <div>{melding.tijdstip || '-'}</div>
-                            </div>
-                        </div>
-                        <h3 className="font-semibold mt-2 text-sm sm:text-base">{melding.subcategorie}</h3>
-                        <p className="text-xs sm:text-sm text-muted-foreground truncate">{melding.extra_informatie}</p>
-                    </div>
-                    <div className="flex justify-between items-center mt-2 pt-2 border-t px-3 sm:px-4 pb-3 sm:pb-4">
-                        <span className="text-xs font-mono bg-muted px-2 py-1 rounded">{melding.intakenummer}</span>
-                         <div className="flex items-center gap-2">
-                             <span className="text-xs text-muted-foreground">{melding.wijk || '-'}</span>
-                             {projectId && (
-                                 <Link href={`/navigation-module?projectId=${projectId}&lat=${melding.latitude}&lng=${melding.longitude}&straat=${encodeURIComponent(melding.straatnaam || '')}`} passHref>
-                                     <Button variant="outline" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
-                                         <Navigation className="h-4 w-4" />
-                                     </Button>
-                                 </Link>
-                             )}
-                         </div>
-                    </div>
-                </Card>
-            ))}
-        </div>
-    )
-  }
-
   return (
     <div className="overflow-auto">
-      <div className="grid grid-cols-[140px_120px_100px_80px_120px_200px_1fr] min-w-[1200px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
+      <div className="grid grid-cols-[140px_120px_100px_80px_120px_200px_1fr_auto] min-w-[1200px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
         <span>Status</span>
         <span>Wijk</span>
         <span>Datum</span>
@@ -164,12 +116,13 @@ function MeldingenList({ meldingen, onMeldingClick, projectId }: { meldingen: Me
         <span>Intakenummer</span>
         <span>Subcategorie</span>
         <span>Omschrijving</span>
+        <span />
       </div>
       {meldingen.map((melding) => (
         <div
           key={melding.id}
           onClick={() => onMeldingClick(melding)}
-          className="grid grid-cols-[140px_120px_100px_80px_120px_200px_1fr] min-w-[1200px] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
+          className="grid grid-cols-[140px_120px_100px_80px_120px_200px_1fr_auto] min-w-[1200px] items-center gap-x-4 px-4 py-3 border-b border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-muted/50"
         >
           <Badge
             style={{
@@ -188,6 +141,15 @@ function MeldingenList({ meldingen, onMeldingClick, projectId }: { meldingen: Me
           <span className="font-medium truncate">{melding.intakenummer}</span>
           <span className="truncate">{melding.subcategorie}</span>
           <span className="truncate">{melding.extra_informatie}</span>
+          <div className="flex justify-end">
+            {projectId && (
+                <Link href={`/navigation-module?projectId=${projectId}&lat=${melding.latitude}&lng=${melding.longitude}&straat=${encodeURIComponent(melding.straatnaam || '')}`} passHref>
+                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                        <Navigation className="h-4 w-4" />
+                    </Button>
+                </Link>
+            )}
+          </div>
         </div>
       ))}
     </div>
