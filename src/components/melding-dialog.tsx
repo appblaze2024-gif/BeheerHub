@@ -5,11 +5,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Loader2, Trash2, File as FileIcon, Upload, MapPin, Camera, Package, Clock, Car, Plus, X, Pencil, FileText, ChevronLeft, User, Paperclip, PlusCircle, AlertCircle, Info, UploadCloud } from 'lucide-react';
-import { useFirestore, useFirebaseApp, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useFirebaseApp, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useCollection } from '@/firebase';
 import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { format } from 'date-fns';
 import Image from 'next/image';
+import * as turf from '@turf/turf';
 
 import {
   Dialog,
@@ -37,7 +38,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from './ui/progress';
 import { MapboxView } from './mapbox-view';
-import type { Melding, UploadedFile, MeldingTask, Hoeveelheid } from '@/lib/types';
+import type { Melding, UploadedFile, MeldingTask, Hoeveelheid, Object as MapObject } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { useUser } from '@/firebase';
 import { nl } from 'date-fns/locale';
@@ -142,6 +143,31 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
   const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
   const [newHoeveelheidEenheid, setNewHoeveelheidEenheid] = React.useState('zak');
   const [gewerkteMinuten, setGewerkteMinuten] = React.useState<number>(0);
+
+  const objectsCollection = React.useMemo(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'objects');
+  }, [firestore]);
+  const { data: allObjects, isLoading: isLoadingObjects } = useCollection<MapObject>(objectsCollection);
+
+  const nearbyObjects = React.useMemo(() => {
+    if (!melding || !allObjects) return [];
+    
+    const meldingPoint = turf.point([melding.longitude, melding.latitude]);
+    
+    return allObjects.filter(obj => {
+      if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') {
+        return false;
+      }
+      const objPoint = turf.point([obj.longitude, obj.latitude]);
+      const distance = turf.distance(meldingPoint, objPoint, { units: 'meters' });
+      return distance <= 100;
+    }).sort((a, b) => {
+        const distA = turf.distance(turf.point([melding.longitude, melding.latitude]), turf.point([a.longitude, a.latitude]));
+        const distB = turf.distance(turf.point([melding.longitude, melding.latitude]), turf.point([b.longitude, b.latitude]));
+        return distA - distB;
+    });
+  }, [melding, allObjects]);
 
 
   const form = useForm<MeldingFormValues>({
@@ -714,15 +740,13 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
             <DialogTitle className="text-xl font-bold">Werkbon</DialogTitle>
           </div>
           <h2 className="text-xl font-semibold absolute left-1/2 -translate-x-1/2">{activeTab}</h2>
-          <div>
-            <Button
-                className="bg-orange-500 hover:bg-orange-600 text-white font-bold"
-                onClick={handleAfronden}
-                disabled={isSubmitting}
-            >
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'WERKBON AFRONDEN'}
-            </Button>
-          </div>
+          <Button
+              className="bg-orange-500 hover:bg-orange-600 text-white font-bold"
+              onClick={handleAfronden}
+              disabled={isSubmitting}
+          >
+              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'WERKBON AFRONDEN'}
+          </Button>
         </DialogHeader>
 
         <div className="flex-1 grid grid-cols-1 md:grid-cols-[360px_1fr] min-h-0 bg-slate-50 dark:bg-slate-900/50">
@@ -767,7 +791,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                 </nav>
             </aside>
             
-            <main className={cn("p-6", activeTab !== 'Locatiegegevens' && "overflow-y-auto")}>
+            <main className={cn("p-6 flex flex-col", activeTab !== 'Locatiegegevens' && "overflow-y-auto")}>
                 {activeTab === 'Werkzaamheden' && (
                     <div className="space-y-6">
                         <div>
@@ -818,30 +842,56 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                 )}
                 {activeTab === 'Locatiegegevens' && (
                     <div className="flex flex-col h-full gap-6">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-lg">Locatie Details</CardTitle>
-                            </CardHeader>
-                            <CardContent className="pt-0">
-                                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                                    <div className="font-semibold text-muted-foreground">Straat & Huisnummer</div>
-                                    <div className="font-medium">{`${melding.straatnaam || ''} ${melding.huisnummer || ''}`.trim() || '-'}</div>
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-lg">Locatie Details</CardTitle>
+                                </CardHeader>
+                                <CardContent className="pt-0">
+                                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                                        <div className="font-semibold text-muted-foreground">Straat & Huisnummer</div>
+                                        <div className="font-medium">{`${melding.straatnaam || ''} ${melding.huisnummer || ''}`.trim() || '-'}</div>
 
-                                    <div className="font-semibold text-muted-foreground">Postcode & Plaats</div>
-                                    <div className="font-medium">{`${melding.postcode || ''} ${melding.plaats || ''}`.trim() || '-'}</div>
+                                        <div className="font-semibold text-muted-foreground">Postcode & Plaats</div>
+                                        <div className="font-medium">{`${melding.postcode || ''} ${melding.plaats || ''}`.trim() || '-'}</div>
 
-                                    <div className="font-semibold text-muted-foreground">Wijk</div>
-                                    <div className="font-medium">{melding.wijk || '-'}</div>
+                                        <div className="font-semibold text-muted-foreground">Wijk</div>
+                                        <div className="font-medium">{melding.wijk || '-'}</div>
 
-                                    <div className="font-semibold text-muted-foreground">Coördinaten</div>
-                                    <div className="font-medium">{melding.latitude?.toFixed(6)}, {melding.longitude?.toFixed(6)}</div>
-                                </div>
-                            </CardContent>
-                        </Card>
+                                        <div className="font-semibold text-muted-foreground">Coördinaten</div>
+                                        <div className="font-medium">{melding.latitude?.toFixed(6)}, {melding.longitude?.toFixed(6)}</div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-lg">Objecten in de buurt (100m)</CardTitle>
+                                </CardHeader>
+                                <CardContent className="pt-0">
+                                    <div className="max-h-32 overflow-y-auto pr-2">
+                                        {isLoadingObjects ? (
+                                            <p className="text-sm text-muted-foreground">Objecten laden...</p>
+                                        ) : nearbyObjects.length > 0 ? (
+                                            <ul className="space-y-2">
+                                                {nearbyObjects.map(obj => (
+                                                    <li key={obj.id} className="text-sm flex items-center justify-between">
+                                                        <span>{obj.id} ({obj.locatieSubType || 'Onbekend type'})</span>
+                                                        <Badge variant="outline">{Math.round(turf.distance(turf.point([melding.longitude, melding.latitude]), turf.point([obj.longitude, obj.latitude]), { units: 'meters' }))}m</Badge>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        ) : (
+                                            <p className="text-sm text-muted-foreground">Geen objecten gevonden.</p>
+                                        )}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
                         <div className="flex-1 min-h-0 rounded-lg overflow-hidden border">
                             <MapboxView
                                 longitude={melding.longitude}
                                 latitude={melding.latitude}
+                                objects={nearbyObjects}
                             />
                         </div>
                     </div>

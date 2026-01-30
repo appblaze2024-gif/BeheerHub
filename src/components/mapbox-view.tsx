@@ -121,13 +121,15 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
   }, [longitude, latitude, objects]);
 
   const markers = React.useMemo(() => {
+    const markerElements: React.ReactNode[] = [];
+
     if (objects) {
-      return objects.map(obj => {
+      markerElements.push(...objects.map(obj => {
         const isSelected = selectedObjects.some(so => so.id === obj.id);
         const color = showHeatmap ? getHeatmapColor(obj.vulgraad) : 'bg-blue-600';
         return (
             <Marker
-              key={obj.id}
+              key={`obj-${obj.id}`}
               longitude={obj.longitude}
               latitude={obj.latitude}
               anchor="center"
@@ -148,15 +150,21 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
               />
             </Marker>
         )
-      });
-    } else if (longitude && latitude) {
-      return (
-        <Marker longitude={longitude} latitude={latitude} anchor="center">
-          <div className="h-3 w-3 bg-blue-500 rounded-full border-2 border-white" />
-        </Marker>
-      );
+      }));
     }
-    return null;
+
+    if (longitude && latitude) {
+        markerElements.push(
+            <Marker key="main-location" longitude={longitude} latitude={latitude} anchor="center">
+                <div className="relative flex h-5 w-5 items-center justify-center">
+                    <div className="absolute h-full w-full rounded-full bg-red-500/50 animate-pulse-scale" />
+                    <div className="relative h-3 w-3 rounded-full bg-red-600 border-2 border-white" />
+                </div>
+            </Marker>
+        );
+    }
+    
+    return markerElements;
   }, [objects, longitude, latitude, selectedObjects, onObjectSelect, showHeatmap]);
 
   const pinToShow = hoveredPin || selectedPin;
