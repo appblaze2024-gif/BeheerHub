@@ -398,14 +398,9 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-6xl p-0 h-screen w-screen max-w-full top-0 left-0 translate-x-0 translate-y-0 rounded-none flex flex-col">
+      <DialogContent className="p-0 h-screen w-screen max-w-full top-0 left-0 translate-x-0 translate-y-0 rounded-none flex flex-col">
         <DialogHeader className="p-4 border-b">
-           <DialogTitle className="flex justify-between items-center">
-            Werkbon: {melding?.intakenummer || 'Nieuw'}
-            <DialogClose asChild>
-                <Button variant="ghost" size="icon"><X className="h-4 w-4" /></Button>
-            </DialogClose>
-          </DialogTitle>
+           <DialogTitle>Werkbon: {melding?.intakenummer || 'Nieuw'}</DialogTitle>
           <DialogDescription className='truncate'>
             {melding?.straatnaam}, {melding?.plaats} | Melder: {melding?.melder} | Categorie: {melding?.hoofdcategorie} &gt; {melding?.subcategorie}
           </DialogDescription>
@@ -471,5 +466,3 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
     </Dialog>
   );
 }
-
-    
