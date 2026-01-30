@@ -705,7 +705,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="p-0 h-screen w-screen max-w-full flex flex-col">
-         <DialogHeader className="p-4 border-b bg-gray-100 dark:bg-gray-900/50 flex-row items-center justify-between shrink-0">
+         <DialogHeader className="p-4 border-b bg-gray-100 dark:bg-gray-800 flex-row items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" className="text-gray-700 dark:text-gray-300" onClick={() => onOpenChange(false)}>
                 <ChevronLeft className="h-6 w-6" />
@@ -713,7 +713,15 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
             <DialogTitle className="text-xl font-bold">Werkbon</DialogTitle>
           </div>
           <h2 className="text-xl font-semibold absolute left-1/2 -translate-x-1/2">{activeTab}</h2>
-          <div/>
+          <div>
+            <Button
+                className="bg-orange-500 hover:bg-orange-600 text-white font-bold"
+                onClick={handleAfronden}
+                disabled={isSubmitting}
+            >
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'WERKBON AFRONDEN'}
+            </Button>
+          </div>
         </DialogHeader>
 
         <div className="flex-1 grid grid-cols-1 md:grid-cols-[360px_1fr] min-h-0 bg-slate-50 dark:bg-slate-900/50">
@@ -731,7 +739,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                         </div>
                          <div className="flex items-center gap-2">
                             <span className='font-semibold'>Categorie:</span>
-                            <span>{melding.hoofdcategorie} {'>'} {melding.subcategorie}</span>
+                            <span>{melding.hoofdcategorie} &gt; {melding.subcategorie}</span>
                         </div>
                     </div>
                 </div>
@@ -1020,17 +1028,6 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                 )}
             </main>
         </div>
-
-         <DialogFooter className="bg-slate-100 dark:bg-slate-800 p-4 shrink-0 border-t">
-            <Button
-                size="lg"
-                className="w-full bg-orange-500 hover:bg-orange-600 text-white text-lg font-bold"
-                onClick={handleAfronden}
-                disabled={isSubmitting}
-            >
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'WERKBON AFRONDEN'}
-            </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
