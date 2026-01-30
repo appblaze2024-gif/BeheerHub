@@ -745,7 +745,6 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
             <Button variant="ghost" size="icon" className="text-gray-700 dark:text-gray-300" onClick={() => onOpenChange(false)}>
                 <ChevronLeft className="h-6 w-6" />
             </Button>
-            <DialogTitle className="text-xl font-bold">Werkbon</DialogTitle>
           </div>
           <h2 className="text-xl font-semibold absolute left-1/2 -translate-x-1/2">{activeTab}</h2>
           <Button
@@ -759,39 +758,21 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
 
         <div className="flex-1 grid grid-cols-1 md:grid-cols-[360px_1fr] min-h-0 bg-slate-50 dark:bg-slate-900/50">
             <aside className="bg-white dark:bg-card p-6 flex flex-col gap-6 border-r overflow-y-auto">
-                <div>
-                    <div className="flex items-center justify-between gap-4">
-                        <h3 className="font-bold text-lg">{`Werkbon: ${melding.intakenummer}`}</h3>
-                        {melding && (
-                            <Link
-                                href={`/navigation-module?projectId=${selectedProjectId}&lat=${melding.latitude}&lng=${melding.longitude}`}
-                                passHref
-                                legacyBehavior
-                            >
-                                <a target="_blank" rel="noopener noreferrer" title="Navigeer naar locatie">
-                                    <Button variant="outline" size="icon">
-                                        <Navigation className="h-5 w-5 text-primary" />
-                                    </Button>
-                                </a>
-                            </Link>
-                        )}
-                    </div>
-                    <div className="space-y-1 text-sm text-muted-foreground mt-2">
-                         <div className="flex items-start gap-2">
-                            <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
-                            <span>{`${melding.straatnaam || ''}, ${melding.postcode || ''} ${melding.plaats || ''}`}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <User className="h-4 w-4 shrink-0" />
-                            <span>Melder: {melding.melder}</span>
-                        </div>
-                         <div className="flex items-center gap-2">
-                            <span className='font-semibold'>Categorie:</span>
-                            <span>{melding.hoofdcategorie} {'>'} {melding.subcategorie}</span>
-                        </div>
-                    </div>
+                <div className="flex items-center justify-between gap-4">
+                    <h3 className="font-bold text-lg">{`Werkbon: ${melding.intakenummer}`}</h3>
+                    {melding && (
+                        <Link
+                            href={`/navigation-module?projectId=${selectedProjectId}&lat=${melding.latitude}&lng=${melding.longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Navigeer naar locatie"
+                        >
+                            <Button variant="outline" size="icon">
+                                <Navigation className="h-5 w-5 text-primary" />
+                            </Button>
+                        </Link>
+                    )}
                 </div>
-                
                 <nav className="flex flex-col gap-1">
                     {werkbonNavItems.map(item => (
                         <Button 
@@ -818,7 +799,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                 </nav>
             </aside>
             
-            <main className={cn("p-6 flex flex-col", activeTab !== 'Locatiegegevens' && "overflow-y-auto")}>
+             <main className={cn("p-6 flex flex-col", activeTab !== 'Locatiegegevens' && "overflow-y-auto")}>
                 {activeTab === 'Werkzaamheden' && (
                     <div className="space-y-6">
                         <div>
@@ -875,7 +856,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                       objects={nearbyObjects}
                     />
                     <div className="absolute top-4 left-4 z-10 space-y-2 w-80">
-                      <Collapsible>
+                      <Collapsible defaultOpen>
                         <CollapsibleTrigger asChild>
                           <Button className="w-full justify-start shadow-md">
                             <Info className="mr-2 h-4 w-4" />
@@ -886,20 +867,18 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                           <Card className="mt-2 shadow-lg">
                             <CardContent className="p-4 pt-4">
                               <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                                <div className="font-semibold text-muted-foreground">Straat & Huisnummer</div>
-                                <div className="font-medium">{`${melding.straatnaam || ''} ${melding.huisnummer || ''}`.trim() || '-'}</div>
-                                <div className="font-semibold text-muted-foreground">Postcode & Plaats</div>
-                                <div className="font-medium">{`${melding.postcode || ''} ${melding.plaats || ''}`.trim() || '-'}</div>
+                                <div className="font-semibold text-muted-foreground col-span-2">Adres</div>
+                                <div className="font-medium col-span-2">{`${melding.straatnaam || ''}, ${melding.postcode || ''} ${melding.plaats || ''}`}</div>
                                 <div className="font-semibold text-muted-foreground">Wijk</div>
                                 <div className="font-medium">{melding.wijk || '-'}</div>
                                 <div className="font-semibold text-muted-foreground">Coördinaten</div>
-                                <div className="font-medium">{melding.latitude?.toFixed(6)}, {melding.longitude?.toFixed(6)}</div>
+                                <div className="font-medium">{melding.latitude?.toFixed(5)}, {melding.longitude?.toFixed(5)}</div>
                               </div>
                             </CardContent>
                           </Card>
                         </CollapsibleContent>
                       </Collapsible>
-                      <Collapsible>
+                      <Collapsible defaultOpen>
                         <CollapsibleTrigger asChild>
                           <Button className="w-full justify-start shadow-md">
                             <Trash2 className="mr-2 h-4 w-4" />
