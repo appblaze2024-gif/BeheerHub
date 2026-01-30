@@ -108,7 +108,7 @@ function MeldingenList({ meldingen, onMeldingClick, onMailMelding, onNavigateToM
 
   return (
     <div className="overflow-auto">
-      <div className="grid grid-cols-[100px_80px_120px_200px_1fr_120px_auto] min-w-[1000px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
+      <div className="grid grid-cols-[100px_80px_120px_200px_auto_auto_auto_1fr] min-w-[1000px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
         <span>Datum</span>
         <span>Tijd</span>
         <span>Intakenummer</span>
@@ -116,12 +116,13 @@ function MeldingenList({ meldingen, onMeldingClick, onMailMelding, onNavigateToM
         <span>Omschrijving</span>
         <span>Status</span>
         <span />
+        <span />
       </div>
       {meldingen.map((melding) => (
         <div
           key={melding.id}
           onClick={() => onMeldingClick(melding)}
-          className="grid grid-cols-[100px_80px_120px_200px_1fr_120px_auto] min-w-[1000px] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
+          className="grid grid-cols-[100px_80px_120px_200px_auto_auto_auto_1fr] min-w-[1000px] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
         >
           <span className="truncate">{melding.datum ? format(new Date(melding.datum), 'dd-MM-yyyy') : '-'}</span>
           <span className="truncate">{melding.tijdstip || '-'}</span>
@@ -147,6 +148,7 @@ function MeldingenList({ meldingen, onMeldingClick, onMailMelding, onNavigateToM
                 <MailIcon className="h-4 w-4" />
             </Button>
           </div>
+          <span />
         </div>
       ))}
     </div>
