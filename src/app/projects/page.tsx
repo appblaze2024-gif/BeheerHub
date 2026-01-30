@@ -49,6 +49,7 @@ import {
 import { useProject } from '@/context/project-context';
 import * as turf from '@turf/turf';
 import { Separator } from '@/components/ui/separator';
+import type { Object as MapObject } from '@/lib/types';
 
 type Werksoort = {
   id: string;
@@ -844,6 +845,7 @@ function PrullenbakkenroutesTab({
   firestore,
   objectCounts,
   totalObjects,
+  allObjects,
 }: {
   prullenbakkenroutes: Prullenbakkenroute[];
   setCurrentProject: React.Dispatch<React.SetStateAction<Project>>;
@@ -852,6 +854,7 @@ function PrullenbakkenroutesTab({
   firestore: any;
   objectCounts: { [routeId: string]: number };
   totalObjects: number;
+  allObjects: MapObject[] | null;
 }) {
   const [mapRoute, setMapRoute] = React.useState<Prullenbakkenroute | null>(null);
 
@@ -863,8 +866,17 @@ function PrullenbakkenroutesTab({
   }, [prullenbakkenroutes]);
 
   const totalObjectsInRoutes = React.useMemo(() => {
-    return Object.values(objectCounts).reduce((sum, count) => sum + count, 0);
-  }, [objectCounts]);
+    if (!prullenbakkenroutes || !allObjects) return 0;
+    
+    const routeNames = new Set(prullenbakkenroutes.map(r => r.naam));
+    
+    const uniqueObjectsInRoutes = allObjects.filter(obj => 
+      Array.isArray(obj.locatieWerkgebieden) && 
+      obj.locatieWerkgebieden.some(gebied => routeNames.has(gebied))
+    );
+    
+    return uniqueObjectsInRoutes.length;
+  }, [allObjects, prullenbakkenroutes]);
 
   const setPrullenbakkenroutes = (updater: Prullenbakkenroute[] | ((prev: Prullenbakkenroute[]) => Prullenbakkenroute[])) => {
     setCurrentProject(prevProject => ({
@@ -990,7 +1002,7 @@ export default function ProjectsPage() {
     return collection(firestore, 'objects');
   }, [firestore]);
 
-  const { data: allObjects } = useCollection<any>(objectsCollection);
+  const { data: allObjects } = useCollection<MapObject>(objectsCollection);
 
   const objectCountsPerPrullenbakkenroute = React.useMemo(() => {
     if (!allObjects || !currentProject.prullenbakkenroutes) return {};
@@ -1277,6 +1289,7 @@ export default function ProjectsPage() {
             firestore={firestore}
             objectCounts={objectCountsPerPrullenbakkenroute}
             totalObjects={allObjects?.length || 0}
+            allObjects={allObjects}
           />
         </TabsContent>}
       </Tabs>
