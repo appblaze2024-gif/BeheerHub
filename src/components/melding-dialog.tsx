@@ -524,7 +524,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="p-0 h-screen w-screen max-w-full flex flex-col">
-         <DialogHeader className="p-4 border-b bg-gray-800 text-white flex-row items-center justify-between shrink-0">
+         <DialogHeader className="p-4 border-b bg-slate-700 text-white flex-row items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
             <DialogClose asChild>
               <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
@@ -534,10 +534,10 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
             <DialogTitle className="text-xl font-bold">Werkbon</DialogTitle>
           </div>
           <h2 className="text-xl font-semibold absolute left-1/2 -translate-x-1/2">{activeTab}</h2>
-          <div className="w-16"></div> {/* Spacer */}
+            <div className="w-16"></div> {/* Spacer */}
         </DialogHeader>
 
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-[360px_1fr] min-h-0 bg-gray-100 dark:bg-gray-900">
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-[360px_1fr] min-h-0 bg-muted/50 dark:bg-background">
             <aside className="bg-white dark:bg-card p-6 flex flex-col gap-6 border-r overflow-y-auto">
                 <div>
                     <h3 className="font-bold text-lg">{`Werkbon: ${melding.intakenummer}`}</h3>
@@ -552,7 +552,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                         </div>
                          <div className="flex items-center gap-2">
                             <span className='font-semibold'>Categorie:</span>
-                            <span>{melding.hoofdcategorie} {'>'} {melding.subcategorie}</span>
+                            <span>{melding.hoofdcategorie} &gt; {melding.subcategorie}</span>
                         </div>
                     </div>
                 </div>
@@ -622,7 +622,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
             </main>
         </div>
 
-         <DialogFooter className="bg-gray-800 p-4 shrink-0">
+         <DialogFooter className="bg-slate-800 p-4 shrink-0">
             <Button
                 size="lg"
                 className="w-full bg-orange-500 hover:bg-orange-600 text-white text-lg font-bold"
