@@ -229,6 +229,13 @@ export type MeldingTask = {
   completed: boolean;
 };
 
+export interface Hoeveelheid {
+  id: string;
+  type: string;
+  aantal: number;
+  eenheid: string;
+}
+
 export type Melding = {
   id: string;
   intakenummer: string;
@@ -261,6 +268,7 @@ export type Melding = {
   files?: UploadedFile[];
   fotos?: UploadedFile[];
   tasks?: MeldingTask[];
+  hoeveelheden?: Hoeveelheid[];
 };
 
 export interface Route {

@@ -37,7 +37,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from './ui/progress';
 import { MapboxView } from './mapbox-view';
-import type { Melding, UploadedFile, MeldingTask } from '@/lib/types';
+import type { Melding, UploadedFile, MeldingTask, Hoeveelheid } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { useUser } from '@/firebase';
 import { nl } from 'date-fns/locale';
@@ -137,6 +137,12 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
   const [isDraggingPhoto, setIsDraggingPhoto] = React.useState(false);
   const [isDraggingDocument, setIsDraggingDocument] = React.useState(false);
 
+  const [hoeveelheden, setHoeveelheden] = React.useState<Hoeveelheid[]>([]);
+  const [newHoeveelheidType, setNewHoeveelheidType] = React.useState('');
+  const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
+  const [newHoeveelheidEenheid, setNewHoeveelheidEenheid] = React.useState('zak');
+
+
   const form = useForm<MeldingFormValues>({
     resolver: zodResolver(meldingFormSchema),
   });
@@ -153,6 +159,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
       setSuggestions([]);
       setIsSearching(false);
       setTasks(melding?.tasks || []);
+      setHoeveelheden(melding?.hoeveelheden || []);
       setActiveTab('Werkzaamheden');
       form.reset(
         melding
@@ -186,6 +193,10 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
       setLocation(null);
       setTasks([]);
       setNewTaskDescription('');
+      setHoeveelheden([]);
+      setNewHoeveelheidType('');
+      setNewHoeveelheidAantal('');
+      setNewHoeveelheidEenheid('zak');
       setActiveTab('Werkzaamheden');
       setIsDraggingDocument(false);
     }
@@ -461,6 +472,26 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
     }
   }, [tasks, open, melding]);
 
+  const handleAddHoeveelheid = () => {
+    if (!newHoeveelheidType.trim() || !newHoeveelheidAantal.trim()) return;
+    const aantal = parseFloat(newHoeveelheidAantal.replace(',', '.'));
+    if (isNaN(aantal)) return;
+
+    const newHoeveelheid: Hoeveelheid = {
+        id: new Date().toISOString(),
+        type: newHoeveelheidType,
+        aantal: aantal,
+        eenheid: newHoeveelheidEenheid,
+    };
+    setHoeveelheden(prev => [...prev, newHoeveelheid]);
+    setNewHoeveelheidType('');
+    setNewHoeveelheidAantal('');
+  };
+
+  const handleRemoveHoeveelheid = (id: string) => {
+      setHoeveelheden(prev => prev.filter(h => h.id !== id));
+  };
+
 
   const onSubmit = async (data: MeldingFormValues) => {
     if (!firestore || !location || !user) {
@@ -480,6 +511,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
       files: uploadedFiles,
       fotos: uploadedPhotos,
       tasks: tasks,
+      hoeveelheden: hoeveelheden,
       updatedAt: serverTimestamp(),
     };
 
@@ -520,6 +552,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
             files: uploadedFiles,
             fotos: uploadedPhotos,
             tasks: tasks,
+            hoeveelheden: hoeveelheden,
         });
         onOpenChange(false);
     } catch (error) {
@@ -676,9 +709,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
             <DialogTitle className="text-xl font-bold text-slate-800 dark:text-slate-200">Werkbon</DialogTitle>
           </div>
           <h2 className="text-xl font-semibold absolute left-1/2 -translate-x-1/2 text-slate-800 dark:text-slate-200">{activeTab}</h2>
-          <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)} className="text-slate-800 dark:text-slate-200">
-            <X className="h-6 w-6" />
-          </Button>
+          <div/>
         </DialogHeader>
 
         <div className="flex-1 grid grid-cols-1 md:grid-cols-[360px_1fr] min-h-0 bg-slate-50 dark:bg-slate-900/50">
@@ -686,7 +717,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                 <div>
                     <h3 className="font-bold text-lg">{`Werkbon: ${melding.intakenummer}`}</h3>
                     <div className="space-y-1 text-sm text-muted-foreground mt-2">
-                        <div className="flex items-start gap-2">
+                         <div className="flex items-start gap-2">
                             <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
                             <span>{melding.straatnaam}, {melding.postcode} {melding.plaats}</span>
                         </div>
@@ -899,6 +930,63 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                                         <p>Geen foto's toegevoegd. Sleep ze hierheen of klik op 'Foto's toevoegen'.</p>
                                     </div>
                                 )}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+                 {activeTab === 'Hoeveelheid' && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Geregistreerde Hoeveelheden</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <div className="space-y-2">
+                                {hoeveelheden.length > 0 ? (
+                                    hoeveelheden.map(h => (
+                                        <div key={h.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-md text-sm">
+                                            <span className="font-medium">{h.type}</span>
+                                            <div className="flex items-center gap-2">
+                                                <span>{h.aantal} {h.eenheid}</span>
+                                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveHoeveelheid(h.id)}>
+                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="text-sm text-muted-foreground text-center py-4">Nog geen hoeveelheden geregistreerd.</p>
+                                )}
+                            </div>
+
+                            <div className="border-t pt-4">
+                                <h4 className="font-semibold mb-2">Nieuwe hoeveelheid toevoegen</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_1fr_auto] gap-2 items-end">
+                                    <div>
+                                        <Label htmlFor="type" className="sr-only">Type</Label>
+                                        <Input id="type" placeholder="Type (bv. Zwerfafval)" value={newHoeveelheidType} onChange={e => setNewHoeveelheidType(e.target.value)} />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="aantal" className="sr-only">Aantal</Label>
+                                        <Input id="aantal" type="number" placeholder="Aantal" value={newHoeveelheidAantal} onChange={e => setNewHoeveelheidAantal(e.target.value)} />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="eenheid" className="sr-only">Eenheid</Label>
+                                        <Select value={newHoeveelheidEenheid} onValueChange={setNewHoeveelheidEenheid}>
+                                            <SelectTrigger id="eenheid">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="zak">zak(ken)</SelectItem>
+                                                <SelectItem value="m³">m³</SelectItem>
+                                                <SelectItem value="kg">kg</SelectItem>
+                                                <SelectItem value="stuks">stuks</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <Button type="button" onClick={handleAddHoeveelheid}>
+                                        <Plus className="h-4 w-4" />
+                                    </Button>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
