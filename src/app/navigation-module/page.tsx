@@ -17,7 +17,7 @@ import {
 import { ArrowLeft, X, ArrowUp, Compass } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { Project, Route, Veegroute, Prullenbakkenroute, Object as MapObject } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
@@ -248,6 +248,7 @@ function NavigatingView({
 export default function StartNavigationPage() {
   const firestore = useFirestore();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { selectedProjectId, setSelectedProjectId } = useProject();
   const { setIsHeaderVisible } = useNavigationUI();
   const { user } = useUser();
@@ -263,6 +264,26 @@ export default function StartNavigationPage() {
   const [isStarting, setIsStarting] = React.useState(false);
   
   const mapRef = React.useRef<MapRef>(null);
+
+  React.useEffect(() => {
+    const lat = searchParams.get('lat');
+    const lng = searchParams.get('lng');
+    const projectIdFromUrl = searchParams.get('projectId');
+    
+    if (projectIdFromUrl && selectedProjectId !== projectIdFromUrl) {
+      setSelectedProjectId(projectIdFromUrl);
+    }
+
+    if (lat && lng && navigationState !== 'navigating') {
+      const meldingObject: MapObject = {
+        id: `destination-${lat}-${lng}`,
+        latitude: parseFloat(lat),
+        longitude: parseFloat(lng),
+      };
+      setObjectsOnRoute([meldingObject]);
+      setNavigationState('navigating');
+    }
+  }, [searchParams, selectedProjectId, setSelectedProjectId, navigationState]);
 
   const objectsCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -418,6 +439,7 @@ export default function StartNavigationPage() {
    const handleExitNavigation = () => {
     setNavigationState('setup');
     setObjectsOnRoute([]);
+    router.push('/navigation-module');
   };
 
   const initialViewState = {
