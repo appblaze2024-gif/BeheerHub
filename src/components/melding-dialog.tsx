@@ -135,6 +135,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
   const [activeTab, setActiveTab] = React.useState('Werkzaamheden');
   const afhandelingBijzonderhedenRef = React.useRef<HTMLTextAreaElement>(null);
   const [isDraggingPhoto, setIsDraggingPhoto] = React.useState(false);
+  const [isDraggingDocument, setIsDraggingDocument] = React.useState(false);
 
   const form = useForm<MeldingFormValues>({
     resolver: zodResolver(meldingFormSchema),
@@ -186,6 +187,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
       setTasks([]);
       setNewTaskDescription('');
       setActiveTab('Werkzaamheden');
+      setIsDraggingDocument(false);
     }
   }, [open, melding, form, firestore]);
 
@@ -300,8 +302,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
     });
   };
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
+  const handleDocumentFiles = async (files: FileList | null) => {
     if (!files || !meldingIdRef.current) return;
     for (const file of Array.from(files)) {
       try {
@@ -309,8 +310,17 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
         setUploadedFiles(prev => [...prev, uploadedFile]);
       } catch (error) { 
         console.error(`Kon ${file.name} niet uploaden.`, error); 
+        toast({
+          variant: "destructive",
+          title: "Upload mislukt",
+          description: `Bestand ${file.name} kon niet worden geüpload.`,
+        });
       }
     }
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    handleDocumentFiles(event.target.files);
   };
   
   const handlePhotoFiles = async (files: FileList | null) => {
@@ -362,6 +372,28 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
       if (error.code === 'storage/object-not-found') {
         setUploadedPhotos((prev) => prev.filter((f) => f.storagePath !== fileToDelete.storagePath));
       }
+    }
+  };
+
+  const handleDocumentDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingDocument(true);
+  };
+
+  const handleDocumentDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingDocument(false);
+  };
+
+  const handleDocumentDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingDocument(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleDocumentFiles(e.dataTransfer.files);
     }
   };
 
@@ -638,15 +670,17 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
       <DialogContent className="p-0 h-screen w-screen max-w-full flex flex-col">
          <DialogHeader className="p-4 border-b bg-slate-100 dark:bg-slate-900 flex-row items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
-            <DialogClose asChild>
-              <Button variant="ghost" size="icon" className="text-slate-800 dark:text-slate-200">
+            <Button variant="ghost" size="icon" className="text-slate-800 dark:text-slate-200" onClick={() => onOpenChange(false)}>
                 <ChevronLeft className="h-6 w-6" />
-              </Button>
-            </DialogClose>
+            </Button>
             <DialogTitle className="text-xl font-bold text-slate-800 dark:text-slate-200">Werkbon</DialogTitle>
           </div>
           <h2 className="text-xl font-semibold absolute left-1/2 -translate-x-1/2 text-slate-800 dark:text-slate-200">{activeTab}</h2>
-          <div className="w-16" />
+            <DialogClose asChild>
+              <Button variant="ghost" size="icon" className="text-slate-800 dark:text-slate-200">
+                <X className="h-6 w-6" />
+              </Button>
+            </DialogClose>
         </DialogHeader>
 
         <div className="flex-1 grid grid-cols-1 md:grid-cols-[360px_1fr] min-h-0 bg-slate-50 dark:bg-slate-900/50">
@@ -779,7 +813,18 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                             </Button>
                             <input type="file" id="melding-document-input" onChange={handleFileChange} className="hidden" multiple />
                         </CardHeader>
-                        <CardContent>
+                        <CardContent
+                            className="relative"
+                            onDragOver={handleDocumentDragOver}
+                            onDragLeave={handleDocumentDragLeave}
+                            onDrop={handleDocumentDrop}
+                        >
+                            {isDraggingDocument && (
+                                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/80 border-2 border-dashed border-primary rounded-md">
+                                    <UploadCloud className="h-12 w-12 text-primary" />
+                                    <p className="mt-2 text-lg font-semibold text-primary">Sleep bestanden hierheen</p>
+                                </div>
+                            )}
                             {Object.entries(uploadProgress).map(([name, progress]) => (
                                 <div key={name} className="mt-2">
                                     <p className="text-sm font-medium">{name}</p>
@@ -802,7 +847,10 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                                         </div>
                                     ))
                                 ) : (
-                                    <p className="text-sm text-muted-foreground text-center py-4">Geen documenten toegevoegd.</p>
+                                    <div className="text-sm text-muted-foreground text-center py-4 flex flex-col items-center justify-center">
+                                        <FileText className="h-10 w-10 text-gray-400 mb-2" />
+                                        <p>Geen documenten toegevoegd. Sleep ze hierheen of klik op 'Toevoegen'.</p>
+                                    </div>
                                 )}
                             </div>
                         </CardContent>
@@ -860,7 +908,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
             </main>
         </div>
 
-         <DialogFooter className="bg-slate-100 dark:bg-slate-800 p-4 shrink-0 border-t">
+         <DialogFooter className="bg-slate-200 dark:bg-slate-800 p-4 shrink-0 border-t">
             <Button
                 size="lg"
                 className="w-full bg-orange-500 hover:bg-orange-600 text-white text-lg font-bold"
