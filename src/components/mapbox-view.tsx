@@ -5,6 +5,8 @@ import MapGL, { Marker, Popup, Source, Layer } from 'react-map-gl';
 import type { FillLayer, LineLayer, SymbolLayer, MapLayerMouseEvent } from 'react-map-gl';
 import * as turf from '@turf/turf';
 import { useProfile } from '@/firebase/profile-provider';
+import { Trash2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -48,10 +50,9 @@ const polygonOutlineLayer: LineLayer = {
 
 const getHeatmapColor = (vulgraad: number | undefined): string => {
     if (vulgraad === undefined || vulgraad === null || vulgraad <= 0) {
-      return 'bg-blue-600'; // Default to blue if no vulgraad
+      return 'hsl(221, 83%, 53%)'; // Default to blue if no vulgraad
     }
-    // Hue: 120 is green, 0 is red.
-    // We want green (120) at 0% and red (0) at 100%.
+    // Hue: 120 is green (0%), 0 is red (100%).
     const hue = 120 * (1 - vulgraad / 100);
     return `hsl(${hue}, 80%, 50%)`;
 };
@@ -126,13 +127,13 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
     if (objects) {
       markerElements.push(...objects.map(obj => {
         const isSelected = selectedObjects.some(so => so.id === obj.id);
-        const color = showHeatmap ? getHeatmapColor(obj.vulgraad) : 'bg-blue-600';
+        const color = showHeatmap ? getHeatmapColor(obj.vulgraad) : 'hsl(221, 83%, 53%)';
         return (
             <Marker
               key={`obj-${obj.id}`}
               longitude={obj.longitude}
               latitude={obj.latitude}
-              anchor="center"
+              anchor="bottom"
               onClick={e => {
                 e.originalEvent.stopPropagation();
                 if (onObjectSelect) {
@@ -144,9 +145,15 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
               onMouseEnter={() => setHoveredPin(obj)}
               onMouseLeave={() => setHoveredPin(null)}
             >
-              <div 
-                className={`h-3 w-3 rounded-full border-2 border-white cursor-pointer ${color}`} 
-                style={{backgroundColor: color.startsWith('hsl') ? color : undefined}}
+              <Trash2 
+                className={cn(
+                    "h-5 w-5 cursor-pointer stroke-white stroke-[1.5] transition-transform",
+                    isSelected && "scale-125"
+                )} 
+                style={{
+                    fill: isSelected ? 'hsl(48, 96%, 56%)' : color,
+                    filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.4))'
+                }}
               />
             </Marker>
         )
