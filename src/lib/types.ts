@@ -223,6 +223,12 @@ export interface Object {
   locatieWerkgebieden?: string[];
 }
 
+export type MeldingTask = {
+  id: string;
+  description: string;
+  completed: boolean;
+};
+
 export type Melding = {
   id: string;
   intakenummer: string;
@@ -253,6 +259,7 @@ export type Melding = {
   plaats?: string;
   wijk?: string;
   files?: UploadedFile[];
+  tasks?: MeldingTask[];
 };
 
 export interface Route {
@@ -269,5 +276,3 @@ export interface Route {
   skippedObjects?: string[];
   totalObjects?: number;
 }
-
-    
