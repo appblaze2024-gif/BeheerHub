@@ -259,6 +259,7 @@ export type Melding = {
   plaats?: string;
   wijk?: string;
   files?: UploadedFile[];
+  fotos?: UploadedFile[];
   tasks?: MeldingTask[];
 };
 

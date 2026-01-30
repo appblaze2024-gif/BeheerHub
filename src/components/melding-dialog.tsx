@@ -9,6 +9,7 @@ import { useFirestore, useFirebaseApp, setDocumentNonBlocking, updateDocumentNon
 import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { format } from 'date-fns';
+import Image from 'next/image';
 
 import {
   Dialog,
@@ -117,6 +118,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
   const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
+  const [uploadedPhotos, setUploadedPhotos] = React.useState<UploadedFile[]>([]);
   const meldingIdRef = React.useRef(melding?.id);
   const [location, setLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
 
@@ -141,6 +143,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
     if (open) {
       meldingIdRef.current = melding?.id || doc(collection(firestore, 'temp')).id;
       setUploadedFiles(melding?.files || []);
+      setUploadedPhotos(melding?.fotos || []);
       setLocation(melding ? { latitude: melding.latitude, longitude: melding.longitude } : null);
       setSearchQuery(melding ? `${melding.straatnaam || ''}, ${melding.plaats || ''}` : '');
       setSuggestions([]);
@@ -174,6 +177,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
       form.reset();
       setIsSubmitting(false);
       setUploadedFiles([]);
+      setUploadedPhotos([]);
       setUploadProgress({});
       setLocation(null);
       setTasks([]);
@@ -264,6 +268,34 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
         });
     });
   };
+  
+  const uploadPhoto = (file: File, meldingId: string): Promise<UploadedFile> => {
+    return new Promise((resolve, reject) => {
+        if (!app) {
+            reject(new Error("Firebase app niet beschikbaar"));
+            return;
+        }
+        const storage = getStorage(app);
+        const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const uniqueFileName = `${new Date().getTime()}-${sanitizedFileName}`;
+        const storagePath = `meldingen/${meldingId}/photos/${uniqueFileName}`;
+        const storageRef = ref(storage, storagePath);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+
+        uploadTask.on('state_changed', (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            setUploadProgress(prev => ({...prev, [uniqueFileName]: progress}));
+        }, (error) => {
+            console.error('Upload mislukt:', error);
+            setUploadProgress(prev => { const newProgress = {...prev}; delete newProgress[uniqueFileName]; return newProgress; });
+            reject(error);
+        }, async () => {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            resolve({ name: file.name, url: downloadURL, size: file.size, type: file.type, uploadedAt: new Date().toISOString(), storagePath: storagePath });
+            setUploadProgress(prev => { const newProgress = {...prev}; delete newProgress[uniqueFileName]; return newProgress; });
+        });
+    });
+  };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -272,6 +304,19 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
       try {
         const uploadedFile = await uploadFile(file, meldingIdRef.current);
         setUploadedFiles(prev => [...prev, uploadedFile]);
+      } catch (error) { 
+        console.error(`Kon ${file.name} niet uploaden.`, error); 
+      }
+    }
+  };
+  
+  const handlePhotoFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || !meldingIdRef.current) return;
+    for (const file of Array.from(files)) {
+      try {
+        const uploadedFile = await uploadPhoto(file, meldingIdRef.current);
+        setUploadedPhotos(prev => [...prev, uploadedFile]);
       } catch (error) { 
         console.error(`Kon ${file.name} niet uploaden.`, error); 
       }
@@ -288,6 +333,20 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
       console.error('Kon bestand niet verwijderen:', error);
       if (error.code === 'storage/object-not-found') {
         setUploadedFiles((prev) => prev.filter((f) => f.storagePath !== fileToDelete.storagePath));
+      }
+    }
+  };
+  
+  const handlePhotoFileDelete = async (fileToDelete: UploadedFile) => {
+    if (!app) return;
+    const storage = getStorage(app);
+    try {
+      await deleteObject(ref(storage, fileToDelete.storagePath));
+      setUploadedPhotos((prev) => prev.filter((f) => f.storagePath !== fileToDelete.storagePath));
+    } catch (error: any) {
+      console.error('Kon foto niet verwijderen:', error);
+      if (error.code === 'storage/object-not-found') {
+        setUploadedPhotos((prev) => prev.filter((f) => f.storagePath !== fileToDelete.storagePath));
       }
     }
   };
@@ -351,6 +410,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
       latitude: location.latitude,
       longitude: location.longitude,
       files: uploadedFiles,
+      fotos: uploadedPhotos,
       tasks: tasks,
       updatedAt: serverTimestamp(),
     };
@@ -390,6 +450,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
             afgehandeld_door: user.displayName || user.email || 'Onbekend',
             afhandeling_bijzonderheden: afhandelingBijzonderhedenRef.current?.value,
             files: uploadedFiles,
+            fotos: uploadedPhotos,
             tasks: tasks,
         });
         onOpenChange(false);
@@ -402,7 +463,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
 
 
    const handleDelete = async () => {
-    if (!firestore || !melding?.id) return;
+    if (!firestore || !melding?.id || !app) return;
     setIsDeleting(true);
     try {
       if (melding.files && melding.files.length > 0) {
@@ -410,6 +471,14 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
         for (const file of melding.files) {
           if (file.storagePath) {
             await deleteObject(ref(storage, file.storagePath)).catch((error) => console.error(`Kon bestand ${file.storagePath} niet verwijderen:`, error));
+          }
+        }
+      }
+      if (melding.fotos && melding.fotos.length > 0) {
+        const storage = getStorage(app);
+        for (const file of melding.fotos) {
+          if (file.storagePath) {
+            await deleteObject(ref(storage, file.storagePath)).catch((error) => console.error(`Kon foto ${file.storagePath} niet verwijderen:`, error));
           }
         }
       }
@@ -470,24 +539,24 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                         
                         <div className='space-y-2'>
                             <FormLabel>Foto's</FormLabel>
-                            <Button type="button" variant="outline" disabled={isUploading || isSubmitting} onClick={() => document.getElementById('melding-file-input')?.click()}>
+                            <Button type="button" variant="outline" disabled={isUploading || isSubmitting} onClick={() => document.getElementById('melding-photo-input-create')?.click()}>
                                 <Upload className="mr-2 h-4 w-4" /> Upload een foto
                             </Button>
-                            <input type="file" id="melding-file-input" onChange={handleFileChange} className="hidden" multiple accept="image/*" />
+                            <input type="file" id="melding-photo-input-create" onChange={handlePhotoFileChange} className="hidden" multiple accept="image/*" />
                              {Object.entries(uploadProgress).map(([name, progress]) => (
                               <div key={name} className="space-y-1 mt-2">
                                 <p className="text-sm font-medium">{name}</p>
                                 <Progress value={progress} className="h-2 mt-1" />
                               </div>
                             ))}
-                            {uploadedFiles.length > 0 && (
+                            {uploadedPhotos.length > 0 && (
                                 <div className='border rounded-md p-2 max-h-32 overflow-auto space-y-2'>
-                                    {uploadedFiles.map(file => (
+                                    {uploadedPhotos.map(file => (
                                         <div key={file.storagePath} className="flex items-center justify-between text-sm">
                                             <a href={file.url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline flex items-center gap-2">
                                                 <FileIcon className='h-4 w-4 shrink-0'/> {file.name}
                                             </a>
-                                            <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleFileDelete(file)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                            <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handlePhotoFileDelete(file)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                                         </div>
                                     ))}
                                 </div>
@@ -531,16 +600,16 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="p-0 h-screen w-screen max-w-full flex flex-col">
-         <DialogHeader className="p-4 border-b bg-slate-100 dark:bg-slate-800 flex-row items-center justify-between shrink-0">
+         <DialogHeader className="p-4 border-b bg-slate-100 dark:bg-slate-900 flex-row items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
             <DialogClose asChild>
               <Button variant="ghost" size="icon" className="text-slate-800 dark:text-slate-200">
                 <ChevronLeft className="h-6 w-6" />
               </Button>
             </DialogClose>
-            <DialogTitle className="text-xl font-bold">Werkbon</DialogTitle>
+            <DialogTitle className="text-xl font-bold text-slate-800 dark:text-slate-200">Werkbon</DialogTitle>
           </div>
-          <h2 className="text-xl font-semibold absolute left-1/2 -translate-x-1/2">{activeTab}</h2>
+          <h2 className="text-xl font-semibold absolute left-1/2 -translate-x-1/2 text-slate-800 dark:text-slate-200">{activeTab}</h2>
           <div className="w-16" />
         </DialogHeader>
 
@@ -559,7 +628,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                         </div>
                          <div className="flex items-center gap-2">
                             <span className='font-semibold'>Categorie:</span>
-                            <span>{melding.hoofdcategorie} &gt; {melding.subcategorie}</span>
+                            <span>{melding.hoofdcategorie} {'>'} {melding.subcategorie}</span>
                         </div>
                     </div>
                 </div>
@@ -576,6 +645,9 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                             <span>{item.label}</span>
                             {item.label === 'Documenten' && uploadedFiles.length > 0 && (
                                 <Badge variant="secondary" className="ml-auto">{uploadedFiles.length}</Badge>
+                            )}
+                            {item.label === 'Foto\'s' && uploadedPhotos.length > 0 && (
+                                <Badge variant="secondary" className="ml-auto">{uploadedPhotos.length}</Badge>
                             )}
                             {item.label === 'Werkzaamheden' && tasks.length > 0 && <Badge variant="secondary" className="ml-auto">{tasks.filter(t => !t.completed).length}</Badge>}
                         </Button>
@@ -695,6 +767,44 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                                     ))
                                 ) : (
                                     <p className="text-sm text-muted-foreground text-center py-4">Geen documenten toegevoegd.</p>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+                 {activeTab === 'Foto\'s' && (
+                    <Card>
+                        <CardHeader className="flex-row items-center justify-between">
+                            <CardTitle>Foto's</CardTitle>
+                            <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('melding-photo-input')?.click()} disabled={isUploading}>
+                                <Upload className="mr-2 h-4 w-4" /> Foto's toevoegen
+                            </Button>
+                            <input type="file" id="melding-photo-input" onChange={handlePhotoFileChange} className="hidden" multiple accept="image/*" />
+                        </CardHeader>
+                        <CardContent>
+                            {Object.entries(uploadProgress).map(([name, progress]) => (
+                                <div key={name} className="mt-2">
+                                    <p className="text-sm font-medium">{name}</p>
+                                    <Progress value={progress} className="h-2 mt-1" />
+                                </div>
+                            ))}
+                            <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                                {uploadedPhotos.length > 0 ? (
+                                    uploadedPhotos.map(file => (
+                                        <div key={file.storagePath} className="relative group aspect-square">
+                                            <Image src={file.url} alt={file.name} layout="fill" className="object-cover rounded-md" />
+                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                <Button type="button" variant="destructive" size="icon" className="h-8 w-8" onClick={() => handlePhotoFileDelete(file)}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="text-sm text-muted-foreground text-center py-4 col-span-full flex flex-col items-center justify-center">
+                                        <Camera className="h-10 w-10 text-gray-400 mb-2" />
+                                        <p>Geen foto's toegevoegd.</p>
+                                    </div>
                                 )}
                             </div>
                         </CardContent>
