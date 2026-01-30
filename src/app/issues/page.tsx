@@ -4,7 +4,7 @@ import * as React from 'react';
 import MapGL, { Marker, Popup, Source, Layer, FillLayer, LineLayer } from 'react-map-gl';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection } from 'firebase/firestore';
-import { Calendar as CalendarIcon, Plus, Search, List, Map as MapIcon, Bell, Filter } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Search, List, Map as MapIcon, Bell, Filter, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MeldingDialog } from '@/components/melding-dialog';
@@ -24,6 +24,7 @@ import { useProfile } from '@/firebase/profile-provider';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useProject } from '@/context/project-context';
 import { useIsMobile } from '@/hooks/use-mobile';
+import Link from 'next/link';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -95,7 +96,7 @@ const polygonOutlineLayer: LineLayer = {
     },
 };
 
-function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], onMeldingClick: (melding: Melding) => void }) {
+function MeldingenList({ meldingen, onMeldingClick, projectId }: { meldingen: Melding[], onMeldingClick: (melding: Melding) => void, projectId: string | null }) {
   const isMobile = useIsMobile(1024);
 
   if (meldingen.length === 0) {
@@ -112,8 +113,8 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
     return (
         <div className="overflow-auto p-2 sm:p-4 space-y-2 sm:space-y-3">
             {meldingen.map((melding) => (
-                <Card key={melding.id} onClick={() => onMeldingClick(melding)} className="cursor-pointer hover:bg-muted/50">
-                    <CardContent className="p-3 sm:p-4">
+                <Card key={melding.id} className="hover:bg-muted/50">
+                    <div onClick={() => onMeldingClick(melding)} className="cursor-pointer p-3 sm:p-4">
                         <div className="flex justify-between items-start gap-2">
                             <Badge
                                 style={{
@@ -133,11 +134,20 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
                         </div>
                         <h3 className="font-semibold mt-2 text-sm sm:text-base">{melding.subcategorie}</h3>
                         <p className="text-xs sm:text-sm text-muted-foreground truncate">{melding.extra_informatie}</p>
-                        <div className="flex justify-between items-end mt-2 pt-2 border-t">
-                            <span className="text-xs font-mono bg-muted px-2 py-1 rounded">{melding.intakenummer}</span>
-                            <span className="text-xs text-muted-foreground">{melding.wijk || '-'}</span>
-                        </div>
-                    </CardContent>
+                    </div>
+                    <div className="flex justify-between items-center mt-2 pt-2 border-t px-3 sm:px-4 pb-3 sm:pb-4">
+                        <span className="text-xs font-mono bg-muted px-2 py-1 rounded">{melding.intakenummer}</span>
+                         <div className="flex items-center gap-2">
+                             <span className="text-xs text-muted-foreground">{melding.wijk || '-'}</span>
+                             {projectId && (
+                                 <Link href={`/navigation-module?projectId=${projectId}&lat=${melding.latitude}&lng=${melding.longitude}`} passHref>
+                                     <Button variant="outline" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                                         <Navigation className="h-4 w-4" />
+                                     </Button>
+                                 </Link>
+                             )}
+                         </div>
+                    </div>
                 </Card>
             ))}
         </div>
@@ -665,7 +675,7 @@ export default function IssuesPage() {
                     <CardTitle>Overzicht Meldingen ({filteredMeldingen.length})</CardTitle>
                 </CardHeader>
                 <CardContent className='p-0 flex-1 min-h-0 overflow-auto'>
-                    <MeldingenList meldingen={filteredMeldingen} onMeldingClick={handleMeldingClickFromList} />
+                    <MeldingenList meldingen={filteredMeldingen} onMeldingClick={handleMeldingClickFromList} projectId={selectedProjectId} />
                 </CardContent>
             </Card>
         </div>
