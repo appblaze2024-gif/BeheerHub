@@ -4,7 +4,7 @@ import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Loader2, Trash2, File as FileIcon, Upload, MapPin, Camera, Package, Clock, Car, Plus, X, Pencil, FileText, ChevronLeft, User, Phone, Paperclip, PlusCircle, AlertCircle, Info } from 'lucide-react';
+import { Loader2, Trash2, File as FileIcon, Upload, MapPin, Camera, Package, Clock, Car, Plus, X, Pencil, FileText, ChevronLeft, User, Paperclip, PlusCircle, AlertCircle, Info } from 'lucide-react';
 import { useFirestore, useFirebaseApp, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -42,6 +42,8 @@ import { useUser } from '@/firebase';
 import { nl } from 'date-fns/locale';
 import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
 
 interface Suggestion {
   place_id: number;
@@ -524,7 +526,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="p-0 h-screen w-screen max-w-full flex flex-col">
-         <DialogHeader className="p-4 border-b bg-muted flex-row items-center justify-between shrink-0">
+         <DialogHeader className="p-4 border-b bg-slate-100 dark:bg-slate-800 flex-row items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
             <DialogClose asChild>
               <Button variant="ghost" size="icon">
@@ -534,10 +536,10 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
             <DialogTitle className="text-xl font-bold">Werkbon</DialogTitle>
           </div>
           <h2 className="text-xl font-semibold absolute left-1/2 -translate-x-1/2">{activeTab}</h2>
-            <div className="w-16" /> {/* Spacer */}
+          <div className="w-16" />
         </DialogHeader>
 
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-[360px_1fr] min-h-0 bg-muted/50 dark:bg-background">
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-[360px_1fr] min-h-0 bg-slate-50 dark:bg-slate-900/50">
             <aside className="bg-white dark:bg-card p-6 flex flex-col gap-6 border-r overflow-y-auto">
                 <div>
                     <h3 className="font-bold text-lg">{`Werkbon: ${melding.intakenummer}`}</h3>
@@ -574,55 +576,87 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
             </aside>
             
             <main className="p-6 overflow-y-auto">
-                 <div className="space-y-6">
-                    <div>
-                        <h3 className="text-sm font-semibold text-gray-500">Werkomschrijving / Melding</h3>
-                        <p className="mt-1">{melding.extra_informatie}</p>
-                    </div>
-                    <div>
-                        <Label className="text-sm font-semibold text-gray-500">Uitgevoerde werkzaamheden</Label>
-                        <Textarea 
-                            placeholder="Vul werkzaamheden in" 
-                            defaultValue={melding.afhandeling_bijzonderheden}
-                            className="mt-1 bg-white"
-                        />
-                    </div>
-                    <div className="space-y-3">
-                        {tasks.map(task => (
-                            <div key={task.id} className="group flex items-center gap-3 p-3 bg-white dark:bg-background rounded-lg shadow-sm">
-                                <Checkbox
-                                    id={`task-${task.id}`}
-                                    checked={task.completed}
-                                    onCheckedChange={() => handleToggleTask(task.id)}
-                                    className="h-6 w-6 rounded-full"
-                                />
-                                <div className="flex-1">
-                                    <Input
-                                        value={task.description}
-                                        onChange={(e) => handleTaskDescriptionChange(task.id, e.target.value)}
-                                        className="border-none p-0 h-auto focus-visible:ring-0 text-base bg-transparent"
+                {activeTab === 'Werkzaamheden' && (
+                    <div className="space-y-6">
+                        <div>
+                            <h3 className="text-sm font-semibold text-gray-500">Werkomschrijving / Melding</h3>
+                            <p className="mt-1">{melding.extra_informatie}</p>
+                        </div>
+                        <div>
+                            <Label className="text-sm font-semibold text-gray-500">Uitgevoerde werkzaamheden</Label>
+                            <Textarea 
+                                placeholder="Vul werkzaamheden in" 
+                                defaultValue={melding.afhandeling_bijzonderheden}
+                                className="mt-1 bg-white"
+                            />
+                        </div>
+                        <div className="space-y-3">
+                            {tasks.map(task => (
+                                <div key={task.id} className="group flex items-center gap-3 p-3 bg-white dark:bg-background rounded-lg shadow-sm">
+                                    <Checkbox
+                                        id={`task-${task.id}`}
+                                        checked={task.completed}
+                                        onCheckedChange={() => handleToggleTask(task.id)}
+                                        className="h-6 w-6 rounded-full"
                                     />
+                                    <div className="flex-1">
+                                        <Input
+                                            value={task.description}
+                                            onChange={(e) => handleTaskDescriptionChange(task.id, e.target.value)}
+                                            className="border-none p-0 h-auto focus-visible:ring-0 text-base bg-transparent"
+                                        />
+                                    </div>
+                                    <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                        onClick={() => handleRemoveTask(task.id)}
+                                    >
+                                        Delete
+                                    </Button>
                                 </div>
-                                <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity"
-                                    onClick={() => handleRemoveTask(task.id)}
-                                >
-                                    Delete
-                                </Button>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
+                        <Button variant="ghost" className="text-orange-600 hover:text-orange-700" onClick={handleAddTask}>
+                            <PlusCircle className="mr-2 h-5 w-5" />
+                            Voeg taak toe
+                        </Button>
                     </div>
-                    <Button variant="ghost" className="text-orange-600 hover:text-orange-700" onClick={handleAddTask}>
-                        <PlusCircle className="mr-2 h-5 w-5" />
-                        Voeg taak toe
-                    </Button>
-                 </div>
+                )}
+                {activeTab === 'Locatiegegevens' && (
+                    <div className="space-y-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-lg">Locatie Details</CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-0">
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                                    <div className="font-semibold text-muted-foreground">Straat & Huisnummer</div>
+                                    <div className="font-medium">{`${melding.straatnaam || ''} ${melding.huisnummer || ''}`.trim() || '-'}</div>
+
+                                    <div className="font-semibold text-muted-foreground">Postcode & Plaats</div>
+                                    <div className="font-medium">{`${melding.postcode || ''} ${melding.plaats || ''}`.trim() || '-'}</div>
+
+                                    <div className="font-semibold text-muted-foreground">Wijk</div>
+                                    <div className="font-medium">{melding.wijk || '-'}</div>
+
+                                    <div className="font-semibold text-muted-foreground">Coördinaten</div>
+                                    <div className="font-medium">{melding.latitude?.toFixed(6)}, {melding.longitude?.toFixed(6)}</div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                        <div className="aspect-video w-full rounded-lg overflow-hidden border">
+                            <MapboxView
+                                longitude={melding.longitude}
+                                latitude={melding.latitude}
+                            />
+                        </div>
+                    </div>
+                )}
             </main>
         </div>
 
-         <DialogFooter className="bg-muted p-4 shrink-0 border-t">
+         <DialogFooter className="bg-slate-200 dark:bg-slate-800 p-4 shrink-0 border-t">
             <Button
                 size="lg"
                 className="w-full bg-orange-500 hover:bg-orange-600 text-white text-lg font-bold"
