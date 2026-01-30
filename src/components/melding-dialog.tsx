@@ -4,7 +4,7 @@ import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Loader2, Trash2, File as FileIcon, Upload, MapPin, Camera, Package, Clock, Car, Plus, X, Pencil, FileText } from 'lucide-react';
+import { Loader2, Trash2, File as FileIcon, Upload, MapPin, Camera, Package, Clock, Car, Plus, X, Pencil, FileText, ChevronLeft, User, Phone, Paperclip, PlusCircle } from 'lucide-react';
 import { useFirestore, useFirebaseApp, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -28,7 +28,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -65,6 +64,7 @@ const meldingFormSchema = z.object({
   straatnaam: z.string().optional(),
   plaats: z.string().optional(),
   postcode: z.string().optional(),
+  afhandeling_bijzonderheden: z.string().optional(),
 });
 
 type MeldingFormValues = z.infer<typeof meldingFormSchema>;
@@ -91,7 +91,7 @@ const subcategorieOptions: Record<string, string[]> = {
 const werkbonNavItems = [
     { label: 'Werkzaamheden', icon: Pencil },
     { label: 'Locatiegegevens', icon: MapPin },
-    { label: 'Documenten', icon: FileText },
+    { label: 'Documenten', icon: Paperclip },
     { label: 'Foto\'s', icon: Camera },
     { label: 'Materialen', icon: Package },
     { label: 'Uren', icon: Clock },
@@ -151,6 +151,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
               straatnaam: melding.straatnaam,
               plaats: melding.plaats,
               postcode: melding.postcode,
+              afhandeling_bijzonderheden: melding.afhandeling_bijzonderheden || '',
             }
           : {
               hoofdcategorie: '',
@@ -160,6 +161,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
               straatnaam: '',
               plaats: '',
               postcode: '',
+              afhandeling_bijzonderheden: '',
             }
       );
     } else {
@@ -170,6 +172,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
       setLocation(null);
       setTasks([]);
       setNewTaskDescription('');
+      setActiveTab('Werkzaamheden');
     }
   }, [open, melding, form, firestore]);
 
@@ -370,6 +373,25 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
     }
   };
   
+  const handleAfronden = async () => {
+    if (!firestore || !melding?.id) return;
+    setIsSubmitting(true);
+    const meldingRef = doc(firestore, 'meldingen', melding.id);
+    try {
+        await updateDocumentNonBlocking(meldingRef, {
+            status: 'Afgerond',
+            afhandeling_datum: format(new Date(), 'yyyy-MM-dd'),
+            afgehandeld_door: user?.displayName || user?.email || 'Onbekend',
+        });
+        onOpenChange(false);
+    } catch (error) {
+        console.error("Fout bij afronden melding:", error);
+    } finally {
+        setIsSubmitting(false);
+    }
+  }
+
+
    const handleDelete = async () => {
     if (!firestore || !melding?.id) return;
     setIsDeleting(true);
@@ -499,74 +521,114 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
   // --- RENDER WERKBON VIEW ---
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="p-0 h-screen w-screen max-w-full top-0 left-0 translate-x-0 translate-y-0 rounded-none flex flex-col">
-        <DialogHeader className="p-4 border-b">
-           <DialogTitle>Werkbon: {melding?.intakenummer || 'Nieuw'}</DialogTitle>
-          <DialogDescription className='truncate'>
-            {melding?.straatnaam}, {melding?.plaats} | Melder: {melding?.melder} | Categorie: {melding?.hoofdcategorie} &gt; {melding?.subcategorie}
-          </DialogDescription>
+      <DialogContent className="p-0 h-screen w-screen max-w-full flex flex-col">
+        <DialogHeader className="p-2 pl-4 border-b bg-gray-800 text-white flex-row items-center justify-between shrink-0">
+          <div className="flex items-center gap-4">
+            <DialogClose asChild>
+              <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
+                <ChevronLeft className="h-6 w-6" />
+              </Button>
+            </DialogClose>
+            <DialogTitle className="text-xl font-bold">Werkbon</DialogTitle>
+          </div>
+          <h2 className="text-xl font-semibold absolute left-1/2 -translate-x-1/2">{activeTab}</h2>
         </DialogHeader>
-        <DialogClose asChild>
-            <Button variant="ghost" size="icon" className="absolute right-4 top-4 h-8 w-8">
-                <X className="h-5 w-5" />
-                <span className="sr-only">Sluiten</span>
-            </Button>
-        </DialogClose>
-        
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-[250px_1fr] min-h-0">
-            <aside className='p-4 border-r flex flex-col justify-between'>
+
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-[360px_1fr] min-h-0 bg-gray-100 dark:bg-gray-900">
+            <aside className="bg-white dark:bg-card p-6 flex flex-col gap-6 border-r overflow-y-auto">
+                <div>
+                    <h3 className="font-bold text-lg">{melding.aangenomen_door}</h3>
+                    <div className="space-y-1 text-sm text-muted-foreground mt-2">
+                        <div className="flex items-start gap-2">
+                            <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
+                            <span>{melding.straatnaam}, {melding.postcode} {melding.plaats}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <User className="h-4 w-4 shrink-0" />
+                            <span>{melding.melder}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Phone className="h-4 w-4 shrink-0" />
+                            <span>06-12345678 / 070-2457080</span>
+                        </div>
+                    </div>
+                </div>
+                
                 <nav className="flex flex-col gap-1">
                     {werkbonNavItems.map(item => (
                         <Button 
                             key={item.label}
                             variant={activeTab === item.label ? 'secondary' : 'ghost'}
-                            className="justify-start gap-2"
+                            className="justify-start gap-3 h-12 text-base"
                             onClick={() => setActiveTab(item.label)}
                         >
-                            <item.icon className="h-4 w-4" />
-                            {item.label}
+                            <item.icon className="h-5 w-5 text-primary" />
+                            <span>{item.label}</span>
+                            {item.label === 'Werkzaamheden' && tasks.length > 0 && <span className="ml-auto text-muted-foreground">{tasks.length} taken</span>}
                         </Button>
                     ))}
                 </nav>
-                <Button size="lg">Werkbon afronden</Button>
             </aside>
             
             <main className="p-6 overflow-y-auto">
-                 <h3 className="text-xl font-semibold mb-4">{melding?.extra_informatie}</h3>
-                
-                <div className="space-y-4">
-                    <Label className="font-semibold text-base">Uitgevoerde werkzaamheden</Label>
-                    <div className="space-y-2">
+                 <div className="space-y-6">
+                    <div>
+                        <h3 className="text-sm font-semibold text-gray-500">Werkomschrijving / Melding</h3>
+                        <p className="mt-1">{melding.extra_informatie}</p>
+                    </div>
+                    <div>
+                        <h3 className="text-sm font-semibold text-gray-500">Uitgevoerde werkzaamheden</h3>
+                        <Textarea 
+                            placeholder="Vul werkzaamheden in" 
+                            defaultValue={melding.afhandeling_bijzonderheden}
+                            className="mt-1 bg-white"
+                        />
+                    </div>
+                    <div className="space-y-3">
                         {tasks.map(task => (
-                            <div key={task.id} className="flex items-center gap-2 group">
+                            <div key={task.id} className="group flex items-center gap-3 p-3 bg-white dark:bg-background rounded-lg shadow-sm">
                                 <Checkbox
                                     id={`task-${task.id}`}
                                     checked={task.completed}
                                     onCheckedChange={() => handleToggleTask(task.id)}
+                                    className="h-6 w-6 rounded-full"
                                 />
-                                <Input
-                                    value={task.description}
-                                    onChange={(e) => handleTaskDescriptionChange(task.id, e.target.value)}
-                                    className="flex-1 h-8"
-                                />
-                                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100" onClick={() => handleRemoveTask(task.id)}>
-                                    <Trash2 className="h-4 w-4 text-destructive"/>
+                                <div className="flex-1">
+                                    <Input
+                                        value={task.description}
+                                        onChange={(e) => handleTaskDescriptionChange(task.id, e.target.value)}
+                                        className="border-none p-0 h-auto focus-visible:ring-0 text-base bg-transparent"
+                                    />
+                                </div>
+                                <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => handleRemoveTask(task.id)}
+                                >
+                                    Delete
                                 </Button>
                             </div>
                         ))}
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Input
-                            placeholder="Voeg nieuwe taak toe..."
-                            value={newTaskDescription}
-                            onChange={(e) => setNewTaskDescription(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
-                        />
-                        <Button onClick={handleAddTask}><Plus className="h-4 w-4 mr-2" /> Voeg taak toe</Button>
-                    </div>
-                </div>
+                    <Button variant="ghost" className="text-orange-600 hover:text-orange-700" onClick={handleAddTask}>
+                        <PlusCircle className="mr-2 h-5 w-5" />
+                        Voeg taak toe
+                    </Button>
+                 </div>
             </main>
         </div>
+
+         <DialogFooter className="bg-gray-800 p-4 shrink-0">
+            <Button
+                size="lg"
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white text-lg font-bold"
+                onClick={handleAfronden}
+                disabled={isSubmitting}
+            >
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'WERKBON AFRONDEN'}
+            </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
