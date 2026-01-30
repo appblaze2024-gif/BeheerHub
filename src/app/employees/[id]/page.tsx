@@ -90,8 +90,10 @@ function DetailField({
   const [currentValue, setCurrentValue] = React.useState(value || '');
 
   React.useEffect(() => {
-    setCurrentValue(value || '');
-  }, [value]);
+    if (!isEditing) {
+      setCurrentValue(value || '');
+    }
+  }, [value, isEditing]);
 
   const handleSave = async () => {
     if (!firestore || !medewerkerId) return;
@@ -1051,5 +1053,3 @@ export default function EmployeeDetailPage() {
     </div>
   );
 }
-
-    
