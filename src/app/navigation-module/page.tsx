@@ -463,7 +463,11 @@ export default function StartNavigationPage() {
     setNavigationState('setup');
     setObjectsOnRoute([]);
     setDestinationAddress(null);
-    router.push('/navigation-module');
+    if (searchParams.has('lat') && searchParams.has('lng')) {
+        router.back();
+    } else {
+        router.push('/navigation-module');
+    }
   };
 
   const initialViewState = {
