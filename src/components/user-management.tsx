@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, collection } from 'firebase/firestore';
-import { Loader2, Plus, MoreHorizontal, User as UserIcon } from 'lucide-react';
+import { Loader2, Plus, MoreHorizontal, User as UserIcon, Nfc } from 'lucide-react';
 import { firebaseConfig } from '@/firebase/config';
 
 import {
@@ -73,6 +73,7 @@ const userFormSchema = z.object({
   wijk: z.string().optional(),
   veegroute: z.string().optional(),
   prullenbakkenroute: z.string().optional(),
+  nfcTagId: z.string().optional(),
 });
 
 type UserFormValues = z.infer<typeof userFormSchema>;
@@ -97,6 +98,8 @@ function UserDialog({
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isNfcScanning, setIsNfcScanning] = React.useState(false);
+  const [nfcScanError, setNfcScanError] = React.useState<string | null>(null);
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema),
@@ -133,6 +136,7 @@ function UserDialog({
           wijk: user.wijk || 'geen_wijk',
           veegroute: user.veegroute || 'geen_veegroute',
           prullenbakkenroute: user.prullenbakkenroute || 'geen_prullenbakkenroute',
+          nfcTagId: user.nfcTagId || '',
         });
       } else {
         form.reset({
@@ -145,6 +149,7 @@ function UserDialog({
           wijk: 'geen_wijk',
           veegroute: 'geen_veegroute',
           prullenbakkenroute: 'geen_prullenbakkenroute',
+          nfcTagId: '',
         });
       }
     }
@@ -170,25 +175,54 @@ function UserDialog({
     }
   }, [role, form])
 
+  const handleNfcScan = async () => {
+    if (!('NDEFReader' in window)) {
+      setNfcScanError('Web NFC wordt niet ondersteund op dit apparaat.');
+      return;
+    }
+    setIsNfcScanning(true);
+    setNfcScanError(null);
+    try {
+      const ndef = new NDEFReader();
+      await ndef.scan();
+      ndef.onreading = ({ serialNumber }) => {
+        if (serialNumber) {
+          form.setValue('nfcTagId', serialNumber, { shouldValidate: true, shouldDirty: true });
+        }
+        setIsNfcScanning(false);
+      };
+      ndef.onreadingerror = () => {
+        setNfcScanError('Kan NFC-tag niet lezen.');
+        setIsNfcScanning(false);
+      };
+    } catch (error) {
+      setNfcScanError('Kon NFC-scanner niet starten.');
+      setIsNfcScanning(false);
+    }
+  };
+
   const onSubmit = async (data: UserFormValues) => {
     setIsSubmitting(true);
     try {
       const displayName = `${data.firstName} ${data.lastName}`.trim();
 
+      const userData = {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        displayName,
+        role: data.role,
+        permissions: data.permissions,
+        status: data.status,
+        wijk: data.wijk === 'geen_wijk' ? null : data.wijk,
+        veegroute: data.veegroute === 'geen_veegroute' ? null : data.veegroute,
+        prullenbakkenroute: data.prullenbakkenroute === 'geen_prullenbakkenroute' ? null : data.prullenbakkenroute,
+        nfcTagId: data.nfcTagId || null,
+      };
+
       if (user) { // Edit existing user
         const userRef = doc(firestore, 'users', user.id);
-        await updateDocumentNonBlocking(userRef, { 
-            firstName: data.firstName,
-            lastName: data.lastName,
-            displayName,
-            role: data.role,
-            permissions: data.permissions,
-            status: data.status,
-            wijk: data.wijk === 'geen_wijk' ? null : data.wijk,
-            veegroute: data.veegroute === 'geen_veegroute' ? null : data.veegroute,
-            prullenbakkenroute: data.prullenbakkenroute === 'geen_prullenbakkenroute' ? null : data.prullenbakkenroute,
-        });
-        toast({ title: 'Gebruiker bijgewerkt', description: `De rol en rechten voor ${user.email} zijn bijgewerkt.` });
+        await updateDocumentNonBlocking(userRef, userData);
+        toast({ title: 'Gebruiker bijgewerkt', description: `De gegevens voor ${user.email} zijn bijgewerkt.` });
       } else { // Create new user
         const tempApp = initializeApp(firebaseConfig, `user-creation-${Date.now()}`);
         const tempAuth = getAuth(tempApp);
@@ -201,16 +235,9 @@ function UserDialog({
             const userProfileData: UserProfile = {
                 id: newUser.uid,
                 email: newUser.email || '',
-                firstName: data.firstName,
-                lastName: data.lastName,
-                displayName,
-                role: data.role,
-                permissions: data.permissions || {},
+                ...userData,
                 sidebarCollapsed: true,
                 status: 'Niet uitgenodigd',
-                wijk: data.wijk === 'geen_wijk' ? null : data.wijk,
-                veegroute: data.veegroute === 'geen_veegroute' ? null : data.veegroute,
-                prullenbakkenroute: data.prullenbakkenroute === 'geen_prullenbakkenroute' ? null : data.prullenbakkenroute,
             };
 
             await setDocumentNonBlocking(doc(firestore, 'users', newUser.uid), userProfileData, {});
@@ -300,6 +327,28 @@ function UserDialog({
                 />
             </div>
             
+            <FormField
+              control={form.control}
+              name="nfcTagId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>NFC Tag ID</FormLabel>
+                  <div className="flex items-center gap-2">
+                    <FormControl>
+                      <Input placeholder="Scan of voer ID in" {...field} value={field.value || ''} />
+                    </FormControl>
+                    <Button type="button" variant="outline" onClick={handleNfcScan} disabled={isNfcScanning}>
+                      {isNfcScanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Nfc className="h-4 w-4" />}
+                      <span className="ml-2 hidden sm:inline">Scan</span>
+                    </Button>
+                  </div>
+                  {isNfcScanning && <p className="text-sm text-muted-foreground">Wachten op NFC-tag...</p>}
+                  {nfcScanError && <FormMessage>{nfcScanError}</FormMessage>}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField control={form.control} name="wijk" render={({ field }) => (
                     <FormItem>
@@ -688,3 +737,5 @@ export function UserManagement() {
     </>
   );
 }
+
+    

@@ -28,6 +28,7 @@ export type UserProfile = {
   schouwenGemeente?: string;
   schouwenMapStyle?: string;
   lastSelectedProjectId?: string | null;
+  nfcTagId?: string;
 };
 
 export interface Medewerker {
@@ -56,7 +57,6 @@ export interface Medewerker {
   status?: 'Actief' | 'Inactief' | 'Niet uitgenodigd';
   avatarUrl?: string;
   soortMedewerker?: string;
-  nfcTagId?: string;
   urenPerDag?: {
     maandag?: { start?: string; eind?: string };
     dinsdag?: { start?: string; eind?: string };

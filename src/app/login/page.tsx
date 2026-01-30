@@ -68,42 +68,23 @@ export default function LoginPage() {
             }
             
             try {
-                // 1. Find Medewerker by NFC tag
-                const medewerkersRef = collection(firestore, 'medewerkers');
-                const qMedewerker = query(medewerkersRef, where('nfcTagId', '==', serialNumber));
-                const medewerkerSnapshot = await getDocs(qMedewerker);
-
-                if (medewerkerSnapshot.empty) {
-                    setNfcError('Geen gebruiker gevonden voor deze NFC-tag.');
-                    setNfcStatus('error');
-                    return;
-                }
-                
-                const medewerkerDoc = medewerkerSnapshot.docs[0].data();
-                if (!medewerkerDoc.email) {
-                     setNfcError('Gebruiker gevonden, maar er is geen e-mailadres gekoppeld.');
-                     setNfcStatus('error');
-                     return;
-                }
-
-                // 2. Find the UserProfile using the email from Medewerker
+                // 1. Find User by NFC tag
                 const usersRef = collection(firestore, 'users');
-                const qUser = query(usersRef, where('email', '==', medewerkerDoc.email));
+                const qUser = query(usersRef, where('nfcTagId', '==', serialNumber));
                 const userSnapshot = await getDocs(qUser);
                 
                 if (userSnapshot.empty) {
-                    setNfcError('Geen gebruikersprofiel gevonden met de juiste rechten.');
+                    setNfcError('Geen gebruiker gevonden voor deze NFC-tag.');
                     setNfcStatus('error');
                     return;
                 }
 
                 const userProfile = userSnapshot.docs[0];
 
-                // 3. Sign in anonymously
+                // 2. Sign in anonymously
                 await signInAnonymously(auth);
 
-                // 4. Store the ID of the user profile we want to impersonate in localStorage.
-                // The ProfileProvider will read this and fetch the correct profile data.
+                // 3. Store the ID of the user profile we want to impersonate in localStorage.
                 localStorage.setItem('impersonatedUserProfileId', userProfile.id);
 
                 setNfcStatus('success');
@@ -204,3 +185,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    

@@ -24,7 +24,6 @@ import {
   ThumbsDown,
   XCircle,
   Users,
-  Nfc
 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 import { collection, doc, getDocs, query, where, writeBatch } from 'firebase/firestore';
@@ -76,14 +75,12 @@ function DetailField({
   fieldName,
   medewerkerId,
   canEdit,
-  onScan,
 }: {
   label: string;
   value: string | undefined | null;
   fieldName: keyof Medewerker;
   medewerkerId: string;
   canEdit: boolean;
-  onScan?: (setValue: (value: string) => void) => void;
 }) {
   const firestore = useFirestore();
   const [isEditing, setIsEditing] = React.useState(false);
@@ -127,11 +124,6 @@ function DetailField({
               className="h-8 text-sm"
               autoFocus
             />
-            {onScan && (
-              <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => onScan(setCurrentValue)}>
-                  <Nfc className="h-4 w-4" />
-              </Button>
-            )}
           </div>
         ) : (
           <p className="text-sm font-medium min-h-[2rem] flex items-center">{currentValue || '-'}</p>
@@ -872,28 +864,6 @@ export default function EmployeeDetailPage() {
 
   const { data: medewerker, isLoading } = useDoc<Medewerker>(employeeRef);
   
-  const handleNfcScan = async (setValue: (value: string) => void) => {
-    if (!('NDEFReader' in window)) {
-      alert('Web NFC wordt niet ondersteund op dit apparaat.');
-      return;
-    }
-    try {
-      const ndef = new NDEFReader();
-      await ndef.scan();
-      alert('Scan nu de NFC tag...');
-      ndef.onreading = ({ serialNumber }) => {
-        if (serialNumber) {
-          setValue(serialNumber);
-        }
-      };
-      ndef.onreadingerror = () => {
-        alert('Kan NFC-tag niet lezen.');
-      };
-    } catch (error) {
-      alert('Kon NFC-scanner niet starten.');
-    }
-  };
-
 
   const getInitials = (firstName?: string, lastName?: string) => {
     const firstInitial = firstName?.[0] || '';
@@ -996,7 +966,6 @@ export default function EmployeeDetailPage() {
                       <DetailField label="Bankrekening" value={medewerker.bankrekening} fieldName="bankrekening" medewerkerId={id} canEdit={canEdit} />
                       <DetailField label="Datum in dienst" value={medewerker.indiensttreding} fieldName="indiensttreding" medewerkerId={id} canEdit={canEdit} />
                       <DetailField label="Personeels nr." value={medewerker.personeelsnummer} fieldName="personeelsnummer" medewerkerId={id} canEdit={canEdit} />
-                      <DetailField label="NFC Tag ID" value={medewerker.nfcTagId} fieldName="nfcTagId" medewerkerId={id} canEdit={canEdit} onScan={handleNfcScan} />
                     </div>
                   </CardContent>
                 </Card>
@@ -1053,3 +1022,5 @@ export default function EmployeeDetailPage() {
     </div>
   );
 }
+
+    
