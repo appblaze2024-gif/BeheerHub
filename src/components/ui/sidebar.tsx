@@ -29,7 +29,7 @@ const Sidebar = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        'flex flex-col h-full bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-all duration-300 ease-in-out',
+        'flex flex-col h-full bg-sidebar text-sidebar-foreground rounded-lg overflow-hidden transition-all duration-300 ease-in-out',
         isCollapsed ? 'w-16' : 'w-64',
         className
       )}
