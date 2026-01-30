@@ -4,7 +4,7 @@ import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Loader2, Trash2, File as FileIcon, Upload, MapPin, Camera, Package, Clock, Car, Plus, X, Pencil, FileText, ChevronLeft, User, Paperclip, PlusCircle, AlertCircle, Info } from 'lucide-react';
+import { Loader2, Trash2, File as FileIcon, Upload, MapPin, Camera, Package, Clock, Car, Plus, X, Pencil, FileText, ChevronLeft, User, Paperclip, PlusCircle, AlertCircle, Info, UploadCloud } from 'lucide-react';
 import { useFirestore, useFirebaseApp, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -45,6 +45,7 @@ import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from './ui/badge';
+import { useToast } from './ui/use-toast';
 
 
 interface Suggestion {
@@ -114,6 +115,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
   const firestore = useFirestore();
   const app = useFirebaseApp();
   const { user } = useUser();
+  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
@@ -132,6 +134,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
   const [newTaskDescription, setNewTaskDescription] = React.useState('');
   const [activeTab, setActiveTab] = React.useState('Werkzaamheden');
   const afhandelingBijzonderhedenRef = React.useRef<HTMLTextAreaElement>(null);
+  const [isDraggingPhoto, setIsDraggingPhoto] = React.useState(false);
 
   const form = useForm<MeldingFormValues>({
     resolver: zodResolver(meldingFormSchema),
@@ -310,10 +313,17 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
     }
   };
   
-  const handlePhotoFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
+  const handlePhotoFiles = async (files: FileList | null) => {
     if (!files || !meldingIdRef.current) return;
     for (const file of Array.from(files)) {
+      if (!file.type.startsWith('image/')) {
+        toast({
+          variant: 'destructive',
+          title: 'Ongeldig bestandstype',
+          description: `${file.name} is geen afbeelding en is overgeslagen.`,
+        });
+        continue;
+      }
       try {
         const uploadedFile = await uploadPhoto(file, meldingIdRef.current);
         setUploadedPhotos(prev => [...prev, uploadedFile]);
@@ -321,6 +331,10 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
         console.error(`Kon ${file.name} niet uploaden.`, error); 
       }
     }
+  };
+
+  const handlePhotoFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    handlePhotoFiles(event.target.files);
   };
 
   const handleFileDelete = async (fileToDelete: UploadedFile) => {
@@ -348,6 +362,28 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
       if (error.code === 'storage/object-not-found') {
         setUploadedPhotos((prev) => prev.filter((f) => f.storagePath !== fileToDelete.storagePath));
       }
+    }
+  };
+
+  const handlePhotoDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingPhoto(true);
+  };
+
+  const handlePhotoDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingPhoto(false);
+  };
+
+  const handlePhotoDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingPhoto(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handlePhotoFiles(e.dataTransfer.files);
     }
   };
   
@@ -628,7 +664,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                         </div>
                          <div className="flex items-center gap-2">
                             <span className='font-semibold'>Categorie:</span>
-                            <span>{melding.hoofdcategorie} {'>'} {melding.subcategorie}</span>
+                            <span>{melding.hoofdcategorie} &gt; {melding.subcategorie}</span>
                         </div>
                     </div>
                 </div>
@@ -781,7 +817,18 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                             </Button>
                             <input type="file" id="melding-photo-input" onChange={handlePhotoFileChange} className="hidden" multiple accept="image/*" />
                         </CardHeader>
-                        <CardContent>
+                        <CardContent
+                            className="relative"
+                            onDragOver={handlePhotoDragOver}
+                            onDragLeave={handlePhotoDragLeave}
+                            onDrop={handlePhotoDrop}
+                        >
+                            {isDraggingPhoto && (
+                            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/80 border-2 border-dashed border-primary rounded-md">
+                                <UploadCloud className="h-12 w-12 text-primary" />
+                                <p className="mt-2 text-lg font-semibold text-primary">Sleep foto's hierheen</p>
+                            </div>
+                            )}
                             {Object.entries(uploadProgress).map(([name, progress]) => (
                                 <div key={name} className="mt-2">
                                     <p className="text-sm font-medium">{name}</p>
@@ -792,7 +839,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                                 {uploadedPhotos.length > 0 ? (
                                     uploadedPhotos.map(file => (
                                         <div key={file.storagePath} className="relative group aspect-square">
-                                            <Image src={file.url} alt={file.name} layout="fill" className="object-cover rounded-md" />
+                                            <Image src={file.url} alt={file.name} fill className="object-cover rounded-md" />
                                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                                 <Button type="button" variant="destructive" size="icon" className="h-8 w-8" onClick={() => handlePhotoFileDelete(file)}>
                                                     <Trash2 className="h-4 w-4" />
@@ -803,7 +850,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                                 ) : (
                                     <div className="text-sm text-muted-foreground text-center py-4 col-span-full flex flex-col items-center justify-center">
                                         <Camera className="h-10 w-10 text-gray-400 mb-2" />
-                                        <p>Geen foto's toegevoegd.</p>
+                                        <p>Geen foto's toegevoegd. Sleep ze hierheen of klik op 'Foto's toevoegen'.</p>
                                     </div>
                                 )}
                             </div>
@@ -813,7 +860,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
             </main>
         </div>
 
-         <DialogFooter className="bg-slate-200 dark:bg-slate-800 p-4 shrink-0 border-t">
+         <DialogFooter className="bg-slate-100 dark:bg-slate-800 p-4 shrink-0 border-t">
             <Button
                 size="lg"
                 className="w-full bg-orange-500 hover:bg-orange-600 text-white text-lg font-bold"
