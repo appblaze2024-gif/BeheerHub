@@ -4,13 +4,14 @@ import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Loader2, Trash2, File as FileIcon, Upload, MapPin, Camera, Package, Clock, Car, Plus, X, Pencil, FileText, ChevronLeft, User, Paperclip, PlusCircle, AlertCircle, Info, UploadCloud } from 'lucide-react';
+import { Loader2, Trash2, File as FileIcon, Upload, MapPin, Camera, Package, Clock, Car, Plus, X, Pencil, FileText, ChevronLeft, User, Paperclip, PlusCircle, AlertCircle, Info, UploadCloud, Navigation } from 'lucide-react';
 import { useFirestore, useFirebaseApp, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useCollection } from '@/firebase';
 import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { format } from 'date-fns';
 import Image from 'next/image';
 import * as turf from '@turf/turf';
+import Link from 'next/link';
 
 import {
   Dialog,
@@ -48,6 +49,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from './ui/badge';
 import { useToast } from './ui/use-toast';
 import { cn } from '@/lib/utils';
+import { useProject } from '@/context/project-context';
 
 
 interface Suggestion {
@@ -117,6 +119,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
   const app = useFirebaseApp();
   const { user } = useUser();
   const { toast } = useToast();
+  const { selectedProjectId } = useProject();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
@@ -774,18 +777,33 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                         <Button 
                             key={item.label}
                             variant={activeTab === item.label ? 'secondary' : 'ghost'}
-                            className="justify-start gap-3 h-12 text-base"
+                            className="justify-between items-center h-12 text-base"
                             onClick={() => setActiveTab(item.label)}
                         >
-                            <item.icon className="h-5 w-5 text-primary" />
-                            <span>{item.label}</span>
+                          <div className="flex items-center gap-3">
+                              <item.icon className="h-5 w-5 text-primary" />
+                              <span>{item.label}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
                             {item.label === 'Documenten' && uploadedFiles.length > 0 && (
-                                <Badge variant="secondary" className="ml-auto">{uploadedFiles.length}</Badge>
+                                <Badge variant="secondary">{uploadedFiles.length}</Badge>
                             )}
                             {item.label === 'Foto\'s' && uploadedPhotos.length > 0 && (
-                                <Badge variant="secondary" className="ml-auto">{uploadedPhotos.length}</Badge>
+                                <Badge variant="secondary">{uploadedPhotos.length}</Badge>
                             )}
-                            {item.label === 'Werkzaamheden' && tasks.length > 0 && <Badge variant="secondary" className="ml-auto">{tasks.filter(t => !t.completed).length}</Badge>}
+                            {item.label === 'Werkzaamheden' && tasks.length > 0 && <Badge variant="secondary">{tasks.filter(t => !t.completed).length}</Badge>}
+                            {item.label === 'Locatiegegevens' && melding && selectedProjectId && (
+                                <Link
+                                    href={`/navigation-module?projectId=${selectedProjectId}&lat=${melding.latitude}&lng=${melding.longitude}`}
+                                    passHref
+                                    legacyBehavior
+                                >
+                                    <a target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} title="Navigeer naar locatie" className="p-2 -mr-2">
+                                        <Navigation className="h-5 w-5 text-primary hover:text-primary/80" />
+                                    </a>
+                                </Link>
+                            )}
+                          </div>
                         </Button>
                     ))}
                 </nav>
@@ -875,7 +893,10 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                                             <ul className="space-y-2">
                                                 {nearbyObjects.map(obj => (
                                                     <li key={obj.id} className="text-sm flex items-center justify-between">
-                                                        <span>{obj.id} ({obj.locatieSubType || 'Onbekend type'})</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <Trash2 className="h-4 w-4 text-muted-foreground"/>
+                                                            <span>{obj.id} ({obj.locatieSubType || 'Onbekend type'})</span>
+                                                        </div>
                                                         <Badge variant="outline">{Math.round(turf.distance(turf.point([melding.longitude, melding.latitude]), turf.point([obj.longitude, obj.latitude]), { units: 'meters' }))}m</Badge>
                                                     </li>
                                                 ))}
