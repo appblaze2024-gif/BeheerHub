@@ -23,6 +23,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { useProfile } from '@/firebase/profile-provider';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useProject } from '@/context/project-context';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -95,6 +96,8 @@ const polygonOutlineLayer: LineLayer = {
 };
 
 function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], onMeldingClick: (melding: Melding) => void }) {
+  const isMobile = useIsMobile(1024);
+
   if (meldingen.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center text-muted-foreground p-8">
@@ -103,6 +106,42 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
         <p className="text-sm">Pas de filters aan of maak een nieuwe melding.</p>
       </div>
     );
+  }
+
+  if (isMobile) {
+    return (
+        <div className="overflow-auto p-2 sm:p-4 space-y-2 sm:space-y-3">
+            {meldingen.map((melding) => (
+                <Card key={melding.id} onClick={() => onMeldingClick(melding)} className="cursor-pointer hover:bg-muted/50">
+                    <CardContent className="p-3 sm:p-4">
+                        <div className="flex justify-between items-start gap-2">
+                            <Badge
+                                style={{
+                                    backgroundColor: statusConfig[melding.status]?.color || '#ccc',
+                                    color: statusConfig[melding.status]?.textColor || 'black',
+                                    borderColor: statusConfig[melding.status]?.borderColor || '#ccc'
+                                }}
+                                variant={melding.status === 'Afgerond' ? 'default' : 'destructive'}
+                                className="justify-center text-xs"
+                            >
+                                {melding.status}
+                            </Badge>
+                            <div className="text-right text-xs text-muted-foreground">
+                                <div>{melding.datum ? format(new Date(melding.datum), 'dd-MM-yyyy') : '-'}</div>
+                                <div>{melding.tijdstip || '-'}</div>
+                            </div>
+                        </div>
+                        <h3 className="font-semibold mt-2 text-sm sm:text-base">{melding.subcategorie}</h3>
+                        <p className="text-xs sm:text-sm text-muted-foreground truncate">{melding.extra_informatie}</p>
+                        <div className="flex justify-between items-end mt-2 pt-2 border-t">
+                            <span className="text-xs font-mono bg-muted px-2 py-1 rounded">{melding.intakenummer}</span>
+                            <span className="text-xs text-muted-foreground">{melding.wijk || '-'}</span>
+                        </div>
+                    </CardContent>
+                </Card>
+            ))}
+        </div>
+    )
   }
 
   return (
