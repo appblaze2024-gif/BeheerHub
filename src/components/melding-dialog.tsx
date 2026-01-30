@@ -28,6 +28,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -123,6 +124,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
   
   const [tasks, setTasks] = React.useState<MeldingTask[]>([]);
   const [newTaskDescription, setNewTaskDescription] = React.useState('');
+  const [activeTab, setActiveTab] = React.useState('Werkzaamheden');
 
   const form = useForm<MeldingFormValues>({
     resolver: zodResolver(meldingFormSchema),
