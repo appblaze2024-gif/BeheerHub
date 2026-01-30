@@ -99,7 +99,7 @@ const werkbonNavItems = [
     { label: 'Locatiegegevens', icon: MapPin },
     { label: 'Documenten', icon: FileText },
     { label: 'Foto\'s', icon: Camera },
-    { label: 'Materialen', icon: Package },
+    { label: 'Hoeveelheid', icon: Package },
     { label: 'Uren', icon: Clock },
     { label: 'Kilometers / parkeerkosten', icon: Car },
 ]
@@ -676,11 +676,9 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
             <DialogTitle className="text-xl font-bold text-slate-800 dark:text-slate-200">Werkbon</DialogTitle>
           </div>
           <h2 className="text-xl font-semibold absolute left-1/2 -translate-x-1/2 text-slate-800 dark:text-slate-200">{activeTab}</h2>
-            <DialogClose asChild>
-              <Button variant="ghost" size="icon" className="text-slate-800 dark:text-slate-200">
-                <X className="h-6 w-6" />
-              </Button>
-            </DialogClose>
+          <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)} className="text-slate-800 dark:text-slate-200">
+            <X className="h-6 w-6" />
+          </Button>
         </DialogHeader>
 
         <div className="flex-1 grid grid-cols-1 md:grid-cols-[360px_1fr] min-h-0 bg-slate-50 dark:bg-slate-900/50">
@@ -698,7 +696,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                         </div>
                          <div className="flex items-center gap-2">
                             <span className='font-semibold'>Categorie:</span>
-                            <span>{melding.hoofdcategorie} &gt; {melding.subcategorie}</span>
+                            <span>{melding.hoofdcategorie} {'>'} {melding.subcategorie}</span>
                         </div>
                     </div>
                 </div>
