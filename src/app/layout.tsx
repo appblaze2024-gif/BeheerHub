@@ -145,46 +145,59 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
   const auth = useAuth();
 
   useEffect(() => {
+    // Exit if profile isn't loaded, user is not a 'medewerker', or has no shift schedule
     if (isProfileLoading || !profile || profile.role !== 'medewerkers' || !profile.urenPerDag) {
       return;
     }
 
-    const checkLogoutTime = () => {
-      const now = new Date();
-      const dayName = format(now, 'eeee', { locale: nl }).toLowerCase() as keyof NonNullable<typeof profile.urenPerDag>;
-      
-      const shift = profile.urenPerDag?.[dayName];
+    const dayName = format(new Date(), 'eeee', { locale: nl }).toLowerCase() as keyof typeof profile.urenPerDag;
+    const shift = profile.urenPerDag[dayName];
 
-      if (shift && shift.eind) {
-        try {
-          const [hours, minutes] = shift.eind.split(':').map(Number);
-          
-          if (isNaN(hours) || isNaN(minutes)) {
-              console.error("Invalid time format in user profile:", shift.eind);
-              return;
-          }
+    // Exit if there's no end time for today's shift
+    if (!shift || !shift.eind) {
+      return;
+    }
 
-          const endTimeToday = new Date();
-          endTimeToday.setHours(hours, minutes, 0, 0);
-
-          if (now > endTimeToday) {
-            if (auth.currentUser?.metadata.lastSignInTime) {
-                const lastLoginTime = new Date(auth.currentUser.metadata.lastSignInTime).getTime();
-                if (lastLoginTime > endTimeToday.getTime()) {
-                    return; 
-                }
-            }
-            signOut(auth);
-          }
-        } catch (e) {
-          console.error("Error parsing shift end time for auto-logout:", e);
-        }
+    try {
+      const [hours, minutes] = shift.eind.split(':').map(Number);
+      if (isNaN(hours) || isNaN(minutes)) {
+        console.error("Invalid time format in user profile:", shift.eind);
+        return;
       }
-    };
 
-    const intervalId = setInterval(checkLogoutTime, 60 * 1000);
+      const now = new Date();
+      const endTimeToday = new Date();
+      endTimeToday.setHours(hours, minutes, 0, 0);
 
-    return () => clearInterval(intervalId);
+      // If it's already past the end of the shift for today...
+      if (now.getTime() > endTimeToday.getTime()) {
+        // ...check when the user last signed in.
+        if (auth.currentUser?.metadata.lastSignInTime) {
+          const lastLoginTime = new Date(auth.currentUser.metadata.lastSignInTime);
+          // If they logged in *after* their shift ended, let them stay.
+          if (lastLoginTime.getTime() > endTimeToday.getTime()) {
+            return;
+          }
+        }
+        // Otherwise, if they were already logged in, sign them out now.
+        signOut(auth);
+        return;
+      }
+
+      // If the shift hasn't ended yet, calculate the time remaining.
+      const timeUntilLogout = endTimeToday.getTime() - now.getTime();
+
+      // Set a single timer to log the user out exactly at their end time.
+      const logoutTimer = setTimeout(() => {
+        signOut(auth);
+      }, timeUntilLogout);
+
+      // Important: Clean up the timer if the component unmounts or dependencies change.
+      return () => clearTimeout(logoutTimer);
+
+    } catch (e) {
+      console.error("Error setting up auto-logout:", e);
+    }
   }, [profile, isProfileLoading, auth]);
   
   if (isUserLoading || isProfileLoading) {
