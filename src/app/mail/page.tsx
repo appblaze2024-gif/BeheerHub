@@ -231,11 +231,6 @@ export default function MailPage() {
 
   React.useEffect(() => {
     fetchAndSetEmails(true);
-    const interval = setInterval(() => {
-      fetchAndSetEmails(false);
-    }, 15000); // Poll every 15 seconds
-
-    return () => clearInterval(interval);
   }, [fetchAndSetEmails]);
 
   const handleDelete = async (e: React.MouseEvent) => {
