@@ -43,6 +43,7 @@ import { nl } from 'date-fns/locale';
 import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from './ui/badge';
 
 
 interface Suggestion {
@@ -128,6 +129,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
   const [tasks, setTasks] = React.useState<MeldingTask[]>([]);
   const [newTaskDescription, setNewTaskDescription] = React.useState('');
   const [activeTab, setActiveTab] = React.useState('Werkzaamheden');
+  const afhandelingBijzonderhedenRef = React.useRef<HTMLTextAreaElement>(null);
 
   const form = useForm<MeldingFormValues>({
     resolver: zodResolver(meldingFormSchema),
@@ -378,14 +380,17 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
   };
   
   const handleAfronden = async () => {
-    if (!firestore || !melding?.id) return;
+    if (!firestore || !melding?.id || !user) return;
     setIsSubmitting(true);
     const meldingRef = doc(firestore, 'meldingen', melding.id);
     try {
         await updateDocumentNonBlocking(meldingRef, {
             status: 'Afgerond',
             afhandeling_datum: format(new Date(), 'yyyy-MM-dd'),
-            afgehandeld_door: user?.displayName || user?.email || 'Onbekend',
+            afgehandeld_door: user.displayName || user.email || 'Onbekend',
+            afhandeling_bijzonderheden: afhandelingBijzonderhedenRef.current?.value,
+            files: uploadedFiles,
+            tasks: tasks,
         });
         onOpenChange(false);
     } catch (error) {
@@ -529,7 +534,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
          <DialogHeader className="p-4 border-b bg-slate-100 dark:bg-slate-800 flex-row items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
             <DialogClose asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="text-slate-800 dark:text-slate-200">
                 <ChevronLeft className="h-6 w-6" />
               </Button>
             </DialogClose>
@@ -554,7 +559,7 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                         </div>
                          <div className="flex items-center gap-2">
                             <span className='font-semibold'>Categorie:</span>
-                            <span>{melding.hoofdcategorie} {'>'} {melding.subcategorie}</span>
+                            <span>{melding.hoofdcategorie} &gt; {melding.subcategorie}</span>
                         </div>
                     </div>
                 </div>
@@ -569,7 +574,10 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                         >
                             <item.icon className="h-5 w-5 text-primary" />
                             <span>{item.label}</span>
-                            {item.label === 'Werkzaamheden' && tasks.length > 0 && <span className="ml-auto text-muted-foreground">{tasks.length} taken</span>}
+                            {item.label === 'Documenten' && uploadedFiles.length > 0 && (
+                                <Badge variant="secondary" className="ml-auto">{uploadedFiles.length}</Badge>
+                            )}
+                            {item.label === 'Werkzaamheden' && tasks.length > 0 && <Badge variant="secondary" className="ml-auto">{tasks.filter(t => !t.completed).length}</Badge>}
                         </Button>
                     ))}
                 </nav>
@@ -579,12 +587,13 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                 {activeTab === 'Werkzaamheden' && (
                     <div className="space-y-6">
                         <div>
-                            <h3 className="text-sm font-semibold text-gray-500">Werkomschrijving / Melding</h3>
+                            <Label className="text-sm font-semibold text-gray-500">Werkomschrijving / Melding</Label>
                             <p className="mt-1">{melding.extra_informatie}</p>
                         </div>
                         <div>
                             <Label className="text-sm font-semibold text-gray-500">Uitgevoerde werkzaamheden</Label>
                             <Textarea 
+                                ref={afhandelingBijzonderhedenRef}
                                 placeholder="Vul werkzaamheden in" 
                                 defaultValue={melding.afhandeling_bijzonderheden}
                                 className="mt-1 bg-white"
@@ -652,6 +661,44 @@ export function MeldingDialog({ open, onOpenChange, melding }: MeldingDialogProp
                             />
                         </div>
                     </div>
+                )}
+                {activeTab === 'Documenten' && (
+                    <Card>
+                        <CardHeader className="flex-row items-center justify-between">
+                            <CardTitle>Documenten</CardTitle>
+                            <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('melding-document-input')?.click()} disabled={isUploading}>
+                                <Upload className="mr-2 h-4 w-4" /> Toevoegen
+                            </Button>
+                            <input type="file" id="melding-document-input" onChange={handleFileChange} className="hidden" multiple />
+                        </CardHeader>
+                        <CardContent>
+                            {Object.entries(uploadProgress).map(([name, progress]) => (
+                                <div key={name} className="mt-2">
+                                    <p className="text-sm font-medium">{name}</p>
+                                    <Progress value={progress} className="h-2 mt-1" />
+                                </div>
+                            ))}
+                            <div className="mt-4 space-y-2">
+                                {uploadedFiles.length > 0 ? (
+                                    uploadedFiles.map(file => (
+                                        <div key={file.storagePath} className="flex items-center justify-between text-sm p-2 bg-muted/50 rounded-md">
+                                            <a href={file.url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline flex items-center gap-2">
+                                                <FileIcon className='h-4 w-4 shrink-0' /> {file.name}
+                                            </a>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</span>
+                                                <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleFileDelete(file)}>
+                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="text-sm text-muted-foreground text-center py-4">Geen documenten toegevoegd.</p>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
                 )}
             </main>
         </div>
