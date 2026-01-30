@@ -107,25 +107,21 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
 
   return (
     <div className="overflow-auto">
-      <div className="grid grid-cols-[100px_80px_120px_200px_1fr_auto] min-w-[1000px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
+      <div className="grid grid-cols-[140px_120px_100px_80px_120px_200px_1fr] min-w-[1200px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
+        <span>Status</span>
+        <span>Wijk</span>
         <span>Datum</span>
         <span>Tijd</span>
         <span>Intakenummer</span>
         <span>Subcategorie</span>
         <span>Omschrijving</span>
-        <span>Status</span>
       </div>
       {meldingen.map((melding) => (
         <div
           key={melding.id}
           onClick={() => onMeldingClick(melding)}
-          className="grid grid-cols-[100px_80px_120px_200px_1fr_auto] min-w-[1000px] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
+          className="grid grid-cols-[140px_120px_100px_80px_120px_200px_1fr] min-w-[1200px] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
         >
-          <span className="truncate">{melding.datum ? format(new Date(melding.datum), 'dd-MM-yyyy') : '-'}</span>
-          <span className="truncate">{melding.tijdstip || '-'}</span>
-          <span className="font-medium truncate">{melding.intakenummer}</span>
-          <span className="truncate">{melding.subcategorie}</span>
-          <span className="truncate">{melding.extra_informatie}</span>
           <Badge
             style={{
               backgroundColor: statusConfig[melding.status]?.color || '#ccc',
@@ -137,6 +133,12 @@ function MeldingenList({ meldingen, onMeldingClick }: { meldingen: Melding[], on
           >
             {melding.status}
           </Badge>
+          <span className="truncate">{melding.wijk || '-'}</span>
+          <span className="truncate">{melding.datum ? format(new Date(melding.datum), 'dd-MM-yyyy') : '-'}</span>
+          <span className="truncate">{melding.tijdstip || '-'}</span>
+          <span className="font-medium truncate">{melding.intakenummer}</span>
+          <span className="truncate">{melding.subcategorie}</span>
+          <span className="truncate">{melding.extra_informatie}</span>
         </div>
       ))}
     </div>
