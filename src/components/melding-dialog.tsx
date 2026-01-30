@@ -1,27 +1,15 @@
 'use client';
 
 import * as React from 'react';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 import { Loader2, Trash2, File as FileIcon, Upload, Pencil, MapPin, Camera, Package, Clock, Car, Plus, X, FileText } from 'lucide-react';
 import { useFirestore, useUser, useCollection, useFirebaseApp, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
-import { format } from 'date-fns';
 import {
   Dialog,
   DialogContent,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -102,10 +90,9 @@ export function MeldingDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-6xl p-0 h-[90vh] flex flex-col">
-        <div className='flex items-center justify-between p-4 border-b'>
-             <h2 className="text-xl font-bold">Werkbon: {melding.intakenummer}</h2>
-             <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}><X className="h-5 w-5" /></Button>
-        </div>
+        <DialogHeader className="p-4 border-b">
+          <DialogTitle>Werkbon: {melding.intakenummer}</DialogTitle>
+        </DialogHeader>
         <div className="flex-1 flex min-h-0">
           {/* Left Column */}
           <div className="w-1/3 bg-gray-50 dark:bg-gray-900/50 border-r flex flex-col">
