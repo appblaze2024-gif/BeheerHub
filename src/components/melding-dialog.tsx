@@ -89,7 +89,7 @@ export function MeldingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-6xl p-0 h-[90vh] flex flex-col">
+      <DialogContent className="w-screen h-screen max-w-none rounded-none top-0 left-0 translate-x-0 translate-y-0 p-0 flex flex-col">
         <DialogHeader className="p-4 border-b">
           <DialogTitle>Werkbon: {melding.intakenummer}</DialogTitle>
         </DialogHeader>
