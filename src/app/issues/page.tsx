@@ -106,24 +106,14 @@ function MeldingenList({ meldingen, onMeldingClick, onMailMelding, onNavigateToM
     );
   }
 
-  const formatAdres = (melding: Melding) => {
-    const parts = [melding.straatnaam, melding.huisnummer, melding.postcode, melding.plaats];
-    return parts.filter(Boolean).join(' ');
-  }
-
   return (
     <div className="overflow-auto">
-      <div className="grid grid-cols-[100px_80px_120px_120px_120px_120px_200px_1fr_1fr_1fr_100px_auto] min-w-[1600px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
+      <div className="grid grid-cols-[100px_80px_120px_200px_1fr_120px_auto] min-w-[1000px] items-center gap-x-4 px-4 py-2 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10">
         <span>Datum</span>
         <span>Tijd</span>
         <span>Intakenummer</span>
-        <span>Extern Nr.</span>
-        <span>Wijk</span>
         <span>Subcategorie</span>
-        <span>Adres</span>
         <span>Omschrijving</span>
-        <span>Melder</span>
-        <span>Afgehandeld door</span>
         <span>Status</span>
         <span />
       </div>
@@ -131,18 +121,13 @@ function MeldingenList({ meldingen, onMeldingClick, onMailMelding, onNavigateToM
         <div
           key={melding.id}
           onClick={() => onMeldingClick(melding)}
-          className="grid grid-cols-[100px_80px_120px_120px_120px_120px_200px_1fr_1fr_1fr_100px_auto] min-w-[1600px] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
+          className="grid grid-cols-[100px_80px_120px_200px_1fr_120px_auto] min-w-[1000px] items-center gap-x-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/50"
         >
           <span className="truncate">{melding.datum ? format(new Date(melding.datum), 'dd-MM-yyyy') : '-'}</span>
           <span className="truncate">{melding.tijdstip || '-'}</span>
           <span className="font-medium truncate">{melding.intakenummer}</span>
-          <span className="truncate">{melding.extern_meldingsnummer || '-'}</span>
-          <span className="truncate">{melding.wijk || '-'}</span>
           <span className="truncate">{melding.subcategorie}</span>
-          <span className="truncate">{formatAdres(melding)}</span>
           <span className="truncate">{melding.extra_informatie}</span>
-          <span className="truncate">{melding.melder || '-'}</span>
-          <span className="truncate">{melding.afgehandeld_door || '-'}</span>
           <Badge
             style={{
               backgroundColor: statusConfig[melding.status]?.color || '#ccc',
