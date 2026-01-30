@@ -24,6 +24,7 @@ import { useProfile } from '@/firebase/profile-provider';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useProject } from '@/context/project-context';
 import Link from 'next/link';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -96,6 +97,8 @@ const polygonOutlineLayer: LineLayer = {
 };
 
 function MeldingenList({ meldingen, onMeldingClick, projectId }: { meldingen: Melding[], onMeldingClick: (melding: Melding) => void, projectId: string | null }) {
+  const isMobile = useIsMobile();
+  
   if (meldingen.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center text-muted-foreground p-8">
@@ -109,7 +112,7 @@ function MeldingenList({ meldingen, onMeldingClick, projectId }: { meldingen: Me
   return (
     <div className="overflow-auto">
       {/* Unified Header */}
-      <div className="grid grid-cols-[140px_1fr_1fr_2fr_auto] items-center gap-x-4 px-2 py-1 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10 border-b">
+      <div className="grid grid-cols-[140px_1fr_1fr_2fr_auto] items-center gap-x-2 px-2 py-1 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10 border-b">
         <span>Status</span>
         <span>Wijk</span>
         <span>Subcategorie</span>
@@ -123,7 +126,7 @@ function MeldingenList({ meldingen, onMeldingClick, projectId }: { meldingen: Me
           <div
             key={melding.id}
             onClick={() => onMeldingClick(melding)}
-            className="grid grid-cols-[140px_1fr_1fr_2fr_auto] items-center gap-x-4 px-2 py-1.5 text-xs cursor-pointer hover:bg-muted/50"
+            className="grid grid-cols-[140px_1fr_1fr_2fr_auto] items-center gap-x-2 px-2 py-1 text-xs cursor-pointer hover:bg-muted/50"
           >
             <Badge
               style={{
