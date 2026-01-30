@@ -4,7 +4,7 @@ import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Loader2, Trash2, File as FileIcon, Upload, Pencil, MapPin, Camera, Package, Clock, Car, Plus, X } from 'lucide-react';
+import { Loader2, Trash2, File as FileIcon, Upload, Pencil, MapPin, Camera, Package, Clock, Car, Plus, X, FileText } from 'lucide-react';
 import { useFirestore, useUser, useCollection, useFirebaseApp, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
