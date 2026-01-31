@@ -7,10 +7,11 @@ import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
-import { CalendarIcon, Loader2, MapPin, Search } from 'lucide-react';
-import { useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { CalendarIcon, Loader2, MapPin, Search, UploadCloud, FileIcon, Trash2 } from 'lucide-react';
+import { useFirestore, addDocumentNonBlocking, useFirebaseApp } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
-import { collection } from 'firebase/firestore';
+import { collection, doc } from 'firebase/firestore';
+import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useToast } from '@/components/ui/use-toast';
 
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
+import type { UploadedFile } from '@/lib/types';
 
 
 const newMeldingSchema = z.object({
@@ -87,17 +90,23 @@ export default function NewIssuePage() {
   const router = useRouter();
   const { toast } = useToast();
   const { profile } = useProfile();
+  const app = useFirebaseApp();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
+  const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
+  const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
+  const [isDragging, setIsDragging] = React.useState(false);
+  
   const now = new Date();
-  const meldingsnummer = format(now, 'yyyyMMddHHmmss');
+  const meldingIdRef = React.useRef(format(now, 'yyyyMMddHHmmss'));
+  const meldingsnummer = meldingIdRef.current;
 
   const form = useForm<NewMeldingFormValues>({
     resolver: zodResolver(newMeldingSchema),
     defaultValues: {
       status: 'Nieuw',
-      voorvaldatum: now,
-      voorvaltijd: format(now, 'HH:mm'),
+      voorvaldatum: undefined,
+      voorvaltijd: '',
       meldingsdatum: now,
       meldingsuur: format(now, 'HH:mm'),
       hoofdcategorie: '',
@@ -108,6 +117,113 @@ export default function NewIssuePage() {
   });
   
   const watchedHoofdcategorie = form.watch('hoofdcategorie');
+  
+  const formatBytes = (bytes: number, decimals = 2) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  };
+
+  const uploadFile = React.useCallback((file: File, meldingId: string): Promise<UploadedFile> => {
+    return new Promise((resolve, reject) => {
+        if (!app) {
+            reject(new Error("Firebase app niet beschikbaar"));
+            return;
+        }
+        const storage = getStorage(app);
+        const uniqueFileName = `${new Date().getTime()}-${file.name}`;
+        const storagePath = `meldingen/${meldingId}/bijlagen/${uniqueFileName}`;
+        const storageRef = ref(storage, storagePath);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+
+        uploadTask.on(
+            'state_changed',
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                setUploadProgress(prev => ({ ...prev, [uniqueFileName]: progress }));
+            },
+            (error) => {
+                console.error('Upload mislukt:', error);
+                setUploadProgress(prev => {
+                    const newProgress = { ...prev };
+                    delete newProgress[uniqueFileName];
+                    return newProgress;
+                });
+                reject(error);
+            },
+            () => {
+                getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+                    const newFile: UploadedFile = {
+                        name: file.name,
+                        url: downloadURL,
+                        size: file.size,
+                        type: file.type,
+                        uploadedAt: new Date().toISOString(),
+                        storagePath: storagePath,
+                    };
+                    resolve(newFile);
+                    setUploadProgress(prev => {
+                        const newProgress = { ...prev };
+                        delete newProgress[uniqueFileName];
+                        return newProgress;
+                    });
+                });
+            }
+        );
+    });
+  }, [app]);
+  
+  const handleFileUploads = React.useCallback(async (files: FileList | File[]) => {
+    if (!files || files.length === 0) return;
+    let currentFiles = [...uploadedFiles];
+    for (const file of Array.from(files)) {
+      try {
+        const uploadedFile = await uploadFile(file, meldingsnummer);
+        currentFiles.push(uploadedFile);
+      } catch (error) {
+        console.error(`Kon ${file.name} niet uploaden.`);
+        toast({
+          variant: "destructive",
+          title: "Upload mislukt",
+          description: `Bestand ${file.name} kon niet worden geüpload.`
+        });
+      }
+    }
+    setUploadedFiles(currentFiles);
+  }, [uploadFile, meldingsnummer, uploadedFiles, toast]);
+  
+  const handleFileChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      handleFileUploads(event.target.files);
+    }
+  }, [handleFileUploads]);
+
+  const handleDrop = React.useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragging(false);
+    if (event.dataTransfer.files) {
+      handleFileUploads(event.dataTransfer.files);
+    }
+  }, [handleFileUploads]);
+  
+  const handleFileDelete = async (fileToDelete: UploadedFile) => {
+    if (!app) return;
+    setUploadedFiles((prev) => prev.filter((f) => f.storagePath !== fileToDelete.storagePath));
+    const storage = getStorage(app);
+    const fileRef = ref(storage, fileToDelete.storagePath);
+    try {
+      await deleteObject(fileRef);
+    } catch (error: any) {
+      if (error.code !== 'storage/object-not-found') {
+        console.error('Kon bestand niet verwijderen:', error);
+      }
+    }
+  };
+
 
   const onSubmit = async (data: NewMeldingFormValues) => {
     if (!firestore) return;
@@ -125,6 +241,7 @@ export default function NewIssuePage() {
         aangenomen_door: profile?.displayName || profile?.email || 'Onbekend',
         latitude: 0,
         longitude: 0,
+        files: uploadedFiles,
       });
 
       toast({
@@ -143,6 +260,8 @@ export default function NewIssuePage() {
       setIsSubmitting(false);
     }
   };
+
+  const isUploading = Object.keys(uploadProgress).length > 0;
 
   return (
     <div className="flex flex-col h-full overflow-hidden text-sm bg-gray-100 dark:bg-gray-900">
@@ -327,7 +446,66 @@ export default function NewIssuePage() {
                     <TabsContent value="memo" className="flex-1 mt-1">
                         <FormField control={form.control} name="extra_informatie" render={({ field }) => ( <FormItem className="h-full flex flex-col"><FormLabel className='sr-only'>Memo</FormLabel><FormControl><Textarea {...field} className="flex-1 resize-none text-xs" /></FormControl><FormMessage /></FormItem> )} />
                     </TabsContent>
-                    <TabsContent value="bijlagen"><div className="text-center p-4 text-muted-foreground text-xs">Nog geen bijlagen.</div></TabsContent>
+                    <TabsContent value="bijlagen" className="flex-1 mt-1">
+                        <div className="h-full flex flex-col gap-4 p-1">
+                            <div
+                                className={cn(
+                                    "border-2 border-dashed border-muted-foreground/30 rounded-lg p-4 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50 transition-colors flex-1",
+                                    isDragging && "bg-muted/50 border-primary"
+                                )}
+                                onDragEnter={() => setIsDragging(true)}
+                                onDragLeave={() => setIsDragging(false)}
+                                onDragOver={(e) => e.preventDefault()}
+                                onDrop={handleDrop}
+                                onClick={() => document.getElementById('bijlage-file-input')?.click()}
+                            >
+                                <UploadCloud className="h-10 w-10 text-muted-foreground" />
+                                <p className="mt-2 text-sm font-semibold">Sleep bestanden hierheen of klik om te uploaden</p>
+                                <p className="text-xs text-muted-foreground">Alle bestandstypes zijn toegestaan.</p>
+                                <input
+                                    type="file"
+                                    id="bijlage-file-input"
+                                    onChange={handleFileChange}
+                                    className="hidden"
+                                    multiple
+                                    disabled={isUploading}
+                                />
+                            </div>
+                            
+                            {Object.entries(uploadProgress).map(([name, progress]) => (
+                                <div key={name} className="space-y-1">
+                                    <p className="text-sm font-medium text-muted-foreground">{name}</p>
+                                    <Progress value={progress} className="w-full h-2" />
+                                </div>
+                            ))}
+
+                            {uploadedFiles.length > 0 && (
+                                <div className="border rounded-md max-h-32 overflow-y-auto">
+                                    {uploadedFiles.map((file) => (
+                                        <div
+                                            key={file.storagePath}
+                                            className="grid grid-cols-[1fr_auto_auto] gap-4 items-center px-2 py-1 border-b last:border-b-0"
+                                        >
+                                            <a href={file.url} target="_blank" rel="noopener noreferrer" className="truncate flex items-center gap-2 hover:underline text-xs">
+                                                <FileIcon className="h-4 w-4 shrink-0" /> {file.name}
+                                            </a>
+                                            <span className='text-xs text-muted-foreground'>{formatBytes(file.size)}</span>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6"
+                                                onClick={() => handleFileDelete(file)}
+                                                disabled={isSubmitting}
+                                            >
+                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </TabsContent>
                     <TabsContent value="bestanden"><div className="text-center p-4 text-muted-foreground text-xs">Nog geen bestanden.</div></TabsContent>
                     <TabsContent value="locatie"><div className="text-center p-4 text-muted-foreground text-xs">Locatiegegevens worden hier getoond.</div></TabsContent>
                     <TabsContent value="dubbele"><div className="text-center p-4 text-muted-foreground text-xs">Geen dubbele meldingen gevonden.</div></TabsContent>
@@ -336,8 +514,8 @@ export default function NewIssuePage() {
             
             <div className="flex-shrink-0 flex justify-end gap-2 px-3 pb-2 border-t pt-2 bg-gray-50 dark:bg-gray-800">
                 <Button type="button" variant="ghost" onClick={() => router.back()} className="h-8">Annuleren</Button>
-                <Button type="submit" disabled={isSubmitting} className="h-8">
-                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Button type="submit" disabled={isSubmitting || isUploading} className="h-8">
+                    {isSubmitting || isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Melding Opslaan
                 </Button>
             </div>
