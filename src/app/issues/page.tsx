@@ -4,7 +4,7 @@ import * as React from 'react';
 import MapGL, { Marker, Popup, Source, Layer, FillLayer, LineLayer } from 'react-map-gl';
 import { useCollection, useFirestore, useFirebaseApp, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
-import { Calendar as CalendarIcon, Plus, Search, List, Map as MapIcon, Bell, Filter, Navigation, Pencil, FileText, ChevronLeft, Camera, Package, Clock, User, Paperclip, PlusCircle, AlertCircle, Info, UploadCloud, ChevronDown, MapPin, Trash2, ArrowLeft } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Search, List, Map as MapIcon, Bell, Filter, Navigation, Pencil, FileText, ChevronLeft, Camera, Package, Clock, User, Paperclip, PlusCircle, AlertCircle, Info, UploadCloud, ChevronDown, MapPin, Trash2, ArrowLeft, File as FileIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -565,42 +565,52 @@ export default function IssuesPage() {
             
             <div className="flex-1 overflow-y-auto p-6">
                  <TabsContent value="Werkzaamheden" className="mt-0">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                        <Card>
-                            <CardHeader className="p-4"><CardTitle className="text-base font-semibold">Werkbon Details</CardTitle></CardHeader>
-                            <CardContent className="space-y-4 p-4 pt-0 text-xs">
-                                <div className="grid grid-cols-2 gap-x-4 gap-y-1 border-b pb-2">
-                                    <div><span className="text-muted-foreground">Intakenr:</span> <span className="font-semibold">{selectedMelding.intakenummer}</span></div>
-                                    <div><span className="text-muted-foreground">Datum:</span> <span className="font-semibold">{format(new Date(selectedMelding.datum), 'dd-MM-yy')} {selectedMelding.tijdstip}</span></div>
-                                    <div className="col-span-2"><span className="text-muted-foreground">Adres:</span> <span className="font-semibold">{selectedMelding.straatnaam}, {selectedMelding.postcode} {selectedMelding.plaats}</span></div>
-                                    <div><span className="text-muted-foreground">Melder:</span> <span className="font-semibold">{selectedMelding.melder}</span></div>
+                    <Card>
+                        <CardHeader><CardTitle className="text-lg font-semibold">Werkbon Details</CardTitle></CardHeader>
+                        <CardContent className="space-y-4 p-4 pt-0 text-xs">
+                            <div className="grid grid-cols-2 gap-x-6 gap-y-2 border-b pb-2">
+                                <div className="space-y-1">
+                                    <p className="text-muted-foreground">Intakenr:</p> 
+                                    <p className="font-semibold text-sm">{selectedMelding.intakenummer}</p>
                                 </div>
-                                
-                                <div className="space-y-3 pt-2">
-                                    <div className="grid grid-cols-3 gap-4">
-                                        <div>
-                                            <p className="text-xs text-muted-foreground">Hoofdcategorie</p>
-                                            <p className="text-sm font-semibold">{selectedMelding.hoofdcategorie}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs text-muted-foreground">Subcategorie</p>
-                                            <p className="text-sm font-semibold">{selectedMelding.subcategorie}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs text-muted-foreground">Status</p>
-                                            <p className="text-sm font-semibold">{selectedMelding.status}</p>
-                                        </div>
+                                <div className="space-y-1">
+                                    <p className="text-muted-foreground">Datum:</p> 
+                                    <p className="font-semibold text-sm">{format(new Date(selectedMelding.datum), 'dd-MM-yy')} {selectedMelding.tijdstip}</p>
+                                </div>
+                                <div className="col-span-2 space-y-1">
+                                    <p className="text-muted-foreground">Adres:</p> 
+                                    <p className="font-semibold text-sm">{selectedMelding.straatnaam}, {selectedMelding.postcode} {selectedMelding.plaats}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-muted-foreground">Melder:</p> 
+                                    <p className="font-semibold text-sm">{selectedMelding.melder}</p>
+                                </div>
+                            </div>
+                            
+                            <div className="space-y-4 pt-2">
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div className="space-y-1">
+                                        <p className="text-muted-foreground">Hoofdcategorie</p>
+                                        <p className="text-sm font-semibold">{selectedMelding.hoofdcategorie}</p>
                                     </div>
-                                    <div>
-                                        <p className="text-xs text-muted-foreground">Omschrijving</p>
-                                        <p className="text-sm whitespace-pre-wrap font-semibold">{selectedMelding.extra_informatie}</p>
+                                    <div className="space-y-1">
+                                        <p className="text-muted-foreground">Subcategorie</p>
+                                        <p className="text-sm font-semibold">{selectedMelding.subcategorie}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-muted-foreground">Status</p>
+                                        <p className="text-sm font-semibold">{selectedMelding.status}</p>
                                     </div>
                                 </div>
-                            </CardContent>
-                        </Card>
-                        <div className="h-80 rounded-lg overflow-hidden border">
-                            <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} />
-                        </div>
+                                <div className="space-y-1">
+                                    <p className="text-muted-foreground">Omschrijving</p>
+                                    <p className="text-sm whitespace-pre-wrap font-semibold">{selectedMelding.extra_informatie}</p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <div className='mt-6 rounded-lg overflow-hidden border h-80'>
+                        <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} />
                     </div>
                 </TabsContent>
                 <TabsContent value="Locatiegegevens" className="mt-0">
