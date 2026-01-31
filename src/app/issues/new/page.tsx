@@ -105,13 +105,33 @@ export default function NewIssuePage() {
     resolver: zodResolver(newMeldingSchema),
     defaultValues: {
       status: 'Nieuw',
-      voorvaldatum: undefined,
-      voorvaltijd: '',
       meldingsdatum: now,
       meldingsuur: format(now, 'HH:mm'),
+      // Keep other fields empty as per user request
+      soort_melder: '',
       hoofdcategorie: '',
       subcategorie: '',
+      behandelende_afdeling: '',
+      behandelaar: '',
+      voorvaldatum: undefined,
+      voorvaltijd: '',
+      actiedatum: null,
+      afhandeldatum: null,
+      afhandeltijd: '',
+      afhandelaar: '',
+      soort_melding: '',
+      ext_referentie: '',
+      straatnaam: '',
+      nummer: '',
+      postcode: '',
+      plaats: '',
+      wijk: '',
+      pasnr: '',
+      soort_adres: '',
       melder: '',
+      telefoon_melder: '',
+      email_melder: '',
+      burgerservicenummer: '',
       extra_informatie: '',
     },
   });
@@ -438,7 +458,7 @@ export default function NewIssuePage() {
                  <Tabs defaultValue="memo" className="flex-1 flex flex-col min-h-0">
                     <TabsList>
                         <TabsTrigger value="memo">Memo</TabsTrigger>
-                        <TabsTrigger value="bijlagen">Bijlagen</TabsTrigger>
+                        <TabsTrigger value="documenten">Documenten</TabsTrigger>
                         <TabsTrigger value="bestanden">Bestanden</TabsTrigger>
                         <TabsTrigger value="locatie">Locatie</TabsTrigger>
                         <TabsTrigger value="dubbele">Dubbele Meldingen</TabsTrigger>
@@ -446,7 +466,7 @@ export default function NewIssuePage() {
                     <TabsContent value="memo" className="flex-1 mt-1">
                         <FormField control={form.control} name="extra_informatie" render={({ field }) => ( <FormItem className="h-full flex flex-col"><FormLabel className='sr-only'>Memo</FormLabel><FormControl><Textarea {...field} className="flex-1 resize-none text-xs" /></FormControl><FormMessage /></FormItem> )} />
                     </TabsContent>
-                    <TabsContent value="bijlagen" className="flex-1 mt-1">
+                    <TabsContent value="documenten" className="flex-1 mt-1">
                         <div className="h-full flex flex-col gap-4 p-1">
                             <div
                                 className={cn(
@@ -457,14 +477,14 @@ export default function NewIssuePage() {
                                 onDragLeave={() => setIsDragging(false)}
                                 onDragOver={(e) => e.preventDefault()}
                                 onDrop={handleDrop}
-                                onClick={() => document.getElementById('bijlage-file-input')?.click()}
+                                onClick={() => document.getElementById('documenten-file-input')?.click()}
                             >
                                 <UploadCloud className="h-10 w-10 text-muted-foreground" />
                                 <p className="mt-2 text-sm font-semibold">Sleep bestanden hierheen of klik om te uploaden</p>
                                 <p className="text-xs text-muted-foreground">Alle bestandstypes zijn toegestaan.</p>
                                 <input
                                     type="file"
-                                    id="bijlage-file-input"
+                                    id="documenten-file-input"
                                     onChange={handleFileChange}
                                     className="hidden"
                                     multiple
