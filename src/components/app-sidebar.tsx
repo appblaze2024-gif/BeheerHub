@@ -189,11 +189,11 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                         <SidebarMenuSub>
                           {item.subItems.map((subItem) => (
                             <SidebarMenuSubItem key={subItem.href}>
-                              <Link href={subItem.href} asChild>
-                                <SidebarMenuSubButton onClick={onNavigate} isActive={pathname === subItem.href}>
-                                  <span>{subItem.label}</span>
-                                </SidebarMenuSubButton>
-                              </Link>
+                              <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
+                                <Link href={subItem.href} onClick={onNavigate}>
+                                  {subItem.label}
+                                </Link>
+                              </SidebarMenuSubButton>
                             </SidebarMenuSubItem>
                           ))}
                         </SidebarMenuSub>
