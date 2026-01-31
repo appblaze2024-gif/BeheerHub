@@ -589,7 +589,7 @@ export default function NewIssuePage() {
                         <div className="grid grid-cols-2 gap-2">
                              <FormRow label="Soort melding">
                                 <FormField control={form.control} name="soort_melding" render={({ field }) => (
-                                    <Select onValueChange={field.onChange} value={field.value}>
+                                    <Select onValueChange={field.onChange} value={field.value || ''}>
                                         <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer soort"/></SelectTrigger></FormControl>
                                         <SelectContent>
                                             <SelectItem value="Balie">Balie</SelectItem>
@@ -615,7 +615,6 @@ export default function NewIssuePage() {
                         <FormRow label="Nummer">
                              <div className="flex items-center gap-2">
                                 <FormField control={form.control} name="nummer" render={({ field }) => ( <FormControl><Input {...field} value={field.value || ''} className="h-7 text-xs w-20" /></FormControl> )} />
-                                <Input className="h-7 text-xs" value="" />
                             </div>
                         </FormRow>
                         <FormRow label="Postcode">
@@ -872,3 +871,5 @@ export default function NewIssuePage() {
     </div>
   );
 }
+
+    
