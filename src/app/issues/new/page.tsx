@@ -172,6 +172,8 @@ export default function NewIssuePage() {
       behandelende_afdeling: '',
       behandelaar: '',
       voorvaltijd: '',
+      actiedatum: null,
+      afhandeldatum: null,
       afhandeltijd: '',
       afhandelaar: '',
       soort_melding: '',
@@ -506,7 +508,7 @@ export default function NewIssuePage() {
                     <FormRow label="Soort melder">
                        <div className="flex items-center">
                             <FormField control={form.control} name="soort_melder" render={({ field }) => (
-                                <FormControl><Input {...field} className="h-7 text-xs rounded-r-none" /></FormControl>
+                                <FormControl><Input {...field} value={field.value || ''} className="h-7 text-xs rounded-r-none" /></FormControl>
                             )} />
                             <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
                         </div>
@@ -532,13 +534,13 @@ export default function NewIssuePage() {
                     </FormRow>
                     <FormRow label="Behandelende afdeling">
                          <FormField control={form.control} name="behandelende_afdeling" render={({ field }) => (
-                            <FormControl><Input {...field} className="h-7 text-xs" /></FormControl>
+                            <FormControl><Input {...field} value={field.value || ''} className="h-7 text-xs" /></FormControl>
                         )} />
                     </FormRow>
                     <FormRow label="Behandelaar">
                         <div className="flex items-center">
                             <FormField control={form.control} name="behandelaar" render={({ field }) => (
-                                <FormControl><Input {...field} className="h-7 text-xs rounded-r-none" /></FormControl>
+                                <FormControl><Input {...field} value={field.value || ''} className="h-7 text-xs rounded-r-none" /></FormControl>
                             )} />
                             <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
                         </div>
@@ -554,13 +556,13 @@ export default function NewIssuePage() {
                     <FormRow label="Voorvaldatum">
                         <div className="flex gap-2 items-center">
                             <FormField control={form.control} name="voorvaldatum" render={({ field }) => (<FormControl><Input type='date' className="h-7 text-xs" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} /></FormControl>)} />
-                             <FormField control={form.control} name="voorvaltijd" render={({ field }) => (<FormControl><Input type="time" className="h-7 text-xs w-24" {...field} /></FormControl>)} />
+                             <FormField control={form.control} name="voorvaltijd" render={({ field }) => (<FormControl><Input type="time" className="h-7 text-xs w-24" {...field} value={field.value || ''} /></FormControl>)} />
                         </div>
                     </FormRow>
                     <FormRow label="Meldingsdatum">
                         <div className="flex gap-2 items-center">
                              <FormField control={form.control} name="meldingsdatum" render={({ field }) => (<FormControl><Input type='date' className="h-7 text-xs" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} /></FormControl>)} />
-                             <FormField control={form.control} name="meldingsuur" render={({ field }) => (<FormControl><Input type="time" className="h-7 text-xs w-24" {...field} /></FormControl>)} />
+                             <FormField control={form.control} name="meldingsuur" render={({ field }) => (<FormControl><Input type="time" className="h-7 text-xs w-24" {...field} value={field.value || ''} /></FormControl>)} />
                         </div>
                     </FormRow>
                      <FormRow label="Actiedatum">
@@ -569,12 +571,12 @@ export default function NewIssuePage() {
                     <FormRow label="Afhandeldatum">
                         <div className="flex gap-2 items-center">
                              <FormField control={form.control} name="afhandeldatum" render={({ field }) => (<FormControl><Input type='date' className="h-7 text-xs" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} /></FormControl>)} />
-                            <FormField control={form.control} name="afhandeltijd" render={({ field }) => (<FormControl><Input type="time" className="h-7 text-xs w-24" {...field} /></FormControl>)} />
+                            <FormField control={form.control} name="afhandeltijd" render={({ field }) => (<FormControl><Input type="time" className="h-7 text-xs w-24" {...field} value={field.value || ''} /></FormControl>)} />
                         </div>
                     </FormRow>
                     <FormRow label="Afhandelaar">
                         <div className="flex items-center">
-                            <FormField control={form.control} name="afhandelaar" render={({ field }) => (<FormControl><Input {...field} className="h-7 text-xs rounded-r-none" /></FormControl>)} />
+                            <FormField control={form.control} name="afhandelaar" render={({ field }) => (<FormControl><Input {...field} value={field.value || ''} className="h-7 text-xs rounded-r-none" /></FormControl>)} />
                             <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
                         </div>
                     </FormRow>
@@ -598,7 +600,7 @@ export default function NewIssuePage() {
                                 )} />
                             </FormRow>
                             <FormRow label="Ext. referentie">
-                                 <FormField control={form.control} name="ext_referentie" render={({ field }) => (<FormControl><Input {...field} className="h-7 text-xs" /></FormControl>)} />
+                                 <FormField control={form.control} name="ext_referentie" render={({ field }) => (<FormControl><Input {...field} value={field.value || ''} className="h-7 text-xs" /></FormControl>)} />
                             </FormRow>
                         </div>
                     </div>
@@ -606,36 +608,41 @@ export default function NewIssuePage() {
                         <h3 className="font-semibold text-xs mb-2">Adresgegevens</h3>
                         <FormRow label="Straatnaam">
                             <div className="flex items-center">
-                                <FormField control={form.control} name="straatnaam" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs rounded-r-none" /></FormControl> )} />
+                                <FormField control={form.control} name="straatnaam" render={({ field }) => ( <FormControl><Input {...field} value={field.value || ''} className="h-7 text-xs rounded-r-none" /></FormControl> )} />
                                 <Button type="button" onClick={handleAddressSearch} size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
                             </div>
                         </FormRow>
                         <FormRow label="Nummer">
                              <div className="flex items-center gap-2">
-                                <FormField control={form.control} name="nummer" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs w-20" /></FormControl> )} />
-                                <Input className="h-7 text-xs" />
+                                <FormField control={form.control} name="nummer" render={({ field }) => ( <FormControl><Input {...field} value={field.value || ''} className="h-7 text-xs w-20" /></FormControl> )} />
+                                <Input className="h-7 text-xs" value="" />
                             </div>
                         </FormRow>
                         <FormRow label="Postcode">
-                             <FormField control={form.control} name="postcode" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs" /></FormControl> )} />
+                             <FormField control={form.control} name="postcode" render={({ field }) => ( <FormControl><Input {...field} value={field.value || ''} className="h-7 text-xs" /></FormControl> )} />
                         </FormRow>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             <FormField control={form.control} name="wijk" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel className='text-xs'>Wijk</FormLabel>
-                                    <FormControl><Input placeholder="Wijk" {...field} className="h-7 text-xs" /></FormControl>
+                                    <FormControl><Input placeholder="Wijk" {...field} value={field.value || ''} className="h-7 text-xs" /></FormControl>
                                 </FormItem>
                             )} />
                             <FormField control={form.control} name="plaats" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel className='text-xs'>Gemeente</FormLabel>
-                                    <FormControl><Input placeholder="Gemeente" {...field} className="h-7 text-xs" /></FormControl>
+                                    <FormControl><Input placeholder="Gemeente" {...field} value={field.value || ''} className="h-7 text-xs" /></FormControl>
                                 </FormItem>
                             )} />
                         </div>
-                        <FormRow label="Werkgebied">
-                             <FormField control={form.control} name="werkgebied" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs" disabled /></FormControl> )} />
-                        </FormRow>
+                        <div className="max-w-sm">
+                          <FormField control={form.control} name="werkgebied" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className='text-xs'>Werkgebied</FormLabel>
+                              <FormControl><Input {...field} value={field.value || ''} className="h-7 text-xs" disabled /></FormControl>
+                            </FormItem>
+                          )} />
+                        </div>
                     </div>
 
                     <div className='p-2 border rounded-md bg-gray-50 dark:bg-gray-800/30 space-y-1.5'>
@@ -646,16 +653,16 @@ export default function NewIssuePage() {
                             </div>
                         </FormRow>
                         <FormRow label="Naam melder">
-                             <FormField control={form.control} name="melder" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs" /></FormControl> )} />
+                             <FormField control={form.control} name="melder" render={({ field }) => ( <FormControl><Input {...field} value={field.value || ''} className="h-7 text-xs" /></FormControl> )} />
                         </FormRow>
                         <FormRow label="Telefoon melder">
-                            <FormField control={form.control} name="telefoon_melder" render={({ field }) => ( <FormControl><Input type="tel" {...field} className="h-7 text-xs" /></FormControl> )} />
+                            <FormField control={form.control} name="telefoon_melder" render={({ field }) => ( <FormControl><Input type="tel" {...field} value={field.value || ''} className="h-7 text-xs" /></FormControl> )} />
                         </FormRow>
                         <FormRow label="E-mail melder">
-                             <FormField control={form.control} name="email_melder" render={({ field }) => ( <FormControl><Input type="email" {...field} className="h-7 text-xs" /></FormControl> )} />
+                             <FormField control={form.control} name="email_melder" render={({ field }) => ( <FormControl><Input type="email" {...field} value={field.value || ''} className="h-7 text-xs" /></FormControl> )} />
                         </FormRow>
                         <FormRow label="Burgerservicenummer">
-                            <FormField control={form.control} name="burgerservicenummer" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs" /></FormControl> )} />
+                            <FormField control={form.control} name="burgerservicenummer" render={({ field }) => ( <FormControl><Input {...field} value={field.value || ''} className="h-7 text-xs" /></FormControl> )} />
                         </FormRow>
                     </div>
                 </div>
@@ -671,7 +678,7 @@ export default function NewIssuePage() {
                         <TabsTrigger value="dubbele">Dubbele Meldingen</TabsTrigger>
                     </TabsList>
                     <TabsContent value="memo" className="flex-1 mt-1">
-                        <FormField control={form.control} name="extra_informatie" render={({ field }) => ( <FormItem className="h-full flex flex-col"><FormLabel className='sr-only'>Memo</FormLabel><FormControl><Textarea {...field} className="flex-1 resize-none text-xs" /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="extra_informatie" render={({ field }) => ( <FormItem className="h-full flex flex-col"><FormLabel className='sr-only'>Memo</FormLabel><FormControl><Textarea {...field} value={field.value || ''} className="flex-1 resize-none text-xs" /></FormControl><FormMessage /></FormItem> )} />
                     </TabsContent>
                     <TabsContent value="documenten" className="flex-1 mt-1">
                         <div className="h-full flex flex-col gap-4 p-1">
