@@ -413,19 +413,19 @@ export default function IssuesPage() {
             
             <div className="flex-1 overflow-y-auto p-6">
                  <TabsContent value="Werkzaamheden" className="mt-0">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <Card>
-                            <CardHeader className="p-4"><CardTitle className="text-sm font-semibold">Werkbon Details</CardTitle></CardHeader>
-                            <CardContent className="space-y-3 p-4 pt-0">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs border-b pb-2 mb-2">
+                            <CardHeader className="p-4"><CardTitle className="text-base font-semibold">Werkbon Details</CardTitle></CardHeader>
+                            <CardContent className="space-y-2 p-4 pt-0 text-xs">
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-1 border-b pb-2">
                                     <div><span className="font-semibold text-muted-foreground">Intakenr:</span> {selectedMelding.intakenummer}</div>
                                     <div><span className="font-semibold text-muted-foreground">Datum:</span> {format(new Date(selectedMelding.datum), 'dd-MM-yy')} {selectedMelding.tijdstip}</div>
-                                    <div className="sm:col-span-2"><span className="font-semibold text-muted-foreground">Adres:</span> {selectedMelding.straatnaam}, {selectedMelding.postcode} {selectedMelding.plaats}</div>
+                                    <div className="col-span-2"><span className="font-semibold text-muted-foreground">Adres:</span> {selectedMelding.straatnaam}, {selectedMelding.postcode} {selectedMelding.plaats}</div>
                                      <div><span className="font-semibold text-muted-foreground">Melder:</span> {selectedMelding.melder}</div>
                                 </div>
 
                                 <Form {...form}>
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2">
+                                    <div className="grid grid-cols-3 gap-2 pt-2">
                                         <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (
                                             <FormItem>
                                             <FormLabel className="text-xs">Hoofdcategorie</FormLabel>
@@ -463,7 +463,7 @@ export default function IssuesPage() {
                                 </Form>
                             </CardContent>
                         </Card>
-                        <div className="min-h-[250px] lg:min-h-0">
+                        <div className="min-h-[250px] md:min-h-0">
                             <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} />
                         </div>
                     </div>
@@ -513,9 +513,9 @@ export default function IssuesPage() {
                                 <CollapsibleContent>
                                      <CardContent className="p-0">
                                          {nearbyObjects.length > 0 ? (
-                                             <div className="space-y-2">
+                                             <div className="space-y-2 max-h-56 overflow-y-auto pr-2">
                                                  {nearbyObjects.map(obj => (
-                                                     <div key={obj.id} className="text-sm p-2 bg-muted rounded-md">{obj.id} - {obj.locatieSubType}</div>
+                                                     <div key={obj.id} className="text-sm p-2 bg-muted rounded-md">{obj.id} - {obj.locatieSubType || 'Onbekend'}</div>
                                                  ))}
                                              </div>
                                          ) : (
