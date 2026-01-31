@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { CalendarIcon, Loader2, MapPin, Search, UploadCloud, FileIcon, Trash2 } from 'lucide-react';
-import { useFirestore, addDocumentNonBlocking, useFirebaseApp } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking, useFirebaseApp, useCollection } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { collection, doc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -25,7 +25,9 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import type { UploadedFile } from '@/lib/types';
+import type { UploadedFile, Object as MapObject } from '@/lib/types';
+import { MapboxView } from '@/components/mapbox-view';
+import * as turf from '@turf/turf';
 
 
 const newMeldingSchema = z.object({
@@ -54,12 +56,12 @@ const newMeldingSchema = z.object({
   pasnr: z.string().optional(),
   soort_adres: z.string().optional(),
   
-  melder: z.string().min(1, 'Naam melder is verplicht'),
+  melder: z.string().optional(),
   telefoon_melder: z.string().optional(),
   email_melder: z.string().email('Ongeldig emailadres').optional().or(z.literal('')),
   burgerservicenummer: z.string().optional(),
 
-  extra_informatie: z.string().min(1, 'Memo is verplicht'),
+  extra_informatie: z.string().optional(),
 });
 
 type NewMeldingFormValues = z.infer<typeof newMeldingSchema>;
@@ -98,6 +100,23 @@ export default function NewIssuePage() {
   const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
   const [isDragging, setIsDragging] = React.useState(false);
   const [isDraggingPhoto, setIsDraggingPhoto] = React.useState(false);
+  const [location, setLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
+
+  const objectsCollection = React.useMemo(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'objects');
+  }, [firestore]);
+  const { data: allObjects } = useCollection<MapObject>(objectsCollection);
+
+  const nearbyObjects = React.useMemo(() => {
+    if (!location || !allObjects) return [];
+    const meldingPoint = turf.point([location.longitude, location.latitude]);
+    return allObjects.filter(obj => {
+      if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
+      const objPoint = turf.point([obj.longitude, obj.latitude]);
+      return turf.distance(meldingPoint, objPoint, { units: 'meters' }) <= 100;
+    }).sort((a, b) => turf.distance(turf.point([location.longitude, location.latitude]), turf.point([a.longitude, a.latitude])) - turf.distance(turf.point([location.longitude, location.latitude]), turf.point([b.longitude, b.latitude])));
+  }, [location, allObjects]);
   
   const now = new Date();
   const meldingIdRef = React.useRef(format(now, 'yyyyMMddHHmmss'));
@@ -308,8 +327,8 @@ export default function NewIssuePage() {
         datum: format(data.meldingsdatum || now, 'yyyy-MM-dd'),
         tijdstip: data.meldingsuur || format(now, 'HH:mm'),
         aangenomen_door: profile?.displayName || profile?.email || 'Onbekend',
-        latitude: 0,
-        longitude: 0,
+        latitude: location?.latitude || 0,
+        longitude: location?.longitude || 0,
         files: uploadedFiles,
         fotos: uploadedPhotos,
       });
@@ -431,8 +450,13 @@ export default function NewIssuePage() {
                         <div className="grid grid-cols-2 gap-2">
                              <FormRow label="Soort melding">
                                 <FormField control={form.control} name="soort_melding" render={({ field }) => (
-                                    <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="h-7 text-xs"><SelectValue/></SelectTrigger></FormControl>
-                                        <SelectContent><SelectItem value="Balie">Balie</SelectItem><SelectItem value="Telefoon">Telefoon</SelectItem><SelectItem value="Email">Email</SelectItem></SelectContent>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue/></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="Balie">Balie</SelectItem>
+                                            <SelectItem value="Telefoon">Telefoon</SelectItem>
+                                            <SelectItem value="Email">Email</SelectItem>
+                                        </SelectContent>
                                     </Select>
                                 )} />
                             </FormRow>
@@ -637,7 +661,15 @@ export default function NewIssuePage() {
                             )}
                         </div>
                     </TabsContent>
-                    <TabsContent value="locatie"><div className="text-center p-4 text-muted-foreground text-xs">Locatiegegevens worden hier getoond.</div></TabsContent>
+                    <TabsContent value="locatie" className="flex-1 mt-1">
+                      <div className="h-full border rounded-md overflow-hidden">
+                          <MapboxView
+                              latitude={location?.latitude}
+                              longitude={location?.longitude}
+                              objects={nearbyObjects}
+                          />
+                      </div>
+                    </TabsContent>
                     <TabsContent value="dubbele"><div className="text-center p-4 text-muted-foreground text-xs">Geen dubbele meldingen gevonden.</div></TabsContent>
                 </Tabs>
             </div>
@@ -654,5 +686,3 @@ export default function NewIssuePage() {
     </div>
   );
 }
-
-    
