@@ -28,7 +28,7 @@ import { useProfile } from '@/firebase/profile-provider';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useProject } from '@/context/project-context';
 import Link from 'next/link';
-import { useIsMobile } from '@/hooks/use-is-mobile';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -413,11 +413,11 @@ export default function IssuesPage() {
             
             <div className="flex-1 overflow-y-auto p-6">
                 <TabsContent value="Werkzaamheden" className="mt-0">
-                    <div className="grid grid-cols-2 gap-6">
-                        <div className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-4">
                              <Card>
-                                <CardHeader><CardTitle>Werkomschrijving / Melding</CardTitle></CardHeader>
-                                <CardContent className="space-y-4">
+                                <CardHeader className="p-4"><CardTitle className="text-base">Werkomschrijving / Melding</CardTitle></CardHeader>
+                                <CardContent className="space-y-4 p-4 pt-0">
                                     <Form {...form}>
                                         <div className="grid grid-cols-2 gap-4">
                                             <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (
@@ -444,7 +444,7 @@ export default function IssuesPage() {
                                         <FormField control={form.control} name="extra_informatie" render={({ field }) => (
                                             <FormItem>
                                             <FormLabel>Omschrijving</FormLabel>
-                                            <FormControl><Textarea rows={4} {...field} /></FormControl>
+                                            <FormControl><Textarea rows={3} {...field} /></FormControl>
                                             <FormMessage />
                                             </FormItem>
                                         )} />
@@ -452,8 +452,8 @@ export default function IssuesPage() {
                                 </CardContent>
                             </Card>
                             <Card>
-                                <CardHeader><CardTitle>Uitgevoerde werkzaamheden (taken)</CardTitle></CardHeader>
-                                <CardContent>
+                                <CardHeader className="p-4"><CardTitle className="text-base">Uitgevoerde werkzaamheden (taken)</CardTitle></CardHeader>
+                                <CardContent className="p-4 pt-0">
                                     <div className="space-y-2">
                                         {tasks.map((task) => (
                                             <div key={task.id} className="flex items-center gap-2">
@@ -470,20 +470,20 @@ export default function IssuesPage() {
                                 </CardContent>
                             </Card>
                         </div>
-                        <div className="space-y-6">
+                        <div className="space-y-4">
                             <Card>
-                                <CardHeader><CardTitle>Locatie</CardTitle></CardHeader>
-                                <CardContent className="h-64 p-0"><MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} /></CardContent>
+                                <CardHeader className="p-4"><CardTitle className="text-base">Locatie</CardTitle></CardHeader>
+                                <CardContent className="h-52 p-0"><MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} /></CardContent>
                             </Card>
                             <Card>
-                                <CardHeader><CardTitle>Foto</CardTitle></CardHeader>
-                                <CardContent>
+                                <CardHeader className="p-4"><CardTitle className="text-base">Foto</CardTitle></CardHeader>
+                                <CardContent className="p-4 pt-0">
                                     {uploadedPhotos.length > 0 ? (
                                         <div className="relative aspect-video w-full rounded-md overflow-hidden border">
                                             <Image src={uploadedPhotos[0].url} alt="Foto van melding" fill className="object-cover" />
                                         </div>
                                     ) : (
-                                        <div className="flex items-center justify-center h-32 text-muted-foreground bg-muted rounded-md">
+                                        <div className="flex items-center justify-center h-28 text-muted-foreground bg-muted rounded-md">
                                             <Camera className="h-8 w-8" />
                                             <p className="ml-2">Geen foto beschikbaar</p>
                                         </div>
