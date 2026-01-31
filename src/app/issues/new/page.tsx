@@ -502,11 +502,9 @@ export default function NewIssuePage() {
             <div className="p-3 grid grid-cols-12 gap-2">
                {/* Left Column */}
                <div className="col-span-7">
-                   <Card className="h-full bg-gray-50 dark:bg-gray-800/30">
-                        <CardHeader>
-                            <CardTitle className="text-base font-semibold">Algemene Informatie</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
+                   <Card className="h-full bg-gray-50 dark:bg-gray-800/30 p-2">
+                        <h3 className="font-semibold text-xs mb-2">Algemene Informatie</h3>
+                        <div className="space-y-1.5">
                             <FormRow label="Meldingsnummer">
                                 <Input value={meldingsnummer} disabled className="h-7 text-xs"/>
                             </FormRow>
@@ -608,12 +606,12 @@ export default function NewIssuePage() {
                                 <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
                             </div>
                             </FormRow>
-                        </CardContent>
+                        </div>
                    </Card>
                </div>
 
                {/* Right Column */}
-                <div className="col-span-5 space-y-1">
+                <div className="col-span-5 space-y-2">
                     <div className='p-2 border rounded-md bg-gray-50 dark:bg-gray-800/30 space-y-1'>
                         <h3 className="font-semibold text-xs mb-2">Adresgegevens</h3>
                         <FormRow label="Straatnaam">
