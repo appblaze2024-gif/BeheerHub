@@ -170,6 +170,7 @@ export default function IssuesPage() {
   const [newHoeveelheidType, setNewHoeveelheidType] = React.useState('');
   const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
   const [newHoeveelheidEenheid, setNewHoeveelheidEenheid] = React.useState('zak');
+  const [gewerkteMinuten, setGewerkteMinuten] = React.useState(0);
 
   const meldingenCollection = React.useMemo(() => {
     if (!firestore) return null;
