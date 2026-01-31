@@ -39,8 +39,8 @@ import * as turf from '@turf/turf';
 
 const newMeldingSchema = z.object({
   soort_melder: z.string().optional(),
-  hoofdcategorie: z.string().min(1, 'Hoofdindeling is verplicht'),
-  subcategorie: z.string().min(1, 'Indeling is verplicht'),
+  hoofdcategorie: z.string().optional(),
+  subcategorie: z.string().optional(),
   behandelende_afdeling: z.string().optional(),
   behandelaar: z.string().optional(),
   status: z.string().min(1, 'Status is verplicht'),
@@ -556,18 +556,14 @@ export default function NewIssuePage() {
                             </div>
                         </FormRow>
                         <FormRow label="Postcode">
-                             <div className="flex items-center gap-2">
-                                <FormField control={form.control} name="postcode" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs" value={field.value || ''} /></FormControl> )} />
-                                <FormField control={form.control} name="plaats" render={({ field }) => (
-                                    <div className="flex items-center">
-                                        <FormControl><Input {...field} className="h-7 text-xs" value={field.value || ''} /></FormControl>
-                                    </div>
-                                )} />
-                            </div>
+                             <FormField control={form.control} name="postcode" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs" value={field.value || ''} /></FormControl> )} />
                         </FormRow>
                         <FormRow label="Gebied">
-                             <div className="flex items-center">
-                                <FormField control={form.control} name="wijk" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs" value={field.value || ''} /></FormControl> )} />
+                            <div className="grid grid-cols-2 gap-2">
+                                <FormField control={form.control} name="wijk" render={({ field }) => ( <FormControl><Input placeholder="Wijk" {...field} className="h-7 text-xs" value={field.value || ''} /></FormControl> )} />
+                                <FormField control={form.control} name="plaats" render={({ field }) => (
+                                    <FormControl><Input placeholder="Plaats/Gemeente" {...field} className="h-7 text-xs" value={field.value || ''} /></FormControl>
+                                )} />
                             </div>
                         </FormRow>
                         <FormRow label="Pasnr">
