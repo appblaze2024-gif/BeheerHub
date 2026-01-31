@@ -164,26 +164,26 @@ export default function NewIssuePage() {
   };
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 p-6 bg-gray-100 dark:bg-gray-900">
+    <div className="flex flex-col flex-1 min-h-0 p-4 bg-gray-100 dark:bg-gray-900">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
           <Card>
             <CardContent className="p-4">
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
                 {/* Left Column */}
-                <div className="xl:col-span-2 space-y-4">
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="xl:col-span-2 space-y-3">
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                      <FormItem>
-                        <FormLabel>Meldingsnummer</FormLabel>
+                        <FormLabel className="text-xs">Meldingsnummer</FormLabel>
                         <FormControl><Input value={meldingsnummer} disabled /></FormControl>
                      </FormItem>
                     <FormField control={form.control} name="soort_melder" render={({ field }) => (
-                        <FormItem><FormLabel>Soort melder</FormLabel><FormControl><Input placeholder="Burger telefonisch" {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel className="text-xs">Soort melder</FormLabel><FormControl><Input placeholder="Burger telefonisch" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                    </div>
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (
-                          <FormItem><FormLabel>Hoofdindeling</FormLabel>
+                          <FormItem><FormLabel className="text-xs">Hoofdindeling</FormLabel>
                               <Select onValueChange={field.onChange} value={field.value}>
                                   <FormControl><SelectTrigger><SelectValue placeholder="Selecteer categorie" /></SelectTrigger></FormControl>
                                   <SelectContent>{hoofdcategorieOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
@@ -192,7 +192,7 @@ export default function NewIssuePage() {
                           </FormItem>
                       )} />
                       <FormField control={form.control} name="subcategorie" render={({ field }) => (
-                          <FormItem><FormLabel>Indeling</FormLabel>
+                          <FormItem><FormLabel className="text-xs">Indeling</FormLabel>
                               <Select onValueChange={field.onChange} value={field.value} disabled={!watchedHoofdcategorie}>
                                   <FormControl><SelectTrigger><SelectValue placeholder="Selecteer indeling" /></SelectTrigger></FormControl>
                                   <SelectContent>{(subcategorieOptions[watchedHoofdcategorie] || []).map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
@@ -202,13 +202,13 @@ export default function NewIssuePage() {
                       )} />
                    </div>
                     <FormField control={form.control} name="behandelende_afdeling" render={({ field }) => (
-                        <FormItem><FormLabel>Behandelende afdeling</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel className="text-xs">Behandelende afdeling</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={form.control} name="behandelaar" render={({ field }) => (
-                        <FormItem><FormLabel>Behandelaar</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel className="text-xs">Behandelaar</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={form.control} name="status" render={({ field }) => (
-                        <FormItem><FormLabel>Status</FormLabel>
+                        <FormItem><FormLabel className="text-xs">Status</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl><SelectTrigger><SelectValue placeholder="Selecteer status" /></SelectTrigger></FormControl>
                                 <SelectContent>{statusOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
@@ -216,44 +216,44 @@ export default function NewIssuePage() {
                             <FormMessage />
                         </FormItem>
                     )} />
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 items-end">
                         <FormField control={form.control} name="voorvaldatum" render={({ field }) => (
-                            <FormItem className="md:col-span-2"><FormLabel>Voorvaldatum</FormLabel><FormControl><Input type='date' value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} /></FormControl><FormMessage /></FormItem>
+                            <FormItem className="md:col-span-2"><FormLabel className="text-xs">Voorvaldatum</FormLabel><FormControl><Input type='date' value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField control={form.control} name="voorvaltijd" render={({ field }) => (
-                            <FormItem><FormLabel>Tijd</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel className="text-xs">Tijd</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                     </div>
-                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
+                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2 items-end">
                         <FormField control={form.control} name="meldingsdatum" render={({ field }) => (
-                            <FormItem className="md:col-span-2"><FormLabel>Meldingsdatum</FormLabel><FormControl><Input type='date' value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} /></FormControl><FormMessage /></FormItem>
+                            <FormItem className="md:col-span-2"><FormLabel className="text-xs">Meldingsdatum</FormLabel><FormControl><Input type='date' value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField control={form.control} name="meldingsuur" render={({ field }) => (
-                            <FormItem><FormLabel>Tijd</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel className="text-xs">Tijd</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 items-end">
                          <FormField control={form.control} name="actiedatum" render={({ field }) => (
-                            <FormItem className="md:col-span-2"><FormLabel>Actiedatum</FormLabel><FormControl><Input type='date' value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} /></FormControl><FormMessage /></FormItem>
+                            <FormItem className="md:col-span-2"><FormLabel className="text-xs">Actiedatum</FormLabel><FormControl><Input type='date' value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} /></FormControl><FormMessage /></FormItem>
                         )} />
                     </div>
-                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
+                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2 items-end">
                          <FormField control={form.control} name="afhandeldatum" render={({ field }) => (
-                            <FormItem className="md:col-span-2"><FormLabel>Afhandeldatum</FormLabel><FormControl><Input type='date' value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} /></FormControl><FormMessage /></FormItem>
+                            <FormItem className="md:col-span-2"><FormLabel className="text-xs">Afhandeldatum</FormLabel><FormControl><Input type='date' value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField control={form.control} name="afhandeltijd" render={({ field }) => (
-                            <FormItem><FormLabel>Tijd</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel className="text-xs">Tijd</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                     </div>
                      <FormField control={form.control} name="afhandelaar" render={({ field }) => (
-                        <FormItem><FormLabel>Afhandelaar</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel className="text-xs">Afhandelaar</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                 </div>
                 {/* Right Column */}
-                <div className="lg:col-span-1 space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="lg:col-span-1 space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                          <FormField control={form.control} name="soort_melding" render={({ field }) => (
-                            <FormItem><FormLabel>Soort melding</FormLabel>
+                            <FormItem><FormLabel className="text-xs">Soort melding</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
                                     <SelectContent><SelectItem value="Balie">Balie</SelectItem><SelectItem value="Telefoon">Telefoon</SelectItem><SelectItem value="Email">Email</SelectItem></SelectContent>
                                 </Select>
@@ -261,33 +261,33 @@ export default function NewIssuePage() {
                             </FormItem>
                         )} />
                         <FormField control={form.control} name="ext_referentie" render={({ field }) => (
-                            <FormItem><FormLabel>Ext. referentie</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel className="text-xs">Ext. referentie</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                     </div>
                     
-                    <Card className='bg-gray-50 dark:bg-gray-800/50'><CardContent className='p-4 space-y-4'>
+                    <Card className='bg-gray-50 dark:bg-gray-800/50'><CardContent className='p-3 space-y-3'>
                         <h3 className="font-semibold">Adresgegevens</h3>
-                         <FormField control={form.control} name="straatnaam" render={({ field }) => ( <FormItem><FormLabel>Straatnaam</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                         <FormField control={form.control} name="straatnaam" render={({ field }) => ( <FormItem><FormLabel className="text-xs">Straatnaam</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
                          <div className="grid grid-cols-3 gap-2">
-                             <FormField control={form.control} name="nummer" render={({ field }) => ( <FormItem className='col-span-1'><FormLabel>Nummer</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                             <FormField control={form.control} name="nummer" render={({ field }) => ( <FormItem className='col-span-1'><FormLabel className="text-xs">Nummer</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
                              <div className='col-span-2' />
                          </div>
-                         <div className="grid grid-cols-2 gap-4">
-                             <FormField control={form.control} name="postcode" render={({ field }) => ( <FormItem><FormLabel>Postcode</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
-                             <FormField control={form.control} name="plaats" render={({ field }) => ( <FormItem><FormLabel>Plaats</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                         <div className="grid grid-cols-2 gap-3">
+                             <FormField control={form.control} name="postcode" render={({ field }) => ( <FormItem><FormLabel className="text-xs">Postcode</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                             <FormField control={form.control} name="plaats" render={({ field }) => ( <FormItem><FormLabel className="text-xs">Plaats</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
                          </div>
-                          <FormField control={form.control} name="wijk" render={({ field }) => ( <FormItem><FormLabel>Gebied</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
-                           <FormField control={form.control} name="pasnr" render={({ field }) => ( <FormItem><FormLabel>Pasnr</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
-                         <FormField control={form.control} name="soort_adres" render={({ field }) => ( <FormItem><FormLabel>Soort adres</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                          <FormField control={form.control} name="wijk" render={({ field }) => ( <FormItem><FormLabel className="text-xs">Gebied</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                           <FormField control={form.control} name="pasnr" render={({ field }) => ( <FormItem><FormLabel className="text-xs">Pasnr</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                         <FormField control={form.control} name="soort_adres" render={({ field }) => ( <FormItem><FormLabel className="text-xs">Soort adres</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
                     </CardContent></Card>
                     
-                     <Card className='bg-gray-50 dark:bg-gray-800/50'><CardContent className='p-4 space-y-4'>
+                     <Card className='bg-gray-50 dark:bg-gray-800/50'><CardContent className='p-3 space-y-3'>
                         <h3 className="font-semibold">Medewerker / Melder</h3>
-                        <FormItem><FormLabel>Medewerker intake</FormLabel><FormControl><Input value={profile?.displayName || profile?.email || ''} disabled /></FormControl></FormItem>
-                        <FormField control={form.control} name="melder" render={({ field }) => ( <FormItem><FormLabel>Naam melder</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
-                        <FormField control={form.control} name="telefoon_melder" render={({ field }) => ( <FormItem><FormLabel>Telefoon melder</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                        <FormField control={form.control} name="email_melder" render={({ field }) => ( <FormItem><FormLabel>E-mail melder</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                        <FormField control={form.control} name="burgerservicenummer" render={({ field }) => ( <FormItem><FormLabel>Burgerservicenummer</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormItem><FormLabel className="text-xs">Medewerker intake</FormLabel><FormControl><Input value={profile?.displayName || profile?.email || ''} disabled /></FormControl></FormItem>
+                        <FormField control={form.control} name="melder" render={({ field }) => ( <FormItem><FormLabel className="text-xs">Naam melder</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="telefoon_melder" render={({ field }) => ( <FormItem><FormLabel className="text-xs">Telefoon melder</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="email_melder" render={({ field }) => ( <FormItem><FormLabel className="text-xs">E-mail melder</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="burgerservicenummer" render={({ field }) => ( <FormItem><FormLabel className="text-xs">Burgerservicenummer</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
                     </CardContent></Card>
                 </div>
               </div>
