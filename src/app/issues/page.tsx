@@ -453,12 +453,6 @@ export default function IssuesPage() {
 
   const handleFileDelete = async (fileToDelete: UploadedFile) => {
     if (!app || !firestore || !selectedMeldingId) return;
-    
-    const isConfirmed = await new Promise(resolve => {
-        resolve(window.confirm(`Weet u zeker dat u het bestand "${fileToDelete.name}" wilt verwijderen?`));
-    });
-
-    if (!isConfirmed) return;
 
     const storage = getStorage(app);
 
@@ -728,16 +722,33 @@ export default function IssuesPage() {
                                     </a>
                                     <span className='text-sm text-muted-foreground'>{formatBytes(file.size)}</span>
                                     {canDeleteFile && (
-                                      <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-8 w-8"
-                                          onClick={() => handleFileDelete(file)}
-                                          disabled={isSubmitting}
-                                      >
-                                          <Trash2 className="h-4 w-4 text-destructive" />
-                                      </Button>
+                                      <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                          <Button
+                                              type="button"
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-8 w-8"
+                                              disabled={isSubmitting}
+                                          >
+                                              <Trash2 className="h-4 w-4 text-destructive" />
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    Weet u zeker dat u het bestand "{file.name}" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleFileDelete(file)}>
+                                                    Doorgaan
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
                                     )}
                                     </div>
                                 ))}
