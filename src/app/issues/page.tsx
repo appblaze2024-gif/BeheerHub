@@ -170,7 +170,6 @@ export default function IssuesPage() {
   const [newHoeveelheidType, setNewHoeveelheidType] = React.useState('');
   const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
   const [newHoeveelheidEenheid, setNewHoeveelheidEenheid] = React.useState('zak');
-  const [gewerkteMinuten, setGewerkteMinuten] = React.useState<number>(0);
 
   const meldingenCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -558,6 +557,41 @@ export default function IssuesPage() {
     }
   };
 
+  const handleAddHoeveelheid = () => {
+    if (!newHoeveelheidType.trim() || !newHoeveelheidAantal.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Onvolledige invoer",
+        description: "Vul aub een type en aantal in.",
+      });
+      return;
+    }
+    const aantal = parseFloat(newHoeveelheidAantal);
+    if (isNaN(aantal) || aantal <= 0) {
+      toast({
+        variant: "destructive",
+        title: "Ongeldig aantal",
+        description: "Voer een geldig getal groter dan 0 in voor het aantal.",
+      });
+      return;
+    }
+    const newHoeveelheid: Hoeveelheid = {
+      id: new Date().toISOString(),
+      type: newHoeveelheidType,
+      aantal: aantal,
+      eenheid: newHoeveelheidEenheid,
+    };
+
+    setHoeveelheden(prev => [...prev, newHoeveelheid]);
+    setNewHoeveelheidType('');
+    setNewHoeveelheidAantal('');
+    setNewHoeveelheidEenheid('zak');
+  };
+
+  const handleRemoveHoeveelheid = (id: string) => {
+    setHoeveelheden(prev => prev.filter(item => item.id !== id));
+  };
+
 
   if (isLoadingMeldingen || isLoadingProjects || isLoadingObjects) {
       return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>
@@ -920,7 +954,59 @@ export default function IssuesPage() {
                   </Card>
                 </TabsContent>
                 <TabsContent value="Hoeveelheid" className="mt-0">
-                    {/* Content will be added in a future step */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Geregistreerd Materiaal</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <div className="space-y-2">
+                                {hoeveelheden.length > 0 ? (
+                                    hoeveelheden.map((item) => (
+                                    <div key={item.id} className="flex items-center justify-between p-2 bg-muted rounded-md text-sm">
+                                        <div className="flex-1 grid grid-cols-3 gap-2 items-center">
+                                            <span className="font-medium">{item.type}</span>
+                                            <span>{item.aantal}</span>
+                                            <span>{item.eenheid}</span>
+                                        </div>
+                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveHoeveelheid(item.id)}>
+                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                        </Button>
+                                    </div>
+                                    ))
+                                ) : (
+                                    <p className="text-sm text-muted-foreground text-center py-4">Nog geen hoeveelheden toegevoegd.</p>
+                                )}
+                            </div>
+                            <div className="flex items-end gap-2 border-t pt-4">
+                                <div className="flex-1 space-y-1">
+                                    <Label htmlFor="type">Type</Label>
+                                    <Input id="type" placeholder="bv. Zwerfafval" value={newHoeveelheidType} onChange={(e) => setNewHoeveelheidType(e.target.value)} />
+                                </div>
+                                <div className="w-24 space-y-1">
+                                    <Label htmlFor="aantal">Aantal</Label>
+                                    <Input id="aantal" type="number" placeholder="0" value={newHoeveelheidAantal} onChange={(e) => setNewHoeveelheidAantal(e.target.value)} />
+                                </div>
+                                <div className="w-32 space-y-1">
+                                    <Label htmlFor="eenheid">Eenheid</Label>
+                                    <Select value={newHoeveelheidEenheid} onValueChange={setNewHoeveelheidEenheid}>
+                                        <SelectTrigger id="eenheid">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="zak">Zak</SelectItem>
+                                            <SelectItem value="kg">Kg</SelectItem>
+                                            <SelectItem value="stuks">Stuks</SelectItem>
+                                            <SelectItem value="m3">m³</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <Button onClick={handleAddHoeveelheid}>
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Toevoegen
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </TabsContent>
                 <TabsContent value="Uren" className="mt-0">
                     {/* Content will be added in a future step */}
