@@ -490,7 +490,7 @@ export default function NewIssuePage() {
     <div className="flex flex-col h-full overflow-hidden text-sm bg-gray-100 dark:bg-gray-900">
         <div className="flex-shrink-0 px-4 py-1.5 border-b flex justify-between items-center bg-gray-200/60 dark:bg-gray-800/60">
             <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" onClick={() => router.push('/issues')}>
+                <Button variant="ghost" size="icon" onClick={() => router.push('/dashboard')}>
                     <ArrowLeft className="h-4 w-4" />
                 </Button>
                 <h1 className="font-semibold text-xs">Melding : {meldingsnummer}</h1>
@@ -499,14 +499,14 @@ export default function NewIssuePage() {
         </div>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
-            <div className="p-3 grid grid-cols-12 gap-4">
+            <div className="p-3 grid grid-cols-12 gap-2">
                {/* Left Column */}
                <div className="col-span-7">
                    <Card className="h-full bg-gray-50 dark:bg-gray-800/30">
                         <CardHeader>
                             <CardTitle className="text-base font-semibold">Algemene Informatie</CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
+                        <CardContent className="space-y-2">
                             <FormRow label="Meldingsnummer">
                                 <Input value={meldingsnummer} disabled className="h-7 text-xs"/>
                             </FormRow>
@@ -537,7 +537,7 @@ export default function NewIssuePage() {
                                 <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
                             </div>
                             </FormRow>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-2">
                                 <FormField control={form.control} name="soort_melding" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel className="text-xs">Soort melding</FormLabel>
@@ -613,8 +613,8 @@ export default function NewIssuePage() {
                </div>
 
                {/* Right Column */}
-                <div className="col-span-5 space-y-2">
-                    <div className='p-2 border rounded-md bg-gray-50 dark:bg-gray-800/30 space-y-1.5'>
+                <div className="col-span-5 space-y-1">
+                    <div className='p-2 border rounded-md bg-gray-50 dark:bg-gray-800/30 space-y-1'>
                         <h3 className="font-semibold text-xs mb-2">Adresgegevens</h3>
                         <FormRow label="Straatnaam">
                             <div className="flex items-center">
@@ -654,7 +654,7 @@ export default function NewIssuePage() {
                         </div>
                     </div>
 
-                    <div className='p-2 border rounded-md bg-gray-50 dark:bg-gray-800/30 space-y-1.5'>
+                    <div className='p-2 border rounded-md bg-gray-50 dark:bg-gray-800/30 space-y-1'>
                         <h3 className="font-semibold text-xs mb-2">Medewerker / Melder</h3>
                         <FormRow label="Medewerker intake">
                              <div className="flex items-center">
@@ -662,16 +662,16 @@ export default function NewIssuePage() {
                             </div>
                         </FormRow>
                         <FormRow label="Naam melder">
-                             <FormField control={form.control} name="melder" render={({ field }) => ( <FormControl><Input {...field} /></FormControl> )} />
+                             <FormField control={form.control} name="melder" render={({ field }) => ( <FormControl><Input {...field} value={field.value || ''} /></FormControl> )} />
                         </FormRow>
                         <FormRow label="Telefoon melder">
-                            <FormField control={form.control} name="telefoon_melder" render={({ field }) => ( <FormControl><Input type="tel" {...field} /></FormControl> )} />
+                            <FormField control={form.control} name="telefoon_melder" render={({ field }) => ( <FormControl><Input type="tel" {...field} value={field.value || ''} /></FormControl> )} />
                         </FormRow>
                         <FormRow label="E-mail melder">
-                             <FormField control={form.control} name="email_melder" render={({ field }) => ( <FormControl><Input type="email" {...field} /></FormControl> )} />
+                             <FormField control={form.control} name="email_melder" render={({ field }) => ( <FormControl><Input type="email" {...field} value={field.value || ''} /></FormControl> )} />
                         </FormRow>
                         <FormRow label="Burgerservicenummer">
-                            <FormField control={form.control} name="burgerservicenummer" render={({ field }) => ( <FormControl><Input {...field} /></FormControl> )} />
+                            <FormField control={form.control} name="burgerservicenummer" render={({ field }) => ( <FormControl><Input {...field} value={field.value || ''} /></FormControl> )} />
                         </FormRow>
                     </div>
                 </div>
@@ -847,7 +847,7 @@ export default function NewIssuePage() {
             </div>
             
             <div className="flex-shrink-0 flex justify-end gap-2 px-3 pb-2 border-t pt-2 bg-gray-50 dark:bg-gray-800">
-                <Button type="button" variant="ghost" onClick={() => router.back()} className="h-8">Annuleren</Button>
+                <Button type="button" variant="ghost" onClick={() => router.push('/issues')} className="h-8">Annuleren</Button>
                 <Button type="submit" disabled={isSubmitting || isUploading} className="h-8">
                     {isSubmitting || isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Melding Opslaan
