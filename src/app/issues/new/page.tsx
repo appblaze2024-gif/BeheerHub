@@ -87,6 +87,8 @@ const FormRow = ({ label, children, labelFor }: { label: string; children: React
     </div>
 );
 
+const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
+
 export default function NewIssuePage() {
   const firestore = useFirestore();
   const router = useRouter();
@@ -350,6 +352,63 @@ export default function NewIssuePage() {
     }
   };
 
+  const handleAddressSearch = async () => {
+    const straatnaam = form.getValues('straatnaam');
+    const nummer = form.getValues('nummer');
+    const postcode = form.getValues('postcode');
+    const plaats = form.getValues('plaats');
+
+    if (!straatnaam && !plaats && !postcode) {
+        toast({
+            variant: 'destructive',
+            title: 'Onvoldoende invoer',
+            description: 'Voer een straat, plaats of postcode in om te zoeken.',
+        });
+        return;
+    }
+
+    const queryParts = [nummer, straatnaam, postcode, plaats].filter(Boolean).join(' ');
+    const urlWithToken = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(queryParts)}.json?access_token=${MAPBOX_TOKEN}&country=NL&limit=1`;
+
+    try {
+        const response = await fetch(urlWithToken);
+        const data = await response.json();
+
+        if (data.features && data.features.length > 0) {
+            const feature = data.features[0];
+            const [longitude, latitude] = feature.center;
+            setLocation({ latitude, longitude });
+
+            const context = feature.context;
+            const address = feature.properties.address;
+            const street = feature.text;
+            
+            const postcodeContext = context.find((c: any) => c.id.startsWith('postcode'));
+            const cityContext = context.find((c: any) => c.id.startsWith('place'));
+            const districtContext = context.find((c: any) => c.id.startsWith('district'));
+
+            form.setValue('straatnaam', street || '');
+            form.setValue('nummer', address || '');
+            form.setValue('postcode', postcodeContext?.text || '');
+            form.setValue('plaats', cityContext?.text || '');
+            form.setValue('wijk', districtContext?.text || '');
+        } else {
+            toast({
+                variant: 'destructive',
+                title: 'Adres niet gevonden',
+                description: 'Kon het opgegeven adres niet vinden. Probeer het opnieuw met andere gegevens.',
+            });
+        }
+    } catch (error) {
+        console.error("Fout bij adres zoeken:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Fout opgetreden',
+            description: 'Er is een fout opgetreden bij het zoeken naar het adres.',
+        });
+    }
+  };
+
   const isUploading = Object.keys(uploadProgress).length > 0;
 
   return (
@@ -371,7 +430,7 @@ export default function NewIssuePage() {
                             <FormField control={form.control} name="soort_melder" render={({ field }) => (
                                 <FormControl><Input {...field} className="h-7 text-xs rounded-r-none" /></FormControl>
                             )} />
-                            <Button size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
+                            <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
                         </div>
                     </FormRow>
                     <FormRow label="Hoofdindeling">
@@ -390,7 +449,7 @@ export default function NewIssuePage() {
                                     <SelectContent>{(subcategorieOptions[watchedHoofdcategorie] || []).map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                 </Select>
                             )} />
-                            <Button size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
+                            <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
                         </div>
                     </FormRow>
                     <FormRow label="Behandelende afdeling">
@@ -403,7 +462,7 @@ export default function NewIssuePage() {
                             <FormField control={form.control} name="behandelaar" render={({ field }) => (
                                 <FormControl><Input {...field} className="h-7 text-xs rounded-r-none" /></FormControl>
                             )} />
-                            <Button size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
+                            <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
                         </div>
                     </FormRow>
                     <FormRow label="Status">
@@ -438,7 +497,7 @@ export default function NewIssuePage() {
                     <FormRow label="Afhandelaar">
                         <div className="flex items-center">
                             <FormField control={form.control} name="afhandelaar" render={({ field }) => (<FormControl><Input {...field} className="h-7 text-xs rounded-r-none" /></FormControl>)} />
-                            <Button size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
+                            <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
                         </div>
                     </FormRow>
                </div>
@@ -470,7 +529,7 @@ export default function NewIssuePage() {
                         <FormRow label="Straatnaam">
                             <div className="flex items-center">
                                 <FormField control={form.control} name="straatnaam" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs rounded-r-none" /></FormControl> )} />
-                                <Button size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
+                                <Button type="button" onClick={handleAddressSearch} size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
                             </div>
                         </FormRow>
                         <FormRow label="Nummer">
@@ -484,16 +543,14 @@ export default function NewIssuePage() {
                                 <FormField control={form.control} name="postcode" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs" /></FormControl> )} />
                                 <FormField control={form.control} name="plaats" render={({ field }) => (
                                     <div className="flex items-center">
-                                        <FormControl><Input {...field} className="h-7 text-xs rounded-r-none" /></FormControl>
-                                        <Button size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
+                                        <FormControl><Input {...field} className="h-7 text-xs" /></FormControl>
                                     </div>
                                 )} />
                             </div>
                         </FormRow>
                         <FormRow label="Gebied">
                              <div className="flex items-center">
-                                <FormField control={form.control} name="wijk" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs rounded-r-none" /></FormControl> )} />
-                                <Button size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
+                                <FormField control={form.control} name="wijk" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs" /></FormControl> )} />
                             </div>
                         </FormRow>
                         <FormRow label="Pasnr">
@@ -508,8 +565,7 @@ export default function NewIssuePage() {
                         <h3 className="font-semibold text-xs mb-2">Medewerker / Melder</h3>
                         <FormRow label="Medewerker intake">
                              <div className="flex items-center">
-                                <Input value={profile?.displayName || profile?.email || ''} disabled className="h-7 text-xs rounded-r-none" />
-                                <Button size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
+                                <Input value={profile?.displayName || profile?.email || ''} disabled className="h-7 text-xs" />
                             </div>
                         </FormRow>
                         <FormRow label="Naam melder">
@@ -664,8 +720,8 @@ export default function NewIssuePage() {
                     <TabsContent value="locatie" className="flex-1 mt-1">
                       <div className="h-full border rounded-md overflow-hidden">
                           <MapboxView
-                              latitude={location?.latitude}
                               longitude={location?.longitude}
+                              latitude={location?.latitude}
                               objects={nearbyObjects}
                           />
                       </div>
