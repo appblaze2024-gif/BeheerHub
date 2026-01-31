@@ -412,129 +412,126 @@ export default function IssuesPage() {
             </div>
             
             <div className="flex-1 overflow-y-auto p-6">
-                <TabsContent value="Werkzaamheden" className="mt-0">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-4">
-                             <Card>
-                                <CardHeader className="p-4"><CardTitle className="text-base">Werkomschrijving / Melding</CardTitle></CardHeader>
-                                <CardContent className="space-y-4 p-4 pt-0">
-                                    <Form {...form}>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (
-                                                <FormItem>
-                                                <FormLabel>Hoofdcategorie</FormLabel>
-                                                <Select onValueChange={field.onChange} value={field.value}>
-                                                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                                    <SelectContent>{hoofdcategorieOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
-                                                </Select>
-                                                <FormMessage />
-                                                </FormItem>
-                                            )} />
-                                            <FormField control={form.control} name="subcategorie" render={({ field }) => (
-                                                <FormItem>
-                                                <FormLabel>Subcategorie</FormLabel>
-                                                <Select onValueChange={field.onChange} value={field.value} disabled={!hoofdcategorie}>
-                                                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                                    <SelectContent>{(subcategorieOptions[hoofdcategorie] || []).map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
-                                                </Select>
-                                                <FormMessage />
-                                                </FormItem>
-                                            )} />
-                                        </div>
-                                        <FormField control={form.control} name="extra_informatie" render={({ field }) => (
+                 <TabsContent value="Werkzaamheden" className="mt-0">
+                    <div className="space-y-4">
+                        <Card>
+                            <CardHeader className="p-4"><CardTitle className="text-base">Werkbon Details</CardTitle></CardHeader>
+                            <CardContent className="space-y-4 p-4 pt-0">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-2 text-sm border-b pb-4 mb-4">
+                                    <div><span className="font-semibold text-muted-foreground">Intakenummer:</span> {selectedMelding.intakenummer}</div>
+                                    <div><span className="font-semibold text-muted-foreground">Datum:</span> {format(new Date(selectedMelding.datum), 'dd-MM-yyyy')}</div>
+                                    <div><span className="font-semibold text-muted-foreground">Tijd:</span> {selectedMelding.tijdstip}</div>
+                                    <div className="md:col-span-3"><span className="font-semibold text-muted-foreground">Adres:</span> {selectedMelding.straatnaam}, {selectedMelding.postcode} {selectedMelding.plaats}</div>
+                                     <div><span className="font-semibold text-muted-foreground">Melder:</span> {selectedMelding.melder}</div>
+                                </div>
+
+                                <Form {...form}>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (
                                             <FormItem>
-                                            <FormLabel>Omschrijving</FormLabel>
-                                            <FormControl><Textarea rows={3} {...field} /></FormControl>
+                                            <FormLabel>Hoofdcategorie</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                                <SelectContent>{hoofdcategorieOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                            </Select>
                                             <FormMessage />
                                             </FormItem>
                                         )} />
-                                    </Form>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader className="p-4"><CardTitle className="text-base">Uitgevoerde werkzaamheden (taken)</CardTitle></CardHeader>
-                                <CardContent className="p-4 pt-0">
-                                    <div className="space-y-2">
-                                        {tasks.map((task) => (
-                                            <div key={task.id} className="flex items-center gap-2">
-                                                <Checkbox id={`task-${task.id}`} checked={task.completed} onCheckedChange={(checked) => { setTasks(tasks.map(t => t.id === task.id ? { ...t, completed: !!checked } : t)); }} />
-                                                <Label htmlFor={`task-${task.id}`} className={`flex-1 ${task.completed ? 'line-through text-muted-foreground' : ''}`}>{task.description}</Label>
-                                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setTasks(tasks.filter(t => t.id !== task.id))}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                                            </div>
-                                        ))}
+                                        <FormField control={form.control} name="subcategorie" render={({ field }) => (
+                                            <FormItem>
+                                            <FormLabel>Subcategorie</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value} disabled={!hoofdcategorie}>
+                                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                                <SelectContent>{(subcategorieOptions[hoofdcategorie] || []).map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                            </FormItem>
+                                        )} />
+                                        <FormField control={form.control} name="status" render={({ field }) => (
+                                            <FormItem>
+                                            <FormLabel>Status</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                                <SelectContent>{statusOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                            </FormItem>
+                                        )} />
                                     </div>
-                                    <div className="flex gap-2 mt-4">
-                                        <Input placeholder="Nieuwe taak toevoegen..." value={newTaskDescription} onChange={(e) => setNewTaskDescription(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && newTaskDescription.trim()) { e.preventDefault(); setTasks([...tasks, { id: new Date().toISOString(), description: newTaskDescription.trim(), completed: false }]); setNewTaskDescription(''); } }} />
-                                        <Button type="button" onClick={() => { if (newTaskDescription.trim()) { setTasks([...tasks, { id: new Date().toISOString(), description: newTaskDescription.trim(), completed: false }]); setNewTaskDescription(''); } }}><Plus className="h-4 w-4" /></Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
-                        <div className="space-y-4">
-                            <Card>
-                                <CardHeader className="p-4"><CardTitle className="text-base">Locatie</CardTitle></CardHeader>
-                                <CardContent className="h-52 p-0"><MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} /></CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader className="p-4"><CardTitle className="text-base">Foto</CardTitle></CardHeader>
-                                <CardContent className="p-4 pt-0">
-                                    {uploadedPhotos.length > 0 ? (
-                                        <div className="relative aspect-video w-full rounded-md overflow-hidden border">
-                                            <Image src={uploadedPhotos[0].url} alt="Foto van melding" fill className="object-cover" />
-                                        </div>
-                                    ) : (
-                                        <div className="flex items-center justify-center h-28 text-muted-foreground bg-muted rounded-md">
-                                            <Camera className="h-8 w-8" />
-                                            <p className="ml-2">Geen foto beschikbaar</p>
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        </div>
+                                    <FormField control={form.control} name="extra_informatie" render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Omschrijving</FormLabel>
+                                        <FormControl><Textarea rows={4} {...field} /></FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )} />
+                                </Form>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader className="p-4"><CardTitle className="text-base">Locatie</CardTitle></CardHeader>
+                            <CardContent className="h-80 p-0">
+                                <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} />
+                            </CardContent>
+                        </Card>
                     </div>
                 </TabsContent>
                 <TabsContent value="Locatiegegevens" className="mt-0">
-                     <div className="grid grid-cols-2 gap-6">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                          <div className="space-y-6">
-                             <Card>
-                                 <CardHeader><CardTitle>Locatie Details</CardTitle></CardHeader>
-                                 <CardContent className="space-y-2">
-                                     <div className="flex justify-between text-sm">
-                                         <span className="font-semibold text-muted-foreground">Adres:</span>
-                                         <span>{selectedMelding.straatnaam} {selectedMelding.huisnummer}</span>
-                                     </div>
-                                      <div className="flex justify-between text-sm">
-                                         <span className="font-semibold text-muted-foreground">Postcode:</span>
-                                         <span>{selectedMelding.postcode}</span>
-                                     </div>
-                                     <div className="flex justify-between text-sm">
-                                         <span className="font-semibold text-muted-foreground">Plaats:</span>
-                                         <span>{selectedMelding.plaats}</span>
-                                     </div>
-                                      <div className="flex justify-between text-sm">
-                                         <span className="font-semibold text-muted-foreground">Wijk:</span>
-                                         <span>{selectedMelding.wijk}</span>
-                                     </div>
-                                      <div className="flex justify-between text-sm">
-                                         <span className="font-semibold text-muted-foreground">Coördinaten:</span>
-                                         <span>{selectedMelding.latitude.toFixed(5)}, {selectedMelding.longitude.toFixed(5)}</span>
-                                     </div>
-                                 </CardContent>
-                             </Card>
-                             <Card>
-                                 <CardHeader><CardTitle>Objecten in de buurt (100m)</CardTitle></CardHeader>
-                                 <CardContent>
-                                     {nearbyObjects.length > 0 ? (
-                                         <div className="space-y-2">
-                                             {nearbyObjects.map(obj => (
-                                                 <div key={obj.id} className="text-sm p-2 bg-muted rounded-md">{obj.id} - {obj.locatieSubType}</div>
-                                             ))}
-                                         </div>
-                                     ) : (
-                                         <p className="text-sm text-muted-foreground">Geen objecten gevonden.</p>
-                                     )}
-                                 </CardContent>
-                             </Card>
+                             <Collapsible defaultOpen>
+                                <CollapsibleTrigger className="w-full">
+                                    <CardHeader className="flex flex-row items-center justify-between p-0 mb-4">
+                                        <CardTitle>Locatie Details</CardTitle>
+                                        <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                                    </CardHeader>
+                                </CollapsibleTrigger>
+                                <CollapsibleContent>
+                                    <CardContent className="space-y-2 p-0">
+                                        <div className="flex justify-between text-sm">
+                                            <span className="font-semibold text-muted-foreground">Adres:</span>
+                                            <span>{selectedMelding.straatnaam} {selectedMelding.huisnummer}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="font-semibold text-muted-foreground">Postcode:</span>
+                                            <span>{selectedMelding.postcode}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="font-semibold text-muted-foreground">Plaats:</span>
+                                            <span>{selectedMelding.plaats}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="font-semibold text-muted-foreground">Wijk:</span>
+                                            <span>{selectedMelding.wijk}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="font-semibold text-muted-foreground">Coördinaten:</span>
+                                            <span>{selectedMelding.latitude.toFixed(5)}, {selectedMelding.longitude.toFixed(5)}</span>
+                                        </div>
+                                    </CardContent>
+                                </CollapsibleContent>
+                             </Collapsible>
+                              <Collapsible defaultOpen>
+                                <CollapsibleTrigger className="w-full">
+                                     <CardHeader className="flex flex-row items-center justify-between p-0 mb-4">
+                                        <CardTitle>Objecten in de buurt (100m)</CardTitle>
+                                        <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                                    </CardHeader>
+                                </CollapsibleTrigger>
+                                <CollapsibleContent>
+                                     <CardContent className="p-0">
+                                         {nearbyObjects.length > 0 ? (
+                                             <div className="space-y-2">
+                                                 {nearbyObjects.map(obj => (
+                                                     <div key={obj.id} className="text-sm p-2 bg-muted rounded-md">{obj.id} - {obj.locatieSubType}</div>
+                                                 ))}
+                                             </div>
+                                         ) : (
+                                             <p className="text-sm text-muted-foreground">Geen objecten gevonden.</p>
+                                         )}
+                                     </CardContent>
+                                </CollapsibleContent>
+                             </Collapsible>
                          </div>
                          <div className="min-h-[400px]">
                              <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} objects={nearbyObjects} />
