@@ -411,35 +411,35 @@ export default function IssuesPage() {
             
             <div className="flex-1 overflow-y-auto p-6">
                  <TabsContent value="Werkzaamheden" className="mt-0">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <Card>
                             <CardHeader className="p-4"><CardTitle className="text-base font-semibold">Werkbon Details</CardTitle></CardHeader>
                             <CardContent className="space-y-4 p-4 pt-0 text-xs">
                                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 border-b pb-2">
-                                    <div><span className="font-semibold text-muted-foreground">Intakenr:</span> {selectedMelding.intakenummer}</div>
-                                    <div><span className="font-semibold text-muted-foreground">Datum:</span> {format(new Date(selectedMelding.datum), 'dd-MM-yy')} {selectedMelding.tijdstip}</div>
-                                    <div className="col-span-2"><span className="font-semibold text-muted-foreground">Adres:</span> {selectedMelding.straatnaam}, {selectedMelding.postcode} {selectedMelding.plaats}</div>
-                                     <div><span className="font-semibold text-muted-foreground">Melder:</span> {selectedMelding.melder}</div>
+                                    <div><span className="text-muted-foreground">Intakenr:</span> <span className="font-semibold">{selectedMelding.intakenummer}</span></div>
+                                    <div><span className="text-muted-foreground">Datum:</span> <span className="font-semibold">{format(new Date(selectedMelding.datum), 'dd-MM-yy')} {selectedMelding.tijdstip}</span></div>
+                                    <div className="col-span-2"><span className="text-muted-foreground">Adres:</span> <span className="font-semibold">{selectedMelding.straatnaam}, {selectedMelding.postcode} {selectedMelding.plaats}</span></div>
+                                     <div><span className="text-muted-foreground">Melder:</span> <span className="font-semibold">{selectedMelding.melder}</span></div>
                                 </div>
                                 
                                 <div className="space-y-3 pt-2">
                                     <div className="grid grid-cols-3 gap-4">
                                         <div>
-                                            <p className="text-xs font-semibold text-muted-foreground">Hoofdcategorie</p>
-                                            <p className="text-sm">{selectedMelding.hoofdcategorie}</p>
+                                            <p className="text-xs text-muted-foreground">Hoofdcategorie</p>
+                                            <p className="text-sm font-semibold">{selectedMelding.hoofdcategorie}</p>
                                         </div>
                                         <div>
-                                            <p className="text-xs font-semibold text-muted-foreground">Subcategorie</p>
-                                            <p className="text-sm">{selectedMelding.subcategorie}</p>
+                                            <p className="text-xs text-muted-foreground">Subcategorie</p>
+                                            <p className="text-sm font-semibold">{selectedMelding.subcategorie}</p>
                                         </div>
                                         <div>
-                                            <p className="text-xs font-semibold text-muted-foreground">Status</p>
-                                            <p className="text-sm">{selectedMelding.status}</p>
+                                            <p className="text-xs text-muted-foreground">Status</p>
+                                            <p className="text-sm font-semibold">{selectedMelding.status}</p>
                                         </div>
                                     </div>
                                     <div>
-                                        <p className="text-xs font-semibold text-muted-foreground">Omschrijving</p>
-                                        <p className="text-sm whitespace-pre-wrap">{selectedMelding.extra_informatie}</p>
+                                        <p className="text-xs text-muted-foreground">Omschrijving</p>
+                                        <p className="text-sm whitespace-pre-wrap font-semibold">{selectedMelding.extra_informatie}</p>
                                     </div>
                                 </div>
                             </CardContent>
@@ -496,7 +496,7 @@ export default function IssuesPage() {
                                 <CollapsibleContent>
                                      <CardContent className="p-0">
                                          {nearbyObjects.length > 0 ? (
-                                             <div className="space-y-2 max-h-[calc(5*2.25rem)] overflow-y-auto pr-2">
+                                             <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
                                                  {nearbyObjects.map(obj => (
                                                      <div key={obj.id} className="text-sm p-2 bg-muted rounded-md">{obj.id} - {obj.locatieSubType || 'Onbekend'}</div>
                                                  ))}
@@ -530,5 +530,3 @@ export default function IssuesPage() {
     </div>
   );
 }
-
-    
