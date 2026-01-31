@@ -413,67 +413,59 @@ export default function IssuesPage() {
             
             <div className="flex-1 overflow-y-auto p-6">
                  <TabsContent value="Werkzaamheden" className="mt-0">
-                    <div className="space-y-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <Card>
-                            <CardHeader className="p-4"><CardTitle className="text-base">Werkbon Details</CardTitle></CardHeader>
-                            <CardContent className="space-y-4 p-4 pt-0">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-2 text-sm border-b pb-4 mb-4">
-                                    <div><span className="font-semibold text-muted-foreground">Intakenummer:</span> {selectedMelding.intakenummer}</div>
-                                    <div><span className="font-semibold text-muted-foreground">Datum:</span> {format(new Date(selectedMelding.datum), 'dd-MM-yyyy')}</div>
-                                    <div><span className="font-semibold text-muted-foreground">Tijd:</span> {selectedMelding.tijdstip}</div>
-                                    <div className="md:col-span-3"><span className="font-semibold text-muted-foreground">Adres:</span> {selectedMelding.straatnaam}, {selectedMelding.postcode} {selectedMelding.plaats}</div>
+                            <CardHeader className="p-4"><CardTitle className="text-sm font-semibold">Werkbon Details</CardTitle></CardHeader>
+                            <CardContent className="space-y-3 p-4 pt-0">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs border-b pb-2 mb-2">
+                                    <div><span className="font-semibold text-muted-foreground">Intakenr:</span> {selectedMelding.intakenummer}</div>
+                                    <div><span className="font-semibold text-muted-foreground">Datum:</span> {format(new Date(selectedMelding.datum), 'dd-MM-yy')} {selectedMelding.tijdstip}</div>
+                                    <div className="sm:col-span-2"><span className="font-semibold text-muted-foreground">Adres:</span> {selectedMelding.straatnaam}, {selectedMelding.postcode} {selectedMelding.plaats}</div>
                                      <div><span className="font-semibold text-muted-foreground">Melder:</span> {selectedMelding.melder}</div>
                                 </div>
 
                                 <Form {...form}>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2">
                                         <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (
                                             <FormItem>
-                                            <FormLabel>Hoofdcategorie</FormLabel>
+                                            <FormLabel className="text-xs">Hoofdcategorie</FormLabel>
                                             <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                                <SelectContent>{hoofdcategorieOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                                <FormControl><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger></FormControl>
+                                                <SelectContent>{hoofdcategorieOptions.map(opt => (<SelectItem key={opt} value={opt} className="text-xs">{opt}</SelectItem>))}</SelectContent>
                                             </Select>
-                                            <FormMessage />
                                             </FormItem>
                                         )} />
                                         <FormField control={form.control} name="subcategorie" render={({ field }) => (
                                             <FormItem>
-                                            <FormLabel>Subcategorie</FormLabel>
+                                            <FormLabel className="text-xs">Subcategorie</FormLabel>
                                             <Select onValueChange={field.onChange} value={field.value} disabled={!hoofdcategorie}>
-                                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                                <SelectContent>{(subcategorieOptions[hoofdcategorie] || []).map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                                <FormControl><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger></FormControl>
+                                                <SelectContent>{(subcategorieOptions[hoofdcategorie] || []).map(opt => (<SelectItem key={opt} value={opt} className="text-xs">{opt}</SelectItem>))}</SelectContent>
                                             </Select>
-                                            <FormMessage />
                                             </FormItem>
                                         )} />
                                         <FormField control={form.control} name="status" render={({ field }) => (
                                             <FormItem>
-                                            <FormLabel>Status</FormLabel>
+                                            <FormLabel className="text-xs">Status</FormLabel>
                                             <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                                <SelectContent>{statusOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                                <FormControl><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger></FormControl>
+                                                <SelectContent>{statusOptions.map(opt => (<SelectItem key={opt} value={opt} className="text-xs">{opt}</SelectItem>))}</SelectContent>
                                             </Select>
-                                            <FormMessage />
                                             </FormItem>
                                         )} />
                                     </div>
                                     <FormField control={form.control} name="extra_informatie" render={({ field }) => (
                                         <FormItem>
-                                        <FormLabel>Omschrijving</FormLabel>
-                                        <FormControl><Textarea rows={4} {...field} /></FormControl>
-                                        <FormMessage />
+                                        <FormLabel className="text-xs">Omschrijving</FormLabel>
+                                        <FormControl><Textarea rows={3} {...field} className="text-xs" /></FormControl>
                                         </FormItem>
                                     )} />
                                 </Form>
                             </CardContent>
                         </Card>
-                        <Card>
-                            <CardHeader className="p-4"><CardTitle className="text-base">Locatie</CardTitle></CardHeader>
-                            <CardContent className="h-80 p-0">
-                                <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} />
-                            </CardContent>
-                        </Card>
+                        <div className="min-h-[250px] lg:min-h-0">
+                            <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} />
+                        </div>
                     </div>
                 </TabsContent>
                 <TabsContent value="Locatiegegevens" className="mt-0">
