@@ -414,13 +414,13 @@ export default function NewIssuePage() {
     
     const postcodeContext = context.find((c: any) => c.id.startsWith('postcode'));
     const cityContext = context.find((c: any) => c.id.startsWith('place'));
-    const districtContext = context.find((c: any) => c.id.startsWith('district'));
+    const neighborhoodContext = context.find((c: any) => c.id.startsWith('locality'));
 
     form.setValue('straatnaam', street || '');
     form.setValue('nummer', houseNumber || '');
     form.setValue('postcode', postcodeContext?.text || '');
     form.setValue('plaats', cityContext?.text || '');
-    form.setValue('wijk', districtContext?.text || '');
+    form.setValue('wijk', neighborhoodContext?.text || '');
     
     setIsAddressDialogOpen(false);
     setAddressSuggestions([]);
