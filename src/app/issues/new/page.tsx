@@ -166,6 +166,27 @@ export default function NewIssuePage() {
       status: 'Nieuw',
       meldingsdatum: now,
       meldingsuur: format(now, 'HH:mm'),
+      soort_melder: '',
+      hoofdcategorie: '',
+      subcategorie: '',
+      behandelende_afdeling: '',
+      behandelaar: '',
+      voorvaltijd: '',
+      afhandeltijd: '',
+      afhandelaar: '',
+      soort_melding: '',
+      ext_referentie: '',
+      straatnaam: '',
+      nummer: '',
+      postcode: '',
+      plaats: '',
+      wijk: '',
+      werkgebied: '',
+      melder: '',
+      telefoon_melder: '',
+      email_melder: '',
+      burgerservicenummer: '',
+      extra_informatie: '',
     },
   });
   
@@ -598,14 +619,20 @@ export default function NewIssuePage() {
                         <FormRow label="Postcode">
                              <FormField control={form.control} name="postcode" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs" /></FormControl> )} />
                         </FormRow>
-                        <FormRow label="Gebied">
-                            <div className="grid grid-cols-2 gap-2">
-                                <FormField control={form.control} name="wijk" render={({ field }) => ( <FormControl><Input placeholder="Wijk" {...field} className="h-7 text-xs" /></FormControl> )} />
-                                <FormField control={form.control} name="plaats" render={({ field }) => (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            <FormField control={form.control} name="wijk" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className='text-xs'>Wijk</FormLabel>
+                                    <FormControl><Input placeholder="Wijk" {...field} className="h-7 text-xs" /></FormControl>
+                                </FormItem>
+                            )} />
+                            <FormField control={form.control} name="plaats" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className='text-xs'>Gemeente</FormLabel>
                                     <FormControl><Input placeholder="Gemeente" {...field} className="h-7 text-xs" /></FormControl>
-                                )} />
-                            </div>
-                        </FormRow>
+                                </FormItem>
+                            )} />
+                        </div>
                         <FormRow label="Werkgebied">
                              <FormField control={form.control} name="werkgebied" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs" disabled /></FormControl> )} />
                         </FormRow>
