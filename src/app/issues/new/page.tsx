@@ -7,12 +7,13 @@ import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
-import { CalendarIcon, Loader2, MapPin, Search, UploadCloud, FileIcon, Trash2 } from 'lucide-react';
+import { ArrowLeft, CalendarIcon, Loader2, MapPin, Search, UploadCloud, FileIcon, Trash2 } from 'lucide-react';
 import { useFirestore, addDocumentNonBlocking, useFirebaseApp, useCollection } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { collection, doc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useToast } from '@/components/ui/use-toast';
+import { useNavigationUI } from '@/context/navigation-ui-context';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -113,6 +114,7 @@ export default function NewIssuePage() {
   const { toast } = useToast();
   const { profile } = useProfile();
   const app = useFirebaseApp();
+  const { setIsHeaderVisible } = useNavigationUI();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
@@ -150,6 +152,13 @@ export default function NewIssuePage() {
   const now = new Date();
   const meldingIdRef = React.useRef(format(now, 'yyyyMMddHHmmss'));
   const meldingsnummer = meldingIdRef.current;
+
+  React.useEffect(() => {
+    setIsHeaderVisible(false);
+    return () => {
+      setIsHeaderVisible(true);
+    };
+  }, [setIsHeaderVisible]);
 
   const form = useForm<NewMeldingFormValues>({
     resolver: zodResolver(newMeldingSchema),
@@ -481,7 +490,12 @@ export default function NewIssuePage() {
   return (
     <div className="flex flex-col h-full overflow-hidden text-sm bg-gray-100 dark:bg-gray-900">
         <div className="flex-shrink-0 px-4 py-1.5 border-b flex justify-between items-center bg-gray-200/60 dark:bg-gray-800/60">
-            <h1 className="font-semibold text-xs">Melding : {meldingsnummer}</h1>
+            <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" onClick={() => router.push('/')}>
+                    <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <h1 className="font-semibold text-xs">Melding : {meldingsnummer}</h1>
+            </div>
             <span className="text-xs text-muted-foreground">Laatst gewijzigd door {profile?.displayName || '...'} op {format(now, 'dd-MM-yyyy')} om {format(now, 'HH:mm:ss')}.</span>
         </div>
         <Form {...form}>
