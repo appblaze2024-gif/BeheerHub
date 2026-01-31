@@ -14,53 +14,53 @@ import { collection } from 'firebase/firestore';
 import { useToast } from '@/components/ui/use-toast';
 
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
+import { Card, CardContent } from '@/components/ui/card';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PageHeader } from '@/components/page-header';
-import { MapboxView } from '@/components/mapbox-view';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
-// Based on the image and Melding type
+// Schema based on the provided image
 const newMeldingSchema = z.object({
+  // Left side
   soort_melder: z.string().optional(),
-  hoofdcategorie: z.string().min(1, 'Hoofdcategorie is verplicht'),
+  hoofdcategorie: z.string().min(1, 'Hoofdindeling is verplicht'),
   subcategorie: z.string().min(1, 'Indeling is verplicht'),
   behandelende_afdeling: z.string().optional(),
+  behandelaar: z.string().optional(),
   status: z.string().min(1, 'Status is verplicht'),
   voorvaldatum: z.date().optional(),
   voorvaltijd: z.string().optional(),
+  meldingsdatum: z.date().optional(),
+  meldingsuur: z.string().optional(),
+  actiedatum: z.date().optional().nullable(),
+  afhandeldatum: z.date().optional().nullable(),
+  afhandeltijd: z.string().optional(),
+  afhandelaar: z.string().optional(),
+
+  // Right side
+  soort_melding: z.string().optional(),
+  ext_referentie: z.string().optional(),
   straatnaam: z.string().optional(),
   nummer: z.string().optional(),
   postcode: z.string().optional(),
   plaats: z.string().optional(),
-  wijk: z.string().optional(),
+  wijk: z.string().optional(), // 'Gebied' in UI
+  pasnr: z.string().optional(),
+  soort_adres: z.string().optional(),
+
+  // Melder section on right
   melder: z.string().min(1, 'Naam melder is verplicht'),
   telefoon_melder: z.string().optional(),
   email_melder: z.string().email('Ongeldig emailadres').optional().or(z.literal('')),
+  burgerservicenummer: z.string().optional(),
+
+  // Memo
   extra_informatie: z.string().min(1, 'Memo is verplicht'),
 });
 
@@ -84,12 +84,13 @@ const statusOptions = [
     "Nieuw", "Intern doorgezet", "In behandeling", "Gepland op korte termijn",
     "Gepland op langere termijn", "Dubbel gemeld", "Afgerond", "Niet in beheer"
 ];
-const hoofdcategorieOptions = ["Afval", "Weg en straatmeubilair", "Groen", "Water", "Overig"];
+const hoofdcategorieOptions = ["Afval", "Weg en straatmeubilair", "Groen", "Water", "Overig", "Zoutkisten"];
 const subcategorieOptions: Record<string, string[]> = {
     "Afval": ["Volle of kapotte afvalbak", "Zwerfafval", "Dumping", "Dierenkadaver"],
     "Weg en straatmeubilair": ["Losse tegel(s)", "Gat in de weg", "Kapotte bank/paal/hek"],
     "Groen": ["Overhangende takken", "Onkruid", "Maaien"],
     "Water": ["Verstopte put", "Wateroverlast"],
+    "Zoutkisten": ["Zoutkist leeg"],
     "Overig": ["Overige meldingen"]
 };
 
@@ -100,69 +101,25 @@ export default function NewIssuePage() {
   const { profile } = useProfile();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  // Location state
   const [location, setLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
-  const [addressSearchQuery, setAddressSearchQuery] = React.useState('');
-  const [suggestions, setSuggestions] = React.useState<Suggestion[]>([]);
-  const [isSearching, setIsSearching] = React.useState(false);
-  const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
-  const justSelectedSuggestion = React.useRef(false);
+  
+  const now = new Date();
+  const meldingsnummer = format(now, 'yyyyMMddHHmmss');
 
   const form = useForm<NewMeldingFormValues>({
     resolver: zodResolver(newMeldingSchema),
     defaultValues: {
-      status: 'Nieuw',
-      voorvaldatum: new Date(),
-      voorvaltijd: format(new Date(), 'HH:mm'),
+      status: 'In behandeling',
+      voorvaldatum: now,
+      voorvaltijd: format(now, 'HH:mm'),
+      meldingsdatum: now,
+      meldingsuur: format(now, 'HH:mm'),
+      behandelende_afdeling: "Kantoor R'hout Reiniging",
+      soort_melding: 'Balie',
     },
   });
   
   const watchedHoofdcategorie = form.watch('hoofdcategorie');
-
-  // Address search logic from bestekmelding-dialog
-  React.useEffect(() => {
-    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    if (justSelectedSuggestion.current) {
-      justSelectedSuggestion.current = false;
-      return;
-    }
-    if (!addressSearchQuery.trim()) {
-      setSuggestions([]);
-      return;
-    }
-    setIsSearching(true);
-    searchTimeoutRef.current = setTimeout(async () => {
-      try {
-        const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addressSearchQuery)}&format=json&countrycodes=nl&limit=5&addressdetails=1`);
-        const data: Suggestion[] = await response.json();
-        setSuggestions(data);
-      } catch (error) {
-        console.error("Fout bij zoeken:", error);
-      } finally {
-        setIsSearching(false);
-      }
-    }, 500);
-    return () => {
-      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    };
-  }, [addressSearchQuery]);
-
-  const handleSuggestionClick = (suggestion: Suggestion) => {
-    justSelectedSuggestion.current = true;
-    setAddressSearchQuery(suggestion.display_name);
-    const lat = parseFloat(suggestion.lat);
-    const lon = parseFloat(suggestion.lon);
-
-    if (!isNaN(lat) && !isNaN(lon)) {
-        setLocation({ latitude: lat, longitude: lon });
-        form.setValue('straatnaam', suggestion.address.road || '');
-        form.setValue('nummer', suggestion.address.house_number || '');
-        form.setValue('postcode', suggestion.address.postcode || '');
-        form.setValue('plaats', suggestion.address.city || '');
-        form.setValue('wijk', suggestion.address.suburb || '');
-    }
-    setSuggestions([]);
-  };
 
   const onSubmit = async (data: NewMeldingFormValues) => {
     if (!firestore) return;
@@ -170,22 +127,20 @@ export default function NewIssuePage() {
         toast({
             variant: "destructive",
             title: "Locatie vereist",
-            description: "Selecteer een locatie op de kaart of via het zoekveld."
+            description: "Selecteer een locatie via het zoekveld."
         });
         return;
     }
     setIsSubmitting(true);
     
-    const now = new Date();
-    const intakenummer = `${format(now, 'yyyyMMddHHmmss')}`;
     const meldingenCollectionRef = collection(firestore, 'meldingen');
 
     try {
       await addDocumentNonBlocking(meldingenCollectionRef, {
         ...data,
-        intakenummer: intakenummer,
-        datum: format(now, 'yyyy-MM-dd'),
-        tijdstip: format(now, 'HH:mm'),
+        intakenummer: meldingsnummer,
+        datum: format(data.meldingsdatum || now, 'yyyy-MM-dd'),
+        tijdstip: data.meldingsuur || format(now, 'HH:mm'),
         aangenomen_door: profile?.displayName || profile?.email || 'Onbekend',
         latitude: location.latitude,
         longitude: location.longitude,
@@ -193,7 +148,7 @@ export default function NewIssuePage() {
 
       toast({
         title: 'Melding aangemaakt',
-        description: `Melding ${intakenummer} is succesvol aangemaakt.`,
+        description: `Melding ${meldingsnummer} is succesvol aangemaakt.`,
       });
       router.push('/issues');
     } catch (error) {
@@ -209,162 +164,152 @@ export default function NewIssuePage() {
   };
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 p-6">
-      <PageHeader title="Nieuwe Melding Maken" />
+    <div className="flex flex-col flex-1 min-h-0 p-6 bg-gray-100 dark:bg-gray-900">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-              {/* Left Column */}
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Melding</CardTitle>
-                  </CardHeader>
-                  <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                {/* Left Column */}
+                <div className="xl:col-span-2 space-y-4">
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <FormItem>
+                        <FormLabel>Meldingsnummer</FormLabel>
+                        <FormControl><Input value={meldingsnummer} disabled /></FormControl>
+                     </FormItem>
                     <FormField control={form.control} name="soort_melder" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Soort Melder</FormLabel>
-                            <FormControl><Input placeholder="Burger telefonisch" {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
+                        <FormItem><FormLabel>Soort melder</FormLabel><FormControl><Input placeholder="Burger telefonisch" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
-                    <div />
-                     <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Hoofdindeling</FormLabel>
-                             <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="Selecteer categorie" /></SelectTrigger></FormControl>
-                                <SelectContent>
-                                    {hoofdcategorieOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                     <FormField control={form.control} name="subcategorie" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Indeling</FormLabel>
-                             <Select onValueChange={field.onChange} value={field.value} disabled={!watchedHoofdcategorie}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="Selecteer indeling" /></SelectTrigger></FormControl>
-                                <SelectContent>
-                                    {(subcategorieOptions[watchedHoofdcategorie] || []).map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
+                   </div>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (
+                          <FormItem><FormLabel>Hoofdindeling</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl><SelectTrigger><SelectValue placeholder="Selecteer categorie" /></SelectTrigger></FormControl>
+                                  <SelectContent>{hoofdcategorieOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                              </Select>
+                              <FormMessage />
+                          </FormItem>
+                      )} />
+                      <FormField control={form.control} name="subcategorie" render={({ field }) => (
+                          <FormItem><FormLabel>Indeling</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value} disabled={!watchedHoofdcategorie}>
+                                  <FormControl><SelectTrigger><SelectValue placeholder="Selecteer indeling" /></SelectTrigger></FormControl>
+                                  <SelectContent>{(subcategorieOptions[watchedHoofdcategorie] || []).map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                              </Select>
+                              <FormMessage />
+                          </FormItem>
+                      )} />
+                   </div>
                     <FormField control={form.control} name="behandelende_afdeling" render={({ field }) => (
-                        <FormItem className="col-span-2">
-                            <FormLabel>Behandelende Afdeling</FormLabel>
-                            <FormControl><Input placeholder="Kantoor R'hout Reiniging" {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
+                        <FormItem><FormLabel>Behandelende afdeling</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
-                  </CardContent>
-                </Card>
-
-                 <Card>
-                  <CardHeader>
-                    <CardTitle>Details</CardTitle>
-                  </CardHeader>
-                  <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField control={form.control} name="behandelaar" render={({ field }) => (
+                        <FormItem><FormLabel>Behandelaar</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
                     <FormField control={form.control} name="status" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Status</FormLabel>
+                        <FormItem><FormLabel>Status</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl><SelectTrigger><SelectValue placeholder="Selecteer status" /></SelectTrigger></FormControl>
-                                <SelectContent>
-                                    {statusOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}
-                                </SelectContent>
+                                <SelectContent>{statusOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                             </Select>
                             <FormMessage />
                         </FormItem>
                     )} />
-                    <div />
-                    <FormField control={form.control} name="voorvaldatum" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Voorvaldatum</FormLabel>
-                             <Popover>
-                                <PopoverTrigger asChild>
-                                <FormControl>
-                                    <Button variant={'outline'} className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground' )}>
-                                    {field.value ? (format(field.value, 'PPP', { locale: nl })) : (<span>Kies een datum</span>)}
-                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                    </Button>
-                                </FormControl>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                                </PopoverContent>
-                            </Popover>
-                            <FormMessage />
-                        </FormItem>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
+                        <FormField control={form.control} name="voorvaldatum" render={({ field }) => (
+                            <FormItem className="md:col-span-2"><FormLabel>Voorvaldatum</FormLabel><FormControl><Input type='date' value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                        <FormField control={form.control} name="voorvaltijd" render={({ field }) => (
+                            <FormItem><FormLabel>Tijd</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                    </div>
+                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
+                        <FormField control={form.control} name="meldingsdatum" render={({ field }) => (
+                            <FormItem className="md:col-span-2"><FormLabel>Meldingsdatum</FormLabel><FormControl><Input type='date' value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                        <FormField control={form.control} name="meldingsuur" render={({ field }) => (
+                            <FormItem><FormLabel>Tijd</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
+                         <FormField control={form.control} name="actiedatum" render={({ field }) => (
+                            <FormItem className="md:col-span-2"><FormLabel>Actiedatum</FormLabel><FormControl><Input type='date' value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                    </div>
+                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
+                         <FormField control={form.control} name="afhandeldatum" render={({ field }) => (
+                            <FormItem className="md:col-span-2"><FormLabel>Afhandeldatum</FormLabel><FormControl><Input type='date' value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                        <FormField control={form.control} name="afhandeltijd" render={({ field }) => (
+                            <FormItem><FormLabel>Tijd</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                    </div>
+                     <FormField control={form.control} name="afhandelaar" render={({ field }) => (
+                        <FormItem><FormLabel>Afhandelaar</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
-                     <FormField control={form.control} name="voorvaltijd" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Voorvaltijd</FormLabel>
-                            <FormControl><Input type="time" {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )} />
-                  </CardContent>
-                </Card>
+                </div>
+                {/* Right Column */}
+                <div className="lg:col-span-1 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                         <FormField control={form.control} name="soort_melding" render={({ field }) => (
+                            <FormItem><FormLabel>Soort melding</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                    <SelectContent><SelectItem value="Balie">Balie</SelectItem><SelectItem value="Telefoon">Telefoon</SelectItem><SelectItem value="Email">Email</SelectItem></SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        <FormField control={form.control} name="ext_referentie" render={({ field }) => (
+                            <FormItem><FormLabel>Ext. referentie</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                    </div>
+                    
+                    <Card className='bg-gray-50 dark:bg-gray-800/50'><CardContent className='p-4 space-y-4'>
+                        <h3 className="font-semibold">Adresgegevens</h3>
+                         <FormField control={form.control} name="straatnaam" render={({ field }) => ( <FormItem><FormLabel>Straatnaam</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                         <div className="grid grid-cols-3 gap-2">
+                             <FormField control={form.control} name="nummer" render={({ field }) => ( <FormItem className='col-span-1'><FormLabel>Nummer</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                             <div className='col-span-2' />
+                         </div>
+                         <div className="grid grid-cols-2 gap-4">
+                             <FormField control={form.control} name="postcode" render={({ field }) => ( <FormItem><FormLabel>Postcode</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                             <FormField control={form.control} name="plaats" render={({ field }) => ( <FormItem><FormLabel>Plaats</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                         </div>
+                          <FormField control={form.control} name="wijk" render={({ field }) => ( <FormItem><FormLabel>Gebied</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                           <FormField control={form.control} name="pasnr" render={({ field }) => ( <FormItem><FormLabel>Pasnr</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                         <FormField control={form.control} name="soort_adres" render={({ field }) => ( <FormItem><FormLabel>Soort adres</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                    </CardContent></Card>
+                    
+                     <Card className='bg-gray-50 dark:bg-gray-800/50'><CardContent className='p-4 space-y-4'>
+                        <h3 className="font-semibold">Medewerker / Melder</h3>
+                        <FormItem><FormLabel>Medewerker intake</FormLabel><FormControl><Input value={profile?.displayName || profile?.email || ''} disabled /></FormControl></FormItem>
+                        <FormField control={form.control} name="melder" render={({ field }) => ( <FormItem><FormLabel>Naam melder</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="telefoon_melder" render={({ field }) => ( <FormItem><FormLabel>Telefoon melder</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="email_melder" render={({ field }) => ( <FormItem><FormLabel>E-mail melder</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="burgerservicenummer" render={({ field }) => ( <FormItem><FormLabel>Burgerservicenummer</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                    </CardContent></Card>
+                </div>
               </div>
-
-              {/* Right Column */}
-               <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Adresgegevens</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                     <div className="space-y-2">
-                        <FormLabel htmlFor="address-search">Zoek Adres</FormLabel>
-                        <div className="relative w-full">
-                            <Input id="address-search" placeholder="Zoek een adres..." value={addressSearchQuery} onChange={(e) => setAddressSearchQuery(e.target.value)} autoComplete="off"/>
-                            {isSearching ? <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" /> : <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />}
-                            {suggestions.length > 0 && (
-                                <div className="absolute z-10 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
-                                    {suggestions.map((suggestion) => (
-                                    <div key={suggestion.place_id} onClick={() => handleSuggestionClick(suggestion)} className="px-4 py-2 text-sm cursor-pointer hover:bg-muted">
-                                        {suggestion.display_name}
-                                    </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    <div className="aspect-video w-full rounded-md border overflow-hidden">
-                        <MapboxView latitude={location?.latitude} longitude={location?.longitude} />
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <FormField control={form.control} name="straatnaam" render={({ field }) => ( <FormItem><FormLabel>Straatnaam</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
-                      <FormField control={form.control} name="nummer" render={({ field }) => ( <FormItem><FormLabel>Nummer</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
-                      <FormField control={form.control} name="postcode" render={({ field }) => ( <FormItem><FormLabel>Postcode</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
-                    </div>
-                     <FormField control={form.control} name="plaats" render={({ field }) => ( <FormItem><FormLabel>Plaats</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
-                  </CardContent>
-                </Card>
-
-                 <Card>
-                  <CardHeader>
-                    <CardTitle>Melder</CardTitle>
-                  </CardHeader>
-                  <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     <FormField control={form.control} name="melder" render={({ field }) => ( <FormItem><FormLabel>Naam Melder</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
-                     <FormField control={form.control} name="telefoon_melder" render={({ field }) => ( <FormItem><FormLabel>Telefoon Melder</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                      <FormField control={form.control} name="email_melder" render={({ field }) => ( <FormItem className="col-span-2"><FormLabel>E-mail Melder</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-            
-            <Card>
-                <CardHeader><CardTitle>Memo</CardTitle></CardHeader>
-                <CardContent>
-                    <FormField control={form.control} name="extra_informatie" render={({ field }) => ( <FormItem><FormControl><Textarea rows={5} placeholder="Bewoner aan de balie wil graag..." {...field} /></FormControl><FormMessage /></FormItem> )} />
-                </CardContent>
-            </Card>
+            </CardContent>
+          </Card>
+          
+            <Tabs defaultValue="memo" className="bg-card p-4 rounded-lg">
+                <TabsList>
+                    <TabsTrigger value="memo">Memo</TabsTrigger>
+                    <TabsTrigger value="bijlagen">Bijlagen</TabsTrigger>
+                    <TabsTrigger value="bestanden">Bestanden</TabsTrigger>
+                    <TabsTrigger value="locatie">Locatie</TabsTrigger>
+                    <TabsTrigger value="dubbele">Dubbele Meldingen</TabsTrigger>
+                </TabsList>
+                <TabsContent value="memo" className="mt-4">
+                    <FormField control={form.control} name="extra_informatie" render={({ field }) => ( <FormItem><FormLabel className='sr-only'>Memo</FormLabel><FormControl><Textarea rows={5} placeholder="Bewoner aan de balie wil graag..." {...field} /></FormControl><FormMessage /></FormItem> )} />
+                </TabsContent>
+                <TabsContent value="bijlagen"><div className="text-center p-8 text-muted-foreground">Nog geen bijlagen.</div></TabsContent>
+                <TabsContent value="bestanden"><div className="text-center p-8 text-muted-foreground">Nog geen bestanden.</div></TabsContent>
+                <TabsContent value="locatie"><div className="text-center p-8 text-muted-foreground">Locatiegegevens worden hier getoond.</div></TabsContent>
+                <TabsContent value="dubbele"><div className="text-center p-8 text-muted-foreground">Geen dubbele meldingen gevonden.</div></TabsContent>
+            </Tabs>
             
             <div className="flex justify-end gap-2">
                 <Button type="button" variant="ghost" onClick={() => router.back()}>Annuleren</Button>
