@@ -4,7 +4,7 @@ import * as React from 'react';
 import MapGL, { Marker, Popup, Source, Layer, FillLayer, LineLayer } from 'react-map-gl';
 import { useCollection, useFirestore, useFirebaseApp, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
-import { Calendar as CalendarIcon, Plus, Search, List, Map as MapIcon, Bell, Filter, Navigation, Pencil, FileText, ChevronLeft, Camera, Package, Clock, User, Paperclip, PlusCircle, AlertCircle, Info, UploadCloud, ChevronDown, MapPin, Trash2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Search, List, Map as MapIcon, Bell, Filter, Navigation, Pencil, FileText, ChevronLeft, Camera, Package, Clock, User, Paperclip, PlusCircle, AlertCircle, Info, UploadCloud, ChevronDown, MapPin, Trash2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -55,6 +55,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/components/ui/use-toast';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useNavigationUI } from '@/context/navigation-ui-context';
 
 
 type Project = {
@@ -120,6 +121,7 @@ const subcategorieOptions: Record<string, string[]> = {
 };
 
 export default function IssuesPage() {
+  const { setIsHeaderVisible } = useNavigationUI();
   const firestore = useFirestore();
   const app = useFirebaseApp();
   const { user } = useUser();
@@ -127,6 +129,13 @@ export default function IssuesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
+  React.useEffect(() => {
+    setIsHeaderVisible(false);
+    return () => {
+      setIsHeaderVisible(true);
+    };
+  }, [setIsHeaderVisible]);
+
   const { selectedProjectId, setSelectedProjectId } = useProject();
   const [selectedMeldingId, setSelectedMeldingId] = React.useState<string | null>(null);
 
@@ -360,6 +369,9 @@ export default function IssuesPage() {
     <div className="flex flex-col flex-1 h-full min-h-0">
         <header className="p-4 border-b bg-gray-50 dark:bg-gray-900/50 flex-row items-center justify-between shrink-0 flex">
             <div className="flex items-center gap-4">
+                 <Button variant="outline" size="icon" onClick={() => router.push('/')}>
+                    <ArrowLeft className="h-4 w-4" />
+                </Button>
                  <Select value={selectedMeldingId || ''} onValueChange={setSelectedMeldingId}>
                     <SelectTrigger className="w-72">
                       <SelectValue>
@@ -411,10 +423,10 @@ export default function IssuesPage() {
             
             <div className="flex-1 overflow-y-auto p-6">
                  <TabsContent value="Werkzaamheden" className="mt-0">
-                    <div className="grid grid-cols-1 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <Card>
                             <CardHeader className="p-4"><CardTitle className="text-base font-semibold">Werkbon Details</CardTitle></CardHeader>
-                            <CardContent className="space-y-2 p-4 pt-0 text-xs">
+                            <CardContent className="space-y-4 p-4 pt-0 text-xs">
                                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 border-b pb-2">
                                     <div><span className="text-muted-foreground">Intakenr:</span> <span className="font-semibold">{selectedMelding.intakenummer}</span></div>
                                     <div><span className="text-muted-foreground">Datum:</span> <span className="font-semibold">{format(new Date(selectedMelding.datum), 'dd-MM-yy')} {selectedMelding.tijdstip}</span></div>
