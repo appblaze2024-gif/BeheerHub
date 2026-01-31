@@ -346,6 +346,148 @@ export default function IssuesPage() {
     }
   };
 
+  const formatBytes = (bytes: number, decimals = 2) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  };
+
+  const uploadFile = React.useCallback((file: File, meldingId: string): Promise<UploadedFile> => {
+    return new Promise((resolve, reject) => {
+        if (!app) {
+            reject(new Error("Firebase app not available"));
+            return;
+        }
+        const storage = getStorage(app);
+        const uniqueFileName = `${new Date().getTime()}-${file.name}`;
+        const storagePath = `meldingen/${meldingId}/${uniqueFileName}`;
+        const storageRef = ref(storage, storagePath);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+
+        uploadTask.on(
+            'state_changed',
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                setUploadProgress(prev => ({...prev, [uniqueFileName]: progress}));
+            },
+            (error) => {
+                console.error('Upload mislukt:', error);
+                setUploadProgress(prev => {
+                    const newProgress = {...prev};
+                    delete newProgress[uniqueFileName];
+                    return newProgress;
+                });
+                reject(error);
+            },
+            () => {
+                getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+                    const newFile: UploadedFile = {
+                        name: file.name,
+                        url: downloadURL,
+                        size: file.size,
+                        type: file.type,
+                        uploadedAt: new Date().toISOString(),
+                        storagePath: storagePath,
+                    };
+                    resolve(newFile);
+                    setUploadProgress(prev => {
+                      const newProgress = {...prev};
+                      delete newProgress[uniqueFileName];
+                      return newProgress;
+                  });
+                });
+            }
+        );
+    });
+  }, [app]);
+
+  const handleFileUploads = React.useCallback(async (files: FileList | File[]) => {
+    if (!files || files.length === 0 || !selectedMeldingId || !firestore) return;
+
+    let currentFiles = [...uploadedFiles];
+    
+    for (const file of Array.from(files)) {
+      try {
+        const uploadedFile = await uploadFile(file, selectedMeldingId);
+        currentFiles.push(uploadedFile);
+      } catch (error) {
+        console.error(`Kon ${file.name} niet uploaden.`);
+        toast({
+            variant: "destructive",
+            title: "Upload mislukt",
+            description: `Bestand ${file.name} kon niet worden geüpload.`
+        })
+      }
+    }
+    
+    setUploadedFiles(currentFiles);
+    const meldingRef = doc(firestore, 'meldingen', selectedMeldingId);
+    await updateDocumentNonBlocking(meldingRef, { files: currentFiles });
+    toast({
+        title: "Bestanden geüpload",
+        description: "De documenten zijn succesvol toegevoegd aan de melding."
+    });
+  }, [selectedMeldingId, firestore, uploadFile, uploadedFiles, toast]);
+
+
+  const handleFileChangeDocuments = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+        handleFileUploads(event.target.files);
+    }
+  }, [handleFileUploads]);
+
+  const handleDropDocuments = React.useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingDocument(false);
+    if (event.dataTransfer.files) {
+        handleFileUploads(event.dataTransfer.files);
+    }
+  }, [handleFileUploads]);
+
+
+  const handleFileDelete = async (fileToDelete: UploadedFile) => {
+    if (!app || !firestore || !selectedMeldingId) return;
+    
+    const isConfirmed = await new Promise(resolve => {
+        resolve(window.confirm(`Weet u zeker dat u het bestand "${fileToDelete.name}" wilt verwijderen?`));
+    });
+
+    if (!isConfirmed) return;
+
+    const storage = getStorage(app);
+
+    const fileRef = ref(storage, fileToDelete.storagePath);
+    try {
+      await deleteObject(fileRef);
+      const newFiles = uploadedFiles.filter((f) => f.storagePath !== fileToDelete.storagePath);
+      setUploadedFiles(newFiles);
+      const meldingRef = doc(firestore, 'meldingen', selectedMeldingId);
+      await updateDocumentNonBlocking(meldingRef, { files: newFiles });
+       toast({
+        title: "Bestand verwijderd",
+        description: `${fileToDelete.name} is succesvol verwijderd.`
+    });
+    } catch (error: any) {
+      console.error('Kon bestand niet verwijderen:', error);
+       toast({
+        variant: "destructive",
+        title: "Verwijderen mislukt",
+        description: error.message || "Kon het bestand niet verwijderen."
+      });
+      if (error.code === 'storage/object-not-found') {
+        const newFiles = uploadedFiles.filter((f) => f.storagePath !== fileToDelete.storagePath);
+        setUploadedFiles(newFiles);
+        const meldingRef = doc(firestore, 'meldingen', selectedMeldingId);
+        await updateDocumentNonBlocking(meldingRef, { files: newFiles });
+      }
+    }
+  };
+
+
   if (isLoadingMeldingen || isLoadingProjects || isLoadingObjects) {
       return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>
   }
@@ -423,7 +565,7 @@ export default function IssuesPage() {
             
             <div className="flex-1 overflow-y-auto p-6">
                  <TabsContent value="Werkzaamheden" className="mt-0">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                         <Card>
                             <CardHeader className="p-4"><CardTitle className="text-base font-semibold">Werkbon Details</CardTitle></CardHeader>
                             <CardContent className="space-y-4 p-4 pt-0 text-xs">
@@ -507,7 +649,7 @@ export default function IssuesPage() {
                                      <CardContent className="p-0">
                                          {nearbyObjects.length > 0 ? (
                                              <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
-                                                 {nearbyObjects.map(obj => (
+                                                 {nearbyObjects.slice(0, 5).map(obj => (
                                                      <div key={obj.id} className="text-sm p-2 bg-muted rounded-md">{obj.id} - {obj.locatieSubType || 'Onbekend'}</div>
                                                  ))}
                                              </div>
@@ -524,7 +666,68 @@ export default function IssuesPage() {
                      </div>
                 </TabsContent>
                 <TabsContent value="Documenten" className="mt-0">
-                    {/* Content will be added in a future step */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Documenten</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div 
+                                className={cn(
+                                    "border-2 border-dashed border-muted-foreground/30 rounded-lg p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50 transition-colors",
+                                    isDraggingDocument && "bg-muted/50 border-primary"
+                                )}
+                                onDragEnter={() => setIsDraggingDocument(true)}
+                                onDragLeave={() => setIsDraggingDocument(false)}
+                                onDragOver={(e) => e.preventDefault()}
+                                onDrop={handleDropDocuments}
+                                onClick={() => document.getElementById('document-file-input')?.click()}
+                            >
+                                <UploadCloud className="h-12 w-12 text-muted-foreground" />
+                                <p className="mt-4 font-semibold">Sleep bestanden hierheen of klik om te uploaden</p>
+                                <p className="text-sm text-muted-foreground">PDF, Word, Excel, afbeeldingen, etc.</p>
+                                <input
+                                    type="file"
+                                    id="document-file-input"
+                                    onChange={handleFileChangeDocuments}
+                                    className="hidden"
+                                    multiple
+                                />
+                            </div>
+                            
+                            {Object.entries(uploadProgress).map(([name, progress]) => (
+                            <div key={name} className="space-y-1 mt-2">
+                                <p className="text-sm font-medium">{name}</p>
+                                <Progress value={progress} className="w-full h-2" />
+                            </div>
+                            ))}
+                            
+                            {uploadedFiles.length > 0 && (
+                                <div className="border rounded-md mt-4">
+                                {uploadedFiles.map((file) => (
+                                    <div
+                                    key={file.storagePath}
+                                    className="grid grid-cols-[1fr_auto_auto] gap-4 items-center px-4 py-2 border-b last:border-b-0"
+                                    >
+                                    <a href={file.url} target="_blank" rel="noopener noreferrer" className="truncate flex items-center gap-2 hover:underline">
+                                        <FileIcon className="h-4 w-4 shrink-0" /> {file.name}
+                                    </a>
+                                    <span className='text-sm text-muted-foreground'>{formatBytes(file.size)}</span>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        onClick={() => handleFileDelete(file)}
+                                        disabled={isSubmitting}
+                                    >
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                    </div>
+                                ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
                 </TabsContent>
                 <TabsContent value="Foto's" className="mt-0">
                     {/* Content will be added in a future step */}
