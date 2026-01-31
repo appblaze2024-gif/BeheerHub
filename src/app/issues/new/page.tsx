@@ -94,8 +94,10 @@ export default function NewIssuePage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
+  const [uploadedPhotos, setUploadedPhotos] = React.useState<UploadedFile[]>([]);
   const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
   const [isDragging, setIsDragging] = React.useState(false);
+  const [isDraggingPhoto, setIsDraggingPhoto] = React.useState(false);
   
   const now = new Date();
   const meldingIdRef = React.useRef(format(now, 'yyyyMMddHHmmss'));
@@ -107,7 +109,6 @@ export default function NewIssuePage() {
       status: 'Nieuw',
       meldingsdatum: now,
       meldingsuur: format(now, 'HH:mm'),
-      // Keep other fields empty as per user request
       soort_melder: '',
       hoofdcategorie: '',
       subcategorie: '',
@@ -147,7 +148,7 @@ export default function NewIssuePage() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
   };
 
-  const uploadFile = React.useCallback((file: File, meldingId: string): Promise<UploadedFile> => {
+  const uploadFile = React.useCallback((file: File, meldingId: string, type: 'documents' | 'photos'): Promise<UploadedFile> => {
     return new Promise((resolve, reject) => {
         if (!app) {
             reject(new Error("Firebase app niet beschikbaar"));
@@ -155,7 +156,7 @@ export default function NewIssuePage() {
         }
         const storage = getStorage(app);
         const uniqueFileName = `${new Date().getTime()}-${file.name}`;
-        const storagePath = `meldingen/${meldingId}/bijlagen/${uniqueFileName}`;
+        const storagePath = `meldingen/${meldingId}/${type}/${uniqueFileName}`;
         const storageRef = ref(storage, storagePath);
         const uploadTask = uploadBytesResumable(storageRef, file);
 
@@ -196,12 +197,12 @@ export default function NewIssuePage() {
     });
   }, [app]);
   
-  const handleFileUploads = React.useCallback(async (files: FileList | File[]) => {
+  const handleDocumentUploads = React.useCallback(async (files: FileList | File[]) => {
     if (!files || files.length === 0) return;
     let currentFiles = [...uploadedFiles];
     for (const file of Array.from(files)) {
       try {
-        const uploadedFile = await uploadFile(file, meldingsnummer);
+        const uploadedFile = await uploadFile(file, meldingsnummer, 'documents');
         currentFiles.push(uploadedFile);
       } catch (error) {
         console.error(`Kon ${file.name} niet uploaden.`);
@@ -215,22 +216,22 @@ export default function NewIssuePage() {
     setUploadedFiles(currentFiles);
   }, [uploadFile, meldingsnummer, uploadedFiles, toast]);
   
-  const handleFileChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDocumentFileChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
-      handleFileUploads(event.target.files);
+      handleDocumentUploads(event.target.files);
     }
-  }, [handleFileUploads]);
+  }, [handleDocumentUploads]);
 
-  const handleDrop = React.useCallback((event: React.DragEvent<HTMLDivElement>) => {
+  const handleDocumentDrop = React.useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.stopPropagation();
     setIsDragging(false);
     if (event.dataTransfer.files) {
-      handleFileUploads(event.dataTransfer.files);
+      handleDocumentUploads(event.dataTransfer.files);
     }
-  }, [handleFileUploads]);
+  }, [handleDocumentUploads]);
   
-  const handleFileDelete = async (fileToDelete: UploadedFile) => {
+  const handleDocumentDelete = async (fileToDelete: UploadedFile) => {
     if (!app) return;
     setUploadedFiles((prev) => prev.filter((f) => f.storagePath !== fileToDelete.storagePath));
     const storage = getStorage(app);
@@ -240,6 +241,54 @@ export default function NewIssuePage() {
     } catch (error: any) {
       if (error.code !== 'storage/object-not-found') {
         console.error('Kon bestand niet verwijderen:', error);
+      }
+    }
+  };
+
+  const handlePhotoUploads = React.useCallback(async (files: FileList | File[]) => {
+    if (!files || files.length === 0) return;
+    let currentPhotos = [...uploadedPhotos];
+    for (const file of Array.from(files)) {
+      try {
+        const uploadedFile = await uploadFile(file, meldingsnummer, 'photos');
+        currentPhotos.push(uploadedFile);
+      } catch (error) {
+        console.error(`Kon ${file.name} niet uploaden.`);
+        toast({
+          variant: "destructive",
+          title: "Upload mislukt",
+          description: `Foto ${file.name} kon niet worden geüpload.`
+        });
+      }
+    }
+    setUploadedPhotos(currentPhotos);
+  }, [uploadFile, meldingsnummer, uploadedPhotos, toast]);
+
+  const handlePhotoFileChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      handlePhotoUploads(event.target.files);
+    }
+  }, [handlePhotoUploads]);
+
+  const handlePhotoDrop = React.useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingPhoto(false);
+    if (event.dataTransfer.files) {
+      handlePhotoUploads(event.dataTransfer.files);
+    }
+  }, [handlePhotoUploads]);
+  
+  const handlePhotoDelete = async (photoToDelete: UploadedFile) => {
+    if (!app) return;
+    setUploadedPhotos((prev) => prev.filter((p) => p.storagePath !== photoToDelete.storagePath));
+    const storage = getStorage(app);
+    const photoRef = ref(storage, photoToDelete.storagePath);
+    try {
+      await deleteObject(photoRef);
+    } catch (error: any) {
+      if (error.code !== 'storage/object-not-found') {
+        console.error('Kon foto niet verwijderen:', error);
       }
     }
   };
@@ -262,6 +311,7 @@ export default function NewIssuePage() {
         latitude: 0,
         longitude: 0,
         files: uploadedFiles,
+        fotos: uploadedPhotos,
       });
 
       toast({
@@ -459,7 +509,7 @@ export default function NewIssuePage() {
                     <TabsList>
                         <TabsTrigger value="memo">Memo</TabsTrigger>
                         <TabsTrigger value="documenten">Documenten</TabsTrigger>
-                        <TabsTrigger value="bestanden">Bestanden</TabsTrigger>
+                        <TabsTrigger value="fotos">Foto's</TabsTrigger>
                         <TabsTrigger value="locatie">Locatie</TabsTrigger>
                         <TabsTrigger value="dubbele">Dubbele Meldingen</TabsTrigger>
                     </TabsList>
@@ -476,7 +526,7 @@ export default function NewIssuePage() {
                                 onDragEnter={() => setIsDragging(true)}
                                 onDragLeave={() => setIsDragging(false)}
                                 onDragOver={(e) => e.preventDefault()}
-                                onDrop={handleDrop}
+                                onDrop={handleDocumentDrop}
                                 onClick={() => document.getElementById('documenten-file-input')?.click()}
                             >
                                 <UploadCloud className="h-10 w-10 text-muted-foreground" />
@@ -485,7 +535,7 @@ export default function NewIssuePage() {
                                 <input
                                     type="file"
                                     id="documenten-file-input"
-                                    onChange={handleFileChange}
+                                    onChange={handleDocumentFileChange}
                                     className="hidden"
                                     multiple
                                     disabled={isUploading}
@@ -515,7 +565,7 @@ export default function NewIssuePage() {
                                                 variant="ghost"
                                                 size="icon"
                                                 className="h-6 w-6"
-                                                onClick={() => handleFileDelete(file)}
+                                                onClick={() => handleDocumentDelete(file)}
                                                 disabled={isSubmitting}
                                             >
                                                 <Trash2 className="h-4 w-4 text-destructive" />
@@ -526,7 +576,67 @@ export default function NewIssuePage() {
                             )}
                         </div>
                     </TabsContent>
-                    <TabsContent value="bestanden"><div className="text-center p-4 text-muted-foreground text-xs">Nog geen bestanden.</div></TabsContent>
+                    <TabsContent value="fotos" className="flex-1 mt-1">
+                       <div className="h-full flex flex-col gap-4 p-1">
+                            <div
+                                className={cn(
+                                    "border-2 border-dashed border-muted-foreground/30 rounded-lg p-4 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50 transition-colors flex-1",
+                                    isDraggingPhoto && "bg-muted/50 border-primary"
+                                )}
+                                onDragEnter={() => setIsDraggingPhoto(true)}
+                                onDragLeave={() => setIsDraggingPhoto(false)}
+                                onDragOver={(e) => e.preventDefault()}
+                                onDrop={handlePhotoDrop}
+                                onClick={() => document.getElementById('fotos-file-input')?.click()}
+                            >
+                                <UploadCloud className="h-10 w-10 text-muted-foreground" />
+                                <p className="mt-2 text-sm font-semibold">Sleep foto's hierheen of klik om te uploaden</p>
+                                <p className="text-xs text-muted-foreground">Alleen afbeeldingen.</p>
+                                <input
+                                    type="file"
+                                    id="fotos-file-input"
+                                    onChange={handlePhotoFileChange}
+                                    className="hidden"
+                                    multiple
+                                    disabled={isUploading}
+                                    accept="image/*"
+                                />
+                            </div>
+                            
+                            {Object.entries(uploadProgress).map(([name, progress]) => (
+                                <div key={name} className="space-y-1">
+                                    <p className="text-sm font-medium text-muted-foreground">{name}</p>
+                                    <Progress value={progress} className="w-full h-2" />
+                                </div>
+                            ))}
+
+                            {uploadedPhotos.length > 0 && (
+                                <div className="border rounded-md max-h-32 overflow-y-auto">
+                                    {uploadedPhotos.map((file) => (
+                                        <div
+                                            key={file.storagePath}
+                                            className="grid grid-cols-[1fr_auto_auto] gap-4 items-center px-2 py-1 border-b last:border-b-0"
+                                        >
+                                            <a href={file.url} target="_blank" rel="noopener noreferrer" className="truncate flex items-center gap-2 hover:underline text-xs">
+                                                <FileIcon className="h-4 w-4 shrink-0" /> {file.name}
+                                            </a>
+                                            <span className='text-xs text-muted-foreground'>{formatBytes(file.size)}</span>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6"
+                                                onClick={() => handlePhotoDelete(file)}
+                                                disabled={isSubmitting}
+                                            >
+                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </TabsContent>
                     <TabsContent value="locatie"><div className="text-center p-4 text-muted-foreground text-xs">Locatiegegevens worden hier getoond.</div></TabsContent>
                     <TabsContent value="dubbele"><div className="text-center p-4 text-muted-foreground text-xs">Geen dubbele meldingen gevonden.</div></TabsContent>
                 </Tabs>
@@ -544,3 +654,5 @@ export default function NewIssuePage() {
     </div>
   );
 }
+
+    
