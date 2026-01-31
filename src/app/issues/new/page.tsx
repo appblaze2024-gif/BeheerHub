@@ -95,18 +95,15 @@ export default function NewIssuePage() {
   const form = useForm<NewMeldingFormValues>({
     resolver: zodResolver(newMeldingSchema),
     defaultValues: {
-      status: 'In behandeling',
+      status: 'Nieuw',
       voorvaldatum: now,
       voorvaltijd: format(now, 'HH:mm'),
       meldingsdatum: now,
       meldingsuur: format(now, 'HH:mm'),
-      behandelende_afdeling: "Kantoor R'hout Reiniging",
-      soort_melding: 'Balie',
-      melder: 'Bijlsma',
-      telefoon_melder: '0653315267',
-      extra_informatie: 'Bewoner aan de balie wil graag een eigen zoutkist laten vullen, het gaat hier om eigen bak van 10 kilo van dit gebouw met appartementen: zegt dat dit door ons 10 jaar geleden! werd gedaan (denkt ie zelf). Ik vraag het na en bel meneer terug. Ana M Receptie',
-      hoofdcategorie: 'Zoutkisten',
-      subcategorie: 'Zoutkist leeg'
+      hoofdcategorie: '',
+      subcategorie: '',
+      melder: '',
+      extra_informatie: '',
     },
   });
   
@@ -151,7 +148,7 @@ export default function NewIssuePage() {
     <div className="flex flex-col h-full overflow-hidden text-sm bg-gray-100 dark:bg-gray-900">
         <div className="flex-shrink-0 px-4 py-1.5 border-b flex justify-between items-center bg-gray-200/60 dark:bg-gray-800/60">
             <h1 className="font-semibold text-xs">Melding : {meldingsnummer}</h1>
-            <span className="text-xs text-muted-foreground">Laatst gewijzigd door A.M. Ayala Trujillo op 30-01-2026 om 09:08:33.</span>
+            <span className="text-xs text-muted-foreground">Laatst gewijzigd door {profile?.displayName || '...'} op {format(now, 'dd-MM-yyyy')} om {format(now, 'HH:mm:ss')}.</span>
         </div>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
@@ -164,7 +161,7 @@ export default function NewIssuePage() {
                     <FormRow label="Soort melder">
                        <div className="flex items-center">
                             <FormField control={form.control} name="soort_melder" render={({ field }) => (
-                                <FormControl><Input placeholder="Burger telefonisch" {...field} className="h-7 text-xs rounded-r-none" /></FormControl>
+                                <FormControl><Input {...field} className="h-7 text-xs rounded-r-none" /></FormControl>
                             )} />
                             <Button size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
                         </div>
@@ -274,7 +271,7 @@ export default function NewIssuePage() {
                                 <FormField control={form.control} name="postcode" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs" /></FormControl> )} />
                                 <FormField control={form.control} name="plaats" render={({ field }) => (
                                     <div className="flex items-center">
-                                        <FormControl><Input placeholder="Nieuw-Vennep" {...field} className="h-7 text-xs rounded-r-none" /></FormControl>
+                                        <FormControl><Input {...field} className="h-7 text-xs rounded-r-none" /></FormControl>
                                         <Button size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
                                     </div>
                                 )} />
@@ -328,7 +325,7 @@ export default function NewIssuePage() {
                         <TabsTrigger value="dubbele">Dubbele Meldingen</TabsTrigger>
                     </TabsList>
                     <TabsContent value="memo" className="flex-1 mt-1">
-                        <FormField control={form.control} name="extra_informatie" render={({ field }) => ( <FormItem className="h-full flex flex-col"><FormLabel className='sr-only'>Memo</FormLabel><FormControl><Textarea placeholder="Bewoner aan de balie wil graag..." {...field} className="flex-1 resize-none text-xs" /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="extra_informatie" render={({ field }) => ( <FormItem className="h-full flex flex-col"><FormLabel className='sr-only'>Memo</FormLabel><FormControl><Textarea {...field} className="flex-1 resize-none text-xs" /></FormControl><FormMessage /></FormItem> )} />
                     </TabsContent>
                     <TabsContent value="bijlagen"><div className="text-center p-4 text-muted-foreground text-xs">Nog geen bijlagen.</div></TabsContent>
                     <TabsContent value="bestanden"><div className="text-center p-4 text-muted-foreground text-xs">Nog geen bestanden.</div></TabsContent>
