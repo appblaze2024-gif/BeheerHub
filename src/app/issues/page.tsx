@@ -411,15 +411,15 @@ export default function IssuesPage() {
             
             <div className="flex-1 overflow-y-auto p-6">
                  <TabsContent value="Werkzaamheden" className="mt-0">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-6">
                         <Card>
                             <CardHeader className="p-4"><CardTitle className="text-base font-semibold">Werkbon Details</CardTitle></CardHeader>
-                            <CardContent className="space-y-4 p-4 pt-0 text-xs">
+                            <CardContent className="space-y-2 p-4 pt-0 text-xs">
                                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 border-b pb-2">
                                     <div><span className="text-muted-foreground">Intakenr:</span> <span className="font-semibold">{selectedMelding.intakenummer}</span></div>
                                     <div><span className="text-muted-foreground">Datum:</span> <span className="font-semibold">{format(new Date(selectedMelding.datum), 'dd-MM-yy')} {selectedMelding.tijdstip}</span></div>
                                     <div className="col-span-2"><span className="text-muted-foreground">Adres:</span> <span className="font-semibold">{selectedMelding.straatnaam}, {selectedMelding.postcode} {selectedMelding.plaats}</span></div>
-                                     <div><span className="text-muted-foreground">Melder:</span> <span className="font-semibold">{selectedMelding.melder}</span></div>
+                                    <div><span className="text-muted-foreground">Melder:</span> <span className="font-semibold">{selectedMelding.melder}</span></div>
                                 </div>
                                 
                                 <div className="space-y-3 pt-2">
@@ -444,10 +444,8 @@ export default function IssuesPage() {
                                 </div>
                             </CardContent>
                         </Card>
-                        <div className="min-h-[250px] md:min-h-0 space-y-4">
-                          <div className="h-full">
-                              <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} />
-                          </div>
+                        <div className="h-80 rounded-lg overflow-hidden border">
+                            <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} />
                         </div>
                     </div>
                 </TabsContent>
