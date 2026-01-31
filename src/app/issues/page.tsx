@@ -4,7 +4,7 @@ import * as React from 'react';
 import MapGL, { Marker, Popup, Source, Layer, FillLayer, LineLayer } from 'react-map-gl';
 import { useCollection, useFirestore, useFirebaseApp, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
-import { Calendar as CalendarIcon, Plus, Search, List, Map as MapIcon, Bell, Filter, Navigation, Pencil, FileText, ChevronLeft, Camera, Package, Clock, User, Paperclip, PlusCircle, AlertCircle, Info, UploadCloud, ChevronDown, MapPin, Trash2, ArrowLeft, File as FileIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Search, List, Map as MapIcon, Bell, Filter, Navigation, Pencil, FileText, ChevronLeft, Camera, Package, Clock, User, Paperclip, PlusCircle, AlertCircle, Info, UploadCloud, ChevronDown, MapPin, Trash2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -21,7 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { format, isSameDay, startOfDay } from 'date-fns';
 import { nl } from 'date-fns/locale';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { useProfile } from '@/firebase/profile-provider';
@@ -1010,7 +1010,30 @@ export default function IssuesPage() {
                     </Card>
                 </TabsContent>
                 <TabsContent value="Uren" className="mt-0">
-                    {/* Content will be added in a future step */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Urenregistratie</CardTitle>
+                             <CardDescription>
+                                Voer hier de totale gewerkte tijd voor deze melding in minuten in.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-6 space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="gewerkte-minuten">Totaal gewerkte minuten</Label>
+                                <Input
+                                    id="gewerkte-minuten"
+                                    type="number"
+                                    value={gewerkteMinuten}
+                                    onChange={(e) => setGewerkteMinuten(Number(e.target.value) >= 0 ? Number(e.target.value) : 0)}
+                                    placeholder="Voer minuten in"
+                                    min="0"
+                                />
+                            </div>
+                            {gewerkteMinuten > 0 && <div className="text-sm text-muted-foreground">
+                                Dit komt overeen met: {Math.floor(gewerkteMinuten / 60)} uur en {gewerkteMinuten % 60} minuten.
+                            </div>}
+                        </CardContent>
+                    </Card>
                 </TabsContent>
             </div>
         </Tabs>
