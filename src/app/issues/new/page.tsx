@@ -502,7 +502,7 @@ export default function NewIssuePage() {
             <div className="p-3 grid grid-cols-12 gap-4">
                {/* Left Column */}
                <div className="col-span-7">
-                   <Card>
+                   <Card className="h-full bg-gray-50 dark:bg-gray-800/30">
                         <CardHeader>
                             <CardTitle className="text-base font-semibold">Algemene Informatie</CardTitle>
                         </CardHeader>
@@ -537,6 +537,29 @@ export default function NewIssuePage() {
                                 <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
                             </div>
                             </FormRow>
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField control={form.control} name="soort_melding" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-xs">Soort melding</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                                            <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer soort"/></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="Balie">Balie</SelectItem>
+                                                <SelectItem value="Telefoon">Telefoon</SelectItem>
+                                                <SelectItem value="Email">Email</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                                <FormField control={form.control} name="ext_referentie" render={({ field }) => (
+                                     <FormItem>
+                                        <FormLabel className="text-xs">Ext. referentie</FormLabel>
+                                        <FormControl><Input {...field} className="h-7 text-xs" /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                            </div>
                             <FormRow label="Behandelende afdeling">
                                 <FormField control={form.control} name="behandelende_afdeling" render={({ field }) => (
                                 <FormControl><Input {...field} className="h-7 text-xs" /></FormControl>
@@ -591,26 +614,6 @@ export default function NewIssuePage() {
 
                {/* Right Column */}
                 <div className="col-span-5 space-y-2">
-                     <div className="grid grid-cols-[140px_1fr] items-center gap-x-2">
-                        <div/>
-                        <div className="grid grid-cols-2 gap-2">
-                             <FormRow label="Soort melding">
-                                <FormField control={form.control} name="soort_melding" render={({ field }) => (
-                                    <Select onValueChange={field.onChange} value={field.value || ''}>
-                                        <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer soort"/></SelectTrigger></FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="Balie">Balie</SelectItem>
-                                            <SelectItem value="Telefoon">Telefoon</SelectItem>
-                                            <SelectItem value="Email">Email</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                )} />
-                            </FormRow>
-                            <FormRow label="Ext. referentie">
-                                 <FormField control={form.control} name="ext_referentie" render={({ field }) => (<FormControl><Input {...field} /></FormControl>)} />
-                            </FormRow>
-                        </div>
-                    </div>
                     <div className='p-2 border rounded-md bg-gray-50 dark:bg-gray-800/30 space-y-1.5'>
                         <h3 className="font-semibold text-xs mb-2">Adresgegevens</h3>
                         <FormRow label="Straatnaam">
