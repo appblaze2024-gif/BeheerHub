@@ -8,7 +8,8 @@ import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { CalendarIcon, Loader2, MapPin, Search } from 'lucide-react';
-import { useFirestore, addDocumentNonBlocking, useProfile } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { useProfile } from '@/firebase/profile-provider';
 import { collection } from 'firebase/firestore';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -377,4 +378,3 @@ export default function NewIssuePage() {
     </div>
   );
 }
-    
