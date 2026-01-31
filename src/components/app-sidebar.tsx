@@ -11,6 +11,9 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -20,12 +23,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { allMenuItems } from '@/lib/menu-config';
+import { allMenuItems, type MenuItem, type SubMenuItem } from '@/lib/menu-config';
 import { useUser, useCollection, useFirestore, useDoc, setDocumentNonBlocking } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { collection, doc } from 'firebase/firestore';
 import { Button } from './ui/button';
-import { Settings, Camera } from 'lucide-react';
+import { Settings, Camera, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
@@ -39,6 +42,11 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useProject } from '@/context/project-context';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 
 type Project = {
   id: string;
@@ -162,16 +170,46 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
             </div>
             <SidebarMenu>
               {menuItems.map((item) => (
-                <SidebarMenuItem key={item.href} onClick={onNavigate}>
-                  <Link href={item.href} passHref>
+                <SidebarMenuItem key={item.label}>
+                  {item.subItems ? (
+                    <Collapsible defaultOpen={pathname.startsWith(item.href)}>
+                      <CollapsibleTrigger asChild>
+                        <SidebarMenuButton
+                          isActive={pathname.startsWith(item.href)}
+                          className="h-12 text-base justify-between"
+                        >
+                          <div className="flex items-center gap-2">
+                            <item.icon className="h-6 w-6 text-primary" />
+                            <span>{item.label}</span>
+                          </div>
+                          <ChevronRight className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-90" />
+                        </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down overflow-hidden">
+                        <SidebarMenuSub>
+                          {item.subItems.map((subItem) => (
+                            <SidebarMenuSubItem key={subItem.href} onClick={onNavigate}>
+                              <Link href={subItem.href} passHref>
+                                <SidebarMenuSubButton isActive={pathname === subItem.href}>
+                                  <span>{subItem.label}</span>
+                                </SidebarMenuSubButton>
+                              </Link>
+                            </SidebarMenuSubItem>
+                          ))}
+                        </SidebarMenuSub>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  ) : (
+                    <Link href={item.href} passHref onClick={onNavigate}>
                       <SidebarMenuButton
-                          isActive={pathname === item.href}
-                          className="h-12 text-base"
+                        isActive={pathname === item.href}
+                        className="h-12 text-base"
                       >
-                          <item.icon className="h-6 w-6 text-primary" />
-                          <span>{item.label}</span>
+                        <item.icon className="h-6 w-6 text-primary" />
+                        <span>{item.label}</span>
                       </SidebarMenuButton>
-                  </Link>
+                    </Link>
+                  )}
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>

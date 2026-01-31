@@ -20,11 +20,17 @@ import {
 } from 'lucide-react';
 import { ElementType } from 'react';
 
+export interface SubMenuItem {
+    href: string;
+    label: string;
+}
+
 export interface MenuItem {
   href: string;
   label: string;
   icon: ElementType;
   module?: string;
+  subItems?: SubMenuItem[];
 }
 
 export const allMenuItems: MenuItem[] = [
@@ -38,7 +44,17 @@ export const allMenuItems: MenuItem[] = [
     { href: '/vehicles', label: 'Wagenpark', icon: Truck, module: 'vehicles' },
     { href: '/objects', label: 'Objecten', icon: MapPin, module: 'objects' },
     { href: '/inventory', label: 'Voorraadbeheer', icon: Warehouse, module: 'inventory' },
-    { href: '/issues', label: 'Meldingen', icon: Bell, module: 'issues' },
+    { 
+      href: '/issues', 
+      label: 'Meldingen', 
+      icon: Bell, 
+      module: 'issues',
+      subItems: [
+        { href: '/issues', label: 'Werkbonnen' },
+        { href: '/issues/new', label: 'Melding maken' },
+        { href: '/issues/archive', label: 'Meldingen archief' },
+      ]
+    },
     { href: '/spec-reports', label: 'Besteksmeldingen', icon: FileWarning, module: 'specReports' },
     { href: '/navigation-module', label: 'Navigatiemodule', icon: Navigation, module: 'navigation' },
     { href: '/teams', label: 'Teams', icon: Users2, module: 'teams' },
