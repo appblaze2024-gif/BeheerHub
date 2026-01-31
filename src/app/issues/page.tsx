@@ -186,8 +186,6 @@ export default function IssuesPage() {
     resolver: zodResolver(meldingFormSchema),
   });
 
-  const hoofdcategorie = form.watch('hoofdcategorie');
-
   const selectedMelding = React.useMemo(() => {
     return meldingen?.find(m => m.id === selectedMeldingId);
   }, [meldingen, selectedMeldingId]);
@@ -416,51 +414,34 @@ export default function IssuesPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <Card>
                             <CardHeader className="p-4"><CardTitle className="text-base font-semibold">Werkbon Details</CardTitle></CardHeader>
-                            <CardContent className="space-y-2 p-4 pt-0 text-xs">
+                            <CardContent className="space-y-4 p-4 pt-0 text-xs">
                                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 border-b pb-2">
                                     <div><span className="font-semibold text-muted-foreground">Intakenr:</span> {selectedMelding.intakenummer}</div>
                                     <div><span className="font-semibold text-muted-foreground">Datum:</span> {format(new Date(selectedMelding.datum), 'dd-MM-yy')} {selectedMelding.tijdstip}</div>
                                     <div className="col-span-2"><span className="font-semibold text-muted-foreground">Adres:</span> {selectedMelding.straatnaam}, {selectedMelding.postcode} {selectedMelding.plaats}</div>
                                      <div><span className="font-semibold text-muted-foreground">Melder:</span> {selectedMelding.melder}</div>
                                 </div>
-
-                                <Form {...form}>
-                                    <div className="grid grid-cols-3 gap-2 pt-2">
-                                        <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (
-                                            <FormItem>
-                                            <FormLabel className="text-xs">Hoofdcategorie</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value} disabled>
-                                                <FormControl><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger></FormControl>
-                                                <SelectContent>{hoofdcategorieOptions.map(opt => (<SelectItem key={opt} value={opt} className="text-xs">{opt}</SelectItem>))}</SelectContent>
-                                            </Select>
-                                            </FormItem>
-                                        )} />
-                                        <FormField control={form.control} name="subcategorie" render={({ field }) => (
-                                            <FormItem>
-                                            <FormLabel className="text-xs">Subcategorie</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value} disabled>
-                                                <FormControl><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger></FormControl>
-                                                <SelectContent>{(subcategorieOptions[hoofdcategorie] || []).map(opt => (<SelectItem key={opt} value={opt} className="text-xs">{opt}</SelectItem>))}</SelectContent>
-                                            </Select>
-                                            </FormItem>
-                                        )} />
-                                        <FormField control={form.control} name="status" render={({ field }) => (
-                                            <FormItem>
-                                            <FormLabel className="text-xs">Status</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value} disabled>
-                                                <FormControl><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger></FormControl>
-                                                <SelectContent>{statusOptions.map(opt => (<SelectItem key={opt} value={opt} className="text-xs">{opt}</SelectItem>))}</SelectContent>
-                                            </Select>
-                                            </FormItem>
-                                        )} />
+                                
+                                <div className="space-y-3 pt-2">
+                                    <div className="grid grid-cols-3 gap-4">
+                                        <div>
+                                            <p className="text-xs font-semibold text-muted-foreground">Hoofdcategorie</p>
+                                            <p className="text-sm">{selectedMelding.hoofdcategorie}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-semibold text-muted-foreground">Subcategorie</p>
+                                            <p className="text-sm">{selectedMelding.subcategorie}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-semibold text-muted-foreground">Status</p>
+                                            <p className="text-sm">{selectedMelding.status}</p>
+                                        </div>
                                     </div>
-                                    <FormField control={form.control} name="extra_informatie" render={({ field }) => (
-                                        <FormItem>
-                                        <FormLabel className="text-xs">Omschrijving</FormLabel>
-                                        <FormControl><Textarea rows={3} {...field} className="text-xs" disabled /></FormControl>
-                                        </FormItem>
-                                    )} />
-                                </Form>
+                                    <div>
+                                        <p className="text-xs font-semibold text-muted-foreground">Omschrijving</p>
+                                        <p className="text-sm whitespace-pre-wrap">{selectedMelding.extra_informatie}</p>
+                                    </div>
+                                </div>
                             </CardContent>
                         </Card>
                         <div className="min-h-[250px] md:min-h-0 space-y-4">
@@ -549,3 +530,5 @@ export default function IssuesPage() {
     </div>
   );
 }
+
+    
