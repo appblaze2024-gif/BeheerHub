@@ -28,7 +28,7 @@ import { useProfile } from '@/firebase/profile-provider';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useProject } from '@/context/project-context';
 import Link from 'next/link';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -413,7 +413,7 @@ export default function IssuesPage() {
             
             <div className="flex-1 overflow-y-auto p-6">
                 <TabsContent value="Werkzaamheden" className="mt-0">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-2 gap-6">
                         <div className="space-y-6">
                              <Card>
                                 <CardHeader><CardTitle>Werkomschrijving / Melding</CardTitle></CardHeader>
@@ -494,7 +494,7 @@ export default function IssuesPage() {
                     </div>
                 </TabsContent>
                 <TabsContent value="Locatiegegevens" className="mt-0">
-                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                     <div className="grid grid-cols-2 gap-6">
                          <div className="space-y-6">
                              <Card>
                                  <CardHeader><CardTitle>Locatie Details</CardTitle></CardHeader>
@@ -536,7 +536,7 @@ export default function IssuesPage() {
                                  </CardContent>
                              </Card>
                          </div>
-                         <div className="min-h-[400px] lg:min-h-0">
+                         <div className="min-h-[400px]">
                              <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} objects={nearbyObjects} />
                          </div>
                      </div>
