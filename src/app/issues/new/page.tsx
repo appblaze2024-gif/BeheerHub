@@ -36,6 +36,18 @@ import type { UploadedFile, Object as MapObject } from '@/lib/types';
 import { MapboxView } from '@/components/mapbox-view';
 import * as turf from '@turf/turf';
 
+// Local types, as they are not in lib/types.ts but are needed for data fetching
+interface Wijk {
+    id: string;
+    naam: string;
+    subGebieden: string;
+}
+
+interface Project {
+    id: string;
+    wijken?: Wijk[];
+}
+
 
 const newMeldingSchema = z.object({
   soort_melder: z.string().optional(),
@@ -60,7 +72,7 @@ const newMeldingSchema = z.object({
   postcode: z.string().optional(),
   plaats: z.string().optional(),
   wijk: z.string().optional(),
-  pasnr: z.string().optional(),
+  werkgebied: z.string().optional(),
   soort_adres: z.string().optional(),
   
   melder: z.string().optional(),
@@ -120,6 +132,12 @@ export default function NewIssuePage() {
   }, [firestore]);
   const { data: allObjects } = useCollection<MapObject>(objectsCollection);
 
+  const projectsCollection = React.useMemo(() => {
+      if (!firestore) return null;
+      return collection(firestore, 'projects');
+  }, [firestore]);
+  const { data: allProjects } = useCollection<Project>(projectsCollection);
+
   const nearbyObjects = React.useMemo(() => {
     if (!location || !allObjects) return [];
     const meldingPoint = turf.point([location.longitude, location.latitude]);
@@ -158,7 +176,7 @@ export default function NewIssuePage() {
       postcode: '',
       plaats: '',
       wijk: '',
-      pasnr: '',
+      werkgebied: '',
       soort_adres: '',
       melder: '',
       telefoon_melder: '',
@@ -170,6 +188,40 @@ export default function NewIssuePage() {
   
   const watchedHoofdcategorie = form.watch('hoofdcategorie');
   
+  React.useEffect(() => {
+    if (!location || !allProjects) {
+        form.setValue('werkgebied', '');
+        return;
+    }
+
+    const point = turf.point([location.longitude, location.latitude]);
+    let foundWijk: string | null = null;
+
+    for (const project of allProjects) {
+        if (project.wijken) {
+            for (const wijk of project.wijken) {
+                try {
+                    const features = JSON.parse(wijk.subGebieden);
+                    if (Array.isArray(features)) {
+                        for (const feature of features) {
+                            if (turf.booleanPointInPolygon(point, feature)) {
+                                foundWijk = wijk.naam;
+                                break;
+                            }
+                        }
+                    }
+                } catch (e) {
+                    // Ignore GeoJSON parsing errors
+                }
+                if (foundWijk) break;
+            }
+        }
+        if (foundWijk) break;
+    }
+
+    form.setValue('werkgebied', foundWijk || 'Geen werkgebied gevonden');
+  }, [location, allProjects, form]);
+
   const formatBytes = (bytes: number, decimals = 2) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -566,8 +618,8 @@ export default function NewIssuePage() {
                                 )} />
                             </div>
                         </FormRow>
-                        <FormRow label="Pasnr">
-                             <FormField control={form.control} name="pasnr" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs" value={field.value || ''} /></FormControl> )} />
+                        <FormRow label="Werkgebied">
+                             <FormField control={form.control} name="werkgebied" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs" value={field.value || ''} disabled /></FormControl> )} />
                         </FormRow>
                         <FormRow label="Soort adres">
                              <FormField control={form.control} name="soort_adres" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs" value={field.value || ''} /></FormControl> )} />
