@@ -188,9 +188,9 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                       <CollapsibleContent className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down overflow-hidden">
                         <SidebarMenuSub>
                           {item.subItems.map((subItem) => (
-                            <SidebarMenuSubItem key={subItem.href} onClick={onNavigate}>
-                              <Link href={subItem.href} passHref>
-                                <SidebarMenuSubButton isActive={pathname === subItem.href}>
+                            <SidebarMenuSubItem key={subItem.href}>
+                              <Link href={subItem.href} passHref legacyBehavior>
+                                <SidebarMenuSubButton onClick={onNavigate} isActive={pathname === subItem.href}>
                                   <span>{subItem.label}</span>
                                 </SidebarMenuSubButton>
                               </Link>
