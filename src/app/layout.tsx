@@ -18,7 +18,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { NavigationUIProvider, useNavigationUI } from '@/context/navigation-ui-context';
 import { ProjectProvider, useProject } from '@/context/project-context';
 import { signOut } from 'firebase/auth';
-import { format } from 'date-fns';
+import { format, isAfter } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from '@/components/ui/sheet';
@@ -175,7 +175,7 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
         if (auth.currentUser?.metadata.lastSignInTime) {
           const lastLoginTime = new Date(auth.currentUser.metadata.lastSignInTime);
           // If they logged in *after* their shift ended, let them stay.
-          if (lastLoginTime.getTime() > endTimeToday.getTime()) {
+          if (isAfter(lastLoginTime, endTimeToday)) {
             return;
           }
         }
@@ -339,3 +339,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+    
