@@ -357,7 +357,7 @@ export default function IssuesPage() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
   };
 
-  const uploadFile = React.useCallback((file: File, meldingId: string): Promise<UploadedFile> => {
+  const uploadFile = React.useCallback((file: File, meldingId: string, type: 'documents' | 'photos'): Promise<UploadedFile> => {
     return new Promise((resolve, reject) => {
         if (!app) {
             reject(new Error("Firebase app not available"));
@@ -365,7 +365,7 @@ export default function IssuesPage() {
         }
         const storage = getStorage(app);
         const uniqueFileName = `${new Date().getTime()}-${file.name}`;
-        const storagePath = `meldingen/${meldingId}/${uniqueFileName}`;
+        const storagePath = `meldingen/${meldingId}/${type}/${uniqueFileName}`;
         const storageRef = ref(storage, storagePath);
         const uploadTask = uploadBytesResumable(storageRef, file);
 
@@ -413,7 +413,7 @@ export default function IssuesPage() {
     
     for (const file of Array.from(files)) {
       try {
-        const uploadedFile = await uploadFile(file, selectedMeldingId);
+        const uploadedFile = await uploadFile(file, selectedMeldingId, 'documents');
         currentFiles.push(uploadedFile);
       } catch (error) {
         console.error(`Kon ${file.name} niet uploaden.`);
@@ -479,6 +479,81 @@ export default function IssuesPage() {
         setUploadedFiles(newFiles);
         const meldingRef = doc(firestore, 'meldingen', selectedMeldingId);
         await updateDocumentNonBlocking(meldingRef, { files: newFiles });
+      }
+    }
+  };
+
+  const handlePhotoUploads = React.useCallback(async (files: FileList | File[]) => {
+    if (!files || files.length === 0 || !selectedMeldingId || !firestore) return;
+
+    let currentPhotos = [...uploadedPhotos];
+    
+    for (const file of Array.from(files)) {
+      try {
+        const uploadedFile = await uploadFile(file, selectedMeldingId, 'photos');
+        currentPhotos.push(uploadedFile);
+      } catch (error) {
+        console.error(`Kon ${file.name} niet uploaden.`);
+        toast({
+            variant: "destructive",
+            title: "Upload mislukt",
+            description: `Foto ${file.name} kon niet worden geüpload.`
+        })
+      }
+    }
+    
+    setUploadedPhotos(currentPhotos);
+    const meldingRef = doc(firestore, 'meldingen', selectedMeldingId);
+    await updateDocumentNonBlocking(meldingRef, { fotos: currentPhotos });
+    toast({
+        title: "Foto's geüpload",
+        description: "De foto's zijn succesvol toegevoegd aan de melding."
+    });
+  }, [selectedMeldingId, firestore, uploadFile, uploadedPhotos, toast]);
+
+  const handlePhotoFileChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      handlePhotoUploads(event.target.files);
+    }
+  }, [handlePhotoUploads]);
+
+  const handleDropPhotos = React.useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingPhoto(false);
+    if (event.dataTransfer.files) {
+      handlePhotoUploads(event.dataTransfer.files);
+    }
+  }, [handlePhotoUploads]);
+
+  const handlePhotoDelete = async (photoToDelete: UploadedFile) => {
+    if (!app || !firestore || !selectedMeldingId) return;
+
+    const storage = getStorage(app);
+    const photoRef = ref(storage, photoToDelete.storagePath);
+
+    try {
+      await deleteObject(photoRef);
+      const newPhotos = uploadedPhotos.filter(p => p.storagePath !== photoToDelete.storagePath);
+      setUploadedPhotos(newPhotos);
+      const meldingRef = doc(firestore, 'meldingen', selectedMeldingId);
+      await updateDocumentNonBlocking(meldingRef, { fotos: newPhotos });
+      toast({
+        title: "Foto verwijderd",
+        description: `${photoToDelete.name} is succesvol verwijderd.`
+      });
+    } catch (error: any) {
+      console.error('Kon foto niet verwijderen:', error);
+      toast({
+        variant: "destructive",
+        title: "Verwijderen mislukt",
+        description: error.message || "Kon de foto niet verwijderen."
+      });
+      if (error.code === 'storage/object-not-found') {
+        const newPhotos = uploadedPhotos.filter(p => p.storagePath !== photoToDelete.storagePath);
+        setUploadedPhotos(newPhotos);
+        const meldingRef = doc(firestore, 'meldingen', selectedMeldingId);
+        await updateDocumentNonBlocking(meldingRef, { fotos: newPhotos });
       }
     }
   };
@@ -758,7 +833,91 @@ export default function IssuesPage() {
                     </Card>
                 </TabsContent>
                 <TabsContent value="Foto's" className="mt-0">
-                    {/* Content will be added in a future step */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Foto's</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div
+                        className={cn(
+                          "border-2 border-dashed border-muted-foreground/30 rounded-lg p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50 transition-colors",
+                          isDraggingPhoto && "bg-muted/50 border-primary"
+                        )}
+                        onDragEnter={() => setIsDraggingPhoto(true)}
+                        onDragLeave={() => setIsDraggingPhoto(false)}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={handleDropPhotos}
+                        onClick={() => document.getElementById('photo-file-input')?.click()}
+                      >
+                        <UploadCloud className="h-12 w-12 text-muted-foreground" />
+                        <p className="mt-4 font-semibold">Sleep foto's hierheen of klik om te uploaden</p>
+                        <p className="text-sm text-muted-foreground">Alleen afbeeldingsbestanden</p>
+                        <input
+                          type="file"
+                          id="photo-file-input"
+                          onChange={handlePhotoFileChange}
+                          className="hidden"
+                          multiple
+                          accept="image/*"
+                        />
+                      </div>
+                      {Object.keys(uploadProgress).length > 0 &&
+                        Object.entries(uploadProgress).some(([name]) => uploadedPhotos.find(p => name.includes(p.name))) && (
+                          <div className="space-y-2">
+                            {Object.entries(uploadProgress).map(([name, progress]) => {
+                                if (uploadedPhotos.find(p => name.includes(p.name))) {
+                                    return (
+                                        <div key={name} className="space-y-1 mt-2">
+                                            <p className="text-sm font-medium">{name}</p>
+                                            <Progress value={progress} className="w-full h-2" />
+                                        </div>
+                                    )
+                                }
+                                return null;
+                            })}
+                          </div>
+                      )}
+                      {uploadedPhotos.length > 0 && (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-4">
+                          {uploadedPhotos.map((photo) => (
+                            <div key={photo.storagePath} className="relative group aspect-square">
+                              <Image
+                                src={photo.url}
+                                alt={photo.name}
+                                fill
+                                className="object-cover rounded-md"
+                              />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                {canDeleteFile && (
+                                   <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button type="button" variant="destructive" size="icon" disabled={isSubmitting}>
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                     </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                Weet u zeker dat u deze foto wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handlePhotoDelete(photo)}>
+                                                Doorgaan
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
                 </TabsContent>
                 <TabsContent value="Hoeveelheid" className="mt-0">
                     {/* Content will be added in a future step */}
