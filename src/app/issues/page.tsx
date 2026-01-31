@@ -429,7 +429,7 @@ export default function IssuesPage() {
                                         <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (
                                             <FormItem>
                                             <FormLabel className="text-xs">Hoofdcategorie</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value}>
+                                            <Select onValueChange={field.onChange} value={field.value} disabled>
                                                 <FormControl><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger></FormControl>
                                                 <SelectContent>{hoofdcategorieOptions.map(opt => (<SelectItem key={opt} value={opt} className="text-xs">{opt}</SelectItem>))}</SelectContent>
                                             </Select>
@@ -438,7 +438,7 @@ export default function IssuesPage() {
                                         <FormField control={form.control} name="subcategorie" render={({ field }) => (
                                             <FormItem>
                                             <FormLabel className="text-xs">Subcategorie</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value} disabled={!hoofdcategorie}>
+                                            <Select onValueChange={field.onChange} value={field.value} disabled>
                                                 <FormControl><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger></FormControl>
                                                 <SelectContent>{(subcategorieOptions[hoofdcategorie] || []).map(opt => (<SelectItem key={opt} value={opt} className="text-xs">{opt}</SelectItem>))}</SelectContent>
                                             </Select>
@@ -447,7 +447,7 @@ export default function IssuesPage() {
                                         <FormField control={form.control} name="status" render={({ field }) => (
                                             <FormItem>
                                             <FormLabel className="text-xs">Status</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value}>
+                                            <Select onValueChange={field.onChange} value={field.value} disabled>
                                                 <FormControl><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger></FormControl>
                                                 <SelectContent>{statusOptions.map(opt => (<SelectItem key={opt} value={opt} className="text-xs">{opt}</SelectItem>))}</SelectContent>
                                             </Select>
@@ -457,14 +457,16 @@ export default function IssuesPage() {
                                     <FormField control={form.control} name="extra_informatie" render={({ field }) => (
                                         <FormItem>
                                         <FormLabel className="text-xs">Omschrijving</FormLabel>
-                                        <FormControl><Textarea rows={3} {...field} className="text-xs" /></FormControl>
+                                        <FormControl><Textarea rows={3} {...field} className="text-xs" disabled /></FormControl>
                                         </FormItem>
                                     )} />
                                 </Form>
                             </CardContent>
                         </Card>
-                        <div className="min-h-[250px] md:min-h-0">
-                            <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} />
+                        <div className="min-h-[250px] md:min-h-0 space-y-4">
+                          <div className="h-full">
+                              <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} />
+                          </div>
                         </div>
                     </div>
                 </TabsContent>
@@ -513,7 +515,7 @@ export default function IssuesPage() {
                                 <CollapsibleContent>
                                      <CardContent className="p-0">
                                          {nearbyObjects.length > 0 ? (
-                                             <div className="space-y-2 max-h-56 overflow-y-auto pr-2">
+                                             <div className="space-y-2 max-h-[calc(5*2.25rem)] overflow-y-auto pr-2">
                                                  {nearbyObjects.map(obj => (
                                                      <div key={obj.id} className="text-sm p-2 bg-muted rounded-md">{obj.id} - {obj.locatieSubType || 'Onbekend'}</div>
                                                  ))}
