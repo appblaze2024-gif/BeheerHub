@@ -4,7 +4,7 @@ import * as React from 'react';
 import MapGL, { Marker, Popup, Source, Layer, FillLayer, LineLayer } from 'react-map-gl';
 import { useCollection, useFirestore, useFirebaseApp, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
-import { Calendar as CalendarIcon, Plus, Search, List, Map as MapIcon, Bell, Filter, Navigation, Pencil, FileText, ChevronLeft, Camera, Package, Clock, User, Paperclip, PlusCircle, AlertCircle, Info, UploadCloud, ChevronDown, MapPin } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Search, List, Map as MapIcon, Bell, Filter, Navigation, Pencil, FileText, ChevronLeft, Camera, Package, Clock, User, Paperclip, PlusCircle, AlertCircle, Info, UploadCloud, ChevronDown, MapPin, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -32,7 +32,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Loader2, Trash2, File as FileIcon, Upload } from 'lucide-react';
+import { Loader2, Upload } from 'lucide-react';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import Image from 'next/image';
 import {
@@ -68,7 +68,7 @@ const werkbonNavItems = [
     { label: 'Werkzaamheden', icon: Pencil },
     { label: 'Locatiegegevens', icon: MapPin },
     { label: 'Documenten', icon: FileText },
-    { label: 'Foto\'s', icon: Camera },
+    { label: "Foto's", icon: Camera },
     { label: 'Hoeveelheid', icon: Package },
     { label: 'Uren', icon: Clock },
 ]
@@ -413,22 +413,145 @@ export default function IssuesPage() {
             
             <div className="flex-1 overflow-y-auto p-6">
                 <TabsContent value="Werkzaamheden" className="mt-0">
-                    {/* Content from MeldingDialog goes here */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-2 space-y-6">
+                             <Card>
+                                <CardHeader><CardTitle>Werkomschrijving / Melding</CardTitle></CardHeader>
+                                <CardContent className="space-y-4">
+                                    <Form {...form}>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (
+                                                <FormItem>
+                                                <FormLabel>Hoofdcategorie</FormLabel>
+                                                <Select onValueChange={field.onChange} value={field.value}>
+                                                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                                    <SelectContent>{hoofdcategorieOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                                </FormItem>
+                                            )} />
+                                            <FormField control={form.control} name="subcategorie" render={({ field }) => (
+                                                <FormItem>
+                                                <FormLabel>Subcategorie</FormLabel>
+                                                <Select onValueChange={field.onChange} value={field.value} disabled={!hoofdcategorie}>
+                                                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                                    <SelectContent>{(subcategorieOptions[hoofdcategorie] || []).map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                                </FormItem>
+                                            )} />
+                                        </div>
+                                        <FormField control={form.control} name="extra_informatie" render={({ field }) => (
+                                            <FormItem>
+                                            <FormLabel>Omschrijving</FormLabel>
+                                            <FormControl><Textarea rows={4} {...field} /></FormControl>
+                                            <FormMessage />
+                                            </FormItem>
+                                        )} />
+                                    </Form>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader><CardTitle>Uitgevoerde werkzaamheden (taken)</CardTitle></CardHeader>
+                                <CardContent>
+                                    <div className="space-y-2">
+                                        {tasks.map((task) => (
+                                            <div key={task.id} className="flex items-center gap-2">
+                                                <Checkbox id={`task-${task.id}`} checked={task.completed} onCheckedChange={(checked) => { setTasks(tasks.map(t => t.id === task.id ? { ...t, completed: !!checked } : t)); }} />
+                                                <Label htmlFor={`task-${task.id}`} className={`flex-1 ${task.completed ? 'line-through text-muted-foreground' : ''}`}>{task.description}</Label>
+                                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setTasks(tasks.filter(t => t.id !== task.id))}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="flex gap-2 mt-4">
+                                        <Input placeholder="Nieuwe taak toevoegen..." value={newTaskDescription} onChange={(e) => setNewTaskDescription(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && newTaskDescription.trim()) { e.preventDefault(); setTasks([...tasks, { id: new Date().toISOString(), description: newTaskDescription.trim(), completed: false }]); setNewTaskDescription(''); } }} />
+                                        <Button type="button" onClick={() => { if (newTaskDescription.trim()) { setTasks([...tasks, { id: new Date().toISOString(), description: newTaskDescription.trim(), completed: false }]); setNewTaskDescription(''); } }}><Plus className="h-4 w-4" /></Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                        <div className="space-y-6">
+                            <Card>
+                                <CardHeader><CardTitle>Locatie</CardTitle></CardHeader>
+                                <CardContent className="h-64 p-0"><MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} /></CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader><CardTitle>Foto</CardTitle></CardHeader>
+                                <CardContent>
+                                    {uploadedPhotos.length > 0 ? (
+                                        <div className="relative aspect-video w-full rounded-md overflow-hidden border">
+                                            <Image src={uploadedPhotos[0].url} alt="Foto van melding" fill className="object-cover" />
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center justify-center h-32 text-muted-foreground bg-muted rounded-md">
+                                            <Camera className="h-8 w-8" />
+                                            <p className="ml-2">Geen foto beschikbaar</p>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </div>
                 </TabsContent>
                 <TabsContent value="Locatiegegevens" className="mt-0">
-                    {/* Content from MeldingDialog goes here */}
+                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                         <div className="space-y-6">
+                             <Card>
+                                 <CardHeader><CardTitle>Locatie Details</CardTitle></CardHeader>
+                                 <CardContent className="space-y-2">
+                                     <div className="flex justify-between text-sm">
+                                         <span className="font-semibold text-muted-foreground">Adres:</span>
+                                         <span>{selectedMelding.straatnaam} {selectedMelding.huisnummer}</span>
+                                     </div>
+                                      <div className="flex justify-between text-sm">
+                                         <span className="font-semibold text-muted-foreground">Postcode:</span>
+                                         <span>{selectedMelding.postcode}</span>
+                                     </div>
+                                     <div className="flex justify-between text-sm">
+                                         <span className="font-semibold text-muted-foreground">Plaats:</span>
+                                         <span>{selectedMelding.plaats}</span>
+                                     </div>
+                                      <div className="flex justify-between text-sm">
+                                         <span className="font-semibold text-muted-foreground">Wijk:</span>
+                                         <span>{selectedMelding.wijk}</span>
+                                     </div>
+                                      <div className="flex justify-between text-sm">
+                                         <span className="font-semibold text-muted-foreground">Coördinaten:</span>
+                                         <span>{selectedMelding.latitude.toFixed(5)}, {selectedMelding.longitude.toFixed(5)}</span>
+                                     </div>
+                                 </CardContent>
+                             </Card>
+                             <Card>
+                                 <CardHeader><CardTitle>Objecten in de buurt (100m)</CardTitle></CardHeader>
+                                 <CardContent>
+                                     {nearbyObjects.length > 0 ? (
+                                         <div className="space-y-2">
+                                             {nearbyObjects.map(obj => (
+                                                 <div key={obj.id} className="text-sm p-2 bg-muted rounded-md">{obj.id} - {obj.locatieSubType}</div>
+                                             ))}
+                                         </div>
+                                     ) : (
+                                         <p className="text-sm text-muted-foreground">Geen objecten gevonden.</p>
+                                     )}
+                                 </CardContent>
+                             </Card>
+                         </div>
+                         <div className="min-h-[400px] lg:min-h-0">
+                             <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} objects={nearbyObjects} />
+                         </div>
+                     </div>
                 </TabsContent>
                 <TabsContent value="Documenten" className="mt-0">
-                    {/* Content from MeldingDialog goes here */}
+                    {/* Content will be added in a future step */}
                 </TabsContent>
                 <TabsContent value="Foto's" className="mt-0">
-                    {/* Content from MeldingDialog goes here */}
+                    {/* Content will be added in a future step */}
                 </TabsContent>
                 <TabsContent value="Hoeveelheid" className="mt-0">
-                    {/* Content from MeldingDialog goes here */}
+                    {/* Content will be added in a future step */}
                 </TabsContent>
                 <TabsContent value="Uren" className="mt-0">
-                    {/* Content from MeldingDialog goes here */}
+                    {/* Content will be added in a future step */}
                 </TabsContent>
             </div>
         </Tabs>
