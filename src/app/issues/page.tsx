@@ -2,15 +2,20 @@
 
 import * as React from 'react';
 import MapGL, { Marker, Popup, Source, Layer, FillLayer, LineLayer } from 'react-map-gl';
-import { useCollection, useFirestore } from '@/firebase';
-import { collection } from 'firebase/firestore';
-import { Calendar as CalendarIcon, Plus, Search, List, Map as MapIcon, Bell, Filter, Navigation } from 'lucide-react';
+import { useCollection, useFirestore, useFirebaseApp, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { Calendar as CalendarIcon, Plus, Search, List, Map as MapIcon, Bell, Filter, Navigation, Pencil, FileText, ChevronLeft, Camera, Package, Clock, User, Paperclip, PlusCircle, AlertCircle, Info, UploadCloud, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MeldingDialog } from '@/components/melding-dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import * as turf from '@turf/turf';
-import type { Wijk } from '@/app/projects/page';
+import type { Wijk, Melding, UploadedFile, MeldingTask, Hoeveelheid, Object as MapObject } from '@/lib/types';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -19,46 +24,38 @@ import { nl } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { useProfile } from '@/firebase/profile-provider';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useProject } from '@/context/project-context';
 import Link from 'next/link';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { Loader2, Trash2, File as FileIcon, Upload } from 'lucide-react';
+import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
+import Image from 'next/image';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Textarea } from '@/components/ui/textarea';
+import { Progress } from '@/components/ui/progress';
+import { MapboxView } from '@/components/mapbox-view';
+import { useUser } from '@/firebase';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useToast } from '@/components/ui/use-toast';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-
-const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
-
-type Melding = {
-  id: string;
-  intakenummer: string;
-  extern_meldingsnummer?: string;
-  latitude: number;
-  longitude: number;
-  subcategorie: string;
-  hoofdcategorie: string;
-  extra_informatie: string;
-  status:
-    | 'Nieuw'
-    | 'Intern doorgezet'
-    | 'In behandeling'
-    | 'Gepland op korte termijn'
-    | 'Gepland op langere termijn'
-    | 'Dubbel gemeld'
-    | 'Afgerond'
-    | 'Niet in beheer';
-  datum: string; // Creation date yyyy-MM-dd
-  tijdstip: string;
-  melder: string;
-  aangenomen_door?: string;
-  afgehandeld_door?: string;
-  afhandeling_datum?: string; // Completion date yyyy-MM-dd
-  straatnaam?: string;
-  huisnummer?: string;
-  postcode?: string;
-  plaats?: string;
-  wijk?: string;
-};
 
 type Project = {
   id: string;
@@ -66,178 +63,105 @@ type Project = {
   wijken?: Wijk[];
 };
 
-const statusConfig: Record<string, { color: string; textColor: string; borderColor: string }> = {
-  Nieuw: { color: '#ef4444', textColor: 'white', borderColor: '#ef4444' }, // red-500
-  'Intern doorgezet': { color: '#ef4444', textColor: 'white', borderColor: '#ef4444' },
-  'In behandeling': { color: '#ef4444', textColor: 'white', borderColor: '#ef4444' },
-  'Gepland op korte termijn': { color: '#ef4444', textColor: 'white', borderColor: '#ef4444' },
-  'Gepland op langere termijn': { color: '#ef4444', textColor: 'white', borderColor: '#ef4444' },
-  'Dubbel gemeld': { color: '#ef4444', textColor: 'white', borderColor: '#ef4444' },
-  Afgerond: { color: '#22c55e', textColor: 'white', borderColor: '#22c55e' }, // green-500
-  'Niet in beheer': { color: '#737373', textColor: 'white', borderColor: '#737373' }, // neutral-500
-};
 
+const werkbonNavItems = [
+    { label: 'Werkzaamheden', icon: Pencil },
+    { label: 'Locatiegegevens', icon: MapPin },
+    { label: 'Documenten', icon: FileText },
+    { label: 'Foto\'s', icon: Camera },
+    { label: 'Hoeveelheid', icon: Package },
+    { label: 'Uren', icon: Clock },
+]
 
-const polygonFillLayer: FillLayer = {
-    id: 'wijk-polygon-fill',
-    type: 'fill',
-    paint: {
-        'fill-color': '#000000',
-        'fill-opacity': 0.3,
-    },
-};
-
-const polygonOutlineLayer: LineLayer = {
-    id: 'wijk-polygon-outline',
-    type: 'line',
-    paint: {
-        'line-color': '#000000',
-        'line-width': 2,
-    },
-};
-
-function MeldingenList({ meldingen, onMeldingClick, projectId }: { meldingen: Melding[], onMeldingClick: (melding: Melding) => void, projectId: string | null }) {
-  const isMobile = useIsMobile();
-  
-  if (meldingen.length === 0) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center text-muted-foreground p-8">
-        <Bell className="h-12 w-12 mb-4" />
-        <p className="text-lg">Geen meldingen gevonden</p>
-        <p className="text-sm">Pas de filters aan of maak een nieuwe melding.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="overflow-auto">
-      {isMobile ? (
-        <div className="divide-y divide-border">
-          {meldingen.map(melding => (
-            <div key={melding.id} onClick={() => onMeldingClick(melding)} className="p-3 sm:p-4 cursor-pointer hover:bg-muted/50">
-              <div className="flex justify-between items-start gap-4">
-                <div className="flex-1">
-                  <Badge
-                    style={{
-                      backgroundColor: statusConfig[melding.status]?.color || '#ccc',
-                      color: statusConfig[melding.status]?.textColor || 'black',
-                      borderColor: statusConfig[melding.status]?.borderColor || '#ccc'
-                    }}
-                    variant={melding.status === 'Afgerond' ? 'default' : 'destructive'}
-                    className="justify-center w-fit text-xs py-0.5"
-                  >
-                    {melding.status}
-                  </Badge>
-                  <p className="text-sm font-semibold mt-2">{melding.subcategorie}</p>
-                  <p className="text-xs text-muted-foreground line-clamp-2">{melding.extra_informatie}</p>
-                </div>
-                {projectId && (
-                  <Link href={`/navigation-module?projectId=${projectId}&lat=${melding.latitude}&lng=${melding.longitude}&straat=${encodeURIComponent(melding.straatnaam || '')}`} passHref>
-                      <Button variant="outline" size="icon" className="h-8 w-8 shrink-0" onClick={(e) => e.stopPropagation()}>
-                          <Navigation className="h-4 w-4" />
-                      </Button>
-                  </Link>
-                )}
-              </div>
-              <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground">
-                <span>{melding.intakenummer}</span>
-                <span>{melding.wijk || '-'}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-[140px_1fr_1fr_2fr_auto] items-center gap-2 px-2 py-1 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10 border-b">
-            <span>Status</span>
-            <span>Wijk</span>
-            <span>Subcategorie</span>
-            <span>Omschrijving</span>
-            <span />
-          </div>
-
-          <div className="divide-y divide-border">
-            {meldingen.map((melding) => (
-              <div
-                key={melding.id}
-                onClick={() => onMeldingClick(melding)}
-                className="grid grid-cols-[140px_1fr_1fr_2fr_auto] items-center gap-2 px-2 py-1 text-xs cursor-pointer hover:bg-muted/50 h-10"
-              >
-                <Badge
-                  style={{
-                    backgroundColor: statusConfig[melding.status]?.color || '#ccc',
-                    color: statusConfig[melding.status]?.textColor || 'black',
-                    borderColor: statusConfig[melding.status]?.borderColor || '#ccc'
-                  }}
-                  variant={melding.status === 'Afgerond' ? 'default' : 'destructive'}
-                  className="justify-center w-fit text-xs py-0.5"
-                >
-                  {melding.status}
-                </Badge>
-                <span className="truncate">{melding.wijk || '-'}</span>
-                <span className="truncate">{melding.subcategorie}</span>
-                <span className="truncate">{melding.extra_informatie}</span>
-                <div className="flex justify-end">
-                  {projectId && (
-                      <Link href={`/navigation-module?projectId=${projectId}&lat=${melding.latitude}&lng=${melding.longitude}&straat=${encodeURIComponent(melding.straatnaam || '')}`} passHref>
-                          <Button variant="outline" size="icon" className="h-7 w-7" onClick={(e) => e.stopPropagation()}>
-                              <Navigation className="h-3 w-3" />
-                          </Button>
-                      </Link>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
+interface Suggestion {
+  place_id: number;
+  display_name: string;
+  lon: string;
+  lat: string;
+  address: {
+    road?: string;
+    house_number?: string;
+    postcode?: string;
+    city?: string;
+    suburb?: string;
+  };
 }
 
+const meldingFormSchema = z.object({
+  hoofdcategorie: z.string().min(1, 'Hoofdcategorie is verplicht'),
+  subcategorie: z.string().min(1, 'Subcategorie is verplicht'),
+  extra_informatie: z.string().min(1, 'Omschrijving is verplicht'),
+  status: z.string().min(1, 'Status is verplicht'),
+  straatnaam: z.string().optional(),
+  plaats: z.string().optional(),
+  postcode: z.string().optional(),
+  afhandeling_bijzonderheden: z.string().optional(),
+});
+
+type MeldingFormValues = z.infer<typeof meldingFormSchema>;
+
+const statusOptions = [
+    "Nieuw",
+    "Intern doorgezet",
+    "In behandeling",
+    "Gepland op korte termijn",
+    "Gepland op langere termijn",
+    "Dubbel gemeld",
+    "Afgerond",
+    "Niet in beheer"
+];
+const hoofdcategorieOptions = ["Afval", "Weg en straatmeubilair", "Groen", "Water", "Overig"];
+const subcategorieOptions: Record<string, string[]> = {
+    "Afval": ["Volle of kapotte afvalbak", "Zwerfafval", "Dumping", "Dierenkadaver"],
+    "Weg en straatmeubilair": ["Losse tegel(s)", "Gat in de weg", "Kapotte bank/paal/hek"],
+    "Groen": ["Overhangende takken", "Onkruid", "Maaien"],
+    "Water": ["Verstopte put", "Wateroverlast"],
+    "Overig": ["Overige meldingen"]
+};
 
 export default function IssuesPage() {
   const firestore = useFirestore();
+  const app = useFirebaseApp();
+  const { user } = useUser();
+  const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [selectedMelding, setSelectedMelding] = React.useState<Melding | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
-
+  
   const { selectedProjectId, setSelectedProjectId } = useProject();
+  const [selectedMeldingId, setSelectedMeldingId] = React.useState<string | null>(null);
+
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [selectedWijkId, setSelectedWijkId] = React.useState<string | null>(null);
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(new Date());
-  const [viewMode, setViewMode] = React.useState<'map' | 'list'>('map');
   const [searchQuery, setSearchQuery] = React.useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = React.useState('');
   const { profile } = useProfile();
-  const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
+  
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
+  const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
+  const [uploadedPhotos, setUploadedPhotos] = React.useState<UploadedFile[]>([]);
+  const [location, setLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
 
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-    }, 500); // 500ms delay
+  const [addressSearchQuery, setAddressSearchQuery] = React.useState('');
+  const [suggestions, setSuggestions] = React.useState<Suggestion[]>([]);
+  const [isSearching, setIsSearching] = React.useState(false);
+  const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const justSelectedSuggestion = React.useRef(false);
+  
+  const [tasks, setTasks] = React.useState<MeldingTask[]>([]);
+  const [newTaskDescription, setNewTaskDescription] = React.useState('');
+  const [activeTab, setActiveTab] = React.useState('Werkzaamheden');
+  const afhandelingBijzonderhedenRef = React.useRef<HTMLTextAreaElement>(null);
+  const [isDraggingPhoto, setIsDraggingPhoto] = React.useState(false);
+  const [isDraggingDocument, setIsDraggingDocument] = React.useState(false);
 
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [searchQuery]);
-
-
-  React.useEffect(() => {
-    const projectIdFromParam = searchParams.get('projectId');
-    if (projectIdFromParam && projectIdFromParam !== selectedProjectId) {
-      setSelectedProjectId(projectIdFromParam);
-    }
-    const wijkId = searchParams.get('wijkId');
-    if (wijkId) {
-      setSelectedWijkId(wijkId);
-    }
-    const view = searchParams.get('view');
-    if (view === 'list' || view === 'map') {
-        setViewMode(view);
-    }
-  }, [searchParams, selectedProjectId, setSelectedProjectId]);
+  const [hoeveelheden, setHoeveelheden] = React.useState<Hoeveelheid[]>([]);
+  const [newHoeveelheidType, setNewHoeveelheidType] = React.useState('');
+  const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
+  const [newHoeveelheidEenheid, setNewHoeveelheidEenheid] = React.useState('zak');
+  const [gewerkteMinuten, setGewerkteMinuten] = React.useState<number>(0);
 
   const meldingenCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -252,440 +176,262 @@ export default function IssuesPage() {
   const { data: meldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenCollection);
   const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsCollection);
 
-  const selectedProject = React.useMemo(() => {
-    return projects?.find(p => p.id === selectedProjectId) ?? null;
-  }, [projects, selectedProjectId]);
+  const objectsCollection = React.useMemo(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'objects');
+  }, [firestore]);
+  const { data: allObjects, isLoading: isLoadingObjects } = useCollection<MapObject>(objectsCollection);
 
-  const sortedWijken = React.useMemo(() => {
-    if (!selectedProject?.wijken) return [];
-    return [...selectedProject.wijken].sort((a, b) => 
-      a.naam.localeCompare(b.naam, undefined, { numeric: true, sensitivity: 'base' })
-    );
-  }, [selectedProject?.wijken]);
+  const form = useForm<MeldingFormValues>({
+    resolver: zodResolver(meldingFormSchema),
+  });
+
+  const hoofdcategorie = form.watch('hoofdcategorie');
+
+  const selectedMelding = React.useMemo(() => {
+    return meldingen?.find(m => m.id === selectedMeldingId);
+  }, [meldingen, selectedMeldingId]);
+
+  const nearbyObjects = React.useMemo(() => {
+    if (!selectedMelding || !allObjects) return [];
+    const meldingPoint = turf.point([selectedMelding.longitude, selectedMelding.latitude]);
+    return allObjects.filter(obj => {
+      if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
+      const objPoint = turf.point([obj.longitude, obj.latitude]);
+      return turf.distance(meldingPoint, objPoint, { units: 'meters' }) <= 100;
+    }).sort((a, b) => turf.distance(turf.point([selectedMelding.longitude, selectedMelding.latitude]), turf.point([a.longitude, a.latitude])) - turf.distance(turf.point([selectedMelding.longitude, selectedMelding.latitude]), turf.point([b.longitude, b.latitude])));
+  }, [selectedMelding, allObjects]);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  React.useEffect(() => {
+    const projectIdFromParam = searchParams.get('projectId');
+    if (projectIdFromParam && projectIdFromParam !== selectedProjectId) {
+      setSelectedProjectId(projectIdFromParam);
+    }
+  }, [searchParams, selectedProjectId, setSelectedProjectId]);
+
+  const selectedProject = React.useMemo(() => projects?.find(p => p.id === selectedProjectId), [projects, selectedProjectId]);
+  const sortedWijken = React.useMemo(() => !selectedProject?.wijken ? [] : [...selectedProject.wijken].sort((a, b) => a.naam.localeCompare(b.naam, undefined, { numeric: true, sensitivity: 'base' })), [selectedProject?.wijken]);
 
   React.useEffect(() => {
     if (profile?.wijk && sortedWijken.length > 0) {
-        const userWijk = sortedWijken.find(w => w.naam === profile.wijk);
-        if (userWijk) {
-            setSelectedWijkId(userWijk.id);
-        } else {
-            setSelectedWijkId(null);
-        }
+      const userWijk = sortedWijken.find(w => w.naam === profile.wijk);
+      setSelectedWijkId(userWijk ? userWijk.id : null);
     }
   }, [profile, sortedWijken]);
 
-  const selectedWijk = React.useMemo(() => {
-      if (!selectedProject || !selectedWijkId || selectedWijkId === 'all') return null;
-      return selectedProject.wijken?.find(w => w.id === selectedWijkId) ?? null;
-  }, [selectedProject, selectedWijkId]);
-  
-  const wijkGeoJSON = React.useMemo(() => {
-    const wijkenToDraw = selectedWijk
-      ? [selectedWijk]
-      : selectedWijkId === 'all' && selectedProject?.wijken
-      ? selectedProject.wijken
-      : [];
-
-    if (wijkenToDraw.length === 0) return null;
-
-    try {
-      const features = wijkenToDraw.flatMap(wijk => {
-        try {
-          return JSON.parse(wijk.subGebieden) || [];
-        } catch {
-          return [];
-        }
-      });
-
-      if (features.length > 0) {
-        return {
-          type: 'FeatureCollection',
-          features: features.map((feature: any) => ({
-            type: 'Feature',
-            properties: {},
-            geometry: feature.geometry,
-          })),
-        };
-      }
-    } catch (e) {
-      console.error('Invalid GeoJSON for wijk(en)', e);
-    }
-    return null;
-  }, [selectedWijk, selectedWijkId, selectedProject?.wijken]);
-
-
   const filteredMeldingen = React.useMemo(() => {
     if (!meldingen) return [];
-
-    let timeFilteredMeldingen = meldingen;
-
-    if (selectedDate) {
+    let timeFilteredMeldingen = selectedDate ? meldingen.filter(m => {
+      try {
+        const creationDate = startOfDay(new Date(m.datum));
         const dayStart = startOfDay(selectedDate);
-        timeFilteredMeldingen = meldingen.filter(melding => {
-            try {
-                const creationDate = startOfDay(new Date(melding.datum));
-                
-                const isCompletedToday =
-                    melding.status === 'Afgerond' &&
-                    melding.afhandeling_datum &&
-                    isSameDay(startOfDay(new Date(melding.afhandeling_datum)), dayStart);
-                
-                const isOpenAndRelevant =
-                    melding.status !== 'Afgerond' && creationDate <= dayStart;
+        return (m.status === 'Afgerond' && m.afhandeling_datum && isSameDay(startOfDay(new Date(m.afhandeling_datum)), dayStart)) || (m.status !== 'Afgerond' && creationDate <= dayStart);
+      } catch (e) { return false; }
+    }) : meldingen;
 
-                return isCompletedToday || isOpenAndRelevant;
-            } catch (e) {
-                console.error("Invalid date for melding:", melding.id, melding.datum);
-                return false;
-            }
-        });
-    }
+    const searchedMeldingen = debouncedSearchQuery ? timeFilteredMeldingen.filter(m => {
+      const query = debouncedSearchQuery.toLowerCase();
+      return ['intakenummer', 'extern_meldingsnummer', 'straatnaam', 'plaats', 'postcode', 'subcategorie', 'hoofdcategorie', 'melder', 'extra_informatie', 'wijk', 'status', 'aangenomen_door', 'afgehandeld_door'].some(field => (m as any)[field]?.toLowerCase().includes(query));
+    }) : timeFilteredMeldingen;
 
-    const searchedMeldingen = debouncedSearchQuery
-      ? timeFilteredMeldingen.filter(
-          (m) => {
-            const query = debouncedSearchQuery.toLowerCase();
-            return (
-                m.intakenummer?.toLowerCase().includes(query) ||
-                m.extern_meldingsnummer?.toLowerCase().includes(query) ||
-                m.straatnaam?.toLowerCase().includes(query) ||
-                m.plaats?.toLowerCase().includes(query) ||
-                m.postcode?.toLowerCase().includes(query) ||
-                m.subcategorie?.toLowerCase().includes(query) ||
-                m.hoofdcategorie?.toLowerCase().includes(query) ||
-                m.melder?.toLowerCase().includes(query) ||
-                m.extra_informatie?.toLowerCase().includes(query) ||
-                m.wijk?.toLowerCase().includes(query) ||
-                m.status?.toLowerCase().includes(query) ||
-                m.aangenomen_door?.toLowerCase().includes(query) ||
-                m.afgehandeld_door?.toLowerCase().includes(query)
-            );
-          }
-        )
-      : timeFilteredMeldingen;
-
-    if (!selectedProjectId) {
-      return [];
-    }
-    
+    if (!selectedProjectId) return [];
     const project = projects?.find(p => p.id === selectedProjectId);
     if (!project?.wijken) return [];
-
     if (!selectedWijkId || selectedWijkId === 'all') {
       const allProjectWijkNames = project.wijken.map(w => w.naam);
       return searchedMeldingen.filter(m => {
-        if (m.wijk && allProjectWijkNames.includes(m.wijk)) {
-            return true;
-        }
-
+        if (m.wijk && allProjectWijkNames.includes(m.wijk)) return true;
         if (typeof m.latitude !== 'number' || typeof m.longitude !== 'number') return false;
         const point = turf.point([m.longitude, m.latitude]);
-        
         for (const wijk of project.wijken || []) {
-            try {
-                const wijkFeatures = JSON.parse(wijk.subGebieden);
-                 if (Array.isArray(wijkFeatures)) {
-                    for (const polygon of wijkFeatures) {
-                        if (turf.booleanPointInPolygon(point, polygon.geometry)) return true;
-                    }
-                 }
-            } catch {
-                continue;
+          try {
+            const wijkFeatures = JSON.parse(wijk.subGebieden);
+            if (Array.isArray(wijkFeatures)) {
+              for (const polygon of wijkFeatures) if (turf.booleanPointInPolygon(point, polygon.geometry)) return true;
             }
+          } catch { continue; }
         }
         return false;
       });
     }
-
     const wijk = project.wijken.find(w => w.id === selectedWijkId);
     if (!wijk) return [];
-    
-    return searchedMeldingen.filter(melding => {
-        if (melding.wijk === wijk.naam) {
-          return true;
+    return searchedMeldingen.filter(m => {
+      if (m.wijk === wijk.naam) return true;
+      try {
+        const wijkFeatures = JSON.parse(wijk.subGebieden);
+        if (Array.isArray(wijkFeatures) && wijkFeatures.length > 0) {
+          if (typeof m.latitude !== 'number' || typeof m.longitude !== 'number') return false;
+          const point = turf.point([m.longitude, m.latitude]);
+          for (const polygon of wijkFeatures) if (turf.booleanPointInPolygon(point, polygon)) return true;
         }
-    
-        try {
-            const wijkFeatures = JSON.parse(wijk.subGebieden);
-            if (Array.isArray(wijkFeatures) && wijkFeatures.length > 0) {
-              if (typeof melding.latitude !== 'number' || typeof melding.longitude !== 'number') return false;
-              const point = turf.point([melding.longitude, melding.latitude]);
-              for (const polygon of wijkFeatures) {
-                if (turf.booleanPointInPolygon(point, polygon)) return true;
-              }
-            }
-        } catch {
-            return false;
-        }
-        return false;
+      } catch { return false; }
+      return false;
     });
-
   }, [meldingen, selectedProjectId, selectedWijkId, projects, selectedDate, debouncedSearchQuery]);
 
-  const openMeldingenCountPerWijk = React.useMemo(() => {
-    if (!meldingen || !selectedProject?.wijken) return {};
-    
-    const counts: { [wijkId: string]: number } = {};
-  
-    for (const wijk of selectedProject.wijken) {
-      counts[wijk.id] = meldingen.filter(m => m.wijk === wijk.naam && m.status !== 'Afgerond').length;
-    }
-    return counts;
-  }, [meldingen, selectedProject?.wijken]);
-
-  const mapRef = React.useRef<any>(null);
-  const mapContainerRef = React.useRef<HTMLDivElement>(null);
-
   React.useEffect(() => {
-    if (!mapContainerRef.current) return;
-    const resizeObserver = new ResizeObserver(() => {
-      if (mapRef.current) {
-        mapRef.current.getMap().resize();
+    if (filteredMeldingen.length > 0 && !selectedMeldingId) {
+      const idFromUrl = searchParams.get('id');
+      if (idFromUrl && filteredMeldingen.find(m => m.id === idFromUrl)) {
+        setSelectedMeldingId(idFromUrl);
+      } else {
+        setSelectedMeldingId(filteredMeldingen[0].id);
       }
-    });
-    resizeObserver.observe(mapContainerRef.current);
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, []);
-
+    } else if (filteredMeldingen.length === 0) {
+      setSelectedMeldingId(null);
+    }
+  }, [filteredMeldingen, selectedMeldingId, searchParams]);
+  
   React.useEffect(() => {
-    const map = mapRef.current?.getMap();
-    if (!map || !wijkGeoJSON) return;
-
+    const melding = meldingen?.find(m => m.id === selectedMeldingId);
+    if (melding) {
+      setUploadedFiles(melding.files || []);
+      setUploadedPhotos(melding.fotos || []);
+      setLocation({ latitude: melding.latitude, longitude: melding.longitude });
+      setAddressSearchQuery(`${melding.straatnaam || ''}, ${melding.plaats || ''}`);
+      setSuggestions([]);
+      setIsSearching(false);
+      setTasks(melding.tasks || []);
+      setHoeveelheden(melding.hoeveelheden || []);
+      setGewerkteMinuten(melding.gewerkteMinuten || 0);
+      setActiveTab('Werkzaamheden');
+      form.reset({
+        hoofdcategorie: melding.hoofdcategorie,
+        subcategorie: melding.subcategorie,
+        extra_informatie: melding.extra_informatie,
+        status: melding.status,
+        straatnaam: melding.straatnaam,
+        plaats: melding.plaats,
+        postcode: melding.postcode,
+        afhandeling_bijzonderheden: melding.afhandeling_bijzonderheden || '',
+      });
+    }
+  }, [selectedMeldingId, meldingen, form]);
+  
+  const handleAfronden = async () => {
+    if (!firestore || !selectedMelding?.id || !user) return;
+    setIsSubmitting(true);
+    const meldingRef = doc(firestore, 'meldingen', selectedMelding.id);
     try {
-        const bbox = turf.bbox(wijkGeoJSON);
-        if(bbox[0] === Infinity || bbox[1] === Infinity || bbox[2] === -Infinity || bbox[3] === -Infinity) {
-          return;
-        }
-        map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
-    } catch (e) {
-        console.error("Error fitting bounds:", e);
+        await updateDocumentNonBlocking(meldingRef, {
+            status: 'Afgerond',
+            afhandeling_datum: format(new Date(), 'yyyy-MM-dd'),
+            afgehandeld_door: user.displayName || user.email || 'Onbekend',
+            afhandeling_bijzonderheden: afhandelingBijzonderhedenRef.current?.value,
+            files: uploadedFiles,
+            fotos: uploadedPhotos,
+            tasks: tasks,
+            hoeveelheden: hoeveelheden,
+            gewerkteMinuten: gewerkteMinuten,
+        });
+        const nextMelding = filteredMeldingen.find(m => m.id !== selectedMeldingId);
+        setSelectedMeldingId(nextMelding ? nextMelding.id : null);
+    } catch (error) {
+        console.error("Fout bij afronden melding:", error);
+    } finally {
+        setIsSubmitting(false);
     }
-  }, [wijkGeoJSON]);
-
-  const initialViewState = {
-    longitude: 5.2913,
-    latitude: 52.1326,
-    zoom: 7,
-  };
-  
-  const handleDialogClose = (open: boolean) => {
-    setIsDialogOpen(open);
-     if (!open) {
-      setSelectedMelding(null);
-    }
-  }
-
-  const handleNewMelding = () => {
-    setSelectedMelding(null);
-    setIsDialogOpen(true);
-  }
-  
-  const handleMarkerClick = (e: mapboxgl.MapboxEvent<MouseEvent>, melding: Melding) => {
-    e.originalEvent.stopPropagation();
-    setSelectedMelding(melding);
-  }
-
-  const handlePopupClose = () => {
-      setSelectedMelding(null);
-  }
-
-  const handleMeldingClickFromList = (melding: Melding) => {
-    setSelectedMelding(melding);
-    setIsDialogOpen(true);
   };
 
-  React.useEffect(() => {
-    if (selectedMelding && !isDialogOpen) {
-      setIsDialogOpen(true);
-    }
-  }, [selectedMelding, isDialogOpen]);
-
-  return (
-    <div ref={mapContainerRef} className="flex-1 flex flex-col min-h-0 relative">
-      <header className="absolute top-0 left-0 z-10 p-4 flex flex-col gap-2 w-full pointer-events-none">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between w-full gap-4 pointer-events-auto">
-            <div className="w-full md:max-w-sm">
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="Zoek op meldingen of adres" 
-                      className="pl-9 bg-card"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                </div>
-            </div>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-2 pointer-events-auto w-full md:w-auto">
-            <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-                <DialogTrigger asChild>
-                    <Button variant="outline" className="bg-card"><Filter className="mr-2 h-4 w-4" /> Filters</Button>
-                </DialogTrigger>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Filters</DialogTitle>
-                        <DialogDescription>
-                            Selecteer een project, wijk en datum om de meldingen te filteren.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className='space-y-2'>
-                                <Label htmlFor='project-select' className='text-sm font-medium'>Project</Label>
-                                    <Select
-                                    value={selectedProjectId || ''}
-                                    onValueChange={(value) => {
-                                        setSelectedProjectId(value || null);
-                                        setSelectedWijkId('all');
-                                    }}
-                                    disabled={isLoadingProjects}
-                                    >
-                                    <SelectTrigger id="project-select" className="w-full bg-card">
-                                        <SelectValue placeholder="Selecteer een project" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {projects?.map(p => <SelectItem key={p.id} value={p.id}>{p.projectnaam}</SelectItem>)}
-                                    </SelectContent>
-                                    </Select>
-                            </div>
-                            <div className='space-y-2'>
-                                <Label htmlFor='wijk-select' className='text-sm font-medium'>Wijk</Label>
-                                <Select
-                                    value={selectedWijkId || 'all'}
-                                    onValueChange={setSelectedWijkId}
-                                    disabled={!selectedProject || !!profile?.wijk}
-                                >
-                                        <SelectTrigger id="wijk-select" className="w-full bg-card">
-                                        <SelectValue placeholder="Selecteer een wijk" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                        <SelectItem value="all">Alle wijken</SelectItem>
-                                        {sortedWijken.map(w => (
-                                            <SelectItem key={w.id} value={w.id}>
-                                            <div className='flex justify-between items-center w-full'>
-                                                <span>{w.naam}</span>
-                                                {(openMeldingenCountPerWijk[w.id] || 0) > 0 && (
-                                                <Badge variant="destructive" className="ml-2 px-2 py-0.5 h-5">{openMeldingenCountPerWijk[w.id]}</Badge>
-                                                )}
-                                            </div>
-                                            </SelectItem>
-                                        ))}
-                                        </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                        <div className='space-y-2 flex flex-col items-center'>
-                            <Label className='text-sm font-medium self-start'>Datum</Label>
-                            <div className="flex justify-center">
-                                 <Calendar
-                                    mode="single"
-                                    selected={selectedDate}
-                                    onSelect={setSelectedDate}
-                                    initialFocus
-                                    locale={nl}
-                                    className="rounded-md border bg-card w-auto"
-                                />
-                            </div>
-                        </div>
-                    </div>
-                     <DialogFooter>
-                        <Button onClick={() => setIsFilterOpen(false)}>Toepassen</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            <div className='flex gap-2 items-center'>
-                    <Button onClick={handleNewMelding}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Nieuwe Melding
-                    </Button>
-                    <Button variant="outline" onClick={() => setViewMode(viewMode === 'map' ? 'list' : 'map')} className="bg-card">
-                      {viewMode === 'map' ? <List className="mr-2 h-4 w-4" /> : <MapIcon className="mr-2 h-4 w-4" />}
-                      {viewMode === 'map' ? 'Lijst' : 'Kaart'}
-                    </Button>
-            </div>
-        </div>
-      </header>
-
-      {viewMode === 'map' ? (
-        <MapGL
-            ref={mapRef}
-            initialViewState={initialViewState}
-            style={{ width: '100%', height: '100%' }}
-            mapStyle={mapStyle}
-            mapboxAccessToken={MAPBOX_TOKEN}
-            cursor="default"
-        >
-            {filteredMeldingen?.map(melding => (
-                <Marker
-                    key={melding.id}
-                    longitude={melding.longitude}
-                    latitude={melding.latitude}
-                    onClick={(e) => handleMarkerClick(e, melding)}
-                >
-                    <div
-                        aria-label="Map marker"
-                        className="w-4 h-4 rounded-full cursor-pointer border-2 border-white"
-                        style={{ backgroundColor: statusConfig[melding.status]?.color || '#ccc' }}
-                    />
-                </Marker>
-            ))}
-
-            {wijkGeoJSON && (
-                 <Source id="wijk-polygon" type="geojson" data={wijkGeoJSON}>
-                    <Layer {...polygonFillLayer} />
-                    <Layer {...polygonOutlineLayer} />
-                </Source>
-            )}
-
-            {selectedMelding && (
-                <Popup
-                    longitude={selectedMelding.longitude}
-                    latitude={selectedMelding.latitude}
-                    onClose={handlePopupClose}
-                    closeOnClick={false}
-                    anchor="bottom"
-                >
-                    <div className="p-1 max-w-xs">
-                        <h3 className="font-bold text-base mb-2">Melding: {selectedMelding.intakenummer}</h3>
-                        <div className="grid grid-cols-[100px_1fr] gap-x-2 gap-y-1 text-sm">
-                            <span className="font-semibold">Locatie:</span>
-                            <span>{selectedMelding.straatnaam}, {selectedMelding.plaats}</span>
-                            <span className="font-semibold">Subcategorie:</span>
-                            <span>{selectedMelding.subcategorie}</span>
-                            <span className="font-semibold">Omschrijving:</span>
-                            <span>{selectedMelding.extra_informatie}</span>
-                            <span className="font-semibold">Status:</span>
-                            <span>{selectedMelding.status}</span>
-                            <span className="font-semibold">Aangemaakt:</span>
-                            <span>{selectedMelding.datum}</span>
-                        </div>
-                         <Button size="sm" className="w-full mt-2" onClick={() => setIsDialogOpen(true)}>
-                          Details bekijken
-                        </Button>
-                    </div>
-                </Popup>
-            )}
-        </MapGL>
-      ) : (
-        <div className="pt-28 px-4 pb-4 h-full">
-            <Card className='h-full flex flex-col'>
-                <CardHeader>
-                    <CardTitle>Overzicht Meldingen ({filteredMeldingen.length})</CardTitle>
-                </CardHeader>
-                <CardContent className='p-0 flex-1 min-h-0'>
-                    <MeldingenList meldingen={filteredMeldingen} onMeldingClick={handleMeldingClickFromList} projectId={selectedProjectId} />
+  if (isLoadingMeldingen || isLoadingProjects || isLoadingObjects) {
+      return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>
+  }
+  
+  if (!selectedMelding) {
+    return (
+        <div className="flex flex-col flex-1 p-6">
+            <h1 className="text-xl font-bold mb-4">Meldingen</h1>
+            <Card className="flex-1 flex items-center justify-center">
+                <CardContent className="text-center p-6">
+                    <Bell className="mx-auto h-12 w-12 text-muted-foreground" />
+                    <p className="mt-4 text-lg font-semibold">Geen meldingen gevonden</p>
+                    <p className="text-muted-foreground">Er zijn geen meldingen die overeenkomen met de huidige filters.</p>
                 </CardContent>
             </Card>
         </div>
-      )}
-         <MeldingDialog 
-            open={isDialogOpen}
-            onOpenChange={handleDialogClose}
-            melding={selectedMelding}
-        />
+    )
+  }
+
+  return (
+    <div className="flex flex-col flex-1 h-full min-h-0">
+        <header className="p-4 border-b bg-gray-50 dark:bg-gray-900/50 flex-row items-center justify-between shrink-0 flex">
+            <div className="flex items-center gap-4">
+                 <Select value={selectedMeldingId || ''} onValueChange={setSelectedMeldingId}>
+                    <SelectTrigger className="w-72">
+                      <SelectValue>
+                        {`Meldingen (${filteredMeldingen.length})`}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                        {filteredMeldingen.map(m => (
+                            <SelectItem key={m.id} value={m.id}>
+                                {m.intakenummer}: {m.extra_informatie.substring(0, 40)}...
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+            <div className="flex items-center gap-2">
+                {selectedProjectId && (
+                <Link href={`/navigation-module?projectId=${selectedProjectId}&lat=${selectedMelding.latitude}&lng=${selectedMelding.longitude}&straat=${encodeURIComponent(selectedMelding.straatnaam || '')}`} passHref>
+                    <Button variant="outline" size="icon" className="h-9 w-9">
+                        <Navigation className="h-4 w-4" />
+                    </Button>
+                </Link>
+                )}
+                <Button
+                    className="bg-orange-500 hover:bg-orange-600 text-white font-bold h-9"
+                    onClick={handleAfronden}
+                    disabled={isSubmitting}
+                >
+                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    WERKBON AFRONDEN
+                </Button>
+            </div>
+        </header>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+            <div className="px-6 pt-4 overflow-x-auto">
+                <TabsList>
+                    {werkbonNavItems.map(item => (
+                        <TabsTrigger key={item.label} value={item.label} className="gap-2">
+                            <item.icon className="h-4 w-4 shrink-0" />
+                            <span>{item.label}</span>
+                            {item.label === 'Documenten' && uploadedFiles.length > 0 && <Badge variant="secondary" className="ml-1">{uploadedFiles.length}</Badge>}
+                            {item.label === "Foto's" && uploadedPhotos.length > 0 && <Badge variant="secondary" className="ml-1">{uploadedPhotos.length}</Badge>}
+                            {item.label === 'Werkzaamheden' && tasks.length > 0 && tasks.filter(t => !t.completed).length > 0 && <Badge variant="secondary" className="ml-1">{tasks.filter(t => !t.completed).length}</Badge>}
+                        </TabsTrigger>
+                    ))}
+                </TabsList>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-6">
+                <TabsContent value="Werkzaamheden" className="mt-0">
+                    {/* Content from MeldingDialog goes here */}
+                </TabsContent>
+                <TabsContent value="Locatiegegevens" className="mt-0">
+                    {/* Content from MeldingDialog goes here */}
+                </TabsContent>
+                <TabsContent value="Documenten" className="mt-0">
+                    {/* Content from MeldingDialog goes here */}
+                </TabsContent>
+                <TabsContent value="Foto's" className="mt-0">
+                    {/* Content from MeldingDialog goes here */}
+                </TabsContent>
+                <TabsContent value="Hoeveelheid" className="mt-0">
+                    {/* Content from MeldingDialog goes here */}
+                </TabsContent>
+                <TabsContent value="Uren" className="mt-0">
+                    {/* Content from MeldingDialog goes here */}
+                </TabsContent>
+            </div>
+        </Tabs>
     </div>
   );
 }
