@@ -189,7 +189,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                         <SidebarMenuSub>
                           {item.subItems.map((subItem) => (
                             <SidebarMenuSubItem key={subItem.href}>
-                              <Link href={subItem.href} passHref legacyBehavior>
+                              <Link href={subItem.href} asChild>
                                 <SidebarMenuSubButton onClick={onNavigate} isActive={pathname === subItem.href}>
                                   <span>{subItem.label}</span>
                                 </SidebarMenuSubButton>
@@ -200,15 +200,16 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                       </CollapsibleContent>
                     </Collapsible>
                   ) : (
-                    <Link href={item.href} passHref onClick={onNavigate}>
-                      <SidebarMenuButton
-                        isActive={pathname === item.href}
-                        className="h-12 text-base"
-                      >
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname === item.href}
+                      className="h-12 text-base"
+                    >
+                      <Link href={item.href} onClick={onNavigate}>
                         <item.icon className="h-6 w-6 text-primary" />
                         <span>{item.label}</span>
-                      </SidebarMenuButton>
-                    </Link>
+                      </Link>
+                    </SidebarMenuButton>
                   )}
                 </SidebarMenuItem>
               ))}
