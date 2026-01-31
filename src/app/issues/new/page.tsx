@@ -73,7 +73,6 @@ const newMeldingSchema = z.object({
   plaats: z.string().optional(),
   wijk: z.string().optional(),
   werkgebied: z.string().optional(),
-  soort_adres: z.string().optional(),
   
   melder: z.string().optional(),
   telefoon_melder: z.string().optional(),
@@ -177,7 +176,6 @@ export default function NewIssuePage() {
       plaats: '',
       wijk: '',
       werkgebied: '',
-      soort_adres: '',
       melder: '',
       telefoon_melder: '',
       email_melder: '',
@@ -620,9 +618,6 @@ export default function NewIssuePage() {
                         </FormRow>
                         <FormRow label="Werkgebied">
                              <FormField control={form.control} name="werkgebied" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs" value={field.value || ''} disabled /></FormControl> )} />
-                        </FormRow>
-                        <FormRow label="Soort adres">
-                             <FormField control={form.control} name="soort_adres" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs" value={field.value || ''} /></FormControl> )} />
                         </FormRow>
                     </div>
 
