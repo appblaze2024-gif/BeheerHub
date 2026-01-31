@@ -6,7 +6,7 @@ import { useProfile } from '@/firebase/profile-provider';
 import * as turf from '@turf/turf';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection, getDocs } from 'firebase/firestore';
-import type { Object as MapObject, Melding, Besteksmelding, Project } from '@/lib/types';
+import type { Object as MapObject, Melding, Besteksmelding, Project, Wijk } from '@/lib/types';
 import { Layers, LocateFixed } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -66,6 +66,21 @@ export default function DashboardPage() {
 
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
 
+  const allProjectsQuery = React.useMemo(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'projects');
+  }, [firestore]);
+  const { data: allProjects, isLoading: isLoadingAllProjects } = useCollection<Project>(allProjectsQuery);
+  
+  const userWijk = React.useMemo(() => {
+    if (!profile?.wijk || !allProjects) return null;
+    for (const project of allProjects) {
+        const wijk = project.wijken?.find(w => w.naam === profile.wijk);
+        if (wijk) return wijk;
+    }
+    return null;
+  }, [profile?.wijk, allProjects]);
+
   const objectsQuery = React.useMemo(() => {
     if (!firestore || !visibleLayers.objects) return null;
     return collection(firestore, 'objects');
@@ -116,9 +131,66 @@ export default function DashboardPage() {
     fetchAll();
   }, [projects, firestore, isLoadingProjects, visibleLayers.besteksmeldingen]);
 
+  // Handle filtering of data
+  const wijkPolygonFeatures = React.useMemo(() => {
+    if (!userWijk?.subGebieden) return null;
+    try {
+      return JSON.parse(userWijk.subGebieden);
+    } catch {
+      return null;
+    }
+  }, [userWijk]);
+
+  const filterByWijk = React.useCallback((items: any[] | null) => {
+    if (!items) return null;
+    if (!userWijk || !wijkPolygonFeatures) return items;
+
+    return items.filter(item => {
+      if (typeof item.latitude !== 'number' || typeof item.longitude !== 'number') return false;
+      const point = turf.point([item.longitude, item.latitude]);
+      for (const polygon of wijkPolygonFeatures) {
+        if (turf.booleanPointInPolygon(point, polygon)) {
+          return true;
+        }
+      }
+      return false;
+    });
+  }, [userWijk, wijkPolygonFeatures]);
+
+  const filteredObjects = React.useMemo(() => filterByWijk(objects), [objects, filterByWijk]);
+  const filteredMeldingen = React.useMemo(() => filterByWijk(meldingen), [meldingen, filterByWijk]);
+  const filteredBesteksmeldingen = React.useMemo(() => filterByWijk(allBesteksmeldingen), [allBesteksmeldingen, filterByWijk]);
 
   React.useEffect(() => {
-    if (profile?.schouwenGemeente) {
+    const map = mapRef.current?.getMap();
+
+    const setBoundaryAndFit = (geojson: any) => {
+        setBoundary(geojson);
+        if (map && map.isStyleLoaded()) {
+            try {
+                const bbox = turf.bbox(geojson);
+                map.fitBounds(bbox as [number, number, number, number], {
+                    padding: 40,
+                    duration: 1000,
+                });
+            } catch (e) {
+                console.error("Error fitting bounds:", e);
+            }
+        }
+    };
+    
+    if (userWijk) {
+        try {
+            const features = JSON.parse(userWijk.subGebieden);
+            if (Array.isArray(features) && features.length > 0) {
+                const featureCollection = turf.featureCollection(features);
+                setBoundaryAndFit(featureCollection);
+            }
+        } catch (e) {
+            console.error('Invalid GeoJSON for wijk', e);
+            setBoundary(null);
+        }
+    } else if (profile?.schouwenGemeente) {
       fetch(
         `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
           profile.schouwenGemeente
@@ -127,30 +199,28 @@ export default function DashboardPage() {
         .then((res) => res.json())
         .then((data) => {
           if (data && data.length > 0 && data[0].geojson) {
-            const geojsonData = data[0].geojson;
-            setBoundary(geojsonData);
-            
-            if (mapRef.current?.getMap().isStyleLoaded()) {
-                const bbox = turf.bbox(geojsonData);
-                mapRef.current?.fitBounds(bbox as [number, number, number, number], {
-                    padding: 40,
-                    duration: 1000,
-                });
-            }
+            setBoundaryAndFit(data[0].geojson);
           }
         })
         .catch(console.error);
     } else {
         setBoundary(null);
     }
-  }, [profile?.schouwenGemeente]);
+  }, [userWijk, profile?.schouwenGemeente]);
 
   const onMapLoad = React.useCallback(() => {
       if (boundary) {
-          const bbox = turf.bbox(boundary);
-          mapRef.current?.fitBounds(bbox as [number, number, number, number], {
-              padding: 40,
-          });
+          const map = mapRef.current?.getMap();
+          if (map) {
+            try {
+                const bbox = turf.bbox(boundary);
+                map.fitBounds(bbox as [number, number, number, number], {
+                    padding: 40,
+                });
+            } catch(e) {
+                console.error("Error on map load fitting bounds", e);
+            }
+          }
       }
   }, [boundary]);
 
@@ -283,9 +353,9 @@ export default function DashboardPage() {
           </Source>
         )}
 
-        {visibleLayers.objects && renderMarkers(objects, 'bg-blue-600', 'object')}
-        {visibleLayers.meldingen && renderMarkers(meldingen, 'bg-red-600', 'melding')}
-        {visibleLayers.besteksmeldingen && renderMarkers(allBesteksmeldingen, 'bg-orange-500', 'besteksmelding')}
+        {visibleLayers.objects && renderMarkers(filteredObjects, 'bg-blue-600', 'object')}
+        {visibleLayers.meldingen && renderMarkers(filteredMeldingen, 'bg-red-600', 'melding')}
+        {visibleLayers.besteksmeldingen && renderMarkers(filteredBesteksmeldingen, 'bg-orange-500', 'besteksmelding')}
 
         {userLocation && (
           <Marker longitude={userLocation.longitude} latitude={userLocation.latitude}>
@@ -324,21 +394,21 @@ export default function DashboardPage() {
                     <CardContent className="p-3 space-y-2">
                         <LayerToggle 
                             label="Objecten" 
-                            count={objects?.length || 0}
+                            count={filteredObjects?.length || 0}
                             checked={visibleLayers.objects} 
                             onCheckedChange={(checked) => setVisibleLayers(v => ({...v, objects: !!checked}))}
                             color="bg-blue-600"
                         />
                         <LayerToggle 
                             label="Meldingen" 
-                            count={meldingen?.length || 0}
+                            count={filteredMeldingen?.length || 0}
                             checked={visibleLayers.meldingen} 
                             onCheckedChange={(checked) => setVisibleLayers(v => ({...v, meldingen: !!checked}))}
                             color="bg-red-600"
                         />
                         <LayerToggle 
                             label="Besteksmeldingen" 
-                            count={allBesteksmeldingen?.length || 0}
+                            count={filteredBesteksmeldingen?.length || 0}
                             checked={visibleLayers.besteksmeldingen} 
                             onCheckedChange={(checked) => setVisibleLayers(v => ({...v, besteksmeldingen: !!checked}))}
                             color="bg-orange-500"

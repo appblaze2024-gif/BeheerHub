@@ -111,49 +111,86 @@ function MeldingenList({ meldingen, onMeldingClick, projectId }: { meldingen: Me
 
   return (
     <div className="overflow-auto">
-      {/* Unified Header */}
-      <div className="grid grid-cols-[140px_1fr_1fr_2fr_auto] items-center gap-x-2 px-2 py-1 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10 border-b">
-        <span>Status</span>
-        <span>Wijk</span>
-        <span>Subcategorie</span>
-        <span>Omschrijving</span>
-        <span />
-      </div>
-
-      {/* Rows */}
-      <div className="divide-y divide-border">
-        {meldingen.map((melding) => (
-          <div
-            key={melding.id}
-            onClick={() => onMeldingClick(melding)}
-            className="grid grid-cols-[140px_1fr_1fr_2fr_auto] items-center gap-x-2 px-2 py-1 text-xs cursor-pointer hover:bg-muted/50"
-          >
-            <Badge
-              style={{
-                backgroundColor: statusConfig[melding.status]?.color || '#ccc',
-                color: statusConfig[melding.status]?.textColor || 'black',
-                borderColor: statusConfig[melding.status]?.borderColor || '#ccc'
-              }}
-              variant={melding.status === 'Afgerond' ? 'default' : 'destructive'}
-              className="justify-center w-fit text-xs py-0.5"
-            >
-              {melding.status}
-            </Badge>
-            <span className="truncate">{melding.wijk || '-'}</span>
-            <span className="truncate">{melding.subcategorie}</span>
-            <span className="truncate">{melding.extra_informatie}</span>
-            <div className="flex justify-end">
-              {projectId && (
+      {isMobile ? (
+        <div className="divide-y divide-border">
+          {meldingen.map(melding => (
+            <div key={melding.id} onClick={() => onMeldingClick(melding)} className="p-3 sm:p-4 cursor-pointer hover:bg-muted/50">
+              <div className="flex justify-between items-start gap-4">
+                <div className="flex-1">
+                  <Badge
+                    style={{
+                      backgroundColor: statusConfig[melding.status]?.color || '#ccc',
+                      color: statusConfig[melding.status]?.textColor || 'black',
+                      borderColor: statusConfig[melding.status]?.borderColor || '#ccc'
+                    }}
+                    variant={melding.status === 'Afgerond' ? 'default' : 'destructive'}
+                    className="justify-center w-fit text-xs py-0.5"
+                  >
+                    {melding.status}
+                  </Badge>
+                  <p className="text-sm font-semibold mt-2">{melding.subcategorie}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-2">{melding.extra_informatie}</p>
+                </div>
+                {projectId && (
                   <Link href={`/navigation-module?projectId=${projectId}&lat=${melding.latitude}&lng=${melding.longitude}&straat=${encodeURIComponent(melding.straatnaam || '')}`} passHref>
-                      <Button variant="outline" size="icon" className="h-7 w-7" onClick={(e) => e.stopPropagation()}>
-                          <Navigation className="h-3 w-3" />
+                      <Button variant="outline" size="icon" className="h-8 w-8 shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <Navigation className="h-4 w-4" />
                       </Button>
                   </Link>
-              )}
+                )}
+              </div>
+              <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground">
+                <span>{melding.intakenummer}</span>
+                <span>{melding.wijk || '-'}</span>
+              </div>
             </div>
+          ))}
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-[140px_1fr_1fr_2fr_auto] items-center gap-2 px-2 py-1 font-semibold bg-muted text-muted-foreground text-xs uppercase sticky top-0 z-10 border-b">
+            <span>Status</span>
+            <span>Wijk</span>
+            <span>Subcategorie</span>
+            <span>Omschrijving</span>
+            <span />
           </div>
-        ))}
-      </div>
+
+          <div className="divide-y divide-border">
+            {meldingen.map((melding) => (
+              <div
+                key={melding.id}
+                onClick={() => onMeldingClick(melding)}
+                className="grid grid-cols-[140px_1fr_1fr_2fr_auto] items-center gap-2 px-2 py-1 text-xs cursor-pointer hover:bg-muted/50 h-10"
+              >
+                <Badge
+                  style={{
+                    backgroundColor: statusConfig[melding.status]?.color || '#ccc',
+                    color: statusConfig[melding.status]?.textColor || 'black',
+                    borderColor: statusConfig[melding.status]?.borderColor || '#ccc'
+                  }}
+                  variant={melding.status === 'Afgerond' ? 'default' : 'destructive'}
+                  className="justify-center w-fit text-xs py-0.5"
+                >
+                  {melding.status}
+                </Badge>
+                <span className="truncate">{melding.wijk || '-'}</span>
+                <span className="truncate">{melding.subcategorie}</span>
+                <span className="truncate">{melding.extra_informatie}</span>
+                <div className="flex justify-end">
+                  {projectId && (
+                      <Link href={`/navigation-module?projectId=${projectId}&lat=${melding.latitude}&lng=${melding.longitude}&straat=${encodeURIComponent(melding.straatnaam || '')}`} passHref>
+                          <Button variant="outline" size="icon" className="h-7 w-7" onClick={(e) => e.stopPropagation()}>
+                              <Navigation className="h-3 w-3" />
+                          </Button>
+                      </Link>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
