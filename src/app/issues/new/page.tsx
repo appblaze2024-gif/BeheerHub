@@ -80,6 +80,9 @@ const newMeldingSchema = z.object({
   burgerservicenummer: z.string().optional(),
 
   extra_informatie: z.string().optional(),
+  afgehandeld_door: z.string().optional(),
+  afhandeling_datum: z.date().optional().nullable(),
+  afhandeling_tijdstip: z.string().optional(),
 });
 
 type NewMeldingFormValues = z.infer<typeof newMeldingSchema>;
@@ -184,6 +187,9 @@ export default function NewIssuePage() {
       email_melder: '',
       burgerservicenummer: '',
       extra_informatie: '',
+      afgehandeld_door: '',
+      afhandeling_datum: null,
+      afhandeling_tijdstip: '',
     },
   });
   
@@ -623,6 +629,17 @@ export default function NewIssuePage() {
                                         <SelectContent>{statusOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                     </Select>
                                 )} />
+                            </FormRow>
+                            <FormRow label="Afgehandeld door">
+                                <FormField control={form.control} name="afgehandeld_door" render={({ field }) => (
+                                    <FormControl><Input {...field} className="h-7 text-xs" disabled /></FormControl>
+                                )} />
+                            </FormRow>
+                            <FormRow label="Afhandeldatum">
+                                <div className="flex gap-2 items-center">
+                                    <FormField control={form.control} name="afhandeling_datum" render={({ field }) => (<FormControl><Input type='date' className="h-7 text-xs" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} disabled /></FormControl>)} />
+                                    <FormField control={form.control} name="afhandeling_tijdstip" render={({ field }) => (<FormControl><Input type="time" className="h-7 text-xs w-24" {...field} disabled /></FormControl>)} />
+                                </div>
                             </FormRow>
                             <FormRow label="Voorvaldatum">
                                 <div className="flex gap-2 items-center">
