@@ -5,7 +5,7 @@ import * as React from 'react';
 import MapGL, { Marker, Popup, Source, Layer, FillLayer, LineLayer } from 'react-map-gl';
 import { useCollection, useFirestore, useFirebaseApp, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
-import { Calendar as CalendarIcon, Plus, Search, List, Map as MapIcon, Bell, Filter, Navigation, Pencil, FileText, ChevronLeft, Camera, Package, Clock, User, Paperclip, PlusCircle, AlertCircle, Info, UploadCloud, ChevronDown, MapPin, Trash2, ArrowLeft, File as FileIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Search, List, Map as MapIcon, Bell, Filter, Navigation, Pencil, FileText, ChevronLeft, Camera, Package, Clock, User, Paperclip, PlusCircle, AlertCircle, Info, UploadCloud, ChevronDown, MapPin, Trash2, ArrowLeft, File as FileIcon, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -33,7 +33,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Loader2, Upload } from 'lucide-react';
+import { Upload } from 'lucide-react';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import Image from 'next/image';
 import {
@@ -696,7 +696,7 @@ export default function IssuesPage() {
                 </Select>
             </div>
 
-            {selectedMelding && (
+            {selectedMelding ? (
               <div className="flex items-center gap-2">
                   {selectedProjectId && (
                   <Link href={`/navigation-module?projectId=${selectedProjectId}&lat=${selectedMelding.latitude}&lng=${selectedMelding.longitude}&straat=${encodeURIComponent(selectedMelding.straatnaam || '')}`} passHref>
@@ -724,10 +724,20 @@ export default function IssuesPage() {
                     </Button>
                   )}
               </div>
-            )}
+            ) : <div className="h-9" />}
         </header>
-
-        {selectedMelding ? (
+        
+        {filteredMeldingen.length === 0 ? (
+            <div className="p-6">
+              <Card>
+                <CardContent className="text-center p-6 pt-6">
+                  <Bell className="mx-auto h-12 w-12 text-muted-foreground" />
+                  <p className="mt-4 text-lg font-semibold">Geen meldingen gevonden</p>
+                  <p className="text-muted-foreground">Er zijn geen meldingen die overeenkomen met de huidige filters.</p>
+                </CardContent>
+              </Card>
+            </div>
+        ) : selectedMelding ? (
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
                 <div className="px-6 pt-4 overflow-x-auto">
                     <TabsList>
@@ -1141,14 +1151,8 @@ export default function IssuesPage() {
                 </div>
             </Tabs>
         ) : (
-             <div className="flex-1 flex items-center justify-center p-6">
-                <Card className="flex-1 flex items-center justify-center">
-                    <CardContent className="text-center p-6">
-                        <Bell className="mx-auto h-12 w-12 text-muted-foreground" />
-                        <p className="mt-4 text-lg font-semibold">Geen meldingen gevonden</p>
-                        <p className="text-muted-foreground">Er zijn geen meldingen die overeenkomen met de huidige filters.</p>
-                    </CardContent>
-                </Card>
+            <div className="flex-1 flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin" />
             </div>
         )}
     </div>
