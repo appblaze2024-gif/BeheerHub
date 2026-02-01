@@ -162,7 +162,6 @@ export default function IssuesPage() {
   const [tasks, setTasks] = React.useState<MeldingTask[]>([]);
   const [newTaskDescription, setNewTaskDescription] = React.useState('');
   const [activeTab, setActiveTab] = React.useState('Werkzaamheden');
-  const afhandelingBijzonderhedenRef = React.useRef<HTMLTextAreaElement>(null);
   const [isDraggingPhoto, setIsDraggingPhoto] = React.useState(false);
   const [isDraggingDocument, setIsDraggingDocument] = React.useState(false);
 
@@ -327,13 +326,14 @@ export default function IssuesPage() {
     if (!firestore || !selectedMelding?.id || !user) return;
     setIsSubmitting(true);
     const meldingRef = doc(firestore, 'meldingen', selectedMelding.id);
+    const afhandeling_bijzonderheden_value = form.getValues('afhandeling_bijzonderheden');
     try {
         await updateDocumentNonBlocking(meldingRef, {
             status: 'Afgerond',
             afhandeling_datum: format(new Date(), 'yyyy-MM-dd'),
             afhandeling_tijdstip: format(new Date(), 'HH:mm'),
             afgehandeld_door: user.displayName || user.email || 'Onbekend',
-            afhandeling_bijzonderheden: afhandelingBijzonderhedenRef.current?.value,
+            afhandeling_bijzonderheden: afhandeling_bijzonderheden_value || null,
             files: uploadedFiles,
             fotos: uploadedPhotos,
             tasks: tasks,
@@ -673,51 +673,80 @@ export default function IssuesPage() {
             <div className="flex-1 overflow-y-auto p-6">
                  <TabsContent value="Werkzaamheden" className="mt-0">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-lg font-semibold">Werkbon Details</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4 p-4 pt-0 text-xs">
-                          <div className="grid grid-cols-2 gap-x-6 gap-y-2 border-b pb-2">
-                            <div className="space-y-1">
-                              <p className="text-muted-foreground">Intakenr:</p>
-                              <p className="font-semibold text-sm">{selectedMelding.intakenummer}</p>
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-muted-foreground">Datum:</p>
-                              <p className="font-semibold text-sm">{format(new Date(selectedMelding.datum), 'dd-MM-yy')} {selectedMelding.tijdstip}</p>
-                            </div>
-                            <div className="col-span-2 space-y-1">
-                              <p className="text-muted-foreground">Adres:</p>
-                              <p className="font-semibold text-sm">{selectedMelding.straatnaam}, {selectedMelding.postcode} {selectedMelding.plaats}</p>
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-muted-foreground">Melder:</p>
-                              <p className="font-semibold text-sm">{selectedMelding.melder}</p>
-                            </div>
-                          </div>
-                          <div className="space-y-4 pt-2">
-                            <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-6">
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="text-lg font-semibold">Werkbon Details</CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-4 p-4 pt-0 text-xs">
+                            <div className="grid grid-cols-2 gap-x-6 gap-y-2 border-b pb-2">
                               <div className="space-y-1">
-                                <p className="text-muted-foreground">Hoofdcategorie</p>
-                                <p className="text-sm font-semibold">{selectedMelding.hoofdcategorie}</p>
+                                <p className="text-muted-foreground">Intakenr:</p>
+                                <p className="font-semibold text-sm">{selectedMelding.intakenummer}</p>
                               </div>
                               <div className="space-y-1">
-                                <p className="text-muted-foreground">Subcategorie</p>
-                                <p className="text-sm font-semibold">{selectedMelding.subcategorie}</p>
+                                <p className="text-muted-foreground">Datum:</p>
+                                <p className="font-semibold text-sm">{format(new Date(selectedMelding.datum), 'dd-MM-yy')} {selectedMelding.tijdstip}</p>
+                              </div>
+                              <div className="col-span-2 space-y-1">
+                                <p className="text-muted-foreground">Adres:</p>
+                                <p className="font-semibold text-sm">{selectedMelding.straatnaam}, {selectedMelding.postcode} {selectedMelding.plaats}</p>
                               </div>
                               <div className="space-y-1">
-                                <p className="text-muted-foreground">Status</p>
-                                <p className="text-sm font-semibold">{selectedMelding.status}</p>
+                                <p className="text-muted-foreground">Melder:</p>
+                                <p className="font-semibold text-sm">{selectedMelding.melder}</p>
                               </div>
                             </div>
-                            <div className="space-y-1">
-                              <p className="text-muted-foreground">Omschrijving</p>
-                              <p className="text-sm whitespace-pre-wrap font-semibold">{selectedMelding.extra_informatie}</p>
+                            <div className="space-y-4 pt-2">
+                              <div className="grid grid-cols-3 gap-4">
+                                <div className="space-y-1">
+                                  <p className="text-muted-foreground">Hoofdcategorie</p>
+                                  <p className="text-sm font-semibold">{selectedMelding.hoofdcategorie}</p>
+                                </div>
+                                <div className="space-y-1">
+                                  <p className="text-muted-foreground">Subcategorie</p>
+                                  <p className="text-sm font-semibold">{selectedMelding.subcategorie}</p>
+                                </div>
+                                <div className="space-y-1">
+                                  <p className="text-muted-foreground">Status</p>
+                                  <p className="text-sm font-semibold">{selectedMelding.status}</p>
+                                </div>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-muted-foreground">Omschrijving</p>
+                                <p className="text-sm whitespace-pre-wrap font-semibold">{selectedMelding.extra_informatie}</p>
+                              </div>
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-lg font-semibold">Notities bij afronding</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <Form {...form}>
+                                <form>
+                                  <FormField
+                                    control={form.control}
+                                    name="afhandeling_bijzonderheden"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormControl>
+                                                <Textarea 
+                                                    placeholder="Voeg notities toe over de afhandeling..."
+                                                    rows={4}
+                                                    {...field} 
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                  />
+                                </form>
+                              </Form>
+                            </CardContent>
+                        </Card>
+                      </div>
                       <div className='rounded-lg overflow-hidden border h-full min-h-[400px]'>
                         <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} />
                       </div>
