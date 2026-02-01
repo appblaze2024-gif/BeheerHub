@@ -499,12 +499,12 @@ export default function NewIssuePage() {
         </div>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
-            <div className="p-3 grid grid-cols-12 gap-4">
+            <div className="p-3 grid grid-cols-12 gap-2">
                {/* Left Column */}
                <div className="col-span-7 h-full">
                    <Card className="h-full bg-gray-50 dark:bg-gray-800/30 p-2 flex flex-col">
-                        <h3 className="font-semibold text-xs p-1">Algemene Informatie</h3>
-                        <div className="space-y-1.5 p-1 flex-1">
+                        <h3 className="font-semibold text-xs mb-2">Algemene Informatie</h3>
+                        <div className="space-y-1 p-1 flex-1">
                             <FormRow label="Meldingsnummer">
                                 <Input value={meldingsnummer} disabled className="h-7 text-xs"/>
                             </FormRow>
@@ -535,23 +535,6 @@ export default function NewIssuePage() {
                                 <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
                             </div>
                             </FormRow>
-                             <FormRow label="Soort melding">
-                                <FormField control={form.control} name="soort_melding" render={({ field }) => (
-                                    <Select onValueChange={field.onChange} value={field.value || ''}>
-                                        <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer soort"/></SelectTrigger></FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="Balie">Balie</SelectItem>
-                                            <SelectItem value="Telefoon">Telefoon</SelectItem>
-                                            <SelectItem value="Email">Email</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                )} />
-                            </FormRow>
-                            <FormRow label="Ext. referentie">
-                                 <FormField control={form.control} name="ext_referentie" render={({ field }) => (
-                                    <FormControl><Input {...field} value={field.value ?? ''} className="h-7 text-xs" /></FormControl>
-                                )} />
-                            </FormRow>
                             <FormRow label="Behandelende afdeling">
                                 <FormField control={form.control} name="behandelende_afdeling" render={({ field }) => (
                                 <FormControl><Input {...field} value={field.value ?? ''} className="h-7 text-xs" /></FormControl>
@@ -576,13 +559,13 @@ export default function NewIssuePage() {
                             <FormRow label="Voorvaldatum">
                                 <div className="flex gap-2 items-center">
                                     <FormField control={form.control} name="voorvaldatum" render={({ field }) => (<FormControl><Input type='date' className="h-7 text-xs" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} /></FormControl>)} />
-                                    <FormField control={form.control} name="voorvaltijd" render={({ field }) => (<FormControl><Input type="time" className="h-7 text-xs w-24" {...field} /></FormControl>)} />
+                                    <FormField control={form.control} name="voorvaltijd" render={({ field }) => (<FormControl><Input type="time" className="h-7 text-xs w-24" {...field} value={field.value ?? ''} /></FormControl>)} />
                                 </div>
                             </FormRow>
                             <FormRow label="Meldingsdatum">
                                 <div className="flex gap-2 items-center">
                                     <FormField control={form.control} name="meldingsdatum" render={({ field }) => (<FormControl><Input type='date' className="h-7 text-xs" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} /></FormControl>)} />
-                                    <FormField control={form.control} name="meldingsuur" render={({ field }) => (<FormControl><Input type="time" className="h-7 text-xs w-24" {...field} /></FormControl>)} />
+                                    <FormField control={form.control} name="meldingsuur" render={({ field }) => (<FormControl><Input type="time" className="h-7 text-xs w-24" {...field} value={field.value ?? ''} /></FormControl>)} />
                                 </div>
                             </FormRow>
                             <FormRow label="Actiedatum">
@@ -591,7 +574,7 @@ export default function NewIssuePage() {
                             <FormRow label="Afhandeldatum">
                             <div className="flex gap-2 items-center">
                                     <FormField control={form.control} name="afhandeldatum" render={({ field }) => (<FormControl><Input type='date' className="h-7 text-xs" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} /></FormControl>)} />
-                                <FormField control={form.control} name="afhandeltijd" render={({ field }) => (<FormControl><Input type="time" className="h-7 text-xs w-24" {...field} /></FormControl>)} />
+                                <FormField control={form.control} name="afhandeltijd" render={({ field }) => (<FormControl><Input type="time" className="h-7 text-xs w-24" {...field} value={field.value ?? ''} /></FormControl>)} />
                             </div>
                             </FormRow>
                             <FormRow label="Afhandelaar">
@@ -606,6 +589,27 @@ export default function NewIssuePage() {
 
                {/* Right Column */}
                 <div className="col-span-5 space-y-2">
+                    <div className='p-2 border rounded-md bg-gray-50 dark:bg-gray-800/30 space-y-1'>
+                        <h3 className="font-semibold text-xs mb-2">Referentie</h3>
+                        <FormRow label="Soort melding">
+                                <FormField control={form.control} name="soort_melding" render={({ field }) => (
+                                    <Select onValueChange={field.onChange} value={field.value || ''}>
+                                        <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer soort"/></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="Balie">Balie</SelectItem>
+                                            <SelectItem value="Telefoon">Telefoon</SelectItem>
+                                            <SelectItem value="Email">Email</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                )} />
+                        </FormRow>
+                        <FormRow label="Ext. referentie">
+                                <FormField control={form.control} name="ext_referentie" render={({ field }) => (
+                                <FormControl><Input {...field} value={field.value ?? ''} className="h-7 text-xs" /></FormControl>
+                            )} />
+                        </FormRow>
+                    </div>
+
                     <div className='p-2 border rounded-md bg-gray-50 dark:bg-gray-800/30 space-y-1'>
                         <h3 className="font-semibold text-xs mb-2">Adresgegevens</h3>
                         <FormRow label="Straatnaam">
@@ -640,7 +644,7 @@ export default function NewIssuePage() {
                           <FormField control={form.control} name="werkgebied" render={({ field }) => (
                             <FormItem>
                               <FormLabel className='text-xs'>Werkgebied</FormLabel>
-                              <FormControl><Input {...field} className="h-7 text-xs" disabled /></FormControl>
+                              <FormControl><Input {...field} className="h-7 text-xs" disabled value={field.value ?? ''} /></FormControl>
                             </FormItem>
                           )} />
                         </div>
