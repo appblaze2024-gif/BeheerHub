@@ -68,7 +68,7 @@ type Project = {
 
 const werkbonNavItems = [
     { label: 'Werkzaamheden', icon: Pencil },
-    { label: 'Opmerking', icon: FileText },
+    { label: 'Opmerkingen', icon: FileText },
     { label: 'Locatiegegevens', icon: MapPin },
     { label: 'Documenten', icon: FileText },
     { label: "Foto's", icon: Camera },
@@ -673,21 +673,6 @@ export default function IssuesPage() {
       return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>
   }
   
-  if (!selectedMelding) {
-    return (
-        <div className="flex flex-col flex-1 p-6">
-            <h1 className="text-xl font-bold mb-4">Meldingen</h1>
-            <Card className="flex-1 flex items-center justify-center">
-                <CardContent className="text-center p-6">
-                    <Bell className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <p className="mt-4 text-lg font-semibold">Geen meldingen gevonden</p>
-                    <p className="text-muted-foreground">Er zijn geen meldingen die overeenkomen met de huidige filters.</p>
-                </CardContent>
-            </Card>
-        </div>
-    )
-  }
-
   return (
     <div className="flex flex-col flex-1 h-full min-h-0">
         <header className="p-4 border-b bg-gray-50 dark:bg-gray-900/50 flex-row items-center justify-between shrink-0 flex">
@@ -698,7 +683,7 @@ export default function IssuesPage() {
                  <Select value={selectedMeldingId || ''} onValueChange={setSelectedMeldingId}>
                     <SelectTrigger className="w-72">
                       <SelectValue>
-                        {`Meldingen (${filteredMeldingen.length})`}
+                        {filteredMeldingen.length > 0 ? `Meldingen (${filteredMeldingen.length})` : 'Geen meldingen'}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
@@ -710,447 +695,462 @@ export default function IssuesPage() {
                     </SelectContent>
                 </Select>
             </div>
-            <div className="flex items-center gap-2">
-                {selectedProjectId && (
-                <Link href={`/navigation-module?projectId=${selectedProjectId}&lat=${selectedMelding.latitude}&lng=${selectedMelding.longitude}&straat=${encodeURIComponent(selectedMelding.straatnaam || '')}`} passHref>
-                    <Button variant="outline" size="icon" className="h-9 w-9">
-                        <Navigation className="h-4 w-4" />
+
+            {selectedMelding && (
+              <div className="flex items-center gap-2">
+                  {selectedProjectId && (
+                  <Link href={`/navigation-module?projectId=${selectedProjectId}&lat=${selectedMelding.latitude}&lng=${selectedMelding.longitude}&straat=${encodeURIComponent(selectedMelding.straatnaam || '')}`} passHref>
+                      <Button variant="outline" size="icon" className="h-9 w-9">
+                          <Navigation className="h-4 w-4" />
+                      </Button>
+                  </Link>
+                  )}
+                  {selectedMelding.workStartedAt ? (
+                    <Button
+                      className="bg-orange-500 hover:bg-orange-600 text-white font-bold h-9"
+                      onClick={handleAfronden}
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      WERKBON AFRONDEN
                     </Button>
-                </Link>
-                )}
-                {selectedMelding.workStartedAt ? (
-                  <Button
-                    className="bg-orange-500 hover:bg-orange-600 text-white font-bold h-9"
-                    onClick={handleAfronden}
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    WERKBON AFRONDEN
-                  </Button>
-                ) : (
-                  <Button
-                    className="bg-green-500 hover:bg-green-600 text-white font-bold h-9"
-                    onClick={handleStartWork}
-                    disabled={isSubmitting}
-                  >
-                    WERKBON STARTEN
-                  </Button>
-                )}
-            </div>
+                  ) : (
+                    <Button
+                      className="bg-green-500 hover:bg-green-600 text-white font-bold h-9"
+                      onClick={handleStartWork}
+                      disabled={isSubmitting}
+                    >
+                      WERKBON STARTEN
+                    </Button>
+                  )}
+              </div>
+            )}
         </header>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-            <div className="px-6 pt-4 overflow-x-auto">
-                <TabsList>
-                    {werkbonNavItems.map(item => (
-                        <TabsTrigger key={item.label} value={item.label} className="gap-2">
-                            <item.icon className="h-4 w-4 shrink-0" />
-                            <span>{item.label}</span>
-                            {item.label === 'Documenten' && uploadedFiles.length > 0 && <Badge variant="secondary" className="ml-1">{uploadedFiles.length}</Badge>}
-                            {item.label === "Foto's" && uploadedPhotos.length > 0 && <Badge variant="secondary" className="ml-1">{uploadedPhotos.length}</Badge>}
-                            {item.label === 'Werkzaamheden' && tasks.length > 0 && tasks.filter(t => !t.completed).length > 0 && <Badge variant="secondary" className="ml-1">{tasks.filter(t => !t.completed).length}</Badge>}
-                        </TabsTrigger>
-                    ))}
-                </TabsList>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto p-6">
-                 <TabsContent value="Werkzaamheden" className="mt-0">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <Card className="flex flex-col h-full">
-                        <CardHeader>
-                          <CardTitle className="text-lg font-semibold">Werkbon Details</CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex-1 space-y-4 p-4 pt-0 text-xs">
-                          <div className="grid grid-cols-2 gap-x-6 gap-y-2 border-b pb-2">
-                            <div className="space-y-1">
-                              <p className="text-muted-foreground">Intakenr:</p>
-                              <p className="font-semibold text-sm">{selectedMelding.intakenummer}</p>
+        {selectedMelding ? (
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+                <div className="px-6 pt-4 overflow-x-auto">
+                    <TabsList>
+                        {werkbonNavItems.map(item => (
+                            <TabsTrigger key={item.label} value={item.label} className="gap-2">
+                                <item.icon className="h-4 w-4 shrink-0" />
+                                <span>{item.label}</span>
+                                {item.label === 'Documenten' && uploadedFiles.length > 0 && <Badge variant="secondary" className="ml-1">{uploadedFiles.length}</Badge>}
+                                {item.label === "Foto's" && uploadedPhotos.length > 0 && <Badge variant="secondary" className="ml-1">{uploadedPhotos.length}</Badge>}
+                                {item.label === 'Werkzaamheden' && tasks.length > 0 && tasks.filter(t => !t.completed).length > 0 && <Badge variant="secondary" className="ml-1">{tasks.filter(t => !t.completed).length}</Badge>}
+                            </TabsTrigger>
+                        ))}
+                    </TabsList>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto p-6">
+                    <TabsContent value="Werkzaamheden" className="mt-0">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <Card className="flex flex-col h-full min-h-[400px]">
+                            <CardHeader>
+                            <CardTitle className="text-lg font-semibold">Werkbon Details</CardTitle>
+                            </CardHeader>
+                            <CardContent className="flex-1 space-y-4 p-4 pt-0 text-xs">
+                            <div className="grid grid-cols-2 gap-x-6 gap-y-2 border-b pb-2">
+                                <div className="space-y-1">
+                                <p className="text-muted-foreground">Intakenr:</p>
+                                <p className="font-semibold text-sm">{selectedMelding.intakenummer}</p>
+                                </div>
+                                <div className="space-y-1">
+                                <p className="text-muted-foreground">Datum:</p>
+                                <p className="font-semibold text-sm">{format(new Date(selectedMelding.datum), 'dd-MM-yy')} {selectedMelding.tijdstip}</p>
+                                </div>
+                                <div className="col-span-2 space-y-1">
+                                <p className="text-muted-foreground">Adres:</p>
+                                <p className="font-semibold text-sm">{selectedMelding.straatnaam}, {selectedMelding.postcode} {selectedMelding.plaats}</p>
+                                </div>
+                                <div className="space-y-1">
+                                <p className="text-muted-foreground">Melder:</p>
+                                <p className="font-semibold text-sm">{selectedMelding.melder}</p>
+                                </div>
                             </div>
-                            <div className="space-y-1">
-                              <p className="text-muted-foreground">Datum:</p>
-                              <p className="font-semibold text-sm">{format(new Date(selectedMelding.datum), 'dd-MM-yy')} {selectedMelding.tijdstip}</p>
+                            <div className="space-y-4 pt-2">
+                                <div className="grid grid-cols-3 gap-4">
+                                <div className="space-y-1">
+                                    <p className="text-muted-foreground">Hoofdcategorie</p>
+                                    <p className="text-sm font-semibold">{selectedMelding.hoofdcategorie}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-muted-foreground">Subcategorie</p>
+                                    <p className="text-sm font-semibold">{selectedMelding.subcategorie}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-muted-foreground">Status</p>
+                                    <p className="text-sm font-semibold">{selectedMelding.status}</p>
+                                </div>
+                                </div>
+                                <div className="space-y-1">
+                                <p className="text-muted-foreground">Omschrijving</p>
+                                <p className="text-sm whitespace-pre-wrap font-semibold">{selectedMelding.extra_informatie}</p>
+                                </div>
                             </div>
-                            <div className="col-span-2 space-y-1">
-                              <p className="text-muted-foreground">Adres:</p>
-                              <p className="font-semibold text-sm">{selectedMelding.straatnaam}, {selectedMelding.postcode} {selectedMelding.plaats}</p>
+                            </CardContent>
+                        </Card>
+                        <div className='rounded-lg overflow-hidden border h-full min-h-[400px]'>
+                            <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} />
+                        </div>
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="Opmerkingen" className="mt-0">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-lg font-semibold">Opmerkingen bij afronding</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                            <Form {...form}>
+                                <form>
+                                <FormField
+                                    control={form.control}
+                                    name="afhandeling_bijzonderheden"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormControl>
+                                                <Textarea 
+                                                    placeholder="Voeg een opmerking toe over de afhandeling..."
+                                                    rows={15}
+                                                    {...field} 
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                </form>
+                            </Form>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                    <TabsContent value="Locatiegegevens" className="mt-0">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-6">
+                                <Collapsible defaultOpen>
+                                    <CollapsibleTrigger className="w-full">
+                                        <CardHeader className="flex flex-row items-center justify-between p-0 mb-4">
+                                            <CardTitle>Locatie Details</CardTitle>
+                                            <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                                        </CardHeader>
+                                    </CollapsibleTrigger>
+                                    <CollapsibleContent>
+                                        <CardContent className="space-y-2 p-0">
+                                            <div className="flex justify-between text-sm">
+                                                <span className="font-semibold text-muted-foreground">Adres:</span>
+                                                <span>{selectedMelding.straatnaam} {selectedMelding.huisnummer}</span>
+                                            </div>
+                                            <div className="flex justify-between text-sm">
+                                                <span className="font-semibold text-muted-foreground">Postcode:</span>
+                                                <span>{selectedMelding.postcode}</span>
+                                            </div>
+                                            <div className="flex justify-between text-sm">
+                                                <span className="font-semibold text-muted-foreground">Plaats:</span>
+                                                <span>{selectedMelding.plaats}</span>
+                                            </div>
+                                            <div className="flex justify-between text-sm">
+                                                <span className="font-semibold text-muted-foreground">Wijk:</span>
+                                                <span>{selectedMelding.wijk}</span>
+                                            </div>
+                                            <div className="flex justify-between text-sm">
+                                                <span className="font-semibold text-muted-foreground">Coördinaten:</span>
+                                                <span>{selectedMelding.latitude.toFixed(5)}, {selectedMelding.longitude.toFixed(5)}</span>
+                                            </div>
+                                        </CardContent>
+                                    </CollapsibleContent>
+                                </Collapsible>
+                                <Collapsible defaultOpen>
+                                    <CollapsibleTrigger className="w-full">
+                                        <CardHeader className="flex flex-row items-center justify-between p-0 mb-4">
+                                            <CardTitle>Objecten in de buurt (100m)</CardTitle>
+                                            <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                                        </CardHeader>
+                                    </CollapsibleTrigger>
+                                    <CollapsibleContent>
+                                        <CardContent className="p-0">
+                                            {nearbyObjects.length > 0 ? (
+                                                <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                                                    {nearbyObjects.slice(0, 5).map(obj => (
+                                                        <div key={obj.id} className="text-sm p-2 bg-muted rounded-md">{obj.id} - {obj.locatieSubType || 'Onbekend'}</div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <p className="text-sm text-muted-foreground">Geen objecten gevonden.</p>
+                                            )}
+                                        </CardContent>
+                                    </CollapsibleContent>
+                                </Collapsible>
                             </div>
-                            <div className="space-y-1">
-                              <p className="text-muted-foreground">Melder:</p>
-                              <p className="font-semibold text-sm">{selectedMelding.melder}</p>
+                            <div className="min-h-[400px]">
+                                <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} objects={nearbyObjects} />
                             </div>
-                          </div>
-                          <div className="space-y-4 pt-2">
-                            <div className="grid grid-cols-3 gap-4">
-                              <div className="space-y-1">
-                                <p className="text-muted-foreground">Hoofdcategorie</p>
-                                <p className="text-sm font-semibold">{selectedMelding.hoofdcategorie}</p>
-                              </div>
-                              <div className="space-y-1">
-                                <p className="text-muted-foreground">Subcategorie</p>
-                                <p className="text-sm font-semibold">{selectedMelding.subcategorie}</p>
-                              </div>
-                              <div className="space-y-1">
-                                <p className="text-muted-foreground">Status</p>
-                                <p className="text-sm font-semibold">{selectedMelding.status}</p>
-                              </div>
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-muted-foreground">Omschrijving</p>
-                              <p className="text-sm whitespace-pre-wrap font-semibold">{selectedMelding.extra_informatie}</p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                      <div className='rounded-lg overflow-hidden border h-full min-h-[400px]'>
-                        <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} />
-                      </div>
-                    </div>
-                </TabsContent>
-                <TabsContent value="Opmerking" className="mt-0">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-lg font-semibold">Opmerkingen bij afronding</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <Form {...form}>
-                            <form>
-                              <FormField
-                                control={form.control}
-                                name="afhandeling_bijzonderheden"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormControl>
-                                            <Textarea 
-                                                placeholder="Voeg een opmerking toe over de afhandeling..."
-                                                rows={15}
-                                                {...field} 
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="Documenten" className="mt-0">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Documenten</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div 
+                                    className={cn(
+                                        "border-2 border-dashed border-muted-foreground/30 rounded-lg p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50 transition-colors",
+                                        isDraggingDocument && "bg-muted/50 border-primary"
+                                    )}
+                                    onDragEnter={() => setIsDraggingDocument(true)}
+                                    onDragLeave={() => setIsDraggingDocument(false)}
+                                    onDragOver={(e) => e.preventDefault()}
+                                    onDrop={handleDropDocuments}
+                                    onClick={() => document.getElementById('document-file-input')?.click()}
+                                >
+                                    <UploadCloud className="h-12 w-12 text-muted-foreground" />
+                                    <p className="mt-4 font-semibold">Sleep bestanden hierheen of klik om te uploaden</p>
+                                    <p className="text-sm text-muted-foreground">PDF, Word, Excel, afbeeldingen, etc.</p>
+                                    <input
+                                        type="file"
+                                        id="document-file-input"
+                                        onChange={handleFileChangeDocuments}
+                                        className="hidden"
+                                        multiple
+                                    />
+                                </div>
+                                
+                                {Object.entries(uploadProgress).map(([name, progress]) => (
+                                <div key={name} className="space-y-1 mt-2">
+                                    <p className="text-sm font-medium">{name}</p>
+                                    <Progress value={progress} className="w-full h-2" />
+                                </div>
+                                ))}
+                                
+                                {uploadedFiles.length > 0 && (
+                                    <div className="border rounded-md mt-4">
+                                    {uploadedFiles.map((file) => (
+                                        <div
+                                        key={file.storagePath}
+                                        className="grid grid-cols-[1fr_auto_auto] gap-4 items-center px-4 py-2 border-b last:border-b-0"
+                                        >
+                                        <a href={file.url} target="_blank" rel="noopener noreferrer" className="truncate flex items-center gap-2 hover:underline">
+                                            <FileIcon className="h-4 w-4 shrink-0" /> {file.name}
+                                        </a>
+                                        <span className='text-sm text-muted-foreground'>{formatBytes(file.size)}</span>
+                                        {canDeleteFile && (
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8"
+                                                disabled={isSubmitting}
+                                            >
+                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                            </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        Weet u zeker dat u het bestand "{file.name}" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleFileDelete(file)}>
+                                                        Doorgaan
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                        )}
+                                        </div>
+                                    ))}
+                                    </div>
                                 )}
-                              />
-                            </form>
-                          </Form>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-                <TabsContent value="Locatiegegevens" className="mt-0">
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                         <div className="space-y-6">
-                             <Collapsible defaultOpen>
-                                <CollapsibleTrigger className="w-full">
-                                    <CardHeader className="flex flex-row items-center justify-between p-0 mb-4">
-                                        <CardTitle>Locatie Details</CardTitle>
-                                        <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                                    </CardHeader>
-                                </CollapsibleTrigger>
-                                <CollapsibleContent>
-                                    <CardContent className="space-y-2 p-0">
-                                        <div className="flex justify-between text-sm">
-                                            <span className="font-semibold text-muted-foreground">Adres:</span>
-                                            <span>{selectedMelding.straatnaam} {selectedMelding.huisnummer}</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm">
-                                            <span className="font-semibold text-muted-foreground">Postcode:</span>
-                                            <span>{selectedMelding.postcode}</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm">
-                                            <span className="font-semibold text-muted-foreground">Plaats:</span>
-                                            <span>{selectedMelding.plaats}</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm">
-                                            <span className="font-semibold text-muted-foreground">Wijk:</span>
-                                            <span>{selectedMelding.wijk}</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm">
-                                            <span className="font-semibold text-muted-foreground">Coördinaten:</span>
-                                            <span>{selectedMelding.latitude.toFixed(5)}, {selectedMelding.longitude.toFixed(5)}</span>
-                                        </div>
-                                    </CardContent>
-                                </CollapsibleContent>
-                             </Collapsible>
-                              <Collapsible defaultOpen>
-                                <CollapsibleTrigger className="w-full">
-                                     <CardHeader className="flex flex-row items-center justify-between p-0 mb-4">
-                                        <CardTitle>Objecten in de buurt (100m)</CardTitle>
-                                        <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                                    </CardHeader>
-                                </CollapsibleTrigger>
-                                <CollapsibleContent>
-                                     <CardContent className="p-0">
-                                         {nearbyObjects.length > 0 ? (
-                                             <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
-                                                 {nearbyObjects.slice(0, 5).map(obj => (
-                                                     <div key={obj.id} className="text-sm p-2 bg-muted rounded-md">{obj.id} - {obj.locatieSubType || 'Onbekend'}</div>
-                                                 ))}
-                                             </div>
-                                         ) : (
-                                             <p className="text-sm text-muted-foreground">Geen objecten gevonden.</p>
-                                         )}
-                                     </CardContent>
-                                </CollapsibleContent>
-                             </Collapsible>
-                         </div>
-                         <div className="min-h-[400px]">
-                             <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} objects={nearbyObjects} />
-                         </div>
-                     </div>
-                </TabsContent>
-                <TabsContent value="Documenten" className="mt-0">
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                    <TabsContent value="Foto's" className="mt-0">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Documenten</CardTitle>
+                        <CardTitle>Foto's</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div 
-                                className={cn(
-                                    "border-2 border-dashed border-muted-foreground/30 rounded-lg p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50 transition-colors",
-                                    isDraggingDocument && "bg-muted/50 border-primary"
-                                )}
-                                onDragEnter={() => setIsDraggingDocument(true)}
-                                onDragLeave={() => setIsDraggingDocument(false)}
-                                onDragOver={(e) => e.preventDefault()}
-                                onDrop={handleDropDocuments}
-                                onClick={() => document.getElementById('document-file-input')?.click()}
-                            >
-                                <UploadCloud className="h-12 w-12 text-muted-foreground" />
-                                <p className="mt-4 font-semibold">Sleep bestanden hierheen of klik om te uploaden</p>
-                                <p className="text-sm text-muted-foreground">PDF, Word, Excel, afbeeldingen, etc.</p>
-                                <input
-                                    type="file"
-                                    id="document-file-input"
-                                    onChange={handleFileChangeDocuments}
-                                    className="hidden"
-                                    multiple
+                        <div
+                            className={cn(
+                            "border-2 border-dashed border-muted-foreground/30 rounded-lg p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50 transition-colors",
+                            isDraggingPhoto && "bg-muted/50 border-primary"
+                            )}
+                            onDragEnter={() => setIsDraggingPhoto(true)}
+                            onDragLeave={() => setIsDraggingPhoto(false)}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={handleDropPhotos}
+                            onClick={() => document.getElementById('photo-file-input')?.click()}
+                        >
+                            <UploadCloud className="h-12 w-12 text-muted-foreground" />
+                            <p className="mt-4 font-semibold">Sleep foto's hierheen of klik om te uploaden</p>
+                            <p className="text-sm text-muted-foreground">Alleen afbeeldingsbestanden</p>
+                            <input
+                            type="file"
+                            id="photo-file-input"
+                            onChange={handlePhotoFileChange}
+                            className="hidden"
+                            multiple
+                            accept="image/*"
+                            />
+                        </div>
+                        {Object.keys(uploadProgress).length > 0 &&
+                            Object.entries(uploadProgress).some(([name]) => uploadedPhotos.find(p => name.includes(p.name))) && (
+                            <div className="space-y-2">
+                                {Object.entries(uploadProgress).map(([name, progress]) => {
+                                    if (uploadedPhotos.find(p => name.includes(p.name))) {
+                                        return (
+                                            <div key={name} className="space-y-1 mt-2">
+                                                <p className="text-sm font-medium">{name}</p>
+                                                <Progress value={progress} className="w-full h-2" />
+                                            </div>
+                                        )
+                                    }
+                                    return null;
+                                })}
+                            </div>
+                        )}
+                        {uploadedPhotos.length > 0 && (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-4">
+                            {uploadedPhotos.map((photo) => (
+                                <div key={photo.storagePath} className="relative group aspect-square">
+                                <Image
+                                    src={photo.url}
+                                    alt={photo.name}
+                                    fill
+                                    className="object-cover rounded-md"
                                 />
-                            </div>
-                            
-                            {Object.entries(uploadProgress).map(([name, progress]) => (
-                            <div key={name} className="space-y-1 mt-2">
-                                <p className="text-sm font-medium">{name}</p>
-                                <Progress value={progress} className="w-full h-2" />
-                            </div>
-                            ))}
-                            
-                            {uploadedFiles.length > 0 && (
-                                <div className="border rounded-md mt-4">
-                                {uploadedFiles.map((file) => (
-                                    <div
-                                    key={file.storagePath}
-                                    className="grid grid-cols-[1fr_auto_auto] gap-4 items-center px-4 py-2 border-b last:border-b-0"
-                                    >
-                                    <a href={file.url} target="_blank" rel="noopener noreferrer" className="truncate flex items-center gap-2 hover:underline">
-                                        <FileIcon className="h-4 w-4 shrink-0" /> {file.name}
-                                    </a>
-                                    <span className='text-sm text-muted-foreground'>{formatBytes(file.size)}</span>
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                     {canDeleteFile && (
-                                      <AlertDialog>
+                                    <AlertDialog>
                                         <AlertDialogTrigger asChild>
-                                          <Button
-                                              type="button"
-                                              variant="ghost"
-                                              size="icon"
-                                              className="h-8 w-8"
-                                              disabled={isSubmitting}
-                                          >
-                                              <Trash2 className="h-4 w-4 text-destructive" />
-                                          </Button>
+                                        <Button type="button" variant="destructive" size="icon" disabled={isSubmitting}>
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
                                         </AlertDialogTrigger>
                                         <AlertDialogContent>
                                             <AlertDialogHeader>
                                                 <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
                                                 <AlertDialogDescription>
-                                                    Weet u zeker dat u het bestand "{file.name}" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.
+                                                    Weet u zeker dat u deze foto wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.
                                                 </AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
                                                 <AlertDialogCancel>Annuleren</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => handleFileDelete(file)}>
+                                                <AlertDialogAction onClick={() => handlePhotoDelete(photo)}>
                                                     Doorgaan
                                                 </AlertDialogAction>
                                             </AlertDialogFooter>
                                         </AlertDialogContent>
-                                      </AlertDialog>
+                                    </AlertDialog>
                                     )}
-                                    </div>
-                                ))}
                                 </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-                <TabsContent value="Foto's" className="mt-0">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Foto's</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div
-                        className={cn(
-                          "border-2 border-dashed border-muted-foreground/30 rounded-lg p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50 transition-colors",
-                          isDraggingPhoto && "bg-muted/50 border-primary"
+                                </div>
+                            ))}
+                            </div>
                         )}
-                        onDragEnter={() => setIsDraggingPhoto(true)}
-                        onDragLeave={() => setIsDraggingPhoto(false)}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={handleDropPhotos}
-                        onClick={() => document.getElementById('photo-file-input')?.click()}
-                      >
-                        <UploadCloud className="h-12 w-12 text-muted-foreground" />
-                        <p className="mt-4 font-semibold">Sleep foto's hierheen of klik om te uploaden</p>
-                        <p className="text-sm text-muted-foreground">Alleen afbeeldingsbestanden</p>
-                        <input
-                          type="file"
-                          id="photo-file-input"
-                          onChange={handlePhotoFileChange}
-                          className="hidden"
-                          multiple
-                          accept="image/*"
-                        />
-                      </div>
-                      {Object.keys(uploadProgress).length > 0 &&
-                        Object.entries(uploadProgress).some(([name]) => uploadedPhotos.find(p => name.includes(p.name))) && (
-                          <div className="space-y-2">
-                            {Object.entries(uploadProgress).map(([name, progress]) => {
-                                if (uploadedPhotos.find(p => name.includes(p.name))) {
-                                    return (
-                                        <div key={name} className="space-y-1 mt-2">
-                                            <p className="text-sm font-medium">{name}</p>
-                                            <Progress value={progress} className="w-full h-2" />
+                        </CardContent>
+                    </Card>
+                    </TabsContent>
+                    <TabsContent value="Hoeveelheid" className="mt-0">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Geregistreerd Materiaal</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                <div className="space-y-2">
+                                    {hoeveelheden.length > 0 ? (
+                                        hoeveelheden.map((item) => (
+                                        <div key={item.id} className="flex items-center justify-between p-2 bg-muted rounded-md text-sm">
+                                            <div className="flex-1 grid grid-cols-3 gap-2 items-center">
+                                                <span className="font-medium">{item.type}</span>
+                                                <span>{item.aantal}</span>
+                                                <span>{item.eenheid}</span>
+                                            </div>
+                                            <Button variant="ghost" size="icon" onClick={() => handleRemoveHoeveelheid(item.id)}>
+                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                            </Button>
                                         </div>
-                                    )
-                                }
-                                return null;
-                            })}
-                          </div>
-                      )}
-                      {uploadedPhotos.length > 0 && (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-4">
-                          {uploadedPhotos.map((photo) => (
-                            <div key={photo.storagePath} className="relative group aspect-square">
-                              <Image
-                                src={photo.url}
-                                alt={photo.name}
-                                fill
-                                className="object-cover rounded-md"
-                              />
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                {canDeleteFile && (
-                                   <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                      <Button type="button" variant="destructive" size="icon" disabled={isSubmitting}>
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                     </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                Weet u zeker dat u deze foto wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Annuleren</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handlePhotoDelete(photo)}>
-                                                Doorgaan
-                                            </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-                <TabsContent value="Hoeveelheid" className="mt-0">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Geregistreerd Materiaal</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className="space-y-2">
-                                {hoeveelheden.length > 0 ? (
-                                    hoeveelheden.map((item) => (
-                                    <div key={item.id} className="flex items-center justify-between p-2 bg-muted rounded-md text-sm">
-                                        <div className="flex-1 grid grid-cols-3 gap-2 items-center">
-                                            <span className="font-medium">{item.type}</span>
-                                            <span>{item.aantal}</span>
-                                            <span>{item.eenheid}</span>
-                                        </div>
-                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveHoeveelheid(item.id)}>
-                                            <Trash2 className="h-4 w-4 text-destructive" />
-                                        </Button>
+                                        ))
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground text-center py-4">Nog geen hoeveelheden toegevoegd.</p>
+                                    )}
+                                </div>
+                                <div className="flex items-end gap-2 border-t pt-4">
+                                    <div className="flex-1 space-y-1">
+                                        <Label htmlFor="type">Type</Label>
+                                        <Input id="type" placeholder="bv. Zwerfafval" value={newHoeveelheidType} onChange={(e) => setNewHoeveelheidType(e.target.value)} />
                                     </div>
-                                    ))
-                                ) : (
-                                    <p className="text-sm text-muted-foreground text-center py-4">Nog geen hoeveelheden toegevoegd.</p>
-                                )}
-                            </div>
-                            <div className="flex items-end gap-2 border-t pt-4">
-                                <div className="flex-1 space-y-1">
-                                    <Label htmlFor="type">Type</Label>
-                                    <Input id="type" placeholder="bv. Zwerfafval" value={newHoeveelheidType} onChange={(e) => setNewHoeveelheidType(e.target.value)} />
+                                    <div className="w-24 space-y-1">
+                                        <Label htmlFor="aantal">Aantal</Label>
+                                        <Input id="aantal" type="number" placeholder="0" value={newHoeveelheidAantal} onChange={(e) => setNewHoeveelheidAantal(e.target.value)} />
+                                    </div>
+                                    <div className="w-32 space-y-1">
+                                        <Label htmlFor="eenheid">Eenheid</Label>
+                                        <Select value={newHoeveelheidEenheid} onValueChange={setNewHoeveelheidEenheid}>
+                                            <SelectTrigger id="eenheid">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="zak">Zak</SelectItem>
+                                                <SelectItem value="kg">Kg</SelectItem>
+                                                <SelectItem value="stuks">Stuks</SelectItem>
+                                                <SelectItem value="m3">m³</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <Button onClick={handleAddHoeveelheid}>
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Toevoegen
+                                    </Button>
                                 </div>
-                                <div className="w-24 space-y-1">
-                                    <Label htmlFor="aantal">Aantal</Label>
-                                    <Input id="aantal" type="number" placeholder="0" value={newHoeveelheidAantal} onChange={(e) => setNewHoeveelheidAantal(e.target.value)} />
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                    <TabsContent value="Uren" className="mt-0">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Urenregistratie</CardTitle>
+                                <CardDescription>
+                                    Voer hier de totale gewerkte tijd voor deze melding in minuten in.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-6 space-y-4">
+                                <div className="space-y-2 max-w-xs">
+                                    <Label htmlFor="gewerkte-minuten">Totaal gewerkte minuten</Label>
+                                    <Input
+                                        id="gewerkte-minuten"
+                                        type="number"
+                                        value={gewerkteMinuten}
+                                        onChange={(e) => setGewerkteMinuten(Number(e.target.value) >= 0 ? Number(e.target.value) : 0)}
+                                        placeholder="Voer minuten in"
+                                        min="0"
+                                    />
                                 </div>
-                                <div className="w-32 space-y-1">
-                                    <Label htmlFor="eenheid">Eenheid</Label>
-                                    <Select value={newHoeveelheidEenheid} onValueChange={setNewHoeveelheidEenheid}>
-                                        <SelectTrigger id="eenheid">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="zak">Zak</SelectItem>
-                                            <SelectItem value="kg">Kg</SelectItem>
-                                            <SelectItem value="stuks">Stuks</SelectItem>
-                                            <SelectItem value="m3">m³</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <Button onClick={handleAddHoeveelheid}>
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    Toevoegen
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-                <TabsContent value="Uren" className="mt-0">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Urenregistratie</CardTitle>
-                             <CardDescription>
-                                Voer hier de totale gewerkte tijd voor deze melding in minuten in.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="p-6 space-y-4">
-                            <div className="space-y-2 max-w-xs">
-                                <Label htmlFor="gewerkte-minuten">Totaal gewerkte minuten</Label>
-                                <Input
-                                    id="gewerkte-minuten"
-                                    type="number"
-                                    value={gewerkteMinuten}
-                                    onChange={(e) => setGewerkteMinuten(Number(e.target.value) >= 0 ? Number(e.target.value) : 0)}
-                                    placeholder="Voer minuten in"
-                                    min="0"
-                                />
-                            </div>
-                            {gewerkteMinuten > 0 && <div className="text-sm text-muted-foreground">
-                                Dit komt overeen met: {Math.floor(gewerkteMinuten / 60)} uur en {gewerkteMinuten % 60} minuten.
-                            </div>}
-                        </CardContent>
-                    </Card>
-                </TabsContent>
+                                {gewerkteMinuten > 0 && <div className="text-sm text-muted-foreground">
+                                    Dit komt overeen met: {Math.floor(gewerkteMinuten / 60)} uur en {gewerkteMinuten % 60} minuten.
+                                </div>}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                </div>
+            </Tabs>
+        ) : (
+             <div className="flex-1 flex items-center justify-center p-6">
+                <Card className="flex-1 flex items-center justify-center">
+                    <CardContent className="text-center p-6">
+                        <Bell className="mx-auto h-12 w-12 text-muted-foreground" />
+                        <p className="mt-4 text-lg font-semibold">Geen meldingen gevonden</p>
+                        <p className="text-muted-foreground">Er zijn geen meldingen die overeenkomen met de huidige filters.</p>
+                    </CardContent>
+                </Card>
             </div>
-        </Tabs>
+        )}
     </div>
   );
 }
