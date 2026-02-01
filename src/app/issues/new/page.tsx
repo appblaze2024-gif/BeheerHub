@@ -166,12 +166,13 @@ export default function NewIssuePage() {
       status: 'Nieuw',
       meldingsdatum: now,
       meldingsuur: format(now, 'HH:mm'),
+      voorvaldatum: now,
+      voorvaltijd: format(now, 'HH:mm'),
       soort_melder: '',
       hoofdcategorie: '',
       subcategorie: '',
       behandelende_afdeling: '',
       behandelaar: '',
-      voorvaltijd: '',
       actiedatum: null,
       afhandeldatum: null,
       afhandeltijd: '',
@@ -465,6 +466,11 @@ export default function NewIssuePage() {
         fotos: uploadedPhotos,
       };
 
+      if (data.voorvaldatum) {
+        meldingData.voorvaldatum = format(new Date(data.voorvaldatum), 'yyyy-MM-dd');
+        meldingData.voorvaltijd = data.voorvaltijd;
+      }
+      
       if (data.afhandeldatum) {
         meldingData.afhandeling_datum = format(new Date(data.afhandeldatum), 'yyyy-MM-dd');
       }
