@@ -441,7 +441,7 @@ export default function NewIssuePage() {
     const meldingenCollectionRef = collection(firestore, 'meldingen');
 
     try {
-       const meldingData = {
+       const meldingData: any = {
         hoofdcategorie: data.hoofdcategorie,
         subcategorie: data.subcategorie,
         status: data.status,
@@ -453,7 +453,6 @@ export default function NewIssuePage() {
         wijk: data.wijk,
         melder: data.melder,
         extra_informatie: data.extra_informatie,
-        afhandeling_datum: data.afhandeldatum ? format(new Date(data.afhandeldatum), 'yyyy-MM-dd') : undefined,
         afgehandeld_door: data.afhandelaar,
         
         intakenummer: meldingsnummer,
@@ -465,6 +464,10 @@ export default function NewIssuePage() {
         files: uploadedFiles,
         fotos: uploadedPhotos,
       };
+
+      if (data.afhandeldatum) {
+        meldingData.afhandeling_datum = format(new Date(data.afhandeldatum), 'yyyy-MM-dd');
+      }
       
       await addDocumentNonBlocking(meldingenCollectionRef, meldingData);
 
