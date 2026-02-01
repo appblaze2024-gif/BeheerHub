@@ -102,7 +102,7 @@ const subcategorieOptions: Record<string, string[]> = {
 };
 
 const FormRow = ({ label, children, labelFor }: { label: string; children: React.ReactNode; labelFor?: string }) => (
-    <div className="grid grid-cols-[140px_1fr] items-start gap-x-2 py-1">
+    <div className="grid grid-cols-[140px_1fr] items-start gap-x-2 py-0.5">
         <FormLabel htmlFor={labelFor} className="text-xs text-left pt-2">{label}</FormLabel>
         {children}
     </div>
@@ -549,14 +549,14 @@ export default function NewIssuePage() {
         </div>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
-             <div className="p-3 grid grid-cols-12 gap-2">
+             <div className="p-3 grid grid-cols-12 gap-4">
                {/* Left Column */}
                <div className="col-span-7 h-full">
                     <Card className="h-full bg-gray-50 dark:bg-gray-800/30 p-2 flex flex-col">
                         <CardHeader className="p-1 pb-1">
                            <CardTitle className="font-semibold text-xs">Algemene Informatie</CardTitle>
                         </CardHeader>
-                        <div className="space-y-1 p-1 flex-1">
+                        <div className="space-y-0.5 p-1 flex-1">
                             <FormRow label="Meldingsnummer">
                                 <Input value={meldingsnummer} disabled className="h-7 text-xs"/>
                             </FormRow>
@@ -569,12 +569,15 @@ export default function NewIssuePage() {
                                 </div>
                             </FormRow>
                             <FormRow label="Hoofdindeling">
-                                <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (
-                                    <Select onValueChange={field.onChange} value={field.value ?? ''}>
-                                        <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer categorie" /></SelectTrigger></FormControl>
-                                        <SelectContent>{hoofdcategorieOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
-                                    </Select>
-                                )} />
+                                <div className="flex items-center">
+                                    <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (
+                                        <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                                            <FormControl><SelectTrigger className="h-7 text-xs rounded-r-none"><SelectValue placeholder="Selecteer categorie" /></SelectTrigger></FormControl>
+                                            <SelectContent>{hoofdcategorieOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                        </Select>
+                                    )} />
+                                     <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
+                                </div>
                             </FormRow>
                             <FormRow label="Indeling">
                                 <div className="flex items-center">
@@ -641,26 +644,30 @@ export default function NewIssuePage() {
 
                {/* Right Column */}
                 <div className="col-span-5 space-y-2">
-                     <div className='p-2 border rounded-md bg-gray-50 dark:bg-gray-800/30 space-y-1'>
-                        <h3 className="font-semibold text-xs mb-2">Soort Melding</h3>
-                        <FormRow label="Soort melding">
-                            <FormField control={form.control} name="soort_melding" render={({ field }) => (
-                                <Select onValueChange={field.onChange} value={field.value || ''}>
-                                    <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer soort"/></SelectTrigger></FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="Balie">Balie</SelectItem>
-                                        <SelectItem value="Telefoon">Telefoon</SelectItem>
-                                        <SelectItem value="Email">Email</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            )} />
-                        </FormRow>
-                        <FormRow label="Ext. referentie">
+                    <Card className='p-2 bg-gray-50 dark:bg-gray-800/30'>
+                        <CardHeader className="p-1 pb-1">
+                            <CardTitle className="font-semibold text-xs">Soort Melding</CardTitle>
+                        </CardHeader>
+                        <div className="space-y-0.5 p-1">
+                            <FormRow label="Soort melding">
+                                <FormField control={form.control} name="soort_melding" render={({ field }) => (
+                                    <Select onValueChange={field.onChange} value={field.value || ''}>
+                                        <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer soort"/></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="Balie">Balie</SelectItem>
+                                            <SelectItem value="Telefoon">Telefoon</SelectItem>
+                                            <SelectItem value="Email">Email</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                )} />
+                            </FormRow>
+                            <FormRow label="Ext. referentie">
                                 <FormField control={form.control} name="ext_referentie" render={({ field }) => (
                                 <FormControl><Input {...field} className="h-7 text-xs" /></FormControl>
                             )} />
-                        </FormRow>
-                    </div>
+                            </FormRow>
+                        </div>
+                    </Card>
                     <div className='p-2 border rounded-md bg-gray-50 dark:bg-gray-800/30 space-y-1'>
                         <h3 className="font-semibold text-xs mb-2">Adresgegevens</h3>
                         <FormRow label="Straatnaam">
