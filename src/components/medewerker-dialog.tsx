@@ -547,9 +547,9 @@ export function MedewerkerDialog({
                   name="notities"
                   render={({ field }) => (
                       <FormItem>
-                          <FormLabel>Notities</FormLabel>
+                          <FormLabel>Opmerkingen</FormLabel>
                           <FormControl>
-                              <Textarea placeholder="Voeg notities toe..." {...field} />
+                              <Textarea placeholder="Voeg opmerkingen toe..." {...field} />
                           </FormControl>
                           <FormMessage />
                       </FormItem>
@@ -631,5 +631,3 @@ export function MedewerkerDialog({
     </Dialog>
   );
 }
-
-    

@@ -174,7 +174,7 @@ export function AfspraakDialog({
               name="notities"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Notities</FormLabel>
+                  <FormLabel>Opmerkingen</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="Extra details of opmerkingen..."

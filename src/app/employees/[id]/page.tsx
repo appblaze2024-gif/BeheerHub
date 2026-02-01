@@ -990,13 +990,13 @@ export default function EmployeeDetailPage() {
                   </Card>
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between">
-                      <CardTitle>Persoonlijke notities</CardTitle>
-                      {canEdit && <Button size="sm"><Plus className="h-4 w-4 mr-2" />Notitie toevoegen</Button>}
+                      <CardTitle>Persoonlijke opmerkingen</CardTitle>
+                      {canEdit && <Button size="sm"><Plus className="h-4 w-4 mr-2" />Opmerking toevoegen</Button>}
                     </CardHeader>
                     <CardContent className="flex h-32 items-center justify-center text-muted-foreground">
                       <div className="text-center">
                         <FileText className="mx-auto h-8 w-8" />
-                        <p className="mt-2 text-sm">Geen notities gevonden</p>
+                        <p className="mt-2 text-sm">Geen opmerkingen gevonden</p>
                       </div>
                     </CardContent>
                   </Card>
@@ -1022,5 +1022,3 @@ export default function EmployeeDetailPage() {
     </div>
   );
 }
-
-    
