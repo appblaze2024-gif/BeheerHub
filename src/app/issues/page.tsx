@@ -67,6 +67,7 @@ type Project = {
 
 const werkbonNavItems = [
     { label: 'Werkzaamheden', icon: Pencil },
+    { label: 'Notities', icon: FileText },
     { label: 'Locatiegegevens', icon: MapPin },
     { label: 'Documenten', icon: FileText },
     { label: "Foto's", icon: Camera },
@@ -719,38 +720,41 @@ export default function IssuesPage() {
                             </div>
                           </CardContent>
                         </Card>
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-lg font-semibold">Notities bij afronding</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <Form {...form}>
-                                <form>
-                                  <FormField
-                                    control={form.control}
-                                    name="afhandeling_bijzonderheden"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormControl>
-                                                <Textarea 
-                                                    placeholder="Voeg notities toe over de afhandeling..."
-                                                    rows={4}
-                                                    {...field} 
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                  />
-                                </form>
-                              </Form>
-                            </CardContent>
-                        </Card>
                       </div>
                       <div className='rounded-lg overflow-hidden border h-full min-h-[400px]'>
                         <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} />
                       </div>
                     </div>
+                </TabsContent>
+                <TabsContent value="Notities" className="mt-0">
+                    <Card className="h-full">
+                        <CardHeader>
+                            <CardTitle className="text-lg font-semibold">Notities bij afronding</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <Form {...form}>
+                            <form>
+                              <FormField
+                                control={form.control}
+                                name="afhandeling_bijzonderheden"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormControl>
+                                            <Textarea 
+                                                placeholder="Voeg notities toe over de afhandeling..."
+                                                rows={15}
+                                                className="min-h-[400px]"
+                                                {...field} 
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                              />
+                            </form>
+                          </Form>
+                        </CardContent>
+                    </Card>
                 </TabsContent>
                 <TabsContent value="Locatiegegevens" className="mt-0">
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
