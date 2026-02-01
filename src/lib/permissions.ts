@@ -42,7 +42,17 @@ export const permissionConfig = [
     },
     { module: 'objects', label: 'Objecten', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }] },
     { module: 'inventory', label: 'Voorraadbeheer', actions: [{ id: 'view', label: 'Bekijken' }] },
-    { module: 'issues', label: 'Meldingen', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }] },
+    { 
+        module: 'issues', 
+        label: 'Meldingen', 
+        actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }],
+        tabs: [
+            { id: 'werkbonnen', label: 'Werkbonnen' },
+            { id: 'open', label: 'Openstaande meldingen' },
+            { id: 'new', label: 'Melding maken' },
+            { id: 'archive', label: 'Meldingen archief' },
+        ]
+    },
     { module: 'navigation', label: 'Navigatiemodule', actions: [{ id: 'use', label: 'Gebruiken' }] },
     { module: 'mail', label: 'Mail', actions: [{ id: 'use', label: 'Gebruiken' }] },
     { 
