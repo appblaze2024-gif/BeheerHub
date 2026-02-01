@@ -51,6 +51,7 @@ export const allMenuItems: MenuItem[] = [
       module: 'issues',
       subItems: [
         { href: '/issues', label: 'Werkbonnen' },
+        { href: '/issues/open', label: 'Openstaande meldingen' },
         { href: '/issues/new', label: 'Melding maken' },
         { href: '/issues/archive', label: 'Meldingen archief' },
       ]
