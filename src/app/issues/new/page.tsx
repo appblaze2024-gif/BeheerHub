@@ -33,9 +33,11 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import type { UploadedFile, Object as MapObject } from '@/lib/types';
+import type { UploadedFile, Object as MapObject, Melding } from '@/lib/types';
 import { MapboxView } from '@/components/mapbox-view';
 import * as turf from '@turf/turf';
+import { Badge } from '@/components/ui/badge';
+
 
 // Local types, as they are not in lib/types.ts but are needed for data fetching
 interface Wijk {
@@ -132,6 +134,12 @@ export default function NewIssuePage() {
     return collection(firestore, 'objects');
   }, [firestore]);
   const { data: allObjects } = useCollection<MapObject>(objectsCollection);
+  
+  const meldingenCollection = React.useMemo(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'meldingen');
+  }, [firestore]);
+  const { data: allMeldingen } = useCollection<Melding>(meldingenCollection);
 
   const projectsCollection = React.useMemo(() => {
       if (!firestore) return null;
@@ -142,6 +150,8 @@ export default function NewIssuePage() {
   const now = new Date();
   const meldingIdRef = React.useRef(`${format(now, 'yyyyMMdd')}${Math.floor(1000 + Math.random() * 9000)}`);
   const meldingsnummer = meldingIdRef.current;
+
+  const [selectedDuplicate, setSelectedDuplicate] = React.useState<Melding | null>(null);
 
   React.useEffect(() => {
     setIsHeaderVisible(false);
@@ -198,6 +208,26 @@ export default function NewIssuePage() {
         return distA - distB;
     });
   }, [location, allObjects]);
+  
+  const duplicateMeldingen = React.useMemo(() => {
+    if (!location || !allMeldingen) return [];
+    const locationPoint = turf.point([location.longitude, location.latitude]);
+    // Filter meldingen within a 25-meter radius, excluding the one being created if it had an ID
+    return allMeldingen.filter(m => {
+        if (m.id === meldingIdRef.current) return false;
+        if (typeof m.latitude !== 'number' || typeof m.longitude !== 'number') return false;
+        const meldingPoint = turf.point([m.longitude, m.latitude]);
+        const distance = turf.distance(locationPoint, meldingPoint, { units: 'meters' });
+        return distance <= 25;
+    });
+  }, [location, allMeldingen]);
+  
+  const handleTabChange = (value: string) => {
+    if (value !== 'dubbele') {
+      setSelectedDuplicate(null);
+    }
+  };
+
 
   React.useEffect(() => {
     if (!location || !allProjects) {
@@ -504,11 +534,11 @@ export default function NewIssuePage() {
         </div>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
-            <div className="p-3 grid grid-cols-12 gap-4">
+             <div className="p-3 grid grid-cols-12 gap-2">
                {/* Left Column */}
                <div className="col-span-7 h-full">
-                   <Card className="h-full bg-gray-50 dark:bg-gray-800/30 p-2 flex flex-col">
-                        <CardHeader className='p-1 pb-2'>
+                    <Card className="h-full bg-gray-50 dark:bg-gray-800/30 p-2 flex flex-col">
+                        <CardHeader className='p-1 pb-1'>
                            <CardTitle className="font-semibold text-xs">Algemene Informatie</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-1 p-1 flex-1">
@@ -518,7 +548,7 @@ export default function NewIssuePage() {
                             <FormRow label="Soort melder">
                             <div className="flex items-center">
                                     <FormField control={form.control} name="soort_melder" render={({ field }) => (
-                                        <FormControl><Input {...field} value={field.value ?? ''} className="h-7 text-xs rounded-r-none" /></FormControl>
+                                        <FormControl><Input {...field} className="h-7 text-xs rounded-r-none" /></FormControl>
                                     )} />
                                     <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
                                 </div>
@@ -542,15 +572,32 @@ export default function NewIssuePage() {
                                 <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
                             </div>
                             </FormRow>
+                            <FormRow label="Soort melding">
+                                <FormField control={form.control} name="soort_melding" render={({ field }) => (
+                                    <Select onValueChange={field.onChange} value={field.value || ''}>
+                                        <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer soort"/></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="Balie">Balie</SelectItem>
+                                            <SelectItem value="Telefoon">Telefoon</SelectItem>
+                                            <SelectItem value="Email">Email</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                )} />
+                            </FormRow>
+                            <FormRow label="Ext. referentie">
+                                    <FormField control={form.control} name="ext_referentie" render={({ field }) => (
+                                    <FormControl><Input {...field} className="h-7 text-xs" /></FormControl>
+                                )} />
+                            </FormRow>
                             <FormRow label="Behandelende afdeling">
                                 <FormField control={form.control} name="behandelende_afdeling" render={({ field }) => (
-                                <FormControl><Input {...field} value={field.value ?? ''} className="h-7 text-xs" /></FormControl>
+                                <FormControl><Input {...field} className="h-7 text-xs" /></FormControl>
                             )} />
                             </FormRow>
                             <FormRow label="Behandelaar">
                             <div className="flex items-center">
                                 <FormField control={form.control} name="behandelaar" render={({ field }) => (
-                                    <FormControl><Input {...field} value={field.value ?? ''} className="h-7 text-xs rounded-r-none" /></FormControl>
+                                    <FormControl><Input {...field} className="h-7 text-xs rounded-r-none" /></FormControl>
                                 )} />
                                 <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
                             </div>
@@ -566,13 +613,13 @@ export default function NewIssuePage() {
                             <FormRow label="Voorvaldatum">
                                 <div className="flex gap-2 items-center">
                                     <FormField control={form.control} name="voorvaldatum" render={({ field }) => (<FormControl><Input type='date' className="h-7 text-xs" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} /></FormControl>)} />
-                                    <FormField control={form.control} name="voorvaltijd" render={({ field }) => (<FormControl><Input type="time" className="h-7 text-xs w-24" {...field} value={field.value ?? ''} /></FormControl>)} />
+                                    <FormField control={form.control} name="voorvaltijd" render={({ field }) => (<FormControl><Input type="time" className="h-7 text-xs w-24" {...field} /></FormControl>)} />
                                 </div>
                             </FormRow>
                             <FormRow label="Meldingsdatum">
                                 <div className="flex gap-2 items-center">
                                     <FormField control={form.control} name="meldingsdatum" render={({ field }) => (<FormControl><Input type='date' className="h-7 text-xs" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} /></FormControl>)} />
-                                    <FormField control={form.control} name="meldingsuur" render={({ field }) => (<FormControl><Input type="time" className="h-7 text-xs w-24" {...field} value={field.value ?? ''} /></FormControl>)} />
+                                    <FormField control={form.control} name="meldingsuur" render={({ field }) => (<FormControl><Input type="time" className="h-7 text-xs w-24" {...field} /></FormControl>)} />
                                 </div>
                             </FormRow>
                             <FormRow label="Actiedatum">
@@ -581,12 +628,12 @@ export default function NewIssuePage() {
                             <FormRow label="Afhandeldatum">
                             <div className="flex gap-2 items-center">
                                     <FormField control={form.control} name="afhandeldatum" render={({ field }) => (<FormControl><Input type='date' className="h-7 text-xs" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} /></FormControl>)} />
-                                <FormField control={form.control} name="afhandeltijd" render={({ field }) => (<FormControl><Input type="time" className="h-7 text-xs w-24" {...field} value={field.value ?? ''} /></FormControl>)} />
+                                <FormField control={form.control} name="afhandeltijd" render={({ field }) => (<FormControl><Input type="time" className="h-7 text-xs w-24" {...field} /></FormControl>)} />
                             </div>
                             </FormRow>
                             <FormRow label="Afhandelaar">
                             <div className="flex items-center">
-                                <FormField control={form.control} name="afhandelaar" render={({ field }) => (<FormControl><Input {...field} value={field.value ?? ''} className="h-7 text-xs rounded-r-none" /></FormControl>)} />
+                                <FormField control={form.control} name="afhandelaar" render={({ field }) => (<FormControl><Input {...field} className="h-7 text-xs rounded-r-none" /></FormControl>)} />
                                 <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
                             </div>
                             </FormRow>
@@ -595,54 +642,34 @@ export default function NewIssuePage() {
                </div>
 
                {/* Right Column */}
-                <div className="col-span-5 space-y-1.5">
-                    <div className='p-2 border rounded-md bg-gray-50 dark:bg-gray-800/30 space-y-1'>
-                        <h3 className="font-semibold text-xs mb-2">Referentie</h3>
-                        <FormRow label="Soort melding">
-                            <FormField control={form.control} name="soort_melding" render={({ field }) => (
-                                <Select onValueChange={field.onChange} value={field.value || ''}>
-                                    <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer soort"/></SelectTrigger></FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="Balie">Balie</SelectItem>
-                                        <SelectItem value="Telefoon">Telefoon</SelectItem>
-                                        <SelectItem value="Email">Email</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            )} />
-                        </FormRow>
-                        <FormRow label="Ext. referentie">
-                                <FormField control={form.control} name="ext_referentie" render={({ field }) => (
-                                <FormControl><Input {...field} value={field.value ?? ''} className="h-7 text-xs" /></FormControl>
-                            )} />
-                        </FormRow>
-                    </div>
+                <div className="col-span-5 space-y-2">
                     <div className='p-2 border rounded-md bg-gray-50 dark:bg-gray-800/30 space-y-1'>
                         <h3 className="font-semibold text-xs mb-2">Adresgegevens</h3>
                         <FormRow label="Straatnaam">
                             <div className="flex items-center">
-                                <FormField control={form.control} name="straatnaam" render={({ field }) => ( <FormControl><Input {...field} value={field.value ?? ''} className="h-7 text-xs rounded-r-none" /></FormControl> )} />
+                                <FormField control={form.control} name="straatnaam" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs rounded-r-none" /></FormControl> )} />
                                 <Button type="button" onClick={handleAddressSearch} size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
                             </div>
                         </FormRow>
                         <FormRow label="Nummer">
                              <div className="flex items-center gap-2">
-                                <FormField control={form.control} name="nummer" render={({ field }) => ( <FormControl><Input {...field} value={field.value ?? ''} className="h-7 text-xs w-20" /></FormControl> )} />
+                                <FormField control={form.control} name="nummer" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs w-20" /></FormControl> )} />
                             </div>
                         </FormRow>
                         <FormRow label="Postcode">
-                             <FormField control={form.control} name="postcode" render={({ field }) => ( <FormControl><Input {...field} value={field.value ?? ''} className="h-7 text-xs" /></FormControl> )} />
+                             <FormField control={form.control} name="postcode" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs" /></FormControl> )} />
                         </FormRow>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             <FormField control={form.control} name="wijk" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel className='text-xs'>Wijk</FormLabel>
-                                    <FormControl><Input placeholder="Wijk" {...field} value={field.value ?? ''} className="h-7 text-xs" /></FormControl>
+                                    <FormControl><Input placeholder="Wijk" {...field} className="h-7 text-xs" /></FormControl>
                                 </FormItem>
                             )} />
                             <FormField control={form.control} name="plaats" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel className='text-xs'>Gemeente</FormLabel>
-                                    <FormControl><Input placeholder="Gemeente" {...field} value={field.value ?? ''} className="h-7 text-xs" /></FormControl>
+                                    <FormControl><Input placeholder="Gemeente" {...field} className="h-7 text-xs" /></FormControl>
                                 </FormItem>
                             )} />
                         </div>
@@ -650,7 +677,7 @@ export default function NewIssuePage() {
                           <FormField control={form.control} name="werkgebied" render={({ field }) => (
                             <FormItem>
                               <FormLabel className='text-xs'>Werkgebied</FormLabel>
-                              <FormControl><Input {...field} className="h-7 text-xs" disabled value={field.value ?? ''} /></FormControl>
+                              <FormControl><Input {...field} className="h-7 text-xs" disabled /></FormControl>
                             </FormItem>
                           )} />
                         </div>
@@ -664,32 +691,37 @@ export default function NewIssuePage() {
                             </div>
                         </FormRow>
                         <FormRow label="Naam melder">
-                             <FormField control={form.control} name="melder" render={({ field }) => ( <FormControl><Input {...field} value={field.value || ''} className="h-7 text-xs" /></FormControl> )} />
+                             <FormField control={form.control} name="melder" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs" /></FormControl> )} />
                         </FormRow>
                         <FormRow label="Telefoon melder">
-                            <FormField control={form.control} name="telefoon_melder" render={({ field }) => ( <FormControl><Input type="tel" {...field} value={field.value || ''} className="h-7 text-xs" /></FormControl> )} />
+                            <FormField control={form.control} name="telefoon_melder" render={({ field }) => ( <FormControl><Input type="tel" {...field} className="h-7 text-xs" /></FormControl> )} />
                         </FormRow>
                         <FormRow label="E-mail melder">
-                             <FormField control={form.control} name="email_melder" render={({ field }) => ( <FormControl><Input type="email" {...field} value={field.value || ''} className="h-7 text-xs" /></FormControl> )} />
+                             <FormField control={form.control} name="email_melder" render={({ field }) => ( <FormControl><Input type="email" {...field} className="h-7 text-xs" /></FormControl> )} />
                         </FormRow>
                         <FormRow label="Burgerservicenummer">
-                            <FormField control={form.control} name="burgerservicenummer" render={({ field }) => ( <FormControl><Input {...field} value={field.value || ''} className="h-7 text-xs" /></FormControl> )} />
+                            <FormField control={form.control} name="burgerservicenummer" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs" /></FormControl> )} />
                         </FormRow>
                     </div>
                 </div>
             </div>
             
             <div className="flex-1 flex flex-col min-h-0 px-3 pb-3">
-                 <Tabs defaultValue="memo" className="flex-1 flex flex-col min-h-0">
+                 <Tabs defaultValue="memo" className="flex-1 flex flex-col min-h-0" onValueChange={handleTabChange}>
                     <TabsList>
                         <TabsTrigger value="memo">Memo</TabsTrigger>
                         <TabsTrigger value="documenten">Documenten</TabsTrigger>
                         <TabsTrigger value="fotos">Foto's</TabsTrigger>
                         <TabsTrigger value="locatie">Locatie</TabsTrigger>
-                        <TabsTrigger value="dubbele">Dubbele Meldingen</TabsTrigger>
+                        <TabsTrigger value="dubbele">
+                          Dubbele Meldingen
+                          {duplicateMeldingen.length > 0 && (
+                            <Badge variant="destructive" className="ml-2">{duplicateMeldingen.length}</Badge>
+                          )}
+                        </TabsTrigger>
                     </TabsList>
                     <TabsContent value="memo" className="flex-1 mt-1">
-                        <FormField control={form.control} name="extra_informatie" render={({ field }) => ( <FormItem className="h-full flex flex-col"><FormLabel className='sr-only'>Memo</FormLabel><FormControl><Textarea {...field} value={field.value ?? ''} className="flex-1 resize-none text-xs" /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="extra_informatie" render={({ field }) => ( <FormItem className="h-full flex flex-col"><FormLabel className='sr-only'>Memo</FormLabel><FormControl><Textarea {...field} className="flex-1 resize-none text-xs" /></FormControl><FormMessage /></FormItem> )} />
                     </TabsContent>
                     <TabsContent value="documenten" className="flex-1 mt-1">
                         <div className="h-full flex flex-col gap-4 p-1">
@@ -844,7 +876,61 @@ export default function NewIssuePage() {
                         </div>
                       </div>
                     </TabsContent>
-                    <TabsContent value="dubbele"><div className="text-center p-4 text-muted-foreground text-xs">Geen dubbele meldingen gevonden.</div></TabsContent>
+                    <TabsContent value="dubbele" className="flex-1 mt-1 overflow-y-auto">
+                        {selectedDuplicate ? (
+                            <div className="p-4 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-lg font-semibold">Details Dubbele Melding: {selectedDuplicate.intakenummer}</h3>
+                                    <Button variant="outline" onClick={() => setSelectedDuplicate(null)}>
+                                        <ArrowLeft className="mr-2 h-4 w-4" /> Terug naar lijst
+                                    </Button>
+                                </div>
+                                <Card>
+                                    <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                        <div className="space-y-2">
+                                            <p><span className="font-semibold">Datum:</span> {format(new Date(selectedDuplicate.datum), 'dd-MM-yyyy')} {selectedDuplicate.tijdstip}</p>
+                                            <p><span className="font-semibold">Status:</span> {selectedDuplicate.status}</p>
+                                            <p><span className="font-semibold">Adres:</span> {selectedDuplicate.straatnaam}, {selectedDuplicate.postcode} {selectedDuplicate.plaats}</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <p><span className="font-semibold">Categorie:</span> {selectedDuplicate.hoofdcategorie} &gt; {selectedDuplicate.subcategorie}</p>
+                                            <p><span className="font-semibold">Melder:</span> {selectedDuplicate.melder}</p>
+                                            <p><span className="font-semibold">Aangenomen door:</span> {selectedDuplicate.aangenomen_door || '-'}</p>
+                                        </div>
+                                        <div className="col-span-full space-y-2">
+                                            <p className="font-semibold">Omschrijving:</p>
+                                            <p className="whitespace-pre-wrap bg-muted p-2 rounded-md">{selectedDuplicate.extra_informatie}</p>
+                                        </div>
+                                        {selectedDuplicate.fotos && selectedDuplicate.fotos.length > 0 && (
+                                            <div className="col-span-full space-y-2">
+                                                <p className="font-semibold">Foto's:</p>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {selectedDuplicate.fotos.map(foto => (
+                                                        <a key={foto.storagePath} href={foto.url} target="_blank" rel="noopener noreferrer">
+                                                            <img src={foto.url} alt={foto.name} className="h-24 w-24 object-cover rounded-md border" />
+                                                        </a>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        ) : duplicateMeldingen.length > 0 ? (
+                            <div className="border rounded-md">
+                                {duplicateMeldingen.map(melding => (
+                                    <div key={melding.id} className="grid grid-cols-[1fr_2fr_1fr_auto] items-center gap-4 px-4 py-3 border-b last:border-b-0">
+                                        <div className="font-medium">{melding.intakenummer}</div>
+                                        <div className="truncate">{melding.extra_informatie}</div>
+                                        <div><Badge variant={melding.status === 'Afgerond' ? 'secondary' : 'default'}>{melding.status}</Badge></div>
+                                        <Button variant="secondary" size="sm" onClick={() => setSelectedDuplicate(melding)}>Bekijken</Button>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center p-8 text-muted-foreground">Geen dubbele meldingen gevonden op deze locatie.</div>
+                        )}
+                        </TabsContent>
                 </Tabs>
             </div>
             
