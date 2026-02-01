@@ -3,12 +3,12 @@
 import * as React from 'react';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection } from 'firebase/firestore';
-import { Plus, Search, ListFilter } from 'lucide-react';
+import { Search, ListFilter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { Melding } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
+import { format, isToday } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { useRouter } from 'next/navigation';
 import {
@@ -20,7 +20,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import Link from 'next/link';
 
 const openStatuses = [
   "Nieuw",
@@ -72,6 +71,7 @@ export default function OpenIssuesPage() {
   
   const statusColorMap: { [key: string]: string } = {
     "Nieuw": "bg-red-500",
+    "Open": "bg-cyan-500",
     "Intern doorgezet": "bg-yellow-500",
     "In behandeling": "bg-blue-500",
     "Gepland op korte termijn": "bg-purple-500",
@@ -82,14 +82,6 @@ export default function OpenIssuesPage() {
     <div className="flex flex-col flex-1 p-6 min-h-0">
       <header className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Openstaande Meldingen</h1>
-        <div className="flex items-center gap-2">
-            <Link href="/issues/new">
-                <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Nieuwe Melding
-                </Button>
-            </Link>
-        </div>
       </header>
 
       <Card className="flex-1 flex flex-col">
@@ -119,7 +111,8 @@ export default function OpenIssuesPage() {
                 <TableRow>
                     <TableHead>Intakenr.</TableHead>
                     <TableHead>Datum</TableHead>
-                    <TableHead>Categorie</TableHead>
+                    <TableHead>Tijd</TableHead>
+                    <TableHead>Melder</TableHead>
                     <TableHead>Adres</TableHead>
                     <TableHead>Omschrijving</TableHead>
                     <TableHead>Status</TableHead>
@@ -128,34 +121,48 @@ export default function OpenIssuesPage() {
                 <TableBody>
                 {isLoadingMeldingen ? (
                     <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={7} className="h-24 text-center">
                         Meldingen laden...
                     </TableCell>
                     </TableRow>
                 ) : filteredMeldingen.length === 0 ? (
                      <TableRow>
-                        <TableCell colSpan={6} className="h-24 text-center">
+                        <TableCell colSpan={7} className="h-24 text-center">
                             Geen openstaande meldingen gevonden.
                         </TableCell>
                     </TableRow>
                 ) : (
-                    filteredMeldingen.map((melding) => (
-                    <TableRow key={melding.id} onClick={() => router.push(`/issues?id=${melding.id}`)} className="cursor-pointer">
-                        <TableCell className="font-medium">{melding.intakenummer}</TableCell>
-                        <TableCell>{format(new Date(melding.datum), 'dd-MM-yyyy')}</TableCell>
-                        <TableCell>{melding.hoofdcategorie} &gt; {melding.subcategorie}</TableCell>
-                        <TableCell className="truncate">{melding.straatnaam}, {melding.plaats}</TableCell>
-                        <TableCell className="max-w-xs truncate">{melding.extra_informatie}</TableCell>
-                        <TableCell>
-                        <Badge
-                            className="text-white"
-                            style={{ backgroundColor: statusColorMap[melding.status] || 'bg-gray-500' }}
-                        >
-                            {melding.status}
-                        </Badge>
-                        </TableCell>
-                    </TableRow>
-                    ))
+                    filteredMeldingen.map((melding) => {
+                      let displayStatus = melding.status;
+                      if (melding.status === 'Nieuw') {
+                        try {
+                          if (!isToday(new Date(melding.datum))) {
+                            displayStatus = 'Open';
+                          }
+                        } catch (e) {
+                           // if date is invalid, keep status as is
+                        }
+                      }
+                      
+                      return (
+                        <TableRow key={melding.id} onClick={() => router.push(`/issues?id=${melding.id}`)} className="cursor-pointer">
+                            <TableCell className="font-medium">{melding.intakenummer}</TableCell>
+                            <TableCell>{format(new Date(melding.datum), 'dd-MM-yyyy')}</TableCell>
+                            <TableCell>{melding.tijdstip}</TableCell>
+                            <TableCell className='truncate'>{melding.melder}</TableCell>
+                            <TableCell className="truncate">{melding.straatnaam}, {melding.plaats}</TableCell>
+                            <TableCell className="max-w-xs truncate">{melding.extra_informatie}</TableCell>
+                            <TableCell>
+                            <Badge
+                                className="text-white"
+                                style={{ backgroundColor: statusColorMap[displayStatus] || 'bg-gray-500' }}
+                            >
+                                {displayStatus}
+                            </Badge>
+                            </TableCell>
+                        </TableRow>
+                      )
+                    })
                 )}
                 </TableBody>
             </Table>
