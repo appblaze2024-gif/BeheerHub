@@ -941,6 +941,19 @@ export default function NewIssuePage() {
                                             <p className="font-semibold">Omschrijving:</p>
                                             <p className="whitespace-pre-wrap bg-muted p-2 rounded-md">{selectedDuplicate.extra_informatie}</p>
                                         </div>
+                                        {selectedDuplicate.files && selectedDuplicate.files.length > 0 && (
+                                            <div className="col-span-full space-y-2">
+                                                <p className="font-semibold">Bestanden:</p>
+                                                <div className="space-y-1">
+                                                    {selectedDuplicate.files.map(file => (
+                                                        <a key={file.storagePath} href={file.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-primary hover:underline text-sm">
+                                                            <FileIcon className="h-4 w-4" />
+                                                            <span>{file.name}</span>
+                                                        </a>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                         {selectedDuplicate.fotos && selectedDuplicate.fotos.length > 0 && (
                                             <div className="col-span-full space-y-2">
                                                 <p className="font-semibold">Foto's:</p>
