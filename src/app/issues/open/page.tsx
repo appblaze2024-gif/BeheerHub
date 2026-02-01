@@ -112,29 +112,29 @@ export default function OpenIssuesPage() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-auto">
-        <Table>
-            <TableHeader className="sticky top-0 bg-card z-10">
+      <div className="flex-1 overflow-auto p-4">
+        <Table className="border-collapse border border-slate-200 w-full">
+            <TableHeader className="sticky top-0 bg-slate-50 z-10 dark:bg-slate-800">
             <TableRow>
-                <TableHead className="py-2 px-4">Intakenr.</TableHead>
-                <TableHead className="py-2 px-4">Datum</TableHead>
-                <TableHead className="py-2 px-4">Tijd</TableHead>
-                <TableHead className="py-2 px-4">Melder</TableHead>
-                <TableHead className="py-2 px-4">Adres</TableHead>
-                <TableHead className="py-2 px-4">Omschrijving</TableHead>
-                <TableHead className="py-2 px-4">Status</TableHead>
+                <TableHead className="py-2 px-3 border border-slate-200">Intakenr.</TableHead>
+                <TableHead className="py-2 px-3 border border-slate-200">Datum</TableHead>
+                <TableHead className="py-2 px-3 border border-slate-200">Tijd</TableHead>
+                <TableHead className="py-2 px-3 border border-slate-200">Melder</TableHead>
+                <TableHead className="py-2 px-3 border border-slate-200">Adres</TableHead>
+                <TableHead className="py-2 px-3 border border-slate-200">Omschrijving</TableHead>
+                <TableHead className="py-2 px-3 border border-slate-200">Status</TableHead>
             </TableRow>
             </TableHeader>
             <TableBody>
             {isLoadingMeldingen ? (
                 <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
+                <TableCell colSpan={7} className="h-24 text-center border border-slate-200">
                     Meldingen laden...
                 </TableCell>
                 </TableRow>
             ) : filteredMeldingen.length === 0 ? (
                  <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">
+                    <TableCell colSpan={7} className="h-24 text-center border border-slate-200">
                         Geen openstaande meldingen gevonden.
                     </TableCell>
                 </TableRow>
@@ -152,14 +152,14 @@ export default function OpenIssuesPage() {
                   }
                   
                   return (
-                    <TableRow key={melding.id} onClick={() => router.push(`/issues?id=${melding.id}`)} className="cursor-pointer h-auto">
-                        <TableCell className="font-medium py-2 px-4">{melding.intakenummer}</TableCell>
-                        <TableCell className="py-2 px-4">{format(new Date(melding.datum), 'dd-MM-yyyy')}</TableCell>
-                        <TableCell className="py-2 px-4">{melding.tijdstip}</TableCell>
-                        <TableCell className='truncate py-2 px-4'>{melding.melder}</TableCell>
-                        <TableCell className="truncate py-2 px-4">{melding.straatnaam}, {melding.plaats}</TableCell>
-                        <TableCell className="max-w-xs truncate py-2 px-4">{melding.extra_informatie}</TableCell>
-                        <TableCell className="py-2 px-4">
+                    <TableRow key={melding.id} onClick={() => router.push(`/issues?id=${melding.id}`)} className="cursor-pointer h-auto hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                        <TableCell className="font-medium py-1 px-3 border border-slate-200">{melding.intakenummer}</TableCell>
+                        <TableCell className="py-1 px-3 border border-slate-200">{format(new Date(melding.datum), 'dd-MM-yyyy')}</TableCell>
+                        <TableCell className="py-1 px-3 border border-slate-200">{melding.tijdstip}</TableCell>
+                        <TableCell className='truncate py-1 px-3 border border-slate-200'>{melding.melder}</TableCell>
+                        <TableCell className="truncate py-1 px-3 border border-slate-200">{melding.straatnaam}, {melding.plaats}</TableCell>
+                        <TableCell className="max-w-xs truncate py-1 px-3 border border-slate-200">{melding.extra_informatie}</TableCell>
+                        <TableCell className="py-1 px-3 border border-slate-200">
                         <Badge
                             className="text-white"
                             style={{ backgroundColor: statusColorMap[displayStatus] || 'bg-gray-500' }}
