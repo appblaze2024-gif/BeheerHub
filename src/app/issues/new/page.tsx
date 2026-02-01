@@ -138,19 +138,9 @@ export default function NewIssuePage() {
       return collection(firestore, 'projects');
   }, [firestore]);
   const { data: allProjects } = useCollection<Project>(projectsCollection);
-
-  const nearbyObjects = React.useMemo(() => {
-    if (!location || !allObjects) return [];
-    const meldingPoint = turf.point([location.longitude, location.latitude]);
-    return allObjects.filter(obj => {
-      if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
-      const objPoint = turf.point([obj.longitude, obj.latitude]);
-      return turf.distance(meldingPoint, objPoint, { units: 'meters' }) <= 100;
-    }).sort((a, b) => turf.distance(turf.point([location.longitude, location.latitude]), turf.point([a.longitude, a.latitude])) - turf.distance(turf.point([location.longitude, location.latitude]), turf.point([b.longitude, b.latitude])));
-  }, [location, allObjects]);
   
   const now = new Date();
-  const meldingIdRef = React.useRef(format(now, 'yyyyMMddHHmmss'));
+  const meldingIdRef = React.useRef(`${format(now, 'yyyyMMdd')}${Math.floor(1000 + Math.random() * 9000)}`);
   const meldingsnummer = meldingIdRef.current;
 
   React.useEffect(() => {
