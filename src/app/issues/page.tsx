@@ -249,40 +249,62 @@ export default function IssuesPage() {
       return ['intakenummer', 'extern_meldingsnummer', 'straatnaam', 'plaats', 'postcode', 'subcategorie', 'hoofdcategorie', 'melder', 'extra_informatie', 'wijk', 'status', 'aangenomen_door', 'afgehandeld_door'].some(field => (m as any)[field]?.toLowerCase().includes(query));
     }) : timeFilteredMeldingen;
 
-    if (!selectedProjectId) return [];
-    const project = projects?.find(p => p.id === selectedProjectId);
-    if (!project?.wijken) return [];
-    if (!selectedWijkId || selectedWijkId === 'all') {
-      const allProjectWijkNames = project.wijken.map(w => w.naam);
-      return searchedMeldingen.filter(m => {
-        if (m.wijk && allProjectWijkNames.includes(m.wijk)) return true;
-        if (typeof m.latitude !== 'number' || typeof m.longitude !== 'number') return false;
-        const point = turf.point([m.longitude, m.latitude]);
-        for (const wijk of project.wijken || []) {
-          try {
-            const wijkFeatures = JSON.parse(wijk.subGebieden);
-            if (Array.isArray(wijkFeatures)) {
-              for (const polygon of wijkFeatures) if (turf.booleanPointInPolygon(point, polygon.geometry)) return true;
+    let projectFilteredMeldingen: Melding[] = [];
+    if (!selectedProjectId) {
+        projectFilteredMeldingen = [];
+    } else {
+        const project = projects?.find(p => p.id === selectedProjectId);
+        if (!project?.wijken) {
+            projectFilteredMeldingen = [];
+        } else if (!selectedWijkId || selectedWijkId === 'all') {
+          const allProjectWijkNames = project.wijken.map(w => w.naam);
+          projectFilteredMeldingen = searchedMeldingen.filter(m => {
+            if (m.wijk && allProjectWijkNames.includes(m.wijk)) return true;
+            if (typeof m.latitude !== 'number' || typeof m.longitude !== 'number') return false;
+            const point = turf.point([m.longitude, m.latitude]);
+            for (const wijk of project.wijken || []) {
+              try {
+                const wijkFeatures = JSON.parse(wijk.subGebieden);
+                if (Array.isArray(wijkFeatures)) {
+                  for (const polygon of wijkFeatures) if (turf.booleanPointInPolygon(point, polygon.geometry)) return true;
+                }
+              } catch { continue; }
             }
-          } catch { continue; }
+            return false;
+          });
+        } else {
+            const wijk = project.wijken.find(w => w.id === selectedWijkId);
+            if (!wijk) {
+                projectFilteredMeldingen = [];
+            } else {
+                projectFilteredMeldingen = searchedMeldingen.filter(m => {
+                    if (m.wijk === wijk.naam) return true;
+                    try {
+                        const wijkFeatures = JSON.parse(wijk.subGebieden);
+                        if (Array.isArray(wijkFeatures) && wijkFeatures.length > 0) {
+                        if (typeof m.latitude !== 'number' || typeof m.longitude !== 'number') return false;
+                        const point = turf.point([m.longitude, m.latitude]);
+                        for (const polygon of wijkFeatures) if (turf.booleanPointInPolygon(point, polygon)) return true;
+                        }
+                    } catch { return false; }
+                    return false;
+                });
+            }
         }
-        return false;
-      });
     }
-    const wijk = project.wijken.find(w => w.id === selectedWijkId);
-    if (!wijk) return [];
-    return searchedMeldingen.filter(m => {
-      if (m.wijk === wijk.naam) return true;
-      try {
-        const wijkFeatures = JSON.parse(wijk.subGebieden);
-        if (Array.isArray(wijkFeatures) && wijkFeatures.length > 0) {
-          if (typeof m.latitude !== 'number' || typeof m.longitude !== 'number') return false;
-          const point = turf.point([m.longitude, m.latitude]);
-          for (const polygon of wijkFeatures) if (turf.booleanPointInPolygon(point, polygon)) return true;
+    
+    projectFilteredMeldingen.sort((a, b) => {
+        try {
+            const dateA = new Date(`${a.datum}T${a.tijdstip || '00:00'}`).getTime();
+            const dateB = new Date(`${b.datum}T${b.tijdstip || '00:00'}`).getTime();
+            if (isNaN(dateA) || isNaN(dateB)) return 0;
+            return dateA - dateB;
+        } catch (e) {
+            return 0;
         }
-      } catch { return false; }
-      return false;
     });
+
+    return projectFilteredMeldingen;
   }, [meldingen, selectedProjectId, selectedWijkId, projects, selectedDate, debouncedSearchQuery]);
 
   React.useEffect(() => {
@@ -343,15 +365,18 @@ export default function IssuesPage() {
 
   const handleAfronden = async () => {
     if (!firestore || !selectedMelding?.id || !user) return;
+    
+    const currentIndex = filteredMeldingen.findIndex(m => m.id === selectedMeldingId);
+    
     setIsSubmitting(true);
     const meldingRef = doc(firestore, 'meldingen', selectedMelding.id);
     const afhandeling_bijzonderheden_value = form.getValues('afhandeling_bijzonderheden');
 
-    let minutesWorked = 0;
+    let minutesWorked = gewerkteMinuten;
     if (selectedMelding.workStartedAt) {
       const startTime = new Date(selectedMelding.workStartedAt).getTime();
       const endTime = Date.now();
-      minutesWorked = Math.round((endTime - startTime) / (1000 * 60));
+      minutesWorked += Math.round((endTime - startTime) / (1000 * 60));
     }
 
     try {
@@ -365,15 +390,23 @@ export default function IssuesPage() {
             fotos: uploadedPhotos,
             tasks: tasks,
             hoeveelheden: hoeveelheden,
-            gewerkteMinuten: gewerkteMinuten + minutesWorked,
+            gewerkteMinuten: minutesWorked,
             workStartedAt: null, // Reset start time
         });
         toast({
           title: 'Werkbon afgerond',
           description: `Melding ${selectedMelding.intakenummer} is afgerond.`,
         });
-        const nextMelding = filteredMeldingen.find(m => m.id !== selectedMeldingId);
-        setSelectedMeldingId(nextMelding ? nextMelding.id : null);
+
+        const remainingMeldingen = filteredMeldingen.filter(m => m.id !== selectedMeldingId);
+
+        if (remainingMeldingen.length > 0) {
+            const nextIndex = Math.min(currentIndex, remainingMeldingen.length - 1);
+            setSelectedMeldingId(remainingMeldingen[nextIndex].id);
+        } else {
+            setSelectedMeldingId(null);
+        }
+        
     } catch (error) {
         console.error("Fout bij afronden melding:", error);
         toast({
@@ -773,7 +806,7 @@ export default function IssuesPage() {
                 <TabsContent value="Opmerking" className="mt-0">
                     <Card className="h-full">
                         <CardHeader>
-                            <CardTitle className="text-lg font-semibold">Opmerking bij afronding</CardTitle>
+                            <CardTitle className="text-lg font-semibold">Opmerkingen bij afronding</CardTitle>
                         </CardHeader>
                         <CardContent>
                           <Form {...form}>
