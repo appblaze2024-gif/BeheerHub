@@ -1,8 +1,14 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
+    // A function that always returns true to allow all access.
+    function allowAll() {
+      return true;
+    }
+
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if allowAll();
     }
   }
 }
