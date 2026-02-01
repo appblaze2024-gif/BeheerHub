@@ -511,7 +511,7 @@ export default function NewIssuePage() {
                         <CardHeader className='p-1 pb-2'>
                            <CardTitle className="font-semibold text-xs">Algemene Informatie</CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-1.5 p-1 flex-1">
+                        <CardContent className="space-y-1 p-1 flex-1">
                             <FormRow label="Meldingsnummer">
                                 <Input value={meldingsnummer} disabled className="h-7 text-xs"/>
                             </FormRow>
@@ -525,7 +525,7 @@ export default function NewIssuePage() {
                             </FormRow>
                             <FormRow label="Hoofdindeling">
                                 <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (
-                                    <Select onValueChange={field.onChange} value={field.value}>
+                                    <Select onValueChange={field.onChange} value={field.value ?? ''}>
                                         <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer categorie" /></SelectTrigger></FormControl>
                                         <SelectContent>{hoofdcategorieOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                     </Select>
@@ -534,30 +534,13 @@ export default function NewIssuePage() {
                             <FormRow label="Indeling">
                                 <div className="flex items-center">
                                     <FormField control={form.control} name="subcategorie" render={({ field }) => (
-                                    <Select onValueChange={field.onChange} value={field.value} disabled={!watchedHoofdcategorie}>
+                                    <Select onValueChange={field.onChange} value={field.value ?? ''} disabled={!watchedHoofdcategorie}>
                                         <FormControl><SelectTrigger className="h-7 text-xs rounded-r-none"><SelectValue placeholder="Selecteer indeling" /></SelectTrigger></FormControl>
                                         <SelectContent>{(subcategorieOptions[watchedHoofdcategorie] || []).map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                     </Select>
                                 )} />
                                 <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
                             </div>
-                            </FormRow>
-                             <FormRow label="Soort melding">
-                                <FormField control={form.control} name="soort_melding" render={({ field }) => (
-                                    <Select onValueChange={field.onChange} value={field.value || ''}>
-                                        <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer soort"/></SelectTrigger></FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="Balie">Balie</SelectItem>
-                                            <SelectItem value="Telefoon">Telefoon</SelectItem>
-                                            <SelectItem value="Email">Email</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                )} />
-                            </FormRow>
-                            <FormRow label="Ext. referentie">
-                                    <FormField control={form.control} name="ext_referentie" render={({ field }) => (
-                                    <FormControl><Input {...field} value={field.value ?? ''} className="h-7 text-xs" /></FormControl>
-                                )} />
                             </FormRow>
                             <FormRow label="Behandelende afdeling">
                                 <FormField control={form.control} name="behandelende_afdeling" render={({ field }) => (
@@ -612,8 +595,28 @@ export default function NewIssuePage() {
                </div>
 
                {/* Right Column */}
-                <div className="col-span-5 space-y-2">
-                    <div className='p-2 border rounded-md bg-gray-50 dark:bg-gray-800/30 space-y-1.5'>
+                <div className="col-span-5 space-y-1.5">
+                    <div className='p-2 border rounded-md bg-gray-50 dark:bg-gray-800/30 space-y-1'>
+                        <h3 className="font-semibold text-xs mb-2">Referentie</h3>
+                        <FormRow label="Soort melding">
+                            <FormField control={form.control} name="soort_melding" render={({ field }) => (
+                                <Select onValueChange={field.onChange} value={field.value || ''}>
+                                    <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer soort"/></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="Balie">Balie</SelectItem>
+                                        <SelectItem value="Telefoon">Telefoon</SelectItem>
+                                        <SelectItem value="Email">Email</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            )} />
+                        </FormRow>
+                        <FormRow label="Ext. referentie">
+                                <FormField control={form.control} name="ext_referentie" render={({ field }) => (
+                                <FormControl><Input {...field} value={field.value ?? ''} className="h-7 text-xs" /></FormControl>
+                            )} />
+                        </FormRow>
+                    </div>
+                    <div className='p-2 border rounded-md bg-gray-50 dark:bg-gray-800/30 space-y-1'>
                         <h3 className="font-semibold text-xs mb-2">Adresgegevens</h3>
                         <FormRow label="Straatnaam">
                             <div className="flex items-center">
@@ -653,7 +656,7 @@ export default function NewIssuePage() {
                         </div>
                     </div>
 
-                    <div className='p-2 border rounded-md bg-gray-50 dark:bg-gray-800/30 space-y-1.5'>
+                    <div className='p-2 border rounded-md bg-gray-50 dark:bg-gray-800/30 space-y-1'>
                         <h3 className="font-semibold text-xs mb-2">Medewerker / Melder</h3>
                         <FormRow label="Medewerker intake">
                              <div className="flex items-center">
