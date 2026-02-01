@@ -115,7 +115,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-6">
         <div className="flex justify-center">
             <Image
-              src="https://i.ibb.co/DHqZVbSM/Ontwerp-zonder-titel-4.png"
+              src="https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png"
               alt="BEHEERHUB"
               width={360}
               height={90}
