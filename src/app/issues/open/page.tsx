@@ -116,13 +116,13 @@ export default function OpenIssuesPage() {
         <Table>
             <TableHeader className="sticky top-0 bg-card z-10">
             <TableRow>
-                <TableHead>Intakenr.</TableHead>
-                <TableHead>Datum</TableHead>
-                <TableHead>Tijd</TableHead>
-                <TableHead>Melder</TableHead>
-                <TableHead>Adres</TableHead>
-                <TableHead>Omschrijving</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead className="py-2 px-4">Intakenr.</TableHead>
+                <TableHead className="py-2 px-4">Datum</TableHead>
+                <TableHead className="py-2 px-4">Tijd</TableHead>
+                <TableHead className="py-2 px-4">Melder</TableHead>
+                <TableHead className="py-2 px-4">Adres</TableHead>
+                <TableHead className="py-2 px-4">Omschrijving</TableHead>
+                <TableHead className="py-2 px-4">Status</TableHead>
             </TableRow>
             </TableHeader>
             <TableBody>
@@ -152,14 +152,14 @@ export default function OpenIssuesPage() {
                   }
                   
                   return (
-                    <TableRow key={melding.id} onClick={() => router.push(`/issues?id=${melding.id}`)} className="cursor-pointer">
-                        <TableCell className="font-medium">{melding.intakenummer}</TableCell>
-                        <TableCell>{format(new Date(melding.datum), 'dd-MM-yyyy')}</TableCell>
-                        <TableCell>{melding.tijdstip}</TableCell>
-                        <TableCell className='truncate'>{melding.melder}</TableCell>
-                        <TableCell className="truncate">{melding.straatnaam}, {melding.plaats}</TableCell>
-                        <TableCell className="max-w-xs truncate">{melding.extra_informatie}</TableCell>
-                        <TableCell>
+                    <TableRow key={melding.id} onClick={() => router.push(`/issues?id=${melding.id}`)} className="cursor-pointer h-auto">
+                        <TableCell className="font-medium py-2 px-4">{melding.intakenummer}</TableCell>
+                        <TableCell className="py-2 px-4">{format(new Date(melding.datum), 'dd-MM-yyyy')}</TableCell>
+                        <TableCell className="py-2 px-4">{melding.tijdstip}</TableCell>
+                        <TableCell className='truncate py-2 px-4'>{melding.melder}</TableCell>
+                        <TableCell className="truncate py-2 px-4">{melding.straatnaam}, {melding.plaats}</TableCell>
+                        <TableCell className="max-w-xs truncate py-2 px-4">{melding.extra_informatie}</TableCell>
+                        <TableCell className="py-2 px-4">
                         <Badge
                             className="text-white"
                             style={{ backgroundColor: statusColorMap[displayStatus] || 'bg-gray-500' }}
