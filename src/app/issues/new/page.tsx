@@ -184,6 +184,21 @@ export default function NewIssuePage() {
   
   const watchedHoofdcategorie = form.watch('hoofdcategorie');
   
+  const nearbyObjects = React.useMemo(() => {
+    if (!location || !allObjects) return [];
+    const locationPoint = turf.point([location.longitude, location.latitude]);
+    return allObjects.filter(obj => {
+        if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
+        const objPoint = turf.point([obj.longitude, obj.latitude]);
+        const distance = turf.distance(locationPoint, objPoint, { units: 'meters' });
+        return distance <= 100;
+    }).sort((a, b) => {
+        const distA = turf.distance(locationPoint, turf.point([a.longitude, a.latitude]));
+        const distB = turf.distance(locationPoint, turf.point([b.longitude, b.latitude]));
+        return distA - distB;
+    });
+  }, [location, allObjects]);
+
   React.useEffect(() => {
     if (!location || !allProjects) {
         form.setValue('werkgebied', '');
@@ -489,12 +504,14 @@ export default function NewIssuePage() {
         </div>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
-            <div className="p-3 grid grid-cols-12 gap-2">
+            <div className="p-3 grid grid-cols-12 gap-4">
                {/* Left Column */}
                <div className="col-span-7 h-full">
                    <Card className="h-full bg-gray-50 dark:bg-gray-800/30 p-2 flex flex-col">
-                        <h3 className="font-semibold text-xs mb-2">Algemene Informatie</h3>
-                        <div className="space-y-1 p-1 flex-1">
+                        <CardHeader className='p-1 pb-2'>
+                           <CardTitle className="font-semibold text-xs">Algemene Informatie</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-1.5 p-1 flex-1">
                             <FormRow label="Meldingsnummer">
                                 <Input value={meldingsnummer} disabled className="h-7 text-xs"/>
                             </FormRow>
@@ -524,6 +541,23 @@ export default function NewIssuePage() {
                                 )} />
                                 <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
                             </div>
+                            </FormRow>
+                             <FormRow label="Soort melding">
+                                <FormField control={form.control} name="soort_melding" render={({ field }) => (
+                                    <Select onValueChange={field.onChange} value={field.value || ''}>
+                                        <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer soort"/></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="Balie">Balie</SelectItem>
+                                            <SelectItem value="Telefoon">Telefoon</SelectItem>
+                                            <SelectItem value="Email">Email</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                )} />
+                            </FormRow>
+                            <FormRow label="Ext. referentie">
+                                    <FormField control={form.control} name="ext_referentie" render={({ field }) => (
+                                    <FormControl><Input {...field} value={field.value ?? ''} className="h-7 text-xs" /></FormControl>
+                                )} />
                             </FormRow>
                             <FormRow label="Behandelende afdeling">
                                 <FormField control={form.control} name="behandelende_afdeling" render={({ field }) => (
@@ -573,34 +607,13 @@ export default function NewIssuePage() {
                                 <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
                             </div>
                             </FormRow>
-                        </div>
+                        </CardContent>
                    </Card>
                </div>
 
                {/* Right Column */}
                 <div className="col-span-5 space-y-2">
-                    <div className='p-2 border rounded-md bg-gray-50 dark:bg-gray-800/30 space-y-1'>
-                        <h3 className="font-semibold text-xs mb-2">Referentie</h3>
-                        <FormRow label="Soort melding">
-                                <FormField control={form.control} name="soort_melding" render={({ field }) => (
-                                    <Select onValueChange={field.onChange} value={field.value || ''}>
-                                        <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer soort"/></SelectTrigger></FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="Balie">Balie</SelectItem>
-                                            <SelectItem value="Telefoon">Telefoon</SelectItem>
-                                            <SelectItem value="Email">Email</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                )} />
-                        </FormRow>
-                        <FormRow label="Ext. referentie">
-                                <FormField control={form.control} name="ext_referentie" render={({ field }) => (
-                                <FormControl><Input {...field} value={field.value ?? ''} className="h-7 text-xs" /></FormControl>
-                            )} />
-                        </FormRow>
-                    </div>
-
-                    <div className='p-2 border rounded-md bg-gray-50 dark:bg-gray-800/30 space-y-1'>
+                    <div className='p-2 border rounded-md bg-gray-50 dark:bg-gray-800/30 space-y-1.5'>
                         <h3 className="font-semibold text-xs mb-2">Adresgegevens</h3>
                         <FormRow label="Straatnaam">
                             <div className="flex items-center">
@@ -640,7 +653,7 @@ export default function NewIssuePage() {
                         </div>
                     </div>
 
-                    <div className='p-2 border rounded-md bg-gray-50 dark:bg-gray-800/30 space-y-1'>
+                    <div className='p-2 border rounded-md bg-gray-50 dark:bg-gray-800/30 space-y-1.5'>
                         <h3 className="font-semibold text-xs mb-2">Medewerker / Melder</h3>
                         <FormRow label="Medewerker intake">
                              <div className="flex items-center">
