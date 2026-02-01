@@ -236,13 +236,17 @@ export default function IssuesPage() {
 
   const filteredMeldingen = React.useMemo(() => {
     if (!meldingen) return [];
-    let timeFilteredMeldingen = selectedDate ? meldingen.filter(m => {
+    
+    // Filter out 'Afgerond' items from the source
+    const openMeldingen = meldingen.filter(m => m.status !== 'Afgerond');
+
+    let timeFilteredMeldingen = selectedDate ? openMeldingen.filter(m => {
       try {
         const creationDate = startOfDay(new Date(m.datum));
         const dayStart = startOfDay(selectedDate);
-        return (m.status === 'Afgerond' && m.afhandeling_datum && isSameDay(startOfDay(new Date(m.afhandeling_datum)), dayStart)) || (m.status !== 'Afgerond' && creationDate <= dayStart);
+        return creationDate <= dayStart;
       } catch (e) { return false; }
-    }) : meldingen;
+    }) : openMeldingen;
 
     const searchedMeldingen = debouncedSearchQuery ? timeFilteredMeldingen.filter(m => {
       const query = debouncedSearchQuery.toLowerCase();
@@ -804,7 +808,7 @@ export default function IssuesPage() {
                     </div>
                 </TabsContent>
                 <TabsContent value="Opmerking" className="mt-0">
-                    <Card className="h-full">
+                    <Card>
                         <CardHeader>
                             <CardTitle className="text-lg font-semibold">Opmerkingen bij afronding</CardTitle>
                         </CardHeader>
@@ -820,7 +824,6 @@ export default function IssuesPage() {
                                             <Textarea 
                                                 placeholder="Voeg een opmerking toe over de afhandeling..."
                                                 rows={15}
-                                                className="min-h-[400px]"
                                                 {...field} 
                                             />
                                         </FormControl>
