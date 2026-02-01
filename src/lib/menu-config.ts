@@ -23,6 +23,7 @@ import { ElementType } from 'react';
 export interface SubMenuItem {
     href: string;
     label: string;
+    id: string;
 }
 
 export interface MenuItem {
@@ -50,10 +51,10 @@ export const allMenuItems: MenuItem[] = [
       icon: Bell, 
       module: 'issues',
       subItems: [
-        { href: '/issues', label: 'Werkbonnen' },
-        { href: '/issues/open', label: 'Openstaande meldingen' },
-        { href: '/issues/new', label: 'Melding maken' },
-        { href: '/issues/archive', label: 'Meldingen archief' },
+        { href: '/issues', label: 'Werkbonnen', id: 'werkbonnen' },
+        { href: '/issues/open', label: 'Openstaande meldingen', id: 'open' },
+        { href: '/issues/new', label: 'Melding maken', id: 'new' },
+        { href: '/issues/archive', label: 'Meldingen archief', id: 'archive' },
       ]
     },
     { href: '/spec-reports', label: 'Besteksmeldingen', icon: FileWarning, module: 'specReports' },

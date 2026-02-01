@@ -187,7 +187,12 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                       </CollapsibleTrigger>
                       <CollapsibleContent className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down overflow-hidden">
                         <SidebarMenuSub>
-                          {item.subItems.map((subItem) => (
+                          {item.subItems.filter(subItem => {
+                              if (isSuperUser) return true;
+                              if (!item.module) return true;
+                              const tabPermissions = profile?.permissions?.[item.module]?.tabs;
+                              return tabPermissions?.[subItem.id];
+                            }).map((subItem) => (
                             <SidebarMenuSubItem key={subItem.href}>
                               <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
                                 <Link href={subItem.href} onClick={onNavigate}>
