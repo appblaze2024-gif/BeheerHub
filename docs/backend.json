@@ -590,6 +590,11 @@
             },
             "required": ["id", "description"]
           }
+        },
+        "workStartedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when work on the melding was started."
         }
       },
       "required": ["id", "intakenummer", "datum", "tijdstip", "latitude", "longitude", "status", "hoofdcategorie", "subcategorie"]

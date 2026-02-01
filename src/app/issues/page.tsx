@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -323,11 +324,36 @@ export default function IssuesPage() {
     }
   }, [selectedMeldingId, meldingen, form]);
   
+  const handleStartWork = async () => {
+    if (!firestore || !selectedMelding?.id) return;
+    const meldingRef = doc(firestore, 'meldingen', selectedMelding.id);
+    try {
+        await updateDocumentNonBlocking(meldingRef, {
+            workStartedAt: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error("Error starting work:", error);
+        toast({
+            variant: "destructive",
+            title: "Fout opgetreden",
+            description: "Kon de werkbon niet starten.",
+        });
+    }
+  };
+
   const handleAfronden = async () => {
     if (!firestore || !selectedMelding?.id || !user) return;
     setIsSubmitting(true);
     const meldingRef = doc(firestore, 'meldingen', selectedMelding.id);
     const afhandeling_bijzonderheden_value = form.getValues('afhandeling_bijzonderheden');
+
+    let minutesWorked = 0;
+    if (selectedMelding.workStartedAt) {
+      const startTime = new Date(selectedMelding.workStartedAt).getTime();
+      const endTime = Date.now();
+      minutesWorked = Math.round((endTime - startTime) / (1000 * 60));
+    }
+
     try {
         await updateDocumentNonBlocking(meldingRef, {
             status: 'Afgerond',
@@ -339,12 +365,22 @@ export default function IssuesPage() {
             fotos: uploadedPhotos,
             tasks: tasks,
             hoeveelheden: hoeveelheden,
-            gewerkteMinuten: gewerkteMinuten,
+            gewerkteMinuten: gewerkteMinuten + minutesWorked,
+            workStartedAt: null, // Reset start time
+        });
+        toast({
+          title: 'Werkbon afgerond',
+          description: `Melding ${selectedMelding.intakenummer} is afgerond.`,
         });
         const nextMelding = filteredMeldingen.find(m => m.id !== selectedMeldingId);
         setSelectedMeldingId(nextMelding ? nextMelding.id : null);
     } catch (error) {
         console.error("Fout bij afronden melding:", error);
+        toast({
+          variant: "destructive",
+          title: 'Fout opgetreden',
+          description: "Kon de werkbon niet afronden.",
+        });
     } finally {
         setIsSubmitting(false);
     }
@@ -645,14 +681,24 @@ export default function IssuesPage() {
                     </Button>
                 </Link>
                 )}
-                <Button
+                {selectedMelding.workStartedAt ? (
+                  <Button
                     className="bg-orange-500 hover:bg-orange-600 text-white font-bold h-9"
                     onClick={handleAfronden}
                     disabled={isSubmitting}
-                >
+                  >
                     {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     WERKBON AFRONDEN
-                </Button>
+                  </Button>
+                ) : (
+                  <Button
+                    className="bg-green-500 hover:bg-green-600 text-white font-bold h-9"
+                    onClick={handleStartWork}
+                    disabled={isSubmitting}
+                  >
+                    WERKBON STARTEN
+                  </Button>
+                )}
             </div>
         </header>
 

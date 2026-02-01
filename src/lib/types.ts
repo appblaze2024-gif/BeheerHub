@@ -271,6 +271,8 @@ export type Melding = {
   tasks?: MeldingTask[];
   hoeveelheden?: Hoeveelheid[];
   gewerkteMinuten?: number;
+  workStartedAt?: string;
+  afhandeling_bijzonderheden?: string;
 };
 
 export interface Route {
