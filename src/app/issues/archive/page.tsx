@@ -128,7 +128,7 @@ export default function ArchiveIssuesPage() {
             ) : (
                 filteredMeldingen.map((melding) => {
                   return (
-                    <TableRow key={melding.id} onClick={() => router.push(`/issues?id=${melding.id}`)} className="cursor-pointer h-auto hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                    <TableRow key={melding.id} onClick={() => router.push(`/issues/new?id=${melding.id}`)} className="cursor-pointer h-auto hover:bg-slate-50 dark:hover:bg-slate-800/50">
                         <TableCell className="font-medium py-2 px-3 border-t">{melding.intakenummer || '-'}</TableCell>
                         <TableCell className="truncate py-2 px-3 border-t">{[melding.straatnaam, melding.plaats].filter(Boolean).join(', ') || '-'}</TableCell>
                         <TableCell className="max-w-xs truncate py-2 px-3 border-t">{melding.extra_informatie || '-'}</TableCell>

@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { format, addDays, isWeekend } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { ArrowLeft, CalendarIcon, Loader2, MapPin, Search, UploadCloud, FileIcon, Trash2 } from 'lucide-react';
@@ -119,6 +119,11 @@ export default function NewIssuePage() {
   const { setIsHeaderVisible } = useNavigationUI();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
+  const searchParams = useSearchParams();
+  const meldingIdFromUrl = searchParams.get('id');
+  const [isReadOnly, setIsReadOnly] = React.useState(false);
+  const [viewedMelding, setViewedMelding] = React.useState<Melding | null>(null);
+
   const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
   const [uploadedPhotos, setUploadedPhotos] = React.useState<UploadedFile[]>([]);
   const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
@@ -148,7 +153,7 @@ export default function NewIssuePage() {
   const { data: allProjects } = useCollection<Project>(projectsCollection);
   
   const now = new Date();
-  const meldingIdRef = React.useRef(`${format(now, 'yyyyMMdd')}${Math.floor(1000 + Math.random() * 9000)}`);
+  const meldingIdRef = React.useRef(meldingIdFromUrl || `${format(now, 'yyyyMMdd')}${Math.floor(1000 + Math.random() * 9000)}`);
   const meldingsnummer = meldingIdRef.current;
 
   const [selectedDuplicate, setSelectedDuplicate] = React.useState<Melding | null>(null);
@@ -197,7 +202,43 @@ export default function NewIssuePage() {
   const watchedMeldingsdatum = form.watch('meldingsdatum');
 
   React.useEffect(() => {
-    if (watchedMeldingsdatum) {
+    if (meldingIdFromUrl && allMeldingen) {
+      const meldingToView = allMeldingen.find(m => m.id === meldingIdFromUrl);
+      if (meldingToView) {
+        setViewedMelding(meldingToView);
+        setIsReadOnly(true);
+        form.reset({
+          hoofdcategorie: meldingToView.hoofdcategorie,
+          subcategorie: meldingToView.subcategorie,
+          status: meldingToView.status,
+          voorvaldatum: meldingToView.datum ? new Date(meldingToView.datum) : undefined,
+          voorvaltijd: meldingToView.tijdstip,
+          meldingsdatum: meldingToView.datum ? new Date(meldingToView.datum) : undefined,
+          meldingsuur: meldingToView.tijdstip,
+          ext_referentie: meldingToView.extern_meldingsnummer || '',
+          straatnaam: meldingToView.straatnaam || '',
+          nummer: meldingToView.huisnummer || '',
+          postcode: meldingToView.postcode || '',
+          plaats: meldingToView.plaats || '',
+          wijk: meldingToView.wijk || '',
+          melder: meldingToView.melder,
+          extra_informatie: meldingToView.extra_informatie,
+          afgehandeld_door: meldingToView.afgehandeld_door || '',
+          afhandeling_datum: meldingToView.afhandeling_datum ? new Date(meldingToView.afhandeling_datum) : null,
+          afhandeling_tijdstip: meldingToView.afhandeling_tijdstip || '',
+        });
+        setLocation({ latitude: meldingToView.latitude, longitude: meldingToView.longitude });
+        setUploadedFiles(meldingToView.files || []);
+        setUploadedPhotos(meldingToView.fotos || []);
+      }
+    } else {
+        setIsReadOnly(false);
+        setViewedMelding(null);
+    }
+  }, [meldingIdFromUrl, allMeldingen, form]);
+
+  React.useEffect(() => {
+    if (watchedMeldingsdatum && !isReadOnly) {
         let count = 0;
         let currentDate = new Date(watchedMeldingsdatum);
         while (count < 5) {
@@ -208,7 +249,7 @@ export default function NewIssuePage() {
         }
         form.setValue('actiedatum', currentDate);
     }
-  }, [watchedMeldingsdatum, form]);
+  }, [watchedMeldingsdatum, form, isReadOnly]);
   
   const nearbyObjects = React.useMemo(() => {
     if (!location || !allObjects) return [];
@@ -435,7 +476,7 @@ export default function NewIssuePage() {
 
 
   const onSubmit = async (data: NewMeldingFormValues) => {
-    if (!firestore) return;
+    if (!firestore || isReadOnly) return;
     
     setIsSubmitting(true);
     
@@ -566,12 +607,12 @@ export default function NewIssuePage() {
     <div className="flex flex-col h-full overflow-hidden text-sm bg-gray-100 dark:bg-gray-900">
         <div className="flex-shrink-0 px-4 py-1.5 border-b flex justify-between items-center bg-gray-200/60 dark:bg-gray-800/60">
             <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" onClick={() => router.push('/dashboard')}>
+                <Button variant="ghost" size="icon" onClick={() => router.back()}>
                     <ArrowLeft className="h-4 w-4" />
                 </Button>
-                <h1 className="font-semibold text-xs">Melding : {meldingsnummer}</h1>
+                <h1 className="font-semibold text-xs">{isReadOnly ? `Melding: ${viewedMelding?.intakenummer}` : `Melding : ${meldingsnummer}`}</h1>
             </div>
-            <span className="text-xs text-muted-foreground">Laatst gewijzigd door {profile?.displayName || '...'} op {format(now, 'dd-MM-yyyy')} om {format(now, 'HH:mm:ss')}.</span>
+            <span className="text-xs text-muted-foreground">Laatst gewijzigd door {isReadOnly ? viewedMelding?.aangenomen_door : profile?.displayName || '...'} op {format(new Date(viewedMelding?.datum || now), 'dd-MM-yyyy')} om {viewedMelding?.tijdstip || format(now, 'HH:mm:ss')}.</span>
         </div>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
@@ -584,54 +625,54 @@ export default function NewIssuePage() {
                         </CardHeader>
                         <div className="space-y-0.5 p-1 flex-1">
                             <FormRow label="Meldingsnummer">
-                                <Input value={meldingsnummer} disabled className="h-7 text-xs"/>
+                                <Input value={isReadOnly ? viewedMelding?.intakenummer : meldingsnummer} disabled className="h-7 text-xs"/>
                             </FormRow>
                             <FormRow label="Soort melder">
                             <div className="flex items-center">
                                     <FormField control={form.control} name="soort_melder" render={({ field }) => (
-                                        <FormControl><Input {...field} className="h-7 text-xs rounded-r-none" /></FormControl>
+                                        <FormControl><Input {...field} className="h-7 text-xs rounded-r-none" disabled={isReadOnly} /></FormControl>
                                     )} />
-                                    <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
+                                    <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0" disabled={isReadOnly}><Search className="h-4 w-4"/></Button>
                                 </div>
                             </FormRow>
                             <FormRow label="Hoofdindeling">
                                 <div className="flex items-center">
                                     <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (
-                                        <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                                        <Select onValueChange={field.onChange} value={field.value ?? ''} disabled={isReadOnly}>
                                             <FormControl><SelectTrigger className="h-7 text-xs rounded-r-none"><SelectValue placeholder="Selecteer categorie" /></SelectTrigger></FormControl>
                                             <SelectContent>{hoofdcategorieOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                         </Select>
                                     )} />
-                                     <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
+                                     <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0" disabled={isReadOnly}><Search className="h-4 w-4"/></Button>
                                 </div>
                             </FormRow>
                             <FormRow label="Indeling">
                                 <div className="flex items-center">
                                     <FormField control={form.control} name="subcategorie" render={({ field }) => (
-                                    <Select onValueChange={field.onChange} value={field.value ?? ''} disabled={!watchedHoofdcategorie}>
+                                    <Select onValueChange={field.onChange} value={field.value ?? ''} disabled={!watchedHoofdcategorie || isReadOnly}>
                                         <FormControl><SelectTrigger className="h-7 text-xs rounded-r-none"><SelectValue placeholder="Selecteer indeling" /></SelectTrigger></FormControl>
                                         <SelectContent>{(subcategorieOptions[watchedHoofdcategorie] || []).map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                     </Select>
                                 )} />
-                                <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
+                                <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0" disabled={isReadOnly}><Search className="h-4 w-4"/></Button>
                             </div>
                             </FormRow>
                             <FormRow label="Behandelende afdeling">
                                 <FormField control={form.control} name="behandelende_afdeling" render={({ field }) => (
-                                <FormControl><Input {...field} className="h-7 text-xs" /></FormControl>
+                                <FormControl><Input {...field} className="h-7 text-xs" disabled={isReadOnly} /></FormControl>
                             )} />
                             </FormRow>
                             <FormRow label="Behandelaar">
                             <div className="flex items-center">
                                 <FormField control={form.control} name="behandelaar" render={({ field }) => (
-                                    <FormControl><Input {...field} className="h-7 text-xs rounded-r-none" /></FormControl>
+                                    <FormControl><Input {...field} className="h-7 text-xs rounded-r-none" disabled={isReadOnly} /></FormControl>
                                 )} />
-                                <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
+                                <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0" disabled={isReadOnly}><Search className="h-4 w-4"/></Button>
                             </div>
                             </FormRow>
                             <FormRow label="Status">
                                 <FormField control={form.control} name="status" render={({ field }) => (
-                                    <Select onValueChange={field.onChange} value={field.value}>
+                                    <Select onValueChange={field.onChange} value={field.value} disabled={isReadOnly}>
                                         <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer status" /></SelectTrigger></FormControl>
                                         <SelectContent>{statusOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                     </Select>
@@ -650,18 +691,18 @@ export default function NewIssuePage() {
                             </FormRow>
                             <FormRow label="Voorvaldatum">
                                 <div className="flex gap-2 items-center">
-                                    <FormField control={form.control} name="voorvaldatum" render={({ field }) => (<FormControl><Input type='date' className="h-7 text-xs" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} /></FormControl>)} />
-                                    <FormField control={form.control} name="voorvaltijd" render={({ field }) => (<FormControl><Input type="time" className="h-7 text-xs w-24" {...field} /></FormControl>)} />
+                                    <FormField control={form.control} name="voorvaldatum" render={({ field }) => (<FormControl><Input type='date' className="h-7 text-xs" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} disabled={isReadOnly} /></FormControl>)} />
+                                    <FormField control={form.control} name="voorvaltijd" render={({ field }) => (<FormControl><Input type="time" className="h-7 text-xs w-24" {...field} disabled={isReadOnly} /></FormControl>)} />
                                 </div>
                             </FormRow>
                             <FormRow label="Meldingsdatum">
                                 <div className="flex gap-2 items-center">
-                                    <FormField control={form.control} name="meldingsdatum" render={({ field }) => (<FormControl><Input type='date' className="h-7 text-xs" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} /></FormControl>)} />
-                                    <FormField control={form.control} name="meldingsuur" render={({ field }) => (<FormControl><Input type="time" className="h-7 text-xs w-24" {...field} /></FormControl>)} />
+                                    <FormField control={form.control} name="meldingsdatum" render={({ field }) => (<FormControl><Input type='date' className="h-7 text-xs" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} disabled={isReadOnly} /></FormControl>)} />
+                                    <FormField control={form.control} name="meldingsuur" render={({ field }) => (<FormControl><Input type="time" className="h-7 text-xs w-24" {...field} disabled={isReadOnly} /></FormControl>)} />
                                 </div>
                             </FormRow>
                             <FormRow label="Actiedatum">
-                            <FormField control={form.control} name="actiedatum" render={({ field }) => (<FormControl><Input type='date' className="h-7 text-xs" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} /></FormControl>)} />
+                            <FormField control={form.control} name="actiedatum" render={({ field }) => (<FormControl><Input type='date' className="h-7 text-xs" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} disabled={isReadOnly} /></FormControl>)} />
                             </FormRow>
                         </div>
                    </Card>
@@ -676,7 +717,7 @@ export default function NewIssuePage() {
                         <div className="space-y-0.5 p-1">
                             <FormRow label="Soort melding">
                                 <FormField control={form.control} name="soort_melding" render={({ field }) => (
-                                    <Select onValueChange={field.onChange} value={field.value || ''}>
+                                    <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
                                         <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer soort"/></SelectTrigger></FormControl>
                                         <SelectContent>
                                             <SelectItem value="Balie">Balie</SelectItem>
@@ -688,7 +729,7 @@ export default function NewIssuePage() {
                             </FormRow>
                             <FormRow label="Ext. referentie">
                                 <FormField control={form.control} name="ext_referentie" render={({ field }) => (
-                                <FormControl><Input {...field} className="h-7 text-xs" /></FormControl>
+                                <FormControl><Input {...field} className="h-7 text-xs" disabled={isReadOnly} /></FormControl>
                             )} />
                             </FormRow>
                         </div>
@@ -697,29 +738,29 @@ export default function NewIssuePage() {
                         <h3 className="font-semibold text-xs mb-2">Adresgegevens</h3>
                         <FormRow label="Straatnaam">
                             <div className="flex items-center">
-                                <FormField control={form.control} name="straatnaam" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs rounded-r-none" /></FormControl> )} />
-                                <Button type="button" onClick={handleAddressSearch} size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
+                                <FormField control={form.control} name="straatnaam" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs rounded-r-none" disabled={isReadOnly} /></FormControl> )} />
+                                <Button type="button" onClick={handleAddressSearch} size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0" disabled={isReadOnly}><Search className="h-4 w-4"/></Button>
                             </div>
                         </FormRow>
                         <FormRow label="Nummer">
                              <div className="flex items-center gap-2">
-                                <FormField control={form.control} name="nummer" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs w-20" /></FormControl> )} />
+                                <FormField control={form.control} name="nummer" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs w-20" disabled={isReadOnly} /></FormControl> )} />
                             </div>
                         </FormRow>
                         <FormRow label="Postcode">
-                             <FormField control={form.control} name="postcode" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs" /></FormControl> )} />
+                             <FormField control={form.control} name="postcode" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs" disabled={isReadOnly} /></FormControl> )} />
                         </FormRow>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             <FormField control={form.control} name="wijk" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel className='text-xs'>Wijk</FormLabel>
-                                    <FormControl><Input placeholder="Wijk" {...field} className="h-7 text-xs" /></FormControl>
+                                    <FormControl><Input placeholder="Wijk" {...field} className="h-7 text-xs" disabled={isReadOnly} /></FormControl>
                                 </FormItem>
                             )} />
                             <FormField control={form.control} name="plaats" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel className='text-xs'>Gemeente</FormLabel>
-                                    <FormControl><Input placeholder="Gemeente" {...field} className="h-7 text-xs" /></FormControl>
+                                    <FormControl><Input placeholder="Gemeente" {...field} className="h-7 text-xs" disabled={isReadOnly} /></FormControl>
                                 </FormItem>
                             )} />
                         </div>
@@ -737,20 +778,20 @@ export default function NewIssuePage() {
                         <h3 className="font-semibold text-xs mb-2">Medewerker / Melder</h3>
                         <FormRow label="Medewerker intake">
                              <div className="flex items-center">
-                                <Input value={profile?.displayName || profile?.email || ''} disabled className="h-7 text-xs" />
+                                <Input value={isReadOnly ? viewedMelding?.aangenomen_door : profile?.displayName || profile?.email || ''} disabled className="h-7 text-xs" />
                             </div>
                         </FormRow>
                         <FormRow label="Naam melder">
-                             <FormField control={form.control} name="melder" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs" /></FormControl> )} />
+                             <FormField control={form.control} name="melder" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs" disabled={isReadOnly} /></FormControl> )} />
                         </FormRow>
                         <FormRow label="Telefoon melder">
-                            <FormField control={form.control} name="telefoon_melder" render={({ field }) => ( <FormControl><Input type="tel" {...field} className="h-7 text-xs" /></FormControl> )} />
+                            <FormField control={form.control} name="telefoon_melder" render={({ field }) => ( <FormControl><Input type="tel" {...field} className="h-7 text-xs" disabled={isReadOnly} /></FormControl> )} />
                         </FormRow>
                         <FormRow label="E-mail melder">
-                             <FormField control={form.control} name="email_melder" render={({ field }) => ( <FormControl><Input type="email" {...field} className="h-7 text-xs" /></FormControl> )} />
+                             <FormField control={form.control} name="email_melder" render={({ field }) => ( <FormControl><Input type="email" {...field} className="h-7 text-xs" disabled={isReadOnly} /></FormControl> )} />
                         </FormRow>
                         <FormRow label="Burgerservicenummer">
-                            <FormField control={form.control} name="burgerservicenummer" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs" /></FormControl> )} />
+                            <FormField control={form.control} name="burgerservicenummer" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs" disabled={isReadOnly} /></FormControl> )} />
                         </FormRow>
                     </div>
                 </div>
@@ -771,128 +812,164 @@ export default function NewIssuePage() {
                         </TabsTrigger>
                     </TabsList>
                     <TabsContent value="memo" className="flex-1 mt-1">
-                        <FormField control={form.control} name="extra_informatie" render={({ field }) => ( <FormItem className="h-full flex flex-col"><FormLabel className='sr-only'>Memo</FormLabel><FormControl><Textarea {...field} className="flex-1 resize-none text-xs" /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="extra_informatie" render={({ field }) => ( <FormItem className="h-full flex flex-col"><FormLabel className='sr-only'>Memo</FormLabel><FormControl><Textarea {...field} className="flex-1 resize-none text-xs" disabled={isReadOnly} /></FormControl><FormMessage /></FormItem> )} />
                     </TabsContent>
                     <TabsContent value="documenten" className="flex-1 mt-1">
-                        <div className="h-full flex flex-col gap-4 p-1">
-                            <div
-                                className={cn(
-                                    "border-2 border-dashed border-muted-foreground/30 rounded-lg p-4 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50 transition-colors flex-1",
-                                    isDragging && "bg-muted/50 border-primary"
-                                )}
-                                onDragEnter={() => setIsDragging(true)}
-                                onDragLeave={() => setIsDragging(false)}
-                                onDragOver={(e) => e.preventDefault()}
-                                onDrop={handleDocumentDrop}
-                                onClick={() => document.getElementById('documenten-file-input')?.click()}
-                            >
-                                <UploadCloud className="h-10 w-10 text-muted-foreground" />
-                                <p className="mt-2 text-sm font-semibold">Sleep bestanden hierheen of klik om te uploaden</p>
-                                <p className="text-xs text-muted-foreground">Alle bestandstypes zijn toegestaan.</p>
-                                <input
-                                    type="file"
-                                    id="documenten-file-input"
-                                    onChange={handleDocumentFileChange}
-                                    className="hidden"
-                                    multiple
-                                    disabled={isUploading}
-                                />
-                            </div>
-                            
-                            {Object.entries(uploadProgress).map(([name, progress]) => (
-                                <div key={name} className="space-y-1">
-                                    <p className="text-sm font-medium text-muted-foreground">{name}</p>
-                                    <Progress value={progress} className="w-full h-2" />
-                                </div>
-                            ))}
-
-                            {uploadedFiles.length > 0 && (
-                                <div className="border rounded-md max-h-32 overflow-y-auto">
+                        {isReadOnly ? (
+                            uploadedFiles.length > 0 ? (
+                                <div className="border rounded-md max-h-full overflow-y-auto">
                                     {uploadedFiles.map((file) => (
                                         <div
                                             key={file.storagePath}
-                                            className="grid grid-cols-[1fr_auto_auto] gap-4 items-center px-2 py-1 border-b last:border-b-0"
+                                            className="grid grid-cols-[1fr_auto] gap-4 items-center px-2 py-1 border-b last:border-b-0"
                                         >
                                             <a href={file.url} target="_blank" rel="noopener noreferrer" className="truncate flex items-center gap-2 hover:underline text-xs">
                                                 <FileIcon className="h-4 w-4 shrink-0" /> {file.name}
                                             </a>
                                             <span className='text-xs text-muted-foreground'>{formatBytes(file.size)}</span>
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-6 w-6"
-                                                onClick={() => handleDocumentDelete(file)}
-                                                disabled={isSubmitting}
-                                            >
-                                                <Trash2 className="h-4 w-4 text-destructive" />
-                                            </Button>
                                         </div>
                                     ))}
                                 </div>
-                            )}
-                        </div>
+                            ) : <p className="text-sm text-muted-foreground p-4">Geen documenten.</p>
+                        ) : (
+                            <div className="h-full flex flex-col gap-4 p-1">
+                                <div
+                                    className={cn(
+                                        "border-2 border-dashed border-muted-foreground/30 rounded-lg p-4 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50 transition-colors flex-1",
+                                        isDragging && "bg-muted/50 border-primary"
+                                    )}
+                                    onDragEnter={() => setIsDragging(true)}
+                                    onDragLeave={() => setIsDragging(false)}
+                                    onDragOver={(e) => e.preventDefault()}
+                                    onDrop={handleDocumentDrop}
+                                    onClick={() => document.getElementById('documenten-file-input')?.click()}
+                                >
+                                    <UploadCloud className="h-10 w-10 text-muted-foreground" />
+                                    <p className="mt-2 text-sm font-semibold">Sleep bestanden hierheen of klik om te uploaden</p>
+                                    <p className="text-xs text-muted-foreground">Alle bestandstypes zijn toegestaan.</p>
+                                    <input
+                                        type="file"
+                                        id="documenten-file-input"
+                                        onChange={handleDocumentFileChange}
+                                        className="hidden"
+                                        multiple
+                                        disabled={isUploading}
+                                    />
+                                </div>
+                                
+                                {Object.entries(uploadProgress).map(([name, progress]) => (
+                                    <div key={name} className="space-y-1">
+                                        <p className="text-sm font-medium text-muted-foreground">{name}</p>
+                                        <Progress value={progress} className="w-full h-2" />
+                                    </div>
+                                ))}
+
+                                {uploadedFiles.length > 0 && (
+                                    <div className="border rounded-md max-h-32 overflow-y-auto">
+                                        {uploadedFiles.map((file) => (
+                                            <div
+                                                key={file.storagePath}
+                                                className="grid grid-cols-[1fr_auto_auto] gap-4 items-center px-2 py-1 border-b last:border-b-0"
+                                            >
+                                                <a href={file.url} target="_blank" rel="noopener noreferrer" className="truncate flex items-center gap-2 hover:underline text-xs">
+                                                    <FileIcon className="h-4 w-4 shrink-0" /> {file.name}
+                                                </a>
+                                                <span className='text-xs text-muted-foreground'>{formatBytes(file.size)}</span>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6"
+                                                    onClick={() => handleDocumentDelete(file)}
+                                                    disabled={isSubmitting}
+                                                >
+                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                </Button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </TabsContent>
                     <TabsContent value="fotos" className="flex-1 mt-1">
-                       <div className="h-full flex flex-col gap-4 p-1">
-                            <div
-                                className={cn(
-                                    "border-2 border-dashed border-muted-foreground/30 rounded-lg p-4 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50 transition-colors flex-1",
-                                    isDraggingPhoto && "bg-muted/50 border-primary"
-                                )}
-                                onDragEnter={() => setIsDraggingPhoto(true)}
-                                onDragLeave={() => setIsDraggingPhoto(false)}
-                                onDragOver={(e) => e.preventDefault()}
-                                onDrop={handlePhotoDrop}
-                                onClick={() => document.getElementById('fotos-file-input')?.click()}
-                            >
-                                <UploadCloud className="h-10 w-10 text-muted-foreground" />
-                                <p className="mt-2 text-sm font-semibold">Sleep foto's hierheen of klik om te uploaden</p>
-                                <p className="text-xs text-muted-foreground">Alleen afbeeldingen.</p>
-                                <input
-                                    type="file"
-                                    id="fotos-file-input"
-                                    onChange={handlePhotoFileChange}
-                                    className="hidden"
-                                    multiple
-                                    disabled={isUploading}
-                                    accept="image/*"
-                                />
-                            </div>
-                            
-                            {Object.entries(uploadProgress).map(([name, progress]) => (
-                                <div key={name} className="space-y-1">
-                                    <p className="text-sm font-medium text-muted-foreground">{name}</p>
-                                    <Progress value={progress} className="w-full h-2" />
-                                </div>
-                            ))}
-
-                            {uploadedPhotos.length > 0 && (
-                                <div className="border rounded-md max-h-32 overflow-y-auto">
+                        {isReadOnly ? (
+                            uploadedPhotos.length > 0 ? (
+                                <div className="border rounded-md max-h-full overflow-y-auto">
                                     {uploadedPhotos.map((file) => (
                                         <div
                                             key={file.storagePath}
-                                            className="grid grid-cols-[1fr_auto_auto] gap-4 items-center px-2 py-1 border-b last:border-b-0"
+                                            className="grid grid-cols-[1fr_auto] gap-4 items-center px-2 py-1 border-b last:border-b-0"
                                         >
                                             <a href={file.url} target="_blank" rel="noopener noreferrer" className="truncate flex items-center gap-2 hover:underline text-xs">
                                                 <FileIcon className="h-4 w-4 shrink-0" /> {file.name}
                                             </a>
                                             <span className='text-xs text-muted-foreground'>{formatBytes(file.size)}</span>
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-6 w-6"
-                                                onClick={() => handlePhotoDelete(file)}
-                                                disabled={isSubmitting}
-                                            >
-                                                <Trash2 className="h-4 w-4 text-destructive" />
-                                            </Button>
                                         </div>
                                     ))}
                                 </div>
-                            )}
-                        </div>
+                            ) : <p className="text-sm text-muted-foreground p-4">Geen foto's.</p>
+                        ) : (
+                           <div className="h-full flex flex-col gap-4 p-1">
+                                <div
+                                    className={cn(
+                                        "border-2 border-dashed border-muted-foreground/30 rounded-lg p-4 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50 transition-colors flex-1",
+                                        isDraggingPhoto && "bg-muted/50 border-primary"
+                                    )}
+                                    onDragEnter={() => setIsDraggingPhoto(true)}
+                                    onDragLeave={() => setIsDraggingPhoto(false)}
+                                    onDragOver={(e) => e.preventDefault()}
+                                    onDrop={handlePhotoDrop}
+                                    onClick={() => document.getElementById('fotos-file-input')?.click()}
+                                >
+                                    <UploadCloud className="h-10 w-10 text-muted-foreground" />
+                                    <p className="mt-2 text-sm font-semibold">Sleep foto's hierheen of klik om te uploaden</p>
+                                    <p className="text-xs text-muted-foreground">Alleen afbeeldingen.</p>
+                                    <input
+                                        type="file"
+                                        id="fotos-file-input"
+                                        onChange={handlePhotoFileChange}
+                                        className="hidden"
+                                        multiple
+                                        disabled={isUploading}
+                                        accept="image/*"
+                                    />
+                                </div>
+                                
+                                {Object.entries(uploadProgress).map(([name, progress]) => (
+                                    <div key={name} className="space-y-1">
+                                        <p className="text-sm font-medium text-muted-foreground">{name}</p>
+                                        <Progress value={progress} className="w-full h-2" />
+                                    </div>
+                                ))}
+
+                                {uploadedPhotos.length > 0 && (
+                                    <div className="border rounded-md max-h-32 overflow-y-auto">
+                                        {uploadedPhotos.map((file) => (
+                                            <div
+                                                key={file.storagePath}
+                                                className="grid grid-cols-[1fr_auto_auto] gap-4 items-center px-2 py-1 border-b last:border-b-0"
+                                            >
+                                                <a href={file.url} target="_blank" rel="noopener noreferrer" className="truncate flex items-center gap-2 hover:underline text-xs">
+                                                    <FileIcon className="h-4 w-4 shrink-0" /> {file.name}
+                                                </a>
+                                                <span className='text-xs text-muted-foreground'>{formatBytes(file.size)}</span>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6"
+                                                    onClick={() => handlePhotoDelete(file)}
+                                                    disabled={isSubmitting}
+                                                >
+                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                </Button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </TabsContent>
                     <TabsContent value="locatie" className="flex-1 mt-1">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
@@ -901,6 +978,7 @@ export default function NewIssuePage() {
                                 longitude={location?.longitude}
                                 latitude={location?.latitude}
                                 objects={nearbyObjects}
+                                interactive={!isReadOnly}
                             />
                         </div>
                         <div className="h-full border rounded-md flex flex-col">
@@ -998,11 +1076,17 @@ export default function NewIssuePage() {
             </div>
             
             <div className="flex-shrink-0 flex justify-end gap-2 px-3 pb-2 border-t pt-2 bg-gray-50 dark:bg-gray-800">
-                <Button type="button" variant="ghost" onClick={() => router.push('/issues')} className="h-8">Annuleren</Button>
-                <Button type="submit" disabled={isSubmitting || isUploading} className="h-8">
-                    {isSubmitting || isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    Melding Opslaan
-                </Button>
+                {isReadOnly ? (
+                    <Button type="button" variant="outline" onClick={() => router.back()} className="h-8">Sluiten</Button>
+                ) : (
+                    <>
+                        <Button type="button" variant="ghost" onClick={() => router.push('/issues')} className="h-8">Annuleren</Button>
+                        <Button type="submit" disabled={isSubmitting || isUploading} className="h-8">
+                            {isSubmitting || isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Melding Opslaan
+                        </Button>
+                    </>
+                )}
             </div>
           </form>
         </Form>
