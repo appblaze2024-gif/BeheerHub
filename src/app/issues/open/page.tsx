@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection } from 'firebase/firestore';
-import { Search, ListFilter } from 'lucide-react';
+import { Search, ListFilter, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { Melding } from '@/lib/types';
@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useNavigationUI } from '@/context/navigation-ui-context';
 
 const openStatuses = [
   "Nieuw",
@@ -34,6 +34,14 @@ export default function OpenIssuesPage() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = React.useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = React.useState('');
+  const { setIsHeaderVisible } = useNavigationUI();
+
+  React.useEffect(() => {
+    setIsHeaderVisible(false);
+    return () => {
+      setIsHeaderVisible(true);
+    };
+  }, [setIsHeaderVisible]);
 
   const meldingenCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -79,95 +87,93 @@ export default function OpenIssuesPage() {
   };
 
   return (
-    <div className="flex flex-col flex-1 p-6 min-h-0">
-      <header className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Openstaande Meldingen</h1>
+    <div className="flex flex-col h-screen bg-background">
+      <header className="flex items-center justify-between p-4 border-b shrink-0">
+        <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={() => router.back()}>
+                <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <h1 className="text-xl font-bold">Openstaande Meldingen</h1>
+        </div>
+        <div className="flex items-center gap-2">
+            <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                    placeholder="Zoek meldingen..."
+                    className="pl-8"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
+            <Button variant="outline">
+                <ListFilter className="mr-2 h-4 w-4" />
+                Filters
+            </Button>
+        </div>
       </header>
 
-      <Card className="flex-1 flex flex-col">
-        <CardHeader>
-           <div className="flex items-center justify-between">
-                <CardTitle>Overzicht</CardTitle>
-                <div className="flex items-center gap-2">
-                    <div className="relative">
-                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Zoek meldingen..."
-                            className="pl-8"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </div>
-                    <Button variant="outline">
-                        <ListFilter className="mr-2 h-4 w-4" />
-                        Filters
-                    </Button>
-                </div>
-           </div>
-        </CardHeader>
-        <CardContent className="p-0 flex-1 overflow-y-auto">
-            <Table>
-                <TableHeader className="sticky top-0 bg-card z-10">
+      <div className="flex-1 overflow-auto">
+        <Table>
+            <TableHeader className="sticky top-0 bg-card z-10">
+            <TableRow>
+                <TableHead>Intakenr.</TableHead>
+                <TableHead>Datum</TableHead>
+                <TableHead>Tijd</TableHead>
+                <TableHead>Melder</TableHead>
+                <TableHead>Adres</TableHead>
+                <TableHead>Omschrijving</TableHead>
+                <TableHead>Status</TableHead>
+            </TableRow>
+            </TableHeader>
+            <TableBody>
+            {isLoadingMeldingen ? (
                 <TableRow>
-                    <TableHead>Intakenr.</TableHead>
-                    <TableHead>Datum</TableHead>
-                    <TableHead>Tijd</TableHead>
-                    <TableHead>Melder</TableHead>
-                    <TableHead>Adres</TableHead>
-                    <TableHead>Omschrijving</TableHead>
-                    <TableHead>Status</TableHead>
+                <TableCell colSpan={7} className="h-24 text-center">
+                    Meldingen laden...
+                </TableCell>
                 </TableRow>
-                </TableHeader>
-                <TableBody>
-                {isLoadingMeldingen ? (
-                    <TableRow>
+            ) : filteredMeldingen.length === 0 ? (
+                 <TableRow>
                     <TableCell colSpan={7} className="h-24 text-center">
-                        Meldingen laden...
+                        Geen openstaande meldingen gevonden.
                     </TableCell>
-                    </TableRow>
-                ) : filteredMeldingen.length === 0 ? (
-                     <TableRow>
-                        <TableCell colSpan={7} className="h-24 text-center">
-                            Geen openstaande meldingen gevonden.
+                </TableRow>
+            ) : (
+                filteredMeldingen.map((melding) => {
+                  let displayStatus = melding.status;
+                  if (melding.status === 'Nieuw') {
+                    try {
+                      if (!isToday(new Date(melding.datum))) {
+                        displayStatus = 'Open';
+                      }
+                    } catch (e) {
+                       // if date is invalid, keep status as is
+                    }
+                  }
+                  
+                  return (
+                    <TableRow key={melding.id} onClick={() => router.push(`/issues?id=${melding.id}`)} className="cursor-pointer">
+                        <TableCell className="font-medium">{melding.intakenummer}</TableCell>
+                        <TableCell>{format(new Date(melding.datum), 'dd-MM-yyyy')}</TableCell>
+                        <TableCell>{melding.tijdstip}</TableCell>
+                        <TableCell className='truncate'>{melding.melder}</TableCell>
+                        <TableCell className="truncate">{melding.straatnaam}, {melding.plaats}</TableCell>
+                        <TableCell className="max-w-xs truncate">{melding.extra_informatie}</TableCell>
+                        <TableCell>
+                        <Badge
+                            className="text-white"
+                            style={{ backgroundColor: statusColorMap[displayStatus] || 'bg-gray-500' }}
+                        >
+                            {displayStatus}
+                        </Badge>
                         </TableCell>
                     </TableRow>
-                ) : (
-                    filteredMeldingen.map((melding) => {
-                      let displayStatus = melding.status;
-                      if (melding.status === 'Nieuw') {
-                        try {
-                          if (!isToday(new Date(melding.datum))) {
-                            displayStatus = 'Open';
-                          }
-                        } catch (e) {
-                           // if date is invalid, keep status as is
-                        }
-                      }
-                      
-                      return (
-                        <TableRow key={melding.id} onClick={() => router.push(`/issues?id=${melding.id}`)} className="cursor-pointer">
-                            <TableCell className="font-medium">{melding.intakenummer}</TableCell>
-                            <TableCell>{format(new Date(melding.datum), 'dd-MM-yyyy')}</TableCell>
-                            <TableCell>{melding.tijdstip}</TableCell>
-                            <TableCell className='truncate'>{melding.melder}</TableCell>
-                            <TableCell className="truncate">{melding.straatnaam}, {melding.plaats}</TableCell>
-                            <TableCell className="max-w-xs truncate">{melding.extra_informatie}</TableCell>
-                            <TableCell>
-                            <Badge
-                                className="text-white"
-                                style={{ backgroundColor: statusColorMap[displayStatus] || 'bg-gray-500' }}
-                            >
-                                {displayStatus}
-                            </Badge>
-                            </TableCell>
-                        </TableRow>
-                      )
-                    })
-                )}
-                </TableBody>
-            </Table>
-        </CardContent>
-      </Card>
+                  )
+                })
+            )}
+            </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
