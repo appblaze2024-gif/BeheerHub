@@ -190,7 +190,7 @@ export default function DashboardPage() {
             console.error('Invalid GeoJSON for wijk', e);
             setBoundary(null);
         }
-    } else if (profile?.schouwenGemeente) {
+    } else if (profile?.schouwenGemeente && profile.role !== 'medewerkers') {
       fetch(
         `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
           profile.schouwenGemeente
@@ -206,7 +206,7 @@ export default function DashboardPage() {
     } else {
         setBoundary(null);
     }
-  }, [userWijk, profile?.schouwenGemeente]);
+  }, [userWijk, profile?.schouwenGemeente, profile?.role]);
 
   const onMapLoad = React.useCallback(() => {
       if (boundary) {

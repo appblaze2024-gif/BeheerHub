@@ -173,7 +173,7 @@ export default function ProfilePage() {
                         )}
                       />
                     </div>
-                     <FormField
+                     {profile?.role !== 'medewerkers' && <FormField
                         control={form.control}
                         name="schouwenGemeente"
                         render={({ field }) => (
@@ -191,7 +191,7 @@ export default function ProfilePage() {
                             <FormMessage />
                           </FormItem>
                         )}
-                      />
+                      />}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
                          <FormField
                             control={form.control}
