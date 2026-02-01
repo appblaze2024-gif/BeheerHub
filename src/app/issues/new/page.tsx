@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
-import { format } from 'date-fns';
+import { format, addDays, isWeekend } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { ArrowLeft, CalendarIcon, Loader2, MapPin, Search, UploadCloud, FileIcon, Trash2 } from 'lucide-react';
 import { useFirestore, addDocumentNonBlocking, useFirebaseApp, useCollection } from '@/firebase';
@@ -102,8 +102,8 @@ const subcategorieOptions: Record<string, string[]> = {
 };
 
 const FormRow = ({ label, children, labelFor }: { label: string; children: React.ReactNode; labelFor?: string }) => (
-    <div className="grid grid-cols-[140px_1fr] items-center gap-x-2">
-        <FormLabel htmlFor={labelFor} className="text-xs text-left">{label}</FormLabel>
+    <div className="grid grid-cols-[140px_1fr] items-start gap-x-2 py-1">
+        <FormLabel htmlFor={labelFor} className="text-xs text-left pt-2">{label}</FormLabel>
         {children}
     </div>
 );
@@ -193,6 +193,21 @@ export default function NewIssuePage() {
   });
   
   const watchedHoofdcategorie = form.watch('hoofdcategorie');
+  const watchedMeldingsdatum = form.watch('meldingsdatum');
+
+  React.useEffect(() => {
+    if (watchedMeldingsdatum) {
+        let count = 0;
+        let currentDate = new Date(watchedMeldingsdatum);
+        while (count < 5) {
+            currentDate = addDays(currentDate, 1);
+            if (!isWeekend(currentDate)) {
+                count++;
+            }
+        }
+        form.setValue('actiedatum', currentDate);
+    }
+  }, [watchedMeldingsdatum, form]);
   
   const nearbyObjects = React.useMemo(() => {
     if (!location || !allObjects) return [];
@@ -538,10 +553,10 @@ export default function NewIssuePage() {
                {/* Left Column */}
                <div className="col-span-7 h-full">
                     <Card className="h-full bg-gray-50 dark:bg-gray-800/30 p-2 flex flex-col">
-                        <CardHeader className='p-1 pb-1'>
+                        <CardHeader className="p-1 pb-1">
                            <CardTitle className="font-semibold text-xs">Algemene Informatie</CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-1 p-1 flex-1">
+                        <div className="space-y-1 p-1 flex-1">
                             <FormRow label="Meldingsnummer">
                                 <Input value={meldingsnummer} disabled className="h-7 text-xs"/>
                             </FormRow>
@@ -571,23 +586,6 @@ export default function NewIssuePage() {
                                 )} />
                                 <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
                             </div>
-                            </FormRow>
-                            <FormRow label="Soort melding">
-                                <FormField control={form.control} name="soort_melding" render={({ field }) => (
-                                    <Select onValueChange={field.onChange} value={field.value || ''}>
-                                        <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer soort"/></SelectTrigger></FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="Balie">Balie</SelectItem>
-                                            <SelectItem value="Telefoon">Telefoon</SelectItem>
-                                            <SelectItem value="Email">Email</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                )} />
-                            </FormRow>
-                            <FormRow label="Ext. referentie">
-                                    <FormField control={form.control} name="ext_referentie" render={({ field }) => (
-                                    <FormControl><Input {...field} className="h-7 text-xs" /></FormControl>
-                                )} />
                             </FormRow>
                             <FormRow label="Behandelende afdeling">
                                 <FormField control={form.control} name="behandelende_afdeling" render={({ field }) => (
@@ -637,12 +635,32 @@ export default function NewIssuePage() {
                                 <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
                             </div>
                             </FormRow>
-                        </CardContent>
+                        </div>
                    </Card>
                </div>
 
                {/* Right Column */}
                 <div className="col-span-5 space-y-2">
+                     <div className='p-2 border rounded-md bg-gray-50 dark:bg-gray-800/30 space-y-1'>
+                        <h3 className="font-semibold text-xs mb-2">Soort Melding</h3>
+                        <FormRow label="Soort melding">
+                            <FormField control={form.control} name="soort_melding" render={({ field }) => (
+                                <Select onValueChange={field.onChange} value={field.value || ''}>
+                                    <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer soort"/></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="Balie">Balie</SelectItem>
+                                        <SelectItem value="Telefoon">Telefoon</SelectItem>
+                                        <SelectItem value="Email">Email</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            )} />
+                        </FormRow>
+                        <FormRow label="Ext. referentie">
+                                <FormField control={form.control} name="ext_referentie" render={({ field }) => (
+                                <FormControl><Input {...field} className="h-7 text-xs" /></FormControl>
+                            )} />
+                        </FormRow>
+                    </div>
                     <div className='p-2 border rounded-md bg-gray-50 dark:bg-gray-800/30 space-y-1'>
                         <h3 className="font-semibold text-xs mb-2">Adresgegevens</h3>
                         <FormRow label="Straatnaam">
