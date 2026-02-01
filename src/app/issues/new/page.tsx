@@ -469,6 +469,13 @@ export default function NewIssuePage() {
         meldingData.voorvaldatum = format(new Date(data.voorvaldatum), 'yyyy-MM-dd');
         meldingData.voorvaltijd = data.voorvaltijd;
       }
+      if (data.afgehandeld_door) {
+        meldingData.afgehandeld_door = data.afgehandeld_door;
+      }
+      if (data.afhandeling_datum) {
+        meldingData.afhandeling_datum = format(new Date(data.afhandeling_datum), 'yyyy-MM-dd');
+        meldingData.afhandeling_tijdstip = data.afhandeling_tijdstip;
+      }
       
       await addDocumentNonBlocking(meldingenCollectionRef, meldingData);
 
@@ -537,7 +544,7 @@ export default function NewIssuePage() {
 
     const context = feature.context;
     const street = feature.text;
-    const houseNumber = feature.properties.address; 
+    const houseNumber = feature.address;
     
     const postcodeContext = context.find((c: any) => c.id.startsWith('postcode'));
     const cityContext = context.find((c: any) => c.id.startsWith('place'));
