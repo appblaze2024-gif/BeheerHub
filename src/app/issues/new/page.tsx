@@ -441,8 +441,21 @@ export default function NewIssuePage() {
     const meldingenCollectionRef = collection(firestore, 'meldingen');
 
     try {
-      await addDocumentNonBlocking(meldingenCollectionRef, {
-        ...data,
+       const meldingData = {
+        hoofdcategorie: data.hoofdcategorie,
+        subcategorie: data.subcategorie,
+        status: data.status,
+        extern_meldingsnummer: data.ext_referentie,
+        straatnaam: data.straatnaam,
+        huisnummer: data.nummer,
+        postcode: data.postcode,
+        plaats: data.plaats,
+        wijk: data.wijk,
+        melder: data.melder,
+        extra_informatie: data.extra_informatie,
+        afhandeling_datum: data.afhandeldatum ? format(new Date(data.afhandeldatum), 'yyyy-MM-dd') : undefined,
+        afgehandeld_door: data.afhandelaar,
+        
         intakenummer: meldingsnummer,
         datum: format(data.meldingsdatum || now, 'yyyy-MM-dd'),
         tijdstip: data.meldingsuur || format(now, 'HH:mm'),
@@ -451,7 +464,9 @@ export default function NewIssuePage() {
         longitude: location?.longitude || 0,
         files: uploadedFiles,
         fotos: uploadedPhotos,
-      });
+      };
+      
+      await addDocumentNonBlocking(meldingenCollectionRef, meldingData);
 
       toast({
         title: 'Melding aangemaakt',
