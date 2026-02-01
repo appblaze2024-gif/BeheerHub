@@ -64,9 +64,6 @@ const newMeldingSchema = z.object({
   meldingsdatum: z.date().optional(),
   meldingsuur: z.string().optional(),
   actiedatum: z.date().optional().nullable(),
-  afhandeldatum: z.date().optional().nullable(),
-  afhandeltijd: z.string().optional(),
-  afhandelaar: z.string().optional(),
 
   soort_melding: z.string().optional(),
   ext_referentie: z.string().optional(),
@@ -174,9 +171,6 @@ export default function NewIssuePage() {
       behandelende_afdeling: '',
       behandelaar: '',
       actiedatum: null,
-      afhandeldatum: null,
-      afhandeltijd: '',
-      afhandelaar: '',
       soort_melding: '',
       ext_referentie: '',
       straatnaam: '',
@@ -454,7 +448,6 @@ export default function NewIssuePage() {
         wijk: data.wijk,
         melder: data.melder,
         extra_informatie: data.extra_informatie,
-        afgehandeld_door: data.afhandelaar,
         
         intakenummer: meldingsnummer,
         datum: format(data.meldingsdatum || now, 'yyyy-MM-dd'),
@@ -469,10 +462,6 @@ export default function NewIssuePage() {
       if (data.voorvaldatum) {
         meldingData.voorvaldatum = format(new Date(data.voorvaldatum), 'yyyy-MM-dd');
         meldingData.voorvaltijd = data.voorvaltijd;
-      }
-      
-      if (data.afhandeldatum) {
-        meldingData.afhandeling_datum = format(new Date(data.afhandeldatum), 'yyyy-MM-dd');
       }
       
       await addDocumentNonBlocking(meldingenCollectionRef, meldingData);
@@ -649,18 +638,6 @@ export default function NewIssuePage() {
                             </FormRow>
                             <FormRow label="Actiedatum">
                             <FormField control={form.control} name="actiedatum" render={({ field }) => (<FormControl><Input type='date' className="h-7 text-xs" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} /></FormControl>)} />
-                            </FormRow>
-                            <FormRow label="Afhandeldatum">
-                            <div className="flex gap-2 items-center">
-                                    <FormField control={form.control} name="afhandeldatum" render={({ field }) => (<FormControl><Input type='date' className="h-7 text-xs" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} /></FormControl>)} />
-                                <FormField control={form.control} name="afhandeltijd" render={({ field }) => (<FormControl><Input type="time" className="h-7 text-xs w-24" {...field} /></FormControl>)} />
-                            </div>
-                            </FormRow>
-                            <FormRow label="Afhandelaar">
-                            <div className="flex items-center">
-                                <FormField control={form.control} name="afhandelaar" render={({ field }) => (<FormControl><Input {...field} className="h-7 text-xs rounded-r-none" /></FormControl>)} />
-                                <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0"><Search className="h-4 w-4"/></Button>
-                            </div>
                             </FormRow>
                         </div>
                    </Card>

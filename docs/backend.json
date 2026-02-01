@@ -576,6 +576,7 @@
           ]
         },
         "afhandeling_datum": { "type": "string", "format": "date" },
+        "afhandeling_tijdstip": { "type": "string", "format": "time" },
         "afgehandeld_door": { "type": "string" },
         "afhandeling_bijzonderheden": { "type": "string" },
         "tasks": {

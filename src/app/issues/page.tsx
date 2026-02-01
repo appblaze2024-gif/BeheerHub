@@ -331,6 +331,7 @@ export default function IssuesPage() {
         await updateDocumentNonBlocking(meldingRef, {
             status: 'Afgerond',
             afhandeling_datum: format(new Date(), 'yyyy-MM-dd'),
+            afhandeling_tijdstip: format(new Date(), 'HH:mm'),
             afgehandeld_door: user.displayName || user.email || 'Onbekend',
             afhandeling_bijzonderheden: afhandelingBijzonderhedenRef.current?.value,
             files: uploadedFiles,

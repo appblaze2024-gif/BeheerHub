@@ -260,6 +260,7 @@ export type Melding = {
   aangenomen_door?: string;
   afgehandeld_door?: string;
   afhandeling_datum?: string; // Completion date yyyy-MM-dd
+  afhandeling_tijdstip?: string;
   straatnaam?: string;
   huisnummer?: string;
   postcode?: string;
