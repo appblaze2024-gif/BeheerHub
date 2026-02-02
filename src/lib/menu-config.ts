@@ -55,6 +55,7 @@ export const allMenuItems: MenuItem[] = [
         { href: '/issues/open', label: 'Openstaande meldingen', id: 'open' },
         { href: '/issues/new', label: 'Melding maken', id: 'new' },
         { href: '/issues/archive', label: 'Meldingen archief', id: 'archive' },
+        { href: '/issues/portal', label: 'Meldingenportaal', id: 'portal' },
       ]
     },
     { href: '/spec-reports', label: 'Besteksmeldingen', icon: FileWarning, module: 'specReports' },

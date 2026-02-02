@@ -51,8 +51,10 @@ export const permissionConfig = [
             { id: 'open', label: 'Openstaande meldingen' },
             { id: 'new', label: 'Melding maken' },
             { id: 'archive', label: 'Meldingen archief' },
+            { id: 'portal', label: 'Meldingenportaal' },
         ]
     },
+    { module: 'specReports', label: 'Besteksmeldingen', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }] },
     { module: 'navigation', label: 'Navigatiemodule', actions: [{ id: 'use', label: 'Gebruiken' }] },
     { module: 'mail', label: 'Mail', actions: [{ id: 'use', label: 'Gebruiken' }] },
     { 
@@ -64,7 +66,6 @@ export const permissionConfig = [
             { id: 'users', label: 'Gebruikers' },
         ]
     },
-    { module: 'specReports', label: 'Besteksmeldingen', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }] },
     { module: 'teams', label: 'Teams', actions: [{ id: 'view', label: 'Bekijken' }] },
     { module: 'news', label: 'Nieuws berichten', actions: [{ id: 'view', label: 'Bekijken' }] },
 ];
