@@ -171,7 +171,7 @@ export default function IssuesPage() {
   
   const [tasks, setTasks] = React.useState<MeldingTask[]>([]);
   const [newTaskDescription, setNewTaskDescription] = React.useState('');
-  const [activeTab, setActiveTab] = React.useState('Locatiegegevens');
+  const [activeTab, setActiveTab] = React.useState('Werkzaamheden');
   const [isDraggingPhoto, setIsDraggingPhoto] = React.useState(false);
   const [isDraggingDocument, setIsDraggingDocument] = React.useState(false);
 
@@ -351,7 +351,7 @@ export default function IssuesPage() {
       setIsSearching(false);
       setTasks(melding.tasks || []);
       setHoeveelheden(melding.hoeveelheden || []);
-      setActiveTab('Locatiegegevens');
+      setActiveTab('Werkzaamheden');
       setHighlightedObject(null);
       form.reset({
         hoofdcategorie: melding.hoofdcategorie,
@@ -1039,7 +1039,7 @@ export default function IssuesPage() {
                     </TabsContent>
                     <TabsContent value="Foto's" className="mt-0">
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <Card className="h-96 flex flex-col">
+                        <Card className="flex flex-col min-h-[400px]">
                             <CardHeader>
                                 <CardTitle>Foto's van Melding</CardTitle>
                             </CardHeader>
@@ -1047,7 +1047,7 @@ export default function IssuesPage() {
                                 {uploadedPhotos.length > 0 ? (
                                 <div className="space-y-4 flex flex-col flex-1 min-h-0">
                                     <div
-                                        className="w-full flex-1 relative rounded-md overflow-hidden border group cursor-pointer"
+                                        className="w-full relative rounded-md overflow-hidden border group cursor-pointer h-48"
                                         onClick={() => mainPhoto && setFullScreenPhoto(mainPhoto)}
                                     >
                                     {mainPhoto ? (
@@ -1085,7 +1085,7 @@ export default function IssuesPage() {
                                 )}
                             </CardContent>
                         </Card>
-                        <Card className="h-96 flex flex-col">
+                        <Card className="flex flex-col min-h-[400px]">
                           <CardHeader>
                             <CardTitle>Foto's van Medewerker</CardTitle>
                           </CardHeader>
