@@ -19,7 +19,7 @@ function Fallback() {
 
 export default function ResetPasswordPage() {
   return (
-    <div className="flex h-screen w-screen flex-col items-center justify-start pt-40 bg-gray-100 dark:bg-gray-950">
+    <div className="flex h-screen w-screen flex-col items-center justify-start pt-20 bg-gray-100 dark:bg-gray-950">
        <div className="absolute top-8 left-8 z-10">
          <Image
           src="https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png"

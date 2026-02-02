@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import Image from 'next/image';
 import {
   MoreHorizontal,
   Plus,
@@ -22,13 +21,11 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import {
   useCollection,
   useFirestore,
 } from '@/firebase';
 import { VehicleImportDialog } from '@/components/vehicle-import-dialog';
-import { AddActionDialog } from '@/components/add-action-dialog';
 import { AddMaintenanceDialog } from '@/components/add-maintenance-dialog';
 import { AddDamageDialog } from '@/components/add-damage-dialog';
 import { AddVehicleDialog } from '@/components/add-vehicle-dialog';
@@ -72,13 +69,6 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
 
   const [selectedItem, setSelectedItem] = React.useState<any | null>(null);
 
-  const actionsCollection = React.useMemo(() => {
-    if (!firestore || !selectedItem) return null;
-    return collection(firestore, collectionName, selectedItem.id, 'actions');
-  }, [firestore, selectedItem, collectionName]);
-
-  const { data: actions, isLoading: actionsLoading } = useCollection<any>(actionsCollection);
-
   const maintenanceCollection = React.useMemo(() => {
     if (!firestore || !selectedItem) return null;
     return collection(firestore, collectionName, selectedItem.id, 'maintenance');
@@ -99,8 +89,6 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
   }, [firestore, selectedItem, collectionName]);
 
   const { data: documents, isLoading: documentsLoading } = useCollection<any>(documentsCollection);
-
-  const mainImage = PlaceHolderImages.find((p) => p.id === 'vehicle-side');
 
   React.useEffect(() => {
     if (!selectedItem && filteredMaterieel && filteredMaterieel.length > 0) {
@@ -248,12 +236,6 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-col lg:flex-row gap-6">
-                    <VehicleImageUploader
-                      materieelId={selectedItem.id}
-                      materieelType={materieelType}
-                      imageUrl={selectedItem.imageUrl ?? mainImage?.imageUrl}
-                      imageHint={selectedItem.imageUrl ? `${selectedItem.merk} ${selectedItem.model}` : mainImage?.imageHint}
-                    />
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-semibold">
@@ -341,29 +323,13 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                 </CardContent>
               </Card>
 
-              <Tabs defaultValue="actions" className="flex-1 flex flex-col min-h-0">
+              <Tabs defaultValue="maintenance" className="flex-1 flex flex-col min-h-0">
                 <TabsList>
-                  {canViewTab('actions') && <TabsTrigger value="actions">Acties</TabsTrigger>}
                   {canViewTab('maintenance') && <TabsTrigger value="maintenance">Onderhoud</TabsTrigger>}
                   {canViewTab('damages') && <TabsTrigger value="damages">Schade</TabsTrigger>}
                   {canViewTab('documents') && <TabsTrigger value="documents">Documenten</TabsTrigger>}
                 </TabsList>
                 
-                {canViewTab('actions') && <TabsContent value="actions" className="h-full mt-4">
-                  <Card className="h-full flex flex-col">
-                    <CardHeader className="flex-row items-center justify-between">
-                      <CardTitle>Acties</CardTitle>
-                      {canEdit && <AddActionDialog materieelId={selectedItem.id} materieelType={materieelType}>
-                        <Button size="sm">
-                          <Plus className="mr-2 h-4 w-4" />
-                          Actie toevoegen
-                        </Button>
-                      </AddActionDialog>}
-                    </CardHeader>
-                    {/* Actions content here */}
-                  </Card>
-                </TabsContent>}
-
                 {canViewTab('maintenance') && <TabsContent value="maintenance" className="h-full mt-4">
                    <Card className="h-full flex flex-col">
                     <CardHeader className="flex-row items-center justify-between">
