@@ -172,8 +172,8 @@ export default function IssuesPage() {
   const [newHoeveelheidType, setNewHoeveelheidType] = React.useState('');
   const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
   const [newHoeveelheidEenheid, setNewHoeveelheidEenheid] = React.useState('zak');
-  const [gewerkteMinuten, setGewerkteMinuten] = React.useState(0);
   const [highlightedObject, setHighlightedObject] = React.useState<MapObject | null>(null);
+  const [elapsedTime, setElapsedTime] = React.useState<string>("0 uur en 0 minuten");
 
   const meldingenCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -337,7 +337,6 @@ export default function IssuesPage() {
       setIsSearching(false);
       setTasks(melding.tasks || []);
       setHoeveelheden(melding.hoeveelheden || []);
-      setGewerkteMinuten(melding.gewerkteMinuten || 0);
       setActiveTab('Locatiegegevens');
       setHighlightedObject(null);
       form.reset({
@@ -353,6 +352,33 @@ export default function IssuesPage() {
     }
   }, [selectedMeldingId, meldingen, form]);
   
+  React.useEffect(() => {
+    if (!selectedMelding) {
+      setElapsedTime("0 uur en 0 minuten");
+      return;
+    }
+
+    if (selectedMelding.workStartedAt) {
+      const interval = setInterval(() => {
+        const startTime = new Date(selectedMelding.workStartedAt!).getTime();
+        const now = Date.now();
+        const minutesSinceStart = Math.floor((now - startTime) / (1000 * 60));
+        const totalMinutes = (selectedMelding.gewerkteMinuten || 0) + minutesSinceStart;
+        
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        setElapsedTime(`${hours} uur en ${minutes} minuten`);
+      }, 1000); // Update every second
+
+      return () => clearInterval(interval);
+    } else {
+      const totalMinutes = selectedMelding.gewerkteMinuten || 0;
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+      setElapsedTime(`${hours} uur en ${minutes} minuten`);
+    }
+  }, [selectedMelding]);
+
   const handleStartWork = async () => {
     if (!firestore || !selectedMelding?.id) return;
     const meldingRef = doc(firestore, 'meldingen', selectedMelding.id);
@@ -379,7 +405,7 @@ export default function IssuesPage() {
     const meldingRef = doc(firestore, 'meldingen', selectedMelding.id);
     const afhandeling_bijzonderheden_value = form.getValues('afhandeling_bijzonderheden');
 
-    let minutesWorked = gewerkteMinuten;
+    let minutesWorked = selectedMelding.gewerkteMinuten || 0;
     if (selectedMelding.workStartedAt) {
       const startTime = new Date(selectedMelding.workStartedAt).getTime();
       const endTime = Date.now();
@@ -1144,24 +1170,22 @@ export default function IssuesPage() {
                             <CardHeader>
                                 <CardTitle>Urenregistratie</CardTitle>
                                 <CardDescription>
-                                    Voer hier de totale gewerkte tijd voor deze melding in minuten in.
+                                    Totaal gewerkte tijd voor deze melding. De timer start als de werkbon wordt gestart.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="p-6 space-y-4">
-                                <div className="space-y-2 max-w-xs">
-                                    <Label htmlFor="gewerkte-minuten">Totaal gewerkte minuten</Label>
-                                    <Input
-                                        id="gewerkte-minuten"
-                                        type="number"
-                                        value={gewerkteMinuten}
-                                        onChange={(e) => setGewerkteMinuten(Number(e.target.value) >= 0 ? Number(e.target.value) : 0)}
-                                        placeholder="Voer minuten in"
-                                        min="0"
-                                    />
+                                 <div className="space-y-2 max-w-xs">
+                                    <Label>Geregistreerde tijd</Label>
+                                    <div className="text-xl font-bold p-2">
+                                        {elapsedTime}
+                                    </div>
+                                    {selectedMelding?.workStartedAt && (
+                                        <div className="text-sm text-green-600 flex items-center gap-2">
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            Timer loopt...
+                                        </div>
+                                    )}
                                 </div>
-                                {gewerkteMinuten > 0 && <div className="text-sm text-muted-foreground">
-                                    Dit komt overeen met: {Math.floor(gewerkteMinuten / 60)} uur en {gewerkteMinuten % 60} minuten.
-                                </div>}
                             </CardContent>
                         </Card>
                     </TabsContent>
