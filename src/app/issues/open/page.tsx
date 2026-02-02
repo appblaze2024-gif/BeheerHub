@@ -27,6 +27,7 @@ const openStatuses = [
   "In behandeling",
   "Gepland op korte termijn",
   "Gepland op langere termijn",
+  "Extern doorgezet",
 ];
 
 export default function OpenIssuesPage() {

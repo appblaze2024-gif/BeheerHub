@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { useCollection, useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
-import { Search, ListFilter, ArrowLeft, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Search, ListFilter, ArrowLeft, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { Melding } from '@/lib/types';
@@ -20,6 +20,12 @@ import {
 } from '@/components/ui/table';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useToast } from '@/components/ui/use-toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export default function MeldingenportaalPage() {
   const firestore = useFirestore();
@@ -67,7 +73,7 @@ export default function MeldingenportaalPage() {
     );
   }, [newMeldingen, debouncedSearchTerm]);
 
-  const handleStatusChange = async (melding: Melding, newStatus: 'In behandeling' | 'Niet in beheer') => {
+  const handleStatusChange = async (melding: Melding, newStatus: 'Intern doorgezet' | 'Extern doorgezet' | 'Niet in beheer') => {
     if (!firestore) return;
     const meldingRef = doc(firestore, 'meldingen', melding.id);
     try {
@@ -147,12 +153,25 @@ export default function MeldingenportaalPage() {
                         <TableCell onClick={() => router.push(`/issues/new?id=${melding.id}`)}>{melding.datum ? format(new Date(melding.datum), 'dd-MM-yyyy') : '-'}</TableCell>
                         <TableCell onClick={() => router.push(`/issues/new?id=${melding.id}`)}>{melding.melder || '-'}</TableCell>
                         <TableCell className="text-right">
-                            <Button variant="ghost" size="icon" onClick={() => handleStatusChange(melding, 'In behandeling')}>
-                                <ThumbsUp className="h-4 w-4 text-green-600" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleStatusChange(melding, 'Niet in beheer')}>
-                                <ThumbsDown className="h-4 w-4 text-red-600" />
-                            </Button>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                        <span className="sr-only">Acties</span>
+                                        <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handleStatusChange(melding, 'Intern doorgezet')}>
+                                        Intern doorzetten
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleStatusChange(melding, 'Extern doorgezet')}>
+                                        Extern doorzetten
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleStatusChange(melding, 'Niet in beheer')}>
+                                        Niet voor onze afdeling
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </TableCell>
                     </TableRow>
                   ))

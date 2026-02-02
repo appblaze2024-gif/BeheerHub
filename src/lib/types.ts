@@ -253,7 +253,8 @@ export type Melding = {
     | 'Gepland op langere termijn'
     | 'Dubbel gemeld'
     | 'Afgerond'
-    | 'Niet in beheer';
+    | 'Niet in beheer'
+    | 'Extern doorgezet';
   datum: string; // Creation date yyyy-MM-dd
   tijdstip: string;
   melder: string;

@@ -90,7 +90,7 @@ type NewMeldingFormValues = z.infer<typeof newMeldingSchema>;
 
 const statusOptions = [
     "Nieuw", "Intern doorgezet", "In behandeling", "Gepland op korte termijn",
-    "Gepland op langere termijn", "Dubbel gemeld", "Afgerond", "Niet in beheer"
+    "Gepland op langere termijn", "Dubbel gemeld", "Afgerond", "Niet in beheer", "Extern doorgezet"
 ];
 const hoofdcategorieOptions = ["Afval", "Weg en straatmeubilair", "Groen", "Water", "Overig", "Zoutkisten"];
 const subcategorieOptions: Record<string, string[]> = {
