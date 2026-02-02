@@ -728,7 +728,7 @@ export default function NewIssuePage() {
                             </FormRow>
                             <FormRow label="Status">
                                 <FormField control={form.control} name="status" render={({ field }) => (
-                                    <Select onValueChange={field.onChange} value={field.value} disabled={isReadOnly}>
+                                    <Select onValueChange={field.onChange} value={field.value} disabled>
                                         <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer status" /></SelectTrigger></FormControl>
                                         <SelectContent>{statusOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                     </Select>
