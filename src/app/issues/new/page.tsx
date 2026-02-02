@@ -876,7 +876,7 @@ export default function NewIssuePage() {
                             <FormField control={form.control} name="wijk" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel className='text-xs'>Wijk</FormLabel>
-                                    <FormControl><Input placeholder="Wijk" {...field} className="h-7 text-xs" disabled={isReadOnly} /></FormControl>
+                                    <FormControl><Input {...field} className="h-7 text-xs" disabled={isReadOnly} /></FormControl>
                                 </FormItem>
                             )} />
                              <FormField control={form.control} name="werkgebied" render={({ field }) => (
