@@ -132,8 +132,10 @@ export default function NewIssuePage() {
   const [location, setLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
   
   const [addressSuggestions, setAddressSuggestions] = React.useState<any[]>([]);
-  const [isAddressDialogOpen, setIsAddressDialogOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
+  const [isSearching, setIsSearching] = React.useState(false);
+  const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const justSelectedSuggestion = React.useRef(false);
 
   const objectsCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -230,12 +232,60 @@ export default function NewIssuePage() {
         setLocation({ latitude: meldingToView.latitude, longitude: meldingToView.longitude });
         setUploadedFiles(meldingToView.files || []);
         setUploadedPhotos(meldingToView.fotos || []);
+        
+        justSelectedSuggestion.current = true;
+        setSearchQuery(`${meldingToView.straatnaam || ''}${meldingToView.huisnummer ? ' ' + meldingToView.huisnummer : ''}, ${meldingToView.plaats || ''}`);
+
       }
     } else {
         setIsReadOnly(false);
         setViewedMelding(null);
+        justSelectedSuggestion.current = true;
+        setSearchQuery('');
     }
   }, [meldingIdFromUrl, allMeldingen, form]);
+  
+  React.useEffect(() => {
+    if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+    }
+    if (justSelectedSuggestion.current) {
+        justSelectedSuggestion.current = false;
+        return;
+    }
+    if (!searchQuery.trim()) {
+        setAddressSuggestions([]);
+        return;
+    }
+
+    setIsSearching(true);
+    searchTimeoutRef.current = setTimeout(async () => {
+        try {
+            const response = await fetch(
+                `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+                searchQuery
+                )}.json?access_token=${MAPBOX_TOKEN}&country=NL&limit=5`
+            );
+            const data = await response.json();
+            if (data.features && data.features.length > 0) {
+                setAddressSuggestions(data.features);
+            } else {
+                setAddressSuggestions([]);
+            }
+        } catch (error) {
+            console.error("Fout bij adres zoeken:", error);
+            setAddressSuggestions([]);
+        } finally {
+            setIsSearching(false);
+        }
+    }, 500);
+
+    return () => {
+        if(searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+        }
+    }
+  }, [searchQuery]);
 
   React.useEffect(() => {
     if (watchedMeldingsdatum && !isReadOnly) {
@@ -493,7 +543,6 @@ export default function NewIssuePage() {
     setUploadProgress({});
     setLocation(null);
     setAddressSuggestions([]);
-    setIsAddressDialogOpen(false);
     setSearchQuery('');
   };
 
@@ -560,67 +609,34 @@ export default function NewIssuePage() {
     }
   };
 
-  const handleAddressSearch = async () => {
-    const straatnaam = form.getValues('straatnaam');
-    const nummer = form.getValues('nummer');
-    const postcode = form.getValues('postcode');
-    const plaats = form.getValues('plaats');
-
-    if (!straatnaam && !plaats && !postcode) {
-        toast({
-            variant: 'destructive',
-            title: 'Onvoldoende invoer',
-            description: 'Voer een straat, plaats of postcode in om te zoeken.',
-        });
-        return;
-    }
-
-    const queryParts = [nummer, straatnaam, postcode, plaats].filter(Boolean).join(' ');
-    const urlWithToken = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(queryParts)}.json?access_token=${MAPBOX_TOKEN}&country=NL&limit=5`;
-
-    try {
-        const response = await fetch(urlWithToken);
-        const data = await response.json();
-
-        if (data.features && data.features.length > 0) {
-            setAddressSuggestions(data.features);
-            setIsAddressDialogOpen(true);
-        } else {
-            toast({
-                variant: 'destructive',
-                title: 'Adres niet gevonden',
-                description: 'Kon het opgegeven adres niet vinden. Probeer het opnieuw met andere gegevens.',
-            });
-        }
-    } catch (error) {
-        console.error("Fout bij adres zoeken:", error);
-        toast({
-            variant: 'destructive',
-            title: 'Fout opgetreden',
-            description: 'Er is een fout opgetreden bij het zoeken naar het adres.',
-        });
-    }
-  };
-  
   const handleSuggestionSelect = (feature: any) => {
+    justSelectedSuggestion.current = true;
     const [longitude, latitude] = feature.center;
     setLocation({ latitude, longitude });
 
-    const context = feature.context;
-    const street = feature.text;
-    const houseNumber = feature.address;
+    const context = feature.context || [];
     
-    const postcodeContext = context.find((c: any) => c.id.startsWith('postcode'));
-    const cityContext = context.find((c: any) => c.id.startsWith('place'));
-    const neighborhoodContext = context.find((c: any) => c.id.startsWith('locality'));
+    let street = feature.text || '';
+    let houseNumber = feature.address || '';
+    
+    // Sometimes house number is in text
+    const streetParts = street.split(' ');
+    if (streetParts.length > 1 && /^\d/.test(streetParts[streetParts.length - 1])) {
+        houseNumber = streetParts.pop() + (houseNumber ? ` ${houseNumber}` : '');
+        street = streetParts.join(' ');
+    }
+    
+    const postcode = context.find((c: any) => c.id.startsWith('postcode'))?.text || '';
+    const city = context.find((c: any) => c.id.startsWith('place'))?.text || '';
+    const neighborhood = context.find((c: any) => c.id.startsWith('locality'))?.text || '';
 
-    form.setValue('straatnaam', street || '');
-    form.setValue('nummer', houseNumber || '');
-    form.setValue('postcode', postcodeContext?.text || '');
-    form.setValue('plaats', cityContext?.text || '');
-    form.setValue('wijk', neighborhoodContext?.text || '');
+    form.setValue('straatnaam', street);
+    form.setValue('nummer', houseNumber);
+    form.setValue('postcode', postcode);
+    form.setValue('plaats', city);
+    form.setValue('wijk', neighborhood);
     
-    setIsAddressDialogOpen(false);
+    setSearchQuery(feature.place_name);
     setAddressSuggestions([]);
   };
 
@@ -742,26 +758,6 @@ export default function NewIssuePage() {
                             <FormRow label="Actiedatum">
                             <FormField control={form.control} name="actiedatum" render={({ field }) => (<FormControl><Input type='date' className="h-7 text-xs" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} disabled={isReadOnly} /></FormControl>)} />
                             </FormRow>
-                             <div className="grid grid-cols-[140px_1fr] items-start gap-x-2 py-0.5">
-                                <FormLabel className="text-xs text-left pt-2">Memo</FormLabel>
-                                <FormField
-                                    control={form.control}
-                                    name="extra_informatie"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormControl>
-                                                <Textarea
-                                                    {...field}
-                                                    className="resize-none text-xs"
-                                                    rows={4}
-                                                    disabled={isReadOnly}
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
                         </div>
                    </Card>
                </div>
@@ -795,37 +791,29 @@ export default function NewIssuePage() {
                     <div className='p-2 border rounded-md bg-gray-50 dark:bg-gray-800/30 space-y-1'>
                         <h3 className="font-semibold text-xs mb-2">Adresgegevens</h3>
                         <div className="relative">
-                            <FormField
-                                control={form.control}
-                                name="straatnaam"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="text-xs">Zoek Adres</FormLabel>
-                                    <div className="flex items-center">
-                                    <FormControl>
-                                        <Input
+                            <FormItem>
+                                <FormLabel className="text-xs">Zoek Adres</FormLabel>
+                                <div className="relative flex items-center">
+                                    <Input
                                         placeholder="Straat, plaats, of postcode"
                                         className="h-7 text-xs"
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         disabled={isReadOnly}
                                         autoComplete="off"
-                                        />
-                                    </FormControl>
-                                    </div>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
+                                    />
+                                    {isSearching && <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />}
+                                </div>
+                            </FormItem>
                             {addressSuggestions.length > 0 && (
                                 <div className="absolute z-10 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
-                                    {addressSuggestions.map((suggestion, index) => (
+                                    {addressSuggestions.map((suggestion) => (
                                         <div
-                                            key={`${suggestion.place_id}-${index}`}
+                                            key={suggestion.id}
                                             className="px-4 py-2 text-sm cursor-pointer hover:bg-muted"
                                             onClick={() => handleSuggestionSelect(suggestion)}
                                         >
-                                            {suggestion.display_name}
+                                            {suggestion.place_name}
                                         </div>
                                     ))}
                                 </div>
@@ -905,6 +893,7 @@ export default function NewIssuePage() {
                         <TabsTrigger value="documenten">Documenten</TabsTrigger>
                         <TabsTrigger value="fotos">Foto's</TabsTrigger>
                         <TabsTrigger value="locatie">Locatie</TabsTrigger>
+                        <TabsTrigger value="memo">Memo</TabsTrigger>
                     </TabsList>
                     <TabsContent value="documenten" className="flex-1 mt-1">
                         {isReadOnly ? (
@@ -1064,8 +1053,8 @@ export default function NewIssuePage() {
                         )}
                     </TabsContent>
                     <TabsContent value="locatie" className="flex-1 mt-1 flex flex-col min-h-0">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 min-h-0">
-                        <div className="border rounded-md overflow-hidden min-h-0">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
+                        <div className="border rounded-md overflow-hidden h-full">
                             <MapboxView
                                 longitude={location?.longitude}
                                 latitude={location?.latitude}
@@ -1096,33 +1085,30 @@ export default function NewIssuePage() {
                         </div>
                       </div>
                     </TabsContent>
+                    <TabsContent value="memo" className="flex-1 mt-1">
+                        <div className="grid grid-cols-1 h-full">
+                            <FormField
+                                control={form.control}
+                                name="extra_informatie"
+                                render={({ field }) => (
+                                    <FormItem className="h-full flex flex-col">
+                                        <FormControl className="flex-1">
+                                            <Textarea
+                                                {...field}
+                                                className="resize-none h-full text-xs"
+                                                disabled={isReadOnly}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                    </TabsContent>
                 </Tabs>
             </div>
           </form>
         </Form>
-        
-        <Dialog open={isAddressDialogOpen} onOpenChange={setIsAddressDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Selecteer een adres</DialogTitle>
-              <DialogDescription>
-                Kies het juiste adres uit de onderstaande lijst of pas uw zoekopdracht aan.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-2 py-4 max-h-96 overflow-y-auto">
-              {addressSuggestions.map((suggestion) => (
-                <Button
-                  key={suggestion.id}
-                  variant="outline"
-                  className="w-full justify-start text-left h-auto py-2"
-                  onClick={() => handleSuggestionSelect(suggestion)}
-                >
-                  {suggestion.place_name}
-                </Button>
-              ))}
-            </div>
-          </DialogContent>
-        </Dialog>
     </div>
   );
 }
