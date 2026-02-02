@@ -908,7 +908,7 @@ export default function NewIssuePage() {
             </div>
             
             <div className="flex-1 flex flex-col min-h-0 px-3 pb-3">
-                 <Tabs defaultValue="documenten" className="flex-1 flex flex-col min-h-0">
+                 <Tabs defaultValue="locatie" className="flex-1 flex flex-col min-h-0">
                     <TabsList>
                         <TabsTrigger value="documenten">Documenten</TabsTrigger>
                         <TabsTrigger value="fotos">Foto's</TabsTrigger>

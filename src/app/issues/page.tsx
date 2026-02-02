@@ -164,7 +164,7 @@ export default function IssuesPage() {
   
   const [tasks, setTasks] = React.useState<MeldingTask[]>([]);
   const [newTaskDescription, setNewTaskDescription] = React.useState('');
-  const [activeTab, setActiveTab] = React.useState('Werkzaamheden');
+  const [activeTab, setActiveTab] = React.useState('Locatiegegevens');
   const [isDraggingPhoto, setIsDraggingPhoto] = React.useState(false);
   const [isDraggingDocument, setIsDraggingDocument] = React.useState(false);
 
@@ -338,7 +338,7 @@ export default function IssuesPage() {
       setTasks(melding.tasks || []);
       setHoeveelheden(melding.hoeveelheden || []);
       setGewerkteMinuten(melding.gewerkteMinuten || 0);
-      setActiveTab('Werkzaamheden');
+      setActiveTab('Locatiegegevens');
       setHighlightedObject(null);
       form.reset({
         hoofdcategorie: melding.hoofdcategorie,
