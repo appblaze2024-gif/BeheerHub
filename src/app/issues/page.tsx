@@ -250,8 +250,8 @@ export default function IssuesPage() {
   const filteredMeldingen = React.useMemo(() => {
     if (!meldingen) return [];
     
-    // Filter out 'Afgerond' items from the source
-    const openMeldingen = meldingen.filter(m => m.status !== 'Afgerond');
+    // Filter out 'Afgerond' and 'Nieuw' items from the source
+    const openMeldingen = meldingen.filter(m => m.status !== 'Afgerond' && m.status !== 'Nieuw');
 
     let timeFilteredMeldingen = selectedDate ? openMeldingen.filter(m => {
       try {
@@ -743,7 +743,7 @@ export default function IssuesPage() {
               <div className="flex items-center gap-2">
                   {selectedProjectId && (
                   <Link href={`/navigation-module?projectId=${selectedProjectId}&lat=${selectedMelding.latitude}&lng=${selectedMelding.longitude}&straat=${encodeURIComponent(selectedMelding.straatnaam || '')}`} passHref>
-                      <Button variant="outline" size="icon" className="h-9 w-9 bg-[#00bfff] hover:bg-[#00a6d2] dark:bg-sky-800/50 dark:hover:bg-sky-800/70">
+                      <Button variant="outline" size="icon" className="h-9 w-9 bg-sky-300 hover:bg-sky-400 dark:bg-sky-800/50 dark:hover:bg-sky-800/70">
                           <Navigation className="h-4 w-4" />
                       </Button>
                   </Link>
@@ -1039,7 +1039,7 @@ export default function IssuesPage() {
                     </TabsContent>
                     <TabsContent value="Foto's" className="mt-0">
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <Card className="flex flex-col h-[400px]">
+                        <Card className="flex flex-col min-h-[400px]">
                             <CardHeader>
                                 <CardTitle>Foto's van Melding</CardTitle>
                             </CardHeader>
@@ -1085,7 +1085,7 @@ export default function IssuesPage() {
                                 )}
                             </CardContent>
                         </Card>
-                        <Card className="flex flex-col h-[400px]">
+                        <Card className="flex flex-col min-h-[400px]">
                           <CardHeader>
                             <CardTitle>Foto's van Medewerker</CardTitle>
                           </CardHeader>

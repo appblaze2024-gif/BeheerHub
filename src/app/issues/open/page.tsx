@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -22,7 +23,6 @@ import {
 import { useNavigationUI } from '@/context/navigation-ui-context';
 
 const openStatuses = [
-  "Nieuw",
   "Intern doorgezet",
   "In behandeling",
   "Gepland op korte termijn",
@@ -157,7 +157,7 @@ export default function OpenIssuesPage() {
                   }
                   
                   return (
-                    <TableRow key={melding.id} onClick={() => router.push(`/issues?id=${melding.id}`)} className="cursor-pointer h-auto hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                    <TableRow key={melding.id} onClick={() => router.push(`/issues/new?id=${melding.id}`)} className="cursor-pointer h-auto hover:bg-slate-50 dark:hover:bg-slate-800/50">
                         <TableCell className="font-medium py-1 px-3 border border-slate-200">{melding.intakenummer || '-'}</TableCell>
                         <TableCell className="py-1 px-3 border border-slate-200">{melding.extern_meldingsnummer || '-'}</TableCell>
                         <TableCell className="py-1 px-3 border border-slate-200">{melding.datum ? format(new Date(melding.datum), 'dd-MM-yyyy') : '-'}</TableCell>
