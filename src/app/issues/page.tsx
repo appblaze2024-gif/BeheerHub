@@ -743,7 +743,7 @@ export default function IssuesPage() {
               <div className="flex items-center gap-2">
                   {selectedProjectId && (
                   <Link href={`/navigation-module?projectId=${selectedProjectId}&lat=${selectedMelding.latitude}&lng=${selectedMelding.longitude}&straat=${encodeURIComponent(selectedMelding.straatnaam || '')}`} passHref>
-                      <Button variant="outline" size="icon" className="h-9 w-9">
+                      <Button variant="outline" size="icon" className="h-9 w-9 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/50 dark:hover:bg-blue-900/70">
                           <Navigation className="h-4 w-4" />
                       </Button>
                   </Link>
@@ -1039,7 +1039,7 @@ export default function IssuesPage() {
                     </TabsContent>
                     <TabsContent value="Foto's" className="mt-0">
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <Card className="flex flex-col min-h-[400px]">
+                        <Card className="flex flex-col h-[450px]">
                             <CardHeader>
                                 <CardTitle>Foto's van Melding</CardTitle>
                             </CardHeader>
@@ -1047,7 +1047,7 @@ export default function IssuesPage() {
                                 {uploadedPhotos.length > 0 ? (
                                 <div className="space-y-4 flex flex-col flex-1 min-h-0">
                                     <div
-                                        className="w-full relative rounded-md overflow-hidden border group cursor-pointer h-48"
+                                        className="w-full relative rounded-md overflow-hidden border group cursor-pointer flex-1"
                                         onClick={() => mainPhoto && setFullScreenPhoto(mainPhoto)}
                                     >
                                     {mainPhoto ? (
@@ -1062,7 +1062,7 @@ export default function IssuesPage() {
                                     )}
                                     </div>
                                     {uploadedPhotos.length > 1 && (
-                                    <div className="flex gap-2 overflow-x-auto pb-2">
+                                    <div className="flex gap-2 overflow-x-auto pb-2 shrink-0">
                                         {uploadedPhotos.map(photo => (
                                         <div
                                             key={photo.storagePath}
@@ -1085,11 +1085,11 @@ export default function IssuesPage() {
                                 )}
                             </CardContent>
                         </Card>
-                        <Card className="flex flex-col min-h-[400px]">
+                        <Card className="flex flex-col h-[450px]">
                           <CardHeader>
                             <CardTitle>Foto's van Medewerker</CardTitle>
                           </CardHeader>
-                          <CardContent className="flex-1 flex flex-col space-y-4 p-4 min-h-0">
+                          <CardContent className="flex-1 flex flex-col space-y-4 p-4 pt-0 min-h-0">
                             <div
                               className={cn(
                                 "border-2 border-dashed border-muted-foreground/30 rounded-lg flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50 transition-colors flex-1",
@@ -1125,7 +1125,7 @@ export default function IssuesPage() {
                             )}
                     
                             {afhandelingFotos.length > 0 && (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 overflow-y-auto">
                                     {afhandelingFotos.map((photo) => (
                                     <div key={photo.storagePath} className="relative group aspect-square">
                                         <Image src={photo.url} alt={photo.name} fill className="object-cover rounded-md" />
