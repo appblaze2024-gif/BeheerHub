@@ -971,9 +971,9 @@ export default function NewIssuePage() {
                             </div>
                         )}
                     </TabsContent>
-                    <TabsContent value="locatie" className="flex-1 mt-1">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
-                        <div className="h-full border rounded-md overflow-hidden">
+                    <TabsContent value="locatie" className="flex-1 mt-1 flex flex-col">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
+                        <div className="border rounded-md overflow-hidden min-h-0">
                             <MapboxView
                                 longitude={location?.longitude}
                                 latitude={location?.latitude}
@@ -981,7 +981,7 @@ export default function NewIssuePage() {
                                 interactive={!isReadOnly}
                             />
                         </div>
-                        <div className="h-full border rounded-md flex flex-col">
+                        <div className="border rounded-md flex flex-col min-h-0">
                             <div className="p-2 border-b shrink-0">
                                 <h3 className="font-semibold text-sm">Objecten in de buurt (100m)</h3>
                             </div>
