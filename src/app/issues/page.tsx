@@ -1038,7 +1038,7 @@ export default function IssuesPage() {
                           <CardContent className="p-4">
                             {uploadedPhotos.length > 0 ? (
                               <div className="space-y-4">
-                                <div className="w-full h-80 relative rounded-md overflow-hidden border">
+                                <div className="w-full h-56 relative rounded-md overflow-hidden border">
                                   {mainPhoto ? (
                                     <Image src={mainPhoto.url} alt={mainPhoto.name} fill className="object-contain" />
                                   ) : (
