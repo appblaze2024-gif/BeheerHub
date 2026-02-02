@@ -28,6 +28,7 @@ interface MapboxViewProps {
   wijkPolygons?: turf.Feature<turf.Polygon | turf.MultiPolygon>[];
   showHeatmap?: boolean;
   interactive?: boolean;
+  highlightedObject?: MapObject | null;
 }
 
 const polygonFillLayer: FillLayer = {
@@ -57,7 +58,7 @@ const getHeatmapColor = (vulgraad: number | undefined): string => {
     return `hsl(${hue}, 80%, 50%)`;
 };
 
-export function MapboxView({ longitude, latitude, objects, selectedObjects = [], onObjectSelect, wijkPolygons = [], showHeatmap = true, interactive = true }: MapboxViewProps) {
+export function MapboxView({ longitude, latitude, objects, selectedObjects = [], onObjectSelect, wijkPolygons = [], showHeatmap = true, interactive = true, highlightedObject = null }: MapboxViewProps) {
   const [selectedPin, setSelectedPin] = React.useState<MapObject | null>(null);
   const [hoveredPin, setHoveredPin] = React.useState<MapObject | null>(null);
   const { profile } = useProfile();
@@ -92,6 +93,11 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
     const map = mapRef.current?.getMap();
     if (!map) return;
     
+    if (highlightedObject) {
+      map.flyTo({ center: [highlightedObject.longitude, highlightedObject.latitude], zoom: 17, duration: 1000 });
+      return;
+    }
+
     if (wijkPolygons.length > 0) {
       try {
         const featureCollection = { type: 'FeatureCollection', features: wijkPolygons };
@@ -114,7 +120,7 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
             duration: 1000
         });
     }
-  }, [wijkPolygons, longitude, latitude]);
+  }, [wijkPolygons, longitude, latitude, highlightedObject]);
 
   const markers = React.useMemo(() => {
     const markerElements: React.ReactNode[] = [];
@@ -122,6 +128,7 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
     if (objects) {
       markerElements.push(...objects.map(obj => {
         const isSelected = selectedObjects.some(so => so.id === obj.id);
+        const isHighlighted = highlightedObject?.id === obj.id;
         const color = showHeatmap ? getHeatmapColor(obj.vulgraad) : 'hsl(221, 83%, 53%)';
         return (
             <Marker
@@ -140,16 +147,21 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
               onMouseEnter={() => setHoveredPin(obj)}
               onMouseLeave={() => setHoveredPin(null)}
             >
-              <Trash2 
-                className={cn(
-                    "h-5 w-5 cursor-pointer stroke-white stroke-[1.5] transition-transform",
-                    isSelected && "scale-125"
-                )} 
-                style={{
-                    fill: isSelected ? 'hsl(48, 96%, 56%)' : color,
-                    filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.4))'
-                }}
-              />
+              <div className="relative flex items-center justify-center w-8 h-8">
+                {isHighlighted && (
+                  <div className="absolute w-6 h-6 rounded-full bg-yellow-400/70 animate-pulse" />
+                )}
+                <Trash2 
+                  className={cn(
+                      "relative h-5 w-5 cursor-pointer stroke-white stroke-[1.5] transition-transform",
+                      isSelected && "scale-125"
+                  )} 
+                  style={{
+                      fill: isSelected ? 'hsl(48, 96%, 56%)' : color,
+                      filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.4))'
+                  }}
+                />
+              </div>
             </Marker>
         )
       }));
@@ -167,7 +179,7 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
     }
     
     return markerElements;
-  }, [objects, longitude, latitude, selectedObjects, onObjectSelect, showHeatmap]);
+  }, [objects, longitude, latitude, selectedObjects, onObjectSelect, showHeatmap, highlightedObject]);
 
   const pinToShow = hoveredPin || selectedPin;
 
@@ -195,7 +207,7 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
 
         {markers}
 
-        {pinToShow && (
+        {pinToShow && !highlightedObject && (
           <Popup
             anchor="top"
             longitude={Number(pinToShow.longitude)}

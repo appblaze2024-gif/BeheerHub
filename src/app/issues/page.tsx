@@ -173,6 +173,7 @@ export default function IssuesPage() {
   const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
   const [newHoeveelheidEenheid, setNewHoeveelheidEenheid] = React.useState('zak');
   const [gewerkteMinuten, setGewerkteMinuten] = React.useState(0);
+  const [highlightedObject, setHighlightedObject] = React.useState<MapObject | null>(null);
 
   const meldingenCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -338,6 +339,7 @@ export default function IssuesPage() {
       setHoeveelheden(melding.hoeveelheden || []);
       setGewerkteMinuten(melding.gewerkteMinuten || 0);
       setActiveTab('Werkzaamheden');
+      setHighlightedObject(null);
       form.reset({
         hoofdcategorie: melding.hoofdcategorie,
         subcategorie: melding.subcategorie,
@@ -881,9 +883,18 @@ export default function IssuesPage() {
                                     <CollapsibleContent>
                                         <CardContent className="p-0">
                                             {nearbyObjects.length > 0 ? (
-                                                <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                                                <div className="space-y-1 max-h-40 overflow-y-auto pr-2">
                                                     {nearbyObjects.slice(0, 5).map(obj => (
-                                                        <div key={obj.id} className="text-sm p-2 bg-muted rounded-md">{obj.id} - {obj.straatnaam || 'Onbekend'}</div>
+                                                        <div 
+                                                            key={obj.id} 
+                                                            className={cn(
+                                                                "text-sm p-2 bg-muted rounded-md cursor-pointer hover:bg-secondary",
+                                                                highlightedObject?.id === obj.id && "bg-secondary ring-2 ring-primary"
+                                                            )}
+                                                            onClick={() => setHighlightedObject(obj)}
+                                                        >
+                                                            {obj.id} - {obj.straatnaam || 'Onbekend'}
+                                                        </div>
                                                     ))}
                                                 </div>
                                             ) : (
@@ -894,7 +905,12 @@ export default function IssuesPage() {
                                 </Collapsible>
                             </div>
                             <div className="min-h-[400px]">
-                                <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} objects={nearbyObjects} />
+                                <MapboxView 
+                                    latitude={selectedMelding.latitude} 
+                                    longitude={selectedMelding.longitude} 
+                                    objects={nearbyObjects} 
+                                    highlightedObject={highlightedObject}
+                                />
                             </div>
                         </div>
                     </TabsContent>
