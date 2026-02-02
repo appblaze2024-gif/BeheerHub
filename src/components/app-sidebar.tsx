@@ -26,7 +26,7 @@ import {
 import { allMenuItems, type MenuItem, type SubMenuItem } from '@/lib/menu-config';
 import { useUser, useCollection, useFirestore, useDoc, setDocumentNonBlocking } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
-import { collection, doc } from 'firebase/firestore';
+import { collection, doc, query, where } from 'firebase/firestore';
 import { Button } from './ui/button';
 import { Settings, Camera, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -47,6 +47,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { Badge } from '@/components/ui/badge';
 
 type Project = {
   id: string;
@@ -99,6 +100,14 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   }, [firestore]);
 
   const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsCollection);
+
+  const newMeldingenQuery = React.useMemo(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'meldingen'), where('status', '==', 'Nieuw'));
+  }, [firestore]);
+
+  const { data: newMeldingen } = useCollection(newMeldingenQuery);
+  const newMeldingenCount = newMeldingen?.length || 0;
 
   const getInitials = (firstName?: string, lastName?: string) => {
     const firstInitial = firstName?.[0] || '';
@@ -182,7 +191,12 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                             <item.icon className="h-6 w-6 text-primary" />
                             <span>{item.label}</span>
                           </div>
-                          <ChevronRight className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-90" />
+                          <div className="flex items-center gap-2">
+                            {item.module === 'issues' && newMeldingenCount > 0 && (
+                              <Badge variant="secondary">{newMeldingenCount}</Badge>
+                            )}
+                            <ChevronRight className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-90" />
+                          </div>
                         </SidebarMenuButton>
                       </CollapsibleTrigger>
                       <CollapsibleContent className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down overflow-hidden">
@@ -195,8 +209,11 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                             }).map((subItem) => (
                             <SidebarMenuSubItem key={subItem.href}>
                               <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
-                                <Link href={subItem.href} onClick={onNavigate}>
-                                  {subItem.label}
+                                <Link href={subItem.href} onClick={onNavigate} className="flex justify-between w-full items-center">
+                                  <span>{subItem.label}</span>
+                                  {subItem.id === 'portal' && newMeldingenCount > 0 && (
+                                    <Badge variant="secondary">{newMeldingenCount}</Badge>
+                                  )}
                                 </Link>
                               </SidebarMenuSubButton>
                             </SidebarMenuSubItem>
