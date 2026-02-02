@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -73,7 +72,7 @@ export default function MeldingenportaalPage() {
     );
   }, [newMeldingen, debouncedSearchTerm]);
 
-  const handleStatusChange = async (melding: Melding, newStatus: 'Intern doorgezet' | 'Extern doorgezet' | 'Niet in beheer') => {
+  const handleStatusChange = async (melding: Melding, newStatus: string) => {
     if (!firestore) return;
     const meldingRef = doc(firestore, 'meldingen', melding.id);
     try {
@@ -161,8 +160,8 @@ export default function MeldingenportaalPage() {
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => handleStatusChange(melding, 'Intern doorgezet')}>
-                                        Intern doorzetten
+                                    <DropdownMenuItem onClick={() => handleStatusChange(melding, 'In behandeling')}>
+                                        Accepteren en intern doorzetten
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleStatusChange(melding, 'Extern doorgezet')}>
                                         Extern doorzetten
