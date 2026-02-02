@@ -144,8 +144,8 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
   const { profile, isLoading: isProfileLoading } = useProfile();
   const auth = useAuth();
 
+  // Auto-logout at the end of a shift for 'medewerkers'
   useEffect(() => {
-    // Exit if profile isn't loaded, user is not a 'medewerker', or has no shift schedule
     if (isProfileLoading || !profile || profile.role !== 'medewerkers' || !profile.urenPerDag) {
       return;
     }
@@ -153,7 +153,6 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
     const dayName = format(new Date(), 'eeee', { locale: nl }).toLowerCase() as keyof typeof profile.urenPerDag;
     const shift = profile.urenPerDag[dayName];
 
-    // Exit if there's no end time for today's shift
     if (!shift || !shift.eind) {
       return;
     }
@@ -169,37 +168,62 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
       const endTimeToday = new Date();
       endTimeToday.setHours(hours, minutes, 0, 0);
 
-      // If it's already past the end of the shift for today...
       if (now.getTime() > endTimeToday.getTime()) {
-        // ...check when the user last signed in.
         if (auth.currentUser?.metadata.lastSignInTime) {
           const lastLoginTime = new Date(auth.currentUser.metadata.lastSignInTime);
-          // If they logged in *after* their shift ended, let them stay.
           if (isAfter(lastLoginTime, endTimeToday)) {
             return;
           }
         }
-        // Otherwise, if they were already logged in, sign them out now.
         signOut(auth);
         return;
       }
 
-      // If the shift hasn't ended yet, calculate the time remaining.
       const timeUntilLogout = endTimeToday.getTime() - now.getTime();
-
-      // Set a single timer to log the user out exactly at their end time.
       const logoutTimer = setTimeout(() => {
         signOut(auth);
       }, timeUntilLogout);
 
-      // Important: Clean up the timer if the component unmounts or dependencies change.
       return () => clearTimeout(logoutTimer);
-
     } catch (e) {
       console.error("Error setting up auto-logout:", e);
     }
   }, [profile, isProfileLoading, auth]);
-  
+
+  // Auto-logout after 60 minutes of inactivity
+  useEffect(() => {
+    let inactivityTimer: NodeJS.Timeout;
+
+    const logout = () => {
+      if (auth) {
+        localStorage.removeItem('impersonatedUserProfileId');
+        signOut(auth);
+      }
+    };
+
+    const resetTimer = () => {
+      clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(logout, 60 * 60 * 1000); // 60 minutes
+    };
+
+    const events: (keyof WindowEventMap)[] = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+    
+    const resetTimerOnActivity = () => resetTimer();
+
+    events.forEach((event) => {
+      window.addEventListener(event, resetTimerOnActivity, { passive: true });
+    });
+    
+    resetTimer(); // Initialize timer
+
+    return () => {
+      clearTimeout(inactivityTimer);
+      events.forEach((event) => {
+        window.removeEventListener(event, resetTimerOnActivity);
+      });
+    };
+  }, [auth]);
+
   if (isUserLoading || isProfileLoading) {
       return (
         <div className="flex h-screen items-center justify-center">
@@ -339,5 +363,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-    
