@@ -889,11 +889,11 @@ export default function IssuesPage() {
                                                             key={obj.id} 
                                                             className={cn(
                                                                 "text-sm p-2 bg-muted rounded-md cursor-pointer hover:bg-secondary",
-                                                                highlightedObject?.id === obj.id && "font-bold bg-secondary"
+                                                                highlightedObject?.id === obj.id && "bg-secondary"
                                                             )}
                                                             onClick={() => setHighlightedObject(obj)}
                                                         >
-                                                            {obj.id} - {obj.straatnaam || ''}
+                                                             <span className={cn(highlightedObject?.id === obj.id && "font-bold")}>{obj.id} - {obj.straatnaam || ''}</span>
                                                         </div>
                                                     ))}
                                                 </div>
