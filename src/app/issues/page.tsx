@@ -1,5 +1,6 @@
 
-'use client';
+
+      'use client';
 
 import * as React from 'react';
 import MapGL, { Marker, Popup, Source, Layer, FillLayer, LineLayer } from 'react-map-gl';
@@ -772,7 +773,7 @@ export default function IssuesPage() {
                                 </div>
                                 <div className="col-span-2 space-y-1">
                                 <p className="text-muted-foreground">Adres:</p>
-                                <p className="font-semibold text-sm">{selectedMelding.straatnaam}, {selectedMelding.postcode} {selectedMelding.plaats}</p>
+                                <p className="font-semibold text-sm">{selectedMelding.straatnaam} {selectedMelding.huisnummer || ''}, {selectedMelding.postcode} {selectedMelding.plaats}</p>
                                 </div>
                                 <div className="space-y-1">
                                 <p className="text-muted-foreground">Melder:</p>
