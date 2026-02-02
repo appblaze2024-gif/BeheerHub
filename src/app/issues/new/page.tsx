@@ -628,13 +628,12 @@ export default function NewIssuePage() {
     
     const postcode = context.find((c: any) => c.id.startsWith('postcode'))?.text || '';
     const city = context.find((c: any) => c.id.startsWith('place'))?.text || '';
-    const neighborhood = context.find((c: any) => c.id.startsWith('locality'))?.text || '';
 
     form.setValue('straatnaam', street);
     form.setValue('nummer', houseNumber);
     form.setValue('postcode', postcode);
     form.setValue('plaats', city);
-    form.setValue('wijk', neighborhood);
+    form.setValue('wijk', '');
     
     setSearchQuery(feature.place_name);
     setAddressSuggestions([]);
