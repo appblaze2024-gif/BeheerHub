@@ -133,6 +133,7 @@ export default function NewIssuePage() {
   
   const [addressSuggestions, setAddressSuggestions] = React.useState<any[]>([]);
   const [isAddressDialogOpen, setIsAddressDialogOpen] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState('');
 
   const objectsCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -453,6 +454,48 @@ export default function NewIssuePage() {
   };
 
 
+  const resetFormForNewMelding = () => {
+    const newNow = new Date();
+    meldingIdRef.current = `${format(newNow, 'yyyyMMdd')}${Math.floor(1000 + Math.random() * 9000)}`;
+    
+    form.reset({
+      status: 'Nieuw',
+      meldingsdatum: newNow,
+      meldingsuur: format(newNow, 'HH:mm'),
+      voorvaldatum: newNow,
+      voorvaltijd: format(newNow, 'HH:mm'),
+      soort_melder: '',
+      hoofdcategorie: '',
+      subcategorie: '',
+      behandelende_afdeling: '',
+      behandelaar: '',
+      actiedatum: null,
+      soort_melding: '',
+      ext_referentie: '',
+      straatnaam: '',
+      nummer: '',
+      postcode: '',
+      plaats: '',
+      wijk: '',
+      werkgebied: '',
+      melder: '',
+      telefoon_melder: '',
+      email_melder: '',
+      burgerservicenummer: '',
+      extra_informatie: '',
+      afgehandeld_door: '',
+      afhandeling_datum: null,
+      afhandeling_tijdstip: '',
+    });
+    setUploadedFiles([]);
+    setUploadedPhotos([]);
+    setUploadProgress({});
+    setLocation(null);
+    setAddressSuggestions([]);
+    setIsAddressDialogOpen(false);
+    setSearchQuery('');
+  };
+
   const onSubmit = async (data: NewMeldingFormValues) => {
     if (!firestore || isReadOnly) return;
     
@@ -502,7 +545,7 @@ export default function NewIssuePage() {
         title: 'Melding aangemaakt',
         description: `Melding ${meldingsnummer} is succesvol aangemaakt.`,
       });
-      router.push('/issues');
+      resetFormForNewMelding();
     } catch (error) {
       console.error('Fout bij aanmaken melding:', error);
       toast({
@@ -612,7 +655,7 @@ export default function NewIssuePage() {
                     <Card className="bg-gray-50 dark:bg-gray-800/30 p-2 flex flex-col h-full">
                         <CardHeader className="p-1 pb-1 flex-row justify-between items-start">
                            <CardTitle className="font-semibold text-xs">Algemene Informatie</CardTitle>
-                            <div className="text-right text-xs text-muted-foreground">
+                           <div className="text-right text-xs text-muted-foreground">
                                 Laatst gewijzigd door {isReadOnly ? viewedMelding?.aangenomen_door : profile?.displayName || '...'} op {format(new Date(viewedMelding?.datum || now), 'dd-MM-yyyy')} om {viewedMelding?.tijdstip || format(now, 'HH:mm:ss')}.
                             </div>
                         </CardHeader>
@@ -749,20 +792,72 @@ export default function NewIssuePage() {
                     </Card>
                     <div className='p-2 border rounded-md bg-gray-50 dark:bg-gray-800/30 space-y-1'>
                         <h3 className="font-semibold text-xs mb-2">Adresgegevens</h3>
-                        <FormRow label="Straatnaam">
-                            <div className="flex items-center">
-                                <FormField control={form.control} name="straatnaam" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs rounded-r-none" disabled={isReadOnly} /></FormControl> )} />
-                                <Button type="button" onClick={handleAddressSearch} size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0" disabled={isReadOnly}><Search className="h-4 w-4"/></Button>
-                            </div>
-                        </FormRow>
-                        <FormRow label="Nummer">
-                             <div className="flex items-center gap-2">
-                                <FormField control={form.control} name="nummer" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs w-20" disabled={isReadOnly} /></FormControl> )} />
-                            </div>
-                        </FormRow>
-                        <FormRow label="Postcode">
-                             <FormField control={form.control} name="postcode" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs" disabled={isReadOnly} /></FormControl> )} />
-                        </FormRow>
+                        <div className="relative">
+                            <FormField
+                                control={form.control}
+                                name="straatnaam"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="text-xs">Zoek Adres</FormLabel>
+                                    <div className="flex items-center">
+                                    <FormControl>
+                                        <Input
+                                        placeholder="Straat, plaats, of postcode"
+                                        className="h-7 text-xs"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        disabled={isReadOnly}
+                                        autoComplete="off"
+                                        />
+                                    </FormControl>
+                                    </div>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            {addressSuggestions.length > 0 && (
+                                <div className="absolute z-10 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                    {addressSuggestions.map((suggestion, index) => (
+                                        <div
+                                            key={`${suggestion.place_id}-${index}`}
+                                            className="px-4 py-2 text-sm cursor-pointer hover:bg-muted"
+                                            onClick={() => handleSuggestionSelect(suggestion)}
+                                        >
+                                            {suggestion.display_name}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pt-2">
+                             <FormField control={form.control} name="straatnaam" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className='text-xs'>Straatnaam</FormLabel>
+                                    <FormControl><Input {...field} className="h-7 text-xs" disabled={isReadOnly} /></FormControl>
+                                </FormItem>
+                            )} />
+                             <FormField control={form.control} name="nummer" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className='text-xs'>Nummer</FormLabel>
+                                    <FormControl><Input {...field} className="h-7 text-xs" disabled={isReadOnly} /></FormControl>
+                                </FormItem>
+                            )} />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            <FormField control={form.control} name="postcode" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className='text-xs'>Postcode</FormLabel>
+                                    <FormControl><Input {...field} className="h-7 text-xs" disabled={isReadOnly} /></FormControl>
+                                </FormItem>
+                            )} />
+                             <FormField control={form.control} name="plaats" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className='text-xs'>Plaats</FormLabel>
+                                    <FormControl><Input {...field} className="h-7 text-xs" disabled={isReadOnly} /></FormControl>
+                                </FormItem>
+                            )} />
+                        </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             <FormField control={form.control} name="wijk" render={({ field }) => (
                                 <FormItem>
@@ -770,20 +865,12 @@ export default function NewIssuePage() {
                                     <FormControl><Input placeholder="Wijk" {...field} className="h-7 text-xs" disabled={isReadOnly} /></FormControl>
                                 </FormItem>
                             )} />
-                            <FormField control={form.control} name="plaats" render={({ field }) => (
+                             <FormField control={form.control} name="werkgebied" render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel className='text-xs'>Gemeente</FormLabel>
-                                    <FormControl><Input placeholder="Gemeente" {...field} className="h-7 text-xs" disabled={isReadOnly} /></FormControl>
+                                <FormLabel className='text-xs'>Werkgebied</FormLabel>
+                                <FormControl><Input {...field} className="h-7 text-xs" disabled /></FormControl>
                                 </FormItem>
                             )} />
-                        </div>
-                        <div className="max-w-sm">
-                          <FormField control={form.control} name="werkgebied" render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className='text-xs'>Werkgebied</FormLabel>
-                              <FormControl><Input {...field} className="h-7 text-xs" disabled /></FormControl>
-                            </FormItem>
-                          )} />
                         </div>
                     </div>
 
@@ -1037,5 +1124,3 @@ export default function NewIssuePage() {
     </div>
   );
 }
-
-    
