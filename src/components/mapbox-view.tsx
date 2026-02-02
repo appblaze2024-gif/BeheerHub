@@ -149,7 +149,7 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
             >
               <div className="relative flex items-center justify-center w-8 h-8">
                 {isHighlighted && (
-                  <div className="absolute w-6 h-6 rounded-full bg-red-500/70 animate-pulse" />
+                  <div className="absolute w-6 h-6 rounded-full bg-black/70 animate-pulse" />
                 )}
                 <Trash2 
                   className={cn(
