@@ -915,10 +915,25 @@ export default function NewIssuePage() {
             <div className="flex-1 flex flex-col min-h-0 px-3 pb-3">
                  <Tabs defaultValue="locatie" className="flex-1 flex flex-col min-h-0">
                     <TabsList>
+                        {isReadOnly && viewedMelding?.afhandeling_bijzonderheden && (
+                            <TabsTrigger value="opmerkingen">Opmerkingen</TabsTrigger>
+                        )}
                         <TabsTrigger value="documenten">Documenten</TabsTrigger>
                         <TabsTrigger value="fotos">Foto's</TabsTrigger>
                         <TabsTrigger value="locatie">Locatie</TabsTrigger>
                     </TabsList>
+                    {isReadOnly && viewedMelding?.afhandeling_bijzonderheden && (
+                        <TabsContent value="opmerkingen" className="flex-1 mt-1">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Opmerkingen bij afronding</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <p className="text-sm whitespace-pre-wrap">{viewedMelding.afhandeling_bijzonderheden}</p>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+                    )}
                     <TabsContent value="documenten" className="flex-1 mt-1">
                         {isReadOnly ? (
                             uploadedFiles.length > 0 ? (
