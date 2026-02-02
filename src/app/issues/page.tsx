@@ -1031,11 +1031,11 @@ export default function IssuesPage() {
                     </TabsContent>
                     <TabsContent value="Foto's" className="mt-0">
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <Card className="flex flex-col min-h-[400px]">
+                        <Card className="flex flex-col h-full min-h-[400px]">
                           <CardHeader>
                             <CardTitle>Foto's van Melding</CardTitle>
                           </CardHeader>
-                          <CardContent className="flex-1 flex flex-col">
+                          <CardContent className="flex-1 p-4 overflow-y-auto">
                             {uploadedPhotos.length > 0 ? (
                               <div className="space-y-4">
                                 <div className="aspect-video w-full relative rounded-md overflow-hidden border">
@@ -1063,18 +1063,18 @@ export default function IssuesPage() {
                                 )}
                               </div>
                             ) : (
-                              <div className="flex-1 flex items-center justify-center text-center text-muted-foreground">
+                              <div className="flex h-full items-center justify-center text-center text-muted-foreground">
                                 Geen foto's bij deze melding.
                               </div>
                             )}
                           </CardContent>
                         </Card>
 
-                        <Card className="flex flex-col min-h-[400px]">
+                        <Card className="flex flex-col h-full min-h-[400px]">
                           <CardHeader>
                             <CardTitle>Foto's van Medewerker</CardTitle>
                           </CardHeader>
-                          <CardContent className="flex-1 flex flex-col space-y-4">
+                          <CardContent className="flex-1 flex flex-col space-y-4 p-4 overflow-y-auto">
                             <div
                               className={cn(
                                 "flex-1 border-2 border-dashed border-muted-foreground/30 rounded-lg p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50 transition-colors",
