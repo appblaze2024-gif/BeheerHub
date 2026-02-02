@@ -220,6 +220,7 @@ export default function NewIssuePage() {
           postcode: meldingToView.postcode || '',
           plaats: meldingToView.plaats || '',
           wijk: meldingToView.wijk || '',
+          werkgebied: meldingToView.werkgebied || '',
           melder: meldingToView.melder,
           extra_informatie: meldingToView.extra_informatie,
           afgehandeld_door: meldingToView.afgehandeld_door || '',
@@ -514,6 +515,7 @@ export default function NewIssuePage() {
         postcode: data.postcode,
         plaats: data.plaats,
         wijk: data.wijk,
+        werkgebied: data.werkgebied,
         melder: data.melder,
         extra_informatie: data.extra_informatie,
         

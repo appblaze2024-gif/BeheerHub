@@ -266,6 +266,7 @@ export type Melding = {
   postcode?: string;
   plaats?: string;
   wijk?: string;
+  werkgebied?: string;
   files?: UploadedFile[];
   fotos?: UploadedFile[];
   tasks?: MeldingTask[];

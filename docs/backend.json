@@ -561,6 +561,7 @@
         "postcode": { "type": "string" },
         "plaats": { "type": "string" },
         "wijk": { "type": "string" },
+        "werkgebied": { "type": "string" },
         "extra_informatie": { "type": "string" },
         "status": {
           "type": "string",
