@@ -860,8 +860,8 @@ export default function IssuesPage() {
                                                 <span>{selectedMelding.plaats}</span>
                                             </div>
                                             <div className="flex justify-between text-sm">
-                                                <span className="font-semibold text-muted-foreground">Wijk:</span>
-                                                <span>{selectedMelding.wijk}</span>
+                                                <span className="font-semibold text-muted-foreground">Werkgebied:</span>
+                                                <span>{selectedMelding.werkgebied || '-'}</span>
                                             </div>
                                             <div className="flex justify-between text-sm">
                                                 <span className="font-semibold text-muted-foreground">Coördinaten:</span>
