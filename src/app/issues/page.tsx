@@ -62,6 +62,8 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
 
 
@@ -1249,6 +1251,9 @@ export default function IssuesPage() {
         {fullScreenPhoto && (
             <Dialog open={!!fullScreenPhoto} onOpenChange={(open) => !open && setFullScreenPhoto(null)}>
                 <DialogContent className="max-w-[95vw] h-auto max-h-[95vh] p-0 bg-transparent border-0 shadow-none flex items-center justify-center">
+                    <DialogHeader className="sr-only">
+                        <DialogTitle>Vergrote afbeelding: {fullScreenPhoto.name}</DialogTitle>
+                    </DialogHeader>
                     <Image 
                         src={fullScreenPhoto.url} 
                         alt={fullScreenPhoto.name}
