@@ -612,15 +612,28 @@ export default function NewIssuePage() {
                 </Button>
                 <h1 className="font-semibold text-xs">{isReadOnly ? `Melding: ${viewedMelding?.intakenummer}` : `Melding : ${meldingsnummer}`}</h1>
             </div>
+            <div className="flex justify-end gap-2">
+                {isReadOnly ? (
+                    <Button type="button" variant="outline" onClick={() => router.back()} className="h-8">Sluiten</Button>
+                ) : (
+                    <>
+                        <Button type="button" variant="ghost" onClick={() => router.push('/issues')} className="h-8">Annuleren</Button>
+                        <Button type="submit" form="new-melding-form" disabled={isSubmitting || isUploading} className="h-8">
+                            {isSubmitting || isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Melding Opslaan
+                        </Button>
+                    </>
+                )}
+            </div>
         </div>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
+          <form id="new-melding-form" onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
              <div className="p-3 grid grid-cols-12 gap-4">
                {/* Left Column */}
                <div className="col-span-7 h-full">
                     <Card className="h-full bg-gray-50 dark:bg-gray-800/30 p-2 flex flex-col">
                         <div className="text-right text-xs text-muted-foreground mb-1">
-                          Laatst gewijzigd door {isReadOnly ? viewedMelding?.aangenomen_door : profile?.displayName || '...'} op {format(new Date(viewedMelding?.datum || now), 'dd-MM-yyyy')} om {viewedMelding?.tijdstip || format(now, 'HH:mm:ss')}.
+                            Laatst gewijzigd door {isReadOnly ? viewedMelding?.aangenomen_door : profile?.displayName || '...'} op {format(new Date(viewedMelding?.datum || now), 'dd-MM-yyyy')} om {viewedMelding?.tijdstip || format(now, 'HH:mm:ss')}.
                         </div>
                         <CardHeader className="p-1 pb-1">
                            <CardTitle className="font-semibold text-xs">Algemene Informatie</CardTitle>
@@ -973,7 +986,7 @@ export default function NewIssuePage() {
                             </div>
                         )}
                     </TabsContent>
-                    <TabsContent value="locatie" className="flex-1 mt-1 flex flex-col">
+                    <TabsContent value="locatie" className="flex-1 mt-1 flex flex-col min-h-0">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 min-h-0">
                         <div className="border rounded-md overflow-hidden min-h-0">
                             <MapboxView
@@ -1075,20 +1088,6 @@ export default function NewIssuePage() {
                         )}
                         </TabsContent>
                 </Tabs>
-            </div>
-            
-            <div className="flex-shrink-0 flex justify-end gap-2 px-3 pb-2 border-t pt-2 bg-gray-50 dark:bg-gray-800">
-                {isReadOnly ? (
-                    <Button type="button" variant="outline" onClick={() => router.back()} className="h-8">Sluiten</Button>
-                ) : (
-                    <>
-                        <Button type="button" variant="ghost" onClick={() => router.push('/issues')} className="h-8">Annuleren</Button>
-                        <Button type="submit" disabled={isSubmitting || isUploading} className="h-8">
-                            {isSubmitting || isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                            Melding Opslaan
-                        </Button>
-                    </>
-                )}
             </div>
           </form>
         </Form>
