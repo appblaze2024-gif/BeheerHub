@@ -743,6 +743,11 @@ export default function NewIssuePage() {
                                     <FormField control={form.control} name="afhandeling_tijdstip" render={({ field }) => (<FormControl><Input type="time" className="h-7 text-xs w-24" {...field} disabled /></FormControl>)} />
                                 </div>
                             </FormRow>
+                            {isReadOnly && viewedMelding?.gewerkteMinuten !== undefined && (
+                                <FormRow label="Duur">
+                                    <Input value={`${viewedMelding.gewerkteMinuten} minuten`} disabled className="h-7 text-xs"/>
+                                </FormRow>
+                            )}
                             <FormRow label="Voorvaldatum">
                                 <div className="flex gap-2 items-center">
                                     <FormField control={form.control} name="voorvaldatum" render={({ field }) => (<FormControl><Input type='date' className="h-7 text-xs" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} disabled={isReadOnly} /></FormControl>)} />
