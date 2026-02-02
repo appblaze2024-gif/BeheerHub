@@ -266,51 +266,7 @@ export default function IssuesPage() {
       return ['intakenummer', 'extern_meldingsnummer', 'straatnaam', 'plaats', 'postcode', 'subcategorie', 'hoofdcategorie', 'melder', 'extra_informatie', 'wijk', 'status', 'aangenomen_door', 'afgehandeld_door'].some(field => (m as any)[field]?.toLowerCase().includes(query));
     }) : timeFilteredMeldingen;
 
-    let projectFilteredMeldingen: Melding[] = [];
-    if (!selectedProjectId) {
-        projectFilteredMeldingen = [];
-    } else {
-        const project = projects?.find(p => p.id === selectedProjectId);
-        if (!project?.wijken) {
-            projectFilteredMeldingen = [];
-        } else if (!selectedWijkId || selectedWijkId === 'all') {
-          const allProjectWijkNames = project.wijken.map(w => w.naam);
-          projectFilteredMeldingen = searchedMeldingen.filter(m => {
-            if (m.wijk && allProjectWijkNames.includes(m.wijk)) return true;
-            if (typeof m.latitude !== 'number' || typeof m.longitude !== 'number') return false;
-            const point = turf.point([m.longitude, m.latitude]);
-            for (const wijk of project.wijken || []) {
-              try {
-                const wijkFeatures = JSON.parse(wijk.subGebieden);
-                if (Array.isArray(wijkFeatures)) {
-                  for (const polygon of wijkFeatures) if (turf.booleanPointInPolygon(point, polygon.geometry)) return true;
-                }
-              } catch { continue; }
-            }
-            return false;
-          });
-        } else {
-            const wijk = project.wijken.find(w => w.id === selectedWijkId);
-            if (!wijk) {
-                projectFilteredMeldingen = [];
-            } else {
-                projectFilteredMeldingen = searchedMeldingen.filter(m => {
-                    if (m.wijk === wijk.naam) return true;
-                    try {
-                        const wijkFeatures = JSON.parse(wijk.subGebieden);
-                        if (Array.isArray(wijkFeatures) && wijkFeatures.length > 0) {
-                        if (typeof m.latitude !== 'number' || typeof m.longitude !== 'number') return false;
-                        const point = turf.point([m.longitude, m.latitude]);
-                        for (const polygon of wijkFeatures) if (turf.booleanPointInPolygon(point, polygon)) return true;
-                        }
-                    } catch { return false; }
-                    return false;
-                });
-            }
-        }
-    }
-    
-    projectFilteredMeldingen.sort((a, b) => {
+    searchedMeldingen.sort((a, b) => {
         try {
             const dateA = new Date(`${a.datum}T${a.tijdstip || '00:00'}`).getTime();
             const dateB = new Date(`${b.datum}T${b.tijdstip || '00:00'}`).getTime();
@@ -321,8 +277,8 @@ export default function IssuesPage() {
         }
     });
 
-    return projectFilteredMeldingen;
-  }, [meldingen, selectedProjectId, selectedWijkId, projects, selectedDate, debouncedSearchQuery]);
+    return searchedMeldingen;
+  }, [meldingen, selectedDate, debouncedSearchQuery]);
 
   React.useEffect(() => {
     if (filteredMeldingen.length > 0 && !selectedMeldingId) {
@@ -743,7 +699,7 @@ export default function IssuesPage() {
               <div className="flex items-center gap-2">
                   {selectedProjectId && (
                   <Link href={`/navigation-module?projectId=${selectedProjectId}&lat=${selectedMelding.latitude}&lng=${selectedMelding.longitude}&straat=${encodeURIComponent(selectedMelding.straatnaam || '')}`} passHref>
-                      <Button variant="outline" size="icon" className="h-9 w-9 bg-sky-300 hover:bg-sky-400 dark:bg-sky-800/50 dark:hover:bg-sky-800/70">
+                      <Button variant="outline" size="icon" className="h-9 w-9 bg-deep-sky-blue hover:bg-sky-400 dark:bg-sky-800/50 dark:hover:bg-sky-800/70">
                           <Navigation className="h-4 w-4" />
                       </Button>
                   </Link>
