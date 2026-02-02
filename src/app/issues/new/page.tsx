@@ -1073,7 +1073,7 @@ export default function NewIssuePage() {
                                 </Card>
                             </div>
                         ) : duplicateMeldingen.length > 0 ? (
-                            <div className="border rounded-md">
+                            <>
                                 {duplicateMeldingen.map(melding => (
                                     <div key={melding.id} className="grid grid-cols-[1fr_2fr_1fr_auto] items-center gap-4 px-4 py-3 border-b last:border-b-0">
                                         <div className="font-medium">{melding.intakenummer}</div>
@@ -1082,7 +1082,7 @@ export default function NewIssuePage() {
                                         <Button variant="secondary" size="sm" onClick={() => setSelectedDuplicate(melding)}>Bekijken</Button>
                                     </div>
                                 ))}
-                            </div>
+                            </>
                         ) : (
                             <div className="text-center p-8 text-muted-foreground">Geen dubbele meldingen gevonden op deze locatie.</div>
                         )}
