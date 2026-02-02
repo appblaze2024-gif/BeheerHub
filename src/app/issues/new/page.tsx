@@ -986,37 +986,35 @@ export default function NewIssuePage() {
                             </div>
                         )}
                     </TabsContent>
-                    <TabsContent value="locatie" className="flex-1 mt-1 flex flex-col min-h-0">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 min-h-0">
-                        <div className="border rounded-md overflow-hidden min-h-0">
-                            <MapboxView
-                                longitude={location?.longitude}
-                                latitude={location?.latitude}
-                                objects={nearbyObjects}
-                                interactive={!isReadOnly}
-                            />
-                        </div>
-                        <div className="border rounded-md flex flex-col min-h-0">
-                            <div className="p-2 border-b shrink-0">
-                                <h3 className="font-semibold text-sm">Objecten in de buurt (100m)</h3>
-                            </div>
-                            <div className="overflow-y-auto flex-1">
-                                {nearbyObjects.length > 0 ? (
-                                    <div className="p-2 space-y-2">
-                                        {nearbyObjects.map(obj => (
-                                            <div key={obj.id} className="p-2 rounded-md bg-muted text-sm">
-                                                <p className="font-semibold">{obj.id}</p>
-                                                <p className="text-xs text-muted-foreground">{obj.locatieSubType || 'Onbekend type'}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="p-4 text-center text-muted-foreground text-xs">
-                                        Geen objecten gevonden in de buurt.
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+                    <TabsContent value="locatie" className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 min-h-0 mt-1">
+                      <div className="border rounded-md overflow-hidden min-h-0">
+                          <MapboxView
+                              longitude={location?.longitude}
+                              latitude={location?.latitude}
+                              objects={nearbyObjects}
+                              interactive={!isReadOnly}
+                          />
+                      </div>
+                      <div className="border rounded-md flex flex-col min-h-0">
+                          <div className="p-2 border-b shrink-0">
+                              <h3 className="font-semibold text-sm">Objecten in de buurt (100m)</h3>
+                          </div>
+                          <div className="overflow-y-auto flex-1">
+                              {nearbyObjects.length > 0 ? (
+                                  <div className="p-2 space-y-2">
+                                      {nearbyObjects.map(obj => (
+                                          <div key={obj.id} className="p-2 rounded-md bg-muted text-sm">
+                                              <p className="font-semibold">{obj.id}</p>
+                                              <p className="text-xs text-muted-foreground">{obj.locatieSubType || 'Onbekend type'}</p>
+                                          </div>
+                                      ))}
+                                  </div>
+                              ) : (
+                                  <div className="p-4 text-center text-muted-foreground text-xs">
+                                      Geen objecten gevonden in de buurt.
+                                  </div>
+                              )}
+                          </div>
                       </div>
                     </TabsContent>
                     <TabsContent value="dubbele" className="flex-1 mt-1 overflow-y-auto">
