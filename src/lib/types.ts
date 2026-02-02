@@ -269,6 +269,7 @@ export type Melding = {
   werkgebied?: string;
   files?: UploadedFile[];
   fotos?: UploadedFile[];
+  afhandeling_fotos?: UploadedFile[];
   tasks?: MeldingTask[];
   hoeveelheden?: Hoeveelheid[];
   gewerkteMinuten?: number;

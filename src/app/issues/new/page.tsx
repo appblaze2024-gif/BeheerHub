@@ -14,6 +14,7 @@ import { collection, doc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigationUI } from '@/context/navigation-ui-context';
+import Image from 'next/image';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -126,6 +127,7 @@ export default function NewIssuePage() {
 
   const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
   const [uploadedPhotos, setUploadedPhotos] = React.useState<UploadedFile[]>([]);
+  const [afhandelingFotos, setAfhandelingFotos] = React.useState<UploadedFile[]>([]);
   const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
   const [isDragging, setIsDragging] = React.useState(false);
   const [isDraggingPhoto, setIsDraggingPhoto] = React.useState(false);
@@ -232,6 +234,7 @@ export default function NewIssuePage() {
         setLocation({ latitude: meldingToView.latitude, longitude: meldingToView.longitude });
         setUploadedFiles(meldingToView.files || []);
         setUploadedPhotos(meldingToView.fotos || []);
+        setAfhandelingFotos(meldingToView.afhandeling_fotos || []);
         
         justSelectedSuggestion.current = true;
         setSearchQuery(`${meldingToView.straatnaam || ''}${meldingToView.huisnummer ? ' ' + meldingToView.huisnummer : ''}, ${meldingToView.plaats || ''}`);
@@ -1012,22 +1015,33 @@ export default function NewIssuePage() {
                         )}
                     </TabsContent>
                     <TabsContent value="fotos" className="flex-1 mt-1">
-                        {isReadOnly ? (
-                            uploadedPhotos.length > 0 ? (
-                                <div className="border rounded-md max-h-full overflow-y-auto">
-                                    {uploadedPhotos.map((file) => (
-                                        <div
-                                            key={file.storagePath}
-                                            className="grid grid-cols-[1fr_auto] gap-4 items-center px-2 py-1 border-b last:border-b-0"
-                                        >
-                                            <a href={file.url} target="_blank" rel="noopener noreferrer" className="truncate flex items-center gap-2 hover:underline text-xs">
-                                                <FileIcon className="h-4 w-4 shrink-0" /> {file.name}
-                                            </a>
-                                            <span className='text-xs text-muted-foreground'>{formatBytes(file.size)}</span>
+                       {isReadOnly ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <h3 className="font-semibold text-base">Foto's van Melding</h3>
+                                    {uploadedPhotos.length > 0 ? (
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                            {uploadedPhotos.map(photo => (
+                                                <a key={photo.storagePath} href={photo.url} target="_blank" rel="noopener noreferrer" className="relative group aspect-square">
+                                                    <Image src={photo.url} alt={photo.name} fill className="object-cover rounded-md" />
+                                                </a>
+                                            ))}
                                         </div>
-                                    ))}
+                                    ) : <p className="text-sm text-muted-foreground pt-2">Geen foto's.</p>}
                                 </div>
-                            ) : <p className="text-sm text-muted-foreground p-4">Geen foto's.</p>
+                                <div className="space-y-2">
+                                    <h3 className="font-semibold text-base">Foto's van Medewerker</h3>
+                                    {afhandelingFotos.length > 0 ? (
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                            {afhandelingFotos.map(photo => (
+                                            <a key={photo.storagePath} href={photo.url} target="_blank" rel="noopener noreferrer" className="relative group aspect-square">
+                                                    <Image src={photo.url} alt={photo.name} fill className="object-cover rounded-md" />
+                                                </a>
+                                            ))}
+                                        </div>
+                                    ) : <p className="text-sm text-muted-foreground pt-2">Geen foto's van de medewerker.</p>}
+                                </div>
+                            </div>
                         ) : (
                            <div className="h-full flex flex-col gap-4 p-1">
                                 <div

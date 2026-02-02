@@ -563,6 +563,19 @@
         "wijk": { "type": "string" },
         "werkgebied": { "type": "string" },
         "extra_informatie": { "type": "string" },
+        "afhandeling_bijzonderheden": { "type": "string" },
+        "afhandeling_fotos": {
+          "type": "array",
+          "items": { "$ref": "#/backend/entities/Bestand" }
+        },
+        "files": {
+          "type": "array",
+          "items": { "$ref": "#/backend/entities/Bestand" }
+        },
+        "fotos": {
+          "type": "array",
+          "items": { "$ref": "#/backend/entities/Bestand" }
+        },
         "status": {
           "type": "string",
           "enum": [
@@ -579,7 +592,6 @@
         "afhandeling_datum": { "type": "string", "format": "date" },
         "afhandeling_tijdstip": { "type": "string", "format": "time" },
         "afgehandeld_door": { "type": "string" },
-        "afhandeling_bijzonderheden": { "type": "string" },
         "tasks": {
           "type": "array",
           "items": {
