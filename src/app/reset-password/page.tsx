@@ -19,21 +19,23 @@ function Fallback() {
 
 export default function ResetPasswordPage() {
   return (
-    <div className="flex h-screen w-screen flex-col items-center justify-start pt-12 bg-gray-100 dark:bg-gray-950">
-       <div className="absolute top-8 left-8 z-10">
-         <Image
-          src="https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png"
-          alt="BEHEERHUB"
-          width={360}
-          height={90}
-          priority
-        />
-      </div>
-      <Card className="w-full max-w-md">
-        <Suspense fallback={<Fallback />}>
-          <ResetPasswordContent />
-        </Suspense>
-      </Card>
+    <div className="flex h-screen w-screen flex-col items-center justify-start bg-gray-100 p-4 dark:bg-gray-950">
+       <div className="w-full max-w-md space-y-6">
+            <div className="flex justify-center">
+                <Image
+                    src="https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png"
+                    alt="BEHEERHUB"
+                    width={360}
+                    height={90}
+                    priority
+                />
+            </div>
+          <Card className="w-full">
+            <Suspense fallback={<Fallback />}>
+              <ResetPasswordContent />
+            </Suspense>
+          </Card>
+        </div>
     </div>
   );
 }
