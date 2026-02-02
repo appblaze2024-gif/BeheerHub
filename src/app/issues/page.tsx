@@ -1031,7 +1031,7 @@ export default function IssuesPage() {
                     </TabsContent>
                     <TabsContent value="Foto's" className="mt-0">
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <Card className="flex flex-col h-full min-h-[400px]">
+                        <Card className="flex flex-col h-[550px]">
                           <CardHeader>
                             <CardTitle>Foto's van Melding</CardTitle>
                           </CardHeader>
@@ -1070,7 +1070,7 @@ export default function IssuesPage() {
                           </CardContent>
                         </Card>
 
-                        <Card className="flex flex-col h-full min-h-[400px]">
+                        <Card className="flex flex-col h-[550px]">
                           <CardHeader>
                             <CardTitle>Foto's van Medewerker</CardTitle>
                           </CardHeader>
