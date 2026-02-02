@@ -609,12 +609,12 @@ export default function NewIssuePage() {
              <div className="p-3 grid grid-cols-12 gap-4">
                {/* Left Column */}
                <div className="col-span-7 h-full flex flex-col gap-4">
-                    <Card className="bg-gray-50 dark:bg-gray-800/30 p-2 flex flex-col">
-                        <div className="text-right text-xs text-muted-foreground mb-1">
-                            Laatst gewijzigd door {isReadOnly ? viewedMelding?.aangenomen_door : profile?.displayName || '...'} op {format(new Date(viewedMelding?.datum || now), 'dd-MM-yyyy')} om {viewedMelding?.tijdstip || format(now, 'HH:mm:ss')}.
-                        </div>
-                        <CardHeader className="p-1 pb-1">
+                    <Card className="bg-gray-50 dark:bg-gray-800/30 p-2 flex flex-col h-full">
+                        <CardHeader className="p-1 pb-1 flex-row justify-between items-start">
                            <CardTitle className="font-semibold text-xs">Algemene Informatie</CardTitle>
+                            <div className="text-right text-xs text-muted-foreground">
+                                Laatst gewijzigd door {isReadOnly ? viewedMelding?.aangenomen_door : profile?.displayName || '...'} op {format(new Date(viewedMelding?.datum || now), 'dd-MM-yyyy')} om {viewedMelding?.tijdstip || format(now, 'HH:mm:ss')}.
+                            </div>
                         </CardHeader>
                         <div className="space-y-0.5 p-1 flex-1">
                             <FormRow label="Meldingsnummer">
@@ -697,32 +697,28 @@ export default function NewIssuePage() {
                             <FormRow label="Actiedatum">
                             <FormField control={form.control} name="actiedatum" render={({ field }) => (<FormControl><Input type='date' className="h-7 text-xs" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} disabled={isReadOnly} /></FormControl>)} />
                             </FormRow>
+                             <div className="grid grid-cols-[140px_1fr] items-start gap-x-2 py-0.5">
+                                <FormLabel className="text-xs text-left pt-2">Memo</FormLabel>
+                                <FormField
+                                    control={form.control}
+                                    name="extra_informatie"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormControl>
+                                                <Textarea
+                                                    {...field}
+                                                    className="resize-none text-xs"
+                                                    rows={4}
+                                                    disabled={isReadOnly}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
                         </div>
                    </Card>
-                   <Card className="p-2 bg-gray-50 dark:bg-gray-800/30 flex-1 flex flex-col">
-                        <CardHeader className="p-1 pb-1">
-                            <CardTitle className="font-semibold text-xs">Memo</CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-1 flex-1 flex">
-                            <FormField
-                                control={form.control}
-                                name="extra_informatie"
-                                render={({ field }) => (
-                                    <FormItem className="h-full flex-1 flex flex-col">
-                                        <FormLabel className="sr-only">Memo</FormLabel>
-                                        <FormControl>
-                                            <Textarea
-                                                {...field}
-                                                className="flex-1 resize-none text-xs"
-                                                disabled={isReadOnly}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </CardContent>
-                    </Card>
                </div>
 
                {/* Right Column */}
