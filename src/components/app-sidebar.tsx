@@ -193,7 +193,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                           </div>
                           <div className="flex items-center gap-2">
                             {item.module === 'issues' && newMeldingenCount > 0 && (
-                              <Badge variant="secondary">{newMeldingenCount}</Badge>
+                              <Badge variant="destructive">{newMeldingenCount}</Badge>
                             )}
                             <ChevronRight className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-90" />
                           </div>
@@ -205,14 +205,14 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                               if (isSuperUser) return true;
                               if (!item.module) return true;
                               const tabPermissions = profile?.permissions?.[item.module]?.tabs;
-                              return tabPermissions?.[subItem.id];
+                              return tabPermissions?.[subItem.id] ?? true; // show if permission exists, or if no permission is defined for it (default true)
                             }).map((subItem) => (
                             <SidebarMenuSubItem key={subItem.href}>
                               <SidebarMenuSubButton asChild isActive={pathname === subItem.href}>
                                 <Link href={subItem.href} onClick={onNavigate} className="flex justify-between w-full items-center">
                                   <span>{subItem.label}</span>
                                   {subItem.id === 'portal' && newMeldingenCount > 0 && (
-                                    <Badge variant="secondary">{newMeldingenCount}</Badge>
+                                    <Badge variant="destructive">{newMeldingenCount}</Badge>
                                   )}
                                 </Link>
                               </SidebarMenuSubButton>
