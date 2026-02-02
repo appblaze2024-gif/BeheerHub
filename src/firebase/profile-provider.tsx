@@ -21,14 +21,14 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (isUserLoading) return;
 
-    if (user?.isAnonymous) {
-      const impersonatedId = localStorage.getItem('impersonatedUserProfileId');
+    const impersonatedId = localStorage.getItem('impersonatedUserProfileId');
+    if (impersonatedId) {
       setProfileId(impersonatedId);
     } else if (user) {
-      localStorage.removeItem('impersonatedUserProfileId');
+      // This is a regular login, not an impersonated one.
       setProfileId(user.uid);
     } else {
-      localStorage.removeItem('impersonatedUserProfileId');
+      // No user, no impersonation.
       setProfileId(null);
     }
   }, [user, isUserLoading]);

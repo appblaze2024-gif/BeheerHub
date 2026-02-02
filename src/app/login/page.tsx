@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth, useFirestore } from '@/firebase';
-import { signInWithEmailAndPassword, signInAnonymously } from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { Mail, Lock, Nfc, Loader2 } from 'lucide-react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 
@@ -84,8 +84,23 @@ export default function LoginPage() {
 
                 const userProfile = userSnapshot.docs[0];
 
-                // 2. Sign in anonymously
-                await signInAnonymously(auth);
+                const nfcUser = process.env.NEXT_PUBLIC_NFC_KIOSK_USER;
+                const nfcPass = process.env.NEXT_PUBLIC_NFC_KIOSK_PASS;
+
+                if (!nfcUser || !nfcPass) {
+                    setNfcError('NFC inlogaccount is niet geconfigureerd. Neem contact op met de beheerder.');
+                    setNfcStatus('error');
+                    return;
+                }
+
+                // 2. Sign in with the shared kiosk account
+                try {
+                    await signInWithEmailAndPassword(auth, nfcUser, nfcPass);
+                } catch (kioskLoginError) {
+                    setNfcError('Fout bij inloggen met gedeeld account.');
+                    setNfcStatus('error');
+                    return;
+                }
 
                 // 3. Store the ID of the user profile we want to impersonate in localStorage.
                 localStorage.setItem('impersonatedUserProfileId', userProfile.id);
