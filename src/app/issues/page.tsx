@@ -882,7 +882,7 @@ export default function IssuesPage() {
                                             {nearbyObjects.length > 0 ? (
                                                 <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
                                                     {nearbyObjects.slice(0, 5).map(obj => (
-                                                        <div key={obj.id} className="text-sm p-2 bg-muted rounded-md">{obj.id} - {obj.locatieSubType || 'Onbekend'}</div>
+                                                        <div key={obj.id} className="text-sm p-2 bg-muted rounded-md">{obj.id} - {obj.straatnaam || 'Onbekend'}</div>
                                                     ))}
                                                 </div>
                                             ) : (
