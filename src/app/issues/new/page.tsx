@@ -144,7 +144,7 @@ export default function NewIssuePage() {
     if (!firestore) return null;
     return collection(firestore, 'meldingen');
   }, [firestore]);
-  const { data: allMeldingen } = useCollection<Melding>(allMeldingen);
+  const { data: allMeldingen } = useCollection<Melding>(meldingenCollection);
 
   const projectsCollection = React.useMemo(() => {
       if (!firestore) return null;
@@ -1021,3 +1021,5 @@ export default function NewIssuePage() {
     </div>
   );
 }
+
+    
