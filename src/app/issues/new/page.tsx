@@ -656,7 +656,7 @@ export default function NewIssuePage() {
                     <Button type="button" variant="outline" onClick={() => router.back()} className="h-8">Sluiten</Button>
                 ) : (
                     <>
-                        <Button type="button" variant="ghost" onClick={() => router.push('/issues')} className="h-8">Annuleren</Button>
+                        <Button type="button" variant="ghost" onClick={resetFormForNewMelding} className="h-8">Annuleren</Button>
                         <Button type="submit" form="new-melding-form" disabled={isSubmitting || isUploading} className="h-8">
                             {isSubmitting || isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                             Melding Opslaan
@@ -758,6 +758,26 @@ export default function NewIssuePage() {
                             <FormRow label="Actiedatum">
                             <FormField control={form.control} name="actiedatum" render={({ field }) => (<FormControl><Input type='date' className="h-7 text-xs" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} disabled={isReadOnly} /></FormControl>)} />
                             </FormRow>
+                        </div>
+                        <div className="p-1 pt-2 border-t mt-2">
+                            <FormField
+                                control={form.control}
+                                name="extra_informatie"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-xs">Memo</FormLabel>
+                                        <FormControl>
+                                            <Textarea
+                                                {...field}
+                                                className="resize-none h-full text-xs"
+                                                rows={4}
+                                                disabled={isReadOnly}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
                         </div>
                    </Card>
                </div>
@@ -893,7 +913,6 @@ export default function NewIssuePage() {
                         <TabsTrigger value="documenten">Documenten</TabsTrigger>
                         <TabsTrigger value="fotos">Foto's</TabsTrigger>
                         <TabsTrigger value="locatie">Locatie</TabsTrigger>
-                        <TabsTrigger value="memo">Memo</TabsTrigger>
                     </TabsList>
                     <TabsContent value="documenten" className="flex-1 mt-1">
                         {isReadOnly ? (
@@ -1084,26 +1103,6 @@ export default function NewIssuePage() {
                             </div>
                         </div>
                       </div>
-                    </TabsContent>
-                    <TabsContent value="memo" className="flex-1 mt-1">
-                        <div className="grid grid-cols-1 h-full">
-                            <FormField
-                                control={form.control}
-                                name="extra_informatie"
-                                render={({ field }) => (
-                                    <FormItem className="h-full flex flex-col">
-                                        <FormControl className="flex-1">
-                                            <Textarea
-                                                {...field}
-                                                className="resize-none h-full text-xs"
-                                                disabled={isReadOnly}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
                     </TabsContent>
                 </Tabs>
             </div>
