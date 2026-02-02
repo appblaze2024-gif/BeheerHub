@@ -144,7 +144,7 @@ export default function NewIssuePage() {
     if (!firestore) return null;
     return collection(firestore, 'meldingen');
   }, [firestore]);
-  const { data: allMeldingen } = useCollection<Melding>(meldingenCollection);
+  const { data: allMeldingen } = useCollection<Melding>(allMeldingen);
 
   const projectsCollection = React.useMemo(() => {
       if (!firestore) return null;
@@ -155,8 +155,6 @@ export default function NewIssuePage() {
   const now = new Date();
   const meldingIdRef = React.useRef(meldingIdFromUrl || `${format(now, 'yyyyMMdd')}${Math.floor(1000 + Math.random() * 9000)}`);
   const meldingsnummer = meldingIdRef.current;
-
-  const [selectedDuplicate, setSelectedDuplicate] = React.useState<Melding | null>(null);
 
   React.useEffect(() => {
     setIsHeaderVisible(false);
@@ -265,26 +263,6 @@ export default function NewIssuePage() {
         return distA - distB;
     });
   }, [location, allObjects]);
-  
-  const duplicateMeldingen = React.useMemo(() => {
-    if (!location || !allMeldingen) return [];
-    const locationPoint = turf.point([location.longitude, location.latitude]);
-    // Filter meldingen within a 25-meter radius, excluding the one being created if it had an ID
-    return allMeldingen.filter(m => {
-        if (m.id === meldingIdRef.current) return false;
-        if (typeof m.latitude !== 'number' || typeof m.longitude !== 'number') return false;
-        const meldingPoint = turf.point([m.longitude, m.latitude]);
-        const distance = turf.distance(locationPoint, meldingPoint, { units: 'meters' });
-        return distance <= 25;
-    });
-  }, [location, allMeldingen]);
-  
-  const handleTabChange = (value: string) => {
-    if (value !== 'dubbele') {
-      setSelectedDuplicate(null);
-    }
-  };
-
 
   React.useEffect(() => {
     if (!location || !allProjects) {
@@ -813,18 +791,12 @@ export default function NewIssuePage() {
             </div>
             
             <div className="flex-1 flex flex-col min-h-0 px-3 pb-3">
-                 <Tabs defaultValue="memo" className="flex-1 flex flex-col min-h-0" onValueChange={handleTabChange}>
+                 <Tabs defaultValue="memo" className="flex-1 flex flex-col min-h-0">
                     <TabsList>
                         <TabsTrigger value="memo">Memo</TabsTrigger>
                         <TabsTrigger value="documenten">Documenten</TabsTrigger>
                         <TabsTrigger value="fotos">Foto's</TabsTrigger>
                         <TabsTrigger value="locatie">Locatie</TabsTrigger>
-                        <TabsTrigger value="dubbele">
-                          Dubbele Meldingen
-                          {duplicateMeldingen.length > 0 && (
-                            <Badge variant="destructive" className="ml-2">{duplicateMeldingen.length}</Badge>
-                          )}
-                        </TabsTrigger>
                     </TabsList>
                     <TabsContent value="memo" className="flex-1 mt-1">
                         <FormField control={form.control} name="extra_informatie" render={({ field }) => ( <FormItem className="h-full flex flex-col"><FormLabel className='sr-only'>Memo</FormLabel><FormControl><Textarea {...field} className="flex-1 resize-none text-xs" disabled={isReadOnly} /></FormControl><FormMessage /></FormItem> )} />
@@ -986,105 +958,39 @@ export default function NewIssuePage() {
                             </div>
                         )}
                     </TabsContent>
-                    <TabsContent value="locatie" className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 min-h-0 mt-1">
-                      <div className="border rounded-md overflow-hidden min-h-0">
-                          <MapboxView
-                              longitude={location?.longitude}
-                              latitude={location?.latitude}
-                              objects={nearbyObjects}
-                              interactive={!isReadOnly}
-                          />
-                      </div>
-                      <div className="border rounded-md flex flex-col min-h-0">
-                          <div className="p-2 border-b shrink-0">
-                              <h3 className="font-semibold text-sm">Objecten in de buurt (100m)</h3>
-                          </div>
-                          <div className="overflow-y-auto flex-1">
-                              {nearbyObjects.length > 0 ? (
-                                  <div className="p-2 space-y-2">
-                                      {nearbyObjects.map(obj => (
-                                          <div key={obj.id} className="p-2 rounded-md bg-muted text-sm">
-                                              <p className="font-semibold">{obj.id}</p>
-                                              <p className="text-xs text-muted-foreground">{obj.locatieSubType || 'Onbekend type'}</p>
-                                          </div>
-                                      ))}
-                                  </div>
-                              ) : (
-                                  <div className="p-4 text-center text-muted-foreground text-xs">
-                                      Geen objecten gevonden in de buurt.
-                                  </div>
-                              )}
-                          </div>
+                    <TabsContent value="locatie" className="flex-1 mt-1 flex flex-col min-h-0">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 min-h-0">
+                        <div className="border rounded-md overflow-hidden min-h-0">
+                            <MapboxView
+                                longitude={location?.longitude}
+                                latitude={location?.latitude}
+                                objects={nearbyObjects}
+                                interactive={!isReadOnly}
+                            />
+                        </div>
+                        <div className="border rounded-md flex flex-col min-h-0">
+                            <div className="p-2 border-b shrink-0">
+                                <h3 className="font-semibold text-sm">Objecten in de buurt (100m)</h3>
+                            </div>
+                            <div className="overflow-y-auto flex-1">
+                                {nearbyObjects.length > 0 ? (
+                                    <div className="p-2 space-y-2">
+                                        {nearbyObjects.map(obj => (
+                                            <div key={obj.id} className="p-2 rounded-md bg-muted text-sm">
+                                                <p className="font-semibold">{obj.id}</p>
+                                                <p className="text-xs text-muted-foreground">{obj.locatieSubType || 'Onbekend type'}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="p-4 text-center text-muted-foreground text-xs">
+                                        Geen objecten gevonden in de buurt.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                       </div>
                     </TabsContent>
-                    <TabsContent value="dubbele" className="flex-1 mt-1 overflow-y-auto">
-                        {selectedDuplicate ? (
-                            <div className="p-4 space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <h3 className="text-lg font-semibold">Details Dubbele Melding: {selectedDuplicate.intakenummer}</h3>
-                                    <Button variant="outline" onClick={() => setSelectedDuplicate(null)}>
-                                        <ArrowLeft className="mr-2 h-4 w-4" /> Terug naar lijst
-                                    </Button>
-                                </div>
-                                <Card>
-                                    <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                        <div className="space-y-2">
-                                            <p><span className="font-semibold">Datum:</span> {format(new Date(selectedDuplicate.datum), 'dd-MM-yyyy')} {selectedDuplicate.tijdstip}</p>
-                                            <p><span className="font-semibold">Status:</span> {selectedDuplicate.status}</p>
-                                            <p><span className="font-semibold">Adres:</span> {selectedDuplicate.straatnaam}, {selectedDuplicate.postcode} {selectedDuplicate.plaats}</p>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <p><span className="font-semibold">Categorie:</span> {selectedDuplicate.hoofdcategorie} &gt; {selectedDuplicate.subcategorie}</p>
-                                            <p><span className="font-semibold">Melder:</span> {selectedDuplicate.melder}</p>
-                                            <p><span className="font-semibold">Aangenomen door:</span> {selectedDuplicate.aangenomen_door || '-'}</p>
-                                        </div>
-                                        <div className="col-span-full space-y-2">
-                                            <p className="font-semibold">Omschrijving:</p>
-                                            <p className="whitespace-pre-wrap bg-muted p-2 rounded-md">{selectedDuplicate.extra_informatie}</p>
-                                        </div>
-                                        {selectedDuplicate.files && selectedDuplicate.files.length > 0 && (
-                                            <div className="col-span-full space-y-2">
-                                                <p className="font-semibold">Bestanden:</p>
-                                                <div className="space-y-1">
-                                                    {selectedDuplicate.files.map(file => (
-                                                        <a key={file.storagePath} href={file.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-primary hover:underline text-sm">
-                                                            <FileIcon className="h-4 w-4" />
-                                                            <span>{file.name}</span>
-                                                        </a>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                        {selectedDuplicate.fotos && selectedDuplicate.fotos.length > 0 && (
-                                            <div className="col-span-full space-y-2">
-                                                <p className="font-semibold">Foto's:</p>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {selectedDuplicate.fotos.map(foto => (
-                                                        <a key={foto.storagePath} href={foto.url} target="_blank" rel="noopener noreferrer">
-                                                            <img src={foto.url} alt={foto.name} className="h-24 w-24 object-cover rounded-md border" />
-                                                        </a>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        ) : duplicateMeldingen.length > 0 ? (
-                            <>
-                                {duplicateMeldingen.map(melding => (
-                                    <div key={melding.id} className="grid grid-cols-[1fr_2fr_1fr_auto] items-center gap-4 px-4 py-3 border-b last:border-b-0">
-                                        <div className="font-medium">{melding.intakenummer}</div>
-                                        <div className="truncate">{melding.extra_informatie}</div>
-                                        <div><Badge variant={melding.status === 'Afgerond' ? 'secondary' : 'default'}>{melding.status}</Badge></div>
-                                        <Button variant="secondary" size="sm" onClick={() => setSelectedDuplicate(melding)}>Bekijken</Button>
-                                    </div>
-                                ))}
-                            </>
-                        ) : (
-                            <div className="text-center p-8 text-muted-foreground">Geen dubbele meldingen gevonden op deze locatie.</div>
-                        )}
-                        </TabsContent>
                 </Tabs>
             </div>
           </form>
