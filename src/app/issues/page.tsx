@@ -30,7 +30,7 @@ import { useProfile } from '@/firebase/profile-provider';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useProject } from '@/context/project-context';
 import Link from 'next/link';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -1038,7 +1038,7 @@ export default function IssuesPage() {
                           <CardContent className="p-4">
                             {uploadedPhotos.length > 0 ? (
                               <div className="space-y-4">
-                                <div className="aspect-square w-full relative rounded-md overflow-hidden border">
+                                <div className="w-full h-80 relative rounded-md overflow-hidden border">
                                   {mainPhoto ? (
                                     <Image src={mainPhoto.url} alt={mainPhoto.name} fill className="object-contain" />
                                   ) : (
@@ -1110,7 +1110,7 @@ export default function IssuesPage() {
                             )}
                     
                             {afhandelingFotos.length > 0 && (
-                              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                                 {afhandelingFotos.map((photo) => (
                                   <div key={photo.storagePath} className="relative group aspect-square">
                                     <Image src={photo.url} alt={photo.name} fill className="object-cover rounded-md" />
