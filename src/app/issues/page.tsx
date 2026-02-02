@@ -174,6 +174,9 @@ export default function IssuesPage() {
   const [newHoeveelheidEenheid, setNewHoeveelheidEenheid] = React.useState('zak');
   const [highlightedObject, setHighlightedObject] = React.useState<MapObject | null>(null);
   const [elapsedTime, setElapsedTime] = React.useState<string>("0 uur en 0 minuten");
+  const [mainPhoto, setMainPhoto] = React.useState<UploadedFile | null>(null);
+  const [afhandelingFotos, setAfhandelingFotos] = React.useState<UploadedFile[]>([]);
+  const [isDraggingAfhandelingPhoto, setIsDraggingAfhandelingPhoto] = React.useState(false);
 
   const meldingenCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -329,8 +332,11 @@ export default function IssuesPage() {
   React.useEffect(() => {
     const melding = meldingen?.find(m => m.id === selectedMeldingId);
     if (melding) {
+      const initialFotos = melding.fotos || [];
       setUploadedFiles(melding.files || []);
-      setUploadedPhotos(melding.fotos || []);
+      setUploadedPhotos(initialFotos);
+      setAfhandelingFotos(melding.afhandeling_fotos || []);
+      setMainPhoto(initialFotos.length > 0 ? initialFotos[0] : null);
       setLocation({ latitude: melding.latitude, longitude: melding.longitude });
       setAddressSearchQuery(`${melding.straatnaam || ''}, ${melding.plaats || ''}`);
       setSuggestions([]);
@@ -420,7 +426,7 @@ export default function IssuesPage() {
             afgehandeld_door: user.displayName || user.email || 'Onbekend',
             afhandeling_bijzonderheden: afhandeling_bijzonderheden_value || null,
             files: uploadedFiles,
-            fotos: uploadedPhotos,
+            afhandeling_fotos: afhandelingFotos,
             tasks: tasks,
             hoeveelheden: hoeveelheden,
             gewerkteMinuten: minutesWorked,
@@ -461,7 +467,7 @@ export default function IssuesPage() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
   };
 
-  const uploadFile = React.useCallback((file: File, meldingId: string, type: 'documents' | 'photos'): Promise<UploadedFile> => {
+  const uploadFile = React.useCallback((file: File, meldingId: string, type: 'documents' | 'photos' | 'afhandeling_fotos'): Promise<UploadedFile> => {
     return new Promise((resolve, reject) => {
         if (!app) {
             reject(new Error("Firebase app not available"));
@@ -586,15 +592,15 @@ export default function IssuesPage() {
       }
     }
   };
-
-  const handlePhotoUploads = React.useCallback(async (files: FileList | File[]) => {
+  
+  const handleAfhandelingPhotoUploads = React.useCallback(async (files: FileList | File[]) => {
     if (!files || files.length === 0 || !selectedMeldingId || !firestore) return;
 
-    let currentPhotos = [...uploadedPhotos];
+    let currentPhotos = [...afhandelingFotos];
     
     for (const file of Array.from(files)) {
       try {
-        const uploadedFile = await uploadFile(file, selectedMeldingId, 'photos');
+        const uploadedFile = await uploadFile(file, selectedMeldingId, 'afhandeling_fotos');
         currentPhotos.push(uploadedFile);
       } catch (error) {
         console.error(`Kon ${file.name} niet uploaden.`);
@@ -606,31 +612,31 @@ export default function IssuesPage() {
       }
     }
     
-    setUploadedPhotos(currentPhotos);
+    setAfhandelingFotos(currentPhotos);
     const meldingRef = doc(firestore, 'meldingen', selectedMeldingId);
-    await updateDocumentNonBlocking(meldingRef, { fotos: currentPhotos });
+    await updateDocumentNonBlocking(meldingRef, { afhandeling_fotos: currentPhotos });
     toast({
         title: "Foto's geüpload",
         description: "De foto's zijn succesvol toegevoegd aan de melding."
     });
-  }, [selectedMeldingId, firestore, uploadFile, uploadedPhotos, toast]);
+  }, [selectedMeldingId, firestore, uploadFile, afhandelingFotos, toast]);
 
-  const handlePhotoFileChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAfhandelingPhotoFileChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
-      handlePhotoUploads(event.target.files);
+      handleAfhandelingPhotoUploads(event.target.files);
     }
-  }, [handlePhotoUploads]);
+  }, [handleAfhandelingPhotoUploads]);
 
-  const handleDropPhotos = React.useCallback((event: React.DragEvent<HTMLDivElement>) => {
+  const handleAfhandelingPhotoDrop = React.useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.stopPropagation();
-    setIsDraggingPhoto(false);
+    setIsDraggingAfhandelingPhoto(false);
     if (event.dataTransfer.files) {
-      handlePhotoUploads(event.dataTransfer.files);
+      handleAfhandelingPhotoUploads(event.dataTransfer.files);
     }
-  }, [handlePhotoUploads]);
+  }, [handleAfhandelingPhotoUploads]);
 
-  const handlePhotoDelete = async (photoToDelete: UploadedFile) => {
+  const handleAfhandelingPhotoDelete = async (photoToDelete: UploadedFile) => {
     if (!app || !firestore || !selectedMeldingId) return;
 
     const storage = getStorage(app);
@@ -638,10 +644,10 @@ export default function IssuesPage() {
 
     try {
       await deleteObject(photoRef);
-      const newPhotos = uploadedPhotos.filter(p => p.storagePath !== photoToDelete.storagePath);
-      setUploadedPhotos(newPhotos);
+      const newPhotos = afhandelingFotos.filter(p => p.storagePath !== photoToDelete.storagePath);
+      setAfhandelingFotos(newPhotos);
       const meldingRef = doc(firestore, 'meldingen', selectedMeldingId);
-      await updateDocumentNonBlocking(meldingRef, { fotos: newPhotos });
+      await updateDocumentNonBlocking(meldingRef, { afhandeling_fotos: newPhotos });
       toast({
         title: "Foto verwijderd",
         description: `${photoToDelete.name} is succesvol verwijderd.`
@@ -654,10 +660,10 @@ export default function IssuesPage() {
         description: error.message || "Kon de foto niet verwijderen."
       });
       if (error.code === 'storage/object-not-found') {
-        const newPhotos = uploadedPhotos.filter(p => p.storagePath !== photoToDelete.storagePath);
-        setUploadedPhotos(newPhotos);
+        const newPhotos = afhandelingFotos.filter(p => p.storagePath !== photoToDelete.storagePath);
+        setAfhandelingFotos(newPhotos);
         const meldingRef = doc(firestore, 'meldingen', selectedMeldingId);
-        await updateDocumentNonBlocking(meldingRef, { fotos: newPhotos });
+        await updateDocumentNonBlocking(meldingRef, { afhandeling_fotos: newPhotos });
       }
     }
   };
@@ -775,7 +781,7 @@ export default function IssuesPage() {
                                 <item.icon className="h-4 w-4 shrink-0" />
                                 <span>{item.label}</span>
                                 {item.label === 'Documenten' && uploadedFiles.length > 0 && <Badge variant="secondary" className="ml-1">{uploadedFiles.length}</Badge>}
-                                {item.label === "Foto's" && uploadedPhotos.length > 0 && <Badge variant="secondary" className="ml-1">{uploadedPhotos.length}</Badge>}
+                                {item.label === "Foto's" && (uploadedPhotos.length + afhandelingFotos.length) > 0 && <Badge variant="secondary" className="ml-1">{uploadedPhotos.length + afhandelingFotos.length}</Badge>}
                                 {item.label === 'Werkzaamheden' && tasks.length > 0 && tasks.filter(t => !t.completed).length > 0 && <Badge variant="secondary" className="ml-1">{tasks.filter(t => !t.completed).length}</Badge>}
                             </TabsTrigger>
                         ))}
@@ -1024,91 +1030,116 @@ export default function IssuesPage() {
                         </Card>
                     </TabsContent>
                     <TabsContent value="Foto's" className="mt-0">
-                    <Card>
-                        <CardHeader>
-                        <CardTitle>Foto's</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                        <div
-                            className={cn(
-                            "border-2 border-dashed border-muted-foreground/30 rounded-lg p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50 transition-colors",
-                            isDraggingPhoto && "bg-muted/50 border-primary"
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <Card>
+                          <CardHeader>
+                            <CardTitle>Foto's van Melding</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            {uploadedPhotos.length > 0 ? (
+                              <div className="space-y-4">
+                                <div className="aspect-video w-full relative rounded-md overflow-hidden border">
+                                  {mainPhoto ? (
+                                    <Image src={mainPhoto.url} alt={mainPhoto.name} fill className="object-contain" />
+                                  ) : (
+                                    <div className="flex items-center justify-center h-full bg-muted text-muted-foreground">Geen foto geselecteerd</div>
+                                  )}
+                                </div>
+                                {uploadedPhotos.length > 1 && (
+                                  <div className="flex gap-2 overflow-x-auto pb-2">
+                                    {uploadedPhotos.map(photo => (
+                                      <div
+                                        key={photo.storagePath}
+                                        className={cn(
+                                          "relative shrink-0 w-20 h-20 rounded-md overflow-hidden cursor-pointer border-2",
+                                          mainPhoto?.storagePath === photo.storagePath ? "border-primary" : "border-transparent"
+                                        )}
+                                        onClick={() => setMainPhoto(photo)}
+                                      >
+                                        <Image src={photo.url} alt={photo.name} fill className="object-cover" />
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-center text-muted-foreground py-8">
+                                Geen foto's bij deze melding.
+                              </div>
                             )}
-                            onDragEnter={() => setIsDraggingPhoto(true)}
-                            onDragLeave={() => setIsDraggingPhoto(false)}
-                            onDragOver={(e) => e.preventDefault()}
-                            onDrop={handleDropPhotos}
-                            onClick={() => document.getElementById('photo-file-input')?.click()}
-                        >
-                            <UploadCloud className="h-12 w-12 text-muted-foreground" />
-                            <p className="mt-4 font-semibold">Sleep foto's hierheen of klik om te uploaden</p>
-                            <p className="text-sm text-muted-foreground">Alleen afbeeldingsbestanden</p>
-                            <input
-                            type="file"
-                            id="photo-file-input"
-                            onChange={handlePhotoFileChange}
-                            className="hidden"
-                            multiple
-                            accept="image/*"
-                            />
-                        </div>
-                        {Object.keys(uploadProgress).length > 0 &&
-                            Object.entries(uploadProgress).some(([name]) => uploadedPhotos.find(p => name.includes(p.name))) && (
-                            <div className="space-y-2">
-                                {Object.entries(uploadProgress).map(([name, progress]) => {
-                                    if (uploadedPhotos.find(p => name.includes(p.name))) {
-                                        return (
-                                            <div key={name} className="space-y-1 mt-2">
-                                                <p className="text-sm font-medium">{name}</p>
-                                                <Progress value={progress} className="w-full h-2" />
-                                            </div>
-                                        )
-                                    }
-                                    return null;
-                                })}
+                          </CardContent>
+                        </Card>
+
+                        <Card>
+                          <CardHeader>
+                            <CardTitle>Foto's van Medewerker</CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            <div
+                              className={cn(
+                                "border-2 border-dashed border-muted-foreground/30 rounded-lg p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50 transition-colors",
+                                isDraggingAfhandelingPhoto && "bg-muted/50 border-primary"
+                              )}
+                              onDragEnter={() => setIsDraggingAfhandelingPhoto(true)}
+                              onDragLeave={() => setIsDraggingAfhandelingPhoto(false)}
+                              onDragOver={(e) => e.preventDefault()}
+                              onDrop={handleAfhandelingPhotoDrop}
+                              onClick={() => document.getElementById('afhandeling-photo-file-input')?.click()}
+                            >
+                              <UploadCloud className="h-12 w-12 text-muted-foreground" />
+                              <p className="mt-4 font-semibold">Sleep foto's hierheen of klik om te uploaden</p>
+                              <input
+                                type="file"
+                                id="afhandeling-photo-file-input"
+                                onChange={handleAfhandelingPhotoFileChange}
+                                className="hidden"
+                                multiple
+                                accept="image/*"
+                              />
                             </div>
-                        )}
-                        {uploadedPhotos.length > 0 && (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-4">
-                            {uploadedPhotos.map((photo) => (
-                                <div key={photo.storagePath} className="relative group aspect-square">
-                                <Image
-                                    src={photo.url}
-                                    alt={photo.name}
-                                    fill
-                                    className="object-cover rounded-md"
-                                />
-                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                    {canDeleteFile && (
-                                    <AlertDialog>
+                            
+                            {uploadProgress && Object.keys(uploadProgress).length > 0 && (
+                                <div className="space-y-2">
+                                    {Object.entries(uploadProgress).map(([name, progress]) => (
+                                        <div key={name} className="space-y-1 mt-2">
+                                            <p className="text-sm font-medium">{name}</p>
+                                            <Progress value={progress} className="w-full h-2" />
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                    
+                            {afhandelingFotos.length > 0 && (
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                {afhandelingFotos.map((photo) => (
+                                  <div key={photo.storagePath} className="relative group aspect-square">
+                                    <Image src={photo.url} alt={photo.name} fill className="object-cover rounded-md" />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                      <AlertDialog>
                                         <AlertDialogTrigger asChild>
-                                        <Button type="button" variant="destructive" size="icon" disabled={isSubmitting}>
+                                          <Button type="button" variant="destructive" size="icon" disabled={isSubmitting}>
                                             <Trash2 className="h-4 w-4" />
-                                        </Button>
+                                          </Button>
                                         </AlertDialogTrigger>
                                         <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    Weet u zeker dat u deze foto wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.
-                                                </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>Annuleren</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => handlePhotoDelete(photo)}>
-                                                    Doorgaan
-                                                </AlertDialogAction>
-                                            </AlertDialogFooter>
+                                          <AlertDialogHeader>
+                                            <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
+                                            <AlertDialogDescription>Weet u zeker dat u deze foto wilt verwijderen?</AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleAfhandelingPhotoDelete(photo)}>Doorgaan</AlertDialogAction>
+                                          </AlertDialogFooter>
                                         </AlertDialogContent>
-                                    </AlertDialog>
-                                    )}
-                                </div>
-                                </div>
-                            ))}
-                            </div>
-                        )}
-                        </CardContent>
-                    </Card>
+                                      </AlertDialog>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </div>
                     </TabsContent>
                     <TabsContent value="Hoeveelheid" className="mt-0">
                         <Card>
