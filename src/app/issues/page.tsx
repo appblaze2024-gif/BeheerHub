@@ -6,7 +6,7 @@ import * as React from 'react';
 import MapGL, { Marker, Popup, Source, Layer, FillLayer, LineLayer } from 'react-map-gl';
 import { useCollection, useFirestore, useFirebaseApp, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
-import { Calendar as CalendarIcon, Plus, Search, List, Map as MapIcon, Bell, Filter, Navigation, Pencil, FileText, ChevronLeft, Camera, Package, Clock, User, Paperclip, PlusCircle, AlertCircle, Info, UploadCloud, ChevronDown, MapPin, Trash2, ArrowLeft, File as FileIcon, Loader2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Search, List, Map as MapIcon, Bell, Filter, Navigation, Pencil, FileText, ChevronLeft, Camera, Package, Clock, User, Paperclip, PlusCircle, AlertCircle, Info, UploadCloud, ChevronDown, MapPin, Trash2, ArrowLeft, File as FileIcon, Loader2, Maximize } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -30,7 +30,7 @@ import { useProfile } from '@/firebase/profile-provider';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useProject } from '@/context/project-context';
 import Link from 'next/link';
-import { useIsMobile } from '@/hooks/use-is-mobile';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -58,6 +58,11 @@ import { useToast } from '@/components/ui/use-toast';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigationUI } from '@/context/navigation-ui-context';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+} from '@/components/ui/dialog';
 
 
 type Project = {
@@ -177,6 +182,7 @@ export default function IssuesPage() {
   const [mainPhoto, setMainPhoto] = React.useState<UploadedFile | null>(null);
   const [afhandelingFotos, setAfhandelingFotos] = React.useState<UploadedFile[]>([]);
   const [isDraggingAfhandelingPhoto, setIsDraggingAfhandelingPhoto] = React.useState(false);
+  const [fullScreenPhoto, setFullScreenPhoto] = React.useState<UploadedFile | null>(null);
 
   const meldingenCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -1031,53 +1037,60 @@ export default function IssuesPage() {
                     </TabsContent>
                     <TabsContent value="Foto's" className="mt-0">
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <Card>
-                          <CardHeader>
-                            <CardTitle>Foto's van Melding</CardTitle>
-                          </CardHeader>
-                          <CardContent className="p-4">
-                            {uploadedPhotos.length > 0 ? (
-                              <div className="space-y-4">
-                                <div className="w-full h-56 relative rounded-md overflow-hidden border">
-                                  {mainPhoto ? (
-                                    <Image src={mainPhoto.url} alt={mainPhoto.name} fill className="object-contain" />
-                                  ) : (
-                                    <div className="flex items-center justify-center h-full bg-muted text-muted-foreground">Geen foto geselecteerd</div>
-                                  )}
+                        <Card className="h-96 flex flex-col">
+                            <CardHeader>
+                                <CardTitle>Foto's van Melding</CardTitle>
+                            </CardHeader>
+                            <CardContent className="flex-1 flex flex-col p-4 pt-0 min-h-0">
+                                {uploadedPhotos.length > 0 ? (
+                                <div className="space-y-4 flex flex-col flex-1 min-h-0">
+                                    <div
+                                        className="w-full flex-1 relative rounded-md overflow-hidden border group cursor-pointer"
+                                        onClick={() => mainPhoto && setFullScreenPhoto(mainPhoto)}
+                                    >
+                                    {mainPhoto ? (
+                                        <>
+                                        <Image src={mainPhoto.url} alt={mainPhoto.name} fill className="object-contain" />
+                                        <div className="absolute inset-0 bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Maximize className="h-10 w-10" />
+                                        </div>
+                                        </>
+                                    ) : (
+                                        <div className="flex items-center justify-center h-full bg-muted text-muted-foreground">Geen foto geselecteerd</div>
+                                    )}
+                                    </div>
+                                    {uploadedPhotos.length > 1 && (
+                                    <div className="flex gap-2 overflow-x-auto pb-2">
+                                        {uploadedPhotos.map(photo => (
+                                        <div
+                                            key={photo.storagePath}
+                                            className={cn(
+                                            "relative shrink-0 w-16 h-16 rounded-md overflow-hidden cursor-pointer border-2",
+                                            mainPhoto?.storagePath === photo.storagePath ? "border-primary" : "border-transparent"
+                                            )}
+                                            onClick={() => setMainPhoto(photo)}
+                                        >
+                                            <Image src={photo.url} alt={photo.name} fill className="object-cover" />
+                                        </div>
+                                        ))}
+                                    </div>
+                                    )}
                                 </div>
-                                {uploadedPhotos.length > 1 && (
-                                  <div className="flex gap-2 overflow-x-auto pb-2">
-                                    {uploadedPhotos.map(photo => (
-                                      <div
-                                        key={photo.storagePath}
-                                        className={cn(
-                                          "relative shrink-0 w-16 h-16 rounded-md overflow-hidden cursor-pointer border-2",
-                                          mainPhoto?.storagePath === photo.storagePath ? "border-primary" : "border-transparent"
-                                        )}
-                                        onClick={() => setMainPhoto(photo)}
-                                      >
-                                        <Image src={photo.url} alt={photo.name} fill className="object-cover" />
-                                      </div>
-                                    ))}
-                                  </div>
+                                ) : (
+                                <div className="flex h-full min-h-[200px] items-center justify-center text-center text-muted-foreground">
+                                    Geen foto's bij deze melding.
+                                </div>
                                 )}
-                              </div>
-                            ) : (
-                              <div className="flex h-full min-h-[200px] items-center justify-center text-center text-muted-foreground">
-                                Geen foto's bij deze melding.
-                              </div>
-                            )}
-                          </CardContent>
+                            </CardContent>
                         </Card>
-
-                        <Card>
+                        <Card className="h-96 flex flex-col">
                           <CardHeader>
                             <CardTitle>Foto's van Medewerker</CardTitle>
                           </CardHeader>
-                          <CardContent className="flex flex-col space-y-4 p-4">
+                          <CardContent className="flex-1 flex flex-col space-y-4 p-4 min-h-0">
                             <div
                               className={cn(
-                                "h-48 border-2 border-dashed border-muted-foreground/30 rounded-lg flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50 transition-colors",
+                                "border-2 border-dashed border-muted-foreground/30 rounded-lg flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50 transition-colors flex-1",
                                 isDraggingAfhandelingPhoto && "bg-muted/50 border-primary"
                               )}
                               onDragEnter={() => setIsDraggingAfhandelingPhoto(true)}
@@ -1110,32 +1123,38 @@ export default function IssuesPage() {
                             )}
                     
                             {afhandelingFotos.length > 0 && (
-                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                                {afhandelingFotos.map((photo) => (
-                                  <div key={photo.storagePath} className="relative group aspect-square">
-                                    <Image src={photo.url} alt={photo.name} fill className="object-cover rounded-md" />
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                      <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                          <Button type="button" variant="destructive" size="icon" disabled={isSubmitting}>
-                                            <Trash2 className="h-4 w-4" />
-                                          </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                          <AlertDialogHeader>
-                                            <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
-                                            <AlertDialogDescription>Weet u zeker dat u deze foto wilt verwijderen?</AlertDialogDescription>
-                                          </AlertDialogHeader>
-                                          <AlertDialogFooter>
-                                            <AlertDialogCancel>Annuleren</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handleAfhandelingPhotoDelete(photo)}>Doorgaan</AlertDialogAction>
-                                          </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                      </AlertDialog>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                                    {afhandelingFotos.map((photo) => (
+                                    <div key={photo.storagePath} className="relative group aspect-square">
+                                        <Image src={photo.url} alt={photo.name} fill className="object-cover rounded-md" />
+                                        <div
+                                            className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+                                            onClick={() => setFullScreenPhoto(photo)}
+                                        >
+                                            <Maximize className="h-8 w-8 text-white" />
+                                        </div>
+                                        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button type="button" variant="destructive" size="icon" className="h-7 w-7" disabled={isSubmitting}>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
+                                                        <AlertDialogDescription>Weet u zeker dat u deze foto wilt verwijderen?</AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleAfhandelingPhotoDelete(photo)}>Doorgaan</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </div>
                                     </div>
-                                  </div>
-                                ))}
-                              </div>
+                                    ))}
+                                </div>
                             )}
                           </CardContent>
                         </Card>
@@ -1226,6 +1245,22 @@ export default function IssuesPage() {
             <div className="flex-1 flex items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin" />
             </div>
+        )}
+        {fullScreenPhoto && (
+            <Dialog open={!!fullScreenPhoto} onOpenChange={(open) => !open && setFullScreenPhoto(null)}>
+                <DialogContent className="max-w-[95vw] h-auto max-h-[95vh] p-0 bg-transparent border-0 shadow-none flex items-center justify-center">
+                    <Image 
+                        src={fullScreenPhoto.url} 
+                        alt={fullScreenPhoto.name}
+                        width={1920}
+                        height={1080}
+                        className="object-contain w-auto h-auto max-w-full max-h-full"
+                    />
+                    <DialogClose className="absolute top-2 right-2 rounded-full bg-black/50 p-1.5 text-white opacity-70 hover:opacity-100 transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                        <X className="h-6 w-6" />
+                    </DialogClose>
+                </DialogContent>
+            </Dialog>
         )}
     </div>
   );
