@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -26,7 +27,6 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from './ui/textarea';
@@ -189,11 +189,8 @@ Team BeheerHub`;
                         <FormItem>
                         <FormLabel>Ontvanger(s)</FormLabel>
                         <FormControl>
-                            <Input placeholder="email1@voorbeeld.nl, email2@voorbeeld.nl" {...field} />
+                            <Input placeholder="" {...field} />
                         </FormControl>
-                        <FormDescription className="text-[10px]">
-                            Meerdere adressen scheiden met een komma.
-                        </FormDescription>
                         <FormMessage />
                         </FormItem>
                     )}
@@ -205,7 +202,7 @@ Team BeheerHub`;
                         <FormItem>
                         <FormLabel>CC</FormLabel>
                         <FormControl>
-                            <Input placeholder="cc@voorbeeld.nl" {...field} />
+                            <Input placeholder="" {...field} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
