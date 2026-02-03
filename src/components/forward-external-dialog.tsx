@@ -1,11 +1,10 @@
-
 'use client';
 
 import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Loader2, Send, Paperclip, X, FileIcon, CheckCircle2 } from 'lucide-react';
+import { Loader2, Send, Paperclip, X, FileIcon, CheckCircle2, MapPin } from 'lucide-react';
 import { sendEmail } from '@/app/mail/actions';
 import { useToast } from '@/components/ui/use-toast';
 import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
@@ -33,6 +32,7 @@ import { Textarea } from './ui/textarea';
 import { Checkbox } from './ui/checkbox';
 import { ScrollArea } from './ui/scroll-area';
 import type { Melding, UploadedFile } from '@/lib/types';
+import { MapboxView } from './mapbox-view';
 
 const forwardSchema = z.object({
   to: z.string().min(1, { message: 'Voer minimaal één e-mailadres in.' }),
@@ -182,6 +182,18 @@ Team BeheerHub`;
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
             <ScrollArea className="flex-1 px-6">
                 <div className="space-y-4 py-2">
+                    <div className="h-40 w-full rounded-md border overflow-hidden mb-4 relative">
+                        <MapboxView
+                            longitude={melding.longitude}
+                            latitude={melding.latitude}
+                            interactive={false}
+                        />
+                        <div className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm px-2 py-1 rounded text-[10px] font-medium border shadow-sm flex items-center gap-1">
+                            <MapPin className="h-3 w-3 text-red-500" />
+                            Locatie Melding
+                        </div>
+                    </div>
+
                     <FormField
                     control={form.control}
                     name="to"
@@ -189,7 +201,7 @@ Team BeheerHub`;
                         <FormItem>
                         <FormLabel>Ontvanger(s)</FormLabel>
                         <FormControl>
-                            <Input placeholder="" {...field} />
+                            <Input placeholder="voorbeeld@email.nl, ander@email.nl" {...field} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
