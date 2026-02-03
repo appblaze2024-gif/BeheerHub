@@ -4,7 +4,8 @@ import { z } from 'zod';
 import nodemailer from 'nodemailer';
 
 const attachmentSchema = z.object({
-  content: z.string(), // base64 encoded content
+  content: z.string().optional(), // base64 encoded content
+  url: z.string().url().optional(), // remote URL path
   filename: z.string(),
   type: z.string(),
 });
@@ -70,12 +71,21 @@ export async function sendEmail(data: z.infer<typeof mailSchema>) {
     };
 
     if (parsedData.attachments && parsedData.attachments.length > 0) {
-      mailOptions.attachments = parsedData.attachments.map(att => ({
+      mailOptions.attachments = parsedData.attachments.map(att => {
+        if (att.url) {
+          return {
+            filename: att.filename,
+            path: att.url,
+            contentType: att.type,
+          };
+        }
+        return {
           filename: att.filename,
           content: att.content,
           encoding: 'base64',
           contentType: att.type,
-        }));
+        };
+      });
     }
 
     const info = await transporter.sendMail(mailOptions);

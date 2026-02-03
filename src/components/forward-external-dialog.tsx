@@ -4,7 +4,7 @@ import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Loader2, Send, Paperclip, X, FileIcon, CheckCircle2, MapPin } from 'lucide-react';
+import { Loader2, Send, X, FileIcon, MapPin } from 'lucide-react';
 import { sendEmail } from '@/app/mail/actions';
 import { useToast } from '@/components/ui/use-toast';
 import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
@@ -51,26 +51,6 @@ interface ForwardExternalDialogProps {
 }
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
-
-// Helper to fetch file and convert to base64
-const fetchToBase64 = async (url: string): Promise<string> => {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`HTTP fout! status: ${response.status}`);
-  const blob = await response.blob();
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      if (typeof result === 'string') {
-        resolve(result.split(',')[1]);
-      } else {
-        reject(new Error('Kon bestand niet converteren naar base64.'));
-      }
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-};
 
 export function ForwardExternalDialog({ open, onOpenChange, melding, onSuccess }: ForwardExternalDialogProps) {
   const { toast } = useToast();
@@ -133,39 +113,28 @@ Team BeheerHub`;
     try {
         const selectedFiles = allFiles.filter(f => selectedAttachments.includes(f.storagePath));
         
-        // Step 1: Fetch issue attachments
-        let attachmentPayloads = [];
-        if (selectedFiles.length > 0) {
-            try {
-                attachmentPayloads = await Promise.all(
-                    selectedFiles.map(async (file) => ({
-                        content: await fetchToBase64(file.url),
-                        filename: file.name,
-                        type: file.type,
-                    }))
-                );
-            } catch (fileError: any) {
-                console.error("Fout bij ophalen bijlagen:", fileError);
-                throw new Error(`Kon bijlagen niet voorbereiden: ${fileError.message}`);
-            }
-        }
+        // Prepare issue attachments as URLs to avoid client-side CORS issues
+        const attachmentPayloads = selectedFiles.map((file) => ({
+            url: file.url,
+            filename: file.name,
+            type: file.type,
+        }));
 
-        // Step 2: Generate static map image from Mapbox (optional step, don't fail if this fails)
+        // Generate static map image URL from Mapbox
         let mapAttachment = null;
         try {
             const staticMapUrl = `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-l+ff0000(${melding.longitude},${melding.latitude})/${melding.longitude},${melding.latitude},15/600x400@2x?access_token=${MAPBOX_TOKEN}`;
-            const mapBase64 = await fetchToBase64(staticMapUrl);
             
             mapAttachment = {
-                content: mapBase64,
+                url: staticMapUrl,
                 filename: `locatie_kaart_${melding.intakenummer}.png`,
                 type: 'image/png',
             };
         } catch (mapError) {
-            console.warn("Kon kaart niet genereren, e-mail wordt zonder kaart verstuurd:", mapError);
+            console.warn("Kon kaart URL niet genereren:", mapError);
         }
 
-        // Step 3: Send the email via server action
+        // Send the email via server action
         const finalAttachments = mapAttachment ? [...attachmentPayloads, mapAttachment] : attachmentPayloads;
         const result = await sendEmail({
             ...data,
