@@ -39,6 +39,8 @@ import type { UploadedFile, Object as MapObject, Melding } from '@/lib/types';
 import { MapboxView } from '@/components/mapbox-view';
 import * as turf from '@turf/turf';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 
 
 // Local types, as they are not in lib/types.ts but are needed for data fetching
