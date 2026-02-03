@@ -107,6 +107,8 @@ const DEFAULT_SUBCATEGORIE_MAPPING: Record<string, string[]> = {
     "Overig": ["Overige meldingen"]
 };
 
+const DEFAULT_DEPARTMENTS = ["Buitendienst", "Reiniging", "Groenvoorziening", "Waterbeheer"];
+
 const FormRow = ({ label, children, labelFor }: { label: string; children: React.ReactNode; labelFor?: string }) => (
     <div className="grid grid-cols-[140px_1fr] items-start gap-x-2 py-0.5">
         <FormLabel htmlFor={labelFor} className="text-xs text-left pt-2">{label}</FormLabel>
@@ -151,6 +153,10 @@ export default function NewIssuePage() {
   const [newSubcategoryName, setNewSubcategoryName] = React.useState('');
   const [manageSubSelectedCategory, setManageSubSelectedCategory] = React.useState('');
 
+  // Department management
+  const [isManageDepartmentsOpen, setIsManageDepartmentsOpen] = React.useState(false);
+  const [newDepartmentName, setNewDepartmentName] = React.useState('');
+
   const categoriesRef = React.useMemo(() => {
     if (!firestore) return null;
     return doc(firestore, 'settings', 'categories');
@@ -158,6 +164,13 @@ export default function NewIssuePage() {
   const { data: categoriesData } = useDoc<{ hoofdcategorieen: string[], subcategorieMapping: Record<string, string[]> }>(categoriesRef);
   const hoofdcategorieOptions = categoriesData?.hoofdcategorieen || DEFAULT_HOOFDCATEGORIEEN;
   const subcategorieMapping = categoriesData?.subcategorieMapping || DEFAULT_SUBCATEGORIE_MAPPING;
+
+  const departmentsRef = React.useMemo(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'settings', 'departments');
+  }, [firestore]);
+  const { data: departmentsData } = useDoc<{ names: string[] }>(departmentsRef);
+  const departmentOptions = departmentsData?.names || DEFAULT_DEPARTMENTS;
 
   const objectsCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -233,6 +246,7 @@ export default function NewIssuePage() {
         form.reset({
           hoofdcategorie: meldingToView.hoofdcategorie,
           subcategorie: meldingToView.subcategorie,
+          behandelende_afdeling: meldingToView.behandelende_afdeling || '',
           status: meldingToView.status,
           voorvaldatum: meldingToView.datum ? new Date(meldingToView.datum) : undefined,
           voorvaltijd: meldingToView.tijdstip,
@@ -586,6 +600,7 @@ export default function NewIssuePage() {
        const meldingData: any = {
         hoofdcategorie: data.hoofdcategorie,
         subcategorie: data.subcategorie,
+        behandelende_afdeling: data.behandelende_afdeling,
         status: data.status,
         extern_meldingsnummer: data.ext_referentie,
         straatnaam: data.straatnaam,
@@ -741,6 +756,29 @@ export default function NewIssuePage() {
     await setDocumentNonBlocking(categoriesRef, { subcategorieMapping: updatedMapping }, { merge: true });
   };
 
+  const handleAddDepartment = async () => {
+    if (!firestore || !newDepartmentName.trim() || !departmentsRef) return;
+    const updatedList = [...departmentOptions, newDepartmentName.trim()];
+    await setDocumentNonBlocking(departmentsRef, { names: updatedList }, { merge: true });
+    setNewDepartmentName('');
+  };
+
+  const handleRemoveDepartment = async (dept: string) => {
+    if (!firestore || !departmentsRef) return;
+    const updatedList = departmentOptions.filter(d => d !== dept);
+    await setDocumentNonBlocking(departmentsRef, { names: updatedList }, { merge: true });
+  };
+
+  const handleMoveDepartment = async (index: number, direction: 'up' | 'down') => {
+    if (!firestore || !departmentsRef) return;
+    const newList = [...departmentOptions];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newList.length) return;
+    const [movedItem] = newList.splice(index, 1);
+    newList.splice(targetIndex, 0, movedItem);
+    await setDocumentNonBlocking(departmentsRef, { names: newList }, { merge: true });
+  };
+
   const isUploading = Object.keys(uploadProgress).length > 0;
 
   return (
@@ -833,9 +871,15 @@ export default function NewIssuePage() {
                             </div>
                             </FormRow>
                             <FormRow label="Behandelende afdeling">
-                                <FormField control={form.control} name="behandelende_afdeling" render={({ field }) => (
-                                <FormControl><Input {...field} className="h-7 text-xs" disabled={isReadOnly} /></FormControl>
-                            )} />
+                                <div className="flex items-center">
+                                    <FormField control={form.control} name="behandelende_afdeling" render={({ field }) => (
+                                        <Select onValueChange={field.onChange} value={field.value ?? ''} disabled={isReadOnly}>
+                                            <FormControl><SelectTrigger className="h-7 text-xs rounded-r-none"><SelectValue placeholder="Selecteer afdeling" /></SelectTrigger></FormControl>
+                                            <SelectContent>{departmentOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                        </Select>
+                                    )} />
+                                    <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0" disabled={isReadOnly} onClick={() => setIsManageDepartmentsOpen(true)}><Search className="h-4 w-4"/></Button>
+                                </div>
                             </FormRow>
                             <FormRow label="Behandelaar">
                             <div className="flex items-center">
@@ -1396,6 +1440,62 @@ export default function NewIssuePage() {
                 </div>
                 <DialogFooter>
                     <Button onClick={() => setIsManageSubcategoriesOpen(false)}>Sluiten</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        {/* Dialog for Managing Departments */}
+        <Dialog open={isManageDepartmentsOpen} onOpenChange={setIsManageDepartmentsOpen}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Behandelende afdelingen beheren</DialogTitle>
+                    <DialogDescription>Voeg nieuwe afdelingen toe aan de lijst of verwijder bestaande.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="flex gap-2">
+                        <Input 
+                            placeholder="Nieuwe afdeling..." 
+                            value={newDepartmentName} 
+                            onChange={(e) => setNewDepartmentName(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleAddDepartment()}
+                        />
+                        <Button onClick={handleAddDepartment} size="icon">
+                            <Plus className="h-4 w-4" />
+                        </Button>
+                    </div>
+                    <div className="border rounded-md max-h-60 overflow-y-auto">
+                        {departmentOptions.map((dept: string, index: number) => (
+                            <div key={dept} className="flex justify-between items-center p-2 border-b last:border-b-0">
+                                <span className="text-sm flex-1">{dept}</span>
+                                <div className="flex items-center gap-1">
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-8 w-8" 
+                                        onClick={() => handleMoveDepartment(index, 'up')}
+                                        disabled={index === 0}
+                                    >
+                                        <ChevronUp className="h-4 w-4" />
+                                    </Button>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-8 w-8" 
+                                        onClick={() => handleMoveDepartment(index, 'down')}
+                                        disabled={index === departmentOptions.length - 1}
+                                    >
+                                        <ChevronDown className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRemoveDepartment(dept)}>
+                                        <Trash2 className="h-4 w-4 text-destructive"/>
+                                    </Button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button onClick={() => setIsManageDepartmentsOpen(false)}>Sluiten</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
