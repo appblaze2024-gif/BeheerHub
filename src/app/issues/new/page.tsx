@@ -91,7 +91,7 @@ const newMeldingSchema = z.object({
 
 type NewMeldingFormValues = z.infer<typeof newMeldingSchema>;
 
-const statusOptions = [
+const DEFAULT_STATUS_OPTIONS = [
     "Nieuw", "Intern doorgezet", "In behandeling", "Gepland op korte termijn",
     "Gepland op langere termijn", "Dubbel gemeld", "Afgerond", "Niet in beheer", "Extern doorgezet"
 ];
@@ -147,6 +147,40 @@ export default function NewIssuePage() {
   const [isSearching, setIsSearching] = React.useState(false);
   const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const justSelectedSuggestion = React.useRef(false);
+
+  // Status management
+  const [isManageStatusesOpen, setIsManageStatusesOpen] = React.useState(false);
+  const [newStatusName, setNewStatusName] = React.useState('');
+
+  const statusesRef = React.useMemo(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'settings', 'statuses');
+  }, [firestore]);
+  const { data: statusesData } = useDoc<{ names: string[] }>(statusesRef);
+  const statusOptions = statusesData?.names || DEFAULT_STATUS_OPTIONS;
+
+  const handleAddStatus = async () => {
+    if (!firestore || !newStatusName.trim() || !statusesRef) return;
+    const updatedList = [...statusOptions, newStatusName.trim()];
+    await setDocumentNonBlocking(statusesRef, { names: updatedList }, { merge: true });
+    setNewStatusName('');
+  };
+
+  const handleRemoveStatus = async (item: string) => {
+    if (!firestore || !statusesRef) return;
+    const updatedList = statusOptions.filter(x => x !== item);
+    await setDocumentNonBlocking(statusesRef, { names: updatedList }, { merge: true });
+  };
+
+  const handleMoveStatus = async (index: number, direction: 'up' | 'down') => {
+    if (!firestore || !statusesRef) return;
+    const newList = [...statusOptions];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newList.length) return;
+    const [movedItem] = newList.splice(index, 1);
+    newList.splice(targetIndex, 0, movedItem);
+    await setDocumentNonBlocking(statusesRef, { names: newList }, { merge: true });
+  };
 
   // Categories management
   const [isManageCategoriesOpen, setIsManageCategoriesOpen] = React.useState(false);
@@ -970,12 +1004,15 @@ export default function NewIssuePage() {
                                 </div>
                             </FormRow>
                             <FormRow label="Status">
-                                <FormField control={form.control} name="status" render={({ field }) => (
-                                    <Select onValueChange={field.onChange} value={field.value} disabled={isReadOnly && !canEditStatus}>
-                                        <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer status" /></SelectTrigger></FormControl>
-                                        <SelectContent>{statusOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
-                                    </Select>
-                                )} />
+                                <div className="flex items-center">
+                                    <FormField control={form.control} name="status" render={({ field }) => (
+                                        <Select onValueChange={field.onChange} value={field.value} disabled={isReadOnly && !canEditStatus}>
+                                            <FormControl><SelectTrigger className="h-7 text-xs rounded-r-none"><SelectValue placeholder="Selecteer status" /></SelectTrigger></FormControl>
+                                            <SelectContent>{statusOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                        </Select>
+                                    )} />
+                                    <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0" disabled={isReadOnly && !canEditStatus} onClick={() => setIsManageStatusesOpen(true)}><Search className="h-4 w-4"/></Button>
+                                </div>
                             </FormRow>
                             <FormRow label="Afgehandeld door">
                                 <FormField control={form.control} name="afgehandeld_door" render={({ field }) => (
@@ -1384,6 +1421,62 @@ export default function NewIssuePage() {
             </div>
           </form>
         </Form>
+
+        {/* Dialog for Managing Statuses */}
+        <Dialog open={isManageStatusesOpen} onOpenChange={setIsManageStatusesOpen}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Statussen beheren</DialogTitle>
+                    <DialogDescription>Voeg nieuwe statussen toe aan de lijst of verwijder bestaande.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="flex gap-2">
+                        <Input 
+                            placeholder="Nieuwe status..." 
+                            value={newStatusName} 
+                            onChange={(e) => setNewStatusName(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleAddStatus()}
+                        />
+                        <Button onClick={handleAddStatus} size="icon">
+                            <Plus className="h-4 w-4" />
+                        </Button>
+                    </div>
+                    <div className="border rounded-md max-h-60 overflow-y-auto">
+                        {statusOptions.map((opt: string, index: number) => (
+                            <div key={opt} className="flex justify-between items-center p-2 border-b last:border-b-0">
+                                <span className="text-sm flex-1">{opt}</span>
+                                <div className="flex items-center gap-1">
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-8 w-8" 
+                                        onClick={() => handleMoveStatus(index, 'up')}
+                                        disabled={index === 0}
+                                    >
+                                        <ChevronUp className="h-4 w-4" />
+                                    </Button>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-8 w-8" 
+                                        onClick={() => handleMoveStatus(index, 'down')}
+                                        disabled={index === statusOptions.length - 1}
+                                    >
+                                        <ChevronDown className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRemoveStatus(opt)}>
+                                        <Trash2 className="h-4 w-4 text-destructive"/>
+                                    </Button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button onClick={() => setIsManageStatusesOpen(false)}>Sluiten</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
 
         {/* Dialog for Managing Reporter Types */}
         <Dialog open={isManageReporterTypesOpen} onOpenChange={setIsManageReporterTypesOpen}>
