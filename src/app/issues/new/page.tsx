@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -8,8 +7,8 @@ import { z } from 'zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { format, addDays, isWeekend } from 'date-fns';
 import { nl } from 'date-fns/locale';
-import { ArrowLeft, CalendarIcon, Loader2, MapPin, Search, UploadCloud, FileIcon, Trash2 } from 'lucide-react';
-import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useFirebaseApp, useCollection } from '@/firebase';
+import { ArrowLeft, CalendarIcon, Loader2, MapPin, Search, UploadCloud, FileIcon, Trash2, Plus } from 'lucide-react';
+import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useFirebaseApp, useCollection, useDoc, setDocumentNonBlocking } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { collection, doc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -24,6 +23,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -93,7 +93,9 @@ const statusOptions = [
     "Nieuw", "Intern doorgezet", "In behandeling", "Gepland op korte termijn",
     "Gepland op langere termijn", "Dubbel gemeld", "Afgerond", "Niet in beheer", "Extern doorgezet"
 ];
-const hoofdcategorieOptions = ["Afval", "Weg en straatmeubilair", "Groen", "Water", "Overig", "Zoutkisten"];
+
+const DEFAULT_HOOFDCATEGORIEEN = ["Afval", "Weg en straatmeubilair", "Groen", "Water", "Overig", "Zoutkisten"];
+
 const subcategorieOptions: Record<string, string[]> = {
     "Afval": ["Volle of kapotte afvalbak", "Zwerfafval", "Dumping", "Dierenkadaver"],
     "Weg en straatmeubilair": ["Losse tegel(s)", "Gat in de weg", "Kapotte bank/paal/hek"],
@@ -139,6 +141,16 @@ export default function NewIssuePage() {
   const [isSearching, setIsSearching] = React.useState(false);
   const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const justSelectedSuggestion = React.useRef(false);
+
+  // Categories management
+  const [isManageCategoriesOpen, setIsManageCategoriesOpen] = React.useState(false);
+  const [newCategoryName, setNewCategoryName] = React.useState('');
+  const categoriesRef = React.useMemo(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'settings', 'categories');
+  }, [firestore]);
+  const { data: categoriesData } = useDoc<{ hoofdcategorieen: string[] }>(categoriesRef);
+  const hoofdcategorieOptions = categoriesData?.hoofdcategorieen || DEFAULT_HOOFDCATEGORIEEN;
 
   const objectsCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -658,6 +670,19 @@ export default function NewIssuePage() {
     setAddressSuggestions([]);
   };
 
+  const handleAddCategory = async () => {
+    if (!firestore || !newCategoryName.trim() || !categoriesRef) return;
+    const updatedList = [...hoofdcategorieOptions, newCategoryName.trim()];
+    await setDocumentNonBlocking(categoriesRef, { hoofdcategorieen: updatedList }, { merge: true });
+    setNewCategoryName('');
+  };
+
+  const handleRemoveCategory = async (cat: string) => {
+    if (!firestore || !categoriesRef) return;
+    const updatedList = hoofdcategorieOptions.filter(c => c !== cat);
+    await setDocumentNonBlocking(categoriesRef, { hoofdcategorieen: updatedList }, { merge: true });
+  };
+
   const isUploading = Object.keys(uploadProgress).length > 0;
 
   return (
@@ -723,7 +748,7 @@ export default function NewIssuePage() {
                                             <SelectContent>{hoofdcategorieOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                         </Select>
                                     )} />
-                                     <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0" disabled={isReadOnly}><Search className="h-4 w-4"/></Button>
+                                     <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0" disabled={isReadOnly} onClick={() => setIsManageCategoriesOpen(true)}><Search className="h-4 w-4"/></Button>
                                 </div>
                             </FormRow>
                             <FormRow label="Indeling">
@@ -1165,6 +1190,41 @@ export default function NewIssuePage() {
             </div>
           </form>
         </Form>
+
+        <Dialog open={isManageCategoriesOpen} onOpenChange={setIsManageCategoriesOpen}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Hoofdindelingen beheren</DialogTitle>
+                    <DialogDescription>Voeg nieuwe categorieën toe aan de lijst of verwijder bestaande.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="flex gap-2">
+                        <Input 
+                            placeholder="Nieuwe categorie..." 
+                            value={newCategoryName} 
+                            onChange={(e) => setNewCategoryName(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
+                        />
+                        <Button onClick={handleAddCategory} size="icon">
+                            <Plus className="h-4 w-4" />
+                        </Button>
+                    </div>
+                    <div className="border rounded-md max-h-60 overflow-y-auto">
+                        {hoofdcategorieOptions.map((opt: string) => (
+                            <div key={opt} className="flex justify-between items-center p-2 border-b last:border-b-0">
+                                <span className="text-sm">{opt}</span>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRemoveCategory(opt)}>
+                                    <Trash2 className="h-4 w-4 text-destructive"/>
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button onClick={() => setIsManageCategoriesOpen(false)}>Sluiten</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }
