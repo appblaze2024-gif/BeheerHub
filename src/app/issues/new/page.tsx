@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -8,7 +9,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { format, addDays, isWeekend } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { ArrowLeft, CalendarIcon, Loader2, MapPin, Search, UploadCloud, FileIcon, Trash2 } from 'lucide-react';
-import { useFirestore, addDocumentNonBlocking, useFirebaseApp, useCollection } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useFirebaseApp, useCollection } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { collection, doc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -549,13 +550,19 @@ export default function NewIssuePage() {
     setSearchQuery('');
   };
 
+  const canEditStatus = !!viewedMelding && (profile?.role === 'Super admin' || profile?.role === 'toezichthouder');
+
   const onSubmit = async (data: NewMeldingFormValues) => {
-    if (!firestore || isReadOnly) return;
+    if (!firestore) return;
+    
+    if (viewedMelding) {
+        if (!canEditStatus) return;
+    } else {
+        if (isReadOnly) return;
+    }
     
     setIsSubmitting(true);
     
-    const meldingenCollectionRef = collection(firestore, 'meldingen');
-
     try {
        const meldingData: any = {
         hoofdcategorie: data.hoofdcategorie,
@@ -570,42 +577,51 @@ export default function NewIssuePage() {
         werkgebied: data.werkgebied,
         melder: data.melder,
         extra_informatie: data.extra_informatie,
-        
-        intakenummer: meldingsnummer,
-        datum: format(data.meldingsdatum || now, 'yyyy-MM-dd'),
-        tijdstip: data.meldingsuur || format(now, 'HH:mm'),
-        aangenomen_door: profile?.displayName || profile?.email || 'Onbekend',
         latitude: location?.latitude || 0,
         longitude: location?.longitude || 0,
         files: uploadedFiles,
         fotos: uploadedPhotos,
       };
 
-      if (data.voorvaldatum) {
-        meldingData.voorvaldatum = format(new Date(data.voorvaldatum), 'yyyy-MM-dd');
-        meldingData.voorvaltijd = data.voorvaltijd;
-      }
-      if (data.afgehandeld_door) {
-        meldingData.afgehandeld_door = data.afgehandeld_door;
-      }
-      if (data.afhandeling_datum) {
-        meldingData.afhandeling_datum = format(new Date(data.afhandeling_datum), 'yyyy-MM-dd');
-        meldingData.afhandeling_tijdstip = data.afhandeling_tijdstip;
-      }
-      
-      await addDocumentNonBlocking(meldingenCollectionRef, meldingData);
+      if (viewedMelding) {
+          const meldingRef = doc(firestore, 'meldingen', viewedMelding.id);
+          
+          if (data.status === 'Afgerond' && viewedMelding.status !== 'Afgerond') {
+              meldingData.afhandeling_datum = format(new Date(), 'yyyy-MM-dd');
+              meldingData.afhandeling_tijdstip = format(new Date(), 'HH:mm');
+              meldingData.afgehandeld_door = profile?.displayName || profile?.email || 'Onbekend';
+          }
 
-      toast({
-        title: 'Melding aangemaakt',
-        description: `Melding ${meldingsnummer} is succesvol aangemaakt.`,
-      });
-      resetFormForNewMelding();
+          await updateDocumentNonBlocking(meldingRef, meldingData);
+          toast({
+            title: 'Melding bijgewerkt',
+            description: `Melding ${viewedMelding.intakenummer} is succesvol bijgewerkt.`,
+          });
+          router.push('/issues/open');
+      } else {
+          meldingData.intakenummer = meldingsnummer;
+          meldingData.datum = format(data.meldingsdatum || now, 'yyyy-MM-dd');
+          meldingData.tijdstip = data.meldingsuur || format(now, 'HH:mm');
+          meldingData.aangenomen_door = profile?.displayName || profile?.email || 'Onbekend';
+          
+          if (data.voorvaldatum) {
+            meldingData.voorvaldatum = format(new Date(data.voorvaldatum), 'yyyy-MM-dd');
+            meldingData.voorvaltijd = data.voorvaltijd;
+          }
+
+          await addDocumentNonBlocking(collection(firestore, 'meldingen'), meldingData);
+          toast({
+            title: 'Melding aangemaakt',
+            description: `Melding ${meldingsnummer} is succesvol aangemaakt.`,
+          });
+          resetFormForNewMelding();
+      }
     } catch (error) {
-      console.error('Fout bij aanmaken melding:', error);
+      console.error('Fout bij verwerken melding:', error);
       toast({
         variant: 'destructive',
         title: 'Fout opgetreden',
-        description: 'Kon de melding niet aanmaken.',
+        description: 'Kon de melding niet opslaan.',
       });
     } finally {
       setIsSubmitting(false);
@@ -651,11 +667,19 @@ export default function NewIssuePage() {
                 <Button variant="ghost" size="icon" onClick={() => router.back()}>
                     <ArrowLeft className="h-4 w-4" />
                 </Button>
-                <h1 className="font-semibold text-xs">{isReadOnly ? `Melding: ${viewedMelding?.intakenummer}` : `Melding : ${meldingsnummer}`}</h1>
+                <h1 className="font-semibold text-xs">{viewedMelding ? `Melding: ${viewedMelding.intakenummer}` : `Melding : ${meldingsnummer}`}</h1>
             </div>
             <div className="flex justify-end gap-2">
                 {isReadOnly ? (
-                    <Button type="button" variant="outline" onClick={() => router.back()} className="h-8">Sluiten</Button>
+                    <div className='flex gap-2'>
+                        <Button type="button" variant="outline" onClick={() => router.back()} className="h-8">Sluiten</Button>
+                        {canEditStatus && (
+                            <Button type="submit" form="new-melding-form" disabled={isSubmitting || isUploading} className="h-8">
+                                {isSubmitting || isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                Wijzigingen Opslaan
+                            </Button>
+                        )}
+                    </div>
                 ) : (
                     <>
                         <Button type="button" variant="ghost" onClick={resetFormForNewMelding} className="h-8">Annuleren</Button>
@@ -676,12 +700,12 @@ export default function NewIssuePage() {
                         <CardHeader className="p-1 pb-1 flex-row justify-between items-start">
                            <CardTitle className="font-semibold text-xs">Algemene Informatie</CardTitle>
                            <div className="text-right text-xs text-muted-foreground">
-                                Laatst gewijzigd door {isReadOnly ? viewedMelding?.aangenomen_door : profile?.displayName || '...'} op {format(new Date(viewedMelding?.datum || now), 'dd-MM-yyyy')} om {viewedMelding?.tijdstip || format(now, 'HH:mm:ss')}.
+                                Laatst gewijzigd door {viewedMelding ? viewedMelding.aangenomen_door : profile?.displayName || '...'} op {format(new Date(viewedMelding?.datum || now), 'dd-MM-yyyy')} om {viewedMelding?.tijdstip || format(now, 'HH:mm:ss')}.
                             </div>
                         </CardHeader>
                         <div className="space-y-0.5 p-1 flex-1">
                             <FormRow label="Meldingsnummer">
-                                <Input value={isReadOnly ? viewedMelding?.intakenummer : meldingsnummer} disabled className="h-7 text-xs"/>
+                                <Input value={viewedMelding ? viewedMelding.intakenummer : meldingsnummer} disabled className="h-7 text-xs"/>
                             </FormRow>
                             <FormRow label="Soort melder">
                             <div className="flex items-center">
@@ -728,7 +752,7 @@ export default function NewIssuePage() {
                             </FormRow>
                             <FormRow label="Status">
                                 <FormField control={form.control} name="status" render={({ field }) => (
-                                    <Select onValueChange={field.onChange} value={field.value} disabled>
+                                    <Select onValueChange={field.onChange} value={field.value} disabled={isReadOnly && !canEditStatus}>
                                         <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer status" /></SelectTrigger></FormControl>
                                         <SelectContent>{statusOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                     </Select>
@@ -745,7 +769,7 @@ export default function NewIssuePage() {
                                     <FormField control={form.control} name="afhandeling_tijdstip" render={({ field }) => (<FormControl><Input type="time" className="h-7 text-xs w-24" {...field} disabled /></FormControl>)} />
                                 </div>
                             </FormRow>
-                            {isReadOnly && viewedMelding?.gewerkteMinuten !== undefined && (
+                            {viewedMelding?.gewerkteMinuten !== undefined && (
                                 <FormRow label="Duur">
                                     <Input value={`${viewedMelding.gewerkteMinuten} minuten`} disabled className="h-7 text-xs"/>
                                 </FormRow>
@@ -895,7 +919,7 @@ export default function NewIssuePage() {
                         <h3 className="font-semibold text-xs mb-2">Medewerker / Melder</h3>
                         <FormRow label="Medewerker intake">
                              <div className="flex items-center">
-                                <Input value={isReadOnly ? viewedMelding?.aangenomen_door : profile?.displayName || profile?.email || ''} disabled className="h-7 text-xs" />
+                                <Input value={viewedMelding ? viewedMelding.aangenomen_door : profile?.displayName || profile?.email || ''} disabled className="h-7 text-xs" />
                             </div>
                         </FormRow>
                         <FormRow label="Naam melder">
@@ -917,14 +941,14 @@ export default function NewIssuePage() {
             <div className="flex-1 flex flex-col min-h-0 px-3 pb-3">
                  <Tabs defaultValue="locatie" className="flex-1 flex flex-col min-h-0">
                     <TabsList>
-                        {isReadOnly && viewedMelding?.afhandeling_bijzonderheden && (
+                        {viewedMelding?.afhandeling_bijzonderheden && (
                             <TabsTrigger value="opmerkingen">Opmerkingen</TabsTrigger>
                         )}
                         <TabsTrigger value="documenten">Documenten</TabsTrigger>
                         <TabsTrigger value="fotos">Foto's</TabsTrigger>
                         <TabsTrigger value="locatie">Locatie</TabsTrigger>
                     </TabsList>
-                    {isReadOnly && viewedMelding?.afhandeling_bijzonderheden && (
+                    {viewedMelding?.afhandeling_bijzonderheden && (
                         <TabsContent value="opmerkingen" className="flex-1 mt-1">
                             <Card>
                                 <CardHeader>
