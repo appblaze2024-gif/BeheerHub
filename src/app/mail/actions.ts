@@ -10,7 +10,7 @@ const attachmentSchema = z.object({
 });
 
 const mailSchema = z.object({
-  to: z.string().email(),
+  to: z.string().min(1, 'Ontvanger is verplicht'),
   cc: z.string().optional(),
   subject: z.string(),
   body: z.string(),

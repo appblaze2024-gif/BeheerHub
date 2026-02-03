@@ -26,6 +26,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from './ui/textarea';
@@ -34,7 +35,8 @@ import { ScrollArea } from './ui/scroll-area';
 import type { Melding, UploadedFile } from '@/lib/types';
 
 const forwardSchema = z.object({
-  to: z.string().email({ message: 'Voer een geldig e-mailadres in.' }),
+  to: z.string().min(1, { message: 'Voer minimaal één e-mailadres in.' }),
+  cc: z.string().optional(),
   subject: z.string().min(1, { message: 'Onderwerp is verplicht.' }),
   body: z.string().min(1, { message: 'Bericht mag niet leeg zijn.' }),
 });
@@ -71,7 +73,7 @@ export function ForwardExternalDialog({ open, onOpenChange, melding, onSuccess }
 
   const form = useForm<ForwardFormValues>({
     resolver: zodResolver(forwardSchema),
-    defaultValues: { to: '', subject: '', body: '' },
+    defaultValues: { to: '', cc: '', subject: '', body: '' },
   });
 
   const allFiles = React.useMemo(() => {
@@ -100,6 +102,7 @@ Team BeheerHub`;
 
       form.reset({
         to: '',
+        cc: '',
         subject: `Doorzetten melding ${melding.intakenummer}: ${melding.subcategorie}`,
         body: initialBody,
       });
@@ -184,9 +187,25 @@ Team BeheerHub`;
                     name="to"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Ontvanger (Email)</FormLabel>
+                        <FormLabel>Ontvanger(s)</FormLabel>
                         <FormControl>
-                            <Input placeholder="onderaannemer@bedrijf.nl" {...field} />
+                            <Input placeholder="email1@voorbeeld.nl, email2@voorbeeld.nl" {...field} />
+                        </FormControl>
+                        <FormDescription className="text-[10px]">
+                            Meerdere adressen scheiden met een komma.
+                        </FormDescription>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name="cc"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>CC</FormLabel>
+                        <FormControl>
+                            <Input placeholder="cc@voorbeeld.nl" {...field} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
