@@ -50,6 +50,8 @@ interface ForwardExternalDialogProps {
   onSuccess: () => void;
 }
 
+const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
+
 // Helper to fetch file and convert to base64
 const fetchToBase64 = async (url: string): Promise<string> => {
   const response = await fetch(url);
@@ -135,9 +137,19 @@ Team BeheerHub`;
             }))
         );
 
+        // Generate static map image from Mapbox
+        const staticMapUrl = `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-l+ff0000(${melding.longitude},${melding.latitude})/${melding.longitude},${melding.latitude},15/600x400@2x?access_token=${MAPBOX_TOKEN}`;
+        const mapBase64 = await fetchToBase64(staticMapUrl);
+        
+        const mapAttachment = {
+            content: mapBase64,
+            filename: `locatie_kaart_${melding.intakenummer}.png`,
+            type: 'image/png',
+        };
+
         const result = await sendEmail({
             ...data,
-            attachments: attachmentPayloads,
+            attachments: [...attachmentPayloads, mapAttachment],
         });
 
         if (result.success) {
@@ -190,7 +202,7 @@ Team BeheerHub`;
                         />
                         <div className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm px-2 py-1 rounded text-[10px] font-medium border shadow-sm flex items-center gap-1">
                             <MapPin className="h-3 w-3 text-red-500" />
-                            Locatie Melding
+                            Locatie Melding (Wordt als kaart bijgevoegd in mail)
                         </div>
                     </div>
 
