@@ -55,12 +55,17 @@ const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGt
 // Helper to fetch file and convert to base64
 const fetchToBase64 = async (url: string): Promise<string> => {
   const response = await fetch(url);
+  if (!response.ok) throw new Error(`HTTP fout! status: ${response.status}`);
   const blob = await response.blob();
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onloadend = () => {
       const result = reader.result as string;
-      resolve(result.split(',')[1]);
+      if (typeof result === 'string') {
+        resolve(result.split(',')[1]);
+      } else {
+        reject(new Error('Kon bestand niet converteren naar base64.'));
+      }
     };
     reader.onerror = reject;
     reader.readAsDataURL(blob);
@@ -128,32 +133,47 @@ Team BeheerHub`;
     try {
         const selectedFiles = allFiles.filter(f => selectedAttachments.includes(f.storagePath));
         
-        // Fetch all selected files and convert to base64
-        const attachmentPayloads = await Promise.all(
-            selectedFiles.map(async (file) => ({
-                content: await fetchToBase64(file.url),
-                filename: file.name,
-                type: file.type,
-            }))
-        );
+        // Step 1: Fetch issue attachments
+        let attachmentPayloads = [];
+        if (selectedFiles.length > 0) {
+            try {
+                attachmentPayloads = await Promise.all(
+                    selectedFiles.map(async (file) => ({
+                        content: await fetchToBase64(file.url),
+                        filename: file.name,
+                        type: file.type,
+                    }))
+                );
+            } catch (fileError: any) {
+                console.error("Fout bij ophalen bijlagen:", fileError);
+                throw new Error(`Kon bijlagen niet voorbereiden: ${fileError.message}`);
+            }
+        }
 
-        // Generate static map image from Mapbox
-        const staticMapUrl = `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-l+ff0000(${melding.longitude},${melding.latitude})/${melding.longitude},${melding.latitude},15/600x400@2x?access_token=${MAPBOX_TOKEN}`;
-        const mapBase64 = await fetchToBase64(staticMapUrl);
-        
-        const mapAttachment = {
-            content: mapBase64,
-            filename: `locatie_kaart_${melding.intakenummer}.png`,
-            type: 'image/png',
-        };
+        // Step 2: Generate static map image from Mapbox (optional step, don't fail if this fails)
+        let mapAttachment = null;
+        try {
+            const staticMapUrl = `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-l+ff0000(${melding.longitude},${melding.latitude})/${melding.longitude},${melding.latitude},15/600x400@2x?access_token=${MAPBOX_TOKEN}`;
+            const mapBase64 = await fetchToBase64(staticMapUrl);
+            
+            mapAttachment = {
+                content: mapBase64,
+                filename: `locatie_kaart_${melding.intakenummer}.png`,
+                type: 'image/png',
+            };
+        } catch (mapError) {
+            console.warn("Kon kaart niet genereren, e-mail wordt zonder kaart verstuurd:", mapError);
+        }
 
+        // Step 3: Send the email via server action
+        const finalAttachments = mapAttachment ? [...attachmentPayloads, mapAttachment] : attachmentPayloads;
         const result = await sendEmail({
             ...data,
-            attachments: [...attachmentPayloads, mapAttachment],
+            attachments: finalAttachments,
         });
 
         if (result.success) {
-            // Update issue status
+            // Update issue status in Firestore
             const meldingRef = doc(firestore, 'meldingen', melding.id);
             await updateDocumentNonBlocking(meldingRef, { 
                 status: 'Extern doorgezet',
@@ -167,13 +187,15 @@ Team BeheerHub`;
             onSuccess();
             onOpenChange(false);
         } else {
+            // Error returned from sendEmail server action
             throw new Error(result.message);
         }
     } catch (error: any) {
+         console.error("Fout bij doorzetten melding:", error);
          toast({
             variant: 'destructive',
-            title: 'Fout bij verzenden',
-            description: error.message || 'Er is een fout opgetreden bij het verzenden van de e-mail.',
+            title: 'Verzenden mislukt',
+            description: error.message || 'Er is een onverwachte fout opgetreden.',
         });
     } finally {
         setIsSending(false);
@@ -292,7 +314,7 @@ Team BeheerHub`;
                     {isSending ? (
                         <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Bezig met voorbereiden...
+                            Bezig met verzenden...
                         </>
                     ) : (
                         <>
