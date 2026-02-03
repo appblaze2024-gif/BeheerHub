@@ -109,6 +109,7 @@ const DEFAULT_SUBCATEGORIE_MAPPING: Record<string, string[]> = {
 
 const DEFAULT_DEPARTMENTS = ["Buitendienst", "Reiniging", "Groenvoorziening", "Waterbeheer"];
 const DEFAULT_HANDLERS = ["Onbekend"];
+const DEFAULT_REPORTER_TYPES = ["Burger", "Bedrijf", "Medewerker", "Overheid"];
 
 const FormRow = ({ label, children, labelFor }: { label: string; children: React.ReactNode; labelFor?: string }) => (
     <div className="grid grid-cols-[140px_1fr] items-start gap-x-2 py-0.5">
@@ -162,6 +163,10 @@ export default function NewIssuePage() {
   const [isManageHandlersOpen, setIsManageHandlersOpen] = React.useState(false);
   const [newHandlerName, setNewHandlerName] = React.useState('');
 
+  // Reporter types management
+  const [isManageReporterTypesOpen, setIsManageReporterTypesOpen] = React.useState(false);
+  const [newReporterTypeName, setNewReporterTypeName] = React.useState('');
+
   const categoriesRef = React.useMemo(() => {
     if (!firestore) return null;
     return doc(firestore, 'settings', 'categories');
@@ -183,6 +188,13 @@ export default function NewIssuePage() {
   }, [firestore]);
   const { data: handlersData } = useDoc<{ names: string[] }>(handlersRef);
   const handlerOptions = handlersData?.names || DEFAULT_HANDLERS;
+
+  const reporterTypesRef = React.useMemo(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'settings', 'reporter_types');
+  }, [firestore]);
+  const { data: reporterTypesData } = useDoc<{ names: string[] }>(reporterTypesRef);
+  const reporterTypeOptions = reporterTypesData?.names || DEFAULT_REPORTER_TYPES;
 
   const objectsCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -256,6 +268,7 @@ export default function NewIssuePage() {
         setViewedMelding(meldingToView);
         setIsReadOnly(true);
         form.reset({
+          soort_melder: meldingToView.soort_melder || '',
           hoofdcategorie: meldingToView.hoofdcategorie,
           subcategorie: meldingToView.subcategorie,
           behandelende_afdeling: meldingToView.behandelende_afdeling || '',
@@ -611,6 +624,7 @@ export default function NewIssuePage() {
     
     try {
        const meldingData: any = {
+        soort_melder: data.soort_melder,
         hoofdcategorie: data.hoofdcategorie,
         subcategorie: data.subcategorie,
         behandelende_afdeling: data.behandelende_afdeling,
@@ -816,6 +830,29 @@ export default function NewIssuePage() {
     await setDocumentNonBlocking(handlersRef, { names: newList }, { merge: true });
   };
 
+  const handleAddReporterType = async () => {
+    if (!firestore || !newReporterTypeName.trim() || !reporterTypesRef) return;
+    const updatedList = [...reporterTypeOptions, newReporterTypeName.trim()];
+    await setDocumentNonBlocking(reporterTypesRef, { names: updatedList }, { merge: true });
+    setNewReporterTypeName('');
+  };
+
+  const handleRemoveReporterType = async (item: string) => {
+    if (!firestore || !reporterTypesRef) return;
+    const updatedList = reporterTypeOptions.filter(x => x !== item);
+    await setDocumentNonBlocking(reporterTypesRef, { names: updatedList }, { merge: true });
+  };
+
+  const handleMoveReporterType = async (index: number, direction: 'up' | 'down') => {
+    if (!firestore || !reporterTypesRef) return;
+    const newList = [...reporterTypeOptions];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newList.length) return;
+    const [movedItem] = newList.splice(index, 1);
+    newList.splice(targetIndex, 0, movedItem);
+    await setDocumentNonBlocking(reporterTypesRef, { names: newList }, { merge: true });
+  };
+
   const isUploading = Object.keys(uploadProgress).length > 0;
 
   return (
@@ -866,11 +903,14 @@ export default function NewIssuePage() {
                                 <Input value={viewedMelding ? viewedMelding.intakenummer : meldingsnummer} disabled className="h-7 text-xs"/>
                             </FormRow>
                             <FormRow label="Soort melder">
-                            <div className="flex items-center">
+                                <div className="flex items-center">
                                     <FormField control={form.control} name="soort_melder" render={({ field }) => (
-                                        <FormControl><Input {...field} className="h-7 text-xs rounded-r-none" disabled={isReadOnly} /></FormControl>
+                                        <Select onValueChange={field.onChange} value={field.value ?? ''} disabled={isReadOnly}>
+                                            <FormControl><SelectTrigger className="h-7 text-xs rounded-r-none"><SelectValue placeholder="Selecteer melder" /></SelectTrigger></FormControl>
+                                            <SelectContent>{reporterTypeOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                        </Select>
                                     )} />
-                                    <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0" disabled={isReadOnly}><Search className="h-4 w-4"/></Button>
+                                    <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0" disabled={isReadOnly} onClick={() => setIsManageReporterTypesOpen(true)}><Search className="h-4 w-4"/></Button>
                                 </div>
                             </FormRow>
                             <FormRow label="Hoofdindeling">
@@ -1344,6 +1384,62 @@ export default function NewIssuePage() {
             </div>
           </form>
         </Form>
+
+        {/* Dialog for Managing Reporter Types */}
+        <Dialog open={isManageReporterTypesOpen} onOpenChange={setIsManageReporterTypesOpen}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Soort melder beheren</DialogTitle>
+                    <DialogDescription>Voeg nieuwe soorten melders toe aan de lijst of verwijder bestaande.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="flex gap-2">
+                        <Input 
+                            placeholder="Nieuw soort melder..." 
+                            value={newReporterTypeName} 
+                            onChange={(e) => setNewReporterTypeName(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleAddReporterType()}
+                        />
+                        <Button onClick={handleAddReporterType} size="icon">
+                            <Plus className="h-4 w-4" />
+                        </Button>
+                    </div>
+                    <div className="border rounded-md max-h-60 overflow-y-auto">
+                        {reporterTypeOptions.map((opt: string, index: number) => (
+                            <div key={opt} className="flex justify-between items-center p-2 border-b last:border-b-0">
+                                <span className="text-sm flex-1">{opt}</span>
+                                <div className="flex items-center gap-1">
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-8 w-8" 
+                                        onClick={() => handleMoveReporterType(index, 'up')}
+                                        disabled={index === 0}
+                                    >
+                                        <ChevronUp className="h-4 w-4" />
+                                    </Button>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-8 w-8" 
+                                        onClick={() => handleMoveReporterType(index, 'down')}
+                                        disabled={index === reporterTypeOptions.length - 1}
+                                    >
+                                        <ChevronDown className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRemoveReporterType(opt)}>
+                                        <Trash2 className="h-4 w-4 text-destructive"/>
+                                    </Button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button onClick={() => setIsManageReporterTypesOpen(false)}>Sluiten</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
 
         {/* Dialog for Managing Main Categories */}
         <Dialog open={isManageCategoriesOpen} onOpenChange={setIsManageCategoriesOpen}>
