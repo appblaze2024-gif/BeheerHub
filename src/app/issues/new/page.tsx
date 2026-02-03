@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { format, addDays, isWeekend } from 'date-fns';
 import { nl } from 'date-fns/locale';
-import { ArrowLeft, CalendarIcon, Loader2, MapPin, Search, UploadCloud, FileIcon, Trash2, Plus } from 'lucide-react';
+import { ArrowLeft, CalendarIcon, Loader2, MapPin, Search, UploadCloud, FileIcon, Trash2, Plus, ChevronUp, ChevronDown } from 'lucide-react';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useFirebaseApp, useCollection, useDoc, setDocumentNonBlocking } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { collection, doc } from 'firebase/firestore';
@@ -683,6 +683,19 @@ export default function NewIssuePage() {
     await setDocumentNonBlocking(categoriesRef, { hoofdcategorieen: updatedList }, { merge: true });
   };
 
+  const handleMoveCategory = async (index: number, direction: 'up' | 'down') => {
+    if (!firestore || !categoriesRef) return;
+    const newList = [...hoofdcategorieOptions];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    
+    if (targetIndex < 0 || targetIndex >= newList.length) return;
+    
+    const [movedItem] = newList.splice(index, 1);
+    newList.splice(targetIndex, 0, movedItem);
+    
+    await setDocumentNonBlocking(categoriesRef, { hoofdcategorieen: newList }, { merge: true });
+  };
+
   const isUploading = Object.keys(uploadProgress).length > 0;
 
   return (
@@ -1210,12 +1223,32 @@ export default function NewIssuePage() {
                         </Button>
                     </div>
                     <div className="border rounded-md max-h-60 overflow-y-auto">
-                        {hoofdcategorieOptions.map((opt: string) => (
+                        {hoofdcategorieOptions.map((opt: string, index: number) => (
                             <div key={opt} className="flex justify-between items-center p-2 border-b last:border-b-0">
-                                <span className="text-sm">{opt}</span>
-                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRemoveCategory(opt)}>
-                                    <Trash2 className="h-4 w-4 text-destructive"/>
-                                </Button>
+                                <span className="text-sm flex-1">{opt}</span>
+                                <div className="flex items-center gap-1">
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-8 w-8" 
+                                        onClick={() => handleMoveCategory(index, 'up')}
+                                        disabled={index === 0}
+                                    >
+                                        <ChevronUp className="h-4 w-4" />
+                                    </Button>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-8 w-8" 
+                                        onClick={() => handleMoveCategory(index, 'down')}
+                                        disabled={index === hoofdcategorieOptions.length - 1}
+                                    >
+                                        <ChevronDown className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRemoveCategory(opt)}>
+                                        <Trash2 className="h-4 w-4 text-destructive"/>
+                                    </Button>
+                                </div>
                             </div>
                         ))}
                     </div>
