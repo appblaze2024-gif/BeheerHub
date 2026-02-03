@@ -96,7 +96,7 @@ const statusOptions = [
 
 const DEFAULT_HOOFDCATEGORIEEN = ["Afval", "Weg en straatmeubilair", "Groen", "Water", "Overig", "Zoutkisten"];
 
-const subcategorieOptions: Record<string, string[]> = {
+const DEFAULT_SUBCATEGORIE_MAPPING: Record<string, string[]> = {
     "Afval": ["Volle of kapotte afvalbak", "Zwerfafval", "Dumping", "Dierenkadaver"],
     "Weg en straatmeubilair": ["Losse tegel(s)", "Gat in de weg", "Kapotte bank/paal/hek"],
     "Groen": ["Overhangende takken", "Onkruid", "Maaien"],
@@ -144,13 +144,18 @@ export default function NewIssuePage() {
 
   // Categories management
   const [isManageCategoriesOpen, setIsManageCategoriesOpen] = React.useState(false);
+  const [isManageSubcategoriesOpen, setIsManageSubcategoriesOpen] = React.useState(false);
   const [newCategoryName, setNewCategoryName] = React.useState('');
+  const [newSubcategoryName, setNewSubcategoryName] = React.useState('');
+  const [manageSubSelectedCategory, setManageSubSelectedCategory] = React.useState('');
+
   const categoriesRef = React.useMemo(() => {
     if (!firestore) return null;
     return doc(firestore, 'settings', 'categories');
   }, [firestore]);
-  const { data: categoriesData } = useDoc<{ hoofdcategorieen: string[] }>(categoriesRef);
+  const { data: categoriesData } = useDoc<{ hoofdcategorieen: string[], subcategorieMapping: Record<string, string[]> }>(categoriesRef);
   const hoofdcategorieOptions = categoriesData?.hoofdcategorieen || DEFAULT_HOOFDCATEGORIEEN;
+  const subcategorieMapping = categoriesData?.subcategorieMapping || DEFAULT_SUBCATEGORIE_MAPPING;
 
   const objectsCollection = React.useMemo(() => {
     if (!firestore) return null;
@@ -696,6 +701,44 @@ export default function NewIssuePage() {
     await setDocumentNonBlocking(categoriesRef, { hoofdcategorieen: newList }, { merge: true });
   };
 
+  const handleAddSubcategory = async () => {
+    if (!firestore || !newSubcategoryName.trim() || !categoriesRef || !manageSubSelectedCategory) return;
+    const currentSubs = subcategorieMapping[manageSubSelectedCategory] || [];
+    const updatedMapping = {
+        ...subcategorieMapping,
+        [manageSubSelectedCategory]: [...currentSubs, newSubcategoryName.trim()]
+    };
+    await setDocumentNonBlocking(categoriesRef, { subcategorieMapping: updatedMapping }, { merge: true });
+    setNewSubcategoryName('');
+  };
+
+  const handleRemoveSubcategory = async (cat: string, sub: string) => {
+    if (!firestore || !categoriesRef) return;
+    const currentSubs = subcategorieMapping[cat] || [];
+    const updatedMapping = {
+        ...subcategorieMapping,
+        [cat]: currentSubs.filter(s => s !== sub)
+    };
+    await setDocumentNonBlocking(categoriesRef, { subcategorieMapping: updatedMapping }, { merge: true });
+  };
+
+  const handleMoveSubcategory = async (cat: string, index: number, direction: 'up' | 'down') => {
+    if (!firestore || !categoriesRef) return;
+    const currentSubs = [...(subcategorieMapping[cat] || [])];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    
+    if (targetIndex < 0 || targetIndex >= currentSubs.length) return;
+    
+    const [movedItem] = currentSubs.splice(index, 1);
+    currentSubs.splice(targetIndex, 0, movedItem);
+    
+    const updatedMapping = {
+        ...subcategorieMapping,
+        [cat]: currentSubs
+    };
+    await setDocumentNonBlocking(categoriesRef, { subcategorieMapping: updatedMapping }, { merge: true });
+  };
+
   const isUploading = Object.keys(uploadProgress).length > 0;
 
   return (
@@ -769,10 +812,22 @@ export default function NewIssuePage() {
                                     <FormField control={form.control} name="subcategorie" render={({ field }) => (
                                     <Select onValueChange={field.onChange} value={field.value ?? ''} disabled={!watchedHoofdcategorie || isReadOnly}>
                                         <FormControl><SelectTrigger className="h-7 text-xs rounded-r-none"><SelectValue placeholder="Selecteer indeling" /></SelectTrigger></FormControl>
-                                        <SelectContent>{(subcategorieOptions[watchedHoofdcategorie] || []).map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                        <SelectContent>{(subcategorieMapping[watchedHoofdcategorie] || []).map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                     </Select>
                                 )} />
-                                <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0" disabled={isReadOnly}><Search className="h-4 w-4"/></Button>
+                                <Button 
+                                    type="button" 
+                                    size="icon" 
+                                    variant="outline" 
+                                    className="h-7 w-7 rounded-l-none border-l-0" 
+                                    disabled={isReadOnly} 
+                                    onClick={() => {
+                                        setManageSubSelectedCategory(watchedHoofdcategorie || hoofdcategorieOptions[0] || '');
+                                        setIsManageSubcategoriesOpen(true);
+                                    }}
+                                >
+                                    <Search className="h-4 w-4"/>
+                                </Button>
                             </div>
                             </FormRow>
                             <FormRow label="Behandelende afdeling">
@@ -1204,6 +1259,7 @@ export default function NewIssuePage() {
           </form>
         </Form>
 
+        {/* Dialog for Managing Main Categories */}
         <Dialog open={isManageCategoriesOpen} onOpenChange={setIsManageCategoriesOpen}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
@@ -1255,6 +1311,89 @@ export default function NewIssuePage() {
                 </div>
                 <DialogFooter>
                     <Button onClick={() => setIsManageCategoriesOpen(false)}>Sluiten</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        {/* Dialog for Managing Subcategories */}
+        <Dialog open={isManageSubcategoriesOpen} onOpenChange={setIsManageSubcategoriesOpen}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Indelingen beheren</DialogTitle>
+                    <DialogDescription>Beheer de indelingen voor een specifieke hoofdindeling.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                        <Label>Hoofdindeling</Label>
+                        <Select value={manageSubSelectedCategory} onValueChange={setManageSubSelectedCategory}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Selecteer hoofdindeling" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {hoofdcategorieOptions.map(opt => (
+                                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-2">
+                        <Label>Nieuwe Indeling voor {manageSubSelectedCategory}</Label>
+                        <div className="flex gap-2">
+                            <Input 
+                                placeholder="Nieuwe indeling..." 
+                                value={newSubcategoryName} 
+                                onChange={(e) => setNewSubcategoryName(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleAddSubcategory()}
+                                disabled={!manageSubSelectedCategory}
+                            />
+                            <Button onClick={handleAddSubcategory} size="icon" disabled={!manageSubSelectedCategory}>
+                                <Plus className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+
+                    <div className="border rounded-md max-h-60 overflow-y-auto">
+                        {manageSubSelectedCategory && (subcategorieMapping[manageSubSelectedCategory] || []).map((sub: string, index: number) => (
+                            <div key={sub} className="flex justify-between items-center p-2 border-b last:border-b-0">
+                                <span className="text-sm flex-1">{sub}</span>
+                                <div className="flex items-center gap-1">
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-8 w-8" 
+                                        onClick={() => handleMoveSubcategory(manageSubSelectedCategory, index, 'up')}
+                                        disabled={index === 0}
+                                    >
+                                        <ChevronUp className="h-4 w-4" />
+                                    </Button>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-8 w-8" 
+                                        onClick={() => handleMoveSubcategory(manageSubSelectedCategory, index, 'down')}
+                                        disabled={index === (subcategorieMapping[manageSubSelectedCategory] || []).length - 1}
+                                    >
+                                        <ChevronDown className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRemoveSubcategory(manageSubSelectedCategory, sub)}>
+                                        <Trash2 className="h-4 w-4 text-destructive"/>
+                                    </Button>
+                                </div>
+                            </div>
+                        ))}
+                        {!manageSubSelectedCategory && (
+                            <div className="p-4 text-center text-muted-foreground italic">Selecteer eerst een hoofdindeling.</div>
+                        )}
+                        {manageSubSelectedCategory && (!subcategorieMapping[manageSubSelectedCategory] || subcategorieMapping[manageSubSelectedCategory].length === 0) && (
+                            <div className="p-4 text-center text-muted-foreground italic">Geen indelingen gevonden voor deze categorie.</div>
+                        )}
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button onClick={() => setIsManageSubcategoriesOpen(false)}>Sluiten</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
