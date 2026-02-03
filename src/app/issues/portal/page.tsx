@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useCollection, useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
-import { Search, ListFilter, ArrowLeft, MoreHorizontal } from 'lucide-react';
+import { Search, ListFilter, ArrowLeft, MoreHorizontal, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { Melding } from '@/lib/types';
@@ -25,6 +25,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { ForwardExternalDialog } from '@/components/forward-external-dialog';
 
 export default function MeldingenportaalPage() {
   const firestore = useFirestore();
@@ -33,6 +34,9 @@ export default function MeldingenportaalPage() {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = React.useState('');
   const { setIsHeaderVisible } = useNavigationUI();
+
+  const [forwardDialogOpen, setForwardDialogOpen] = React.useState(false);
+  const [selectedMeldingForForward, setSelectedMeldingForForward] = React.useState<Melding | null>(null);
 
   React.useEffect(() => {
     setIsHeaderVisible(false);
@@ -76,7 +80,10 @@ export default function MeldingenportaalPage() {
     if (!firestore) return;
     const meldingRef = doc(firestore, 'meldingen', melding.id);
     try {
-        await updateDocumentNonBlocking(meldingRef, { status: newStatus });
+        await updateDocumentNonBlocking(meldingRef, { 
+            status: newStatus,
+            updatedAt: new Date().toISOString()
+        });
         toast({
             title: "Status bijgewerkt",
             description: `Melding ${melding.intakenummer} is bijgewerkt naar "${newStatus}".`,
@@ -89,6 +96,11 @@ export default function MeldingenportaalPage() {
             description: "Kon de status van de melding niet bijwerken.",
         });
     }
+  };
+
+  const handleOpenForward = (melding: Melding) => {
+    setSelectedMeldingForForward(melding);
+    setForwardDialogOpen(true);
   };
 
   return (
@@ -163,8 +175,9 @@ export default function MeldingenportaalPage() {
                                     <DropdownMenuItem onClick={() => handleStatusChange(melding, 'In behandeling')}>
                                         Accepteren en intern doorzetten
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleStatusChange(melding, 'Extern doorgezet')}>
-                                        Extern doorzetten
+                                    <DropdownMenuItem onClick={() => handleOpenForward(melding)}>
+                                        <Mail className="mr-2 h-4 w-4" />
+                                        Extern doorzetten via mail
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleStatusChange(melding, 'Niet in beheer')}>
                                         Niet voor onze afdeling
@@ -179,6 +192,13 @@ export default function MeldingenportaalPage() {
         </Table>
         </div>
       </div>
+
+      <ForwardExternalDialog
+        open={forwardDialogOpen}
+        onOpenChange={setForwardDialogOpen}
+        melding={selectedMeldingForForward}
+        onSuccess={() => {}}
+      />
     </div>
   );
 }
