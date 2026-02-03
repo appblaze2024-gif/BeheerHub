@@ -68,6 +68,8 @@ export function ForwardExternalDialog({ open, onOpenChange, melding, onSuccess }
     return [...(melding.files || []), ...(melding.fotos || [])];
   }, [melding]);
 
+  const meldingId = melding?.id;
+
   React.useEffect(() => {
     if (open && melding) {
       const address = `${melding.straatnaam || ''} ${melding.huisnummer || ''}, ${melding.plaats || ''}`.trim();
@@ -98,7 +100,8 @@ Team BeheerHub`;
       setSelectedAttachments(allFiles.map(f => f.storagePath));
       setIsSending(false);
     }
-  }, [open, melding, form, allFiles]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, meldingId, form]);
 
   const toggleAttachment = (path: string) => {
     setSelectedAttachments(prev => 
@@ -113,14 +116,12 @@ Team BeheerHub`;
     try {
         const selectedFiles = allFiles.filter(f => selectedAttachments.includes(f.storagePath));
         
-        // Prepare issue attachments as URLs to avoid client-side CORS issues
         const attachmentPayloads = selectedFiles.map((file) => ({
             url: file.url,
             filename: file.name,
             type: file.type,
         }));
 
-        // Generate static map image URL from Mapbox
         let mapAttachment = null;
         try {
             const staticMapUrl = `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-l+ff0000(${melding.longitude},${melding.latitude})/${melding.longitude},${melding.latitude},15/600x400@2x?access_token=${MAPBOX_TOKEN}`;
@@ -134,7 +135,6 @@ Team BeheerHub`;
             console.warn("Kon kaart URL niet genereren:", mapError);
         }
 
-        // Send the email via server action
         const finalAttachments = mapAttachment ? [...attachmentPayloads, mapAttachment] : attachmentPayloads;
         const result = await sendEmail({
             ...data,
@@ -142,7 +142,6 @@ Team BeheerHub`;
         });
 
         if (result.success) {
-            // Update issue status in Firestore
             const meldingRef = doc(firestore, 'meldingen', melding.id);
             await updateDocumentNonBlocking(meldingRef, { 
                 status: 'Extern doorgezet',
@@ -156,7 +155,6 @@ Team BeheerHub`;
             onSuccess();
             onOpenChange(false);
         } else {
-            // Error returned from sendEmail server action
             throw new Error(result.message);
         }
     } catch (error: any) {

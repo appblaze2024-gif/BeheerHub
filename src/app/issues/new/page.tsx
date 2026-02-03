@@ -240,7 +240,7 @@ export default function NewIssuePage() {
     if (!firestore) return null;
     return collection(firestore, 'meldingen');
   }, [firestore]);
-  const { data: allMeldingen } = useCollection<Melding>(meldingenCollection);
+  const { data: allMeldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenCollection);
 
   const projectsCollection = React.useMemo(() => {
       if (!firestore) return null;
@@ -295,52 +295,54 @@ export default function NewIssuePage() {
   const watchedHoofdcategorie = form.watch('hoofdcategorie');
   const watchedMeldingsdatum = form.watch('meldingsdatum');
 
-  React.useEffect(() => {
-    if (meldingIdFromUrl && allMeldingen) {
-      const meldingToView = allMeldingen.find(m => m.id === meldingIdFromUrl);
-      if (meldingToView) {
-        setViewedMelding(meldingToView);
-        setIsReadOnly(true);
-        form.reset({
-          soort_melder: meldingToView.soort_melder || '',
-          hoofdcategorie: meldingToView.hoofdcategorie,
-          subcategorie: meldingToView.subcategorie,
-          behandelende_afdeling: meldingToView.behandelende_afdeling || '',
-          behandelaar: meldingToView.behandelaar || '',
-          status: meldingToView.status,
-          voorvaldatum: meldingToView.datum ? new Date(meldingToView.datum) : undefined,
-          voorvaltijd: meldingToView.tijdstip,
-          meldingsdatum: meldingToView.datum ? new Date(meldingToView.datum) : undefined,
-          meldingsuur: meldingToView.tijdstip,
-          ext_referentie: meldingToView.extern_meldingsnummer || '',
-          straatnaam: meldingToView.straatnaam || '',
-          nummer: meldingToView.huisnummer || '',
-          postcode: meldingToView.postcode || '',
-          plaats: meldingToView.plaats || '',
-          wijk: meldingToView.wijk || '',
-          werkgebied: meldingToView.werkgebied || '',
-          melder: meldingToView.melder,
-          extra_informatie: meldingToView.extra_informatie,
-          afgehandeld_door: meldingToView.afgehandeld_door || '',
-          afhandeling_datum: meldingToView.afhandeling_datum ? new Date(meldingToView.afhandeling_datum) : null,
-          afhandeling_tijdstip: meldingToView.afhandeling_tijdstip || '',
-        });
-        setLocation({ latitude: meldingToView.latitude, longitude: meldingToView.longitude });
-        setUploadedFiles(meldingToView.files || []);
-        setUploadedPhotos(meldingToView.fotos || []);
-        setAfhandelingFotos(meldingToView.afhandeling_fotos || []);
-        
-        justSelectedSuggestion.current = true;
-        setSearchQuery(`${meldingToView.straatnaam || ''}${meldingToView.huisnummer ? ' ' + meldingToView.huisnummer : ''}, ${meldingToView.plaats || ''}`);
+  const viewedMeldingFromDb = React.useMemo(() => {
+    if (!meldingIdFromUrl || !allMeldingen) return null;
+    return allMeldingen.find(m => m.id === meldingIdFromUrl);
+  }, [allMeldingen, meldingIdFromUrl]);
 
-      }
-    } else {
+  React.useEffect(() => {
+    if (viewedMeldingFromDb) {
+      setViewedMelding(viewedMeldingFromDb);
+      setIsReadOnly(true);
+      form.reset({
+        soort_melder: viewedMeldingFromDb.soort_melder || '',
+        hoofdcategorie: viewedMeldingFromDb.hoofdcategorie,
+        subcategorie: viewedMeldingFromDb.subcategorie,
+        behandelende_afdeling: viewedMeldingFromDb.behandelende_afdeling || '',
+        behandelaar: viewedMeldingFromDb.behandelaar || '',
+        status: viewedMeldingFromDb.status,
+        voorvaldatum: viewedMeldingFromDb.datum ? new Date(viewedMeldingFromDb.datum) : undefined,
+        voorvaltijd: viewedMeldingFromDb.tijdstip,
+        meldingsdatum: viewedMeldingFromDb.datum ? new Date(viewedMeldingFromDb.datum) : undefined,
+        meldingsuur: viewedMeldingFromDb.tijdstip,
+        ext_referentie: viewedMeldingFromDb.extern_meldingsnummer || '',
+        straatnaam: viewedMeldingFromDb.straatnaam || '',
+        nummer: viewedMeldingFromDb.huisnummer || '',
+        postcode: viewedMeldingFromDb.postcode || '',
+        plaats: viewedMeldingFromDb.plaats || '',
+        wijk: viewedMeldingFromDb.wijk || '',
+        werkgebied: viewedMeldingFromDb.werkgebied || '',
+        melder: viewedMeldingFromDb.melder,
+        extra_informatie: viewedMeldingFromDb.extra_informatie,
+        afgehandeld_door: viewedMeldingFromDb.afgehandeld_door || '',
+        afhandeling_datum: viewedMeldingFromDb.afhandeling_datum ? new Date(viewedMeldingFromDb.afhandeling_datum) : null,
+        afhandeling_tijdstip: viewedMeldingFromDb.afhandeling_tijdstip || '',
+      });
+      setLocation({ latitude: viewedMeldingFromDb.latitude, longitude: viewedMeldingFromDb.longitude });
+      setUploadedFiles(viewedMeldingFromDb.files || []);
+      setUploadedPhotos(viewedMeldingFromDb.fotos || []);
+      setAfhandelingFotos(viewedMeldingFromDb.afhandeling_fotos || []);
+      
+      justSelectedSuggestion.current = true;
+      setSearchQuery(`${viewedMeldingFromDb.straatnaam || ''}${viewedMeldingFromDb.huisnummer ? ' ' + viewedMeldingFromDb.huisnummer : ''}, ${viewedMeldingFromDb.plaats || ''}`);
+    } else if (!meldingIdFromUrl) {
         setIsReadOnly(false);
         setViewedMelding(null);
         justSelectedSuggestion.current = true;
         setSearchQuery('');
     }
-  }, [meldingIdFromUrl, allMeldingen, form]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewedMeldingFromDb?.id, meldingIdFromUrl, form]);
   
   React.useEffect(() => {
     if (searchTimeoutRef.current) {
