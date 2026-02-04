@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { ChevronLeft, ChevronRight, Clock, MoreHorizontal, Plus, Printer, Trash2, Copy, ClipboardCopy, FileText, Save, ListOrdered } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, MoreHorizontal, Plus, Printer, Trash2, Copy, ClipboardCopy, FileText, Save, ListOrdered, Eye, EyeOff } from 'lucide-react';
 import {
   startOfWeek,
   endOfWeek,
@@ -64,6 +64,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { useProject } from '@/context/project-context';
 import { MedewerkerVolgordeDialog } from '@/components/medewerker-volgorde-dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 
 
 const getInitials = (firstName?: string, lastName?: string) => {
@@ -250,6 +251,26 @@ export default function WorkPlanningPage() {
   const [dragOverCell, setDragOverCell] = React.useState<{medewerkerId: string, day: string} | null>(null);
   const isTablet = useIsMobile(1024);
 
+  const [isVisibilityMode, setIsVisibilityMode] = React.useState(false);
+  const [hiddenMedewerkerIds, setHiddenMedewerkerIds] = React.useState<Set<string>>(new Set());
+
+  // Load hidden employees from local storage
+  React.useEffect(() => {
+    const saved = localStorage.getItem('planning_hidden_employees');
+    if (saved) {
+      try {
+        setHiddenMedewerkerIds(new Set(JSON.parse(saved)));
+      } catch (e) {
+        console.error("Failed to parse hidden employees from localStorage", e);
+      }
+    }
+  }, []);
+
+  // Save hidden employees to local storage
+  React.useEffect(() => {
+    localStorage.setItem('planning_hidden_employees', JSON.stringify(Array.from(hiddenMedewerkerIds)));
+  }, [hiddenMedewerkerIds]);
+
   const [contextMenu, setContextMenu] = React.useState<{
     x: number;
     y: number;
@@ -287,7 +308,7 @@ export default function WorkPlanningPage() {
   const voertuigenCollection = React.useMemo(() => {
     if (!firestore) return null;
     return collection(firestore, 'voertuigen');
-  }, [firestore]);
+  }, [firestore, isProfileLoading]);
 
   const { data: voertuigen, isLoading: isLoadingVoertuigen } = useCollection<Voertuig>(voertuigenCollection);
 
@@ -434,7 +455,6 @@ export default function WorkPlanningPage() {
 
     Object.keys(groups).forEach(key => {
       groups[key].sort((a, b) => {
-        // Sort by planningOrder first, then alphabetically
         const orderA = a.planningOrder ?? 999999;
         const orderB = b.planningOrder ?? 999999;
         if (orderA !== orderB) return orderA - orderB;
@@ -449,6 +469,16 @@ export default function WorkPlanningPage() {
         items: groups[name]
       }));
   }, [medewerkers]);
+
+  const finalGroupedMedewerkers = React.useMemo(() => {
+    if (!groupedMedewerkers) return [];
+    if (isVisibilityMode) return groupedMedewerkers;
+
+    return groupedMedewerkers.map(group => ({
+      ...group,
+      items: group.items.filter(m => !hiddenMedewerkerIds.has(m.id))
+    })).filter(group => group.items.length > 0);
+  }, [groupedMedewerkers, isVisibilityMode, hiddenMedewerkerIds]);
 
   
   const handleOpenSheetForNew = (medewerker: Medewerker, datum: Date) => {
@@ -568,7 +598,7 @@ export default function WorkPlanningPage() {
     const head = [['Medewerker', ...weekDays.map(d => format(d, 'eee dd-MM', { locale: nl }))]];
 
     const body = (medewerkers || [])
-      .filter(m => m.status === 'Actief')
+      .filter(m => m.status === 'Actief' && !hiddenMedewerkerIds.has(m.id))
       .map(medewerker => {
         const rowData = [`${medewerker.voornaam || ''} ${medewerker.achternaam || ''}`.trim()];
         weekDays.forEach(day => {
@@ -625,7 +655,7 @@ export default function WorkPlanningPage() {
     doc.setFontSize(11);
     doc.text(`Datum: ${dateStr}`, 150, 22);
 
-    const dayDiensten = diensten.filter(d => isSameDay(new Date(d.datum), dayToPrint));
+    const dayDiensten = diensten.filter(d => isSameDay(new Date(d.datum), dayToPrint) && !hiddenMedewerkerIds.has(d.medewerkerId));
     const medewerkersById = new Map(medewerkers.map(m => [m.id, m]));
     
     const employeesWithDienst = Array.from(new Set(dayDiensten.map(d => d.medewerkerId)))
@@ -815,6 +845,14 @@ export default function WorkPlanningPage() {
 
   const renderActionButtons = () => {
     const buttons = [
+      <Button 
+        key="toggle-visibility" 
+        variant={isVisibilityMode ? "default" : "outline"} 
+        onClick={() => setIsVisibilityMode(!isVisibilityMode)}
+        title={isVisibilityMode ? "Stop met bewerken zichtbaarheid" : "Medewerkers verbergen/tonen"}
+      >
+        {isVisibilityMode ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      </Button>,
       <Button key="print-day" variant="outline" onClick={() => setIsPrintDayDialogOpen(true)}><Printer className="mr-2 h-4 w-4" /> Print Dag</Button>,
       <Button key="print-week" variant="outline" onClick={handlePrintWeek}><Printer className="mr-2 h-4 w-4" /> Print Week</Button>,
       <Button key="save-pdf" variant="outline" onClick={() => setIsSaveWeekDialogOpen(true)} disabled={!selectedProjectId}><Save className="mr-2 h-4 w-4" /> Opslaan als PDF</Button>,
@@ -1197,7 +1235,7 @@ export default function WorkPlanningPage() {
           ) : !canView ? (
               <div className="col-span-8 p-8 text-center text-muted-foreground">U heeft geen rechten om deze planning te bekijken.</div>
           ) : (
-            groupedMedewerkers.map((group) => (
+            finalGroupedMedewerkers.map((group) => (
               <React.Fragment key={group.name}>
                 <div className="col-span-8 p-3 bg-slate-100 dark:bg-slate-800/50 border-b border-r flex items-center">
                   <span className="font-bold text-xs uppercase tracking-widest text-slate-500 dark:text-slate-400">{group.name}</span>
@@ -1206,6 +1244,23 @@ export default function WorkPlanningPage() {
                   <React.Fragment key={medewerker.id}>
                     <div className="flex flex-col justify-center p-3 border-b border-r medewerker-header">
                       <div className="flex items-center gap-3">
+                        {isVisibilityMode && (
+                          <Checkbox
+                            checked={!hiddenMedewerkerIds.has(medewerker.id)}
+                            onCheckedChange={(checked) => {
+                              setHiddenMedewerkerIds(prev => {
+                                const next = new Set(prev);
+                                if (checked) {
+                                  next.delete(medewerker.id);
+                                } else {
+                                  next.add(medewerker.id);
+                                }
+                                return next;
+                              });
+                            }}
+                            className="h-4 w-4"
+                          />
+                        )}
                         <Avatar className="h-8 w-8">
                            <AvatarImage
                                 src={medewerker.avatarUrl}
@@ -1379,5 +1434,3 @@ export default function WorkPlanningPage() {
     </div>
   );
 }
-
-    
