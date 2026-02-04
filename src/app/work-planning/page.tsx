@@ -203,7 +203,7 @@ const DienstItem = ({ dienst, onEdit, onDelete, onContextMenu, isNonWorkingDay, 
                     size="icon" 
                     className="delete-button absolute top-0 right-0 h-6 w-6 opacity-0 group-hover/dienst:opacity-100 focus:opacity-100"
                     onClick={(e) => {
-                        e.stopPropagation(); // Prevent opening edit sheet
+                        e.stopPropagation(); // Prevent triggering edit when deleting
                         setShowDeleteConfirm(true);
                     }}
                 >
@@ -409,6 +409,38 @@ export default function WorkPlanningPage() {
     return () => clearTimeout(handler);
   }, [unavailableVehicles, availableVehicles, firestore, selectedProjectId]);
 
+  const groupedMedewerkers = React.useMemo(() => {
+    if (!medewerkers) return [];
+    
+    const activeMedewerkers = medewerkers.filter(m => m.status === 'Actief');
+    
+    const groups: Record<string, Medewerker[]> = {};
+    const groupOrder = ['Machinist', 'Chauffeur', 'Inhuur', 'Voorman', 'Stratenmaker', 'Grondwerker', 'Onkruidploeg', 'Kantoor', 'Overig'];
+
+    activeMedewerkers.forEach(m => {
+      let groupName = m.functie || 'Overig';
+      if (m.soortMedewerker === 'Inhuur') {
+        groupName = 'Inhuur';
+      }
+      
+      if (!groupOrder.includes(groupName)) groupName = 'Overig';
+      
+      if (!groups[groupName]) groups[groupName] = [];
+      groups[groupName].push(m);
+    });
+
+    Object.keys(groups).forEach(key => {
+      groups[key].sort((a, b) => (a.achternaam || '').localeCompare(b.achternaam || ''));
+    });
+
+    return groupOrder
+      .filter(name => groups[name] && groups[name].length > 0)
+      .map(name => ({
+        name,
+        items: groups[name]
+      }));
+  }, [medewerkers]);
+
   
   const handleOpenSheetForNew = (medewerker: Medewerker, datum: Date) => {
     if (!canEdit) return;
@@ -451,10 +483,8 @@ export default function WorkPlanningPage() {
     const droppedDienst: Dienst = JSON.parse(dienstJson);
     const newDatumString = format(newDatum, 'yyyy-MM-dd');
     
-    // For Mac, Option key is metaKey. For Windows, use Ctrl key.
     const isCopy = e.altKey || e.ctrlKey;
   
-    // For a move, only update if there's a change
     if (!isCopy && droppedDienst.medewerkerId === newMedewerkerId && droppedDienst.datum === newDatumString) {
       return;
     }
@@ -468,8 +498,6 @@ export default function WorkPlanningPage() {
       const dienstenColRef = collection(firestore, 'projects', droppedDienst.projectId, 'diensten');
   
       if (isCopy) {
-        // Copy action: create a new document
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { id, ...newDienstData } = droppedDienst;
         await addDocumentNonBlocking(dienstenColRef, {
           ...newDienstData,
@@ -477,14 +505,13 @@ export default function WorkPlanningPage() {
           datum: newDatumString,
         });
       } else {
-        // Move action: update the existing document
         const dienstRef = doc(dienstenColRef, droppedDienst.id);
         await updateDocumentNonBlocking(dienstRef, {
           medewerkerId: newMedewerkerId,
           datum: newDatumString,
         });
       }
-      fetchDiensten(); // Refetch data to show the result
+      fetchDiensten();
     } catch(error) {
       console.error("Error updating dienst:", error);
     }
@@ -607,9 +634,8 @@ export default function WorkPlanningPage() {
     const groupOrder = ['Machinist', 'Chauffeur', 'Inhuur', 'Onkruidploeg'];
     const groupedData: { [key: string]: { medewerker: Medewerker; diensten: Dienst[] }[] } = {};
 
-    // Initialize groups
     groupOrder.forEach(group => groupedData[group] = []);
-    groupedData['Onkruidploeg'] = []; // Explicitly init 'Overig' which is now 'Onkruidploeg'
+    groupedData['Onkruidploeg'] = [];
 
     tableData.forEach(item => {
         const { medewerker } = item;
@@ -651,13 +677,13 @@ export default function WorkPlanningPage() {
       const gebiedCell: any = { content: gebiedText };
       
       if (hasNotities && !isZiek && !isVerlof) {
-          activiteitCell.styles = { fillColor: [255, 255, 204] }; // Light Yellow
+          activiteitCell.styles = { fillColor: [255, 255, 204] };
       }
       
       if (isZiek) {
-          gebiedCell.styles = { fillColor: [255, 228, 196] }; // Light Orange/Peach
+          gebiedCell.styles = { fillColor: [255, 228, 196] };
       } else if (isVerlof) {
-          gebiedCell.styles = { fillColor: [230, 230, 250] }; // Light Purple
+          gebiedCell.styles = { fillColor: [230, 230, 250] };
       }
 
       body.push([
@@ -704,7 +730,7 @@ export default function WorkPlanningPage() {
         lineColor: [0, 0, 0]
       },
       headStyles: {
-        fillColor: [228, 228, 231], // gray-200
+        fillColor: [228, 228, 231],
         textColor: [0, 0, 0],
         fontStyle: 'bold',
       },
@@ -750,6 +776,7 @@ export default function WorkPlanningPage() {
 
     finalY += 10;
 
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.text('Onbeschikbare voertuigen:', 14, finalY);
 
@@ -760,7 +787,6 @@ export default function WorkPlanningPage() {
     doc.save(`dagplanning_${format(dayToPrint, 'yyyy-MM-dd')}.pdf`);
   };
 
-  // Add a cleanup effect for the print classes
   React.useEffect(() => {
     const afterPrint = () => {
        document.body.className = document.body.className.replace(/print-(day|week)-view/g, '').trim();
@@ -812,7 +838,6 @@ export default function WorkPlanningPage() {
 
     const dienstenToCopy = diensten.filter(d => d.datum === dateStringToCopy);
 
-    // Remove IDs so they are created as new documents on paste
     const dienstenWithoutIds = dienstenToCopy.map(({ id, ...rest }) => rest);
 
     setCopiedDay({ diensten: dienstenWithoutIds });
@@ -840,7 +865,7 @@ export default function WorkPlanningPage() {
 
     try {
         await batch.commit();
-        fetchDiensten(); // This will handle loading state and refetch
+        fetchDiensten();
     } catch (error) {
         console.error('Error pasting day:', error);
         setIsLoadingDiensten(false);
@@ -852,7 +877,6 @@ export default function WorkPlanningPage() {
   const handlePaste = async () => {
     if (!copiedDienst || selectedCells.length === 0 || !firestore || !selectedProjectId || !canEdit) return;
   
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id, ...dienstToCopy } = copiedDienst;
     const batch = writeBatch(firestore);
     const dienstenColRef = collection(firestore, 'projects', selectedProjectId, 'diensten');
@@ -870,7 +894,7 @@ export default function WorkPlanningPage() {
     try {
       await batch.commit();
       fetchDiensten();
-      setSelectedCells([]); // Clear selection after pasting
+      setSelectedCells([]);
     } catch (error) {
       console.error('Error pasting diensten:', error);
     }
@@ -906,13 +930,13 @@ export default function WorkPlanningPage() {
     const cell = { medewerkerId, datum };
     const isSelected = selectedCells.some(c => c.medewerkerId === medewerkerId && c.datum === datum);
     
-    if (e.ctrlKey || e.metaKey) { // For multi-select
+    if (e.ctrlKey || e.metaKey) {
         if (isSelected) {
             setSelectedCells(prev => prev.filter(c => !(c.medewerkerId === medewerkerId && c.datum === datum)));
         } else {
             setSelectedCells(prev => [...prev, cell]);
         }
-    } else { // For single select
+    } else {
         setSelectedCells(isSelected ? [] : [cell]);
     }
   };
@@ -1029,7 +1053,6 @@ export default function WorkPlanningPage() {
       </header>
       <div className="flex-1 overflow-auto border-t">
         <div className="grid grid-cols-[250px_repeat(7,1fr)] min-w-[1200px]">
-          {/* Header Row */}
           <div className="sticky top-0 z-20 p-2 bg-background border-b border-r">
             <div className="grid grid-rows-3 h-full">
               <div className="row-span-2"></div>
@@ -1100,7 +1123,7 @@ export default function WorkPlanningPage() {
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline" size="xs" className="w-full h-auto text-xs justify-start text-left mt-0.5 truncate p-1" disabled={!canEdit}>
-                                 {(availableVehicles[format(day, 'yyyy-MM-dd')] || []).length > 0 ? (availableVehicles[format(day, 'yyyy-MM-dd')] || []).map(id => { const item = equipmentMap.get(id); if (!item) return id; return (item as Voertuig).voertuignummer || (item as Machine).machinenummer || id; }).join(', ') : "Alle"}
+                                 {(availableVehicles[format(day, 'yyyy-MM-dd')] || []).map(id => { const item = equipmentMap.get(id); if (!item) return id; return (item as Voertuig).voertuignummer || (item as Machine).machinenummer || id; }).join(', ') || "Alle"}
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="w-64 max-h-80 overflow-y-auto">
@@ -1140,7 +1163,6 @@ export default function WorkPlanningPage() {
             </div>
           ))}
 
-          {/* Data Rows */}
           {isLoadingMedewerkers || isProfileLoading ? (
             <div className="col-span-8 p-4">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -1160,86 +1182,93 @@ export default function WorkPlanningPage() {
           ) : !canView ? (
               <div className="col-span-8 p-8 text-center text-muted-foreground">U heeft geen rechten om deze planning te bekijken.</div>
           ) : (
-            medewerkers?.filter(m => m.status === 'Actief').map((medewerker) => (
-              <React.Fragment key={medewerker.id}>
-                <div className="flex flex-col justify-center p-3 border-b border-r medewerker-header">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
-                       <AvatarImage
-                            src={medewerker.avatarUrl}
-                            alt={`${medewerker.voornaam} ${medewerker.achternaam}`}
-                          />
-                      <AvatarFallback>{getInitials(medewerker.voornaam, medewerker.achternaam)}</AvatarFallback>
-                    </Avatar>
-                    <span className="font-semibold text-sm truncate">{`${medewerker.voornaam || ''} ${medewerker.tussenvoegsel || ''} ${medewerker.achternaam || ''}`.trim()}</span>
-                  </div>
-                  <div className="mt-1 pl-11 space-y-0.5">
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      <span>{formatHours(calculateWeekHours(medewerker.id))} / {formatHours(getWeekContractHours(medewerker))}</span>
-                    </div>
-                  </div>
+            groupedMedewerkers.map((group) => (
+              <React.Fragment key={group.name}>
+                <div className="col-span-8 p-3 bg-slate-100 dark:bg-slate-800/50 border-b border-r flex items-center">
+                  <span className="font-bold text-xs uppercase tracking-widest text-slate-500 dark:text-slate-400">{group.name}</span>
                 </div>
-                {weekDays.map((day) => {
-                  const datumString = format(day, 'yyyy-MM-dd');
-                  const dienstenForDay = diensten?.filter(d => 
-                      d.medewerkerId === medewerker.id && 
-                      isSameDay(new Date(d.datum), day)
-                  );
-                  const isDragOver = dragOverCell?.medewerkerId === medewerker.id && dragOverCell?.day === datumString;
-                  const isSelected = selectedCells.some(c => c.medewerkerId === medewerker.id && c.datum === datumString);
-                  
-                  const dayName = format(day, 'eeee', { locale: nl }).toLowerCase() as keyof NonNullable<Medewerker['urenPerDag']>;
-                  const isWeekend = dayName === 'zaterdag' || dayName === 'zondag';
-                  const defaultUren = { maandag: { start: '07:00', eind: '15:30' }, dinsdag: { start: '07:00', eind: '15:30' }, woensdag: { start: '07:00', eind: '15:30' }, donderdag: { start: '07:00', eind: '15:30' }, vrijdag: { start: '07:00', eind: '15:30' }, zaterdag: { start: '', eind: '' }, zondag: { start: '', eind: '' } };
-                  const urenPerDag = { ...defaultUren, ...(medewerker.urenPerDag || {}) };
-
-                  const dagUren = urenPerDag[dayName];
-                  const isNonWorkingDay = !dagUren || !dagUren.start || !dagUren.eind;
-                  const isVisuallyNonWorkingDay = isNonWorkingDay && !isWeekend;
-
-
-                  return (
-                    <div
-                        key={day.toISOString()}
-                        onDrop={(e) => !isVisuallyNonWorkingDay && canEdit && handleDrop(e, medewerker.id, day)}
-                        onDragOver={(e) => !isVisuallyNonWorkingDay && canEdit && handleDragOver(e, medewerker.id, day)}
-                        onDragLeave={() => setDragOverCell(null)}
-                        onContextMenu={(e) => {
-                          if (isVisuallyNonWorkingDay || !canEdit) return;
-                          if (!(e.target as HTMLElement).closest('.group\\/dienst')) {
-                            handleContextMenu(e, { cellContext: { medewerker, datum: day } });
-                          }
-                        }}
-                        onClick={(e) => {
-                            if (isVisuallyNonWorkingDay || !canEdit) return;
-                            if ((e.target as HTMLElement).closest('.group\\/dienst')) return;
-                            handleOpenSheetForNew(medewerker, day);
-                        }}
-                        className={cn(
-                            "group relative p-2 border-b border-r min-h-[80px] flex flex-col gap-1 transition-colors day-column",
-                            isVisuallyNonWorkingDay
-                                ? 'bg-black' 
-                                : isToday(day) ? "bg-muted/50" : "",
-                            isDragOver && !isVisuallyNonWorkingDay && "bg-blue-100 dark:bg-blue-900/30",
-                            isSelected && !isVisuallyNonWorkingDay && "bg-primary/10",
-                            !isVisuallyNonWorkingDay && canEdit && "cursor-pointer"
-                        )}
-                    >
-                        <div className="flex-1 space-y-1 relative z-10">
-                          {isLoadingDiensten ? (
-                              <Skeleton className="h-10 w-full" />
-                          ) : (
-                            dienstenForDay?.map(dienst => (
-                                <DienstItem key={dienst.id} dienst={dienst} onEdit={handleOpenSheetForEdit} onDelete={handleDienstDelete} onContextMenu={(e, d) => {
-                                    e.stopPropagation(); // Prevent grid cell context menu
-                                    if(canEdit) handleContextMenu(e, { dienst: d });
-                                }} isNonWorkingDay={isVisuallyNonWorkingDay} canEdit={canEdit} />
-                            ))
-                          )}
+                {group.items.map((medewerker) => (
+                  <React.Fragment key={medewerker.id}>
+                    <div className="flex flex-col justify-center p-3 border-b border-r medewerker-header">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                           <AvatarImage
+                                src={medewerker.avatarUrl}
+                                alt={`${medewerker.voornaam} ${medewerker.achternaam}`}
+                              />
+                          <AvatarFallback>{getInitials(medewerker.voornaam, medewerker.achternaam)}</AvatarFallback>
+                        </Avatar>
+                        <span className="font-semibold text-sm truncate">{`${medewerker.voornaam || ''} ${medewerker.tussenvoegsel || ''} ${medewerker.achternaam || ''}`.trim()}</span>
+                      </div>
+                      <div className="mt-1 pl-11 space-y-0.5">
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          <span>{formatHours(calculateWeekHours(medewerker.id))} / {formatHours(getWeekContractHours(medewerker))}</span>
                         </div>
+                      </div>
                     </div>
-                )})}
+                    {weekDays.map((day) => {
+                      const datumString = format(day, 'yyyy-MM-dd');
+                      const dienstenForDay = diensten?.filter(d => 
+                          d.medewerkerId === medewerker.id && 
+                          isSameDay(new Date(d.datum), day)
+                      );
+                      const isDragOver = dragOverCell?.medewerkerId === medewerker.id && dragOverCell?.day === datumString;
+                      const isSelected = selectedCells.some(c => c.medewerkerId === medewerker.id && c.datum === datumString);
+                      
+                      const dayName = format(day, 'eeee', { locale: nl }).toLowerCase() as keyof NonNullable<Medewerker['urenPerDag']>;
+                      const isWeekend = dayName === 'zaterdag' || dayName === 'zondag';
+                      const defaultUren = { maandag: { start: '07:00', eind: '15:30' }, dinsdag: { start: '07:00', eind: '15:30' }, woensdag: { start: '07:00', eind: '15:30' }, donderdag: { start: '07:00', eind: '15:30' }, vrijdag: { start: '07:00', eind: '15:30' }, zaterdag: { start: '', eind: '' }, zondag: { start: '', eind: '' } };
+                      const urenPerDag = { ...defaultUren, ...(medewerker.urenPerDag || {}) };
+
+                      const dagUren = urenPerDag[dayName];
+                      const isNonWorkingDay = !dagUren || !dagUren.start || !dagUren.eind;
+                      const isVisuallyNonWorkingDay = isNonWorkingDay && !isWeekend;
+
+
+                      return (
+                        <div
+                            key={day.toISOString()}
+                            onDrop={(e) => !isVisuallyNonWorkingDay && canEdit && handleDrop(e, medewerker.id, day)}
+                            onDragOver={(e) => !isVisuallyNonWorkingDay && canEdit && handleDragOver(e, medewerker.id, day)}
+                            onDragLeave={() => setDragOverCell(null)}
+                            onContextMenu={(e) => {
+                              if (isVisuallyNonWorkingDay || !canEdit) return;
+                              if (!(e.target as HTMLElement).closest('.group\\/dienst')) {
+                                handleContextMenu(e, { cellContext: { medewerker, datum: day } });
+                              }
+                            }}
+                            onClick={(e) => {
+                                if (isVisuallyNonWorkingDay || !canEdit) return;
+                                if ((e.target as HTMLElement).closest('.group\\/dienst')) return;
+                                handleOpenSheetForNew(medewerker, day);
+                            }}
+                            className={cn(
+                                "group relative p-2 border-b border-r min-h-[80px] flex flex-col gap-1 transition-colors day-column",
+                                isVisuallyNonWorkingDay
+                                    ? 'bg-black' 
+                                    : isToday(day) ? "bg-muted/50" : "",
+                                isDragOver && !isVisuallyNonWorkingDay && "bg-blue-100 dark:bg-blue-900/30",
+                                isSelected && !isVisuallyNonWorkingDay && "bg-primary/10",
+                                !isVisuallyNonWorkingDay && canEdit && "cursor-pointer"
+                            )}
+                        >
+                            <div className="flex-1 space-y-1 relative z-10">
+                              {isLoadingDiensten ? (
+                                  <Skeleton className="h-10 w-full" />
+                              ) : (
+                                dienstenForDay?.map(dienst => (
+                                    <DienstItem key={dienst.id} dienst={dienst} onEdit={handleOpenSheetForEdit} onDelete={handleDienstDelete} onContextMenu={(e, d) => {
+                                        e.stopPropagation();
+                                        if(canEdit) handleContextMenu(e, { dienst: d });
+                                    }} isNonWorkingDay={isVisuallyNonWorkingDay} canEdit={canEdit} />
+                                ))
+                              )}
+                            </div>
+                        </div>
+                    )})}
+                  </React.Fragment>
+                ))}
               </React.Fragment>
             ))
           )}

@@ -69,11 +69,20 @@ export default function MeldingenportaalPage() {
     if (!debouncedSearchTerm) return newMeldingen;
 
     const lowercasedFilter = debouncedSearchTerm.toLowerCase();
-    return newMeldingen.filter(melding =>
-      Object.values(melding).some(value =>
-        String(value).toLowerCase().includes(lowercasedFilter)
-      )
-    );
+    return newMeldingen.filter(melding => {
+      const searchFields = [
+        melding.intakenummer,
+        melding.straatnaam,
+        melding.plaats,
+        melding.extra_informatie,
+        melding.melder,
+        melding.hoofdcategorie,
+        melding.subcategorie
+      ];
+      return searchFields.some(field => 
+        field?.toLowerCase().includes(lowercasedFilter)
+      );
+    });
   }, [newMeldingen, debouncedSearchTerm]);
 
   const handleStatusChange = async (melding: Melding, newStatus: string) => {
@@ -195,7 +204,13 @@ export default function MeldingenportaalPage() {
 
       <ForwardExternalDialog
         open={forwardDialogOpen}
-        onOpenChange={setForwardDialogOpen}
+        onOpenChange={(open) => {
+            setForwardDialogOpen(open);
+            if (!open) {
+                // Clear selection after a small delay to avoid UI flicker during close animation
+                setTimeout(() => setSelectedMeldingForForward(null), 300);
+            }
+        }}
         melding={selectedMeldingForForward}
         onSuccess={() => {}}
       />
