@@ -1,3 +1,4 @@
+
 export type UserPermissions = {
   [module: string]: {
     view?: boolean;
@@ -57,6 +58,7 @@ export interface Medewerker {
   status?: 'Actief' | 'Inactief' | 'Niet uitgenodigd';
   avatarUrl?: string;
   soortMedewerker?: string;
+  planningOrder?: number;
   urenPerDag?: {
     maandag?: { start?: string; eind?: string };
     dinsdag?: { start?: string; eind?: string };
@@ -292,3 +294,5 @@ export interface Route {
   skippedObjects?: string[];
   totalObjects?: number;
 }
+
+    

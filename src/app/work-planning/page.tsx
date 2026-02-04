@@ -1,7 +1,8 @@
+
 'use client';
 
 import * as React from 'react';
-import { ChevronLeft, ChevronRight, Clock, MoreHorizontal, Plus, Printer, Trash2, Copy, ClipboardCopy, FileText, Save } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, MoreHorizontal, Plus, Printer, Trash2, Copy, ClipboardCopy, FileText, Save, ListOrdered } from 'lucide-react';
 import {
   startOfWeek,
   endOfWeek,
@@ -62,6 +63,7 @@ import { useProfile } from '@/firebase/profile-provider';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { useProject } from '@/context/project-context';
+import { MedewerkerVolgordeDialog } from '@/components/medewerker-volgorde-dialog';
 
 
 const getInitials = (firstName?: string, lastName?: string) => {
@@ -235,6 +237,7 @@ export default function WorkPlanningPage() {
   const [currentDate, setCurrentDate] = React.useState(new Date());
   const [isPrintDayDialogOpen, setIsPrintDayDialogOpen] = React.useState(false);
   const [isSaveWeekDialogOpen, setIsSaveWeekDialogOpen] = React.useState(false);
+  const [isVolgordeDialogOpen, setIsVolgordeDialogOpen] = React.useState(false);
   const { selectedProjectId, setSelectedProjectId } = useProject();
   
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
@@ -430,7 +433,13 @@ export default function WorkPlanningPage() {
     });
 
     Object.keys(groups).forEach(key => {
-      groups[key].sort((a, b) => (a.achternaam || '').localeCompare(b.achternaam || ''));
+      groups[key].sort((a, b) => {
+        // Sort by planningOrder first, then alphabetically
+        const orderA = a.planningOrder ?? 999999;
+        const orderB = b.planningOrder ?? 999999;
+        if (orderA !== orderB) return orderA - orderB;
+        return (a.achternaam || '').localeCompare(b.achternaam || '');
+      });
     });
 
     return groupOrder
@@ -700,7 +709,12 @@ export default function WorkPlanningPage() {
         const items = groupedData[groupName];
         if (!items || items.length === 0) return;
 
-        items.sort((a, b) => (a.medewerker.achternaam || '').localeCompare(b.medewerker.achternaam || ''));
+        items.sort((a, b) => {
+          const orderA = a.medewerker.planningOrder ?? 999999;
+          const orderB = b.medewerker.planningOrder ?? 999999;
+          if (orderA !== orderB) return orderA - orderB;
+          return (a.medewerker.achternaam || '').localeCompare(b.medewerker.achternaam || '');
+        });
 
         body.push([{ content: groupName, colSpan: 4, styles: { halign: 'left', fontStyle: 'bold' } }]);
         
@@ -804,6 +818,7 @@ export default function WorkPlanningPage() {
       <Button key="print-day" variant="outline" onClick={() => setIsPrintDayDialogOpen(true)}><Printer className="mr-2 h-4 w-4" /> Print Dag</Button>,
       <Button key="print-week" variant="outline" onClick={handlePrintWeek}><Printer className="mr-2 h-4 w-4" /> Print Week</Button>,
       <Button key="save-pdf" variant="outline" onClick={() => setIsSaveWeekDialogOpen(true)} disabled={!selectedProjectId}><Save className="mr-2 h-4 w-4" /> Opslaan als PDF</Button>,
+      <Button key="edit-volgorde" variant="outline" onClick={() => setIsVolgordeDialogOpen(true)} disabled={!canEdit}><ListOrdered className="mr-2 h-4 w-4" /> Volgorde bewerken</Button>,
     ];
 
     if (isMobile) {
@@ -1356,6 +1371,13 @@ export default function WorkPlanningPage() {
             weekNumber={getISOWeek(currentDate)}
             currentYear={getYear(currentDate)}
         />
+        <MedewerkerVolgordeDialog
+          open={isVolgordeDialogOpen}
+          onOpenChange={setIsVolgordeDialogOpen}
+          groupedMedewerkers={groupedMedewerkers}
+        />
     </div>
   );
 }
+
+    

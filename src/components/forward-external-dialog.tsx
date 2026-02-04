@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -169,7 +170,7 @@ Team BeheerHub`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col p-0">
+      <DialogContent className="sm:max-w-[650px] max-h-[90vh] flex flex-col p-0">
         <DialogHeader className="p-6 pb-2">
           <DialogTitle>Melding Extern Doorzetten</DialogTitle>
           <DialogDescription>Stel de e-mail op voor de externe partij. De meldingdetails zijn al ingevuld.</DialogDescription>
@@ -297,3 +298,5 @@ Team BeheerHub`;
     </Dialog>
   );
 }
+
+    
