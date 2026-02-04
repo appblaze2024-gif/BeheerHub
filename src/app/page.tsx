@@ -4,7 +4,7 @@ import * as React from 'react';
 import MapGL, { Source, Layer, type MapRef, Marker, Popup } from 'react-map-gl';
 import { useProfile } from '@/firebase/profile-provider';
 import * as turf from '@turf/turf';
-import { useCollection, useFirestore } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import type { Object as MapObject, Melding, Besteksmelding, Project, Wijk } from '@/lib/types';
 import { Layers, LocateFixed } from 'lucide-react';
@@ -66,7 +66,7 @@ export default function DashboardPage() {
 
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
 
-  const allProjectsQuery = React.useMemo(() => {
+  const allProjectsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'projects');
   }, [firestore]);
@@ -81,17 +81,17 @@ export default function DashboardPage() {
     return null;
   }, [profile?.wijk, allProjects]);
 
-  const objectsQuery = React.useMemo(() => {
+  const objectsQuery = useMemoFirebase(() => {
     if (!firestore || !visibleLayers.objects) return null;
     return collection(firestore, 'objects');
   }, [firestore, visibleLayers.objects]);
   
-  const meldingenQuery = React.useMemo(() => {
+  const meldingenQuery = useMemoFirebase(() => {
     if (!firestore || !visibleLayers.meldingen) return null;
     return collection(firestore, 'meldingen');
   }, [firestore, visibleLayers.meldingen]);
   
-  const projectsQuery = React.useMemo(() => {
+  const projectsQuery = useMemoFirebase(() => {
     if (!firestore || !visibleLayers.besteksmeldingen) return null;
     return collection(firestore, 'projects');
   }, [firestore, visibleLayers.besteksmeldingen]);

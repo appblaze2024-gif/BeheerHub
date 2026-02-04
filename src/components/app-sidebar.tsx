@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { allMenuItems, type MenuItem, type SubMenuItem } from '@/lib/menu-config';
-import { useUser, useCollection, useFirestore, useDoc, setDocumentNonBlocking } from '@/firebase';
+import { useUser, useCollection, useFirestore, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { collection, doc, query, where } from 'firebase/firestore';
 import { Button } from './ui/button';
@@ -68,7 +68,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const isMobile = useIsMobile();
   const [isVersionDialogOpen, setIsVersionDialogOpen] = React.useState(false);
 
-  const settingsRef = React.useMemo(() => {
+  const settingsRef = useMemoFirebase(() => {
     if (!firestore) return null;
     return doc(firestore, 'settings', 'main');
   }, [firestore]);
@@ -94,14 +94,14 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     setIsVersionDialogOpen(false);
   };
   
-  const projectsCollection = React.useMemo(() => {
+  const projectsCollection = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'projects');
   }, [firestore]);
 
   const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsCollection);
 
-  const newMeldingenQuery = React.useMemo(() => {
+  const newMeldingenQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'meldingen'), where('status', '==', 'Nieuw'));
   }, [firestore]);

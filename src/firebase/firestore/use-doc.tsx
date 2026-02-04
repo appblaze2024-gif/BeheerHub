@@ -1,6 +1,6 @@
 'use client';
     
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   DocumentReference,
   onSnapshot,
@@ -39,6 +39,7 @@ export function useDoc<T = any>(
   const [data, setData] = useState<StateDataType>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
+  const checkCount = useRef(0);
 
   useEffect(() => {
     if (!docRef) {
@@ -50,7 +51,14 @@ export function useDoc<T = any>(
 
     // Safety check for memoization
     if (!docRef.__memo) {
-        console.error("Firestore document reference was not properly memoized using useMemoFirebase. This can cause infinite render loops.");
+        checkCount.current++;
+        if (checkCount.current > 2) {
+            const errorMsg = "Firestore document reference was not properly memoized using useMemoFirebase. This can cause infinite render loops.";
+            console.error(errorMsg, docRef);
+            if (process.env.NODE_ENV === 'development') {
+                setError(new Error(errorMsg));
+            }
+        }
     }
 
     setIsLoading(true);
@@ -59,7 +67,7 @@ export function useDoc<T = any>(
     const unsubscribe = onSnapshot(
       docRef,
       (snapshot: DocumentSnapshot<DocumentData>) => {
-        if (snapshot.exists) {
+        if (snapshot.exists()) {
           setData({ ...(snapshot.data() as T), id: snapshot.id });
         } else {
           setData(null);

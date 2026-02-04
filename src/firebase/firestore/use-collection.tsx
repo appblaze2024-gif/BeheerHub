@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Query,
   onSnapshot,
@@ -53,6 +53,7 @@ export function useCollection<T = any>(
   const [data, setData] = useState<StateDataType>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
+  const checkCount = useRef(0);
 
   useEffect(() => {
     // If the query/ref is not ready, do nothing and reset state.
@@ -65,7 +66,16 @@ export function useCollection<T = any>(
 
     // Safety check for memoization
     if (!targetRefOrQuery.__memo) {
-        console.error("Firestore reference/query was not properly memoized using useMemoFirebase. This can cause infinite render loops.");
+        checkCount.current++;
+        // We allow a few skips for initialization, but persistent lack of memoization is an error.
+        if (checkCount.current > 2) {
+            const errorMsg = "Firestore reference/query was not properly memoized using useMemoFirebase. This can cause infinite render loops.";
+            console.error(errorMsg, targetRefOrQuery);
+            // In development, we want this to be very visible
+            if (process.env.NODE_ENV === 'development') {
+                setError(new Error(errorMsg));
+            }
+        }
     }
 
     setIsLoading(true);

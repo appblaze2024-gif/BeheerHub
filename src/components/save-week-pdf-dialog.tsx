@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useFirebaseApp, useFirestore, useCollection, setDocumentNonBlocking } from '@/firebase';
+import { useFirebaseApp, useFirestore, useCollection, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
 import {
@@ -89,7 +89,7 @@ export function SaveWeekPdfDialog({ open, onOpenChange, project, medewerkers, di
     }
   }, [open, project, weekNumber, currentYear]);
 
-  const allFoldersQuery = React.useMemo(() => {
+  const allFoldersQuery = useMemoFirebase(() => {
     if (!firestore || !project?.id) return null;
     return collection(firestore, 'projects', project.id, 'folders');
   }, [firestore, project?.id]);
@@ -213,7 +213,7 @@ export function SaveWeekPdfDialog({ open, onOpenChange, project, medewerkers, di
             url: downloadURL,
             uploadedAt: new Date().toISOString(),
             storagePath: storagePath,
-            folderId: selectedFolderId,
+            folderId: selectedFolderId === 'root' ? null : selectedFolderId,
           };
           await setDocumentNonBlocking(fileDocRef, fileData, {});
         } catch (error) {

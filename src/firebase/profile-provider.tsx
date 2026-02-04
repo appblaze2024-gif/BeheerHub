@@ -1,6 +1,6 @@
 'use client';
 
-import { useUser, useDoc, useFirestore, updateDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { useUser, useDoc, useFirestore, updateDocumentNonBlocking, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { doc, getDocFromServer } from 'firebase/firestore';
 import React, { createContext, useContext, ReactNode, useMemo, useEffect, useState } from 'react';
 import type { UserProfile } from '@/lib/types';
@@ -33,7 +33,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     }
   }, [user, isUserLoading]);
 
-  const userProfileRef = useMemo(() => {
+  const userProfileRef = useMemoFirebase(() => {
     if (!profileId || !firestore) return null;
     return doc(firestore, 'users', profileId);
   }, [profileId, firestore]);

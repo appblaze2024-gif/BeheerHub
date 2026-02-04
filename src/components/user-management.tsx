@@ -16,6 +16,7 @@ import {
   useFirebaseApp,
   setDocumentNonBlocking,
   updateDocumentNonBlocking,
+  useMemoFirebase,
 } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import type { UserProfile } from '@/lib/types';
@@ -513,12 +514,12 @@ export function UserManagement() {
   const isSuperUser = currentAdminProfile?.role === 'Super admin';
   const canManageUsers = isSuperUser || !!currentAdminProfile?.permissions?.users?.view;
 
-  const usersCollection = React.useMemo(() => {
+  const usersCollection = useMemoFirebase(() => {
     if (!firestore || !canManageUsers) return null;
     return collection(firestore, 'users');
   }, [firestore, canManageUsers]);
 
-  const projectsCollection = React.useMemo(() => {
+  const projectsCollection = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'projects');
   }, [firestore]);
@@ -737,4 +738,3 @@ export function UserManagement() {
     </>
   );
 }
-
