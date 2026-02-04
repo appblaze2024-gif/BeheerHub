@@ -114,8 +114,8 @@ export function DienstToevoegenDialog({
         const dayName = format(datum, 'eeee', { locale: nl }).toLowerCase() as keyof NonNullable<Medewerker['urenPerDag']>;
         const defaultTimes = medewerker.urenPerDag?.[dayName];
         
-        const hasLastColor = !!currentUserProfile?.lastUsedDienstColor;
-        setUseCustomColor(hasLastColor);
+        // Default to false for new services as requested
+        setUseCustomColor(false);
         
         form.reset({
           werksoort: '',
