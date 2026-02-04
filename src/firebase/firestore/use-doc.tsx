@@ -1,6 +1,6 @@
 'use client';
     
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import {
   DocumentReference,
   onSnapshot,
@@ -29,17 +29,10 @@ export interface UseDocResult<T> {
  * Handles nullable references.
  * 
  * IMPORTANT! YOU MUST MEMOIZE the inputted docRef or BAD THINGS WILL HAPPEN
- * use useMemo to memoize it per React guidence.  Also make sure that it's dependencies are stable
- * references
- *
- *
- * @template T Optional type for document data. Defaults to any.
- * @param {DocumentReference<DocumentData> | null | undefined} docRef -
- * The Firestore DocumentReference. Waits if null/undefined.
- * @returns {UseDocResult<T>} Object with data, isLoading, error.
+ * Use useMemoFirebase to stabilize these references.
  */
 export function useDoc<T = any>(
-  docRef: DocumentReference<DocumentData> | null | undefined,
+  docRef: (DocumentReference<DocumentData> & { __memo?: boolean }) | null | undefined,
 ): UseDocResult<T> {
   type StateDataType = WithId<T> | null;
 
@@ -48,12 +41,16 @@ export function useDoc<T = any>(
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
-    // If the docRef is not ready, do nothing and reset state.
     if (!docRef) {
       setData(null);
       setError(null);
-      setIsLoading(false); // Not loading because there's nothing to load.
+      setIsLoading(false);
       return;
+    }
+
+    // Safety check for memoization
+    if (!docRef.__memo) {
+        console.error("Firestore document reference was not properly memoized using useMemoFirebase. This can cause infinite render loops.");
     }
 
     setIsLoading(true);
@@ -65,7 +62,6 @@ export function useDoc<T = any>(
         if (snapshot.exists) {
           setData({ ...(snapshot.data() as T), id: snapshot.id });
         } else {
-          // Document does not exist, so data is null.
           setData(null);
         }
         setError(null);
@@ -85,10 +81,8 @@ export function useDoc<T = any>(
       }
     );
 
-    // CRITICAL: Cleanup function to unsubscribe on unmount or when the docRef changes.
-    // This prevents memory leaks and hanging connections.
     return () => unsubscribe();
-  }, [docRef]); // Only re-run the effect if the memoized docRef changes.
+  }, [docRef]);
 
   return { data, isLoading, error };
 }

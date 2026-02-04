@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Query,
   onSnapshot,
@@ -41,18 +41,11 @@ export interface InternalQuery extends Query<DocumentData> {
  * React hook to subscribe to a Firestore collection or query in real-time.
  * Handles nullable references/queries.
  * 
- *
  * IMPORTANT! YOU MUST MEMOIZE the inputted targetRefOrQuery or BAD THINGS WILL HAPPEN
- * use useMemo to memoize it per React guidence.  Also make sure that it's dependencies are stable
- * references
- *  
- * @template T Optional type for document data. Defaults to any.
- * @param {CollectionReference<DocumentData> | Query<DocumentData> | null | undefined} targetRefOrQuery -
- * The Firestore CollectionReference or Query. Waits if null/undefined.
- * @returns {UseCollectionResult<T>} Object with data, isLoading, error.
+ * Use useMemoFirebase to stabilize these references.
  */
 export function useCollection<T = any>(
-    targetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>))  | null | undefined,
+    targetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & { __memo?: boolean }) | null | undefined,
 ): UseCollectionResult<T> {
   type ResultItemType = WithId<T>;
   type StateDataType = ResultItemType[] | null;
@@ -66,11 +59,15 @@ export function useCollection<T = any>(
     if (!targetRefOrQuery) {
       setData(null);
       setError(null);
-      setIsLoading(false); // Not loading because there's nothing to load.
+      setIsLoading(false);
       return;
     }
 
-    // Start loading and clear previous errors.
+    // Safety check for memoization
+    if (!targetRefOrQuery.__memo) {
+        console.error("Firestore reference/query was not properly memoized using useMemoFirebase. This can cause infinite render loops.");
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -104,10 +101,8 @@ export function useCollection<T = any>(
       }
     );
 
-    // CRITICAL: Cleanup function to unsubscribe on unmount or when the query changes.
-    // This prevents memory leaks and hanging connections.
     return () => unsubscribe();
-  }, [targetRefOrQuery]); // Only re-run the effect if the memoized query reference changes.
+  }, [targetRefOrQuery]);
   
   return { data, isLoading, error };
 }

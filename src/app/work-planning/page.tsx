@@ -39,6 +39,7 @@ import {
   errorEmitter,
   FirestorePermissionError,
   useMemoFirebase,
+  useUser,
 } from '@/firebase';
 import type { Medewerker, Dienst, Voertuig, Machine, UserProfile } from '@/lib/types';
 import { DienstToevoegenDialog } from '@/components/dienst-toevoegen-dialog';
@@ -420,8 +421,6 @@ export default function WorkPlanningPage() {
   const groupedMedewerkers = React.useMemo(() => {
     if (!medewerkers) return [];
     
-    // In visibility mode, show both Active and Inactive
-    // Otherwise only Active
     const filtered = medewerkers.filter(m => {
       if (isVisibilityMode) {
         return m.status === 'Actief' || m.status === 'Inactief';
