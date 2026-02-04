@@ -38,6 +38,7 @@ import {
   updateDocumentNonBlocking,
   errorEmitter,
   FirestorePermissionError,
+  useMemoFirebase,
 } from '@/firebase';
 import type { Medewerker, Dienst, Voertuig, Machine, UserProfile } from '@/lib/types';
 import { DienstToevoegenDialog } from '@/components/dienst-toevoegen-dialog';
@@ -272,7 +273,7 @@ export default function WorkPlanningPage() {
   const isMobile = useIsMobile();
   const firestore = useFirestore();
 
-  const medewerkersCollection = React.useMemo(() => {
+  const medewerkersCollection = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'medewerkers');
   }, [firestore]);
@@ -280,7 +281,7 @@ export default function WorkPlanningPage() {
   const { data: medewerkers, isLoading: isLoadingMedewerkers } =
     useCollection<Medewerker>(medewerkersCollection);
 
-  const projectsCollection = React.useMemo(() => {
+  const projectsCollection = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'projects');
   }, [firestore]);
@@ -288,14 +289,14 @@ export default function WorkPlanningPage() {
   const { data: projects, isLoading: isLoadingProjects } =
     useCollection<Project>(projectsCollection);
 
-  const voertuigenCollection = React.useMemo(() => {
+  const voertuigenCollection = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'voertuigen');
-  }, [firestore, isProfileLoading]);
+  }, [firestore]);
 
   const { data: voertuigen, isLoading: isLoadingVoertuigen } = useCollection<Voertuig>(voertuigenCollection);
 
-  const machinesCollection = React.useMemo(() => {
+  const machinesCollection = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'machines');
   }, [firestore]);
@@ -1117,7 +1118,7 @@ export default function WorkPlanningPage() {
       </header>
       <div className="flex-1 overflow-auto border-t">
         <div className="grid grid-cols-[250px_repeat(7,1fr)] min-w-[1200px]">
-          <div className="sticky top-0 z-20 p-2 bg-slate-200 border-b border-r">
+          <div className="sticky top-0 z-20 p-2 bg-slate-300 border-b border-r">
             <div className="grid grid-rows-3 h-full">
               <div className="row-span-2"></div>
               <div className="flex items-end">
@@ -1448,7 +1449,9 @@ export default function WorkPlanningPage() {
             diensten={diensten}
             allEquipment={allEquipment}
             unavailableVehicles={unavailableVehicles}
+            onToggleUnavailability={handleUnavailableVehicleToggle}
             medewerkers={medewerkers}
+            canEdit={canEdit}
         />
     </div>
   );
