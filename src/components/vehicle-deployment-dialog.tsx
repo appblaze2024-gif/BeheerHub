@@ -65,6 +65,7 @@ export function VehicleDeploymentDialog({
         
         const assignedDiensten = dayDiensten.filter(d => d.voertuignummer === name || d.voertuignummer === id);
         const isScheduled = assignedDiensten.length > 0;
+        const isDoubleAssigned = assignedDiensten.length > 1;
         
         let status: 'scheduled' | 'unavailable' | 'available' = 'available';
         if (isUnavailable) status = 'unavailable';
@@ -78,6 +79,7 @@ export function VehicleDeploymentDialog({
             type: item.__type,
             status,
             isUnavailable,
+            isDoubleAssigned,
             assignments: assignedDiensten.map(d => {
                 const medewerker = medewerkers?.find(m => m.id === d.medewerkerId);
                 return {
@@ -177,14 +179,16 @@ export function VehicleDeploymentDialog({
                                 "flex flex-col border-2 rounded-2xl overflow-hidden transition-all duration-200 shadow-sm group",
                                 item.status === 'scheduled' && "border-blue-200 bg-blue-50/20 dark:bg-blue-950/10",
                                 item.status === 'unavailable' && "border-red-200 bg-red-50/20 dark:bg-red-950/10",
-                                item.status === 'available' && "border-slate-200 bg-card hover:border-primary/30 hover:shadow-md"
+                                item.status === 'available' && "border-slate-200 bg-card hover:border-primary/30 hover:shadow-md",
+                                item.isDoubleAssigned && "border-orange-400 bg-orange-50/30 dark:bg-orange-950/20 ring-2 ring-orange-400/20"
                             )}
                         >
                             <div className={cn(
                                 "p-4 flex items-start justify-between border-b-2",
-                                item.status === 'scheduled' && "bg-blue-100/40 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900",
+                                item.status === 'scheduled' && !item.isDoubleAssigned && "bg-blue-100/40 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900",
                                 item.status === 'unavailable' && "bg-red-100/40 dark:bg-red-900/20 border-red-100 dark:border-red-900",
-                                item.status === 'available' && "bg-muted/30 border-slate-100 dark:border-slate-800"
+                                item.status === 'available' && "bg-muted/30 border-slate-100 dark:border-slate-800",
+                                item.isDoubleAssigned && "bg-orange-100/40 dark:bg-orange-900/20 border-orange-200 dark:border-orange-900"
                             )}>
                                 <div className="min-w-0">
                                     <div className="flex items-center gap-2 mb-1">
@@ -192,13 +196,19 @@ export function VehicleDeploymentDialog({
                                         <Badge variant="outline" className="text-[9px] h-4 uppercase font-black bg-background/80 tracking-widest border-2">
                                             {item.type}
                                         </Badge>
+                                        {item.isDoubleAssigned && (
+                                            <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-none text-[9px] font-black uppercase tracking-widest h-4">
+                                                Dubbele Inzet
+                                            </Badge>
+                                        )}
                                     </div>
                                     <p className="text-[11px] text-muted-foreground font-bold truncate uppercase tracking-tighter">{item.merk} {item.model}</p>
                                 </div>
                                 <div className="flex flex-col items-end gap-2">
                                     <div className={cn(
                                         "h-3 w-3 rounded-full",
-                                        item.status === 'scheduled' && "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)] animate-pulse",
+                                        item.status === 'scheduled' && !item.isDoubleAssigned && "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)] animate-pulse",
+                                        item.isDoubleAssigned && "bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)] animate-pulse",
                                         item.status === 'unavailable' && "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]",
                                         item.status === 'available' && "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"
                                     )} />
@@ -233,9 +243,17 @@ export function VehicleDeploymentDialog({
                                 {item.status === 'scheduled' ? (
                                     <div className="space-y-3">
                                         {item.assignments.map((as, idx) => (
-                                            <div key={idx} className="flex flex-col gap-2 p-3 rounded-xl bg-background/80 border-2 border-blue-100 dark:border-blue-900 shadow-sm">
-                                                <div className="flex items-center gap-2 text-blue-900 dark:text-blue-100 font-black text-xs uppercase tracking-tight">
-                                                    <User className="h-4 w-4 text-blue-500" />
+                                            <div 
+                                                key={idx} 
+                                                className={cn(
+                                                    "flex flex-col gap-2 p-3 rounded-xl border-2 shadow-sm",
+                                                    item.isDoubleAssigned 
+                                                        ? "bg-background/90 border-orange-100 dark:border-orange-900" 
+                                                        : "bg-background/80 border-blue-100 dark:border-blue-900"
+                                                )}
+                                            >
+                                                <div className="flex items-center gap-2 text-slate-900 dark:text-slate-100 font-black text-xs uppercase tracking-tight">
+                                                    <User className={cn("h-4 w-4", item.isDoubleAssigned ? "text-orange-500" : "text-blue-500")} />
                                                     <span className="truncate">{as.medewerkerName}</span>
                                                 </div>
                                                 <div className="flex items-center justify-between">
