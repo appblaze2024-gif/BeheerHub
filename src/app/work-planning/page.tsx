@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { ChevronLeft, ChevronRight, Clock, MoreHorizontal, Plus, Printer, Trash2, Copy, ClipboardCopy, FileText, Save, ListOrdered, Eye, EyeOff } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, MoreHorizontal, Plus, Printer, Trash2, Copy, ClipboardCopy, FileText, Save, ListOrdered, Eye, EyeOff, Loader2 } from 'lucide-react';
 import {
   startOfWeek,
   endOfWeek,
@@ -129,7 +129,6 @@ const DienstItem = ({ dienst, onEdit, onDelete, onContextMenu, isNonWorkingDay, 
 
     const handleEdit = (e: React.MouseEvent) => {
         if (!canEdit || isNonWorkingDay) return;
-        // Prevent triggering edit when clicking delete button
         if ((e.target as HTMLElement).closest('.delete-button')) {
             return;
         }
@@ -206,7 +205,7 @@ const DienstItem = ({ dienst, onEdit, onDelete, onContextMenu, isNonWorkingDay, 
                     size="icon" 
                     className="delete-button absolute top-0 right-0 h-6 w-6 opacity-0 group-hover/dienst:opacity-100 focus:opacity-100"
                     onClick={(e) => {
-                        e.stopPropagation(); // Prevent triggering edit when deleting
+                        e.stopPropagation();
                         setShowDeleteConfirm(true);
                     }}
                 >
@@ -252,24 +251,7 @@ export default function WorkPlanningPage() {
   const isTablet = useIsMobile(1024);
 
   const [isVisibilityMode, setIsVisibilityMode] = React.useState(false);
-  const [hiddenMedewerkerIds, setHiddenMedewerkerIds] = React.useState<Set<string>>(new Set());
-
-  // Load hidden employees from local storage
-  React.useEffect(() => {
-    const saved = localStorage.getItem('planning_hidden_employees');
-    if (saved) {
-      try {
-        setHiddenMedewerkerIds(new Set(JSON.parse(saved)));
-      } catch (e) {
-        console.error("Failed to parse hidden employees from localStorage", e);
-      }
-    }
-  }, []);
-
-  // Save hidden employees to local storage
-  React.useEffect(() => {
-    localStorage.setItem('planning_hidden_employees', JSON.stringify(Array.from(hiddenMedewerkerIds)));
-  }, [hiddenMedewerkerIds]);
+  const [pendingStatusChanges, setPendingStatusChanges] = React.useState<Record<string, 'Actief' | 'Inactief'>>({});
 
   const [contextMenu, setContextMenu] = React.useState<{
     x: number;
@@ -427,7 +409,7 @@ export default function WorkPlanningPage() {
                 unavailable: unavailableVehicles,
                 available: availableVehicles,
             }
-        }).catch(e => console.error("Error saving vehicle availability", e));
+        });
     }, 1500);
 
     return () => clearTimeout(handler);
@@ -436,12 +418,19 @@ export default function WorkPlanningPage() {
   const groupedMedewerkers = React.useMemo(() => {
     if (!medewerkers) return [];
     
-    const activeMedewerkers = medewerkers.filter(m => m.status === 'Actief');
+    // In visibility mode, show both Active and Inactive
+    // Otherwise only Active
+    const filtered = medewerkers.filter(m => {
+      if (isVisibilityMode) {
+        return m.status === 'Actief' || m.status === 'Inactief';
+      }
+      return m.status === 'Actief';
+    });
     
     const groups: Record<string, Medewerker[]> = {};
     const groupOrder = ['Machinist', 'Chauffeur', 'Inhuur', 'Voorman', 'Stratenmaker', 'Grondwerker', 'Onkruidploeg', 'Kantoor', 'Overig'];
 
-    activeMedewerkers.forEach(m => {
+    filtered.forEach(m => {
       let groupName = m.functie || 'Overig';
       if (m.soortMedewerker === 'Inhuur') {
         groupName = 'Inhuur';
@@ -468,17 +457,28 @@ export default function WorkPlanningPage() {
         name,
         items: groups[name]
       }));
-  }, [medewerkers]);
+  }, [medewerkers, isVisibilityMode]);
 
-  const finalGroupedMedewerkers = React.useMemo(() => {
-    if (!groupedMedewerkers) return [];
-    if (isVisibilityMode) return groupedMedewerkers;
+  const handleSaveVisibility = async () => {
+    if (!firestore || !canEdit) return;
+    setIsLoadingDiensten(true);
+    const batch = writeBatch(firestore);
+    
+    Object.entries(pendingStatusChanges).forEach(([id, status]) => {
+      const medRef = doc(firestore, 'medewerkers', id);
+      batch.update(medRef, { status });
+    });
 
-    return groupedMedewerkers.map(group => ({
-      ...group,
-      items: group.items.filter(m => !hiddenMedewerkerIds.has(m.id))
-    })).filter(group => group.items.length > 0);
-  }, [groupedMedewerkers, isVisibilityMode, hiddenMedewerkerIds]);
+    try {
+      await batch.commit();
+      setPendingStatusChanges({});
+      setIsVisibilityMode(false);
+    } catch (error) {
+      console.error("Error saving visibility:", error);
+    } finally {
+      setIsLoadingDiensten(false);
+    }
+  };
 
   
   const handleOpenSheetForNew = (medewerker: Medewerker, datum: Date) => {
@@ -598,7 +598,7 @@ export default function WorkPlanningPage() {
     const head = [['Medewerker', ...weekDays.map(d => format(d, 'eee dd-MM', { locale: nl }))]];
 
     const body = (medewerkers || [])
-      .filter(m => m.status === 'Actief' && !hiddenMedewerkerIds.has(m.id))
+      .filter(m => m.status === 'Actief')
       .map(medewerker => {
         const rowData = [`${medewerker.voornaam || ''} ${medewerker.achternaam || ''}`.trim()];
         weekDays.forEach(day => {
@@ -655,12 +655,12 @@ export default function WorkPlanningPage() {
     doc.setFontSize(11);
     doc.text(`Datum: ${dateStr}`, 150, 22);
 
-    const dayDiensten = diensten.filter(d => isSameDay(new Date(d.datum), dayToPrint) && !hiddenMedewerkerIds.has(d.medewerkerId));
+    const dayDiensten = diensten.filter(d => isSameDay(new Date(d.datum), dayToPrint));
     const medewerkersById = new Map(medewerkers.map(m => [m.id, m]));
     
     const employeesWithDienst = Array.from(new Set(dayDiensten.map(d => d.medewerkerId)))
       .map(id => medewerkersById.get(id))
-      .filter((m): m is Medewerker => !!m);
+      .filter((m): m is Medewerker => !!m && m.status === 'Actief');
 
     const tableData: { medewerker: Medewerker; diensten: Dienst[] }[] = [];
     employeesWithDienst.forEach(medewerker => {
@@ -848,11 +848,21 @@ export default function WorkPlanningPage() {
       <Button 
         key="toggle-visibility" 
         variant={isVisibilityMode ? "default" : "outline"} 
-        onClick={() => setIsVisibilityMode(!isVisibilityMode)}
+        onClick={() => {
+            if (isVisibilityMode) {
+                setPendingStatusChanges({});
+            }
+            setIsVisibilityMode(!isVisibilityMode);
+        }}
         title={isVisibilityMode ? "Stop met bewerken zichtbaarheid" : "Medewerkers verbergen/tonen"}
       >
         {isVisibilityMode ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
       </Button>,
+      ...(isVisibilityMode ? [
+          <Button key="save-visibility" onClick={handleSaveVisibility} disabled={Object.keys(pendingStatusChanges).length === 0}>
+            Zichtbaarheid Opslaan
+          </Button>
+      ] : []),
       <Button key="print-day" variant="outline" onClick={() => setIsPrintDayDialogOpen(true)}><Printer className="mr-2 h-4 w-4" /> Print Dag</Button>,
       <Button key="print-week" variant="outline" onClick={handlePrintWeek}><Printer className="mr-2 h-4 w-4" /> Print Week</Button>,
       <Button key="save-pdf" variant="outline" onClick={() => setIsSaveWeekDialogOpen(true)} disabled={!selectedProjectId}><Save className="mr-2 h-4 w-4" /> Opslaan als PDF</Button>,
@@ -1106,7 +1116,7 @@ export default function WorkPlanningPage() {
       </header>
       <div className="flex-1 overflow-auto border-t">
         <div className="grid grid-cols-[250px_repeat(7,1fr)] min-w-[1200px]">
-          <div className="sticky top-0 z-20 p-2 bg-background border-b border-r">
+          <div className="sticky top-0 z-20 p-2 bg-slate-200 border-b border-r">
             <div className="grid grid-rows-3 h-full">
               <div className="row-span-2"></div>
               <div className="flex items-end">
@@ -1119,8 +1129,8 @@ export default function WorkPlanningPage() {
               key={day.toISOString()}
               onContextMenu={(e) => handleDayHeaderContextMenu(e, day)}
               className={cn(
-                "sticky top-0 z-20 p-2 text-center bg-background border-b border-r day-column cursor-context-menu",
-                isToday(day) && "bg-muted/50"
+                "sticky top-0 z-20 p-2 text-center bg-slate-200 border-b border-r day-column cursor-context-menu",
+                isToday(day) && "bg-slate-300"
               )}
             >
               <p className="font-semibold capitalize text-sm">
@@ -1235,10 +1245,10 @@ export default function WorkPlanningPage() {
           ) : !canView ? (
               <div className="col-span-8 p-8 text-center text-muted-foreground">U heeft geen rechten om deze planning te bekijken.</div>
           ) : (
-            finalGroupedMedewerkers.map((group) => (
+            groupedMedewerkers.map((group) => (
               <React.Fragment key={group.name}>
-                <div className="col-span-8 p-3 bg-slate-100 dark:bg-slate-800/50 border-b border-r flex items-center">
-                  <span className="font-bold text-xs uppercase tracking-widest text-slate-500 dark:text-slate-400">{group.name}</span>
+                <div className="col-span-8 p-3 bg-slate-300 dark:bg-slate-800 border-b border-r flex items-center">
+                  <span className="font-bold text-xs uppercase tracking-widest text-slate-600 dark:text-slate-400">{group.name}</span>
                 </div>
                 {group.items.map((medewerker) => (
                   <React.Fragment key={medewerker.id}>
@@ -1246,17 +1256,16 @@ export default function WorkPlanningPage() {
                       <div className="flex items-center gap-3">
                         {isVisibilityMode && (
                           <Checkbox
-                            checked={!hiddenMedewerkerIds.has(medewerker.id)}
+                            checked={
+                                pendingStatusChanges[medewerker.id] !== undefined
+                                    ? pendingStatusChanges[medewerker.id] === 'Actief'
+                                    : medewerker.status === 'Actief'
+                            }
                             onCheckedChange={(checked) => {
-                              setHiddenMedewerkerIds(prev => {
-                                const next = new Set(prev);
-                                if (checked) {
-                                  next.delete(medewerker.id);
-                                } else {
-                                  next.add(medewerker.id);
-                                }
-                                return next;
-                              });
+                              setPendingStatusChanges(prev => ({
+                                ...prev,
+                                [medewerker.id]: checked ? 'Actief' : 'Inactief'
+                              }));
                             }}
                             className="h-4 w-4"
                           />
