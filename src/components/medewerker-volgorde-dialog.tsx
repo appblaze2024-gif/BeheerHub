@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -15,8 +14,8 @@ import { ChevronUp, ChevronDown, Loader2 } from 'lucide-react';
 import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { Medewerker } from '@/lib/types';
-import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
+import { cn } from '@/lib/utils';
 
 interface MedewerkerVolgordeDialogProps {
   open: boolean;
@@ -74,34 +73,34 @@ export function MedewerkerVolgordeDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
-        <DialogHeader className="p-6 pb-2">
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+        <DialogHeader className="p-6 pb-2 border-b">
           <DialogTitle>Volgorde medewerkers aanpassen</DialogTitle>
           <DialogDescription>
             Gebruik de pijltjes om medewerkers binnen hun groep te sorteren.
           </DialogDescription>
         </DialogHeader>
         
-        <ScrollArea className="flex-1 p-6">
+        <div className="flex-1 overflow-y-auto p-6 bg-slate-50 dark:bg-slate-900/20">
           <div className="space-y-6">
             {localGroups.map((group, gIndex) => (
               <div key={group.name} className="space-y-2">
-                <Badge variant="outline" className="uppercase tracking-wider text-[10px] font-bold">
-                  {group.name}
+                <Badge variant="outline" className="uppercase tracking-wider text-[10px] font-bold bg-background">
+                  {group.name} ({group.items.length})
                 </Badge>
-                <div className="border rounded-md divide-y">
+                <div className="border rounded-md divide-y shadow-sm bg-background">
                   {group.items.map((m, iIndex) => (
-                    <div key={m.id} className="flex items-center justify-between p-2 text-sm bg-background">
-                      <span className="font-medium truncate">
+                    <div key={m.id} className="flex items-center justify-between p-2 text-sm">
+                      <span className="font-medium truncate pr-2">
                         {`${m.voornaam || ''} ${m.tussenvoegsel || ''} ${m.achternaam || ''}`.trim()}
                       </span>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 flex-shrink-0">
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
                           onClick={() => moveItem(gIndex, iIndex, 'up')}
-                          disabled={iIndex === 0}
+                          disabled={iIndex === 0 || isSaving}
                         >
                           <ChevronUp className="h-4 w-4" />
                         </Button>
@@ -110,7 +109,7 @@ export function MedewerkerVolgordeDialog({
                           size="icon"
                           className="h-8 w-8"
                           onClick={() => moveItem(gIndex, iIndex, 'down')}
-                          disabled={iIndex === group.items.length - 1}
+                          disabled={iIndex === group.items.length - 1 || isSaving}
                         >
                           <ChevronDown className="h-4 w-4" />
                         </Button>
@@ -121,7 +120,7 @@ export function MedewerkerVolgordeDialog({
               </div>
             ))}
           </div>
-        </ScrollArea>
+        </div>
 
         <DialogFooter className="p-6 pt-4 border-t bg-muted/10">
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isSaving}>
@@ -136,5 +135,3 @@ export function MedewerkerVolgordeDialog({
     </Dialog>
   );
 }
-
-    
