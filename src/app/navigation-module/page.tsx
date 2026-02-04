@@ -1,5 +1,4 @@
-
-      'use client';
+'use client';
 
 import * as React from 'react';
 import MapGL, { Marker, Source, Layer, type MapRef, FillLayer, LineLayer } from 'react-map-gl';
@@ -370,7 +369,7 @@ export default function StartNavigationPage() {
     if (!selectedRouteDef) return null;
     try {
       const features = JSON.parse(selectedRouteDef.subGebieden);
-      if (Array.isArray(features)) {
+      if (Array.isArray(features) && features.length > 0) {
         return {
           type: 'FeatureCollection',
           features: features.map((feature: any) => ({
@@ -388,16 +387,26 @@ export default function StartNavigationPage() {
 
   React.useEffect(() => {
       if (routeGeoJSON && mapRef.current) {
-          try {
-              const map = mapRef.current.getMap();
-              if (map.isStyleLoaded()) {
+          const map = mapRef.current.getMap();
+          const fit = () => {
+              try {
                   const bbox = turf.bbox(routeGeoJSON);
-                  if (bbox[0] !== Infinity) {
-                      map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
+                  if (bbox[0] !== Infinity && !isNaN(bbox[0])) {
+                      map.fitBounds(bbox as [number, number, number, number], { 
+                          padding: 60, 
+                          duration: 1000,
+                          maxZoom: 16 
+                      });
                   }
+              } catch(e) {
+                  console.error("Error fitting bounds", e);
               }
-          } catch(e) {
-              console.error("Error fitting bounds", e);
+          };
+
+          if (map.isStyleLoaded()) {
+              fit();
+          } else {
+              map.once('style.load', fit);
           }
       }
   }, [routeGeoJSON]);

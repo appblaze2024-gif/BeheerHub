@@ -60,7 +60,6 @@ export const allMenuItems: MenuItem[] = [
     },
     { href: '/spec-reports', label: 'Besteksmeldingen', icon: FileWarning, module: 'specReports' },
     { href: '/navigation-module', label: 'Navigatiemodule', icon: Navigation, module: 'navigation' },
-    { href: '/teams', label: 'Teams', icon: Users2, module: 'teams' },
     { href: '/mail', label: 'Mail', icon: Mail, module: 'mail' },
     { href: '/profile', label: 'Mijn Profiel', icon: User, module: 'users' },
     { href: '/settings', label: 'Instellingen', icon: Settings },

@@ -66,7 +66,6 @@ export const permissionConfig = [
             { id: 'users', label: 'Gebruikers' },
         ]
     },
-    { module: 'teams', label: 'Teams', actions: [{ id: 'view', label: 'Bekijken' }] },
     { module: 'news', label: 'Nieuws berichten', actions: [{ id: 'view', label: 'Bekijken' }] },
 ];
 
