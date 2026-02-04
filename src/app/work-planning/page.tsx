@@ -1,8 +1,7 @@
-
 'use client';
 
 import * as React from 'react';
-import { ChevronLeft, ChevronRight, Clock, MoreHorizontal, Plus, Printer, Trash2, Copy, ClipboardCopy, FileText, Save, ListOrdered, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, MoreHorizontal, Plus, Printer, Trash2, Copy, ClipboardCopy, FileText, Save, ListOrdered, Eye, EyeOff, Loader2, Truck } from 'lucide-react';
 import {
   startOfWeek,
   endOfWeek,
@@ -65,6 +64,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { useProject } from '@/context/project-context';
 import { MedewerkerVolgordeDialog } from '@/components/medewerker-volgorde-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
+import { VehicleDeploymentDialog } from '@/components/vehicle-deployment-dialog';
 
 
 const getInitials = (firstName?: string, lastName?: string) => {
@@ -238,6 +238,7 @@ export default function WorkPlanningPage() {
   const [isPrintDayDialogOpen, setIsPrintDayDialogOpen] = React.useState(false);
   const [isSaveWeekDialogOpen, setIsSaveWeekDialogOpen] = React.useState(false);
   const [isVolgordeDialogOpen, setIsVolgordeDialogOpen] = React.useState(false);
+  const [isVehicleDeploymentOpen, setIsVehicleDeploymentOpen] = React.useState(false);
   const { selectedProjectId, setSelectedProjectId } = useProject();
   
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
@@ -863,6 +864,7 @@ export default function WorkPlanningPage() {
             Zichtbaarheid Opslaan
           </Button>
       ] : []),
+      <Button key="vehicle-deployment" variant="outline" onClick={() => setIsVehicleDeploymentOpen(true)}><Truck className="mr-2 h-4 w-4" /> Voertuigeninzet</Button>,
       <Button key="print-day" variant="outline" onClick={() => setIsPrintDayDialogOpen(true)}><Printer className="mr-2 h-4 w-4" /> Print Dag</Button>,
       <Button key="print-week" variant="outline" onClick={handlePrintWeek}><Printer className="mr-2 h-4 w-4" /> Print Week</Button>,
       <Button key="save-pdf" variant="outline" onClick={() => setIsSaveWeekDialogOpen(true)} disabled={!selectedProjectId}><Save className="mr-2 h-4 w-4" /> Opslaan als PDF</Button>,
@@ -907,10 +909,9 @@ export default function WorkPlanningPage() {
     setContextMenu(null);
   };
   
-  const handlePasteDay = async () => {
-    if (!contextMenu?.dayHeaderContext || !copiedDay || !firestore || !selectedProjectId || !canEdit) return;
+  const handlePasteDay = async (targetDate: Date) => {
+    if (!copiedDay || !firestore || !selectedProjectId || !canEdit) return;
 
-    const targetDate = contextMenu.dayHeaderContext.datum;
     const targetDateString = format(targetDate, 'yyyy-MM-dd');
 
     setIsLoadingDiensten(true);
@@ -1384,7 +1385,7 @@ export default function WorkPlanningPage() {
                         Kopieer Dag
                     </DropdownMenuItem>
                     {copiedDay && (
-                        <DropdownMenuItem onClick={handlePasteDay}>
+                        <DropdownMenuItem onClick={() => contextMenu.dayHeaderContext && handlePasteDay(contextMenu.dayHeaderContext.datum)}>
                             <ClipboardCopy className="mr-2 h-4 w-4" />
                             Plak Dag
                         </DropdownMenuItem>
@@ -1439,6 +1440,15 @@ export default function WorkPlanningPage() {
           open={isVolgordeDialogOpen}
           onOpenChange={setIsVolgordeDialogOpen}
           groupedMedewerkers={groupedMedewerkers}
+        />
+        <VehicleDeploymentDialog
+            open={isVehicleDeploymentOpen}
+            onOpenChange={setIsVehicleDeploymentOpen}
+            weekDays={weekDays}
+            diensten={diensten}
+            allEquipment={allEquipment}
+            unavailableVehicles={unavailableVehicles}
+            medewerkers={medewerkers}
         />
     </div>
   );
