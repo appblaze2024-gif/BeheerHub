@@ -1117,7 +1117,7 @@ export default function WorkPlanningPage() {
       </header>
       <div className="flex-1 overflow-auto border-t">
         <div className="grid grid-cols-[250px_repeat(7,1fr)] min-w-[1200px]">
-          <div className="sticky top-0 z-20 p-2 bg-slate-300 border-b border-r">
+          <div className="sticky top-0 z-20 p-2 bg-slate-200 border-b border-r">
             <div className="grid grid-rows-3 h-full">
               <div className="row-span-2"></div>
               <div className="flex items-end">
