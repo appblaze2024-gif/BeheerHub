@@ -1117,7 +1117,7 @@ export default function WorkPlanningPage() {
       </header>
       <div className="flex-1 overflow-auto border-t">
         <div className="grid grid-cols-[250px_repeat(7,1fr)] min-w-[1200px]">
-          <div className="sticky top-0 z-20 p-2 bg-slate-200 border-b border-r">
+          <div className="sticky top-0 z-20 p-2 bg-slate-100 border-b border-r">
             <div className="grid grid-rows-3 h-full">
               <div className="row-span-2"></div>
               <div className="flex items-end">
@@ -1130,8 +1130,8 @@ export default function WorkPlanningPage() {
               key={day.toISOString()}
               onContextMenu={(e) => handleDayHeaderContextMenu(e, day)}
               className={cn(
-                "sticky top-0 z-20 p-2 text-center bg-slate-200 border-b border-r day-column cursor-context-menu",
-                isToday(day) && "bg-slate-300"
+                "sticky top-0 z-20 p-2 text-center bg-slate-100 border-b border-r day-column cursor-context-menu",
+                isToday(day) && "bg-slate-200"
               )}
             >
               <p className="font-semibold capitalize text-sm">
@@ -1164,7 +1164,7 @@ export default function WorkPlanningPage() {
           ) : (
             groupedMedewerkers.map((group) => (
               <React.Fragment key={group.name}>
-                <div className="col-span-8 p-3 bg-slate-300 dark:bg-slate-800 border-b border-r flex items-center">
+                <div className="col-span-8 p-3 bg-slate-200 dark:bg-slate-800 border-b border-r flex items-center">
                   <span className="font-bold text-xs uppercase tracking-widest text-slate-600 dark:text-slate-400">{group.name}</span>
                 </div>
                 {group.items.map((medewerker) => (
