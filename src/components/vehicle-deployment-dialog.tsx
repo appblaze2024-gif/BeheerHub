@@ -18,6 +18,7 @@ import type { Dienst, Voertuig, Machine, Medewerker } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Separator } from '@/components/ui/separator';
 
 interface VehicleDeploymentDialogProps {
   open: boolean;
@@ -98,7 +99,7 @@ export function VehicleDeploymentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-5xl h-[90vh] flex flex-col p-0">
+      <DialogContent className="sm:max-w-6xl h-[90vh] flex flex-col p-0">
         <DialogHeader className="p-6 pb-2">
           <DialogTitle className="flex items-center gap-2 text-xl font-black uppercase tracking-tight">
             <Truck className="h-6 w-6 text-primary" />
@@ -170,120 +171,102 @@ export function VehicleDeploymentDialog({
                 </Card>
             </div>
 
-            <ScrollArea className="flex-1 p-6 bg-slate-50 dark:bg-slate-900/20">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pb-10">
+            <div className="bg-muted/50 border-b px-6 py-2 grid grid-cols-[120px_1fr_120px_2fr_80px] gap-4 items-center text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                <span>Voertuig ID</span>
+                <span>Merk & Model</span>
+                <span>Status</span>
+                <span>Inzet / Personeel</span>
+                <span className="text-right">Actie</span>
+            </div>
+
+            <ScrollArea className="flex-1 bg-slate-50 dark:bg-slate-900/20">
+                <div className="flex flex-col pb-10">
                     {deploymentData.map(item => (
                         <div 
                             key={item.id}
                             className={cn(
-                                "flex flex-col border-2 rounded-2xl overflow-hidden transition-all duration-200 shadow-sm group",
-                                item.status === 'scheduled' && "border-blue-200 bg-blue-50/20 dark:bg-blue-950/10",
-                                item.status === 'unavailable' && "border-red-200 bg-red-50/20 dark:bg-red-950/10",
-                                item.status === 'available' && "border-slate-200 bg-card hover:border-primary/30 hover:shadow-md",
-                                item.isDoubleAssigned && "border-orange-400 bg-orange-50/30 dark:bg-orange-950/20 ring-2 ring-orange-400/20"
+                                "grid grid-cols-[120px_1fr_120px_2fr_80px] gap-4 items-center px-6 py-3 border-b-2 transition-colors",
+                                item.status === 'scheduled' && !item.isDoubleAssigned && "bg-blue-50/30 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900",
+                                item.isDoubleAssigned && "bg-orange-50/40 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900",
+                                item.status === 'unavailable' && "bg-red-50/30 dark:bg-red-900/10 border-red-100 dark:border-red-900",
+                                item.status === 'available' && "bg-card border-slate-100 dark:border-slate-800 hover:bg-slate-100/50"
                             )}
                         >
-                            <div className={cn(
-                                "p-4 flex items-start justify-between border-b-2",
-                                item.status === 'scheduled' && !item.isDoubleAssigned && "bg-blue-100/40 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900",
-                                item.status === 'unavailable' && "bg-red-100/40 dark:bg-red-900/20 border-red-100 dark:border-red-900",
-                                item.status === 'available' && "bg-muted/30 border-slate-100 dark:border-slate-800",
-                                item.isDoubleAssigned && "bg-orange-100/40 dark:bg-orange-900/20 border-orange-200 dark:border-orange-900"
-                            )}>
-                                <div className="min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <h4 className="font-black text-xl tracking-tight truncate leading-none">{item.name}</h4>
-                                        <Badge variant="outline" className="text-[9px] h-4 uppercase font-black bg-background/80 tracking-widest border-2">
-                                            {item.type}
-                                        </Badge>
-                                        {item.isDoubleAssigned && (
-                                            <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-none text-[9px] font-black uppercase tracking-widest h-4">
-                                                Dubbele Inzet
-                                            </Badge>
-                                        )}
-                                    </div>
-                                    <p className="text-[11px] text-muted-foreground font-bold truncate uppercase tracking-tighter">{item.merk} {item.model}</p>
-                                </div>
-                                <div className="flex flex-col items-end gap-2">
+                            <div className="flex items-center gap-2">
+                                <span className="font-black text-sm tracking-tight truncate">{item.name}</span>
+                                <Badge variant="outline" className="text-[8px] h-4 uppercase font-black bg-background/80 tracking-widest border-2">
+                                    {item.type[0]}
+                                </Badge>
+                            </div>
+
+                            <div className="min-w-0">
+                                <p className="text-[10px] text-muted-foreground font-bold truncate uppercase tracking-tighter">{item.merk} {item.model}</p>
+                            </div>
+
+                            <div>
+                                <div className="flex items-center gap-2">
                                     <div className={cn(
-                                        "h-3 w-3 rounded-full",
-                                        item.status === 'scheduled' && !item.isDoubleAssigned && "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)] animate-pulse",
-                                        item.isDoubleAssigned && "bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)] animate-pulse",
-                                        item.status === 'unavailable' && "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]",
-                                        item.status === 'available' && "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"
+                                        "h-2 w-2 rounded-full",
+                                        item.status === 'scheduled' && !item.isDoubleAssigned && "bg-blue-500",
+                                        item.isDoubleAssigned && "bg-orange-500 animate-pulse",
+                                        item.status === 'unavailable' && "bg-red-500",
+                                        item.status === 'available' && "bg-green-500"
                                     )} />
-                                    
-                                    {canEdit && (
-                                        <TooltipProvider>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="icon" 
-                                                        className={cn(
-                                                            "h-8 w-8 rounded-full transition-colors",
-                                                            item.isUnavailable 
-                                                                ? "text-red-600 hover:text-red-700 hover:bg-red-100" 
-                                                                : "text-slate-400 hover:text-red-600 hover:bg-slate-100"
-                                                        )}
-                                                        onClick={() => onToggleUnavailability(selectedDay, item.id, !item.isUnavailable)}
-                                                    >
-                                                        {item.isUnavailable ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
-                                                    </Button>
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                    <p>{item.isUnavailable ? "Beschikbaar maken" : "Markeer als defect/beurt"}</p>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </TooltipProvider>
-                                    )}
+                                    <span className={cn(
+                                        "text-[10px] font-black uppercase tracking-tight",
+                                        item.status === 'scheduled' && !item.isDoubleAssigned && "text-blue-600",
+                                        item.isDoubleAssigned && "text-orange-600",
+                                        item.status === 'unavailable' && "text-red-600",
+                                        item.status === 'available' && "text-green-600"
+                                    )}>
+                                        {item.isDoubleAssigned ? "Dubbel" : item.status === 'scheduled' ? "Inzet" : item.status === 'unavailable' ? "Defect" : "Vrij"}
+                                    </span>
                                 </div>
                             </div>
-                            <div className="p-4 flex-1">
-                                {item.status === 'scheduled' ? (
-                                    <div className="space-y-3">
+
+                            <div className="min-w-0">
+                                {item.assignments.length > 0 ? (
+                                    <div className="flex flex-col gap-1">
                                         {item.assignments.map((as, idx) => (
-                                            <div 
-                                                key={idx} 
-                                                className={cn(
-                                                    "flex flex-col gap-2 p-3 rounded-xl border-2 shadow-sm",
-                                                    item.isDoubleAssigned 
-                                                        ? "bg-background/90 border-orange-100 dark:border-orange-900" 
-                                                        : "bg-background/80 border-blue-100 dark:border-blue-900"
-                                                )}
-                                            >
-                                                <div className="flex items-center gap-2 text-slate-900 dark:text-slate-100 font-black text-xs uppercase tracking-tight">
-                                                    <User className={cn("h-4 w-4", item.isDoubleAssigned ? "text-orange-500" : "text-blue-500")} />
-                                                    <span className="truncate">{as.medewerkerName}</span>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
-                                                        <Clock className="h-3.5 w-3.5" />
-                                                        {as.times}
-                                                    </div>
-                                                    <Badge variant="secondary" className="text-[9px] font-black uppercase tracking-widest px-2 py-0 h-5">
-                                                        {as.werksoort}
-                                                    </Badge>
-                                                </div>
+                                            <div key={idx} className="flex items-center gap-2 text-[10px] font-bold">
+                                                <User className={cn("h-3 w-3 shrink-0", item.isDoubleAssigned ? "text-orange-500" : "text-blue-500")} />
+                                                <span className="truncate max-w-[120px]">{as.medewerkerName}</span>
+                                                <span className="text-muted-foreground text-[9px] shrink-0">({as.times})</span>
+                                                <Badge variant="secondary" className="text-[8px] h-4 font-black uppercase tracking-tight py-0">
+                                                    {as.werksoort}
+                                                </Badge>
                                             </div>
                                         ))}
                                     </div>
-                                ) : item.status === 'unavailable' ? (
-                                    <div className="flex flex-col items-center justify-center py-6 text-center">
-                                        <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-full mb-3">
-                                            <AlertCircle className="h-8 w-8 text-red-500 opacity-80" />
-                                        </div>
-                                        <p className="text-sm font-black text-red-600 dark:text-red-400 uppercase tracking-widest">Niet inzetbaar</p>
-                                        <p className="text-[10px] text-muted-foreground font-bold mt-1 uppercase">Onderhoud of defect</p>
-                                    </div>
                                 ) : (
-                                    <div className="flex flex-col items-center justify-center py-6 text-center">
-                                        <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-full mb-3 transition-transform group-hover:scale-110">
-                                            <CheckCircle2 className="h-8 w-8 text-green-500 opacity-80" />
-                                        </div>
-                                        <p className="text-sm font-black text-green-600 dark:text-green-400 uppercase tracking-widest">Vrij voor inzet</p>
-                                        <p className="text-[10px] text-muted-foreground font-bold mt-1 uppercase">Geen diensten toegewezen</p>
-                                    </div>
+                                    <span className="text-[10px] text-muted-foreground/60 italic">Geen inzet</span>
+                                )}
+                            </div>
+
+                            <div className="flex justify-end">
+                                {canEdit && (
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className={cn(
+                                                        "h-8 w-8 rounded-full transition-colors",
+                                                        item.isUnavailable 
+                                                            ? "text-red-600 hover:text-red-700 hover:bg-red-100" 
+                                                            : "text-slate-400 hover:text-red-600 hover:bg-slate-100"
+                                                    )}
+                                                    onClick={() => onToggleUnavailability(selectedDay, item.id, !item.isUnavailable)}
+                                                >
+                                                    {item.isUnavailable ? <PowerOff className="h-4 w-4" /> : <Power className="h-4 w-4" />}
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p>{item.isUnavailable ? "Beschikbaar maken" : "Markeer als defect/beurt"}</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
                                 )}
                             </div>
                         </div>
