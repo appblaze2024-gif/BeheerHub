@@ -11,6 +11,7 @@ import {
   ChevronDown,
   MapPin,
   MoreVertical,
+  MoreHorizontal,
   ChevronRight,
   Image as ImageIcon,
   Upload,
