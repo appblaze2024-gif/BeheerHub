@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { PageHeader } from '@/components/page-header';
-import { Cpu, Wifi, Database, Terminal, Send, Copy, Check, Loader2, Sparkles, AlertCircle, User, Bot, Trash2 } from 'lucide-react';
+import { Cpu, Wifi, Database, Terminal, Send, Copy, Check, Loader2, Sparkles, AlertCircle, User, Bot, Trash2, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
@@ -13,6 +13,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type Message = {
   role: 'user' | 'model';
@@ -28,6 +30,7 @@ export default function IoTPage() {
   const [generatedCode, setGeneratedCode] = React.useState<string | null>(null);
   const [explanation, setExplanation] = React.useState<string | null>(null);
   const [copied, setCopied] = React.useState(false);
+  const [messageCount, setMessageCount] = React.useState(0);
   
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
@@ -37,14 +40,28 @@ export default function IoTPage() {
     }
   }, [messages]);
 
+  // Load message count from localStorage on mount (simple way to track daily usage)
+  React.useEffect(() => {
+    const saved = localStorage.getItem('iot_ai_usage_count');
+    const lastDate = localStorage.getItem('iot_ai_usage_date');
+    const today = new Date().toDateString();
+
+    if (lastDate === today && saved) {
+      setMessageCount(parseInt(saved, 10));
+    } else {
+      localStorage.setItem('iot_ai_usage_date', today);
+      localStorage.setItem('iot_ai_usage_count', '0');
+      setMessageCount(0);
+    }
+  }, []);
+
   const handleGenerateCode = async () => {
-    if (!inputPrompt.trim()) return;
+    if (!inputPrompt.trim() || isGenerating) return;
 
     const userMessage = inputPrompt.trim();
     setInputPrompt('');
     setIsGenerating(true);
     
-    // Voeg gebruikersbericht toe aan de lijst
     const newMessages: Message[] = [...messages, { role: 'user', content: userMessage }];
     setMessages(newMessages);
 
@@ -60,9 +77,12 @@ export default function IoTPage() {
       setGeneratedCode(result.code);
       setExplanation(result.explanation);
       
-      // Voeg AI antwoord (uitleg) toe aan de lijst
       setMessages([...newMessages, { role: 'model', content: result.explanation }]);
       
+      const newCount = messageCount + 1;
+      setMessageCount(newCount);
+      localStorage.setItem('iot_ai_usage_count', newCount.toString());
+
       toast({
         title: 'Code bijgewerkt',
         description: 'De code is aangepast op basis van je instructie.',
@@ -146,6 +166,19 @@ export default function IoTPage() {
               <CardTitle className="text-xs font-bold uppercase tracking-tight">IoT-Assistent</CardTitle>
             </div>
             <div className="flex items-center gap-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="outline" className="h-6 text-[10px] font-bold px-2 bg-background/50 border-primary/20">
+                      <Zap className="h-3 w-3 mr-1 text-yellow-500 fill-yellow-500" />
+                      {messageCount} / 1500
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-xs">Gratis dagelijks limiet: 1500 vragen.<br/>Max. 15 vragen per minuut.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <Select value={selectedBoard} onValueChange={setSelectedBoard}>
                 <SelectTrigger className="h-7 w-28 text-[10px] font-bold">
                   <SelectValue />
@@ -218,7 +251,7 @@ export default function IoTPage() {
                 size="icon" 
                 className="absolute right-2 bottom-2 h-7 w-7" 
                 onClick={handleGenerateCode}
-                disabled={isGenerating || !inputPrompt.trim()}
+                disabled={isGenerating || !inputPrompt.trim() || messageCount >= 1500}
               >
                 <Send className="h-3.5 w-3.5" />
               </Button>
