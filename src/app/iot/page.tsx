@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { firebaseConfig } from '@/firebase/config';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const IOT_TEMPLATES = [
   {
@@ -65,7 +66,7 @@ void loop() {
     int httpResponseCode = http.sendRequest("PATCH", payload);
     
     if (httpResponseCode > 0) {
-      Serial.printf("Vulgraad %d%% succesvol verzonden naar %s\\n", percentage, objectId.c_興);
+      Serial.printf("Vulgraad %d%% succesvol verzonden naar %s\\n", percentage, objectId.c_str());
     }
     http.end();
   }
