@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -167,9 +168,9 @@ export function AddMaintenanceDialog({
                         mode="single"
                         selected={field.value}
                         onSelect={field.onChange}
-                        disabled={(date) =>
-                          date < new Date('1900-01-01')
-                        }
+                        captionLayout="dropdown-buttons"
+                        fromDate={new Date(2000, 0, 1)}
+                        toDate={new Date(new Date().getFullYear() + 10, 11, 31)}
                         initialFocus
                       />
                     </PopoverContent>

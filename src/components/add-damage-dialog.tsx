@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -335,6 +336,9 @@ export function AddDamageDialog({
                           mode="single"
                           selected={field.value}
                           onSelect={field.onChange}
+                          captionLayout="dropdown-buttons"
+                          fromDate={new Date(2000, 0, 1)}
+                          toDate={new Date(new Date().getFullYear() + 10, 11, 31)}
                           initialFocus
                         />
                       </PopoverContent>
