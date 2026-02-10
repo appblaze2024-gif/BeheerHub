@@ -3,160 +3,58 @@
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { PageHeader } from '@/components/page-header';
-import { Cpu, Wifi, Database, Copy, Check, Code2, Info } from 'lucide-react';
+import { Cpu, Wifi, Database, Copy, Check, Code2, Info, Send, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { firebaseConfig } from '@/firebase/config';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-
-const IOT_TEMPLATES = [
-  {
-    id: 'ultrasoon-vulgraad',
-    label: 'Prullenbak Vulgraad (HC-SR04)',
-    description: 'Gebruikt een ultrasoon sensor om de afstand tot het afval te meten en de vulgraad (%) bij te werken in Firestore.',
-    code: (projectId: string, apiKey: string) => `#include <WiFi.h>
-#include <HTTPClient.h>
-
-// --- CONFIGURATIE ---
-const char* ssid = "JOUW_WIFI_NAAM";
-const char* password = "JOUW_WIFI_WACHTWOORD";
-
-// Firebase/Firestore instellingen
-const String projectId = "${projectId}";
-const String apiKey = "${apiKey}";
-const String objectId = "B001"; // ID van de prullenbak in het systeem
-
-// Sensor pinnen
-const int trigPin = 5;
-const int echoPin = 18;
-const int binHeight = 100; // Hoogte van de prullenbak in cm
-
-void setup() {
-  Serial.begin(115200);
-  pinMode(trigPin, OUTPUT);
-  pinMode(echoPin, INPUT);
-  
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
-  Serial.println("\\nWiFi verbonden!");
-}
-
-void loop() {
-  if (WiFi.status() == WL_CONNECTED) {
-    // Afstand meten
-    digitalWrite(trigPin, LOW); delayMicroseconds(2);
-    digitalWrite(trigPin, HIGH); delayMicroseconds(10);
-    digitalWrite(trigPin, LOW);
-    long duration = pulseIn(echoPin, HIGH);
-    int distance = duration * 0.034 / 2;
-    
-    // Bereken vulgraad percentage (omgekeerd: minder afstand = voller)
-    int percentage = map(distance, 0, binHeight, 100, 0);
-    percentage = constrain(percentage, 0, 100);
-
-    // Firestore Update
-    HTTPClient http;
-    String url = "https://firestore.googleapis.com/v1/projects/" + projectId + "/databases/(default)/documents/objects/" + objectId + "?key=" + apiKey;
-    
-    http.begin(url);
-    http.addHeader("Content-Type", "application/json");
-    
-    String payload = "{\\"fields\\": {\\"vulgraad\\": {\\"integerValue\\": \\"" + String(percentage) + "\\"}}}";
-    int httpResponseCode = http.sendRequest("PATCH", payload);
-    
-    if (httpResponseCode > 0) {
-      Serial.printf("Vulgraad %d%% succesvol verzonden naar %s\\n", percentage, objectId.c_str());
-    }
-    http.end();
-  }
-  delay(300000); // 5 minuten wachten
-}`
-  },
-  {
-    id: 'dht-temperatuur',
-    label: 'Temperatuur & Luchtvochtigheid (DHT11/22)',
-    description: 'Slaat sensorgegevens op in een specifieke collectie voor monitoring van locaties.',
-    code: (projectId: string, apiKey: string) => `#include <WiFi.h>
-#include <HTTPClient.h>
-#include "DHT.h"
-
-const char* ssid = "JOUW_WIFI_NAAM";
-const char* password = "JOUW_WIFI_WACHTWOORD";
-
-const String projectId = "${projectId}";
-const String apiKey = "${apiKey}";
-
-#define DHTPIN 4
-#define DHTTYPE DHT11
-DHT dht(DHTPIN, DHTTYPE);
-
-void setup() {
-  Serial.begin(115200);
-  dht.begin();
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) { delay(500); }
-}
-
-void loop() {
-  float h = dht.readHumidity();
-  float t = dht.readTemperature();
-
-  if (WiFi.status() == WL_CONNECTED && !isnan(h) && !isnan(t)) {
-    HTTPClient http;
-    // We slaan dit op onder een 'sensor_data' document
-    String url = "https://firestore.googleapis.com/v1/projects/" + projectId + "/databases/(default)/documents/settings/iot_data?key=" + apiKey;
-    
-    http.begin(url);
-    http.addHeader("Content-Type", "application/json");
-    
-    String payload = "{\\"fields\\": {\\"temperatuur\\": {\\"doubleValue\\": " + String(t) + "}, \\"luchtvochtigheid\\": {\\"doubleValue\\": " + String(h) + "}}}";
-    http.sendRequest("PATCH", payload);
-    http.end();
-  }
-  delay(60000);
-}`
-  },
-  {
-    id: 'basis-status',
-    label: 'Basis Status (Heartbeat)',
-    description: 'Eenvoudige code die aangeeft dat een apparaat online is door een timestamp bij te werken.',
-    code: (projectId: string, apiKey: string) => `#include <WiFi.h>
-#include <HTTPClient.h>
-
-const char* ssid = "JOUW_WIFI_NAAM";
-const char* password = "JOUW_WIFI_WACHTWOORD";
-
-void setup() {
-  Serial.begin(115200);
-  WiFi.begin(ssid, password);
-}
-
-void loop() {
-  if (WiFi.status() == WL_CONNECTED) {
-    HTTPClient http;
-    String url = "https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/settings/iot_status?key=${apiKey}";
-    http.begin(url);
-    http.addHeader("Content-Type", "application/json");
-    String payload = "{\\"fields\\": {\\"last_seen\\": {\\"stringValue\\": \\"online\\"}, \\"device_id\\": {\\"stringValue\\": \\"ESP32_MAIN\\"}}}";
-    http.sendRequest("PATCH", payload);
-    http.end();
-  }
-  delay(60000);
-}`
-  }
-];
+import { Textarea } from '@/components/ui/textarea';
+import { generateIoTCode } from '@/ai/flows/generate-iot-code-flow';
 
 export default function IoTPage() {
-  const [selectedTemplateId, setSelectedTemplateId] = React.useState(IOT_TEMPLATES[0].id);
+  const [prompt, setPrompt] = React.useState('');
+  const [isGenerating, setIsGenerating] = React.useState(false);
+  const [generatedResult, setGeneratedResult] = React.useState<{ code: string; explanation: string } | null>(null);
   const [copied, setCopied] = React.useState(false);
   const { toast } = useToast();
 
-  const currentTemplate = IOT_TEMPLATES.find(t => t.id === selectedTemplateId) || IOT_TEMPLATES[0];
-  const generatedCode = currentTemplate.code(firebaseConfig.projectId, firebaseConfig.apiKey);
+  const handleGenerate = async () => {
+    if (!prompt.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Lege vraag",
+        description: "Voer a.u.b. een instructie in voor de AI.",
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const result = await generateIoTCode({
+        prompt: prompt,
+        projectId: firebaseConfig.projectId,
+        apiKey: firebaseConfig.apiKey,
+      });
+      setGeneratedResult(result);
+      toast({
+        title: "Code gegenereerd!",
+        description: "Je ESP32 code staat voor je klaar.",
+      });
+    } catch (error: any) {
+      console.error("Fout bij genereren:", error);
+      toast({
+        variant: "destructive",
+        title: "Fout bij genereren",
+        description: error.message || "Er is iets misgegaan bij het aanroepen van de AI.",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(generatedCode);
+    if (!generatedResult?.code) return;
+    navigator.clipboard.writeText(generatedResult.code);
     setCopied(true);
     toast({
       title: "Code gekopieerd!",
@@ -168,8 +66,8 @@ export default function IoTPage() {
   return (
     <div className="flex flex-col flex-1 p-6 min-h-0 bg-background overflow-y-auto">
       <PageHeader 
-        title="IoT Dashboard & Hardware Integratie" 
-        description="Beheer je sensoren en gebruik kant-en-klare code om je hardware te koppelen aan dit project."
+        title="IoT Dashboard & AI Code Assistant" 
+        description="Geef instructies en laat de AI direct werkende ESP32 code voor je project schrijven."
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
@@ -219,35 +117,43 @@ export default function IoTPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Code2 className="h-5 w-5 text-primary" />
-                Code Generator
+                Vraag het de AI
               </CardTitle>
               <CardDescription>
-                Selecteer een scenario om direct werkende ESP32 code te genereren.
+                Omschrijf wat je wilt bouwen. De AI zorgt voor de juiste Firebase-configuratie.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-semibold">Kies Scenario</label>
-                <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {IOT_TEMPLATES.map(t => (
-                      <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <label className="text-sm font-semibold">Jouw Instructie</label>
+                <Textarea 
+                  placeholder="Bijv: Maak een programma dat de vulgraad van prullenbak B001 meet met een HC-SR04 sensor..."
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  className="min-h-[150px]"
+                />
               </div>
-              <div className="p-3 bg-muted rounded-md text-xs">
-                <p className="font-semibold mb-1">Beschrijving:</p>
-                <p className="text-muted-foreground">{currentTemplate.description}</p>
-              </div>
-              <Alert className="bg-amber-50 dark:bg-amber-950/20 border-amber-200">
-                <Info className="h-4 w-4 text-amber-600" />
-                <AlertTitle className="text-xs font-bold text-amber-800 dark:text-amber-400">Gratis Gebruik</AlertTitle>
-                <AlertDescription className="text-[10px] text-amber-700 dark:text-amber-500">
-                  Deze code is gebaseerd op templates en gebruikt geen AI-services. Er zijn dus GEEN extra API-kosten.
+              <Button 
+                onClick={handleGenerate} 
+                disabled={isGenerating} 
+                className="w-full gap-2"
+              >
+                {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                {isGenerating ? 'Genereren...' : 'Genereer ESP32 Code'}
+              </Button>
+              
+              {generatedResult?.explanation && (
+                <div className="p-3 bg-muted rounded-md text-xs">
+                  <p className="font-semibold mb-1">Uitleg:</p>
+                  <p className="text-muted-foreground">{generatedResult.explanation}</p>
+                </div>
+              )}
+
+              <Alert className="bg-blue-50 dark:bg-blue-950/20 border-blue-200">
+                <Info className="h-4 w-4 text-blue-600" />
+                <AlertTitle className="text-xs font-bold text-blue-800 dark:text-blue-400">Automatische Configuratie</AlertTitle>
+                <AlertDescription className="text-[10px] text-blue-700 dark:text-blue-500">
+                  De AI vult automatisch je Project ID en API Key in de code in voor directe communicatie met je database.
                 </AlertDescription>
               </Alert>
             </CardContent>
@@ -255,20 +161,30 @@ export default function IoTPage() {
         </div>
 
         <div className="xl:col-span-2">
-          <Card className="h-full flex flex-col">
+          <Card className="h-full flex flex-col min-h-[500px]">
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <div>
                 <CardTitle className="text-lg">Arduino / C++ Code</CardTitle>
                 <CardDescription>Volledig geconfigureerd voor jouw project.</CardDescription>
               </div>
-              <Button size="sm" onClick={handleCopy} className="gap-2">
-                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                {copied ? 'Gekopieerd' : 'Kopieer code'}
-              </Button>
+              {generatedResult && (
+                <Button size="sm" onClick={handleCopy} className="gap-2">
+                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  {copied ? 'Gekopieerd' : 'Kopieer code'}
+                </Button>
+              )}
             </CardHeader>
-            <CardContent className="flex-1 min-h-[400px]">
-              <div className="relative h-full rounded-md bg-zinc-950 p-4 font-mono text-sm overflow-auto text-zinc-300">
-                <pre><code>{generatedCode}</code></pre>
+            <CardContent className="flex-1">
+              <div className="relative h-full min-h-[400px] rounded-md bg-zinc-950 p-4 font-mono text-xs overflow-auto text-zinc-300 border border-zinc-800 shadow-inner">
+                {generatedResult ? (
+                  <pre><code>{generatedResult.code}</code></pre>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-zinc-600 italic">
+                    <Code2 className="h-12 w-12 mb-4 opacity-20" />
+                    <p>Nog geen code gegenereerd.</p>
+                    <p className="text-[10px]">Geef links een instructie om te beginnen.</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
