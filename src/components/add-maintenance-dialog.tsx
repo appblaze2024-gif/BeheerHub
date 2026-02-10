@@ -4,11 +4,8 @@ import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { CalendarIcon } from 'lucide-react';
-import { format, startOfMonth } from 'date-fns';
-import { nl } from 'date-fns/locale';
+import { format } from 'date-fns';
 
-import { cn } from '@/lib/utils';
 import { useFirestore, addDocumentNonBlocking } from '@/firebase';
 import { collection } from 'firebase/firestore';
 
@@ -32,12 +29,6 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 
 const maintenanceFormSchema = z.object({
   description: z.string().min(1, { message: 'Omschrijving is verplicht.' }),
@@ -102,9 +93,6 @@ export function AddMaintenanceDialog({
     }
   };
 
-  const startMonth = new Date(2020, 0);
-  const endMonth = new Date(new Date().getFullYear() + 10, 11);
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
@@ -146,37 +134,14 @@ export function AddMaintenanceDialog({
               render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4 space-y-0">
                   <FormLabel className="text-right">Datum</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl className="col-span-3">
-                        <Button
-                          variant={'outline'}
-                          className={cn(
-                            'w-full pl-3 text-left font-normal',
-                            !field.value && 'text-muted-foreground'
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, 'dd-MM-yyyy', { locale: nl })
-                          ) : (
-                            <span>Kies een datum</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        captionLayout="dropdown"
-                        startMonth={startMonth}
-                        endMonth={endMonth}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <FormControl className="col-span-3">
+                    <Input
+                      type="date"
+                      {...field}
+                      value={field.value ? format(field.value, 'yyyy-MM-dd') : ''}
+                      onChange={(e) => field.onChange(e.target.valueAsDate)}
+                    />
+                  </FormControl>
                   <FormMessage className="col-start-2 col-span-3" />
                 </FormItem>
               )}

@@ -4,9 +4,8 @@ import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { CalendarIcon, Upload, Trash2, File as FileIcon, Loader2 } from 'lucide-react';
+import { Upload, Trash2, File as FileIcon, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { nl } from 'date-fns/locale';
 import {
   collection,
   doc,
@@ -20,7 +19,6 @@ import {
   deleteObject,
 } from 'firebase/storage';
 
-import { cn } from '@/lib/utils';
 import { useFirestore, useFirebaseApp, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 
 import {
@@ -52,12 +50,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
+import { Input } from '@/components/ui/input';
 import { Progress } from './ui/progress';
 
 const damageFormSchema = z.object({
@@ -290,8 +283,6 @@ export function AddDamageDialog({
   };
   
   const isUploading = Object.keys(uploadProgress).length > 0;
-  const startMonth = new Date(2020, 0);
-  const endMonth = new Date(new Date().getFullYear() + 10, 11);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -313,37 +304,14 @@ export function AddDamageDialog({
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Datum</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={'outline'}
-                            className={cn(
-                              'w-full pl-3 text-left font-normal',
-                              !field.value && 'text-muted-foreground'
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, 'dd-MM-yyyy', { locale: nl })
-                            ) : (
-                              <span>Kies een datum</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          captionLayout="dropdown"
-                          startMonth={startMonth}
-                          endMonth={endMonth}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        {...field}
+                        value={field.value ? format(field.value, 'yyyy-MM-dd') : ''}
+                        onChange={(e) => field.onChange(e.target.valueAsDate)}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
