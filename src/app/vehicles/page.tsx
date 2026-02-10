@@ -15,6 +15,7 @@ import {
   Loader2,
   FileText,
   AlertCircle,
+  Wrench,
 } from 'lucide-react';
 import { collection, doc } from 'firebase/firestore';
 import { format } from 'date-fns';
@@ -41,6 +42,7 @@ import { AddVehicleDialog } from '@/components/add-vehicle-dialog';
 import { VehicleImageUploader } from '@/components/vehicle-image-uploader';
 import { AddDocumentDialog } from '@/components/add-document-dialog';
 import { ApkOverviewDialog } from '@/components/apk-overview-dialog';
+import { MaintenanceOverviewDialog } from '@/components/maintenance-overview-dialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { useProfile } from '@/firebase/profile-provider';
@@ -569,6 +571,7 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
 export default function MaterieelBeheerPage() {
   const [isImporting, setIsImporting] = React.useState(false);
   const [isApkDialogOpen, setIsApkDialogOpen] = React.useState(false);
+  const [isMaintenanceDialogOpen, setIsMaintenanceDialogOpen] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<MaterieelType>('voertuigen');
   const { profile } = useProfile();
 
@@ -593,6 +596,9 @@ export default function MaterieelBeheerPage() {
             <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => setIsApkDialogOpen(true)}>
                 <CalendarCheck className="mr-2 h-4 w-4" /> APK
+            </Button>
+            <Button variant="outline" onClick={() => setIsMaintenanceDialogOpen(true)}>
+                <Wrench className="mr-2 h-4 w-4" /> Onderhoud
             </Button>
             {canCreate && <AddVehicleDialog materieelType={activeTab}>
                 <Button>
@@ -623,6 +629,7 @@ export default function MaterieelBeheerPage() {
         </TabsContent>
       </Tabs>
       <ApkOverviewDialog open={isApkDialogOpen} onOpenChange={setIsApkDialogOpen} />
+      <MaintenanceOverviewDialog open={isMaintenanceDialogOpen} onOpenChange={setIsMaintenanceDialogOpen} />
     </div>
   );
 }
