@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "AppSettings": {
@@ -24,7 +23,11 @@
         "latitude": { "type": "number" },
         "longitude": { "type": "number" },
         "lastSeen": { "type": "string", "format": "date-time" },
-        "batteryLevel": { "type": "number" }
+        "batteryLevel": { "type": "number" },
+        "vulgraad": { "type": "number", "description": "Percentage gevuld (0-100)" },
+        "currentDistanceCm": { "type": "number", "description": "Laatst gemeten afstand in cm" },
+        "binDepthCm": { "type": "number", "description": "Totale diepte van de bak in cm voor kalibratie" },
+        "measurementFrequency": { "type": "number", "description": "Aantal metingen per 24 uur" }
       },
       "required": ["id", "name", "type", "status"]
     },

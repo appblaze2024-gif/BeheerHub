@@ -1,4 +1,3 @@
-
 export type UserPermissions = {
   [module: string]: {
     view?: boolean;
@@ -41,6 +40,10 @@ export interface Sensor {
   longitude: number;
   lastSeen?: string;
   batteryLevel?: number;
+  vulgraad?: number;
+  currentDistanceCm?: number;
+  binDepthCm?: number;
+  measurementFrequency?: number;
 }
 
 export interface Medewerker {

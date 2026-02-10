@@ -1,40 +1,35 @@
 'use client';
 
 import * as React from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageHeader } from '@/components/page-header';
 import { 
   Wifi, 
-  Database, 
   Cpu, 
   Plus, 
   MapPin, 
-  Battery, 
-  Activity, 
   Loader2, 
-  Signal, 
-  SignalLow, 
   Trash2, 
   MoreVertical, 
   Terminal, 
   Copy, 
   Check, 
-  ExternalLink, 
   Code2, 
   Info, 
   BookOpen, 
   Sparkles, 
   Send, 
   ArrowRight,
-  List
+  List,
+  Ruler,
+  Clock,
+  Battery
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFirestore, useCollection, deleteDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { MapboxView } from '@/components/mapbox-view';
 import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
-import { nl } from 'date-fns/locale';
 import { AddSensorDialog } from '@/components/add-sensor-dialog';
 import type { Sensor } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -61,6 +56,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { generateIoTCode } from '@/ai/flows/generate-iot-code-flow';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
+import { Progress } from '@/components/ui/progress';
 
 export default function IoTPage() {
   const firestore = useFirestore();
@@ -74,7 +70,6 @@ export default function IoTPage() {
   const [isGenerating, setIsGenerating] = React.useState(false);
   const [chatHistory, setChatHistory] = React.useState<{ role: 'user' | 'model', content: string }[]>([]);
   const [customCode, setCustomCode] = React.useState<string | null>(null);
-  const [aiExplanation, setAiExplanation] = React.useState<string | null>(null);
 
   const sensorsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -97,10 +92,10 @@ export default function IoTPage() {
 
   const getStatusBadge = (status: Sensor['status']) => {
     switch (status) {
-      case 'Online': return <Badge variant="outline" className="text-green-600 border-green-600 bg-green-50">Live</Badge>;
-      case 'Offline': return <Badge variant="destructive">Offline</Badge>;
-      case 'Batterij laag': return <Badge variant="outline" className="text-orange-600 border-orange-600 bg-orange-50">Accu Laag</Badge>;
-      default: return <Badge variant="secondary">{status}</Badge>;
+      case 'Online': return <Badge variant="outline" className="text-green-600 border-green-600 bg-green-50 text-[9px] h-4">Live</Badge>;
+      case 'Offline': return <Badge variant="destructive" className="text-[9px] h-4">Offline</Badge>;
+      case 'Batterij laag': return <Badge variant="outline" className="text-orange-600 border-orange-600 bg-orange-50 text-[9px] h-4">Accu</Badge>;
+      default: return <Badge variant="secondary" className="text-[9px] h-4">{status}</Badge>;
     }
   };
 
@@ -128,7 +123,6 @@ export default function IoTPage() {
       });
       
       setCustomCode(result.code);
-      setAiExplanation(result.explanation);
       setChatHistory([...newHistory, { role: 'model' as const, content: result.explanation }]);
       setAiPrompt('');
     } catch (error: any) {
@@ -146,15 +140,26 @@ export default function IoTPage() {
     ? `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/sensors/${selectedSensor.id}?key=${firebaseConfig.apiKey}`
     : '';
 
+  // Calculate delay based on frequency (default 24 metingen = 1 per uur = 3600000ms)
+  const frequency = selectedSensor?.measurementFrequency || 24;
+  const delayMs = Math.round((24 * 3600 * 1000) / frequency);
+  const binDepth = selectedSensor?.binDepthCm || 100;
+
   const defaultEsp32Code = selectedSensor ? `#include <WiFi.h>
 #include <HTTPClient.h>
 
+// WiFi Instellingen
 const char* ssid = "JOUW_WIFI_NAAM";
 const char* password = "JOUW_WIFI_WACHTWOORD";
 
+// Firebase/Firestore Configuratie
 const String projectId = "${firebaseConfig.projectId}";
 const String apiKey = "${firebaseConfig.apiKey}";
 const String sensorId = "${selectedSensor.id}";
+
+// Kalibratie voor bak: ${selectedSensor.name}
+const int BIN_DEPTH_CM = ${binDepth}; 
+const long FREQUENCY_DELAY_MS = ${delayMs}; // ${frequency} metingen per 24u
 
 void setup() {
   Serial.begin(115200);
@@ -167,16 +172,37 @@ void loop() {
   if (WiFi.status() == WL_CONNECTED) {
     HTTPClient http;
     String url = "https://firestore.googleapis.com/v1/projects/" + projectId + "/databases/(default)/documents/sensors/" + sensorId + "?key=" + apiKey;
+    
     http.begin(url);
     http.addHeader("Content-Type", "application/json");
     http.addHeader("X-HTTP-Method-Override", "PATCH");
     
-    // Voorbeeld data
-    String payload = "{\\"fields\\": {\\"status\\": {\\"stringValue\\": \\"Online\\"}, \\"batteryLevel\\": {\\"integerValue\\": \\"100\\"}}}";
+    // --- Meting ---
+    // Simuleer hier je ultrasoon meting:
+    int distanceCm = random(10, BIN_DEPTH_CM); 
+    
+    // Bereken vulgraad % (afstand 0cm = 100%, afstand BIN_DEPTH = 0%)
+    int vulgraad = map(distanceCm, 0, BIN_DEPTH_CM, 100, 0);
+    vulgraad = constrain(vulgraad, 0, 100);
+
+    // Bouw JSON payload
+    String payload = "{\\"fields\\": {";
+    payload += "\\"status\\": {\\"stringValue\\": \\"Online\\"},";
+    payload += "\\"vulgraad\\": {\\"integerValue\\": \\"" + String(vulgraad) + "\\"},";
+    payload += "\\"currentDistanceCm\\": {\\"integerValue\\": \\"" + String(distanceCm) + "\\"},";
+    payload += "\\"lastSeen\\": {\\"stringValue\\": \\"" + String(__DATE__) + " " + String(__TIME__) + "\\"}";
+    payload += "}}";
+
     int httpResponseCode = http.POST(payload);
+    
+    Serial.print("Data verstuurd. Code: ");
+    Serial.println(httpResponseCode);
+    
     http.end();
   }
-  delay(300000); 
+  
+  // Wacht tot de volgende meting
+  delay(FREQUENCY_DELAY_MS); 
 }` : '';
 
   const activeCode = customCode || defaultEsp32Code;
@@ -188,7 +214,7 @@ void loop() {
         description="Beheer hardware-koppelingen via unieke serienummers."
         className="p-0 mb-4"
       >
-        <Button onClick={() => setIsAddDialogOpen(true)}>
+        <Button onClick={() => setIsAddDialogOpen(true)} className="font-bold">
           <Plus className="mr-2 h-4 w-4" /> Nieuwe Sensor
         </Button>
       </PageHeader>
@@ -215,8 +241,10 @@ void loop() {
         <Card className="shadow-none border-slate-200">
           <CardContent className="p-3 flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Gateway Status</p>
-              <p className="text-xl font-black text-green-600">Online</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Gem. Vulgraad</p>
+              <p className="text-xl font-black text-green-600">
+                {sensors?.length ? Math.round(sensors.reduce((acc, s) => acc + (s.vulgraad || 0), 0) / sensors.length) : 0}%
+              </p>
             </div>
             <Wifi className="h-5 w-5 text-green-500" />
           </CardContent>
@@ -248,15 +276,21 @@ void loop() {
                     }}
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-xs truncate">{sensor.name}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <code className="text-[9px] bg-slate-100 px-1 rounded font-mono">{sensor.id}</code>
+                      <div className="flex justify-between items-start mb-1">
+                        <p className="font-bold text-xs truncate pr-2">{sensor.name}</p>
                         {getStatusBadge(sensor.status)}
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center justify-between">
+                          <code className="text-[9px] bg-slate-100 px-1 rounded font-mono text-muted-foreground">{sensor.id}</code>
+                          <span className="text-[10px] font-black">{sensor.vulgraad || 0}%</span>
+                        </div>
+                        <Progress value={sensor.vulgraad || 0} variant="gauge" className="h-1" />
                       </div>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="h-7 w-7"><MoreVertical className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0"><MoreVertical className="h-4 w-4" /></Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <AlertDialog>
@@ -283,7 +317,7 @@ void loop() {
               </div>
             ) : (
               <div className="text-center p-12 text-muted-foreground">
-                <SignalLow className="h-8 w-8 mx-auto mb-3 opacity-20" />
+                <List className="h-8 w-8 mx-auto mb-3 opacity-20" />
                 <p className="text-[10px] font-bold uppercase tracking-widest">Geen apparaten</p>
               </div>
             )}
@@ -297,7 +331,7 @@ void loop() {
               <div className="px-4 py-2 border-b bg-muted/10 flex items-center justify-between">
                 <TabsList className="h-8 bg-transparent gap-2">
                   <TabsTrigger value="map" className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 text-xs font-bold gap-2">
-                    <MapPin className="h-3 w-3" /> Kaart & API
+                    <MapPin className="h-3 w-3" /> Dashboard
                   </TabsTrigger>
                   <TabsTrigger value="code" className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 text-xs font-bold gap-2">
                     <Code2 className="h-3 w-3" /> ESP32 Arduino Code
@@ -312,39 +346,83 @@ void loop() {
                 </div>
               </div>
 
-              <TabsContent value="map" className="flex-1 m-0 relative">
-                <MapboxView 
-                  objects={sensors?.map(s => ({
-                    id: s.id,
-                    latitude: s.latitude,
-                    longitude: s.longitude,
-                    name: s.name,
-                    type: s.type
-                  }))}
-                  highlightedObject={selectedSensor ? { id: selectedSensor.id, latitude: selectedSensor.latitude, longitude: selectedSensor.longitude } : null}
-                />
-                <div className="absolute bottom-4 left-4 right-4 z-10">
-                    <Card className="bg-zinc-900/95 backdrop-blur text-zinc-100 border-none shadow-2xl overflow-hidden">
-                        <div className="bg-zinc-800 px-3 py-1.5 flex items-center justify-between border-b border-zinc-700">
-                            <p className="text-[9px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2">
-                                <Terminal className="h-3 w-3" /> REST API Endpoint
-                            </p>
-                            <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="h-6 text-[9px] text-zinc-400 hover:text-white"
-                                onClick={() => copyToClipboard(apiEndpoint)}
-                            >
-                                {copied ? <Check className="h-3 w-3 mr-1 text-green-500" /> : <Copy className="h-3 w-3 mr-1" />}
-                                Kopieer URL
-                            </Button>
+              <TabsContent value="map" className="flex-1 m-0 relative flex flex-col">
+                <div className="flex-1 relative">
+                  <MapboxView 
+                    objects={sensors?.map(s => ({
+                      id: s.id,
+                      latitude: s.latitude,
+                      longitude: s.longitude,
+                      name: s.name,
+                      type: s.type,
+                      vulgraad: s.vulgraad
+                    }))}
+                    highlightedObject={selectedSensor ? { id: selectedSensor.id, latitude: selectedSensor.latitude, longitude: selectedSensor.longitude } : null}
+                  />
+                  
+                  {/* Status Overlay */}
+                  <div className="absolute top-4 right-4 z-10 w-64 space-y-3">
+                    <Card className="bg-white/95 backdrop-blur shadow-xl border-slate-200 overflow-hidden">
+                      <div className="bg-slate-900 px-3 py-2 flex items-center justify-between">
+                        <p className="text-[10px] font-black text-white uppercase tracking-widest">Live Sensor Data</p>
+                        <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
+                      </div>
+                      <CardContent className="p-4 space-y-4">
+                        <div className="flex justify-between items-end">
+                          <div>
+                            <p className="text-[9px] font-black text-muted-foreground uppercase">Vulgraad</p>
+                            <p className="text-3xl font-black">{selectedSensor.vulgraad || 0}%</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-[9px] font-black text-muted-foreground uppercase">Afstand</p>
+                            <p className="text-sm font-bold text-slate-600">{selectedSensor.currentDistanceCm || 0} cm</p>
+                          </div>
                         </div>
-                        <CardContent className="p-3">
-                            <div className="bg-black/50 p-2 rounded font-mono text-[9px] break-all border border-zinc-800 text-green-400">
-                                PATCH {apiEndpoint}
+                        <Progress value={selectedSensor.vulgraad || 0} variant="gauge" className="h-2" />
+                        
+                        <div className="grid grid-cols-2 gap-2 pt-2 border-t">
+                          <div className="flex items-center gap-2">
+                            <Ruler className="h-3 w-3 text-slate-400" />
+                            <div>
+                              <p className="text-[8px] font-black text-muted-foreground uppercase">Bak Diepte</p>
+                              <p className="text-[10px] font-bold">{selectedSensor.binDepthCm || 100} cm</p>
                             </div>
-                        </CardContent>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-3 w-3 text-slate-400" />
+                            <div>
+                              <p className="text-[8px] font-black text-muted-foreground uppercase">Frequentie</p>
+                              <p className="text-[10px] font-bold">{selectedSensor.measurementFrequency || 24} / 24u</p>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
                     </Card>
+                  </div>
+
+                  <div className="absolute bottom-4 left-4 right-4 z-10">
+                      <Card className="bg-zinc-900/95 backdrop-blur text-zinc-100 border-none shadow-2xl overflow-hidden">
+                          <div className="bg-zinc-800 px-3 py-1.5 flex items-center justify-between border-b border-zinc-700">
+                              <p className="text-[9px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+                                  <Terminal className="h-3 w-3" /> REST API Endpoint
+                              </p>
+                              <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-6 text-[9px] text-zinc-400 hover:text-white"
+                                  onClick={() => copyToClipboard(apiEndpoint)}
+                              >
+                                  {copied ? <Check className="h-3 w-3 mr-1 text-green-500" /> : <Copy className="h-3 w-3 mr-1" />}
+                                  Kopieer URL
+                              </Button>
+                          </div>
+                          <CardContent className="p-3">
+                              <div className="bg-black/50 p-2 rounded font-mono text-[9px] break-all border border-zinc-800 text-green-400">
+                                  PATCH {apiEndpoint}
+                              </div>
+                          </CardContent>
+                      </Card>
+                  </div>
                 </div>
               </TabsContent>
 
@@ -357,8 +435,8 @@ void loop() {
                                 <BookOpen className="h-4 w-4 text-blue-400" />
                             </div>
                             <div>
-                                <h3 className="text-zinc-100 text-sm font-bold">C++ Sketch</h3>
-                                <p className="text-zinc-500 text-[10px]">Geconfigureerd voor project {firebaseConfig.projectId}</p>
+                                <h3 className="text-zinc-100 text-sm font-bold">C++ Sketch (Kalibratie actief)</h3>
+                                <p className="text-zinc-500 text-[10px]">Geconfigureerd voor bak-diepte: {binDepth}cm</p>
                             </div>
                         </div>
                         <Button 
@@ -391,7 +469,7 @@ void loop() {
                         {chatHistory.length === 0 ? (
                             <div className="text-center py-8">
                                 <Info className="h-8 w-8 text-zinc-700 mx-auto mb-3" />
-                                <p className="text-xs text-zinc-500 font-medium">Stel een vraag om de code aan te passen. Bijv: "Voeg een DHT11 temperatuursensor toe op pin 4."</p>
+                                <p className="text-xs text-zinc-500 font-medium">Pas de code aan. Bijv: "Stuur ook de batterijspanning mee als veld 'batteryLevel'."</p>
                             </div>
                         ) : (
                             <div className="space-y-4">
@@ -445,26 +523,18 @@ void loop() {
                         <ArrowRight className="h-4 w-4" />
                     </div>
                 </div>
-                <h3 className="text-xl font-black tracking-tight mb-2">Code & Integratie</h3>
+                <h3 className="text-xl font-black tracking-tight mb-2">Configureer & Monitor</h3>
                 <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-8">
-                    Selecteer een apparaat in de lijst links om de bijbehorende <strong>Arduino code</strong> en <strong>API-instellingen</strong> te bekijken.
+                    Selecteer een apparaat in de lijst links om de bijbehorende <strong>kalibratie</strong>, <strong>vulgraad</strong> en <strong>Arduino code</strong> te bekijken.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left max-w-lg">
                     <div className="p-4 rounded-lg border bg-slate-50 dark:bg-zinc-900/50">
                         <h4 className="text-xs font-bold uppercase mb-1 flex items-center gap-2"><Plus className="h-3 w-3 text-primary" /> Stap 1</h4>
-                        <p className="text-[11px] text-muted-foreground">Registreer je hardware met het unieke serienummer.</p>
+                        <p className="text-[11px] text-muted-foreground">Registreer je hardware en stel de diepte van de prullenbak in.</p>
                     </div>
                     <div className="p-4 rounded-lg border bg-slate-50 dark:bg-zinc-900/50">
                         <h4 className="text-xs font-bold uppercase mb-1 flex items-center gap-2"><List className="h-3 w-3 text-primary" /> Stap 2</h4>
-                        <p className="text-[11px] text-muted-foreground">Klik op de sensor in de lijst aan de linkerkant.</p>
-                    </div>
-                    <div className="p-4 rounded-lg border bg-slate-50 dark:bg-zinc-900/50">
-                        <h4 className="text-xs font-bold uppercase mb-1 flex items-center gap-2"><Code2 className="h-3 w-3 text-primary" /> Stap 3</h4>
-                        <p className="text-[11px] text-muted-foreground">Kopieer de gegenereerde C++ code naar je Arduino IDE.</p>
-                    </div>
-                    <div className="p-4 rounded-lg border bg-slate-50 dark:bg-zinc-900/50">
-                        <h4 className="text-xs font-bold uppercase mb-1 flex items-center gap-2"><Wifi className="h-3 w-3 text-primary" /> Stap 4</h4>
-                        <p className="text-[11px] text-muted-foreground">Upload de code en monitor de status live op de kaart.</p>
+                        <p className="text-[11px] text-muted-foreground">Monitor de vulgraad live op de kaart met kleur-indicatoren.</p>
                     </div>
                 </div>
             </div>
