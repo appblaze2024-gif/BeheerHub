@@ -17,6 +17,7 @@ import {
   Settings,
   User,
   FileWarning,
+  Cpu,
 } from 'lucide-react';
 import { ElementType } from 'react';
 
@@ -60,6 +61,7 @@ export const allMenuItems: MenuItem[] = [
     },
     { href: '/spec-reports', label: 'Besteksmeldingen', icon: FileWarning, module: 'specReports' },
     { href: '/navigation-module', label: 'Navigatiemodule', icon: Navigation, module: 'navigation' },
+    { href: '/iot', label: 'IoT', icon: Cpu, module: 'iot' },
     { href: '/mail', label: 'Mail', icon: Mail, module: 'mail' },
     { href: '/profile', label: 'Mijn Profiel', icon: User, module: 'users' },
     { href: '/settings', label: 'Instellingen', icon: Settings },

@@ -56,6 +56,7 @@ export const permissionConfig = [
     },
     { module: 'specReports', label: 'Besteksmeldingen', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }] },
     { module: 'navigation', label: 'Navigatiemodule', actions: [{ id: 'use', label: 'Gebruiken' }] },
+    { module: 'iot', label: 'IoT Integratie', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'use', label: 'Gebruiken' }] },
     { module: 'mail', label: 'Mail', actions: [{ id: 'use', label: 'Gebruiken' }] },
     { 
         module: 'users', 
