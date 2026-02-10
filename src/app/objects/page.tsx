@@ -1,5 +1,4 @@
-
-      'use client';
+'use client';
 
 import * as React from 'react';
 import {
@@ -40,7 +39,7 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { MapboxView } from '@/components/mapbox-view';
 import { ObjectImportDialog } from '@/components/object-import-dialog';
 import { ObjectExportDialog } from '@/components/object-export-dialog';
@@ -356,7 +355,7 @@ export default function ObjectsPage() {
                        </div>
                      </div>
                       <Button variant="ghost" size="icon" className="h-8 w-8">
-                         <MoreVertical className="h-4 w-4" />
+                         <MoreHorizontal className="h-4 w-4" />
                      </Button>
                    </div>
                  ))
@@ -457,6 +456,33 @@ export default function ObjectsPage() {
                              />
                          </div>
                      </div>
+
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label htmlFor="latitude" className="text-sm font-medium">
+                            Breedtegraad (Latitude)
+                            </label>
+                            <Input 
+                                id="latitude" 
+                                type="number"
+                                step="any"
+                                value={selectedObject.latitude || ''}
+                                onChange={(e) => handleUpdateField('latitude', parseFloat(e.target.value))}
+                            />
+                        </div>
+                        <div>
+                            <label htmlFor="longitude" className="text-sm font-medium">
+                            Lengtegraad (Longitude)
+                            </label>
+                            <Input 
+                                id="longitude" 
+                                type="number"
+                                step="any"
+                                value={selectedObject.longitude || ''}
+                                onChange={(e) => handleUpdateField('longitude', parseFloat(e.target.value))}
+                            />
+                        </div>
+                    </div>
  
                      <div>
                        <label htmlFor="object-id" className="text-sm font-medium">
@@ -606,5 +632,3 @@ export default function ObjectsPage() {
     </div>
   );
 }
-
-    
