@@ -9,6 +9,12 @@ import {
   Download,
   File as FileIcon,
   CalendarCheck,
+  ArrowLeft,
+  Pencil,
+  Trash2,
+  Loader2,
+  FileText,
+  AlertCircle,
 } from 'lucide-react';
 import { collection, doc } from 'firebase/firestore';
 import { format } from 'date-fns';
@@ -26,6 +32,7 @@ import {
   useCollection,
   useFirestore,
   useMemoFirebase,
+  deleteDocumentNonBlocking,
 } from '@/firebase';
 import { VehicleImportDialog } from '@/components/vehicle-import-dialog';
 import { AddMaintenanceDialog } from '@/components/add-maintenance-dialog';
@@ -36,8 +43,26 @@ import { AddDocumentDialog } from '@/components/add-document-dialog';
 import { ApkOverviewDialog } from '@/components/apk-overview-dialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, Pencil } from 'lucide-react';
 import { useProfile } from '@/firebase/profile-provider';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type MaterieelType = 'voertuigen' | 'machines';
 
@@ -139,6 +164,12 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
     setIsVehicleDialogOpen(true);
   };
   
+  const handleDeleteMaintenance = (id: string) => {
+    if (!firestore || !selectedItem) return;
+    const ref = doc(firestore, collectionName, selectedItem.id, 'maintenance', id);
+    deleteDocumentNonBlocking(ref);
+  };
+
   const idLabel = materieelType === 'voertuigen' ? 'Kenteken' : 'ID';
   const numberLabel = materieelType === 'voertuigen' ? 'Voertuignummer' : 'Machinenummer';
   const numberField = materieelType === 'voertuigen' ? 'voertuignummer' : 'machinenummer';
@@ -333,7 +364,7 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                   {canViewTab('documents') && <TabsTrigger value="documents">Documenten</TabsTrigger>}
                 </TabsList>
                 
-                {canViewTab('maintenance') && <TabsContent value="maintenance" className="h-full mt-4">
+                {canViewTab('maintenance') && <TabsContent value="maintenance" className="flex-1 mt-4">
                    <Card className="h-full flex flex-col">
                     <CardHeader className="flex-row items-center justify-between">
                       <CardTitle>Onderhoud</CardTitle>
@@ -344,11 +375,58 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                         </Button>
                       </AddMaintenanceDialog>}
                     </CardHeader>
-                    {/* Maintenance content here */}
+                    <CardContent className="flex-1 overflow-auto">
+                      <Table>
+                        <TableHeader className="bg-muted/50 sticky top-0 z-10">
+                          <TableRow>
+                            <TableHead>Datum</TableHead>
+                            <TableHead>Omschrijving</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead className="text-right">Kosten</TableHead>
+                            <TableHead className="w-[50px]"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {maintenanceLoading ? (
+                            <TableRow><TableCell colSpan={5} className="text-center py-10"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
+                          ) : maintenance && maintenance.length > 0 ? (
+                            maintenance.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((item: any) => (
+                              <TableRow key={item.id} className="group">
+                                <TableCell>{format(new Date(item.date), 'dd-MM-yyyy')}</TableCell>
+                                <TableCell className="font-medium">{item.description}</TableCell>
+                                <TableCell>{item.type}</TableCell>
+                                <TableCell className="text-right">€ {Number(item.cost || 0).toLocaleString('nl-NL', { minimumFractionDigits: 2 })}</TableCell>
+                                <TableCell>
+                                  {canDelete && (
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="h-4 w-4" /></Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
+                                          <AlertDialogDescription>Deze actie kan niet ongedaan worden gemaakt. Dit zal het onderhoudsrecord permanent verwijderen.</AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => handleDeleteMaintenance(item.id)}>Doorgaan</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground">Geen onderhoudshistorie gevonden.</TableCell></TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
                   </Card>
                 </TabsContent>}
 
-                {canViewTab('damages') && <TabsContent value="damages" className="h-full mt-4">
+                {canViewTab('damages') && <TabsContent value="damages" className="flex-1 mt-4">
                   <Card className="h-full flex flex-col">
                     <CardHeader className="flex-row items-center justify-between">
                       <CardTitle>Schade</CardTitle>
@@ -357,11 +435,53 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                         Schade melden
                       </Button>}
                     </CardHeader>
-                    {/* Damages content here */}
+                    <CardContent className="flex-1 overflow-auto">
+                      <Table>
+                        <TableHeader className="bg-muted/50 sticky top-0 z-10">
+                          <TableRow>
+                            <TableHead>Datum</TableHead>
+                            <TableHead>Omschrijving</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-center">Bestanden</TableHead>
+                            <TableHead className="w-[50px]"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {damagesLoading ? (
+                            <TableRow><TableCell colSpan={5} className="text-center py-10"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
+                          ) : damages && damages.length > 0 ? (
+                            damages.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((item: any) => (
+                              <TableRow key={item.id} className="group cursor-pointer hover:bg-muted/30" onClick={() => handleEditDamage(item)}>
+                                <TableCell>{format(new Date(item.date), 'dd-MM-yyyy')}</TableCell>
+                                <TableCell className="font-medium truncate max-w-xs">{item.description}</TableCell>
+                                <TableCell>
+                                  <Badge variant={item.status === 'Afgehandeld' ? 'outline' : 'secondary'}>
+                                    {item.status || 'Open'}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  {item.files?.length > 0 ? (
+                                    <div className="flex items-center justify-center gap-1 text-muted-foreground">
+                                      <FileIcon className="h-4 w-4" />
+                                      <span className="text-xs">{item.files.length}</span>
+                                    </div>
+                                  ) : '-'}
+                                </TableCell>
+                                <TableCell>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="h-4 w-4" /></Button>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground">Geen schademeldingen gevonden.</TableCell></TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
                   </Card>
                 </TabsContent>}
 
-                {canViewTab('documents') && <TabsContent value="documents" className="h-full mt-4">
+                {canViewTab('documents') && <TabsContent value="documents" className="flex-1 mt-4">
                   <Card className="h-full flex flex-col">
                     <CardHeader className="flex-row items-center justify-between">
                       <CardTitle>Documenten</CardTitle>
@@ -370,7 +490,45 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                         Document toevoegen
                       </Button>}
                     </CardHeader>
-                    {/* Documents content here */}
+                    <CardContent className="flex-1 overflow-auto">
+                      <Table>
+                        <TableHeader className="bg-muted/50 sticky top-0 z-10">
+                          <TableRow>
+                            <TableHead>Titel</TableHead>
+                            <TableHead>Omschrijving</TableHead>
+                            <TableHead>Toegevoegd op</TableHead>
+                            <TableHead className="text-center">Bestanden</TableHead>
+                            <TableHead className="w-[50px]"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {documentsLoading ? (
+                            <TableRow><TableCell colSpan={5} className="text-center py-10"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
+                          ) : documents && documents.length > 0 ? (
+                            documents.sort((a: any, b: any) => new Date(b.updatedAt?.seconds * 1000 || 0).getTime() - new Date(a.updatedAt?.seconds * 1000 || 0).getTime()).map((item: any) => (
+                              <TableRow key={item.id} className="group cursor-pointer hover:bg-muted/30" onClick={() => handleEditDocument(item)}>
+                                <TableCell className="font-medium">{item.title}</TableCell>
+                                <TableCell className="text-muted-foreground truncate max-w-xs">{item.description || '-'}</TableCell>
+                                <TableCell>{item.updatedAt ? format(new Date(item.updatedAt.seconds * 1000), 'dd-MM-yyyy') : '-'}</TableCell>
+                                <TableCell className="text-center">
+                                  {item.files?.length > 0 ? (
+                                    <div className="flex items-center justify-center gap-1 text-muted-foreground">
+                                      <FileIcon className="h-4 w-4" />
+                                      <span className="text-xs">{item.files.length}</span>
+                                    </div>
+                                  ) : '-'}
+                                </TableCell>
+                                <TableCell>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="h-4 w-4" /></Button>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          ) : (
+                            <TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground">Geen documenten gevonden.</TableCell></TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
                   </Card>
                 </TabsContent>}
               </Tabs>
