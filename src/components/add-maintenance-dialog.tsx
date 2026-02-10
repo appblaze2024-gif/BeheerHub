@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -6,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { CalendarIcon } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, startOfMonth } from 'date-fns';
 import { nl } from 'date-fns/locale';
 
 import { cn } from '@/lib/utils';
@@ -103,6 +102,9 @@ export function AddMaintenanceDialog({
     }
   };
 
+  const startMonth = new Date(2020, 0);
+  const endMonth = new Date(new Date().getFullYear() + 10, 11);
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
@@ -168,9 +170,9 @@ export function AddMaintenanceDialog({
                         mode="single"
                         selected={field.value}
                         onSelect={field.onChange}
-                        captionLayout="dropdown-buttons"
-                        fromDate={new Date(2000, 0, 1)}
-                        toDate={new Date(new Date().getFullYear() + 10, 11, 31)}
+                        captionLayout="dropdown"
+                        startMonth={startMonth}
+                        endMonth={endMonth}
                         initialFocus
                       />
                     </PopoverContent>

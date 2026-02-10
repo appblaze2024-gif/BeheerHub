@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -291,6 +290,8 @@ export function AddDamageDialog({
   };
   
   const isUploading = Object.keys(uploadProgress).length > 0;
+  const startMonth = new Date(2020, 0);
+  const endMonth = new Date(new Date().getFullYear() + 10, 11);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -336,9 +337,9 @@ export function AddDamageDialog({
                           mode="single"
                           selected={field.value}
                           onSelect={field.onChange}
-                          captionLayout="dropdown-buttons"
-                          fromDate={new Date(2000, 0, 1)}
-                          toDate={new Date(new Date().getFullYear() + 10, 11, 31)}
+                          captionLayout="dropdown"
+                          startMonth={startMonth}
+                          endMonth={endMonth}
                           initialFocus
                         />
                       </PopoverContent>

@@ -1059,6 +1059,8 @@ export default function WorkPlanningPage() {
     return filteredEquipment;
   }, [allEquipment, selectedDay, unavailableVehicles, availableVehicles]);
 
+  const startMonth = new Date(new Date().getFullYear(), new Date().getMonth());
+  const endMonth = new Date(new Date().getFullYear() + 5, 11);
 
   return (
     <div className="flex flex-col flex-1 h-full min-h-0" id="planning-container">
@@ -1101,9 +1103,9 @@ export default function WorkPlanningPage() {
                     mode="single"
                     selected={currentDate}
                     onSelect={(date) => date && setCurrentDate(date)}
-                    captionLayout="dropdown-buttons"
-                    fromYear={2020}
-                    toYear={new Date().getFullYear() + 5}
+                    captionLayout="dropdown"
+                    startMonth={startMonth}
+                    endMonth={endMonth}
                     initialFocus
                     locale={nl}
                 />
