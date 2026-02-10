@@ -3,16 +3,14 @@
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { PageHeader } from '@/components/page-header';
-import { Cpu, Wifi, Database, Info, Copy, Check, Loader2 } from 'lucide-react';
+import { Cpu, Wifi, Database, Info, Copy, Check, Loader2, Sparkles, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { firebaseConfig } from '@/firebase/config';
+import { Textarea } from '@/components/ui/textarea';
+import { generateIoTCode } from '@/ai/flows/generate-iot-code-flow';
 
-export default function IoTPage() {
-  const { toast } = useToast();
-  const [copied, setCopied] = React.useState(false);
-
-  const esp32Code = `
+const DEFAULT_CODE = `
 #include <WiFi.h>
 #include <HTTPClient.h>
 
@@ -67,14 +65,58 @@ void loop() {
   // Wacht 5 minuten voor de volgende meting
   delay(300000);
 }
-  `;
+`;
+
+export default function IoTPage() {
+  const { toast } = useToast();
+  const [copied, setCopied] = React.useState(false);
+  const [userPrompt, setUserPrompt] = React.useState('');
+  const [isGenerating, setIsGenerating] = React.useState(false);
+  const [generatedCode, setGeneratedCode] = React.useState(DEFAULT_CODE.trim());
+  const [explanation, setExplanation] = React.useState('Dit is een standaard voorbeeld om een prullenbak-sensor te simuleren.');
+
+  const handleGenerateCode = async () => {
+    if (!userPrompt.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Lege vraag",
+        description: "Stel eerst een vraag over de gewenste functionaliteit.",
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const result = await generateIoTCode({
+        prompt: userPrompt,
+        projectId: firebaseConfig.projectId,
+        apiKey: firebaseConfig.apiKey,
+      });
+      
+      setGeneratedCode(result.code.trim());
+      setExplanation(result.explanation);
+      toast({
+        title: "Code gegenereerd",
+        description: "De ESP32 code is bijgewerkt op basis van je vraag.",
+      });
+    } catch (error) {
+      console.error("Fout bij genereren code:", error);
+      toast({
+        variant: "destructive",
+        title: "Fout",
+        description: "Er is een fout opgetreden bij het genereren van de code.",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(esp32Code.trim());
+    navigator.clipboard.writeText(generatedCode);
     setCopied(true);
     toast({
       title: "Gekopieerd",
-      description: "ESP32 codevoorbeeld gekopieerd naar klembord.",
+      description: "ESP32 code gekopieerd naar klembord.",
     });
     setTimeout(() => setCopied(false), 2000);
   };
@@ -82,8 +124,8 @@ void loop() {
   return (
     <div className="flex flex-col flex-1 p-6 min-h-0 bg-background">
       <PageHeader 
-        title="IoT Dashboard & Integratie" 
-        description="Beheer je slimme sensoren en koppel nieuwe hardware zoals de ESP32."
+        title="IoT Dashboard & AI Integratie" 
+        description="Beheer je sensoren en gebruik AI om direct werkende code voor je ESP32 te schrijven."
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
@@ -122,51 +164,91 @@ void loop() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">Online</p>
-            <p className="text-xs text-muted-foreground">IoT Gateway is operationeel</p>
+            <p className="text-xs text-muted-foreground">AI Gateway is operationeel</p>
           </CardContent>
         </Card>
       </div>
 
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Cpu className="h-5 w-5 text-primary" />
-            ESP32 Integratie Gids
-          </CardTitle>
-          <CardDescription>
-            Gebruik de onderstaande C++ code om je ESP32 te programmeren. Deze code is al geconfigureerd met de API-sleutels voor dit project.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg flex items-start gap-3 border border-blue-100">
-            <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
-            <div className="text-sm text-blue-800 dark:text-blue-300">
-              <p className="font-bold mb-1">Hoe dit werkt:</p>
-              <ul className="list-disc ml-4 space-y-1">
-                <li>Installeer de Arduino IDE en voeg ESP32 ondersteuning toe.</li>
-                <li>Zorg dat de <strong>HTTPClient</strong> en <strong>WiFi</strong> bibliotheken zijn geïnstalleerd.</li>
-                <li>Vervang de WiFi gegevens in de code hieronder.</li>
-                <li>De ESP32 zal via de Google Firestore REST API direct waarden (zoals de vulgraad) in de database aanpassen.</li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="relative">
-            <pre className="bg-slate-950 text-slate-50 p-4 rounded-lg overflow-x-auto text-xs font-mono leading-relaxed max-h-[400px]">
-              {esp32Code.trim()}
-            </pre>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-6 min-h-0">
+        <Card className="flex flex-col">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Vraag het aan de IoT-Assistent
+            </CardTitle>
+            <CardDescription>
+              Stel een vraag over wat je ESP32 moet doen. De AI schrijft de code voor je, inclusief de juiste Firebase-koppelingen.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex-1 flex flex-col gap-4">
+            <Textarea 
+              placeholder="Bijv: Maak een programma dat elke 10 minuten de batterijspanning van een sensor stuurt naar object ID 'BAT-01'..."
+              className="flex-1 min-h-[150px] resize-none"
+              value={userPrompt}
+              onChange={(e) => setUserPrompt(e.target.value)}
+            />
             <Button 
-              variant="secondary" 
-              size="sm" 
-              className="absolute top-2 right-2"
-              onClick={handleCopy}
+              onClick={handleGenerateCode} 
+              disabled={isGenerating || !userPrompt.trim()}
+              className="w-full h-12"
             >
-              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-              <span className="ml-2">{copied ? 'Gekopieerd' : 'Kopieer code'}</span>
+              {isGenerating ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Code genereren...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-5 w-5" />
+                  Genereer ESP32 Code
+                </>
+              )}
             </Button>
-          </div>
-        </CardContent>
-      </Card>
+
+            {explanation && (
+              <div className="bg-muted p-4 rounded-lg border">
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-2">
+                  <Info className="h-3 w-3" />
+                  Uitleg
+                </p>
+                <p className="text-sm leading-relaxed">
+                  {explanation}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="flex flex-col">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Cpu className="h-5 w-5 text-primary" />
+                Gegenereerde C++ Code
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleCopy}
+                className="h-8"
+              >
+                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                <span className="ml-2">{copied ? 'Gekopieerd' : 'Kopieer'}</span>
+              </Button>
+            </CardTitle>
+            <CardDescription>
+              Plak deze code in de Arduino IDE. WiFi-gegevens moeten nog handmatig worden ingevuld.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex-1 min-h-0">
+            <div className="relative h-full">
+              <pre className="absolute inset-0 bg-slate-950 text-slate-50 p-4 rounded-lg overflow-auto text-[11px] font-mono leading-relaxed border-2 border-slate-800">
+                {generatedCode}
+              </pre>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
