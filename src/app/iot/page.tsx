@@ -14,6 +14,7 @@ import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { AddSensorDialog } from '@/components/add-sensor-dialog';
 import type { Sensor } from '@/lib/types';
+import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
