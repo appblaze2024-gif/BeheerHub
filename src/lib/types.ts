@@ -32,6 +32,17 @@ export type UserProfile = {
   nfcTagId?: string;
 };
 
+export interface Sensor {
+  id: string;
+  name: string;
+  type: 'Vulgraad' | 'Temperatuur' | 'Luchtkwaliteit' | 'GPS Tracker' | 'Waterpeil';
+  status: 'Online' | 'Offline' | 'Batterij laag' | 'Onderhoud';
+  latitude: number;
+  longitude: number;
+  lastSeen?: string;
+  batteryLevel?: number;
+}
+
 export interface Medewerker {
   id: string;
   voornaam?: string;
@@ -294,5 +305,3 @@ export interface Route {
   skippedObjects?: string[];
   totalObjects?: number;
 }
-
-    

@@ -12,6 +12,22 @@
             }
         }
     },
+    "Sensor": {
+      "title": "Sensor",
+      "type": "object",
+      "description": "Represents an IoT sensor device.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["Vulgraad", "Temperatuur", "Luchtkwaliteit", "GPS Tracker", "Waterpeil"] },
+        "status": { "type": "string", "enum": ["Online", "Offline", "Batterij laag", "Onderhoud"] },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "lastSeen": { "type": "string", "format": "date-time" },
+        "batteryLevel": { "type": "number" }
+      },
+      "required": ["id", "name", "type", "status"]
+    },
     "Folder": {
         "title": "Folder",
         "type": "object",
@@ -285,338 +301,6 @@
         }
       }
     },
-    "Revenue": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Revenue",
-      "type": "object",
-      "description": "Represents a single revenue stream.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the revenue entry."
-        },
-        "date": {
-          "type": "string",
-          "description": "Date the revenue was received.",
-          "format": "date-time"
-        },
-        "amount": {
-          "type": "number",
-          "description": "The amount of revenue received."
-        },
-        "description": {
-          "type": "string",
-          "description": "Description of the revenue source."
-        }
-      },
-      "required": [
-        "id",
-        "date",
-        "amount"
-      ]
-    },
-    "Expense": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Expense",
-      "type": "object",
-      "description": "Represents a single expense.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the expense entry."
-        },
-        "date": {
-          "type": "string",
-          "description": "Date the expense was incurred.",
-          "format": "date-time"
-        },
-        "amount": {
-          "type": "number",
-          "description": "The amount of the expense."
-        },
-        "description": {
-          "type": "string",
-          "description": "Description of the expense."
-        }
-      },
-      "required": [
-        "id",
-        "date",
-        "amount"
-      ]
-    },
-    "Appointment": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Appointment",
-      "type": "object",
-      "description": "Represents a scheduled appointment.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the appointment."
-        },
-        "onderwerp": {
-          "type": "string",
-          "description": "Subject of the appointment."
-        },
-        "datum": {
-          "type": "string",
-          "format": "date",
-          "description": "Date of the appointment."
-        },
-        "tijd": {
-          "type": "string",
-          "format": "time",
-          "description": "Time of the appointment."
-        },
-        "notities": {
-          "type": "string",
-          "description": "Notes for the appointment."
-        }
-      },
-      "required": [
-        "id",
-        "onderwerp",
-        "datum",
-        "tijd"
-      ]
-    },
-    "OrganisatieContact": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "OrganisatieContact",
-      "type": "object",
-      "description": "Represents a contact person in the organization for a project.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the contact."
-        },
-        "naam": {
-          "type": "string",
-          "description": "Name of the contact person."
-        },
-        "rol": {
-          "type": "string",
-          "description": "Role of the contact person in the project."
-        },
-        "bedrijf": {
-          "type": "string",
-          "description": "Company of the contact person."
-        },
-        "telefoon": {
-          "type": "string",
-          "description": "Phone number of the contact person."
-        },
-        "email": {
-          "type": "string",
-          "format": "email",
-          "description": "Email address of the contact person."
-        },
-        "wijk": {
-          "type": "string",
-          "description": "The district the contact is associated with."
-        }
-      },
-      "required": [
-        "id",
-        "naam",
-        "rol"
-      ]
-    },
-    "Medewerker": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Medewerker",
-      "type": "object",
-      "description": "Represents an employee in the system.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the employee."
-        },
-        "voornaam": {
-          "type": "string",
-          "description": "First name of the employee."
-        },
-        "tussenvoegsel": {
-          "type": "string",
-          "description": "Middle name prefix of the employee."
-        },
-        "achternaam": {
-          "type": "string",
-          "description": "Last name of the employee."
-        },
-        "email": {
-          "type": "string",
-          "format": "email",
-          "description": "Email address of the employee."
-        },
-        "telefoonnummer": {
-            "type": "string"
-        },
-        "mobiel": {
-            "type": "string"
-        },
-        "noodnummer": {
-            "type": "string"
-        },
-        "geboortedatum": {
-            "type": "string",
-            "format": "date"
-        },
-        "geboorteplaats": {
-            "type": "string"
-        },
-        "nationaliteit": {
-            "type": "string"
-        },
-        "bsn": {
-            "type": "string"
-        },
-        "adres": {
-            "type": "string"
-        },
-        "postcode": {
-            "type": "string"
-        },
-        "plaats": {
-            "type": "string"
-        },
-        "paspoortnummer": {
-            "type": "string"
-        },
-        "bankrekening": {
-            "type": "string"
-        },
-        "personeelsnummer": {
-            "type": "string"
-        },
-        "taal": {
-          "type": "string",
-          "description": "Preferred language of the employee."
-        },
-        "functie": {
-          "type": "string",
-          "description": "Job title of the employee."
-        },
-        "status": {
-          "type": "string",
-          "description": "Current status of the employee (e.g., 'Actief', 'Inactief').",
-          "enum": ["Actief", "Inactief", "Niet uitgenodigd"]
-        },
-        "avatarUrl": {
-          "type": "string",
-          "format": "uri",
-          "description": "URL of the employee's avatar image."
-        },
-        "lastUsedDienstColor": {
-          "type": "string",
-          "description": "The last custom color used for a 'Dienst' (shift)."
-        },
-        "planningOrder": {
-          "type": "number",
-          "description": "Custom order for display in planning views."
-        }
-      },
-      "required": ["voornaam", "achternaam"]
-    },
-     "Dienst": {
-      "title": "Dienst",
-      "type": "object",
-      "description": "Represents a single shift or service for an employee on a project.",
-      "properties": {
-        "id": { "type": "string" },
-        "medewerkerId": { "type": "string" },
-        "projectId": { "type": "string" },
-        "werksoort": { "type": "string" },
-        "boekingregelId": { "type": "string" },
-        "starttijd": { "type": "string", "format": "time" },
-        "eindtijd": { "type": "string", "format": "time" },
-        "datum": { "type": "string", "format": "date" },
-        "onbetaaldePauze": { "type": "number", "description": "Unpaid break in minutes." },
-        "verbergEindtijd": { "type": "boolean" },
-        "herhaalDienst": { "type": "boolean" },
-        "goedkeuringVereist": { "type": "boolean" },
-        "informeerMedewerkers": { "type": "boolean" },
-        "voertuigId": { "type": ["string", "null"] },
-        "goedkeuringStatus": {
-          "type": "string",
-          "enum": ["In behandeling", "Goedgekeurd", "Afgekeurd"],
-          "description": "The approval status of the shift, especially for leave requests."
-        }
-      },
-      "required": ["medewerkerId", "projectId", "boekingregelId", "starttijd", "eindtijd", "datum"]
-    },
-    "Melding": {
-      "title": "Melding",
-      "type": "object",
-      "description": "Represents an issue or report (melding).",
-      "properties": {
-        "id": { "type": "string" },
-        "intakenummer": { "type": "string" },
-        "datum": { "type": "string", "format": "date" },
-        "tijdstip": { "type": "string", "format": "time" },
-        "melder": { "type": "string" },
-        "aangenomen_door": { "type": "string" },
-        "extern_meldingsnummer": { "type": "string" },
-        "latitude": { "type": "number" },
-        "longitude": { "type": "number" },
-        "hoofdcategorie": { "type": "string" },
-        "subcategorie": { "type": "string" },
-        "straatnaam": { "type": "string" },
-        "postcode": { "type": "string" },
-        "plaats": { "type": "string" },
-        "wijk": { "type": "string" },
-        "werkgebied": { "type": "string" },
-        "extra_informatie": { "type": "string" },
-        "afhandeling_bijzonderheden": { "type": "string" },
-        "afhandeling_fotos": {
-          "type": "array",
-          "items": { "$ref": "#/backend/entities/Bestand" }
-        },
-        "files": {
-          "type": "array",
-          "items": { "$ref": "#/backend/entities/Bestand" }
-        },
-        "fotos": {
-          "type": "array",
-          "items": { "$ref": "#/backend/entities/Bestand" }
-        },
-        "status": {
-          "type": "string",
-          "enum": [
-            "Nieuw",
-            "Intern doorgezet",
-            "In behandeling",
-            "Gepland op korte termijn",
-            "Gepland op langere termijn",
-            "Dubbel gemeld",
-            "Afgerond",
-            "Niet in beheer"
-          ]
-        },
-        "afhandeling_datum": { "type": "string", "format": "date" },
-        "afhandeling_tijdstip": { "type": "string", "format": "time" },
-        "afgehandeld_door": { "type": "string" },
-        "tasks": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": { "type": "string" },
-              "description": { "type": "string" },
-              "completed": { "type": "boolean" }
-            },
-            "required": ["id", "description"]
-          }
-        },
-        "workStartedAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Timestamp when work on the melding was started."
-        }
-      },
-      "required": ["id", "intakenummer", "datum", "tijdstip", "latitude", "longitude", "status", "hoofdcategorie", "subcategorie"]
-    },
     "UserProfile": {
       "title": "UserProfile",
       "type": "object",
@@ -642,7 +326,7 @@
           "description": "The user's last name."
         },
         "sidebarCollapsed": {
-          "type": "boolean",
+          "boolean": "description",
           "description": "User's preference for the sidebar state."
         },
         "role": {
@@ -702,6 +386,17 @@
   },
   "firestore": {
     "structure": [
+      {
+        "path": "/sensors/{sensorId}",
+        "definition": {
+          "entityName": "Sensor",
+          "schema": { "$ref": "#/backend/entities/Sensor" },
+          "description": "Stores IoT sensor data.",
+          "params": [
+            { "name": "sensorId", "description": "The unique ID of the sensor." }
+          ]
+        }
+      },
       {
         "path": "/settings/{docId}",
         "definition": {
@@ -782,30 +477,6 @@
           ]
         }
       },
-       {
-        "path": "/projects/{projectId}/diensten/{dienstId}",
-        "definition": {
-          "entityName": "Dienst",
-          "schema": { "$ref": "#/backend/entities/Dienst" },
-          "description": "Stores all shifts for a specific project.",
-          "params": [
-            { "name": "projectId", "description": "The ID of the project." },
-            { "name": "dienstId", "description": "The ID of the shift." }
-          ]
-        }
-      },
-      {
-        "path": "/projects/{projectId}/boekingregels/{boekingregelId}",
-        "definition": {
-          "entityName": "Boekingregel",
-          "schema": { "$ref": "#/backend/entities/Boekingregel" },
-          "description": "Stores all booking rules for a specific project.",
-          "params": [
-            { "name": "projectId", "description": "The ID of the project." },
-            { "name": "boekingregelId", "description": "The ID of the booking rule." }
-          ]
-        }
-      },
       {
         "path": "/projects/{projectId}/bestanden/{bestandId}",
         "definition": {
@@ -847,46 +518,6 @@
         }
       },
       {
-        "path": "/projects/{projectId}/afspraken/{afspraakId}",
-        "definition": {
-          "entityName": "Appointment",
-          "schema": {
-            "$ref": "#/backend/entities/Appointment"
-          },
-          "description": "Stores appointments for a specific project.",
-          "params": [
-            {
-              "name": "projectId",
-              "description": "The ID of the project."
-            },
-            {
-              "name": "afspraakId",
-              "description": "The ID of the appointment."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/projects/{projectId}/organisatie/{contactId}",
-        "definition": {
-          "entityName": "OrganisatieContact",
-          "schema": {
-            "$ref": "#/backend/entities/OrganisatieContact"
-          },
-          "description": "Stores contact persons for a specific project.",
-          "params": [
-            {
-              "name": "projectId",
-              "description": "The ID of the project."
-            },
-            {
-              "name": "contactId",
-              "description": "The ID of the contact."
-            }
-          ]
-        }
-      },
-      {
         "path": "/medewerkers/{medewerkerId}",
         "definition": {
             "entityName": "Medewerker",
@@ -918,70 +549,7 @@
             { "name": "meldingId", "description": "The ID of the issue." }
           ]
         }
-      },
-      {
-        "path": "/users/{userId}/revenues/{revenueId}",
-        "definition": {
-          "entityName": "Revenue",
-          "schema": {
-            "$ref": "#/backend/entities/Revenue"
-          },
-          "description": "Stores revenue data for a specific user. Path-based ownership ensures only the user can access their revenue data.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The ID of the user who owns the revenue data."
-            },
-            {
-              "name": "revenueId",
-              "description": "The ID of the revenue entry."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/expenses/{expenseId}",
-        "definition": {
-          "entityName": "Expense",
-          "schema": {
-            "$ref": "#/backend/entities/Expense"
-          },
-          "description": "Stores expense data for a specific user. Path-based ownership ensures only the user can access their expense data.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The ID of the user who owns the expense data."
-            },
-            {
-              "name": "expenseId",
-              "description": "The ID of the expense entry."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/appointments/{appointmentId}",
-        "definition": {
-          "entityName": "Appointment",
-          "schema": {
-            "$ref": "#/backend/entities/Appointment"
-          },
-          "description": "Stores appointment data for a specific user. Path-based ownership ensures only the user can access their appointment data.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The ID of the user who owns the appointment data."
-            },
-            {
-              "name": "appointmentId",
-              "description": "The ID of the appointment entry."
-            }
-          ]
-        }
       }
-    ],
-    "reasoning": "The Firestore structure is designed to provide a secure and scalable foundation for the BizBoard application, focusing on clear ownership and authorization. Each user's data (revenues, expenses, and appointments) is stored under their respective user ID, ensuring data isolation and simplified security rules. This design avoids complex queries and `get()` calls in security rules, which aligns with the principles of Authorization Independence and facilitates easier debugging. The use of path-based ownership `/users/{userId}/revenues/{revenueId}` makes it straightforward to implement security rules that grants access only to the owner of the data.\\n\\n*   **Authorization Independence:** Achieved by structuring data under user-specific paths, eliminating the need for `get()` calls to parent documents for authorization. All data needed for authorization is implicitly available in the path.\\n*   **QAPs:** Secure list operations are supported by the path-based ownership model. Listing revenues, expenses, or appointments is always scoped to a specific user, preventing unauthorized access to other users' data.\\n\\nBy adhering to these principles, the data structure promotes a maintainable and secure application."
+    ]
   }
 }
-
-    
