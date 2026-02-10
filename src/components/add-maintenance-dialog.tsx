@@ -105,22 +105,22 @@ export function AddMaintenanceDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
           <DialogTitle>Onderhoud Toevoegen</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
             <FormField
               control={form.control}
               name="description"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Omschrijving</FormLabel>
-                  <FormControl>
+                <FormItem className="grid grid-cols-4 items-center gap-4 space-y-0">
+                  <FormLabel className="text-right">Omschrijving</FormLabel>
+                  <FormControl className="col-span-3">
                     <Input placeholder="Bijv. Grote beurt" {...field} />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="col-start-2 col-span-3" />
                 </FormItem>
               )}
             />
@@ -128,88 +128,90 @@ export function AddMaintenanceDialog({
               control={form.control}
               name="type"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Type</FormLabel>
-                  <FormControl>
+                <FormItem className="grid grid-cols-4 items-center gap-4 space-y-0">
+                  <FormLabel className="text-right">Type</FormLabel>
+                  <FormControl className="col-span-3">
                     <Input placeholder="Bijv. Periodiek" {...field} />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="col-start-2 col-span-3" />
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-2 gap-4">
-               <FormField
-                control={form.control}
-                name="date"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Datum</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={'outline'}
-                            className={cn(
-                              'w-full pl-3 text-left font-normal',
-                              !field.value && 'text-muted-foreground'
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, 'dd-MM-yyyy')
-                            ) : (
-                              <span>Kies een datum</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) =>
-                            date > new Date() || date < new Date('1900-01-01')
-                          }
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <FormField
-                  control={form.control}
-                  name="cost"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Kosten (€)</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="0" {...field} />
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem className="grid grid-cols-4 items-center gap-4 space-y-0">
+                  <FormLabel className="text-right">Datum</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl className="col-span-3">
+                        <Button
+                          variant={'outline'}
+                          className={cn(
+                            'w-full pl-3 text-left font-normal',
+                            !field.value && 'text-muted-foreground'
+                          )}
+                        >
+                          {field.value ? (
+                            format(field.value, 'dd-MM-yyyy', { locale: nl })
+                          ) : (
+                            <span>Kies een datum</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-            </div>
-             <FormField
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) =>
+                          date > new Date() || date < new Date('1900-01-01')
+                        }
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage className="col-start-2 col-span-3" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="cost"
+              render={({ field }) => (
+                <FormItem className="grid grid-cols-4 items-center gap-4 space-y-0">
+                  <FormLabel className="text-right">Kosten (€)</FormLabel>
+                  <FormControl className="col-span-3">
+                    <Input type="number" placeholder="0" {...field} />
+                  </FormControl>
+                  <FormMessage className="col-start-2 col-span-3" />
+                </FormItem>
+              )}
+            />
+            <FormField
               control={form.control}
               name="details"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Details</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Extra details over het onderhoud..." {...field} />
+                <FormItem className="grid grid-cols-4 items-start gap-4 space-y-0">
+                  <FormLabel className="text-right mt-2">Details</FormLabel>
+                  <FormControl className="col-span-3">
+                    <Textarea 
+                      placeholder="Extra details over het onderhoud..." 
+                      {...field} 
+                      className="min-h-[100px]"
+                    />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="col-start-2 col-span-3" />
                 </FormItem>
               )}
             />
             <DialogFooter>
-                <DialogClose asChild>
-                    <Button type="button" variant="ghost">Annuleren</Button>
-                </DialogClose>
+              <DialogClose asChild>
+                <Button type="button" variant="ghost">Annuleren</Button>
+              </DialogClose>
               <Button type="submit">Toevoegen</Button>
             </DialogFooter>
           </form>
