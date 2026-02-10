@@ -382,19 +382,21 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                             <TableHead>Datum</TableHead>
                             <TableHead>Omschrijving</TableHead>
                             <TableHead>Type</TableHead>
+                            <TableHead>Details</TableHead>
                             <TableHead className="text-right">Kosten</TableHead>
                             <TableHead className="w-[50px]"></TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {maintenanceLoading ? (
-                            <TableRow><TableCell colSpan={5} className="text-center py-10"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
+                            <TableRow><TableCell colSpan={6} className="text-center py-10"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
                           ) : maintenance && maintenance.length > 0 ? (
                             maintenance.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((item: any) => (
                               <TableRow key={item.id} className="group">
                                 <TableCell>{format(new Date(item.date), 'dd-MM-yyyy')}</TableCell>
                                 <TableCell className="font-medium">{item.description}</TableCell>
                                 <TableCell>{item.type}</TableCell>
+                                <TableCell className="text-muted-foreground max-w-[200px] truncate" title={item.details}>{item.details || '-'}</TableCell>
                                 <TableCell className="text-right">€ {Number(item.cost || 0).toLocaleString('nl-NL', { minimumFractionDigits: 2 })}</TableCell>
                                 <TableCell>
                                   {canDelete && (
@@ -418,7 +420,7 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                               </TableRow>
                             ))
                           ) : (
-                            <TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground">Geen onderhoudshistorie gevonden.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground">Geen onderhoudshistorie gevonden.</TableCell></TableRow>
                           )}
                         </TableBody>
                       </Table>

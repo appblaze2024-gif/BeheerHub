@@ -13,12 +13,11 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Truck, User, AlertCircle, CheckCircle2, Clock, Power, PowerOff } from 'lucide-react';
+import { Truck, User, AlertCircle, CheckCircle2, Clock, Power, PowerOff, FileText } from 'lucide-react';
 import type { Dienst, Voertuig, Machine, Medewerker } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Separator } from '@/components/ui/separator';
 
 interface VehicleDeploymentDialogProps {
   open: boolean;
@@ -86,7 +85,8 @@ export function VehicleDeploymentDialog({
                 return {
                     medewerkerName: medewerker ? `${medewerker.voornaam || ''} ${medewerker.achternaam || ''}`.trim() : 'Onbekend',
                     times: `${d.starttijd} - ${d.eindtijd}`,
-                    werksoort: d.werksoort
+                    werksoort: d.werksoort,
+                    notities: d.notities || ''
                 };
             })
         };
@@ -99,7 +99,7 @@ export function VehicleDeploymentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-6xl h-[90vh] flex flex-col p-0">
+      <DialogContent className="sm:max-w-7xl h-[90vh] flex flex-col p-0">
         <DialogHeader className="p-6 pb-2">
           <DialogTitle className="flex items-center gap-2 text-xl font-black uppercase tracking-tight">
             <Truck className="h-6 w-6 text-primary" />
@@ -171,11 +171,12 @@ export function VehicleDeploymentDialog({
                 </Card>
             </div>
 
-            <div className="bg-muted/50 border-b px-6 py-2 grid grid-cols-[120px_1fr_120px_2fr_80px] gap-4 items-center text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+            <div className="bg-muted/50 border-b px-6 py-2 grid grid-cols-[100px_1fr_100px_1.5fr_1.5fr_60px] gap-4 items-center text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                 <span>Voertuig ID</span>
                 <span>Merk & Model</span>
                 <span>Status</span>
                 <span>Inzet / Personeel</span>
+                <span>Omschrijving</span>
                 <span className="text-right">Actie</span>
             </div>
 
@@ -185,7 +186,7 @@ export function VehicleDeploymentDialog({
                         <div 
                             key={item.id}
                             className={cn(
-                                "grid grid-cols-[120px_1fr_120px_2fr_80px] gap-4 items-center px-6 py-3 border-b-2 transition-colors",
+                                "grid grid-cols-[100px_1fr_100px_1.5fr_1.5fr_60px] gap-4 items-center px-6 py-3 border-b-2 transition-colors",
                                 item.status === 'scheduled' && !item.isDoubleAssigned && "bg-blue-50/30 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900",
                                 item.isDoubleAssigned && "bg-orange-50/40 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900",
                                 item.status === 'unavailable' && "bg-red-50/30 dark:bg-red-900/10 border-red-100 dark:border-red-900",
@@ -230,17 +231,27 @@ export function VehicleDeploymentDialog({
                                         {item.assignments.map((as, idx) => (
                                             <div key={idx} className="flex items-center gap-2 text-[10px] font-bold">
                                                 <User className={cn("h-3 w-3 shrink-0", item.isDoubleAssigned ? "text-orange-500" : "text-blue-500")} />
-                                                <span className="truncate max-w-[120px]">{as.medewerkerName}</span>
+                                                <span className="truncate max-w-[100px]">{as.medewerkerName}</span>
                                                 <span className="text-muted-foreground text-[9px] shrink-0">({as.times})</span>
-                                                <Badge variant="secondary" className="text-[8px] h-4 font-black uppercase tracking-tight py-0">
-                                                    {as.werksoort}
-                                                </Badge>
                                             </div>
                                         ))}
                                     </div>
                                 ) : (
                                     <span className="text-[10px] text-muted-foreground/60 italic">Geen inzet</span>
                                 )}
+                            </div>
+
+                            <div className="min-w-0">
+                                {item.assignments.length > 0 ? (
+                                    <div className="flex flex-col gap-1">
+                                        {item.assignments.map((as, idx) => (
+                                            <div key={idx} className="flex items-center gap-2 text-[10px] font-bold">
+                                                <FileText className="h-3 w-3 shrink-0 text-muted-foreground" />
+                                                <span className="truncate text-muted-foreground" title={as.notities}>{as.notities || as.werksoort}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : null}
                             </div>
 
                             <div className="flex justify-end">
