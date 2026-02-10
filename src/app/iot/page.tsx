@@ -1,10 +1,33 @@
-
 'use client';
 
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { PageHeader } from '@/components/page-header';
-import { Wifi, Database, Cpu, Plus, MapPin, Battery, Activity, Loader2, Signal, SignalLow, Trash2, MoreVertical, Terminal, Copy, Check, ExternalLink, Code2, Info, BookOpen, Sparkles, Send, ArrowRight } from 'lucide-react';
+import { 
+  Wifi, 
+  Database, 
+  Cpu, 
+  Plus, 
+  MapPin, 
+  Battery, 
+  Activity, 
+  Loader2, 
+  Signal, 
+  SignalLow, 
+  Trash2, 
+  MoreVertical, 
+  Terminal, 
+  Copy, 
+  Check, 
+  ExternalLink, 
+  Code2, 
+  Info, 
+  BookOpen, 
+  Sparkles, 
+  Send, 
+  ArrowRight,
+  List
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFirestore, useCollection, deleteDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
