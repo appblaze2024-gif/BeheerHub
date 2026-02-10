@@ -23,7 +23,9 @@ import {
   List,
   Ruler,
   Clock,
-  Battery
+  Battery,
+  Zap,
+  Smartphone
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFirestore, useCollection, deleteDocumentNonBlocking, useMemoFirebase } from '@/firebase';
@@ -57,6 +59,13 @@ import { generateIoTCode } from '@/ai/flows/generate-iot-code-flow';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export default function IoTPage() {
   const firestore = useFirestore();
@@ -70,6 +79,8 @@ export default function IoTPage() {
   const [isGenerating, setIsGenerating] = React.useState(false);
   const [chatHistory, setChatHistory] = React.useState<{ role: 'user' | 'model', content: string }[]>([]);
   const [customCode, setCustomCode] = React.useState<string | null>(null);
+  const [selectedBoard, setSelectedBoard] = React.useState('ESP32');
+  const [requestCount, setRequestCount] = React.useState(0);
 
   const sensorsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -116,7 +127,7 @@ export default function IoTPage() {
     try {
       const result = await generateIoTCode({
         prompt: aiPrompt,
-        board: 'ESP32',
+        board: selectedBoard,
         history: chatHistory,
         projectId: firebaseConfig.projectId,
         apiKey: firebaseConfig.apiKey,
@@ -125,6 +136,7 @@ export default function IoTPage() {
       setCustomCode(result.code);
       setChatHistory([...newHistory, { role: 'model' as const, content: result.explanation }]);
       setAiPrompt('');
+      setRequestCount(prev => prev + 1);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -140,7 +152,6 @@ export default function IoTPage() {
     ? `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/sensors/${selectedSensor.id}?key=${firebaseConfig.apiKey}`
     : '';
 
-  // Calculate delay based on frequency (default 24 metingen = 1 per uur = 3600000ms)
   const frequency = selectedSensor?.measurementFrequency || 24;
   const delayMs = Math.round((24 * 3600 * 1000) / frequency);
   const binDepth = selectedSensor?.binDepthCm || 100;
@@ -178,14 +189,10 @@ void loop() {
     http.addHeader("X-HTTP-Method-Override", "PATCH");
     
     // --- Meting ---
-    // Simuleer hier je ultrasoon meting:
     int distanceCm = random(10, BIN_DEPTH_CM); 
-    
-    // Bereken vulgraad % (afstand 0cm = 100%, afstand BIN_DEPTH = 0%)
     int vulgraad = map(distanceCm, 0, BIN_DEPTH_CM, 100, 0);
     vulgraad = constrain(vulgraad, 0, 100);
 
-    // Bouw JSON payload
     String payload = "{\\"fields\\": {";
     payload += "\\"status\\": {\\"stringValue\\": \\"Online\\"},";
     payload += "\\"vulgraad\\": {\\"integerValue\\": \\"" + String(vulgraad) + "\\"},";
@@ -194,14 +201,10 @@ void loop() {
     payload += "}}";
 
     int httpResponseCode = http.POST(payload);
-    
     Serial.print("Data verstuurd. Code: ");
     Serial.println(httpResponseCode);
-    
     http.end();
   }
-  
-  // Wacht tot de volgende meting
   delay(FREQUENCY_DELAY_MS); 
 }` : '';
 
@@ -252,7 +255,6 @@ void loop() {
       </div>
 
       <div className="flex-1 grid grid-cols-1 xl:grid-cols-12 gap-4 min-h-0 overflow-hidden">
-        {/* Sidebar: Sensor List */}
         <Card className="xl:col-span-3 flex flex-col shadow-none overflow-hidden border-slate-200">
           <CardHeader className="p-3 border-b bg-muted/20">
             <CardTitle className="text-xs font-bold uppercase tracking-tight">Gekoppelde Units</CardTitle>
@@ -324,7 +326,6 @@ void loop() {
           </div>
         </Card>
 
-        {/* Main Content: Map & Code */}
         <Card className="xl:col-span-9 flex flex-col shadow-none border-slate-200 overflow-hidden">
           {selectedSensor ? (
             <Tabs defaultValue="map" className="flex-1 flex flex-col">
@@ -334,7 +335,7 @@ void loop() {
                     <MapPin className="h-3 w-3" /> Dashboard
                   </TabsTrigger>
                   <TabsTrigger value="code" className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 text-xs font-bold gap-2">
-                    <Code2 className="h-3 w-3" /> ESP32 Arduino Code
+                    <Code2 className="h-3 w-3" /> Hardware Code
                   </TabsTrigger>
                 </TabsList>
                 <div className="flex items-center gap-3">
@@ -360,7 +361,6 @@ void loop() {
                     highlightedObject={selectedSensor ? { id: selectedSensor.id, latitude: selectedSensor.latitude, longitude: selectedSensor.longitude } : null}
                   />
                   
-                  {/* Status Overlay */}
                   <div className="absolute top-4 right-4 z-10 w-64 space-y-3">
                     <Card className="bg-white/95 backdrop-blur shadow-xl border-slate-200 overflow-hidden">
                       <div className="bg-slate-900 px-3 py-2 flex items-center justify-between">
@@ -427,7 +427,6 @@ void loop() {
               </TabsContent>
 
               <TabsContent value="code" className="flex-1 m-0 flex flex-col xl:flex-row overflow-hidden">
-                {/* Code Editor Side */}
                 <div className="flex-1 flex flex-col bg-zinc-950 p-4 min-h-0 border-r border-zinc-800">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
@@ -436,7 +435,7 @@ void loop() {
                             </div>
                             <div>
                                 <h3 className="text-zinc-100 text-sm font-bold">C++ Sketch (Kalibratie actief)</h3>
-                                <p className="text-zinc-500 text-[10px]">Geconfigureerd voor bak-diepte: {binDepth}cm</p>
+                                <p className="text-zinc-500 text-[10px]">Setup: {selectedBoard} | Diepte: {binDepth}cm</p>
                             </div>
                         </div>
                         <Button 
@@ -455,21 +454,44 @@ void loop() {
                     </div>
                 </div>
 
-                {/* AI Assistent Side */}
                 <div className="w-full xl:w-80 flex flex-col bg-zinc-900 border-l border-zinc-800">
-                    <div className="p-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/50">
-                        <div className="flex items-center gap-2">
-                            <Sparkles className="h-4 w-4 text-purple-400" />
-                            <h4 className="text-xs font-black text-zinc-100 uppercase tracking-wider">IoT Assistent</h4>
+                    <div className="p-4 border-b border-zinc-800 flex flex-col gap-3 bg-zinc-900/50">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Sparkles className="h-4 w-4 text-purple-400" />
+                                <h4 className="text-xs font-black text-zinc-100 uppercase tracking-wider">IoT Assistent</h4>
+                            </div>
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Badge variant="secondary" className="text-[9px] bg-zinc-800 text-zinc-400 gap-1">
+                                            <Zap className="h-2 w-2" /> {requestCount} / 1500
+                                        </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p className="text-xs">Dagelijkse gratis limiet. Max 15 per minuut.</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
                         </div>
-                        <Badge variant="secondary" className="text-[9px] bg-zinc-800 text-zinc-400">Gemini 2.5</Badge>
+                        <Select value={selectedBoard} onValueChange={setSelectedBoard}>
+                            <SelectTrigger className="h-8 bg-zinc-950 border-zinc-800 text-zinc-100 text-[10px] font-bold">
+                                <SelectValue placeholder="Kies hardware setup" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="ESP32">ESP32 (WiFi)</SelectItem>
+                                <SelectItem value="ESP32 + SIM800L (GSM)">ESP32 + SIM800L (GSM/GPRS)</SelectItem>
+                                <SelectItem value="ESP8266">ESP8266 (WiFi)</SelectItem>
+                                <SelectItem value="Arduino Nano RP2040">Nano RP2040 (WiFi)</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                     
                     <ScrollArea className="flex-1 p-4">
                         {chatHistory.length === 0 ? (
                             <div className="text-center py-8">
                                 <Info className="h-8 w-8 text-zinc-700 mx-auto mb-3" />
-                                <p className="text-xs text-zinc-500 font-medium">Pas de code aan. Bijv: "Stuur ook de batterijspanning mee als veld 'batteryLevel'."</p>
+                                <p className="text-xs text-zinc-500 font-medium">Pas de code aan. Bijv: "Gebruik een SIM800L module voor GPRS verbinding op afstand."</p>
                             </div>
                         ) : (
                             <div className="space-y-4">
@@ -527,14 +549,18 @@ void loop() {
                 <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-8">
                     Selecteer een apparaat in de lijst links om de bijbehorende <strong>kalibratie</strong>, <strong>vulgraad</strong> en <strong>Arduino code</strong> te bekijken.
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left max-w-lg">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left max-w-2xl">
                     <div className="p-4 rounded-lg border bg-slate-50 dark:bg-zinc-900/50">
                         <h4 className="text-xs font-bold uppercase mb-1 flex items-center gap-2"><Plus className="h-3 w-3 text-primary" /> Stap 1</h4>
                         <p className="text-[11px] text-muted-foreground">Registreer je hardware en stel de diepte van de prullenbak in.</p>
                     </div>
                     <div className="p-4 rounded-lg border bg-slate-50 dark:bg-zinc-900/50">
                         <h4 className="text-xs font-bold uppercase mb-1 flex items-center gap-2"><List className="h-3 w-3 text-primary" /> Stap 2</h4>
-                        <p className="text-[11px] text-muted-foreground">Monitor de vulgraad live op de kaart met kleur-indicatoren.</p>
+                        <p className="text-[11px] text-muted-foreground">Klik op de sensor in de lijst aan de linkerkant.</p>
+                    </div>
+                    <div className="p-4 rounded-lg border bg-slate-50 dark:bg-zinc-900/50">
+                        <h4 className="text-xs font-bold uppercase mb-1 flex items-center gap-2"><Smartphone className="h-3 w-3 text-primary" /> Stap 3</h4>
+                        <p className="text-[11px] text-muted-foreground">Kies je setup (WiFi of GSM) en upload de gegenereerde code.</p>
                     </div>
                 </div>
             </div>

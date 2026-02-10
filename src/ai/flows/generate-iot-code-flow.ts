@@ -35,10 +35,10 @@ const prompt = ai.definePrompt({
   name: 'generateIoTCodePrompt',
   input: { schema: GenerateIoTCodeInputSchema },
   output: { schema: GenerateIoTCodeOutputSchema },
-  prompt: `Je bent een expert in IoT-ontwikkeling voor de boards: ESP32, ESP8266 en Arduino Nano RP2040 Connect. 
+  prompt: `Je bent een expert in IoT-ontwikkeling voor de boards: ESP32, ESP8266 en specifiek combinaties met GSM modules zoals de SIM800L. 
 Je bent gespecialiseerd in integratie met Google Firebase via de REST API.
 
-Huidig geselecteerd board: {{{board}}}
+Huidig geselecteerd board/setup: {{{board}}}
 
 CONTEXT VAN HET GESPREK:
 {{#each history}}
@@ -49,15 +49,15 @@ NIEUWE VRAAG/AANPASSING:
 "{{{prompt}}}"
 
 INSTRUCTIES:
-1. Genereer volledige, compileerbare Arduino C++ code voor het geselecteerde board ({{{board}}}).
-2. Als dit een aanpassing is op eerdere code, verwerk dan de wijzigingen maar geef altijd de VOLLEDIGE code terug.
+1. Genereer volledige, compileerbare Arduino C++ code voor de geselecteerde setup ({{{board}}}).
+2. Als de setup SIM800L bevat, gebruik dan de TinyGSM bibliotheek voor de GPRS verbinding.
 3. Gebruik de volgende gegevens voor Firebase integratie:
    - Project ID: {{{projectId}}}
    - API Key: {{{apiKey}}}
    - Firestore Base URL: https://firestore.googleapis.com/v1/projects/{{{projectId}}}/databases/(default)/documents/
-4. Voor ESP32/ESP8266: Gebruik <WiFi.h> of <ESP8266WiFi.h> en <HTTPClient.h>.
+4. Voor SIM800L setups: Zorg voor placeholders voor APN, user en password van de provider. Gebruik SoftwareSerial of HardwareSerial (bij voorkeur HardwareSerial op ESP32 pins 16/17).
 5. Gebruik de PATCH methode met 'X-HTTP-Method-Override: PATCH' header voor Firestore updates.
-6. Zorg voor placeholders voor WiFi SSID en Wachtwoord.
+6. Zorg voor duidelijke comments over de benodigde bibliotheken.
 
 Antwoord in JSON formaat met de velden 'code' en 'explanation'.`,
 });
