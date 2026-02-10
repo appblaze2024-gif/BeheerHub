@@ -1,10 +1,9 @@
-
 'use client';
 
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { PageHeader } from '@/components/page-header';
-import { Wifi, Database, Cpu, Plus, MapPin, Battery, Activity, Loader2, Signal, SignalLow, Trash2, MoreVertical, Terminal, Copy, Check, ExternalLink } from 'lucide-react';
+import { Wifi, Database, Cpu, Plus, MapPin, Battery, Activity, Loader2, Signal, SignalLow, Trash2, MoreVertical, Terminal, Copy, Check, ExternalLink, Code2, Info, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFirestore, useCollection, deleteDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
@@ -34,6 +33,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { firebaseConfig } from '@/firebase/config';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function IoTPage() {
   const firestore = useFirestore();
@@ -74,7 +74,7 @@ export default function IoTPage() {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    toast({ title: 'Gekopieerd', description: 'API URL naar klembord gekopieerd.' });
+    toast({ title: 'Gekopieerd', description: 'Code naar klembord gekopieerd.' });
   };
 
   // Construct the REST API URL for the sensor
@@ -82,11 +82,67 @@ export default function IoTPage() {
     ? `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/sensors/${selectedSensor.id}?key=${firebaseConfig.apiKey}`
     : '';
 
+  // ESP32 Code Template
+  const esp32Code = selectedSensor ? `#include <WiFi.h>
+#include <HTTPClient.h>
+
+// --- WiFi Instellingen ---
+const char* ssid = "JOUW_WIFI_NAAM";
+const char* password = "JOUW_WIFI_WACHTWOORD";
+
+// --- Project Config (BeheerHub) ---
+const String projectId = "${firebaseConfig.projectId}";
+const String apiKey = "${firebaseConfig.apiKey}";
+const String sensorId = "${selectedSensor.id}";
+
+void setup() {
+  Serial.begin(115200);
+  WiFi.begin(ssid, password);
+  
+  Serial.print("Verbinden met WiFi");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\\nWiFi Verbonden!");
+}
+
+void loop() {
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    
+    // API URL voor deze specifieke sensor
+    String url = "https://firestore.googleapis.com/v1/projects/" + projectId + "/databases/(default)/documents/sensors/" + sensorId + "?key=" + apiKey;
+    
+    http.begin(url);
+    http.addHeader("Content-Type", "application/json");
+    
+    // Data om te updaten (voorbeeld: status en batterij)
+    // We gebruiken de PATCH methode om alleen deze velden te wijzigen
+    String payload = "{\\"fields\\": {\\"status\\": {\\"stringValue\\": \\"Online\\"}, \\"batteryLevel\\": {\\"integerValue\\": \\"85\\"}, \\"lastSeen\\": {\\"stringValue\\": \\"2023-10-27T10:00:00Z\\"}}}";
+    
+    // Firestore REST vereist PATCH met X-HTTP-Method-Override header voor sommige clients
+    http.addHeader("X-HTTP-Method-Override", "PATCH");
+    int httpResponseCode = http.POST(payload);
+    
+    if (httpResponseCode > 0) {
+      Serial.printf("Data verzonden! Code: %d\\n", httpResponseCode);
+    } else {
+      Serial.printf("Fout bij verzenden: %s\\n", http.errorToString(httpResponseCode).c_str());
+    }
+    
+    http.end();
+  }
+  
+  // Wacht 5 minuten voor de volgende update
+  delay(300000); 
+}` : '// Selecteer een sensor om code te genereren';
+
   return (
     <div className="flex flex-col flex-1 p-4 min-h-0 bg-background overflow-hidden">
       <PageHeader 
         title="IoT & Sensorbeheer" 
-        description="Beheer hardware-koppelingen via unieke serienummers."
+        description="Koppel hardware aan je dashboard via unieke serienummers."
         className="p-0 mb-4"
       >
         <Button onClick={() => setIsAddDialogOpen(true)}>
@@ -98,37 +154,37 @@ export default function IoTPage() {
         <Card className="shadow-none border-slate-200">
           <CardContent className="p-3 flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Actieve Koppelingen</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Gekoppelde Units</p>
               <p className="text-xl font-black">{sensors?.length || 0}</p>
             </div>
-            <Wifi className="h-5 w-5 text-green-500" />
+            <Cpu className="h-5 w-5 text-blue-500" />
           </CardContent>
         </Card>
         <Card className="shadow-none border-slate-200">
           <CardContent className="p-3 flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Inkomende Data</p>
-              <p className="text-xl font-black">Live</p>
-            </div>
-            <Activity className="h-5 w-5 text-blue-500" />
-          </CardContent>
-        </Card>
-        <Card className="shadow-none border-slate-200">
-          <CardContent className="p-3 flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Systeem Gateway</p>
-              <p className="text-xl font-black">Firestore REST</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Connectie Methode</p>
+              <p className="text-xl font-black">REST API</p>
             </div>
             <Terminal className="h-5 w-5 text-purple-500" />
+          </CardContent>
+        </Card>
+        <Card className="shadow-none border-slate-200">
+          <CardContent className="p-3 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Cloud Sync</p>
+              <p className="text-xl font-black">Real-time</p>
+            </div>
+            <Wifi className="h-5 w-5 text-green-500" />
           </CardContent>
         </Card>
       </div>
 
       <div className="flex-1 grid grid-cols-1 xl:grid-cols-12 gap-4 min-h-0 overflow-hidden">
         {/* Sensor Lijst */}
-        <Card className="xl:col-span-4 flex flex-col shadow-none overflow-hidden border-slate-200">
+        <Card className="xl:col-span-3 flex flex-col shadow-none overflow-hidden border-slate-200">
           <CardHeader className="p-3 border-b bg-muted/20">
-            <CardTitle className="text-xs font-bold uppercase tracking-tight">Geregistreerde Serienummers</CardTitle>
+            <CardTitle className="text-xs font-bold uppercase tracking-tight">Mijn Apparaten</CardTitle>
           </CardHeader>
           <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-900/20">
             {isLoading ? (
@@ -144,16 +200,10 @@ export default function IoTPage() {
                     )}
                     onClick={() => setSelectedSensorId(sensor.id)}
                   >
-                    <div className={cn(
-                      "p-2 rounded-lg",
-                      sensor.status === 'Online' ? "bg-green-100 text-green-700" : "bg-zinc-200 text-zinc-500"
-                    )}>
-                      <Cpu className="h-4 w-4" />
-                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <p className="font-bold text-xs truncate">{sensor.name}</p>
-                        <p className="text-[9px] text-muted-foreground font-mono bg-slate-200 px-1 rounded uppercase">{sensor.id}</p>
+                        <p className="text-[9px] text-muted-foreground font-mono bg-slate-200 px-1 rounded">{sensor.id}</p>
                       </div>
                       <div className="flex items-center gap-2 mt-1">
                         <Badge variant="secondary" className="text-[9px] h-4 font-bold">{sensor.type}</Badge>
@@ -173,9 +223,9 @@ export default function IoTPage() {
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Sensor ontkoppelen?</AlertDialogTitle>
+                              <AlertDialogTitle>Sensor verwijderen?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Weet je zeker dat je serienummer '{sensor.id}' wilt verwijderen? De hardware zal geen data meer kunnen opslaan.
+                                De koppeling met serienummer '{sensor.id}' wordt verbroken.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -191,84 +241,107 @@ export default function IoTPage() {
               </div>
             ) : (
               <div className="text-center p-12 text-muted-foreground">
-                <SignalLow className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                <p className="text-xs font-bold uppercase tracking-widest">Geen koppelingen</p>
-                <p className="text-[10px] mt-1">Registreer je eerste serienummer om data te ontvangen.</p>
+                <SignalLow className="h-8 w-8 mx-auto mb-3 opacity-20" />
+                <p className="text-[10px] font-bold uppercase tracking-widest">Geen koppelingen</p>
               </div>
             )}
           </div>
         </Card>
 
-        {/* Kaart & Details */}
-        <Card className="xl:col-span-8 flex flex-col shadow-none border-slate-200 overflow-hidden">
-          <div className="flex-1 relative">
-            <MapboxView 
-              objects={sensors?.map(s => ({
-                id: s.id,
-                latitude: s.latitude,
-                longitude: s.longitude,
-                name: s.name,
-                type: s.type
-              }))}
-              highlightedObject={selectedSensor ? { id: selectedSensor.id, latitude: selectedSensor.latitude, longitude: selectedSensor.longitude } : null}
-            />
-            
-            {selectedSensor && (
-              <div className="absolute bottom-4 left-4 right-4 z-10 flex flex-col gap-2">
-                {/* API Info Card */}
-                <Card className="bg-zinc-900 text-zinc-100 border-none shadow-2xl">
-                  <CardContent className="p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2">
-                        <Terminal className="h-3 w-3" /> API Endpoint voor deze sensor
-                      </p>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-6 text-[10px] text-zinc-400 hover:text-white"
-                        onClick={() => copyToClipboard(apiEndpoint)}
-                      >
-                        {copied ? <Check className="h-3 w-3 mr-1 text-green-500" /> : <Copy className="h-3 w-3 mr-1" />}
-                        {copied ? 'Gekopieerd' : 'Kopieer URL'}
-                      </Button>
+        {/* Kaart & Integratie Gids */}
+        <Card className="xl:col-span-9 flex flex-col shadow-none border-slate-200 overflow-hidden">
+          {selectedSensor ? (
+            <Tabs defaultValue="map" className="flex-1 flex flex-col">
+              <div className="px-4 py-2 border-b bg-muted/10 flex items-center justify-between">
+                <TabsList className="h-8 bg-transparent gap-2">
+                  <TabsTrigger value="map" className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 text-xs font-bold gap-2">
+                    <MapPin className="h-3 w-3" /> Kaart
+                  </TabsTrigger>
+                  <TabsTrigger value="code" className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 text-xs font-bold gap-2">
+                    <Code2 className="h-3 w-3" /> ESP32 Code
+                  </TabsTrigger>
+                </TabsList>
+                <div className="flex items-center gap-4">
+                    <div className="hidden sm:flex items-center gap-2">
+                        <p className="text-[9px] font-black text-muted-foreground uppercase">Serienummer:</p>
+                        <span className="text-[10px] font-mono font-bold">{selectedSensor.id}</span>
                     </div>
-                    <div className="bg-black/50 p-2 rounded font-mono text-[9px] break-all border border-zinc-800 text-green-400">
-                      PATCH {apiEndpoint}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Status Card */}
-                <Card className="bg-background/95 backdrop-blur shadow-xl border-primary/20">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex gap-4">
-                        <div className="space-y-1">
-                          <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Geselecteerd serienummer</p>
-                          <h3 className="text-lg font-black tracking-tight">{selectedSensor.id}</h3>
-                          <div className="flex gap-2">
-                            <Badge className="bg-primary text-primary-foreground font-bold">{selectedSensor.name}</Badge>
-                            {getStatusBadge(selectedSensor.status)}
-                          </div>
-                        </div>
-                        <div className="border-l border-slate-200 pl-4 space-y-2">
-                          <div className="flex items-center gap-2 text-xs font-bold">
-                            <Battery className={cn("h-4 w-4", selectedSensor.batteryLevel && selectedSensor.batteryLevel < 20 ? "text-red-500" : "text-green-500")} />
-                            <span>{selectedSensor.batteryLevel}% Accu</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
-                            <MapPin className="h-4 w-4" />
-                            <span>{selectedSensor.latitude.toFixed(5)}, {selectedSensor.longitude.toFixed(5)}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setSelectedSensorId(null)}><XIcon className="h-4 w-4" /></Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedSensorId(null)}><XIcon className="h-4 w-4" /></Button>
+                </div>
               </div>
-            )}
-          </div>
+
+              <TabsContent value="map" className="flex-1 m-0 relative">
+                <MapboxView 
+                  objects={sensors?.map(s => ({
+                    id: s.id,
+                    latitude: s.latitude,
+                    longitude: s.longitude,
+                    name: s.name,
+                    type: s.type
+                  }))}
+                  highlightedObject={selectedSensor ? { id: selectedSensor.id, latitude: selectedSensor.latitude, longitude: selectedSensor.longitude } : null}
+                />
+                <div className="absolute bottom-4 left-4 right-4 z-10">
+                    <Card className="bg-zinc-900/95 backdrop-blur text-zinc-100 border-none shadow-2xl">
+                        <CardContent className="p-3">
+                            <div className="flex items-center justify-between mb-2">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+                                    <Terminal className="h-3 w-3" /> Live REST API Endpoint
+                                </p>
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-6 text-[9px] text-zinc-400 hover:text-white"
+                                    onClick={() => copyToClipboard(apiEndpoint)}
+                                >
+                                    {copied ? <Check className="h-3 w-3 mr-1 text-green-500" /> : <Copy className="h-3 w-3 mr-1" />}
+                                    Kopieer URL
+                                </Button>
+                            </div>
+                            <div className="bg-black/50 p-2 rounded font-mono text-[9px] break-all border border-zinc-800 text-green-400">
+                                PATCH {apiEndpoint}
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="code" className="flex-1 m-0 overflow-hidden flex flex-col bg-zinc-950 p-4">
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                        <div className="bg-blue-500/20 p-2 rounded-lg">
+                            <BookOpen className="h-4 w-4 text-blue-400" />
+                        </div>
+                        <div>
+                            <h3 className="text-zinc-100 text-sm font-bold">ESP32 Arduino Sketch</h3>
+                            <p className="text-zinc-500 text-[10px]">Kopieer deze code naar de Arduino IDE. De API-keys zijn al voor je ingevuld.</p>
+                        </div>
+                    </div>
+                    <Button 
+                        variant="secondary" 
+                        size="sm" 
+                        className="text-xs font-bold gap-2"
+                        onClick={() => copyToClipboard(esp32Code)}
+                    >
+                        <Copy className="h-3 w-3" /> Code Kopiëren
+                    </Button>
+                </div>
+                <div className="flex-1 bg-black/40 rounded border border-zinc-800 p-4 overflow-auto scrollbar-hide">
+                    <pre className="text-[11px] font-mono text-blue-300 leading-relaxed">
+                        {esp32Code}
+                    </pre>
+                </div>
+              </TabsContent>
+            </Tabs>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-12">
+                <div className="bg-muted p-6 rounded-full mb-4">
+                    <Cpu className="h-12 w-12 text-muted-foreground/40" />
+                </div>
+                <h3 className="text-lg font-black tracking-tight mb-2">Geen sensor geselecteerd</h3>
+                <p className="text-sm text-muted-foreground max-w-xs mx-auto">Selecteer een apparaat aan de linkerkant om de kaart en integratie-instructies te bekijken.</p>
+            </div>
+          )}
         </Card>
       </div>
 
