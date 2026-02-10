@@ -8,6 +8,7 @@ import {
   Upload,
   Download,
   File as FileIcon,
+  CalendarCheck,
 } from 'lucide-react';
 import { collection, doc } from 'firebase/firestore';
 import { format } from 'date-fns';
@@ -24,6 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   useCollection,
   useFirestore,
+  useMemoFirebase,
 } from '@/firebase';
 import { VehicleImportDialog } from '@/components/vehicle-import-dialog';
 import { AddMaintenanceDialog } from '@/components/add-maintenance-dialog';
@@ -31,6 +33,7 @@ import { AddDamageDialog } from '@/components/add-damage-dialog';
 import { AddVehicleDialog } from '@/components/add-vehicle-dialog';
 import { VehicleImageUploader } from '@/components/vehicle-image-uploader';
 import { AddDocumentDialog } from '@/components/add-document-dialog';
+import { ApkOverviewDialog } from '@/components/apk-overview-dialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { ArrowLeft, Pencil } from 'lucide-react';
@@ -46,7 +49,7 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
 
   const collectionName = materieelType;
 
-  const materieelCollection = React.useMemo(() => {
+  const materieelCollection = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, collectionName);
   }, [firestore, collectionName]);
@@ -69,21 +72,21 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
 
   const [selectedItem, setSelectedItem] = React.useState<any | null>(null);
 
-  const maintenanceCollection = React.useMemo(() => {
+  const maintenanceCollection = useMemoFirebase(() => {
     if (!firestore || !selectedItem) return null;
     return collection(firestore, collectionName, selectedItem.id, 'maintenance');
   }, [firestore, selectedItem, collectionName]);
 
   const { data: maintenance, isLoading: maintenanceLoading } = useCollection<any>(maintenanceCollection);
 
-  const damagesCollection = React.useMemo(() => {
+  const damagesCollection = useMemoFirebase(() => {
     if (!firestore || !selectedItem) return null;
     return collection(firestore, collectionName, selectedItem.id, 'damages');
   }, [firestore, selectedItem, collectionName]);
 
   const { data: damages, isLoading: damagesLoading } = useCollection<any>(damagesCollection);
   
-  const documentsCollection = React.useMemo(() => {
+  const documentsCollection = useMemoFirebase(() => {
     if (!firestore || !selectedItem) return null;
     return collection(firestore, collectionName, selectedItem.id, 'documents');
   }, [firestore, selectedItem, collectionName]);
@@ -405,6 +408,7 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
 
 export default function MaterieelBeheerPage() {
   const [isImporting, setIsImporting] = React.useState(false);
+  const [isApkDialogOpen, setIsApkDialogOpen] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<MaterieelType>('voertuigen');
   const { profile } = useProfile();
 
@@ -427,6 +431,9 @@ export default function MaterieelBeheerPage() {
                 <TabsTrigger value="machines">Machines</TabsTrigger>
             </TabsList>
             <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setIsApkDialogOpen(true)}>
+                <CalendarCheck className="mr-2 h-4 w-4" /> APK
+            </Button>
             {canCreate && <AddVehicleDialog materieelType={activeTab}>
                 <Button>
                 <Plus className="mr-2 h-4 w-4" /> Nieuw
@@ -455,6 +462,7 @@ export default function MaterieelBeheerPage() {
           <MaterielView materieelType="machines" canEdit={canEdit} canDelete={canDelete} />
         </TabsContent>
       </Tabs>
+      <ApkOverviewDialog open={isApkDialogOpen} onOpenChange={setIsApkDialogOpen} />
     </div>
   );
 }
