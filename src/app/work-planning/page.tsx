@@ -1131,7 +1131,7 @@ export default function WorkPlanningPage() {
               onContextMenu={(e) => handleDayHeaderContextMenu(e, day)}
               className={cn(
                 "sticky top-0 z-20 p-2 text-center bg-slate-100 border-b border-r day-column cursor-context-menu",
-                isToday(day) && "bg-slate-200"
+                isToday(day) && "ring-2 ring-inset ring-black"
               )}
             >
               <p className="font-semibold capitalize text-sm">
