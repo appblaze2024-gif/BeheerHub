@@ -34,6 +34,7 @@ import {
   AlertTriangle,
   Home,
   LocateFixed,
+  SignalLow,
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -113,6 +114,7 @@ function NavigatingView({
   const [distanceRemainingToDestination, setDistanceRemainingToDestination] = React.useState(0);
   const [hasReachedCurrentTarget, setHasReachedCurrentTarget] = React.useState(false);
   const [isFollowing, setIsFollowing] = React.useState(true);
+  const [gpsError, setGpsError] = React.useState<'permission' | 'signal' | null>(null);
   
   const { profile } = useProfile();
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
@@ -135,6 +137,32 @@ function NavigatingView({
   });
 
   const nextObject = objectsOnRoute[currentObjectIndex];
+
+  // ROAD SNAPPING LOGIC
+  const snappedLocation = React.useMemo(() => {
+    if (!userLocation || !currentRouteGeometry) return userLocation;
+    try {
+        const coords = currentRouteGeometry.coordinates;
+        if (!Array.isArray(coords) || coords.length < 2) return userLocation;
+        
+        const line = turf.lineString(coords);
+        const pt = turf.point([userLocation.longitude, userLocation.latitude]);
+        const snapped = turf.nearestPointOnLine(line, pt, { units: 'meters' });
+        
+        // Only snap if within 50 meters of the road to avoid jumping to nearby roads
+        if (snapped.properties.dist! < 50) {
+            const [lng, lat] = snapped.geometry.coordinates;
+            return {
+                ...userLocation,
+                latitude: lat,
+                longitude: lng
+            };
+        }
+    } catch (e) {
+        console.warn("Snapping failed:", e);
+    }
+    return userLocation;
+  }, [userLocation, currentRouteGeometry]);
 
   const navHudData = React.useMemo(() => {
     if (!currentLeg?.steps) return null;
@@ -195,18 +223,22 @@ function NavigatingView({
     
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
+        setGpsError(null);
         const { latitude, longitude, speed, heading } = position.coords;
         setUserLocation({ latitude, longitude, speed, heading });
         
         if (isFollowing && !isPaused) {
             const currentSpeedKmh = speed ? speed * 3.6 : 0;
-            // Track-Up logic: Rotate map to heading
+            
+            // Use SNAPPED location for map centering to avoid jitter
+            const mapLat = latitude;
+            const mapLng = longitude;
+
             setViewState(prev => ({
                 ...prev,
-                latitude,
-                longitude,
+                latitude: mapLat,
+                longitude: mapLng,
                 bearing: heading !== null ? heading : prev.bearing,
-                // Adjust zoom based on speed like simulation
                 zoom: 18.5 - (Math.min(currentSpeedKmh, 50) / 25),
                 pitch: 65,
             }));
@@ -229,13 +261,21 @@ function NavigatingView({
             } catch (e) {}
         }
       },
-      () => {
-        toast({ title: "Locatiefout", description: "Zorg ervoor dat locatietoegang is ingeschakeld op dit apparaat.", variant: "destructive" });
+      (error) => {
+        if (error.code === 1) { // PERMISSION_DENIED
+            setGpsError('permission');
+        } else {
+            setGpsError('signal');
+        }
       },
-      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      { 
+        enableHighAccuracy: true, 
+        timeout: 15000, // Longer timeout for tablet GPS warm-up
+        maximumAge: 0 
+      }
     );
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [isSimulating, toast, currentRouteGeometry, isFollowing, isPaused]);
+  }, [isSimulating, currentRouteGeometry, isFollowing, isPaused]);
 
   // SIMULATION ANIMATION EFFECT
   React.useEffect(() => {
@@ -415,7 +455,6 @@ function NavigatingView({
         {...viewState}
         onMove={evt => {
             setViewState(evt.viewState);
-            // If user manually moves the map, stop auto-following
             if (evt.viewState.latitude !== viewState.latitude || evt.viewState.longitude !== viewState.longitude) {
                 if (isFollowing) setIsFollowing(false);
             }
@@ -424,14 +463,12 @@ function NavigatingView({
         mapStyle={mapStyle}
         mapboxAccessToken={MAPBOX_TOKEN}
       >
-        {userLocation && (
+        {snappedLocation && (
           <Marker 
-            longitude={userLocation.longitude} 
-            latitude={userLocation.latitude} 
+            longitude={snappedLocation.longitude} 
+            latitude={snappedLocation.latitude} 
             anchor="center"
-            // When map bearing follows heading, the marker rotation should be 0 
-            // so it always points UP relative to the device.
-            rotation={isFollowing ? 0 : (userLocation.heading || 0)} 
+            rotation={isFollowing ? 0 : (snappedLocation.heading || 0)} 
           >
             <div className="relative flex items-center justify-center transition-all duration-150 ease-linear">
                 <div className="absolute h-16 w-16 bg-blue-500/20 rounded-full animate-pulse" />
@@ -481,6 +518,26 @@ function NavigatingView({
         )}
       </MapGL>
       
+      {gpsError && (
+          <div className="absolute top-24 left-1/2 -translate-x-1/2 z-[70] w-[90%] max-w-sm">
+              <Alert variant="destructive" className="bg-red-600 text-white border-none shadow-2xl">
+                  <div className="flex items-center gap-3">
+                      {gpsError === 'permission' ? <XIcon className="h-5 w-5" /> : <SignalLow className="h-5 w-5 animate-pulse" />}
+                      <div>
+                          <AlertTitle className="font-black uppercase tracking-tight text-xs">
+                              {gpsError === 'permission' ? 'Locatie Toegang Geweigerd' : 'Zwak GPS Signaal'}
+                          </AlertTitle>
+                          <AlertDescription className="text-[10px] opacity-90 font-bold">
+                              {gpsError === 'permission' 
+                                ? 'Schakel locatietoegang in bij de iPad instellingen voor deze browser.' 
+                                : 'Uw locatie wordt gezocht. Zorg voor vrij zicht op de hemel.'}
+                          </AlertDescription>
+                      </div>
+                  </div>
+              </Alert>
+          </div>
+      )}
+
       {navHudData && !arrivedObject && !isCalculatingRoute && (
           <div className="absolute top-6 left-1/2 -translate-x-1/2 z-10 w-[90%] max-w-lg">
               <Card className="bg-slate-900/95 backdrop-blur-xl text-white shadow-2xl border-none overflow-hidden">
@@ -624,7 +681,6 @@ export default function StartNavigationPage() {
   // Watch device location automatically
   React.useEffect(() => {
     if (!navigator.geolocation) {
-        console.warn("Geolocation is not supported by this browser.");
         return;
     }
 
@@ -633,9 +689,9 @@ export default function StartNavigationPage() {
             setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
         },
         (err) => {
-            console.warn("Could not get device location:", err.message);
+            console.warn("Location error in setup:", err.message);
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
@@ -656,7 +712,7 @@ export default function StartNavigationPage() {
   const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
   const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
 
-  const selectedProject = React.useMemo(() => projects?.find(p => p.id === selectedProjectId) ?? null, [projects, selectedProjectId]);
+  const selectedProject = React.useMemo(() => projects?.find(p => p.id === selectedProjectId) || null, [projects, selectedProjectId]);
   const availableRoutes = React.useMemo(() => {
       if (!selectedProject) return [];
       if (routeType === 'veeg') return selectedProject.veegroutes || [];
@@ -667,7 +723,7 @@ export default function StartNavigationPage() {
   const selectedRouteDef = React.useMemo(() => {
     if (!selectedRouteId || selectedRouteId === '--nieuwe-route--' || !selectedProject) return null;
     const allRoutes = [...(selectedProject.veegroutes || []), ...(selectedProject.prullenbakkenroutes || [])];
-    return allRoutes.find(r => r.id === selectedRouteId) ?? null;
+    return allRoutes.find(r => r.id === selectedRouteId) || null;
   }, [selectedRouteId, selectedProject]);
 
   const objectsOnRouteQuery = useMemoFirebase(() => {
@@ -723,14 +779,11 @@ export default function StartNavigationPage() {
         ? { latitude: selectedRouteDef.startLatitude, longitude: selectedRouteDef.startLongitude }
         : null;
 
-    // Preference for simulation: Depot
     if (simulate && predefinedStart) {
         startLoc = predefinedStart;
     } else if (!startLoc && predefinedStart) {
-        // Fallback for live if GPS not ready: Depot
         startLoc = predefinedStart;
     } else if (simulate && !startLoc && objectsOnMap && objectsOnMap.length > 0) {
-        // Ultimate fallback: first object
         startLoc = { latitude: objectsOnMap[0].latitude, longitude: objectsOnMap[0].longitude };
     }
     
@@ -779,7 +832,6 @@ export default function StartNavigationPage() {
     }
     
     setObjectsOnRoute(sortedObjects);
-    setUserLocation(startCoords);
     setNavigationState('navigating');
     setIsStarting(false);
   };
