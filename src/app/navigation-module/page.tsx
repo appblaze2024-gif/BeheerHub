@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, X, ArrowUp, Play, Navigation as NavigationIcon, CheckCircle2, Pause, MapPin, Gauge } from 'lucide-react';
+import { ArrowLeft, X, ArrowUp, Play, CheckCircle2, Pause, MapPin, Gauge } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -106,6 +106,27 @@ function NavigatingView({
 
   const nextObject = objectsOnRoute[currentObjectIndex];
 
+  // Dynamic route line: Only show the part in front of the user
+  const remainingRouteGeometry = React.useMemo(() => {
+    if (!currentRouteGeometry || !userLocation) return null;
+    try {
+        const coords = currentRouteGeometry.coordinates;
+        if (coords.length < 2) return currentRouteGeometry;
+
+        const line = turf.lineString(coords);
+        const startPoint = turf.point([userLocation.longitude, userLocation.latitude]);
+        const endPoint = turf.point(coords[coords.length - 1]);
+        
+        // Find closest point on line to start the slice
+        const snappedStart = turf.nearestPointOnLine(line, startPoint);
+        const sliced = turf.lineSlice(snappedStart, endPoint, line);
+        
+        return sliced.geometry;
+    } catch (e) {
+        return currentRouteGeometry;
+    }
+  }, [currentRouteGeometry, userLocation?.latitude, userLocation?.longitude]);
+
   // Real Geolocation Watcher
   React.useEffect(() => {
     if (isSimulating) return;
@@ -163,20 +184,18 @@ function NavigatingView({
         const bearingDiff = Math.abs(currentBearing - farBearing);
         const distanceToNextPoint = totalDistance - simStateRef.current.distanceTravelled;
 
-        // Realistic Utility Vehicle Speed Profile
-        // Max 50km/h (13.8m/s) in cities, slow down to 15km/h (4m/s) for sharp turns or approaching object
+        // Max 50km/h (13.8m/s) baseline
         if (distanceToNextPoint < 20) {
-            simStateRef.current.targetSpeedMs = 3; // ~10 km/h close to target
+            simStateRef.current.targetSpeedMs = 3; 
         } else if (bearingDiff > 25) {
-            simStateRef.current.targetSpeedMs = 4.5; // ~16 km/h for sharp turns
+            simStateRef.current.targetSpeedMs = 4.5; 
         } else if (bearingDiff > 10) {
-            simStateRef.current.targetSpeedMs = 8; // ~30 km/h for slight curves
+            simStateRef.current.targetSpeedMs = 8; 
         } else {
-            simStateRef.current.targetSpeedMs = 13.8; // ~50 km/h cruise
+            simStateRef.current.targetSpeedMs = 13.8; 
         }
 
-        // Smoothen speed transition (Inertia)
-        const accelFactor = simStateRef.current.targetSpeedMs > simStateRef.current.currentSpeedMs ? 4 : 8; // Braking is harder
+        const accelFactor = simStateRef.current.targetSpeedMs > simStateRef.current.currentSpeedMs ? 4 : 8; 
         simStateRef.current.currentSpeedMs += (simStateRef.current.targetSpeedMs - simStateRef.current.currentSpeedMs) * deltaTime * accelFactor;
 
         simStateRef.current.distanceTravelled += simStateRef.current.currentSpeedMs * deltaTime;
@@ -197,7 +216,6 @@ function NavigatingView({
             heading: heading
         });
 
-        // Camera follow with dynamic zoom and smoothing
         setViewState(prev => ({
             ...prev,
             latitude: lat,
@@ -301,7 +319,10 @@ function NavigatingView({
             >
                 <div className="absolute h-16 w-16 bg-blue-500/20 rounded-full animate-pulse" />
                 <div className="h-14 w-14 bg-blue-600 rounded-full border-[6px] border-white shadow-2xl flex items-center justify-center">
-                    <NavigationIcon className="h-7 w-7 text-white fill-current" />
+                    {/* Custom SVG Arrow pointing exactly up (0 deg) */}
+                    <svg viewBox="0 0 24 24" className="h-8 w-8 text-white fill-current">
+                        <path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z" />
+                    </svg>
                 </div>
             </div>
           </Marker>
@@ -316,8 +337,8 @@ function NavigatingView({
                 </div>
             </Marker>
         ))}
-        {currentRouteGeometry && (
-          <Source id="route-line" type="geojson" data={currentRouteGeometry}>
+        {remainingRouteGeometry && (
+          <Source id="route-line" type="geojson" data={remainingRouteGeometry}>
             <Layer {...routeLayer} />
           </Source>
         )}
@@ -708,7 +729,7 @@ export default function StartNavigationPage() {
                 onClick={() => handleStartRoute(false)} 
                 disabled={!selectedRouteId || selectedRouteId === '--nieuwe-route--' || isStarting}
             >
-                {isStarting ? <Loader2 className="mr-3 h-6 w-6 animate-spin" /> : <NavigationIcon className="mr-3 h-6 w-6 fill-current" />}
+                {isStarting ? <Loader2 className="mr-3 h-6 w-6 animate-spin" /> : <svg viewBox="0 0 24 24" className="mr-3 h-6 w-6 fill-current"><path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z" /></svg>}
                 START LIVE RIT
             </Button>
             
