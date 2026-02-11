@@ -1,9 +1,8 @@
-
 'use client';
 
 import * as React from 'react';
-import { useCollection, useFirestore } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
 import { Search, ListFilter, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,12 +43,16 @@ export default function OpenIssuesPage() {
     };
   }, [setIsHeaderVisible]);
 
-  const meldingenCollection = React.useMemo(() => {
+  // OPTIMIZED QUERY: Only fetch meldingen with open statuses
+  const meldingenQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return collection(firestore, 'meldingen');
+    return query(
+      collection(firestore, 'meldingen'),
+      where('status', 'in', openStatuses)
+    );
   }, [firestore]);
 
-  const { data: allMeldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenCollection);
+  const { data: openMeldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenQuery);
 
   React.useEffect(() => {
     const handler = setTimeout(() => {
@@ -60,11 +63,6 @@ export default function OpenIssuesPage() {
       clearTimeout(handler);
     };
   }, [searchTerm]);
-
-  const openMeldingen = React.useMemo(() => {
-    if (!allMeldingen) return [];
-    return allMeldingen.filter(m => openStatuses.includes(m.status));
-  }, [allMeldingen]);
 
   const filteredMeldingen = React.useMemo(() => {
     if (!openMeldingen) return [];

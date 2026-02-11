@@ -27,8 +27,9 @@ import {
   updateDocumentNonBlocking,
   deleteDocumentNonBlocking,
   useFirebaseApp,
+  useMemoFirebase,
 } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { collection, doc, query, where, getDocs } from 'firebase/firestore';
 import { getStorage, ref, deleteObject } from 'firebase/storage';
 import { AfspraakDialog } from '@/components/afspraak-dialog';
 import { OrganisatieContactDialog } from '@/components/organisatie-contact-dialog';
@@ -162,7 +163,7 @@ function BoekingregelsTab({ projectId, canEdit }: { projectId: string | undefine
   const firestore = useFirestore();
   const [newRegelNaam, setNewRegelNaam] = React.useState('');
 
-  const boekingregelsCollection = React.useMemo(() => {
+  const boekingregelsCollection = useMemoFirebase(() => {
     if (!firestore || !projectId) return null;
     return collection(firestore, 'projects', projectId, 'boekingregels');
   }, [firestore, projectId]);
@@ -179,7 +180,7 @@ function BoekingregelsTab({ projectId, canEdit }: { projectId: string | undefine
   const handleAddRegel = async () => {
     if (!firestore || !projectId || !newRegelNaam.trim()) return;
     const regelData = { naam: newRegelNaam.trim() };
-    await addDocumentNonBlocking(boekingregelsCollection!, regelData);
+    await addDocumentNonBlocking(collection(firestore, 'projects', projectId, 'boekingregels'), regelData);
     setNewRegelNaam('');
   };
 
@@ -249,7 +250,7 @@ function AfsprakenTab({ projectId, canEdit, canDelete }: { projectId: string | u
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedAfspraak, setSelectedAfspraak] = React.useState<Afspraak | undefined>();
 
-  const afsprakenCollection = React.useMemo(() => {
+  const afsprakenCollection = useMemoFirebase(() => {
     if (!firestore || !projectId) return null;
     return collection(firestore, 'projects', projectId, 'afspraken');
   }, [firestore, projectId]);
@@ -330,7 +331,7 @@ function OrganisatieTab({ projectId, wijken, canEdit, canDelete }: { projectId: 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedContact, setSelectedContact] = React.useState<OrganisatieContact | undefined>();
 
-  const organisatieCollection = React.useMemo(() => {
+  const organisatieCollection = useMemoFirebase(() => {
     if (!firestore || !projectId) return null;
     return collection(firestore, 'projects', projectId, 'organisatie');
   }, [firestore, projectId]);
@@ -416,7 +417,7 @@ function BestandenTab({ projectId, canEdit, canDelete }: { projectId: string | u
   const app = useFirebaseApp();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
 
-  const bestandenCollection = React.useMemo(() => {
+  const bestandenCollection = useMemoFirebase(() => {
     if (!firestore || !projectId) return null;
     return collection(firestore, 'projects', projectId, 'bestanden');
   }, [firestore, projectId]);
@@ -511,7 +512,7 @@ function BestandenTab({ projectId, canEdit, canDelete }: { projectId: string | u
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         projectId={projectId}
-        folderId={null} // Default to root for this simplified tab
+        folderId={null} 
       />}
     </Card>
   );
@@ -947,13 +948,14 @@ export default function ProjectsPage() {
   const [currentProject, setCurrentProject] = React.useState<Project>(EMPTY_PROJECT);
   const [isEndDateHeden, setIsEndDateHeden] = React.useState(false);
   const [isGlobalWijkMapOpen, setIsGlobalWijkMapOpen] = React.useState(false);
+  const [activeTab, setActiveTab] = React.useState('project');
 
   const isSuperUser = profile?.role === 'Super admin';
   const canCreate = isSuperUser || !!profile?.permissions?.projects?.create;
   const canEdit = isSuperUser || !!profile?.permissions?.projects?.edit;
   const canDelete = isSuperUser || !!profile?.permissions?.projects?.delete;
 
-  const projectsCollection = React.useMemo(() => {
+  const projectsCollection = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'projects');
   }, [firestore]);
@@ -962,10 +964,11 @@ export default function ProjectsPage() {
     projectsCollection
   );
   
-  const objectsCollection = React.useMemo(() => {
-    if (!firestore) return null;
+  // OPTIMIZED: Only fetch all objects when the relevant tab is active
+  const objectsCollection = useMemoFirebase(() => {
+    if (!firestore || activeTab !== 'prullenbakkenroutes') return null;
     return collection(firestore, 'objects');
-  }, [firestore]);
+  }, [firestore, activeTab]);
 
   const { data: allObjects } = useCollection<MapObject>(objectsCollection);
 
@@ -1023,9 +1026,7 @@ export default function ProjectsPage() {
             setIsEndDateHeden(false);
         }
       } else {
-        // This can happen if a project is deleted while it's selected.
-        // We should clear the selection.
-        if (projects) { // Only clear if projects have loaded
+        if (projects) { 
              setSelectedProjectId(null);
         }
       }
@@ -1090,7 +1091,7 @@ export default function ProjectsPage() {
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <Tabs defaultValue="project" className="flex-1 flex flex-col min-h-0">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
         <div className="px-6 pt-6 overflow-x-auto">
           <TabsList className="inline-flex">
             {canViewTab('project') && <TabsTrigger value="project">Project</TabsTrigger>}

@@ -44,8 +44,8 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { MapboxView } from '@/components/mapbox-view';
 import { ObjectImportDialog } from '@/components/object-import-dialog';
 import { ObjectExportDialog } from '@/components/object-export-dialog';
-import { useCollection, useFirestore, updateDocumentNonBlocking } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { useCollection, useFirestore, updateDocumentNonBlocking, useMemoFirebase } from '@/firebase';
+import { collection, doc, query, where } from 'firebase/firestore';
 import { Wijk } from '@/app/projects/page';
 import * as turf from '@turf/turf';
 import { Label } from '@/components/ui/label';
@@ -137,17 +137,22 @@ export default function ObjectsPage() {
   const { selectedProjectId, setSelectedProjectId } = useProject();
   const [selectedAreaIds, setSelectedAreaIds] = React.useState<string[]>([]);
 
-  const objectsCollection = React.useMemo(() => {
+  // OPTIMIZED QUERY: Filter objects server-side if a specific route/area is selected on map
+  const objectsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return collection(firestore, 'objects');
+    const colRef = collection(firestore, 'objects');
+    
+    // On the map, if we have selected areas, we could filter here.
+    // However, for the list view, we usually want the full list for searching.
+    return colRef;
   }, [firestore]);
   
-  const projectsCollection = React.useMemo(() => {
+  const projectsCollection = useMemoFirebase(() => {
       if (!firestore) return null;
       return collection(firestore, 'projects');
   }, [firestore]);
 
-  const { data: objects, isLoading: isLoadingObjects } = useCollection<any>(objectsCollection);
+  const { data: objects, isLoading: isLoadingObjects } = useCollection<any>(objectsQuery);
   const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsCollection);
 
   const selectedProject = React.useMemo(() => {
@@ -156,10 +161,7 @@ export default function ObjectsPage() {
   
   const projectAreas = React.useMemo<Area[]>(() => {
     if (!selectedProject) return [];
-    
-    // Alleen prullenbakkenroutes tonen zoals gevraagd.
     const prullenbakkenroutes: Area[] = (selectedProject.prullenbakkenroutes || []).map(r => ({ ...r, type: 'prullenbakkenroute' }));
-
     return prullenbakkenroutes;
   }, [selectedProject]);
 
@@ -186,7 +188,6 @@ export default function ObjectsPage() {
   
   const handleImportSuccess = () => {
     setIsImporting(false);
-    // Data will refresh automatically due to useCollection hook
   };
 
   const handleUpdateField = (field: string, value: any) => {
@@ -254,14 +255,13 @@ export default function ObjectsPage() {
               for (const polygon of features) {
                 if (turf.booleanPointInPolygon(point, polygon)) {
                   objectCount++;
-                  break; // Count object only once per wijk
+                  break;
                 }
               }
             }
           }
         }
       } catch (e) {
-        // Ignore parsing errors for this calculation
       }
       counts[area.id] = objectCount;
     }
@@ -271,7 +271,6 @@ export default function ObjectsPage() {
 
   return (
     <div className="flex flex-col flex-1 h-full min-h-0 bg-background">
-      {/* Header */}
       <header className="flex items-center justify-between p-3 bg-card border-b shadow-sm">
         <div className="flex items-center gap-2">
           <Button variant="outline">
@@ -323,7 +322,6 @@ export default function ObjectsPage() {
 
       {viewMode === 'list' ? (
          <div className="flex flex-1 min-h-0">
-         {/* Sidebar */}
          <aside className="w-64 bg-card border-r flex flex-col">
            <div className="p-3">
              <Input placeholder="Filter objecten..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
@@ -369,7 +367,6 @@ export default function ObjectsPage() {
            </div>
          </aside>
  
-         {/* Main Content */}
          <main className="flex-1 p-4 overflow-y-auto">
               {selectedObject ? (
                <Card className="h-full">

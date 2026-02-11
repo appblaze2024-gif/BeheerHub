@@ -5,7 +5,7 @@ import MapGL, { Source, Layer, type MapRef, Marker, Popup } from 'react-map-gl';
 import { useProfile } from '@/firebase/profile-provider';
 import * as turf from '@turf/turf';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import type { Object as MapObject, Melding, Besteksmelding, Project, Wijk } from '@/lib/types';
 import { Layers, LocateFixed } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -81,15 +81,26 @@ export default function DashboardPage() {
     return null;
   }, [profile?.wijk, allProjects]);
 
+  // OPTIMIZED QUERY: Filter by wijk at source if user is a medewerker
   const objectsQuery = useMemoFirebase(() => {
     if (!firestore || !visibleLayers.objects) return null;
-    return collection(firestore, 'objects');
-  }, [firestore, visibleLayers.objects]);
+    const colRef = collection(firestore, 'objects');
+    if (profile?.role === 'medewerkers' && profile?.wijk) {
+        return query(colRef, where('locatieWerkgebieden', 'array-contains', profile.wijk));
+    }
+    return colRef;
+  }, [firestore, visibleLayers.objects, profile?.role, profile?.wijk]);
   
   const meldingenQuery = useMemoFirebase(() => {
     if (!firestore || !visibleLayers.meldingen) return null;
-    return collection(firestore, 'meldingen');
-  }, [firestore, visibleLayers.meldingen]);
+    const colRef = collection(firestore, 'meldingen');
+    // Only show active issues on dashboard to save reads
+    const q = query(colRef, where('status', 'not-in', ['Afgerond', 'Niet in beheer']));
+    if (profile?.role === 'medewerkers' && profile?.wijk) {
+        return query(q, where('wijk', '==', profile.wijk));
+    }
+    return q;
+  }, [firestore, visibleLayers.meldingen, profile?.role, profile?.wijk]);
   
   const projectsQuery = useMemoFirebase(() => {
     if (!firestore || !visibleLayers.besteksmeldingen) return null;
@@ -121,7 +132,9 @@ export default function DashboardPage() {
       setIsLoadingBesteksmeldingen(true);
       const promises = projects.map(p => {
         if (!p.id) return Promise.resolve(null);
-        return getDocs(collection(firestore, 'projects', p.id, 'besteksmeldingen'));
+        let q = collection(firestore, 'projects', p.id, 'besteksmeldingen');
+        // Only fetch non-finished reports
+        return getDocs(query(q, where('status', '!=', 'Afgerond')));
       });
       const snapshots = await Promise.all(promises);
       const allMeldingen = snapshots.filter(s => s).flatMap(snap => snap!.docs.map(d => ({ ...d.data(), id: d.id } as Besteksmelding)));

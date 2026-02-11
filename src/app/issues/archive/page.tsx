@@ -1,8 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { useCollection, useFirestore } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where, orderBy } from 'firebase/firestore';
 import { Search, ListFilter, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,12 +37,17 @@ export default function ArchiveIssuesPage() {
     };
   }, [setIsHeaderVisible]);
 
-  const meldingenCollection = React.useMemo(() => {
+  // OPTIMIZED QUERY: Only fetch meldingen with 'Afgerond' status
+  const archiveQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return collection(firestore, 'meldingen');
+    return query(
+      collection(firestore, 'meldingen'),
+      where('status', '==', closedStatus),
+      orderBy('afhandeling_datum', 'desc')
+    );
   }, [firestore]);
 
-  const { data: allMeldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenCollection);
+  const { data: archivedMeldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(archiveQuery);
 
   React.useEffect(() => {
     const handler = setTimeout(() => {
@@ -53,13 +58,6 @@ export default function ArchiveIssuesPage() {
       clearTimeout(handler);
     };
   }, [searchTerm]);
-
-  const archivedMeldingen = React.useMemo(() => {
-    if (!allMeldingen) return [];
-    return allMeldingen
-      .filter(m => m.status === closedStatus)
-      .sort((a, b) => new Date(b.afhandeling_datum || b.datum).getTime() - new Date(a.afhandeling_datum || a.datum).getTime());
-  }, [allMeldingen]);
 
   const filteredMeldingen = React.useMemo(() => {
     if (!archivedMeldingen) return [];

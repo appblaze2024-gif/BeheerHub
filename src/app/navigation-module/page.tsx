@@ -594,8 +594,8 @@ export default function StartNavigationPage() {
     }
   }, [searchParams, selectedProjectId, setSelectedProjectId, navigationState]);
 
-  const { data: allObjects } = useCollection<MapObject>(useMemoFirebase(() => firestore ? collection(firestore, 'objects') : null, [firestore]));
-  const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]));
+  const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
+  const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
 
   const selectedProject = React.useMemo(() => projects?.find(p => p.id === selectedProjectId) ?? null, [projects, selectedProjectId]);
   const availableRoutes = React.useMemo(() => {
@@ -611,10 +611,16 @@ export default function StartNavigationPage() {
     return allRoutes.find(r => r.id === selectedRouteId) ?? null;
   }, [selectedRouteId, selectedProject]);
 
-  const objectsOnMap = React.useMemo(() => {
-    if (!selectedRouteDef || !allObjects) return [];
-    return allObjects.filter(obj => obj.locatieWerkgebieden && obj.locatieWerkgebieden.includes(selectedRouteDef.naam));
-  }, [selectedRouteDef, allObjects]);
+  // OPTIMIZED QUERY: Only fetch objects for the specific selected route
+  const objectsOnRouteQuery = useMemoFirebase(() => {
+    if (!firestore || !selectedRouteDef) return null;
+    return query(
+      collection(firestore, 'objects'),
+      where('locatieWerkgebieden', 'array-contains', selectedRouteDef.naam)
+    );
+  }, [firestore, selectedRouteDef?.naam]);
+
+  const { data: objectsOnMap } = useCollection<MapObject>(objectsOnRouteQuery);
 
   const routeGeoJSON = React.useMemo(() => {
     if (!selectedRouteDef) return null;
@@ -633,9 +639,8 @@ export default function StartNavigationPage() {
       const fit = () => {
           let features: any[] = [];
           if (routeGeoJSON?.features) features = [...features, ...routeGeoJSON.features];
-          if (objectsOnMap.length > 0) features = [...features, ...objectsOnMap.map(obj => turf.point([obj.longitude, obj.latitude]))];
+          if (objectsOnMap && objectsOnMap.length > 0) features = [...features, ...objectsOnMap.map(obj => turf.point([obj.longitude, obj.latitude]))];
           
-          // Also include start location in bounds if set
           if (selectedRouteDef && 'startLatitude' in selectedRouteDef && selectedRouteDef.startLatitude && selectedRouteDef.startLongitude) {
               features.push(turf.point([selectedRouteDef.startLongitude, selectedRouteDef.startLatitude]));
           }
@@ -662,7 +667,7 @@ export default function StartNavigationPage() {
 
     if (!startLoc && predefinedStart) {
         startLoc = predefinedStart;
-    } else if (simulate && !startLoc && objectsOnMap.length > 0) {
+    } else if (simulate && !startLoc && objectsOnMap && objectsOnMap.length > 0) {
         startLoc = { latitude: objectsOnMap[0].latitude, longitude: objectsOnMap[0].longitude };
     }
     
@@ -671,7 +676,7 @@ export default function StartNavigationPage() {
         return; 
     }
     
-    if (!selectedProjectId || !selectedRouteDef || !allObjects || !user) return;
+    if (!selectedProjectId || !selectedRouteDef || !objectsOnMap || !user) return;
     
     setIsStarting(true);
     if (objectsOnMap.length === 0) { 
@@ -730,7 +735,6 @@ export default function StartNavigationPage() {
           </Marker>
         )}
         
-        {/* Render route start location if defined and no user location override is active */}
         {selectedRouteDef && 'startLatitude' in selectedRouteDef && selectedRouteDef.startLatitude && selectedRouteDef.startLongitude && (
             <Marker longitude={selectedRouteDef.startLongitude} latitude={selectedRouteDef.startLatitude} anchor="center">
                 <div className="relative flex flex-col items-center">
@@ -749,7 +753,7 @@ export default function StartNavigationPage() {
                 <Layer id="route-area-outline" type="line" paint={{ 'line-color': '#3b82f6', 'line-width': 1, 'line-dasharray': [2, 2] }} />
             </Source>
         )}
-        {objectsOnMap.map(obj => (
+        {objectsOnMap?.map(obj => (
             <Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude}>
                 <div className="w-4 h-4 bg-blue-600 rounded-full border-2 border-white shadow-lg" />
             </Marker>

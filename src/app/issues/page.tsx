@@ -1,11 +1,9 @@
-
-
-      'use client';
+'use client';
 
 import * as React from 'react';
 import MapGL, { Marker, Popup, Source, Layer, FillLayer, LineLayer } from 'react-map-gl';
-import { useCollection, useFirestore, useFirebaseApp, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { useCollection, useFirestore, useFirebaseApp, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking, useMemoFirebase } from '@/firebase';
+import { collection, doc, serverTimestamp, writeBatch, query, where } from 'firebase/firestore';
 import { Calendar as CalendarIcon, Plus, Search, List, Map as MapIcon, Bell, Filter, Navigation, Pencil, FileText, ChevronLeft, Camera, Package, Clock, User, Paperclip, PlusCircle, AlertCircle, Info, UploadCloud, ChevronDown, MapPin, Trash2, ArrowLeft, File as FileIcon, Loader2, Maximize, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -186,23 +184,28 @@ export default function IssuesPage() {
   const [isDraggingAfhandelingPhoto, setIsDraggingAfhandelingPhoto] = React.useState(false);
   const [fullScreenPhoto, setFullScreenPhoto] = React.useState<UploadedFile | null>(null);
 
-  const meldingenCollection = React.useMemo(() => {
+  // OPTIMIZED QUERY: Filter out 'Afgerond' and 'Nieuw' meldingen at source
+  const meldingenQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return collection(firestore, 'meldingen');
+    return query(
+      collection(firestore, 'meldingen'),
+      where('status', 'not-in', ['Afgerond', 'Nieuw', 'Niet in beheer'])
+    );
   }, [firestore]);
 
-  const projectsCollection = React.useMemo(() => {
+  const projectsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'projects');
   }, [firestore]);
 
-  const { data: meldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenCollection);
-  const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsCollection);
+  const { data: meldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenQuery);
+  const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
 
-  const objectsCollection = React.useMemo(() => {
-    if (!firestore) return null;
+  // OPTIMIZED: Fetch nearby objects only when a melding is selected
+  const objectsCollection = useMemoFirebase(() => {
+    if (!firestore || !selectedMeldingId) return null;
     return collection(firestore, 'objects');
-  }, [firestore]);
+  }, [firestore, selectedMeldingId]);
   const { data: allObjects, isLoading: isLoadingObjects } = useCollection<MapObject>(objectsCollection);
 
   const form = useForm<MeldingFormValues>({
@@ -250,16 +253,13 @@ export default function IssuesPage() {
   const filteredMeldingen = React.useMemo(() => {
     if (!meldingen) return [];
     
-    // Filter out 'Afgerond' and 'Nieuw' items from the source
-    const openMeldingen = meldingen.filter(m => m.status !== 'Afgerond' && m.status !== 'Nieuw');
-
-    let timeFilteredMeldingen = selectedDate ? openMeldingen.filter(m => {
+    let timeFilteredMeldingen = selectedDate ? meldingen.filter(m => {
       try {
         const creationDate = startOfDay(new Date(m.datum));
         const dayStart = startOfDay(selectedDate);
         return creationDate <= dayStart;
       } catch (e) { return false; }
-    }) : openMeldingen;
+    }) : meldingen;
 
     const searchedMeldingen = debouncedSearchQuery ? timeFilteredMeldingen.filter(m => {
       const query = debouncedSearchQuery.toLowerCase();
@@ -338,7 +338,7 @@ export default function IssuesPage() {
         const hours = Math.floor(totalMinutes / 60);
         const minutes = totalMinutes % 60;
         setElapsedTime(`${hours} uur en ${minutes} minuten`);
-      }, 1000); // Update every second
+      }, 1000); 
 
       return () => clearInterval(interval);
     } else {
@@ -394,7 +394,7 @@ export default function IssuesPage() {
             tasks: tasks,
             hoeveelheden: hoeveelheden,
             gewerkteMinuten: minutesWorked,
-            workStartedAt: null, // Reset start time
+            workStartedAt: null, 
         });
         toast({
           title: 'Werkbon afgerond',
@@ -668,7 +668,7 @@ export default function IssuesPage() {
   };
 
 
-  if (isLoadingMeldingen || isLoadingProjects || isLoadingObjects) {
+  if (isLoadingMeldingen || isLoadingProjects || (selectedMeldingId && isLoadingObjects)) {
       return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>
   }
   

@@ -1,8 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { useCollection, useFirestore, updateDocumentNonBlocking } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { useCollection, useFirestore, updateDocumentNonBlocking, useMemoFirebase } from '@/firebase';
+import { collection, doc, query, where } from 'firebase/firestore';
 import { Search, ListFilter, ArrowLeft, MoreHorizontal, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,12 +45,13 @@ export default function MeldingenportaalPage() {
     };
   }, [setIsHeaderVisible]);
 
-  const meldingenCollection = React.useMemo(() => {
+  // OPTIMIZED QUERY: Only fetch 'Nieuw' meldingen
+  const portalQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return collection(firestore, 'meldingen');
+    return query(collection(firestore, 'meldingen'), where('status', '==', 'Nieuw'));
   }, [firestore]);
 
-  const { data: allMeldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenCollection);
+  const { data: newMeldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(portalQuery);
 
   React.useEffect(() => {
     const handler = setTimeout(() => {
@@ -58,11 +59,6 @@ export default function MeldingenportaalPage() {
     }, 300);
     return () => clearTimeout(handler);
   }, [searchTerm]);
-
-  const newMeldingen = React.useMemo(() => {
-    if (!allMeldingen) return [];
-    return allMeldingen.filter(m => m.status === 'Nieuw');
-  }, [allMeldingen]);
 
   const filteredMeldingen = React.useMemo(() => {
     if (!newMeldingen) return [];
@@ -207,7 +203,6 @@ export default function MeldingenportaalPage() {
         onOpenChange={(open) => {
             setForwardDialogOpen(open);
             if (!open) {
-                // Clear selection after a small delay to avoid UI flicker during close animation
                 setTimeout(() => setSelectedMeldingForForward(null), 300);
             }
         }}
