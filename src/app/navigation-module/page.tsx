@@ -14,7 +14,23 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, X, ArrowUp, Play, CheckCircle2, Pause, MapPin, Gauge, Loader2 } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  X, 
+  ArrowUp, 
+  Play, 
+  CheckCircle2, 
+  Pause, 
+  MapPin, 
+  Gauge, 
+  Loader2,
+  ArrowUpLeft,
+  ArrowUpRight,
+  CornerUpLeft,
+  CornerUpRight,
+  RotateCcw,
+  Navigation
+} from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -49,6 +65,26 @@ const routeLayer: Layer = {
   },
 };
 
+// Helper to select appropriate icon for maneuver
+function getManeuverIcon(step: any) {
+    const modifier = step?.maneuver?.modifier;
+    const type = step?.maneuver?.type;
+
+    if (type === 'arrive') return <CheckCircle2 className="h-14 w-14 text-green-400" />;
+    if (type === 'depart') return <ArrowUp className="h-14 w-14 text-white" />;
+    
+    switch (modifier) {
+        case 'left': return <CornerUpLeft className="h-14 w-14 text-white" />;
+        case 'right': return <CornerUpRight className="h-14 w-14 text-white" />;
+        case 'slight left': return <ArrowUpLeft className="h-14 w-14 text-white" />;
+        case 'slight right': return <ArrowUpRight className="h-14 w-14 text-white" />;
+        case 'sharp left': return <CornerUpLeft className="h-14 w-14 text-white stroke-[3]" />;
+        case 'sharp right': return <CornerUpRight className="h-14 w-14 text-white stroke-[3]" />;
+        case 'uturn': return <RotateCcw className="h-14 w-14 text-white" />;
+        default: return <ArrowUp className="h-14 w-14 text-white" />;
+    }
+}
+
 function NavigatingView({ 
     objectsOnRoute, 
     onExit,
@@ -69,6 +105,7 @@ function NavigatingView({
   const [currentRouteGeometry, setCurrentRouteGeometry] = React.useState<any>(null);
   const [currentLeg, setCurrentLeg] = React.useState<any>(null);
   const [isPaused, setIsPaused] = React.useState(false);
+  const [distanceRemaining, setDistanceRemaining] = React.useState(0);
   const { profile } = useProfile();
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
   const { toast } = useToast();
@@ -125,6 +162,20 @@ function NavigatingView({
       (position) => {
         const { latitude, longitude, speed, heading } = position.coords;
         setUserLocation({ latitude, longitude, speed, heading });
+        
+        // Update distance remaining for real GPS
+        if (currentRouteGeometry) {
+            try {
+                const line = turf.lineString(currentRouteGeometry.coordinates);
+                const totalDist = turf.length(line, { units: 'meters' });
+                const userPoint = turf.point([longitude, latitude]);
+                const snapped = turf.nearestPointOnLine(line, userPoint);
+                const distToStart = turf.length(turf.lineSlice(turf.point(currentRouteGeometry.coordinates[0]), snapped, line), { units: 'meters' });
+                setDistanceRemaining(Math.max(0, totalDist - distToStart));
+            } catch (e) {
+                // fallback to initial leg distance
+            }
+        }
       },
       (error) => {
         console.error("Locatiefout:", error.code, error.message);
@@ -137,7 +188,7 @@ function NavigatingView({
       { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
     );
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [isSimulating, toast]);
+  }, [isSimulating, toast, currentRouteGeometry]);
 
   // High Performance 60FPS Animation Loop for Simulation
   React.useEffect(() => {
@@ -189,6 +240,9 @@ function NavigatingView({
         simStateRef.current.currentSpeedMs += (simStateRef.current.targetSpeedMs - simStateRef.current.currentSpeedMs) * deltaTime * accelFactor;
 
         simStateRef.current.distanceTravelled += simStateRef.current.currentSpeedMs * deltaTime;
+        
+        // Update distance remaining UI
+        setDistanceRemaining(Math.max(0, totalDistance - simStateRef.current.distanceTravelled));
 
         if (simStateRef.current.distanceTravelled >= totalDistance) {
             const finalCoord = coords[coords.length - 1];
@@ -243,13 +297,15 @@ function NavigatingView({
     
     const fetchRoute = async () => {
       const { longitude, latitude } = userLocation;
-      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${longitude},${latitude};${nextObject.longitude},${nextObject.latitude}?steps=true&geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
+      // Add &language=nl for Dutch instructions
+      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${longitude},${latitude};${nextObject.longitude},${nextObject.latitude}?steps=true&geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}&language=nl`;
       try {
         const response = await fetch(url);
         const data = await response.json();
         if (data.routes && data.routes.length > 0) {
           setCurrentRouteGeometry(data.routes[0].geometry);
           setCurrentLeg(data.routes[0].legs[0]);
+          setDistanceRemaining(data.routes[0].legs[0].distance);
           simStateRef.current.distanceTravelled = 0; 
         }
       } catch (error) {
@@ -287,7 +343,6 @@ function NavigatingView({
 
   const speedKmh = userLocation?.speed ? Math.round(userLocation.speed * 3.6) : 0;
   const firstStep = currentLeg?.steps?.[0];
-  const distanceRemaining = currentLeg?.distance || 0;
 
   return (
     <div className="w-full h-full relative bg-slate-100 overflow-hidden">
@@ -310,7 +365,6 @@ function NavigatingView({
             <div className="relative flex items-center justify-center">
                 <div className="absolute h-16 w-16 bg-blue-500/20 rounded-full animate-pulse" />
                 <div className="h-14 w-14 bg-blue-600 rounded-full border-[6px] border-white shadow-2xl flex items-center justify-center">
-                    {/* SVG Arrow pointing exactly UP (0 deg) */}
                     <svg viewBox="0 0 24 24" className="h-8 w-8 text-white fill-current">
                         <path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z" />
                     </svg>
@@ -341,13 +395,15 @@ function NavigatingView({
               <Card className="bg-slate-900/95 backdrop-blur-xl text-white shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-none overflow-hidden">
                   <CardContent className="p-5 flex items-center gap-6">
                       <div className="bg-blue-600 p-4 rounded-2xl shadow-inner">
-                          <ArrowUp className="h-14 w-14 text-white" />
+                          {getManeuverIcon(firstStep)}
                       </div>
                       <div className="min-w-0 flex-1">
                           <p className="text-5xl font-black tracking-tighter tabular-nums mb-1">
                               {distanceRemaining > 1000 ? `${(distanceRemaining/1000).toFixed(1)} km` : `${Math.round(distanceRemaining)} m`}
                           </p>
-                          <p className="text-sm font-bold opacity-80 uppercase tracking-widest leading-tight">{firstStep.maneuver.instruction}</p>
+                          <p className="text-sm font-bold opacity-80 uppercase tracking-widest leading-tight">
+                              {firstStep.maneuver.instruction}
+                          </p>
                       </div>
                   </CardContent>
               </Card>
