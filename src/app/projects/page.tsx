@@ -51,6 +51,7 @@ import {
 import { useProject } from '@/context/project-context';
 import * as turf from '@turf/turf';
 import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 import type { Object as MapObject, Project, Werksoort, Veegroute, Prullenbakkenroute, Boekingregel, Bestand } from '@/lib/types';
 
 const EMPTY_PROJECT: Project = {
