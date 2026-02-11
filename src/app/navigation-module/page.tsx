@@ -649,12 +649,19 @@ export default function StartNavigationPage() {
     let startLoc = userLocation;
     setIsSimulationMode(simulate);
     
-    if (simulate && !startLoc && objectsOnMap.length > 0) {
+    // Check if the selected route has a predefined start location
+    const predefinedStart = selectedRouteDef && 'startLatitude' in selectedRouteDef && selectedRouteDef.startLatitude && selectedRouteDef.startLongitude
+        ? { latitude: selectedRouteDef.startLatitude, longitude: selectedRouteDef.startLongitude }
+        : null;
+
+    if (!startLoc && predefinedStart) {
+        startLoc = predefinedStart;
+    } else if (simulate && !startLoc && objectsOnMap.length > 0) {
         startLoc = { latitude: objectsOnMap[0].latitude, longitude: objectsOnMap[0].longitude };
     }
     
     if (!startLoc && !simulate) { 
-        alert("Kon uw locatie niet bepalen. Klik op de kaart om een startpunt te kiezen."); 
+        alert("Kon uw locatie niet bepalen en er is geen startlocatie ingesteld voor deze route. Klik op de kaart om een startpunt te kiezen."); 
         return; 
     }
     
@@ -694,6 +701,7 @@ export default function StartNavigationPage() {
     }
     
     setObjectsOnRoute(sortedObjects);
+    setUserLocation(startCoords);
     setNavigationState('navigating');
     setIsStarting(false);
   };
@@ -755,7 +763,11 @@ export default function StartNavigationPage() {
                 <SelectTrigger className="h-12 border-2 font-bold"><SelectValue /></SelectTrigger>
                 <SelectContent>
                     <SelectItem value="--nieuwe-route--">-- Kies een route --</SelectItem>
-                    {availableRoutes.map((r: any) => <SelectItem key={r.id} value={r.id}>{r.naam}</SelectItem>)}
+                    {availableRoutes.map((r: any) => (
+                        <SelectItem key={r.id} value={r.id}>
+                            {r.naam} {r.startAdres ? ' (Startlocatie ingesteld)' : ''}
+                        </SelectItem>
+                    ))}
                 </SelectContent>
             </Select>
           </div>

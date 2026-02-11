@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { FilePenLine, Plus, Trash2, Upload, Download, MapPin, Map as MapIcon, MoreHorizontal, Copy } from 'lucide-react';
+import { FilePenLine, Plus, Trash2, Upload, Download, MapPin, Map as MapIcon, MoreHorizontal, Copy, Home } from 'lucide-react';
 import {
   useFirestore,
   useCollection,
@@ -35,9 +35,11 @@ import { OrganisatieContactDialog } from '@/components/organisatie-contact-dialo
 import { ProjectBestandenDialog } from '@/components/project-bestanden-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
+import { Wijk } from '@/lib/types';
 import { WijkMapDialog } from '@/components/wijk-map-dialog';
 import { VeegrouteMapDialog } from '@/components/veegroute-map-dialog';
 import { PrullenbakkenrouteMapDialog } from '@/components/prullenbakkenroute-map-dialog';
+import { RouteStartLocationDialog } from '@/components/route-start-location-dialog';
 import { useProfile } from '@/firebase/profile-provider';
 import {
   DropdownMenu,
@@ -49,91 +51,7 @@ import {
 import { useProject } from '@/context/project-context';
 import * as turf from '@turf/turf';
 import { Separator } from '@/components/ui/separator';
-import type { Object as MapObject } from '@/lib/types';
-
-type Werksoort = {
-  id: string;
-  postnummer: string;
-  werksoort: string;
-  eenheid: string;
-  fictieveH: string;
-  uurprijs: string;
-};
-
-export type Wijk = {
-  id: string;
-  naam: string;
-  locatie: string;
-  subGebieden: string;
-};
-
-type Veegroute = {
-  id: string;
-  naam: string;
-  locatie: string;
-  subGebieden: string;
-  roadTypes?: string[];
-};
-
-type Prullenbakkenroute = {
-  id: string;
-  naam: string;
-  locatie: string;
-  subGebieden: string;
-};
-
-type Boekingregel = {
-    id: string;
-    naam: string;
-};
-
-type Project = {
-  id?: string;
-  projectnummer: string;
-  projectnaam: string;
-  locatie: string;
-  opdrachtgever: string;
-  startdatum: string;
-  einddatum: string;
-  bestek: string;
-  besteknummer: string;
-  versie: string;
-  datum: string;
-  omschrijving: string;
-  werksoorten: Werksoort[];
-  boekingregels?: Boekingregel[];
-  wijken?: Wijk[];
-  veegroutes?: Veegroute[];
-  prullenbakkenroutes?: Prullenbakkenroute[];
-};
-
-export type Afspraak = {
-  id?: string;
-  onderwerp: string;
-  datum: string;
-  tijd: string;
-  notities: string;
-}
-
-export type OrganisatieContact = {
-  id?: string;
-  naam: string;
-  rol: string;
-  bedrijf: string;
-  telefoon: string;
-  email: string;
-  wijk?: string;
-}
-
-export type Bestand = {
-    id: string;
-    name: string;
-    type: string;
-    size: number;
-    url: string;
-    uploadedAt: string;
-    storagePath: string;
-};
+import type { Object as MapObject, Project, Werksoort, Veegroute, Prullenbakkenroute, Boekingregel, Bestand } from '@/lib/types';
 
 const EMPTY_PROJECT: Project = {
   projectnummer: '',
@@ -153,6 +71,24 @@ const EMPTY_PROJECT: Project = {
   veegroutes: [],
   prullenbakkenroutes: [],
 };
+
+export type Afspraak = {
+  id?: string;
+  onderwerp: string;
+  datum: string;
+  tijd: string;
+  notities: string;
+}
+
+export type OrganisatieContact = {
+  id?: string;
+  naam: string;
+  rol: string;
+  bedrijf: string;
+  telefoon: string;
+  email: string;
+  wijk?: string;
+}
 
 function WerksoortenTab({
   werksoorten,
@@ -857,6 +793,7 @@ function PrullenbakkenroutesTab({
   allObjects: MapObject[] | null;
 }) {
   const [mapRoute, setMapRoute] = React.useState<Prullenbakkenroute | null>(null);
+  const [startLocRoute, setStartLocRoute] = React.useState<Prullenbakkenroute | null>(null);
 
   const sortedRoutes = React.useMemo(() => {
     if (!prullenbakkenroutes) return [];
@@ -919,29 +856,44 @@ function PrullenbakkenroutesTab({
     setCurrentProject(prev => ({ ...prev, prullenbakkenroutes: updatedRoutes }));
   };
 
+  const handleSaveStartLocation = async (routeId: string, address: string, lat: number, lng: number) => {
+    if (!firestore || !projectId) return;
+    const updatedRoutes = (prullenbakkenroutes || []).map(r =>
+      r.id === routeId ? { ...r, startAdres: address, startLatitude: lat, startLongitude: lng } : r
+    );
+    const projectRef = doc(firestore, 'projects', projectId);
+    await updateDocumentNonBlocking(projectRef, { prullenbakkenroutes: updatedRoutes });
+    setCurrentProject(prev => ({ ...prev, prullenbakkenroutes: updatedRoutes }));
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-end text-sm text-muted-foreground">
         Totaal objecten: <span className="font-bold text-foreground ml-1">{totalObjects}</span>
       </div>
-      <div className="grid grid-cols-[1fr_1fr_100px_auto_auto] gap-x-4 px-1 text-sm font-semibold">
+      <div className="grid grid-cols-[1fr_1fr_100px_auto_auto_auto] gap-x-4 px-1 text-sm font-semibold">
         <Label>Prullenbakkenroute</Label>
         <Label>Locatie</Label>
-        <Label>Objecten</Label>
+        <Label className="text-center">Objecten</Label>
         <Label>Gebied</Label>
+        <Label>Startlocatie</Label>
         <span />
       </div>
       {sortedRoutes.map((route) => (
         <div
           key={route.id}
-          className="grid grid-cols-[1fr_1fr_100px_auto_auto] items-center gap-x-4"
+          className="grid grid-cols-[1fr_1fr_100px_auto_auto_auto] items-center gap-x-4"
         >
           <Input value={route.naam} onChange={(e) => handleInputChange(route.id, 'naam', e.target.value)} disabled={!canEdit}/>
           <Input value={route.locatie} onChange={(e) => handleInputChange(route.id, 'locatie', e.target.value)} disabled={!canEdit}/>
           <div className="text-center text-sm">{objectCounts[route.id] ?? 0}</div>
-          <Button variant="outline" onClick={() => setMapRoute(route)}>
-            <MapPin className="mr-2 h-4 w-4" />
-            Gebied {canEdit ? 'tekenen/bewerken' : 'bekijken'}
+          <Button variant="outline" size="sm" onClick={() => setMapRoute(route)}>
+            <MapIcon className="mr-2 h-4 w-4" />
+            Gebied {canEdit ? 'bewerken' : 'bekijken'}
+          </Button>
+          <Button variant={route.startAdres ? "secondary" : "outline"} size="sm" onClick={() => setStartLocRoute(route)}>
+            <Home className={cn("mr-2 h-4 w-4", route.startAdres && "text-primary")} />
+            {route.startAdres ? 'Startlocatie' : 'Instellen'}
           </Button>
           <div className="flex items-center">
             {canEdit && <Button variant="ghost" size="icon" onClick={() => removeRow(route.id)}>
@@ -952,10 +904,11 @@ function PrullenbakkenroutesTab({
       ))}
       {canEdit && <Button variant="outline" onClick={addRow}>Prullenbakkenroute toevoegen</Button>}
       <div className="border-t pt-4 mt-4">
-        <div className="grid grid-cols-[1fr_1fr_100px_auto_auto] gap-x-4 px-1 text-sm">
+        <div className="grid grid-cols-[1fr_1fr_100px_auto_auto_auto] gap-x-4 px-1 text-sm">
             <span className="font-semibold">Totaal</span>
             <span/>
             <div className="text-center font-semibold">{totalObjectsInRoutes}</div>
+            <span/>
             <span/>
             <span/>
         </div>
@@ -968,6 +921,17 @@ function PrullenbakkenroutesTab({
           allPrullenbakkenroutes={prullenbakkenroutes}
           onSave={handleSaveCoordinates}
           readOnly={!canEdit}
+        />
+      )}
+      {startLocRoute && (
+        <RouteStartLocationDialog
+          open={!!startLocRoute}
+          onOpenChange={(open) => !open && setStartLocRoute(null)}
+          routeName={startLocRoute.naam}
+          initialAddress={startLocRoute.startAdres}
+          initialLat={startLocRoute.startLatitude}
+          initialLng={startLocRoute.startLongitude}
+          onSave={(address, lat, lng) => handleSaveStartLocation(startLocRoute.id, address, lat, lng)}
         />
       )}
     </div>

@@ -184,6 +184,9 @@ export interface Prullenbakkenroute {
   naam: string;
   locatie: string;
   subGebieden: string;
+  startLatitude?: number;
+  startLongitude?: number;
+  startAdres?: string;
 }
 
 export type Project = {
