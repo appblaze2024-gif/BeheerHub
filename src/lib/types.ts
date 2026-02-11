@@ -1,3 +1,4 @@
+
 export type UserPermissions = {
   [module: string]: {
     view?: boolean;
@@ -34,7 +35,7 @@ export type UserProfile = {
 export interface Sensor {
   id: string;
   name: string;
-  type: 'Vulgraad' | 'Temperatuur' | 'Luchtkwaliteit' | 'GPS Tracker' | 'Waterpeil';
+  type: 'TOF200C' | 'Temperatuur' | 'Luchtkwaliteit' | 'GPS Tracker' | 'Waterpeil';
   status: 'Online' | 'Offline' | 'Batterij laag' | 'Onderhoud';
   latitude: number;
   longitude: number;

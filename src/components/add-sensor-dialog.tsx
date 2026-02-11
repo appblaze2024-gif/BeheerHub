@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -39,7 +40,7 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 const sensorSchema = z.object({
   id: z.string().min(1, 'Serienummer is verplicht (bv. MAC-adres of Chip ID)').toUpperCase(),
   name: z.string().min(1, 'Naam is verplicht'),
-  type: z.enum(["Vulgraad", "Temperatuur", "Luchtkwaliteit", "GPS Tracker", "Waterpeil"]),
+  type: z.enum(["TOF200C", "Temperatuur", "Luchtkwaliteit", "GPS Tracker", "Waterpeil"]),
   binDepthCm: z.coerce.number().min(1, 'Voer een diepte in groter dan 0'),
   measurementFrequency: z.coerce.number().min(1, 'Voer een frequentie in (minimaal 1)').max(1440, 'Maximaal elke minuut'),
 });
@@ -67,7 +68,7 @@ export function AddSensorDialog({
     defaultValues: { 
       id: '', 
       name: '', 
-      type: 'Vulgraad',
+      type: 'TOF200C',
       binDepthCm: 100,
       measurementFrequency: 24 
     },
@@ -169,7 +170,7 @@ export function AddSensorDialog({
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="Vulgraad">Vulgraad (Ultrasoon)</SelectItem>
+                            <SelectItem value="TOF200C">Vulgraad (TOF200C)</SelectItem>
                             <SelectItem value="Temperatuur">Temperatuur</SelectItem>
                             <SelectItem value="Luchtkwaliteit">Luchtkwaliteit</SelectItem>
                             <SelectItem value="GPS Tracker">GPS Tracker</SelectItem>

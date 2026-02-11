@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "AppSettings": {
@@ -18,7 +19,7 @@
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
-        "type": { "type": "string", "enum": ["Vulgraad", "Temperatuur", "Luchtkwaliteit", "GPS Tracker", "Waterpeil"] },
+        "type": { "type": "string", "enum": ["TOF200C", "Temperatuur", "Luchtkwaliteit", "GPS Tracker", "Waterpeil"] },
         "status": { "type": "string", "enum": ["Online", "Offline", "Batterij laag", "Onderhoud"] },
         "latitude": { "type": "number" },
         "longitude": { "type": "number" },
