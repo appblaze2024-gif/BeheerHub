@@ -46,6 +46,7 @@ import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
 import { useProfile } from '@/firebase/profile-provider';
 import { useToast } from '@/components/ui/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -229,15 +230,10 @@ function NavigatingView({
         
         if (isFollowing && !isPaused) {
             const currentSpeedKmh = speed ? speed * 3.6 : 0;
-            
-            // Use SNAPPED location for map centering to avoid jitter
-            const mapLat = latitude;
-            const mapLng = longitude;
-
             setViewState(prev => ({
                 ...prev,
-                latitude: mapLat,
-                longitude: mapLng,
+                latitude: latitude,
+                longitude: longitude,
                 bearing: heading !== null ? heading : prev.bearing,
                 zoom: 18.5 - (Math.min(currentSpeedKmh, 50) / 25),
                 pitch: 65,
@@ -270,7 +266,7 @@ function NavigatingView({
       },
       { 
         enableHighAccuracy: true, 
-        timeout: 15000, // Longer timeout for tablet GPS warm-up
+        timeout: 15000, 
         maximumAge: 0 
       }
     );
@@ -664,6 +660,7 @@ export default function StartNavigationPage() {
   const { user } = useUser();
   const { profile } = useProfile();
   const { toast } = useToast();
+  const { setIsHeaderVisible } = useNavigationUI();
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
   const isSuperUser = profile?.role === 'Super admin';
   
@@ -677,6 +674,16 @@ export default function StartNavigationPage() {
   const [isSimulationMode, setIsSimulationMode] = React.useState(false);
   
   const mapRef = React.useRef<MapRef>(null);
+
+  // Toggle global header visibility
+  React.useEffect(() => {
+    if (navigationState === 'navigating') {
+      setIsHeaderVisible(false);
+    } else {
+      setIsHeaderVisible(true);
+    }
+    return () => setIsHeaderVisible(true);
+  }, [navigationState, setIsHeaderVisible]);
 
   // Watch device location automatically
   React.useEffect(() => {
@@ -837,7 +844,20 @@ export default function StartNavigationPage() {
   };
   
   if (navigationState === 'navigating') {
-    return <NavigatingView objectsOnRoute={objectsOnRoute} onExit={() => { setNavigationState('setup'); setObjectsOnRoute([]); if (searchParams.has('lat')) router.back(); }} initialUserLocation={userLocation} isSimulating={isSimulationMode} />;
+    return (
+      <div className="fixed inset-0 z-[100] bg-background">
+        <NavigatingView 
+          objectsOnRoute={objectsOnRoute} 
+          onExit={() => { 
+            setNavigationState('setup'); 
+            setObjectsOnRoute([]); 
+            if (searchParams.has('lat')) router.back(); 
+          }} 
+          initialUserLocation={userLocation} 
+          isSimulating={isSimulationMode} 
+        />
+      </div>
+    );
   }
 
   return (
