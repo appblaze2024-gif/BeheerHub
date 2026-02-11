@@ -116,7 +116,6 @@ function NavigatingView({
   });
 
   const nextObject = objectsOnRoute[currentObjectIndex];
-  const isSinglePointNavigation = objectsOnRoute.length === 1 && destinationAddress;
 
   // Real Geolocation Watcher
   React.useEffect(() => {
@@ -140,41 +139,55 @@ function NavigatingView({
     return () => navigator.geolocation.clearWatch(watchId);
   }, [isSimulating, toast]);
 
-  // Simulation Logic: Drive along the road geometry
+  // Simulation Logic: Smoothly follow the road geometry
   React.useEffect(() => {
     if (!isSimulating || isPaused || !currentRouteGeometry || !nextObject) return;
 
     const coords = currentRouteGeometry.coordinates;
-    let step = 0;
+    if (coords.length < 2) return;
+
+    const line = turf.lineString(coords);
+    const totalDistance = turf.length(line, { units: 'meters' });
+    let distanceTravelled = 0;
+    const speedMs = 12.5; // ~45 km/h
+    const tickRate = 30; // 30ms intervals (~33 fps)
     
     const interval = setInterval(() => {
-        if (step >= coords.length) {
+        distanceTravelled += (speedMs * tickRate) / 1000;
+        
+        if (distanceTravelled >= totalDistance) {
+            // Arrival detection at end of geometry
+            const finalCoord = coords[coords.length - 1];
+            setUserLocation({
+                latitude: finalCoord[1],
+                longitude: finalCoord[0],
+                speed: 0,
+                heading: null
+            });
             clearInterval(interval);
             return;
         }
 
-        const [lng, lat] = coords[step];
-        const nextStep = coords[step + 1];
+        const currentPoint = turf.along(line, distanceTravelled, { units: 'meters' });
+        const lookAheadPoint = turf.along(line, Math.min(distanceTravelled + 5, totalDistance), { units: 'meters' });
         
-        let heading = null;
-        if (nextStep) {
-            heading = calculateBearing(lat, lng, nextStep[1], nextStep[0]);
-        }
+        const [lng, lat] = currentPoint.geometry.coordinates;
+        const [nextLng, nextLat] = lookAheadPoint.geometry.coordinates;
+        
+        const heading = calculateBearing(lat, lng, nextLat, nextLng);
 
         setUserLocation({
             latitude: lat,
             longitude: lng,
-            speed: 45 / 3.6, // Simuleer 45 km/h
+            speed: speedMs,
             heading: heading
         });
-
-        step++;
-    }, 100); // 10 steps per second
+    }, tickRate);
 
     return () => clearInterval(interval);
   }, [isSimulating, isPaused, currentRouteGeometry, nextObject]);
 
-  // Update Map perspective
+  // Update Map perspective based on position
   React.useEffect(() => {
     if (!userLocation || !nextObject) return;
 
@@ -189,15 +202,19 @@ function NavigatingView({
       bearing: effectiveHeading,
     }));
 
-    mapRef.current?.flyTo({ 
-      center: [userLocation.longitude, userLocation.latitude], 
-      bearing: effectiveHeading,
-      pitch: 65,
-      zoom: 18,
-      duration: isSimulating ? 150 : 1000,
-      essential: true
-    });
-  }, [userLocation?.latitude, userLocation?.longitude, nextObject?.id, isSimulating]);
+    // Only use flyTo for non-simulated updates to keep real GPS movements smooth
+    // For simulation, the state update cycle at 30ms is enough for react-map-gl to render smoothly
+    if (!isSimulating) {
+        mapRef.current?.flyTo({ 
+            center: [userLocation.longitude, userLocation.latitude], 
+            bearing: effectiveHeading,
+            pitch: 65,
+            zoom: 18,
+            duration: 1000,
+            essential: true
+        });
+    }
+  }, [userLocation, nextObject, isSimulating]);
 
   // Fetch Route Data from Directions API
   React.useEffect(() => {
@@ -221,7 +238,7 @@ function NavigatingView({
     fetchRoute();
   }, [nextObject?.id]); // Re-fetch when we target a new object
   
-  // Arrival Detection
+  // Arrival Detection (Real World)
   React.useEffect(() => {
     if (!userLocation || !nextObject) return;
 
@@ -229,7 +246,7 @@ function NavigatingView({
     const objectPoint = turf.point([nextObject.longitude, nextObject.latitude]);
     const distance = turf.distance(userPoint, objectPoint, { units: 'meters' });
 
-    if (distance < 10) { 
+    if (distance < 15) { 
       setCompletedObjects(prev => [...prev, nextObject.id]);
       setCurrentObjectIndex(prev => prev + 1);
     }
@@ -248,7 +265,7 @@ function NavigatingView({
 
   const speedKmh = userLocation?.speed ? (userLocation.speed * 3.6).toFixed(0) : 0;
   const firstStep = currentLeg?.steps?.[0];
-  const distance = currentLeg?.distance || 0;
+  const distanceRemaining = currentLeg?.distance || 0;
 
   return (
     <div className="w-full h-full relative">
@@ -293,7 +310,7 @@ function NavigatingView({
               <Button 
                 variant="secondary" 
                 size="lg" 
-                className="h-12 w-12 rounded-full shadow-xl bg-white/90 backdrop-blur"
+                className="h-12 w-12 rounded-full shadow-xl bg-white/90 backdrop-blur border-2"
                 onClick={() => setIsPaused(!isPaused)}
               >
                   {isPaused ? <Play className="h-6 w-6 fill-current" /> : <Pause className="h-6 w-6 fill-current" />}
@@ -310,13 +327,13 @@ function NavigatingView({
                         <ArrowUp className="h-10 w-10 shrink-0"/>
                     </div>
                     <div>
-                        <p className="text-3xl font-black">{distance > 1000 ? `${(distance/1000).toFixed(1)} km` : `${Math.round(distance)} m`}</p>
+                        <p className="text-3xl font-black">{distanceRemaining > 1000 ? `${(distanceRemaining/1000).toFixed(1)} km` : `${Math.round(distanceRemaining)} m`}</p>
                         <p className="text-xs font-bold uppercase tracking-wider opacity-80 line-clamp-2">{firstStep.maneuver.instruction}</p>
                     </div>
                 </CardContent>
             </Card>
         )}
-         <Card className="w-72 shadow-xl bg-white/95 backdrop-blur">
+         <Card className="w-72 shadow-xl bg-white/95 backdrop-blur border-2">
             <CardHeader className="p-4 pb-2 border-b">
                 <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex justify-between items-center">
                     <span>{isSimulating ? "SIMULATIE" : "LIVE NAVIGATIE"}</span>
@@ -582,7 +599,7 @@ export default function StartNavigationPage() {
         ))}
       </MapGL>
         
-      <Card className="absolute top-4 left-4 z-10 w-full max-w-sm shadow-2xl bg-white/95 backdrop-blur">
+      <Card className="absolute top-4 left-4 z-10 w-full max-w-sm shadow-2xl bg-white/95 backdrop-blur border-2">
         <CardHeader className="p-4 border-b">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={() => router.push('/')} className="h-8 w-8">
@@ -646,7 +663,7 @@ export default function StartNavigationPage() {
           
           <div className="flex flex-col gap-2 pt-2">
             <Button 
-                className="w-full h-14 text-lg font-black bg-blue-600 hover:bg-blue-700" 
+                className="w-full h-14 text-lg font-black bg-blue-600 hover:bg-blue-700 shadow-lg" 
                 onClick={() => handleStartRoute(false)} 
                 disabled={!selectedRouteId || selectedRouteId === '--nieuwe-route--' || isStarting}
             >
