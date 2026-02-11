@@ -431,7 +431,7 @@ function NavigatingView({
             anchor="center"
             // When map bearing follows heading, the marker rotation should be 0 
             // so it always points UP relative to the device.
-            rotation={0} 
+            rotation={isFollowing ? 0 : (userLocation.heading || 0)} 
           >
             <div className="relative flex items-center justify-center transition-all duration-150 ease-linear">
                 <div className="absolute h-16 w-16 bg-blue-500/20 rounded-full animate-pulse" />
@@ -561,7 +561,8 @@ function NavigatingView({
         {!isFollowing && (
             <Button 
                 onClick={() => setIsFollowing(true)}
-                className="h-12 w-12 rounded-full shadow-2xl bg-primary text-white border-none hover:scale-110 active:scale-95 transition-all"
+                className="h-12 w-12 rounded-full shadow-2xl bg-primary text-white border-none hover:scale-110 active:scale-95 transition-all flex items-center justify-center"
+                title="Locatie herstellen"
             >
                 <LocateFixed className="h-6 w-6" />
             </Button>
@@ -589,10 +590,10 @@ function NavigatingView({
       </div>
 
       <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10 flex gap-3">
-            <Button variant="secondary" size="lg" className="h-14 w-14 rounded-full shadow-2xl bg-white/95 backdrop-blur-xl border-none hover:scale-110 active:scale-95 transition-all" onClick={() => setIsPaused(!isPaused)}>
+            <Button variant="secondary" size="lg" className="h-14 w-14 rounded-full shadow-2xl bg-white/95 backdrop-blur-xl border-none hover:scale-110 active:scale-95 transition-all flex items-center justify-center" onClick={() => setIsPaused(!isPaused)}>
                 {isPaused ? <Play className="h-7 w-7 fill-current text-blue-600" /> : <Pause className="h-7 w-7 fill-current text-blue-600" />}
             </Button>
-            <Button variant="destructive" size="lg" className="h-14 w-14 rounded-full shadow-2xl border-none hover:scale-110 active:scale-95 transition-all" onClick={onExit}><XIcon className="h-7 w-7" /></Button>
+            <Button variant="destructive" size="lg" className="h-14 w-14 rounded-full shadow-2xl border-none hover:scale-110 active:scale-95 transition-all flex items-center justify-center" onClick={onExit}><XIcon className="h-7 w-7" /></Button>
       </div>
     </div>
   );
@@ -722,10 +723,14 @@ export default function StartNavigationPage() {
         ? { latitude: selectedRouteDef.startLatitude, longitude: selectedRouteDef.startLongitude }
         : null;
 
-    // Use GPS if available, otherwise fallback to predefined start
-    if (!startLoc && predefinedStart) {
+    // Preference for simulation: Depot
+    if (simulate && predefinedStart) {
+        startLoc = predefinedStart;
+    } else if (!startLoc && predefinedStart) {
+        // Fallback for live if GPS not ready: Depot
         startLoc = predefinedStart;
     } else if (simulate && !startLoc && objectsOnMap && objectsOnMap.length > 0) {
+        // Ultimate fallback: first object
         startLoc = { latitude: objectsOnMap[0].latitude, longitude: objectsOnMap[0].longitude };
     }
     
@@ -832,7 +837,7 @@ export default function StartNavigationPage() {
       <Card className="absolute top-4 left-4 z-10 w-full max-w-sm shadow-2xl bg-white/95 backdrop-blur border-2 border-slate-100">
         <CardHeader className="p-5 border-b bg-slate-50/50">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => router.push('/')} className="h-10 w-10 hover:bg-white rounded-full"><ArrowLeft className="h-5 w-5" /></Button>
+            <Button variant="ghost" size="icon" onClick={() => router.push('/')} className="h-10 w-10 hover:bg-white rounded-full flex items-center justify-center"><ArrowLeft className="h-5 w-5" /></Button>
             <CardTitle className="text-lg font-black uppercase tracking-tighter">Navigatie Setup</CardTitle>
           </div>
         </CardHeader>
@@ -847,8 +852,8 @@ export default function StartNavigationPage() {
           <div className="space-y-2">
             <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Type Inzet</Label>
             <div className="grid grid-cols-2 gap-3">
-              <Button variant={routeType === 'veeg' ? 'default' : 'outline'} onClick={() => setRouteType('veeg')} disabled={!selectedProjectId} className={cn("font-black h-12 border-2", routeType === 'veeg' ? "bg-blue-600 border-blue-600 shadow-md" : "border-slate-200")}>Veegwagen</Button>
-              <Button variant={routeType === 'prullenbak' ? 'default' : 'outline'} onClick={() => setRouteType('prullenbak')} disabled={!selectedProjectId} className={cn("font-black h-12 border-2", routeType === 'prullenbak' ? "bg-blue-600 border-blue-600 shadow-md" : "border-slate-200")}>Prullenbakken</Button>
+              <Button variant={routeType === 'veeg' ? 'default' : 'outline'} onClick={() => setRouteType('veeg')} disabled={!selectedProjectId} className={cn("font-black h-12 border-2", routeType === 'veeg' ? "bg-blue-600 border-blue-600 shadow-md text-white" : "border-slate-200")}>Veegwagen</Button>
+              <Button variant={routeType === 'prullenbak' ? 'default' : 'outline'} onClick={() => setRouteType('prullenbak')} disabled={!selectedProjectId} className={cn("font-black h-12 border-2", routeType === 'prullenbak' ? "bg-blue-600 border-blue-600 shadow-md text-white" : "border-slate-200")}>Prullenbakken</Button>
             </div>
           </div>
           <div className="space-y-2">
@@ -875,11 +880,11 @@ export default function StartNavigationPage() {
               </div>
           )}
           <div className="flex flex-col gap-3 pt-2">
-            <Button className="w-full h-16 text-xl font-black bg-blue-600 hover:bg-blue-700 shadow-xl rounded-2xl uppercase tracking-tighter" onClick={() => handleStartRoute(false)} disabled={!selectedRouteId || selectedRouteId === '--nieuwe-route--' || isStarting}>
+            <Button className="w-full h-16 text-xl font-black bg-blue-600 hover:bg-blue-700 shadow-xl rounded-2xl uppercase tracking-tighter flex items-center justify-center text-white" onClick={() => handleStartRoute(false)} disabled={!selectedRouteId || selectedRouteId === '--nieuwe-route--' || isStarting}>
                 {isStarting ? <Loader2 className="mr-3 h-6 w-6 animate-spin" /> : <Navigation className="mr-3 h-6 w-6 fill-current" />} START LIVE RIT
             </Button>
             {isSuperUser && (
-                <Button variant="outline" className="w-full h-14 border-dashed border-2 border-blue-200 text-blue-600 hover:bg-blue-50/50 font-black uppercase tracking-tighter rounded-2xl" onClick={() => handleStartRoute(true)} disabled={!selectedRouteId || selectedRouteId === '--nieuwe-route--' || isStarting}>
+                <Button variant="outline" className="w-full h-14 border-dashed border-2 border-blue-200 text-blue-600 hover:bg-blue-50/50 font-black uppercase tracking-tighter rounded-2xl flex items-center justify-center" onClick={() => handleStartRoute(true)} disabled={!selectedRouteId || selectedRouteId === '--nieuwe-route--' || isStarting}>
                     <Gauge className="mr-2 h-5 w-5" /> SIMULATOR STARTEN
                 </Button>
             )}
