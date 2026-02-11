@@ -79,7 +79,7 @@ function NavigatingView({
     destinationAddress?: string | null;
 }) {
   const mapRef = React.useRef<MapRef>(null);
-  const [userLocation, setUserLocation] = React.useState<{ latitude: number, longitude: number, speed: number | null } | null>(initialUserLocation ? { ...initialUserLocation, speed: 0 } : null);
+  const [userLocation, setUserLocation] = React.useState<{ latitude: number, longitude: number, speed: number | null, heading: number | null } | null>(initialUserLocation ? { ...initialUserLocation, speed: 0, heading: 0 } : null);
   const [currentObjectIndex, setCurrentObjectIndex] = React.useState(0);
   const [completedObjects, setCompletedObjects] = React.useState<string[]>([]);
   const [currentRoute, setCurrentRoute] = React.useState<any>(null);
@@ -88,9 +88,9 @@ function NavigatingView({
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
   const { toast } = useToast();
   const [viewState, setViewState] = React.useState({
-    pitch: 60,
+    pitch: 65, // Steeper pitch for driving perspective
     bearing: 0,
-    zoom: 17,
+    zoom: 18, // Zoomed in closer to the road
     latitude: initialUserLocation?.latitude || 52.1326,
     longitude: initialUserLocation?.longitude || 5.2913,
   });
@@ -103,12 +103,30 @@ function NavigatingView({
   React.useEffect(() => {
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
+        const { latitude, longitude, speed, heading } = position.coords;
+        
         setUserLocation({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          speed: position.coords.speed,
+          latitude,
+          longitude,
+          speed,
+          heading,
         });
-        mapRef.current?.flyTo({ center: [position.coords.longitude, position.coords.latitude], duration: 1000 });
+
+        // Update viewState to follow user and rotate with heading
+        setViewState(prev => ({
+          ...prev,
+          latitude,
+          longitude,
+          bearing: heading !== null ? heading : prev.bearing,
+        }));
+
+        // FlyTo for smoothness if needed, but setViewState should handle it via props
+        mapRef.current?.flyTo({ 
+          center: [longitude, latitude], 
+          bearing: heading !== null ? heading : undefined,
+          duration: 1000,
+          essential: true
+        });
       },
       (error) => {
         console.error("Error watching position:", error.code, error.message);
@@ -159,7 +177,7 @@ function NavigatingView({
         clearTimeout(fetchRouteTimeoutRef.current);
       }
     };
-  }, [userLocation, nextObject]); // Re-run effect when location or destination changes
+  }, [userLocation?.latitude, userLocation?.longitude, nextObject?.id]); // Deep check for changes
   
   // Effect to check for arrival
   React.useEffect(() => {
@@ -173,7 +191,7 @@ function NavigatingView({
       setCompletedObjects(prev => [...prev, nextObject.id]);
       setCurrentObjectIndex(prev => prev + 1);
     }
-  }, [userLocation, nextObject]);
+  }, [userLocation?.latitude, userLocation?.longitude, nextObject?.id]);
 
   if (currentObjectIndex >= objectsOnRoute.length) {
     return (
