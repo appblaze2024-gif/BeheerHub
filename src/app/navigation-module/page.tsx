@@ -1,7 +1,8 @@
+
 'use client';
 
 import * as React from 'react';
-import MapGL, { Marker, Source, Layer, type MapRef, FillLayer, LineLayer } from 'react-map-gl';
+import MapGL, { Marker, Source, Layer, type MapRef, NavigationControl } from 'react-map-gl';
 import { useCollection, useFirestore, useUser } from '@/firebase';
 import { collection, query, where, addDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft, X, ArrowUp, Play, Navigation as NavigationIcon, CheckCircle2, Pause, MapPin } from 'lucide-react';
+import { ArrowLeft, X, ArrowUp, Play, Navigation as NavigationIcon, CheckCircle2, Pause, MapPin, Gauge } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -63,7 +64,7 @@ const routeLayer: Layer = {
   },
 };
 
-const routeAreaFillLayer: FillLayer = {
+const routeAreaFillLayer: any = {
     id: 'route-area-fill',
     type: 'fill',
     paint: {
@@ -72,7 +73,7 @@ const routeAreaFillLayer: FillLayer = {
     },
 };
 
-const routeAreaOutlineLayer: LineLayer = {
+const routeAreaOutlineLayer: any = {
     id: 'route-area-outline',
     type: 'line',
     paint: {
@@ -115,6 +116,14 @@ function NavigatingView({
     longitude: initialUserLocation?.longitude || 5.2913,
   });
 
+  const animationRef = React.useRef<number | null>(null);
+  const simStateRef = React.useRef({
+    distanceTravelled: 0,
+    currentSpeedMs: 0,
+    targetSpeedMs: 25, // ~90 km/h baseline for straights
+    lastTimestamp: 0
+  });
+
   const nextObject = objectsOnRoute[currentObjectIndex];
 
   // Real Geolocation Watcher
@@ -139,57 +148,93 @@ function NavigatingView({
     return () => navigator.geolocation.clearWatch(watchId);
   }, [isSimulating, toast]);
 
-  // Simulation Logic: Smoothly follow the road geometry
+  // High Performance 60FPS Animation Loop for Simulation
   React.useEffect(() => {
-    if (!isSimulating || isPaused || !currentRouteGeometry || !nextObject) return;
+    if (!isSimulating || !currentRouteGeometry || !nextObject) return;
 
     const coords = currentRouteGeometry.coordinates;
     if (coords.length < 2) return;
 
     const line = turf.lineString(coords);
     const totalDistance = turf.length(line, { units: 'meters' });
-    let distanceTravelled = 0;
-    const speedMs = 12.5; // ~45 km/h
-    const tickRate = 30; // 30ms intervals (~33 fps)
-    
-    const interval = setInterval(() => {
-        distanceTravelled += (speedMs * tickRate) / 1000;
-        
-        if (distanceTravelled >= totalDistance) {
-            // Arrival detection at end of geometry
-            const finalCoord = coords[coords.length - 1];
-            setUserLocation({
-                latitude: finalCoord[1],
-                longitude: finalCoord[0],
-                speed: 0,
-                heading: null
-            });
-            clearInterval(interval);
+
+    const animate = (timestamp: number) => {
+        if (isPaused) {
+            simStateRef.current.lastTimestamp = timestamp;
+            animationRef.current = requestAnimationFrame(animate);
             return;
         }
 
-        const currentPoint = turf.along(line, distanceTravelled, { units: 'meters' });
-        const lookAheadPoint = turf.along(line, Math.min(distanceTravelled + 5, totalDistance), { units: 'meters' });
+        if (!simStateRef.current.lastTimestamp) simStateRef.current.lastTimestamp = timestamp;
+        const deltaTime = (timestamp - simStateRef.current.lastTimestamp) / 1000;
+        simStateRef.current.lastTimestamp = timestamp;
+
+        // Realistic Acceleration Logic
+        // Calculate curvature ahead to decide target speed
+        const lookAheadForSpeed = turf.along(line, Math.min(simStateRef.current.distanceTravelled + 30, totalDistance), { units: 'meters' });
+        const lookAheadPoint = turf.along(line, Math.min(simStateRef.current.distanceTravelled + 5, totalDistance), { units: 'meters' });
         
+        const currentPoint = turf.along(line, simStateRef.current.distanceTravelled, { units: 'meters' });
         const [lng, lat] = currentPoint.geometry.coordinates;
         const [nextLng, nextLat] = lookAheadPoint.geometry.coordinates;
+        const [farLng, farLat] = lookAheadForSpeed.geometry.coordinates;
+
+        // Detect turns by comparing bearing changes
+        const currentBearing = calculateBearing(lat, lng, nextLat, nextLng);
+        const farBearing = calculateBearing(nextLat, nextLng, farLat, farLng);
+        const bearingDiff = Math.abs(currentBearing - farBearing);
         
+        // Slow down for sharp turns (large bearing diff)
+        if (bearingDiff > 15) {
+            simStateRef.current.targetSpeedMs = 8; // ~30 km/h
+        } else {
+            simStateRef.current.targetSpeedMs = 28; // ~100 km/h
+        }
+
+        // Smoothen speed transition
+        const accel = simStateRef.current.targetSpeedMs > simStateRef.current.currentSpeedMs ? 10 : 20; // Braking is faster
+        if (Math.abs(simStateRef.current.currentSpeedMs - simStateRef.current.targetSpeedMs) > 0.1) {
+            simStateRef.current.currentSpeedMs += (simStateRef.current.targetSpeedMs - simStateRef.current.currentSpeedMs) * deltaTime * accel * 0.1;
+        }
+
+        simStateRef.current.distanceTravelled += simStateRef.current.currentSpeedMs * deltaTime;
+
+        if (simStateRef.current.distanceTravelled >= totalDistance) {
+            const finalCoord = coords[coords.length - 1];
+            setUserLocation({ latitude: finalCoord[1], longitude: finalCoord[0], speed: 0, heading: null });
+            simStateRef.current.distanceTravelled = 0; // Prepare for next leg
+            return;
+        }
+
         const heading = calculateBearing(lat, lng, nextLat, nextLng);
 
         setUserLocation({
             latitude: lat,
             longitude: lng,
-            speed: speedMs,
+            speed: simStateRef.current.currentSpeedMs,
             heading: heading
         });
-    }, tickRate);
 
-    return () => clearInterval(interval);
-  }, [isSimulating, isPaused, currentRouteGeometry, nextObject]);
+        setViewState(prev => ({
+            ...prev,
+            latitude: lat,
+            longitude: lng,
+            bearing: heading, // Map follows rotation perfectly
+            zoom: 18 - (simStateRef.current.currentSpeedMs / 30) * 1.5, // Dynamic zoom based on speed
+        }));
 
-  // Update Map perspective based on position
+        animationRef.current = requestAnimationFrame(animate);
+    };
+
+    animationRef.current = requestAnimationFrame(animate);
+    return () => {
+        if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    };
+  }, [isSimulating, isPaused, currentRouteGeometry, nextObject?.id]);
+
+  // Sync Camera for non-simulated (Real GPS)
   React.useEffect(() => {
-    if (!userLocation || !nextObject) return;
+    if (isSimulating || !userLocation || !nextObject) return;
 
     const effectiveHeading = userLocation.heading !== null 
         ? userLocation.heading 
@@ -201,19 +246,6 @@ function NavigatingView({
       longitude: userLocation.longitude,
       bearing: effectiveHeading,
     }));
-
-    // Only use flyTo for non-simulated updates to keep real GPS movements smooth
-    // For simulation, the state update cycle at 30ms is enough for react-map-gl to render smoothly
-    if (!isSimulating) {
-        mapRef.current?.flyTo({ 
-            center: [userLocation.longitude, userLocation.latitude], 
-            bearing: effectiveHeading,
-            pitch: 65,
-            zoom: 18,
-            duration: 1000,
-            essential: true
-        });
-    }
   }, [userLocation, nextObject, isSimulating]);
 
   // Fetch Route Data from Directions API
@@ -229,6 +261,7 @@ function NavigatingView({
         if (data.routes && data.routes.length > 0) {
           setCurrentRouteGeometry(data.routes[0].geometry);
           setCurrentLeg(data.routes[0].legs[0]);
+          simStateRef.current.distanceTravelled = 0; // Reset local tracking for new leg
         }
       } catch (error) {
         console.error("Error fetching directions:", error);
@@ -236,9 +269,9 @@ function NavigatingView({
     };
     
     fetchRoute();
-  }, [nextObject?.id]); // Re-fetch when we target a new object
+  }, [nextObject?.id]);
   
-  // Arrival Detection (Real World)
+  // Arrival Detection
   React.useEffect(() => {
     if (!userLocation || !nextObject) return;
 
@@ -246,7 +279,7 @@ function NavigatingView({
     const objectPoint = turf.point([nextObject.longitude, nextObject.latitude]);
     const distance = turf.distance(userPoint, objectPoint, { units: 'meters' });
 
-    if (distance < 15) { 
+    if (distance < 20) { 
       setCompletedObjects(prev => [...prev, nextObject.id]);
       setCurrentObjectIndex(prev => prev + 1);
     }
@@ -256,19 +289,19 @@ function NavigatingView({
     return (
         <div className="flex flex-col items-center justify-center h-full gap-4 bg-background p-6 text-center">
             <CheckCircle2 className="h-16 w-16 text-green-500" />
-            <h1 className="text-2xl font-bold">Route Voltooid!</h1>
-            <p className="text-muted-foreground">{completedObjects.length} van de {objectsOnRoute.length} objecten succesvol afgerond.</p>
-            <Button onClick={onExit} size="lg">Terug naar overzicht</Button>
+            <h1 className="text-3xl font-black tracking-tight">Route Voltooid!</h1>
+            <p className="text-muted-foreground font-medium">{completedObjects.length} van de {objectsOnRoute.length} objecten succesvol afgerond.</p>
+            <Button onClick={onExit} size="lg" className="px-10 h-14 text-lg font-bold">Terug naar overzicht</Button>
         </div>
     )
   }
 
-  const speedKmh = userLocation?.speed ? (userLocation.speed * 3.6).toFixed(0) : 0;
+  const speedKmh = userLocation?.speed ? Math.round(userLocation.speed * 3.6) : 0;
   const firstStep = currentLeg?.steps?.[0];
   const distanceRemaining = currentLeg?.distance || 0;
 
   return (
-    <div className="w-full h-full relative">
+    <div className="w-full h-full relative bg-slate-100">
       <MapGL
         ref={mapRef}
         {...viewState}
@@ -280,9 +313,9 @@ function NavigatingView({
         {userLocation && (
           <Marker longitude={userLocation.longitude} latitude={userLocation.latitude} anchor="center">
             <div className="relative flex items-center justify-center">
-                <div className="absolute h-12 w-12 bg-blue-500/20 rounded-full animate-pulse" />
-                <div className="h-10 w-10 bg-blue-600 rounded-full border-4 border-white shadow-2xl flex items-center justify-center transition-transform duration-150" style={{ transform: `rotate(${userLocation.heading || 0}deg)` }}>
-                    <NavigationIcon className="h-5 w-5 text-white fill-current" />
+                <div className="absolute h-16 w-16 bg-blue-500/10 rounded-full animate-pulse" />
+                <div className="h-12 w-12 bg-blue-600 rounded-full border-4 border-white shadow-2xl flex items-center justify-center transition-transform duration-75" style={{ transform: `rotate(${userLocation.heading || 0}deg)` }}>
+                    <NavigationIcon className="h-6 w-6 text-white fill-current" />
                 </div>
             </div>
           </Marker>
@@ -290,8 +323,8 @@ function NavigatingView({
         {objectsOnRoute.map((obj, idx) => (
             <Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude} anchor="center">
                 <div className={cn(
-                    "w-5 h-5 rounded-full border-4 border-white shadow-md flex items-center justify-center text-[8px] font-bold text-white",
-                    idx < currentObjectIndex ? "bg-green-500" : (idx === currentObjectIndex ? "bg-blue-600 scale-125" : "bg-slate-400")
+                    "w-6 h-6 rounded-full border-4 border-white shadow-md flex items-center justify-center text-[10px] font-black text-white transition-all",
+                    idx < currentObjectIndex ? "bg-green-500" : (idx === currentObjectIndex ? "bg-blue-600 scale-125 ring-4 ring-blue-500/20" : "bg-slate-400")
                 )}>
                     {idx + 1}
                 </div>
@@ -310,10 +343,10 @@ function NavigatingView({
               <Button 
                 variant="secondary" 
                 size="lg" 
-                className="h-12 w-12 rounded-full shadow-xl bg-white/90 backdrop-blur border-2"
+                className="h-14 w-14 rounded-full shadow-2xl bg-white/95 backdrop-blur border-2 border-slate-200"
                 onClick={() => setIsPaused(!isPaused)}
               >
-                  {isPaused ? <Play className="h-6 w-6 fill-current" /> : <Pause className="h-6 w-6 fill-current" />}
+                  {isPaused ? <Play className="h-7 w-7 fill-current text-blue-600" /> : <Pause className="h-7 w-7 fill-current text-blue-600" />}
               </Button>
           </div>
       )}
@@ -321,38 +354,53 @@ function NavigatingView({
       {/* UI Overlays */}
       <div className="absolute top-4 left-4 z-10 flex flex-col gap-4">
         {firstStep && (
-            <Card className="bg-primary text-primary-foreground w-72 shadow-2xl border-none">
-                <CardContent className="p-4 flex items-center gap-4">
-                    <div className="bg-white/20 p-2 rounded-lg">
-                        <ArrowUp className="h-10 w-10 shrink-0"/>
+            <Card className="bg-blue-600 text-white w-80 shadow-2xl border-none overflow-hidden">
+                <div className="bg-blue-700/50 px-4 py-1 flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-widest opacity-70">Volgende Instructie</span>
+                    <NavigationIcon className="h-3 w-3 rotate-45" />
+                </div>
+                <CardContent className="p-4 flex items-center gap-5">
+                    <div className="bg-white/20 p-3 rounded-2xl">
+                        <ArrowUp className="h-12 w-12 shrink-0"/>
                     </div>
-                    <div>
-                        <p className="text-3xl font-black">{distanceRemaining > 1000 ? `${(distanceRemaining/1000).toFixed(1)} km` : `${Math.round(distanceRemaining)} m`}</p>
-                        <p className="text-xs font-bold uppercase tracking-wider opacity-80 line-clamp-2">{firstStep.maneuver.instruction}</p>
+                    <div className="min-w-0">
+                        <p className="text-4xl font-black tracking-tighter tabular-nums">{distanceRemaining > 1000 ? `${(distanceRemaining/1000).toFixed(1)} km` : `${Math.round(distanceRemaining)} m`}</p>
+                        <p className="text-xs font-bold leading-tight line-clamp-2 uppercase tracking-wide">{firstStep.maneuver.instruction}</p>
                     </div>
                 </CardContent>
             </Card>
         )}
-         <Card className="w-72 shadow-xl bg-white/95 backdrop-blur border-2">
-            <CardHeader className="p-4 pb-2 border-b">
+         <Card className="w-80 shadow-2xl bg-white/95 backdrop-blur border-2 border-slate-100 overflow-hidden">
+            <CardHeader className="p-4 pb-2 border-b bg-slate-50/50">
                 <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex justify-between items-center">
-                    <span>{isSimulating ? "SIMULATIE" : "LIVE NAVIGATIE"}</span>
-                    {isPaused && <span className="text-red-500 animate-pulse">GEPAUZEERD</span>}
+                    <div className="flex items-center gap-2">
+                        <div className={cn("h-2 w-2 rounded-full", isPaused ? "bg-red-500" : "bg-green-500 animate-pulse")} />
+                        <span>{isSimulating ? "AUTO-PILOT ACTIEF" : "LIVE GPS TRACKING"}</span>
+                    </div>
+                    {isPaused && <span className="text-red-500">PAUZE</span>}
                 </CardTitle>
             </CardHeader>
             <CardContent className="p-4">
-                <div className="flex flex-col w-full gap-3">
-                    <div className="flex flex-col">
-                        <div className="flex justify-between text-[10px] font-black mb-1">
-                            <span>ROUTE VOORTGANG</span>
+                <div className="flex flex-col w-full gap-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-black text-muted-foreground uppercase">Snelheid</span>
+                            <div className="flex items-baseline gap-1">
+                                <span className="text-5xl font-black tracking-tighter tabular-nums">{speedKmh}</span>
+                                <span className="text-sm font-bold text-muted-foreground">km/h</span>
+                            </div>
+                        </div>
+                        <div className="h-16 w-16 bg-slate-100 rounded-full flex items-center justify-center border-4 border-white shadow-inner">
+                            <Gauge className={cn("h-8 w-8 transition-colors", speedKmh > 80 ? "text-red-500" : "text-blue-600")} />
+                        </div>
+                    </div>
+
+                    <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] font-black uppercase text-muted-foreground">
+                            <span>Route Voortgang</span>
                             <span>{completedObjects.length} / {objectsOnRoute.length}</span>
                         </div>
-                        <Progress value={(completedObjects.length / objectsOnRoute.length) * 100} className="h-2" />
-                    </div>
-                    
-                    <div className="flex items-baseline justify-center gap-1">
-                        <span className="text-6xl font-black tracking-tighter">{speedKmh}</span>
-                        <span className="text-lg font-bold text-muted-foreground">km/h</span>
+                        <Progress value={(completedObjects.length / objectsOnRoute.length) * 100} className="h-3 bg-slate-100" />
                     </div>
                 </div>
             </CardContent>
@@ -360,8 +408,8 @@ function NavigatingView({
       </div>
 
        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10">
-            <Button variant="destructive" size="lg" className="h-16 w-16 rounded-full shadow-2xl border-4 border-white" onClick={onExit}>
-                <X className="h-8 w-8" />
+            <Button variant="destructive" size="lg" className="h-20 w-20 rounded-full shadow-2xl border-8 border-white hover:scale-110 transition-transform active:scale-95" onClick={onExit}>
+                <X className="h-10 w-10" />
             </Button>
       </div>
 
@@ -465,7 +513,6 @@ export default function StartNavigationPage() {
     return null;
   }, [selectedRouteDef]);
 
-  // Map Click handler for setting start position in simulation mode
   const handleMapClick = (e: any) => {
       if (navigationState === 'setup') {
           setUserLocation({
@@ -499,7 +546,7 @@ export default function StartNavigationPage() {
 
       if (map.isStyleLoaded()) fit();
       else map.once('style.load', fit);
-  }, [selectedRouteDef, routeGeoJSON, objectsOnMap]);
+  }, [selectedRouteId, routeGeoJSON, objectsOnMap]);
 
   const handleStartRoute = async (simulate = false) => {
     let startLoc = userLocation;
@@ -527,7 +574,6 @@ export default function StartNavigationPage() {
 
     const startCoords = startLoc || { latitude: objectsOnMap[0].latitude, longitude: objectsOnMap[0].longitude };
 
-    // Sort objects by distance from start to create a logical sequence
     const sortedObjects = [...objectsOnMap].sort((a, b) => {
         const distA = turf.distance(turf.point([startCoords.longitude, startCoords.latitude]), turf.point([a.longitude, a.latitude]));
         const distB = turf.distance(turf.point([startCoords.longitude, startCoords.latitude]), turf.point([b.longitude, b.latitude]));
@@ -564,7 +610,7 @@ export default function StartNavigationPage() {
   }
 
   return (
-    <div className="w-full h-full relative">
+    <div className="w-full h-full relative bg-slate-100">
       <MapGL
         ref={mapRef}
         initialViewState={initialViewState}
@@ -577,11 +623,11 @@ export default function StartNavigationPage() {
         {userLocation && (
           <Marker longitude={userLocation.longitude} latitude={userLocation.latitude} anchor="center">
             <div className="relative flex flex-col items-center">
-              <div className="absolute h-8 w-8 rounded-full bg-green-500/30 animate-ping" />
-              <div className="relative h-6 w-6 rounded-full bg-green-600 border-2 border-white shadow-lg flex items-center justify-center">
-                  <MapPin className="h-3 w-3 text-white fill-current" />
+              <div className="absolute h-10 w-10 rounded-full bg-green-500/30 animate-ping" />
+              <div className="relative h-8 w-8 rounded-full bg-green-600 border-4 border-white shadow-xl flex items-center justify-center">
+                  <MapPin className="h-4 w-4 text-white fill-current" />
               </div>
-              <span className="bg-green-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded mt-1 shadow-md">STARTPUNT</span>
+              <span className="bg-green-600 text-white text-[10px] font-black px-2 py-1 rounded-lg mt-2 shadow-2xl uppercase tracking-widest">Startpunt</span>
             </div>
           </Marker>
         )}
@@ -594,29 +640,29 @@ export default function StartNavigationPage() {
         )}
         {objectsOnMap.map(obj => (
             <Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude}>
-                <div className="w-3 h-3 bg-blue-600 rounded-full border-2 border-white shadow-sm" />
+                <div className="w-4 h-4 bg-blue-600 rounded-full border-2 border-white shadow-lg" />
             </Marker>
         ))}
       </MapGL>
         
-      <Card className="absolute top-4 left-4 z-10 w-full max-w-sm shadow-2xl bg-white/95 backdrop-blur border-2">
-        <CardHeader className="p-4 border-b">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => router.push('/')} className="h-8 w-8">
-                <ArrowLeft className="h-4 w-4" />
+      <Card className="absolute top-4 left-4 z-10 w-full max-w-sm shadow-2xl bg-white/95 backdrop-blur border-2 border-slate-100">
+        <CardHeader className="p-5 border-b bg-slate-50/50">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => router.push('/')} className="h-10 w-10 hover:bg-white rounded-full">
+                <ArrowLeft className="h-5 w-5" />
             </Button>
-            <CardTitle className="text-base font-black uppercase tracking-tight">Navigatie Setup</CardTitle>
+            <CardTitle className="text-lg font-black uppercase tracking-tighter">Navigatie Setup</CardTitle>
           </div>
         </CardHeader>
-        <CardContent className="p-4 space-y-5">
+        <CardContent className="p-5 space-y-6">
           <div className="space-y-2">
-            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Stap 1: Project</Label>
+            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Project Selecteren</Label>
             <Select
               value={selectedProjectId || ''}
               onValueChange={(v) => { setSelectedProjectId(v || null); setRouteType(null); setSelectedRouteId('--nieuwe-route--'); }}
               disabled={isLoadingProjects}
             >
-              <SelectTrigger className="h-10 border-2"><SelectValue placeholder="Selecteer een project" /></SelectTrigger>
+              <SelectTrigger className="h-12 border-2 text-sm font-bold"><SelectValue placeholder="Selecteer een project" /></SelectTrigger>
               <SelectContent>
                 {projects?.map((p) => (<SelectItem key={p.id} value={p.id!}>{p.projectnaam}</SelectItem>))}
               </SelectContent>
@@ -624,13 +670,13 @@ export default function StartNavigationPage() {
           </div>
           
           <div className="space-y-2">
-            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Stap 2: Type Inzet</Label>
-            <div className="grid grid-cols-2 gap-2">
+            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Type Inzet</Label>
+            <div className="grid grid-cols-2 gap-3">
               <Button 
                 variant={routeType === 'veeg' ? 'default' : 'outline'} 
                 onClick={() => { setRouteType('veeg'); setSelectedRouteId('--nieuwe-route--'); }}
                 disabled={!selectedProjectId}
-                className="font-bold h-10 border-2"
+                className={cn("font-black h-12 border-2 uppercase tracking-tighter", routeType === 'veeg' ? "bg-blue-600 border-blue-600 shadow-md" : "border-slate-200")}
               >
                 Veegwagen
               </Button>
@@ -638,7 +684,7 @@ export default function StartNavigationPage() {
                 variant={routeType === 'prullenbak' ? 'default' : 'outline'} 
                 onClick={() => { setRouteType('prullenbak'); setSelectedRouteId('--nieuwe-route--'); }}
                 disabled={!selectedProjectId}
-                className="font-bold h-10 border-2"
+                className={cn("font-black h-12 border-2 uppercase tracking-tighter", routeType === 'prullenbak' ? "bg-blue-600 border-blue-600 shadow-md" : "border-slate-200")}
               >
                 Prullenbakken
               </Button>
@@ -646,9 +692,9 @@ export default function StartNavigationPage() {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Stap 3: Selecteer Route</Label>
+            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Route Keuze</Label>
             <Select onValueChange={setSelectedRouteId} value={selectedRouteId} disabled={!routeType}>
-                <SelectTrigger className="h-10 border-2"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-12 border-2 text-sm font-bold"><SelectValue /></SelectTrigger>
                 <SelectContent>
                     <SelectItem value="--nieuwe-route--">-- Kies een route --</SelectItem>
                     {availableRoutes.map((r: any) => (<SelectItem key={r.id} value={r.id}>{r.naam}</SelectItem>))}
@@ -656,29 +702,32 @@ export default function StartNavigationPage() {
             </Select>
           </div>
 
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800">
-              <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase mb-1">Tip voor simulator</p>
-              <p className="text-[11px] text-blue-800 dark:text-blue-300 leading-tight">Klik op de kaart om de <strong>startlocatie</strong> van de simulatie te bepalen.</p>
+          <div className="bg-blue-50/50 dark:bg-blue-900/20 p-4 rounded-2xl border-2 border-blue-100 dark:border-blue-800">
+              <div className="flex items-center gap-2 mb-1">
+                <Play className="h-3 w-3 text-blue-600 fill-current" />
+                <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">Simulator Tip</p>
+              </div>
+              <p className="text-[11px] text-blue-800/80 dark:text-blue-300 leading-snug font-medium">Klik ergens op de kaart om het <strong>startpunt</strong> van je gesimuleerde rit te bepalen.</p>
           </div>
           
-          <div className="flex flex-col gap-2 pt-2">
+          <div className="flex flex-col gap-3 pt-2">
             <Button 
-                className="w-full h-14 text-lg font-black bg-blue-600 hover:bg-blue-700 shadow-lg" 
+                className="w-full h-16 text-xl font-black bg-blue-600 hover:bg-blue-700 shadow-xl rounded-2xl uppercase tracking-tighter" 
                 onClick={() => handleStartRoute(false)} 
                 disabled={!selectedRouteId || selectedRouteId === '--nieuwe-route--' || isStarting}
             >
-                {isStarting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <NavigationIcon className="mr-2 h-5 w-5 fill-current" />}
+                {isStarting ? <Loader2 className="mr-3 h-6 w-6 animate-spin" /> : <NavigationIcon className="mr-3 h-6 w-6 fill-current" />}
                 START LIVE RIT
             </Button>
             
             {isSuperUser && (
                 <Button 
                     variant="outline" 
-                    className="w-full h-12 border-dashed border-2 border-primary text-primary hover:bg-primary/5 font-black uppercase tracking-tight" 
+                    className="w-full h-14 border-dashed border-2 border-blue-200 text-blue-600 hover:bg-blue-50/50 font-black uppercase tracking-tighter rounded-2xl" 
                     onClick={() => handleStartRoute(true)} 
                     disabled={!selectedRouteId || selectedRouteId === '--nieuwe-route--' || isStarting}
                 >
-                    <Play className="mr-2 h-4 w-4 fill-current" />
+                    <Gauge className="mr-2 h-5 w-5" />
                     SIMULATOR STARTEN
                 </Button>
             )}
