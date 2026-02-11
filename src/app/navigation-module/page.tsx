@@ -2,10 +2,10 @@
 
 import * as React from 'react';
 import MapGL, { Marker, Source, Layer, type MapRef } from 'react-map-gl';
-import { useCollection, useFirestore, useUser } from '@/firebase';
+import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -99,7 +99,7 @@ function NavigatingView({
     isSimulating?: boolean
 }) {
   const mapRef = React.useRef<MapRef>(null);
-  const [userLocation, setUserLocation] = React.useState<{ latitude: number, longitude: number, speed: number | null, heading: number | null } | null>(initialUserLocation ? { ...initialUserLocation, speed: 0, heading: null } : null);
+  const [userLocation, setUserLocation] = React.useState<{ latitude: number, longitude: number, speed: number | null, heading: number | null } | null>(initialUserLocation ? { ...initialUserLocation, speed: 0, heading: 0 } : null);
   const [currentObjectIndex, setCurrentObjectIndex] = React.useState(0);
   const [completedObjects, setCompletedObjects] = React.useState<string[]>([]);
   const [currentRouteGeometry, setCurrentRouteGeometry] = React.useState<any>(null);
@@ -122,7 +122,7 @@ function NavigatingView({
   const simStateRef = React.useRef({
     distanceTravelled: 0,
     currentSpeedMs: 0,
-    targetSpeedMs: 13.8,
+    targetSpeedMs: 13.8, // ~50 km/h
     lastTimestamp: 0
   });
 
@@ -166,7 +166,7 @@ function NavigatingView({
     return null;
   }, [currentLeg, distanceRemainingToDestination]);
 
-  // Dynamic route line
+  // Dynamic route line - only show what's ahead
   const remainingRouteGeometry = React.useMemo(() => {
     if (!currentRouteGeometry) return null;
     try {
@@ -212,7 +212,7 @@ function NavigatingView({
     return () => navigator.geolocation.clearWatch(watchId);
   }, [isSimulating, toast, currentRouteGeometry]);
 
-  // Animation Loop
+  // Animation Loop for Simulator
   React.useEffect(() => {
     if (!isSimulating || !currentRouteGeometry || !nextObject) return;
 
@@ -233,8 +233,8 @@ function NavigatingView({
         const deltaTime = (timestamp - simStateRef.current.lastTimestamp) / 1000;
         simStateRef.current.lastTimestamp = timestamp;
 
-        const lookAheadPoint = turf.along(line, Math.min(simStateRef.current.distanceTravelled + 5, totalDistance), { units: 'meters' });
         const currentPoint = turf.along(line, simStateRef.current.distanceTravelled, { units: 'meters' });
+        const lookAheadPoint = turf.along(line, Math.min(simStateRef.current.distanceTravelled + 5, totalDistance), { units: 'meters' });
         
         const [lng, lat] = currentPoint.geometry.coordinates;
         const heading = (turf.bearing(currentPoint, lookAheadPoint) + 360) % 360;
@@ -265,7 +265,7 @@ function NavigatingView({
             ...prev,
             latitude: lat,
             longitude: lng,
-            bearing: heading, // Map rotates to follow heading
+            bearing: heading,
             zoom: 18.5 - (simStateRef.current.currentSpeedMs / 15), 
         }));
 
@@ -336,12 +336,13 @@ function NavigatingView({
             longitude={userLocation.longitude} 
             latitude={userLocation.latitude} 
             anchor="center"
+            rotation={(userLocation.heading || 0)}
+            rotationAlignment="map"
           >
-            <div className="relative flex items-center justify-center">
+            <div className="relative flex items-center justify-center transition-all duration-100 ease-linear">
                 <div className="absolute h-16 w-16 bg-blue-500/20 rounded-full animate-pulse" />
                 <div className="h-14 w-14 bg-blue-600 rounded-full border-[6px] border-white shadow-2xl flex items-center justify-center">
                     <svg viewBox="0 0 24 24" className="h-8 w-8 text-white fill-current">
-                        {/* Standard Upward Arrow - Symmetrical */}
                         <path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z" />
                     </svg>
                 </div>
@@ -365,7 +366,7 @@ function NavigatingView({
         )}
       </MapGL>
       
-      {/* HUD: Instruction Panel - Showing NEXT maneuver */}
+      {/* HUD: Instruction Panel */}
       {navHudData && (
           <div className="absolute top-6 left-1/2 -translate-x-1/2 z-10 w-[90%] max-w-lg">
               <Card className="bg-slate-900/95 backdrop-blur-xl text-white shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-none overflow-hidden">
