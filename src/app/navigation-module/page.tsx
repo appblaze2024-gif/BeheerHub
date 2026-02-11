@@ -29,7 +29,10 @@ import {
   CornerUpLeft,
   CornerUpRight,
   RotateCcw,
-  Navigation
+  Navigation,
+  RefreshCw,
+  MoreVertical,
+  Minus
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -44,11 +47,6 @@ import { useProfile } from '@/firebase/profile-provider';
 import { useToast } from '@/components/ui/use-toast';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
-
-type ProjectWithRoutes = Project & {
-  veegroutes?: Veegroute[];
-  prullenbakkenroutes?: Prullenbakkenroute[];
-};
 
 const routeLayer: Layer = {
   id: 'route',
@@ -65,8 +63,10 @@ const routeLayer: Layer = {
   },
 };
 
-// Helper to select appropriate icon for maneuver
+// Helper to select appropriate icon for maneuver based on API response
 function getManeuverIcon(step: any) {
+    if (!step) return <ArrowUp className="h-14 w-14 text-white" />;
+    
     const modifier = step?.maneuver?.modifier;
     const type = step?.maneuver?.type;
 
@@ -81,7 +81,14 @@ function getManeuverIcon(step: any) {
         case 'sharp left': return <CornerUpLeft className="h-14 w-14 text-white stroke-[3]" />;
         case 'sharp right': return <CornerUpRight className="h-14 w-14 text-white stroke-[3]" />;
         case 'uturn': return <RotateCcw className="h-14 w-14 text-white" />;
-        default: return <ArrowUp className="h-14 w-14 text-white" />;
+        case 'straight': return <ArrowUp className="h-14 w-14 text-white" />;
+        default: {
+            // Handle roundabout types
+            if (type && type.includes('roundabout')) {
+                return <RefreshCw className="h-14 w-14 text-white" />;
+            }
+            return <ArrowUp className="h-14 w-14 text-white" />;
+        }
     }
 }
 
@@ -127,6 +134,23 @@ function NavigatingView({
   });
 
   const nextObject = objectsOnRoute[currentObjectIndex];
+
+  // Determine the active instruction step based on distance travelled
+  const activeStep = React.useMemo(() => {
+    if (!currentLeg?.steps) return null;
+    
+    // Distance travelled along this specific leg
+    const distTravelled = currentLeg.distance - distanceRemaining;
+    
+    let cumulativeDistance = 0;
+    for (const step of currentLeg.steps) {
+      cumulativeDistance += step.distance;
+      if (distTravelled < cumulativeDistance) {
+        return step;
+      }
+    }
+    return currentLeg.steps[currentLeg.steps.length - 1];
+  }, [currentLeg, distanceRemaining]);
 
   // Dynamic route line: Only show the path ahead
   const remainingRouteGeometry = React.useMemo(() => {
@@ -342,7 +366,6 @@ function NavigatingView({
   }
 
   const speedKmh = userLocation?.speed ? Math.round(userLocation.speed * 3.6) : 0;
-  const firstStep = currentLeg?.steps?.[0];
 
   return (
     <div className="w-full h-full relative bg-slate-100 overflow-hidden">
@@ -390,19 +413,19 @@ function NavigatingView({
       </MapGL>
       
       {/* HUD: Instruction Panel */}
-      {firstStep && (
+      {activeStep && (
           <div className="absolute top-6 left-1/2 -translate-x-1/2 z-10 w-[90%] max-w-lg">
               <Card className="bg-slate-900/95 backdrop-blur-xl text-white shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-none overflow-hidden">
                   <CardContent className="p-5 flex items-center gap-6">
                       <div className="bg-blue-600 p-4 rounded-2xl shadow-inner">
-                          {getManeuverIcon(firstStep)}
+                          {getManeuverIcon(activeStep)}
                       </div>
                       <div className="min-w-0 flex-1">
                           <p className="text-5xl font-black tracking-tighter tabular-nums mb-1">
                               {distanceRemaining > 1000 ? `${(distanceRemaining/1000).toFixed(1)} km` : `${Math.round(distanceRemaining)} m`}
                           </p>
                           <p className="text-sm font-bold opacity-80 uppercase tracking-widest leading-tight">
-                              {firstStep.maneuver.instruction}
+                              {activeStep.maneuver.instruction}
                           </p>
                       </div>
                   </CardContent>
