@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -14,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, X, ArrowUp, Play, Navigation as NavigationIcon, CheckCircle2, Pause, MapPin, Gauge } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -159,7 +159,7 @@ function NavigatingView({
         const [farLng, farLat] = lookAheadForSpeed.geometry.coordinates;
 
         const currentBearing = calculateBearing(lat, lng, nextLat, nextLng);
-        const farBearing = calculateBearing(nextLat, nextLng, farLat, farLng);
+        const farBearing = calculateBearing(nextLat, nextLng, farLng, farLng);
         const bearingDiff = Math.abs(currentBearing - farBearing);
         const distanceToNextPoint = totalDistance - simStateRef.current.distanceTravelled;
 
