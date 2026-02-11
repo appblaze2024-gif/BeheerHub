@@ -32,6 +32,7 @@ import {
   Navigation,
   X as XIcon,
   AlertTriangle,
+  Home,
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -633,6 +634,12 @@ export default function StartNavigationPage() {
           let features: any[] = [];
           if (routeGeoJSON?.features) features = [...features, ...routeGeoJSON.features];
           if (objectsOnMap.length > 0) features = [...features, ...objectsOnMap.map(obj => turf.point([obj.longitude, obj.latitude]))];
+          
+          // Also include start location in bounds if set
+          if (selectedRouteDef && 'startLatitude' in selectedRouteDef && selectedRouteDef.startLatitude && selectedRouteDef.startLongitude) {
+              features.push(turf.point([selectedRouteDef.startLongitude, selectedRouteDef.startLatitude]));
+          }
+
           if (features.length > 0) {
               try {
                   const collection = turf.featureCollection(features);
@@ -643,13 +650,12 @@ export default function StartNavigationPage() {
       };
       if (map.isStyleLoaded()) fit();
       else map.once('style.load', fit);
-  }, [selectedRouteId, routeGeoJSON, objectsOnMap]);
+  }, [selectedRouteId, routeGeoJSON, objectsOnMap, selectedRouteDef]);
 
   const handleStartRoute = async (simulate = false) => {
     let startLoc = userLocation;
     setIsSimulationMode(simulate);
     
-    // Check if the selected route has a predefined start location
     const predefinedStart = selectedRouteDef && 'startLatitude' in selectedRouteDef && selectedRouteDef.startLatitude && selectedRouteDef.startLongitude
         ? { latitude: selectedRouteDef.startLatitude, longitude: selectedRouteDef.startLongitude }
         : null;
@@ -723,6 +729,20 @@ export default function StartNavigationPage() {
             </div>
           </Marker>
         )}
+        
+        {/* Render route start location if defined and no user location override is active */}
+        {selectedRouteDef && 'startLatitude' in selectedRouteDef && selectedRouteDef.startLatitude && selectedRouteDef.startLongitude && (
+            <Marker longitude={selectedRouteDef.startLongitude} latitude={selectedRouteDef.startLatitude} anchor="center">
+                <div className="relative flex flex-col items-center">
+                    <div className="absolute h-12 w-12 rounded-full bg-blue-500/20 animate-pulse" />
+                    <div className="relative h-10 w-10 rounded-full bg-blue-600 border-4 border-white shadow-2xl flex items-center justify-center">
+                        <Home className="h-5 w-5 text-white fill-current" />
+                    </div>
+                    <div className="mt-1 bg-blue-600 text-white text-[10px] font-black px-2 py-0.5 rounded shadow-lg uppercase tracking-tighter">Startpunt</div>
+                </div>
+            </Marker>
+        )}
+
         {routeGeoJSON && (
             <Source id="route-area" type="geojson" data={routeGeoJSON}>
                 <Layer id="route-area-fill" type="fill" paint={{ 'fill-color': '#3b82f6', 'fill-opacity': 0.05 }} />
@@ -771,6 +791,15 @@ export default function StartNavigationPage() {
                 </SelectContent>
             </Select>
           </div>
+          {selectedRouteDef && 'startAdres' in selectedRouteDef && selectedRouteDef.startAdres && (
+              <div className="p-3 rounded-xl bg-blue-50 border-2 border-blue-100 flex items-start gap-3">
+                  <Home className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                      <p className="text-[10px] font-black uppercase text-blue-600 tracking-widest">Route Startpunt</p>
+                      <p className="text-xs font-bold text-slate-700 truncate">{selectedRouteDef.startAdres}</p>
+                  </div>
+              </div>
+          )}
           <div className="flex flex-col gap-3 pt-2">
             <Button className="w-full h-16 text-xl font-black bg-blue-600 hover:bg-blue-700 shadow-xl rounded-2xl uppercase tracking-tighter" onClick={() => handleStartRoute(false)} disabled={!selectedRouteId || selectedRouteId === '--nieuwe-route--' || isStarting}>
                 {isStarting ? <Loader2 className="mr-3 h-6 w-6 animate-spin" /> : <Navigation className="mr-3 h-6 w-6 fill-current" />} START LIVE RIT
