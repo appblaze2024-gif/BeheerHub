@@ -53,7 +53,7 @@ const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGt
 const routeLayer: Layer = {
   id: 'route',
   type: 'line',
-  source: 'route',
+  source: 'route-line', // Moet matchen met Source id
   layout: {
     'line-join': 'round',
     'line-cap': 'round',
@@ -150,7 +150,6 @@ function NavigatingView({
         const pt = turf.point([userLocation.longitude, userLocation.latitude]);
         const snapped = turf.nearestPointOnLine(line, pt, { units: 'meters' });
         
-        // Only snap if within 50 meters of the road to avoid jumping to nearby roads
         if (snapped.properties.dist! < 50) {
             const [lng, lat] = snapped.geometry.coordinates;
             return {
@@ -202,7 +201,7 @@ function NavigatingView({
         
         let startDist = 0;
         if (isSimulating) {
-            startDist = Math.min(simStateRef.current.distanceTravelled, totalDist - 0.1);
+            startDist = Math.min(simStateRef.current.distanceTravelled, Math.max(0, totalDist - 0.1));
         } else if (userLocation) {
             const startPoint = turf.point([userLocation.longitude, userLocation.latitude]);
             const snappedStart = turf.nearestPointOnLine(line, startPoint);
@@ -258,17 +257,10 @@ function NavigatingView({
         }
       },
       (error) => {
-        if (error.code === 1) { // PERMISSION_DENIED
-            setGpsError('permission');
-        } else {
-            setGpsError('signal');
-        }
+        if (error.code === 1) setGpsError('permission');
+        else setGpsError('signal');
       },
-      { 
-        enableHighAccuracy: true, 
-        timeout: 15000, 
-        maximumAge: 0 
-      }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
     return () => navigator.geolocation.clearWatch(watchId);
   }, [isSimulating, currentRouteGeometry, isFollowing, isPaused]);
@@ -328,7 +320,7 @@ function NavigatingView({
 
         try {
             const currentPoint = turf.along(line, simStateRef.current.distanceTravelled, { units: 'meters' });
-            const lookAheadPoint = turf.along(line, Math.min(simStateRef.current.distanceTravelled + 2, totalDistance), { units: 'meters' });
+            const lookAheadPoint = turf.along(line, Math.min(simStateRef.current.distanceTravelled + 4, totalDistance), { units: 'meters' });
             
             const [lng, lat] = currentPoint.geometry.coordinates;
             const heading = (turf.bearing(currentPoint, lookAheadPoint) + 360) % 360;
@@ -779,12 +771,13 @@ export default function StartNavigationPage() {
   }, [selectedRouteId, routeGeoJSON, objectsOnMap, selectedRouteDef]);
 
   const handleStartRoute = async (simulate = false) => {
-    let startLoc = userLocation;
     setIsSimulationMode(simulate);
     
     const predefinedStart = selectedRouteDef && 'startLatitude' in selectedRouteDef && selectedRouteDef.startLatitude && selectedRouteDef.startLongitude
         ? { latitude: selectedRouteDef.startLatitude, longitude: selectedRouteDef.startLongitude }
         : null;
+
+    let startLoc = userLocation;
 
     if (simulate && predefinedStart) {
         startLoc = predefinedStart;
@@ -814,6 +807,9 @@ export default function StartNavigationPage() {
     
     const startCoords = startLoc || { latitude: objectsOnMap[0].latitude, longitude: objectsOnMap[0].longitude };
     
+    // Update userLocation state zodat NavigatingView op de juiste plek begint
+    setUserLocation(startCoords);
+
     const unvisited = [...objectsOnMap];
     const sortedObjects: MapObject[] = [];
     let currentPos = startCoords;
