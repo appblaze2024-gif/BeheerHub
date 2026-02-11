@@ -110,6 +110,7 @@ function NavigatingView({
   const [currentLeg, setCurrentLeg] = React.useState<any>(null);
   const [isPaused, setIsPaused] = React.useState(false);
   const [arrivedObject, setArrivedObject] = React.useState<MapObject | null>(null);
+  const [isCalculatingRoute, setIsCalculatingRoute] = React.useState(false);
   const [distanceRemainingToDestination, setDistanceRemainingToDestination] = React.useState(0);
   const { profile } = useProfile();
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
@@ -217,7 +218,7 @@ function NavigatingView({
 
   // Simulation loop
   React.useEffect(() => {
-    if (!isSimulating || !currentRouteGeometry || !nextObject || arrivedObject) return;
+    if (!isSimulating || !currentRouteGeometry || !nextObject || arrivedObject || isCalculatingRoute) return;
 
     const coords = currentRouteGeometry.coordinates;
     if (coords.length < 2) return;
@@ -226,7 +227,7 @@ function NavigatingView({
     const totalDistance = turf.length(line, { units: 'meters' });
 
     const animate = (timestamp: number) => {
-        if (isPaused || arrivedObject) {
+        if (isPaused || arrivedObject || isCalculatingRoute) {
             simStateRef.current.lastTimestamp = timestamp;
             animationRef.current = requestAnimationFrame(animate);
             return;
@@ -279,12 +280,13 @@ function NavigatingView({
     return () => {
         if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-  }, [isSimulating, isPaused, arrivedObject, currentRouteGeometry, nextObject?.id]);
+  }, [isSimulating, isPaused, arrivedObject, currentRouteGeometry, nextObject?.id, isCalculatingRoute]);
 
   // Fetch Directions
   React.useEffect(() => {
     if (!userLocation || !nextObject || arrivedObject) return;
     const fetchRoute = async () => {
+      setIsCalculatingRoute(true);
       const { longitude, latitude } = userLocation;
       const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${longitude},${latitude};${nextObject.longitude},${nextObject.latitude}?steps=true&geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}&language=nl`;
       try {
@@ -296,7 +298,12 @@ function NavigatingView({
           setDistanceRemainingToDestination(data.routes[0].legs[0].distance);
           if (isSimulating) simStateRef.current.distanceTravelled = 0; 
         }
-      } catch (error) {}
+      } catch (error) {
+          console.error("Failed to fetch route:", error);
+      } finally {
+          // Give a small delay for background rendering of the line before hiding loader
+          setTimeout(() => setIsCalculatingRoute(false), 500);
+      }
     };
     fetchRoute();
   }, [nextObject?.id, arrivedObject]);
@@ -313,14 +320,15 @@ function NavigatingView({
 
   const handleArrivedAction = (type: 'finish' | 'issue') => {
     if (!arrivedObject) return;
-    setCompletedObjects(prev => [...prev, arrivedObject.id]);
+    const finishedId = arrivedObject.id;
+    setCompletedObjects(prev => [...prev, finishedId]);
     setArrivedObject(null);
     setCurrentObjectIndex(prev => prev + 1);
     simStateRef.current.distanceTravelled = 0;
     simStateRef.current.currentSpeedMs = 0;
   };
 
-  if (currentObjectIndex >= objectsOnRoute.length && objectsOnRoute.length > 0 && !arrivedObject) {
+  if (currentObjectIndex >= objectsOnRoute.length && objectsOnRoute.length > 0 && !arrivedObject && !isCalculatingRoute) {
     return (
         <div className="flex flex-col items-center justify-center h-full gap-4 bg-background p-6 text-center">
             <CheckCircle2 className="h-16 w-16 text-green-500" />
@@ -382,7 +390,7 @@ function NavigatingView({
         )}
       </MapGL>
       
-      {navHudData && !arrivedObject && (
+      {navHudData && !arrivedObject && !isCalculatingRoute && (
           <div className="absolute top-6 left-1/2 -translate-x-1/2 z-10 w-[90%] max-w-lg">
               <Card className="bg-slate-900/95 backdrop-blur-xl text-white shadow-2xl border-none overflow-hidden">
                   <CardContent className="p-4 flex items-center gap-5">
@@ -399,6 +407,15 @@ function NavigatingView({
                       </div>
                   </CardContent>
               </Card>
+          </div>
+      )}
+
+      {isCalculatingRoute && (
+          <div className="absolute inset-0 z-[60] flex items-center justify-center bg-background/60 backdrop-blur-md">
+              <div className="flex flex-col items-center gap-4 bg-white p-8 rounded-2xl shadow-2xl border border-slate-100">
+                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                  <p className="font-black uppercase tracking-widest text-xs text-slate-500">Volgende route berekenen...</p>
+              </div>
           </div>
       )}
 
