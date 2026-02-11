@@ -371,9 +371,9 @@ export default function StartNavigationPage() {
       const features = JSON.parse(selectedRouteDef.subGebieden);
       if (Array.isArray(features) && features.length > 0) {
         return {
-          type: 'FeatureCollection',
+          type: 'FeatureCollection' as const,
           features: features.map((feature: any) => ({
-            type: 'Feature',
+            type: 'Feature' as const,
             properties: {},
             geometry: feature.geometry,
           })),
@@ -385,15 +385,32 @@ export default function StartNavigationPage() {
     return null;
   }, [selectedRouteDef]);
 
+  // Handle automatic map fitting/zooming when a route is selected
   React.useEffect(() => {
-      if (routeGeoJSON && mapRef.current) {
-          const map = mapRef.current.getMap();
-          const fit = () => {
+      const map = mapRef.current?.getMap();
+      if (!map) return;
+
+      const fit = () => {
+          let features: any[] = [];
+          
+          // Add GeoJSON features if present
+          if (routeGeoJSON?.features) {
+              features = [...features, ...routeGeoJSON.features];
+          }
+          
+          // Add objects as point features if present
+          if (objectsOnMap && objectsOnMap.length > 0) {
+              const objectPoints = objectsOnMap.map(obj => turf.point([obj.longitude, obj.latitude]));
+              features = [...features, ...objectPoints];
+          }
+
+          if (features.length > 0) {
               try {
-                  const bbox = turf.bbox(routeGeoJSON);
+                  const collection = turf.featureCollection(features);
+                  const bbox = turf.bbox(collection);
                   if (bbox[0] !== Infinity && !isNaN(bbox[0])) {
                       map.fitBounds(bbox as [number, number, number, number], { 
-                          padding: 60, 
+                          padding: 100, 
                           duration: 1000,
                           maxZoom: 16 
                       });
@@ -401,15 +418,15 @@ export default function StartNavigationPage() {
               } catch(e) {
                   console.error("Error fitting bounds", e);
               }
-          };
-
-          if (map.isStyleLoaded()) {
-              fit();
-          } else {
-              map.once('style.load', fit);
           }
+      };
+
+      if (map.isStyleLoaded()) {
+          fit();
+      } else {
+          map.once('style.load', fit);
       }
-  }, [routeGeoJSON]);
+  }, [routeGeoJSON, objectsOnMap]);
 
   React.useEffect(() => {
     setIsHeaderVisible(navigationState !== 'navigating');
