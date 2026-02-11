@@ -194,6 +194,15 @@ function NavigatingView({
         const { latitude, longitude, speed, heading } = position.coords;
         setUserLocation({ latitude, longitude, speed, heading });
         
+        // Auto-follow logic for live mode
+        setViewState(prev => ({
+            ...prev,
+            latitude,
+            longitude,
+            bearing: heading !== null ? heading : prev.bearing,
+            zoom: 18,
+        }));
+
         if (currentRouteGeometry) {
             try {
                 const coords = currentRouteGeometry.coordinates;
@@ -212,7 +221,7 @@ function NavigatingView({
         }
       },
       () => {
-        toast({ title: "Locatiefout", description: "Zorg ervoor dat locatietoegang is ingeschakeld.", variant: "destructive" });
+        toast({ title: "Locatiefout", description: "Zorg ervoor dat locatietoegang is ingeschakeld op dit apparaat.", variant: "destructive" });
       },
       { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
     );
@@ -568,6 +577,7 @@ export default function StartNavigationPage() {
   const { selectedProjectId, setSelectedProjectId } = useProject();
   const { user } = useUser();
   const { profile } = useProfile();
+  const { toast } = useToast();
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
   const isSuperUser = profile?.role === 'Super admin';
   
@@ -581,6 +591,26 @@ export default function StartNavigationPage() {
   const [isSimulationMode, setIsSimulationMode] = React.useState(false);
   
   const mapRef = React.useRef<MapRef>(null);
+
+  // Watch device location automatically
+  React.useEffect(() => {
+    if (!navigator.geolocation) {
+        console.warn("Geolocation is not supported by this browser.");
+        return;
+    }
+
+    const watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+            setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+        },
+        (err) => {
+            console.warn("Could not get device location:", err.message);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
 
   React.useEffect(() => {
     const lat = searchParams.get('lat');
@@ -611,7 +641,6 @@ export default function StartNavigationPage() {
     return allRoutes.find(r => r.id === selectedRouteId) ?? null;
   }, [selectedRouteId, selectedProject]);
 
-  // OPTIMIZED QUERY: Only fetch objects for the specific selected route
   const objectsOnRouteQuery = useMemoFirebase(() => {
     if (!firestore || !selectedRouteDef) return null;
     return query(
@@ -665,6 +694,7 @@ export default function StartNavigationPage() {
         ? { latitude: selectedRouteDef.startLatitude, longitude: selectedRouteDef.startLongitude }
         : null;
 
+    // Use GPS if available, otherwise fallback to predefined start
     if (!startLoc && predefinedStart) {
         startLoc = predefinedStart;
     } else if (simulate && !startLoc && objectsOnMap && objectsOnMap.length > 0) {
@@ -672,7 +702,11 @@ export default function StartNavigationPage() {
     }
     
     if (!startLoc && !simulate) { 
-        alert("Kon uw locatie niet bepalen en er is geen startlocatie ingesteld voor deze route. Klik op de kaart om een startpunt te kiezen."); 
+        toast({ 
+            title: "Locatie vereist", 
+            description: "Schakel GPS in of klik op de kaart voor een startpunt.", 
+            variant: "destructive" 
+        });
         return; 
     }
     
@@ -680,7 +714,7 @@ export default function StartNavigationPage() {
     
     setIsStarting(true);
     if (objectsOnMap.length === 0) { 
-        alert("Geen objecten gevonden voor deze route."); 
+        toast({ title: "Geen objecten", description: "Deze route bevat geen prullenbakken." });
         setIsStarting(false); 
         return; 
     }
@@ -723,7 +757,15 @@ export default function StartNavigationPage() {
 
   return (
     <div className="w-full h-full relative bg-slate-100">
-      <MapGL ref={mapRef} initialViewState={{ longitude: 5.2913, latitude: 52.1326, zoom: 7 }} style={{ width: '100%', height: '100%' }} mapStyle={mapStyle} mapboxAccessToken={MAPBOX_TOKEN} onClick={e => setUserLocation({ latitude: e.lngLat.lat, longitude: e.lngLat.lng })} interactive={true}>
+      <MapGL 
+        ref={mapRef} 
+        initialViewState={{ longitude: 5.2913, latitude: 52.1326, zoom: 7 }} 
+        style={{ width: '100%', height: '100%' }} 
+        mapStyle={mapStyle} 
+        mapboxAccessToken={MAPBOX_TOKEN} 
+        onClick={e => setUserLocation({ latitude: e.lngLat.lat, longitude: e.lngLat.lng })} 
+        interactive={true}
+      >
         {userLocation && (
           <Marker longitude={userLocation.longitude} latitude={userLocation.latitude} anchor="center">
             <div className="relative flex flex-col items-center">
