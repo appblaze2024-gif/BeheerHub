@@ -128,11 +128,9 @@ function NavigatingView({
 
   const nextObject = objectsOnRoute[currentObjectIndex];
 
-  // Logic to determine what to show in the HUD
   const navHudData = React.useMemo(() => {
     if (!currentLeg?.steps) return null;
     
-    // Distance travelled along this specific leg
     const distTravelled = currentLeg.distance - distanceRemainingToDestination;
     
     let cumulativeDistance = 0;
@@ -141,10 +139,7 @@ function NavigatingView({
       cumulativeDistance += step.distance;
       
       if (distTravelled < cumulativeDistance) {
-        // We are currently driving in this step
         const distanceToManeuver = cumulativeDistance - distTravelled;
-        
-        // The maneuver we want to show is the one that starts the NEXT step
         const nextStep = currentLeg.steps[i + 1];
         
         if (nextStep) {
@@ -154,7 +149,6 @@ function NavigatingView({
             step: nextStep
           };
         } else {
-          // Final segment
           return {
             distance: distanceToManeuver,
             instruction: "U bent bijna bij uw bestemming",
@@ -166,7 +160,6 @@ function NavigatingView({
     return null;
   }, [currentLeg, distanceRemainingToDestination]);
 
-  // Dynamic route line - only show what's ahead
   const remainingRouteGeometry = React.useMemo(() => {
     if (!currentRouteGeometry) return null;
     try {
@@ -186,7 +179,6 @@ function NavigatingView({
     } catch (e) { return currentRouteGeometry; }
   }, [currentRouteGeometry, userLocation?.latitude, userLocation?.longitude, isSimulating]);
 
-  // GPS Watcher
   React.useEffect(() => {
     if (isSimulating) return;
     const watchId = navigator.geolocation.watchPosition(
@@ -212,7 +204,6 @@ function NavigatingView({
     return () => navigator.geolocation.clearWatch(watchId);
   }, [isSimulating, toast, currentRouteGeometry]);
 
-  // Animation Loop for Simulator
   React.useEffect(() => {
     if (!isSimulating || !currentRouteGeometry || !nextObject) return;
 
@@ -278,12 +269,11 @@ function NavigatingView({
     };
   }, [isSimulating, isPaused, currentRouteGeometry, nextObject?.id]);
 
-  // Directions Fetching
   React.useEffect(() => {
     if (!userLocation || !nextObject) return;
     const fetchRoute = async () => {
       const { longitude, latitude } = userLocation;
-      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${longitude},${latitude};${nextObject.longitude},${nextObject.latitude}?steps=true&geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}&language=nl`;
+      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${longitude},latitude};${nextObject.longitude},${nextObject.latitude}?steps=true&geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}&language=nl`;
       try {
         const response = await fetch(url);
         const data = await response.json();
@@ -298,7 +288,6 @@ function NavigatingView({
     fetchRoute();
   }, [nextObject?.id]);
   
-  // Arrival Logic
   React.useEffect(() => {
     if (!userLocation || !nextObject) return;
     const userPoint = turf.point([userLocation.longitude, userLocation.latitude]);
@@ -339,11 +328,11 @@ function NavigatingView({
             rotation={(userLocation.heading || 0)}
             rotationAlignment="map"
           >
-            <div className="relative flex items-center justify-center transition-all duration-100 ease-linear">
+            <div className="relative flex items-center justify-center transition-all duration-300 ease-linear" style={{ transform: 'rotate(0deg)' }}>
                 <div className="absolute h-16 w-16 bg-blue-500/20 rounded-full animate-pulse" />
                 <div className="h-14 w-14 bg-blue-600 rounded-full border-[6px] border-white shadow-2xl flex items-center justify-center">
                     <svg viewBox="0 0 24 24" className="h-8 w-8 text-white fill-current">
-                        <path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z" />
+                        <path d="M12 3L4 21L12 17L20 21L12 3Z" />
                     </svg>
                 </div>
             </div>
@@ -366,7 +355,6 @@ function NavigatingView({
         )}
       </MapGL>
       
-      {/* HUD: Instruction Panel */}
       {navHudData && (
           <div className="absolute top-6 left-1/2 -translate-x-1/2 z-10 w-[90%] max-w-lg">
               <Card className="bg-slate-900/95 backdrop-blur-xl text-white shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-none overflow-hidden">
@@ -387,7 +375,6 @@ function NavigatingView({
           </div>
       )}
 
-      {/* HUD: Speed meter */}
       <div className="absolute bottom-10 left-6 z-10">
          <Card className="w-48 shadow-2xl bg-white/95 backdrop-blur-xl border-none overflow-hidden">
             <CardContent className="p-0">
@@ -524,12 +511,34 @@ export default function StartNavigationPage() {
     if (!selectedProjectId || !selectedRouteDef || !allObjects || !user) return;
     setIsStarting(true);
     if (objectsOnMap.length === 0) { alert("Geen objecten gevonden voor deze route."); setIsStarting(false); return; }
+    
     const startCoords = startLoc || { latitude: objectsOnMap[0].latitude, longitude: objectsOnMap[0].longitude };
-    const sortedObjects = [...objectsOnMap].sort((a, b) => {
-        const distA = turf.distance(turf.point([startCoords.longitude, startCoords.latitude]), turf.point([a.longitude, a.latitude]));
-        const distB = turf.distance(turf.point([startCoords.longitude, startCoords.latitude]), turf.point([b.longitude, b.latitude]));
-        return distA - distB;
-    });
+    
+    // --- IMPROVED ROUTE LOGIC: NEAREST NEIGHBOR (Greedy pathfinding) ---
+    const unvisited = [...objectsOnMap];
+    const sortedObjects: MapObject[] = [];
+    let currentPos = startCoords;
+
+    while (unvisited.length > 0) {
+      let nearestIdx = 0;
+      let minDistance = Infinity;
+
+      for (let i = 0; i < unvisited.length; i++) {
+        const dist = turf.distance(
+          turf.point([currentPos.longitude, currentPos.latitude]),
+          turf.point([unvisited[i].longitude, unvisited[i].latitude])
+        );
+        if (dist < minDistance) {
+          minDistance = dist;
+          nearestIdx = i;
+        }
+      }
+
+      const nextPoint = unvisited.splice(nearestIdx, 1)[0];
+      sortedObjects.push(nextPoint);
+      currentPos = { latitude: nextPoint.latitude, longitude: nextPoint.longitude };
+    }
+    
     setObjectsOnRoute(sortedObjects);
     setNavigationState('navigating');
     setIsStarting(false);
