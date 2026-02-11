@@ -110,6 +110,8 @@ export interface Voertuig {
   bouwjaar?: string;
   brandstof?: 'Benzine' | 'Diesel' | 'Elektrisch' | 'Hybride (benzine)' | 'Hybride (diesel)' | 'LPG' | 'CNG (Aardgas)' | 'Waterstof';
   apk_vervaldatum?: string; // YYYY-MM-DD
+  opbouw_keuring?: string; // YYYY-MM-DD
+  bandenwissel?: string; // YYYY-MM-DD
   imageUrl?: string;
 }
 
@@ -122,6 +124,8 @@ export interface Machine {
   status?: 'Actief' | 'Inactief' | 'In onderhoud';
   bouwjaar?: string;
   brandstof?: 'Benzine' | 'Diesel' | 'Elektrisch' | 'Hybride (benzine)' | 'Hybride (diesel)' | 'LPG' | 'CNG (Aardgas)' | 'Waterstof';
+  opbouw_keuring?: string; // YYYY-MM-DD
+  bandenwissel?: string; // YYYY-MM-DD
   imageUrl?: string;
 }
 

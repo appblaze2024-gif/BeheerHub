@@ -48,6 +48,8 @@ const materieelFormSchema = z.object({
   bouwjaar: z.string().optional(),
   brandstof: z.string().optional(),
   apk_vervaldatum: z.string().optional(),
+  opbouw_keuring: z.string().optional(),
+  bandenwissel: z.string().optional(),
   imageUrl: z.string().url().optional().nullable(),
 });
 
@@ -107,6 +109,8 @@ export function AddVehicleDialog({ children, vehicle = null, open: controlledOpe
           bouwjaar: vehicle.bouwjaar || '',
           brandstof: vehicle.brandstof || '',
           apk_vervaldatum: vehicle.apk_vervaldatum || '',
+          opbouw_keuring: vehicle.opbouw_keuring || '',
+          bandenwissel: vehicle.bandenwissel || '',
           imageUrl: vehicle.imageUrl ?? null,
         });
       } else {
@@ -120,6 +124,8 @@ export function AddVehicleDialog({ children, vehicle = null, open: controlledOpe
           bouwjaar: '',
           brandstof: '',
           apk_vervaldatum: '',
+          opbouw_keuring: '',
+          bandenwissel: '',
           imageUrl: null,
         });
       }
@@ -372,13 +378,28 @@ export function AddVehicleDialog({ children, vehicle = null, open: controlledOpe
                 )}
               />
             </div>
-            {!isMachine && (
+            <div className="grid grid-cols-2 gap-4">
+              {!isMachine && (
+                <FormField
+                  control={form.control}
+                  name="apk_vervaldatum"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>APK Datum</FormLabel>
+                      <FormControl>
+                        <Input type='date' {...field} value={field.value ?? ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               <FormField
                 control={form.control}
-                name="apk_vervaldatum"
+                name="opbouw_keuring"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>APK Datum</FormLabel>
+                    <FormLabel>Opbouw keuring</FormLabel>
                     <FormControl>
                       <Input type='date' {...field} value={field.value ?? ''} />
                     </FormControl>
@@ -386,7 +407,22 @@ export function AddVehicleDialog({ children, vehicle = null, open: controlledOpe
                   </FormItem>
                 )}
               />
-            )}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="bandenwissel"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bandenwissel</FormLabel>
+                    <FormControl>
+                      <Input type='date' {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             <DialogFooter>
               <DialogClose asChild>
                 <Button type="button" variant="ghost" disabled={isSubmitting}>

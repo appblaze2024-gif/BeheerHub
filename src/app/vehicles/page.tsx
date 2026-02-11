@@ -353,6 +353,32 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                               : '-'}
                           </span>
                         </div>
+                        <div className="flex justify-between border-b pb-2">
+                          <span className="text-muted-foreground">
+                            Opbouw keuring
+                          </span>
+                          <span className="font-medium">
+                            {selectedItem?.opbouw_keuring
+                              ? format(
+                                  new Date(selectedItem.opbouw_keuring),
+                                  'dd-MM-yyyy'
+                                )
+                              : '-'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between border-b pb-2">
+                          <span className="text-muted-foreground">
+                            Bandenwissel
+                          </span>
+                          <span className="font-medium">
+                            {selectedItem?.bandenwissel
+                              ? format(
+                                  new Date(selectedItem.bandenwissel),
+                                  'dd-MM-yyyy'
+                                )
+                              : '-'}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
