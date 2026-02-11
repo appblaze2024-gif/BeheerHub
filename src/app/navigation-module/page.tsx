@@ -204,7 +204,8 @@ function NavigatingView({
                     const distToStart = turf.length(turf.lineSlice(turf.point(coords[0]), snapped, line), { units: 'meters' });
                     const remaining = Math.max(0, totalDist - distToStart);
                     setDistanceRemainingToDestination(remaining);
-                    if (remaining < 5) setHasReachedCurrentTarget(true);
+                    if (remaining < 100) setHasReachedCurrentTarget(true);
+                    else setHasReachedCurrentTarget(false);
                 }
             } catch (e) {}
         }
@@ -263,6 +264,10 @@ function NavigatingView({
             setUserLocation({ latitude: finalCoord[1], longitude: finalCoord[0], speed: 0, heading: 0 });
             setHasReachedCurrentTarget(true);
             return;
+        } else if (totalDistance - simStateRef.current.distanceTravelled < 100) {
+            setHasReachedCurrentTarget(true);
+        } else {
+            setHasReachedCurrentTarget(false);
         }
 
         try {
@@ -306,7 +311,7 @@ function NavigatingView({
           setCurrentRouteGeometry(data.routes[0].geometry);
           setCurrentLeg(data.routes[0].legs[0]);
           setDistanceRemainingToDestination(data.routes[0].legs[0].distance);
-          setHasReachedCurrentTarget(false);
+          setHasReachedCurrentTarget(data.routes[0].legs[0].distance < 100);
           if (isSimulating) {
               simStateRef.current.distanceTravelled = 0;
               simStateRef.current.currentSpeedMs = 0;
@@ -346,8 +351,26 @@ function NavigatingView({
   };
 
   const handleMarkerClick = (obj: MapObject, idx: number) => {
-    if (idx === currentObjectIndex) {
+    if (idx !== currentObjectIndex) return;
+
+    if (!userLocation) {
+        toast({ title: "Locatie onbekend", description: "Wacht op GPS signaal..." });
+        return;
+    }
+
+    const dist = turf.distance(
+        turf.point([userLocation.longitude, userLocation.latitude]),
+        turf.point([obj.longitude, obj.latitude]),
+        { units: 'meters' }
+    );
+
+    if (dist <= 100) {
         setArrivedObject(obj);
+    } else {
+        toast({ 
+            title: "Buiten bereik", 
+            description: `Rijd eerst dichterbij. U bent nog ${Math.round(dist)}m verwijderd.` 
+        });
     }
   };
 
@@ -395,6 +418,8 @@ function NavigatingView({
         {objectsOnRoute.map((obj, idx) => {
             if (completedObjects.includes(obj.id)) return null;
             const isTarget = idx === currentObjectIndex;
+            const inRange = isTarget && hasReachedCurrentTarget;
+
             return (
                 <Marker 
                     key={obj.id} 
@@ -408,10 +433,11 @@ function NavigatingView({
                 >
                     <div className={cn(
                         "w-8 h-8 rounded-full border-4 border-white shadow-lg flex items-center justify-center text-[10px] font-black text-white transition-all cursor-pointer hover:scale-110",
-                        isTarget ? "bg-blue-600 scale-125 ring-4 ring-blue-500/30" : "bg-slate-400"
+                        isTarget ? "bg-blue-600 scale-125 ring-4 ring-blue-500/30" : "bg-slate-400",
+                        inRange && "bg-green-600 ring-green-500/50"
                     )}>
-                        {isTarget && hasReachedCurrentTarget && (
-                            <div className="absolute inset-0 rounded-full animate-ping bg-blue-400 opacity-75" />
+                        {inRange && (
+                            <div className="absolute inset-0 rounded-full animate-ping bg-green-400 opacity-75" />
                         )}
                         {idx + 1}
                     </div>
@@ -493,7 +519,7 @@ function NavigatingView({
          <Card className="w-40 shadow-2xl bg-white/95 backdrop-blur-xl border-none overflow-hidden">
             <CardContent className="p-0">
                 <div className="bg-slate-50 border-b p-2 flex justify-between items-center px-3">
-                    <span className="text-[9px] font-black uppercase text-slate-400 tracking-tighter">Snelheid</span>
+                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">Snelheid</span>
                     <Badge variant="outline" className="text-[8px] font-black text-blue-600 border-blue-200">MAX 50</Badge>
                 </div>
                 <div className="p-3 flex items-baseline gap-1 justify-center">
