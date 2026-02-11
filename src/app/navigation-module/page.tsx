@@ -109,6 +109,8 @@ function NavigatingView({
   const [arrivedObject, setArrivedObject] = React.useState<MapObject | null>(null);
   const [isCalculatingRoute, setIsCalculatingRoute] = React.useState(false);
   const [distanceRemainingToDestination, setDistanceRemainingToDestination] = React.useState(0);
+  const [hasReachedCurrentTarget, setHasReachedCurrentTarget] = React.useState(false);
+  
   const { profile } = useProfile();
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
   const { toast } = useToast();
@@ -125,13 +127,12 @@ function NavigatingView({
   const simStateRef = React.useRef({
     distanceTravelled: 0,
     currentSpeedMs: 0,
-    targetSpeedMs: 11.1, // ~40 km/h
+    targetSpeedMs: 13.8, // ~50 km/h
     lastTimestamp: 0
   });
 
   const nextObject = objectsOnRoute[currentObjectIndex];
 
-  // HUD data calculation
   const navHudData = React.useMemo(() => {
     if (!currentLeg?.steps) return null;
     
@@ -158,7 +159,6 @@ function NavigatingView({
     return null;
   }, [currentLeg, distanceRemainingToDestination]);
 
-  // Sliced route line
   const remainingRouteGeometry = React.useMemo(() => {
     if (!currentRouteGeometry || isCalculatingRoute) return null;
     try {
@@ -186,7 +186,6 @@ function NavigatingView({
     }
   }, [currentRouteGeometry, userLocation?.latitude, userLocation?.longitude, isSimulating, isCalculatingRoute]);
 
-  // Watch real position
   React.useEffect(() => {
     if (isSimulating) return;
     const watchId = navigator.geolocation.watchPosition(
@@ -203,7 +202,9 @@ function NavigatingView({
                     const userPoint = turf.point([longitude, latitude]);
                     const snapped = turf.nearestPointOnLine(line, userPoint);
                     const distToStart = turf.length(turf.lineSlice(turf.point(coords[0]), snapped, line), { units: 'meters' });
-                    setDistanceRemainingToDestination(Math.max(0, totalDist - distToStart));
+                    const remaining = Math.max(0, totalDist - distToStart);
+                    setDistanceRemainingToDestination(remaining);
+                    if (remaining < 5) setHasReachedCurrentTarget(true);
                 }
             } catch (e) {}
         }
@@ -216,7 +217,6 @@ function NavigatingView({
     return () => navigator.geolocation.clearWatch(watchId);
   }, [isSimulating, toast, currentRouteGeometry]);
 
-  // Animation Loop for Simulation
   React.useEffect(() => {
     if (!isSimulating || !currentRouteGeometry || !nextObject || arrivedObject || isCalculatingRoute) return;
 
@@ -246,11 +246,10 @@ function NavigatingView({
 
         const distanceToDestination = totalDistance - simStateRef.current.distanceTravelled;
         
-        // Acceleration / Deceleration
         if (distanceToDestination < 30) {
-            simStateRef.current.targetSpeedMs = 4; // Slow down for arrival
+            simStateRef.current.targetSpeedMs = 4;
         } else {
-            simStateRef.current.targetSpeedMs = 13.8; // ~50 km/h
+            simStateRef.current.targetSpeedMs = 13.8;
         }
 
         const accel = simStateRef.current.targetSpeedMs > simStateRef.current.currentSpeedMs ? 3 : 6;
@@ -262,7 +261,7 @@ function NavigatingView({
         if (simStateRef.current.distanceTravelled >= totalDistance - 0.5) {
             const finalCoord = coords[coords.length - 1];
             setUserLocation({ latitude: finalCoord[1], longitude: finalCoord[0], speed: 0, heading: 0 });
-            setArrivedObject(nextObject);
+            setHasReachedCurrentTarget(true);
             return;
         }
 
@@ -282,9 +281,7 @@ function NavigatingView({
                 bearing: heading,
                 zoom: 18.5 - (simStateRef.current.currentSpeedMs / 25), 
             }));
-        } catch (e) {
-            console.warn("Turf error during simulation", e);
-        }
+        } catch (e) {}
 
         animationRef.current = requestAnimationFrame(animate);
     };
@@ -295,7 +292,6 @@ function NavigatingView({
     };
   }, [isSimulating, isPaused, arrivedObject, currentRouteGeometry, nextObject?.id, isCalculatingRoute]);
 
-  // Fetch Directions for the leg
   React.useEffect(() => {
     if (!userLocation || !nextObject || arrivedObject) return;
     
@@ -310,6 +306,7 @@ function NavigatingView({
           setCurrentRouteGeometry(data.routes[0].geometry);
           setCurrentLeg(data.routes[0].legs[0]);
           setDistanceRemainingToDestination(data.routes[0].legs[0].distance);
+          setHasReachedCurrentTarget(false);
           if (isSimulating) {
               simStateRef.current.distanceTravelled = 0;
               simStateRef.current.currentSpeedMs = 0;
@@ -327,16 +324,14 @@ function NavigatingView({
   const handleArrivedAction = (type: 'finish' | 'issue') => {
     if (!arrivedObject) return;
     
-    // 1. Clean up markers
     const finishedId = arrivedObject.id;
     setCompletedObjects(prev => [...prev, finishedId]);
     
-    // 2. Prepare for next destination
     setIsCalculatingRoute(true);
     setArrivedObject(null);
+    setHasReachedCurrentTarget(false);
     setCurrentObjectIndex(prev => prev + 1);
     
-    // 3. Force route clear to ensure fetch effect picks it up
     setCurrentRouteGeometry(null);
     setCurrentLeg(null);
     
@@ -344,9 +339,15 @@ function NavigatingView({
         simStateRef.current = {
             distanceTravelled: 0,
             currentSpeedMs: 0,
-            targetSpeedMs: 11.1,
+            targetSpeedMs: 13.8,
             lastTimestamp: 0
         };
+    }
+  };
+
+  const handleMarkerClick = (obj: MapObject, idx: number) => {
+    if (idx === currentObjectIndex) {
+        setArrivedObject(obj);
     }
   };
 
@@ -393,12 +394,25 @@ function NavigatingView({
 
         {objectsOnRoute.map((obj, idx) => {
             if (completedObjects.includes(obj.id)) return null;
+            const isTarget = idx === currentObjectIndex;
             return (
-                <Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude} anchor="center">
+                <Marker 
+                    key={obj.id} 
+                    longitude={obj.longitude} 
+                    latitude={obj.latitude} 
+                    anchor="center"
+                    onClick={(e) => {
+                        e.originalEvent.stopPropagation();
+                        handleMarkerClick(obj, idx);
+                    }}
+                >
                     <div className={cn(
-                        "w-7 h-7 rounded-full border-4 border-white shadow-lg flex items-center justify-center text-[10px] font-black text-white transition-all",
-                        idx === currentObjectIndex ? "bg-blue-600 scale-125 ring-4 ring-blue-500/30" : "bg-slate-400"
+                        "w-8 h-8 rounded-full border-4 border-white shadow-lg flex items-center justify-center text-[10px] font-black text-white transition-all cursor-pointer hover:scale-110",
+                        isTarget ? "bg-blue-600 scale-125 ring-4 ring-blue-500/30" : "bg-slate-400"
                     )}>
+                        {isTarget && hasReachedCurrentTarget && (
+                            <div className="absolute inset-0 rounded-full animate-ping bg-blue-400 opacity-75" />
+                        )}
                         {idx + 1}
                     </div>
                 </Marker>
@@ -466,6 +480,9 @@ function NavigatingView({
                         className="w-full h-12 border-2 border-orange-200 text-orange-600 hover:bg-orange-50 font-black uppercase tracking-tight gap-2"
                       >
                           <AlertTriangle className="h-4 w-4" /> Issue Melden
+                      </Button>
+                      <Button variant="ghost" onClick={() => setArrivedObject(null)} className="w-full">
+                          Sluiten
                       </Button>
                   </CardContent>
               </Card>
