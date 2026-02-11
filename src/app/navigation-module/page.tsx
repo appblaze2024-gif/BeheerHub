@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft, X, ArrowUp, Compass } from 'lucide-react';
+import { ArrowLeft, X, ArrowUp, Compass, Play } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -272,6 +272,7 @@ export default function StartNavigationPage() {
   const { user } = useUser();
   const { profile } = useProfile();
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
+  const isSuperUser = profile?.role === 'Super admin';
   
   const [userLocation, setUserLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
   const [routeType, setRouteType] = React.useState<'veeg' | 'prullenbak' | null>(null);
@@ -445,8 +446,21 @@ export default function StartNavigationPage() {
     return () => setIsHeaderVisible(true);
   }, [setIsHeaderVisible, navigationState]);
 
-  const handleStartRoute = async () => {
-    if (!userLocation || !selectedProjectId || !selectedRouteDef || !allObjects || !user) return;
+  const handleStartRoute = async (simulate = false) => {
+    let startLoc = userLocation;
+    
+    // Simulate location at the first object if no real location is found
+    if (simulate && !startLoc && objectsOnMap.length > 0) {
+        startLoc = { latitude: objectsOnMap[0].latitude, longitude: objectsOnMap[0].longitude };
+        setUserLocation(startLoc);
+    }
+
+    if (!startLoc || !selectedProjectId || !selectedRouteDef || !allObjects || !user) {
+        if (!startLoc) {
+            alert("Kon uw locatie niet bepalen. Zorg ervoor dat GPS aan staat.");
+        }
+        return;
+    }
 
     setIsStarting(true);
     
@@ -459,8 +473,8 @@ export default function StartNavigationPage() {
     }
 
     const sortedObjects = filteredObjects.sort((a, b) => {
-        const distA = turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([a.longitude, a.latitude]));
-        const distB = turf.distance(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([b.longitude, b.latitude]));
+        const distA = turf.distance(turf.point([startLoc!.longitude, startLoc!.latitude]), turf.point([a.longitude, a.latitude]));
+        const distB = turf.distance(turf.point([startLoc!.longitude, startLoc!.latitude]), turf.point([b.longitude, b.latitude]));
         return distA - distB;
     });
 
@@ -640,9 +654,23 @@ export default function StartNavigationPage() {
             </Select>
           </div>
           
-          <Button className="w-full" onClick={handleStartRoute} disabled={!selectedProjectId || !routeType || !selectedRouteId || selectedRouteId === '--nieuwe-route--' || isLoadingObjects || isStarting}>
-            {isStarting ? "Route starten..." : "Start Route"}
-          </Button>
+          <div className="flex flex-col gap-2">
+            <Button className="w-full" onClick={() => handleStartRoute(false)} disabled={!selectedProjectId || !routeType || !selectedRouteId || selectedRouteId === '--nieuwe-route--' || isLoadingObjects || isStarting}>
+                {isStarting ? "Route starten..." : "Start Route"}
+            </Button>
+            
+            {isSuperUser && (
+                <Button 
+                    variant="outline" 
+                    className="w-full border-dashed border-primary text-primary hover:bg-primary/5" 
+                    onClick={() => handleStartRoute(true)} 
+                    disabled={!selectedProjectId || !routeType || !selectedRouteId || selectedRouteId === '--nieuwe-route--' || isLoadingObjects || isStarting}
+                >
+                    <Play className="mr-2 h-4 w-4" />
+                    Simuleer Navigatie Modus
+                </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
