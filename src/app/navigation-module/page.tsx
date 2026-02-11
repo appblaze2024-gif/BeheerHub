@@ -16,7 +16,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { 
   ArrowLeft, 
-  X, 
   ArrowUp, 
   Play, 
   CheckCircle2, 
@@ -132,7 +131,7 @@ function NavigatingView({
 
   const nextObject = objectsOnRoute[currentObjectIndex];
 
-  // Calculate HUD data
+  // HUD data calculation
   const navHudData = React.useMemo(() => {
     if (!currentLeg?.steps) return null;
     
@@ -159,7 +158,7 @@ function NavigatingView({
     return null;
   }, [currentLeg, distanceRemainingToDestination]);
 
-  // Dynamic route line
+  // Sliced route line
   const remainingRouteGeometry = React.useMemo(() => {
     if (!currentRouteGeometry || isCalculatingRoute) return null;
     try {
@@ -217,7 +216,7 @@ function NavigatingView({
     return () => navigator.geolocation.clearWatch(watchId);
   }, [isSimulating, toast, currentRouteGeometry]);
 
-  // Simulation loop
+  // Animation Loop for Simulation
   React.useEffect(() => {
     if (!isSimulating || !currentRouteGeometry || !nextObject || arrivedObject || isCalculatingRoute) return;
 
@@ -246,10 +245,12 @@ function NavigatingView({
         simStateRef.current.lastTimestamp = timestamp;
 
         const distanceToDestination = totalDistance - simStateRef.current.distanceTravelled;
+        
+        // Acceleration / Deceleration
         if (distanceToDestination < 30) {
-            simStateRef.current.targetSpeedMs = 4;
+            simStateRef.current.targetSpeedMs = 4; // Slow down for arrival
         } else {
-            simStateRef.current.targetSpeedMs = 11.1; 
+            simStateRef.current.targetSpeedMs = 13.8; // ~50 km/h
         }
 
         const accel = simStateRef.current.targetSpeedMs > simStateRef.current.currentSpeedMs ? 3 : 6;
@@ -258,7 +259,7 @@ function NavigatingView({
         
         setDistanceRemainingToDestination(Math.max(0, totalDistance - simStateRef.current.distanceTravelled));
 
-        if (simStateRef.current.distanceTravelled >= totalDistance) {
+        if (simStateRef.current.distanceTravelled >= totalDistance - 0.5) {
             const finalCoord = coords[coords.length - 1];
             setUserLocation({ latitude: finalCoord[1], longitude: finalCoord[0], speed: 0, heading: 0 });
             setArrivedObject(nextObject);
@@ -267,7 +268,7 @@ function NavigatingView({
 
         try {
             const currentPoint = turf.along(line, simStateRef.current.distanceTravelled, { units: 'meters' });
-            const lookAheadPoint = turf.along(line, Math.min(simStateRef.current.distanceTravelled + 4, totalDistance), { units: 'meters' });
+            const lookAheadPoint = turf.along(line, Math.min(simStateRef.current.distanceTravelled + 2, totalDistance), { units: 'meters' });
             
             const [lng, lat] = currentPoint.geometry.coordinates;
             const heading = (turf.bearing(currentPoint, lookAheadPoint) + 360) % 360;
@@ -279,7 +280,7 @@ function NavigatingView({
                 latitude: lat,
                 longitude: lng,
                 bearing: heading,
-                zoom: 18.5 - (simStateRef.current.currentSpeedMs / 20), 
+                zoom: 18.5 - (simStateRef.current.currentSpeedMs / 25), 
             }));
         } catch (e) {
             console.warn("Turf error during simulation", e);
@@ -294,9 +295,10 @@ function NavigatingView({
     };
   }, [isSimulating, isPaused, arrivedObject, currentRouteGeometry, nextObject?.id, isCalculatingRoute]);
 
-  // Fetch Directions
+  // Fetch Directions for the leg
   React.useEffect(() => {
     if (!userLocation || !nextObject || arrivedObject) return;
+    
     const fetchRoute = async () => {
       setIsCalculatingRoute(true);
       const { longitude, latitude } = userLocation;
@@ -308,36 +310,44 @@ function NavigatingView({
           setCurrentRouteGeometry(data.routes[0].geometry);
           setCurrentLeg(data.routes[0].legs[0]);
           setDistanceRemainingToDestination(data.routes[0].legs[0].distance);
-          if (isSimulating) simStateRef.current.distanceTravelled = 0; 
+          if (isSimulating) {
+              simStateRef.current.distanceTravelled = 0;
+              simStateRef.current.currentSpeedMs = 0;
+          }
         }
       } catch (error) {
           console.error("Failed to fetch route:", error);
       } finally {
-          setTimeout(() => setIsCalculatingRoute(false), 500);
+          setTimeout(() => setIsCalculatingRoute(false), 800);
       }
     };
     fetchRoute();
-  }, [nextObject?.id, arrivedObject]);
+  }, [nextObject?.id, arrivedObject, isSimulating]);
   
-  // Real GPS arrival check
-  React.useEffect(() => {
-    if (isSimulating || !userLocation || !nextObject || arrivedObject) return;
-    const userPoint = turf.point([userLocation.longitude, userLocation.latitude]);
-    const objectPoint = turf.point([nextObject.longitude, nextObject.latitude]);
-    if (turf.distance(userPoint, objectPoint, { units: 'meters' }) < 15) { 
-      setArrivedObject(nextObject);
-    }
-  }, [userLocation?.latitude, userLocation?.longitude, nextObject?.id, isSimulating, arrivedObject]);
-
   const handleArrivedAction = (type: 'finish' | 'issue') => {
     if (!arrivedObject) return;
+    
+    // 1. Clean up markers
     const finishedId = arrivedObject.id;
     setCompletedObjects(prev => [...prev, finishedId]);
+    
+    // 2. Prepare for next destination
+    setIsCalculatingRoute(true);
     setArrivedObject(null);
     setCurrentObjectIndex(prev => prev + 1);
-    simStateRef.current.distanceTravelled = 0;
-    simStateRef.current.currentSpeedMs = 0;
-    setCurrentRouteGeometry(null); // Clear segment to avoidCoord is required error while calculating next
+    
+    // 3. Force route clear to ensure fetch effect picks it up
+    setCurrentRouteGeometry(null);
+    setCurrentLeg(null);
+    
+    if (isSimulating) {
+        simStateRef.current = {
+            distanceTravelled: 0,
+            currentSpeedMs: 0,
+            targetSpeedMs: 11.1,
+            lastTimestamp: 0
+        };
+    }
   };
 
   if (currentObjectIndex >= objectsOnRoute.length && objectsOnRoute.length > 0 && !arrivedObject && !isCalculatingRoute) {
@@ -370,7 +380,7 @@ function NavigatingView({
             anchor="center"
             rotation={isSimulating ? 0 : (userLocation.heading || 0)}
           >
-            <div className="relative flex items-center justify-center transition-all duration-100 ease-linear">
+            <div className="relative flex items-center justify-center transition-all duration-150 ease-linear">
                 <div className="absolute h-16 w-16 bg-blue-500/20 rounded-full animate-pulse" />
                 <div className="h-12 w-12 bg-blue-600 rounded-full border-[4px] border-white shadow-2xl flex items-center justify-center">
                     <svg viewBox="0 0 24 24" className="h-7 w-7 text-white fill-current">
@@ -426,7 +436,7 @@ function NavigatingView({
           <div className="absolute inset-0 z-[60] flex items-center justify-center bg-background/60 backdrop-blur-md">
               <div className="flex flex-col items-center gap-4 bg-white p-8 rounded-2xl shadow-2xl border border-slate-100">
                   <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                  <p className="font-black uppercase tracking-widest text-xs text-slate-500">Volgende route berekenen...</p>
+                  <p className="font-black uppercase tracking-widest text-xs text-slate-500">Volgende locatie berekenen...</p>
               </div>
           </div>
       )}
