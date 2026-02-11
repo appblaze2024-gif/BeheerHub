@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, X, ArrowUp, Play, CheckCircle2, Pause, MapPin, Gauge } from 'lucide-react';
+import { ArrowLeft, X, ArrowUp, Play, CheckCircle2, Pause, MapPin, Gauge, Loader2 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -28,21 +28,6 @@ import { useProfile } from '@/firebase/profile-provider';
 import { useToast } from '@/components/ui/use-toast';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
-
-// Helper to calculate bearing between two points
-function calculateBearing(lat1: number, lon1: number, lat2: number, lon2: number) {
-    const startLat = (lat1 * Math.PI) / 180;
-    const startLng = (lon1 * Math.PI) / 180;
-    const endLat = (lat2 * Math.PI) / 180;
-    const endLng = (lon2 * Math.PI) / 180;
-
-    const dLng = endLng - startLng;
-    const y = Math.sin(dLng) * Math.cos(endLat);
-    const x = Math.cos(startLat) * Math.sin(endLat) -
-              Math.sin(startLat) * Math.cos(endLat) * Math.cos(dLng);
-    const brng = (Math.atan2(y, x) * 180) / Math.PI;
-    return (brng + 360) % 360;
-}
 
 type ProjectWithRoutes = Project & {
   veegroutes?: Veegroute[];
@@ -100,32 +85,37 @@ function NavigatingView({
   const simStateRef = React.useRef({
     distanceTravelled: 0,
     currentSpeedMs: 0,
-    targetSpeedMs: 13.8, // ~50 km/h baseline for urban driving
+    targetSpeedMs: 13.8, // ~50 km/h baseline
     lastTimestamp: 0
   });
 
   const nextObject = objectsOnRoute[currentObjectIndex];
 
-  // Dynamic route line: Only show the part in front of the user
+  // Dynamic route line: Only show the path ahead
   const remainingRouteGeometry = React.useMemo(() => {
-    if (!currentRouteGeometry || !userLocation) return null;
+    if (!currentRouteGeometry) return null;
+    
     try {
-        const coords = currentRouteGeometry.coordinates;
-        if (coords.length < 2) return currentRouteGeometry;
-
-        const line = turf.lineString(coords);
-        const startPoint = turf.point([userLocation.longitude, userLocation.latitude]);
-        const endPoint = turf.point(coords[coords.length - 1]);
+        const line = turf.lineString(currentRouteGeometry.coordinates);
+        const totalDist = turf.length(line, { units: 'meters' });
         
-        // Find closest point on line to start the slice
-        const snappedStart = turf.nearestPointOnLine(line, startPoint);
-        const sliced = turf.lineSlice(snappedStart, endPoint, line);
-        
-        return sliced.geometry;
+        if (isSimulating) {
+            // Simulator: Precise distance-based slicing
+            const sliced = turf.lineSliceAlong(line, simStateRef.current.distanceTravelled, totalDist, { units: 'meters' });
+            return sliced.geometry;
+        } else {
+            // Real GPS: Snapping logic
+            if (!userLocation) return currentRouteGeometry;
+            const startPoint = turf.point([userLocation.longitude, userLocation.latitude]);
+            const snappedStart = turf.nearestPointOnLine(line, startPoint);
+            const endPoint = turf.point(currentRouteGeometry.coordinates[currentRouteGeometry.coordinates.length - 1]);
+            const sliced = turf.lineSlice(snappedStart, endPoint, line);
+            return sliced.geometry;
+        }
     } catch (e) {
         return currentRouteGeometry;
     }
-  }, [currentRouteGeometry, userLocation?.latitude, userLocation?.longitude]);
+  }, [currentRouteGeometry, userLocation?.latitude, userLocation?.longitude, isSimulating]);
 
   // Real Geolocation Watcher
   React.useEffect(() => {
@@ -170,21 +160,21 @@ function NavigatingView({
         const deltaTime = (timestamp - simStateRef.current.lastTimestamp) / 1000;
         simStateRef.current.lastTimestamp = timestamp;
 
-        // Optimized Physics: Detect upcoming turns and distance to destination
+        // Optimized Physics
         const lookAheadForSpeed = turf.along(line, Math.min(simStateRef.current.distanceTravelled + 40, totalDistance), { units: 'meters' });
         const lookAheadPoint = turf.along(line, Math.min(simStateRef.current.distanceTravelled + 5, totalDistance), { units: 'meters' });
         const currentPoint = turf.along(line, simStateRef.current.distanceTravelled, { units: 'meters' });
         
         const [lng, lat] = currentPoint.geometry.coordinates;
         const [nextLng, nextLat] = lookAheadPoint.geometry.coordinates;
-        const [farLng, farLat] = lookAheadForSpeed.geometry.coordinates;
-
-        const currentBearing = calculateBearing(lat, lng, nextLat, nextLng);
-        const farBearing = calculateBearing(nextLat, nextLng, farLng, farLng);
-        const bearingDiff = Math.abs(currentBearing - farBearing);
+        
+        // Calculate bearing using turf for better precision
+        const heading = (turf.bearing(currentPoint, lookAheadPoint) + 360) % 360;
+        const lookAheadBearing = (turf.bearing(lookAheadPoint, lookAheadForSpeed) + 360) % 360;
+        const bearingDiff = Math.abs(heading - lookAheadBearing);
         const distanceToNextPoint = totalDistance - simStateRef.current.distanceTravelled;
 
-        // Max 50km/h (13.8m/s) baseline
+        // Max 50km/h baseline
         if (distanceToNextPoint < 20) {
             simStateRef.current.targetSpeedMs = 3; 
         } else if (bearingDiff > 25) {
@@ -202,12 +192,10 @@ function NavigatingView({
 
         if (simStateRef.current.distanceTravelled >= totalDistance) {
             const finalCoord = coords[coords.length - 1];
-            setUserLocation({ latitude: finalCoord[1], longitude: finalCoord[0], speed: 0, heading: null });
+            setUserLocation({ latitude: finalCoord[1], longitude: finalCoord[0], speed: 0, heading: heading });
             simStateRef.current.distanceTravelled = 0;
             return;
         }
-
-        const heading = calculateBearing(lat, lng, nextLat, nextLng);
 
         setUserLocation({
             latitude: lat,
@@ -239,7 +227,7 @@ function NavigatingView({
 
     const effectiveHeading = userLocation.heading !== null 
         ? userLocation.heading 
-        : calculateBearing(userLocation.latitude, userLocation.longitude, nextObject.latitude, nextObject.longitude);
+        : (turf.bearing(turf.point([userLocation.longitude, userLocation.latitude]), turf.point([nextObject.longitude, nextObject.latitude])) + 360) % 360;
 
     setViewState(prev => ({
       ...prev,
@@ -249,7 +237,7 @@ function NavigatingView({
     }));
   }, [userLocation, nextObject, isSimulating]);
 
-  // Fetch Route Data from Directions API
+  // Fetch Route Data
   React.useEffect(() => {
     if (!userLocation || !nextObject) return;
     
@@ -312,14 +300,17 @@ function NavigatingView({
         mapboxAccessToken={MAPBOX_TOKEN}
       >
         {userLocation && (
-          <Marker longitude={userLocation.longitude} latitude={userLocation.latitude} anchor="center">
-            <div 
-                className="relative flex items-center justify-center transition-all duration-[120ms] ease-linear"
-                style={{ transform: `rotate(${userLocation.heading || 0}deg)` }}
-            >
+          <Marker 
+            longitude={userLocation.longitude} 
+            latitude={userLocation.latitude} 
+            anchor="center"
+            rotation={userLocation.heading || 0}
+            rotationAlignment="map"
+          >
+            <div className="relative flex items-center justify-center">
                 <div className="absolute h-16 w-16 bg-blue-500/20 rounded-full animate-pulse" />
                 <div className="h-14 w-14 bg-blue-600 rounded-full border-[6px] border-white shadow-2xl flex items-center justify-center">
-                    {/* Custom SVG Arrow pointing exactly up (0 deg) */}
+                    {/* SVG Arrow pointing exactly UP (0 deg) */}
                     <svg viewBox="0 0 24 24" className="h-8 w-8 text-white fill-current">
                         <path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z" />
                     </svg>
@@ -363,7 +354,7 @@ function NavigatingView({
           </div>
       )}
 
-      {/* HUD: Snelheid & Info */}
+      {/* HUD: Speed meter */}
       <div className="absolute bottom-10 left-6 z-10">
          <Card className="w-48 shadow-2xl bg-white/95 backdrop-blur-xl border-none overflow-hidden">
             <CardContent className="p-0">
@@ -398,7 +389,7 @@ function NavigatingView({
           </Card>
       </div>
 
-      {/* Control Buttons */}
+      {/* Controls */}
       <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10 flex gap-4">
             <Button 
                 variant="secondary" 
@@ -749,23 +740,4 @@ export default function StartNavigationPage() {
       </Card>
     </div>
   );
-}
-
-function Loader2(props: any) {
-    return (
-      <svg
-        {...props}
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-      </svg>
-    )
 }
