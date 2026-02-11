@@ -33,6 +33,7 @@ import {
   X as XIcon,
   AlertTriangle,
   Home,
+  LocateFixed,
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -111,6 +112,7 @@ function NavigatingView({
   const [isCalculatingRoute, setIsCalculatingRoute] = React.useState(false);
   const [distanceRemainingToDestination, setDistanceRemainingToDestination] = React.useState(0);
   const [hasReachedCurrentTarget, setHasReachedCurrentTarget] = React.useState(false);
+  const [isFollowing, setIsFollowing] = React.useState(true);
   
   const { profile } = useProfile();
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
@@ -187,21 +189,28 @@ function NavigatingView({
     }
   }, [currentRouteGeometry, userLocation?.latitude, userLocation?.longitude, isSimulating, isCalculatingRoute]);
 
+  // LIVE GPS TRACKING EFFECT
   React.useEffect(() => {
     if (isSimulating) return;
+    
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
         const { latitude, longitude, speed, heading } = position.coords;
         setUserLocation({ latitude, longitude, speed, heading });
         
-        // Auto-follow logic for live mode
-        setViewState(prev => ({
-            ...prev,
-            latitude,
-            longitude,
-            bearing: heading !== null ? heading : prev.bearing,
-            zoom: 18,
-        }));
+        if (isFollowing && !isPaused) {
+            const currentSpeedKmh = speed ? speed * 3.6 : 0;
+            // Track-Up logic: Rotate map to heading
+            setViewState(prev => ({
+                ...prev,
+                latitude,
+                longitude,
+                bearing: heading !== null ? heading : prev.bearing,
+                // Adjust zoom based on speed like simulation
+                zoom: 18.5 - (Math.min(currentSpeedKmh, 50) / 25),
+                pitch: 65,
+            }));
+        }
 
         if (currentRouteGeometry) {
             try {
@@ -226,8 +235,9 @@ function NavigatingView({
       { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
     );
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [isSimulating, toast, currentRouteGeometry]);
+  }, [isSimulating, toast, currentRouteGeometry, isFollowing, isPaused]);
 
+  // SIMULATION ANIMATION EFFECT
   React.useEffect(() => {
     if (!isSimulating || !currentRouteGeometry || !nextObject || arrivedObject || isCalculatingRoute) return;
 
@@ -307,6 +317,7 @@ function NavigatingView({
     };
   }, [isSimulating, isPaused, arrivedObject, currentRouteGeometry, nextObject?.id, isCalculatingRoute]);
 
+  // ROUTE CALCULATION EFFECT
   React.useEffect(() => {
     if (!userLocation || !nextObject || arrivedObject) return;
     
@@ -402,7 +413,13 @@ function NavigatingView({
       <MapGL
         ref={mapRef}
         {...viewState}
-        onMove={evt => setViewState(evt.viewState)}
+        onMove={evt => {
+            setViewState(evt.viewState);
+            // If user manually moves the map, stop auto-following
+            if (evt.viewState.latitude !== viewState.latitude || evt.viewState.longitude !== viewState.longitude) {
+                if (isFollowing) setIsFollowing(false);
+            }
+        }}
         style={{ width: '100%', height: '100%' }}
         mapStyle={mapStyle}
         mapboxAccessToken={MAPBOX_TOKEN}
@@ -412,7 +429,9 @@ function NavigatingView({
             longitude={userLocation.longitude} 
             latitude={userLocation.latitude} 
             anchor="center"
-            rotation={isSimulating ? 0 : (userLocation.heading || 0)}
+            // When map bearing follows heading, the marker rotation should be 0 
+            // so it always points UP relative to the device.
+            rotation={0} 
           >
             <div className="relative flex items-center justify-center transition-all duration-150 ease-linear">
                 <div className="absolute h-16 w-16 bg-blue-500/20 rounded-full animate-pulse" />
@@ -525,7 +544,7 @@ function NavigatingView({
           </div>
       )}
 
-      <div className="absolute bottom-10 left-6 z-10">
+      <div className="absolute bottom-10 left-6 z-10 flex flex-col gap-3">
          <Card className="w-40 shadow-2xl bg-white/95 backdrop-blur-xl border-none overflow-hidden">
             <CardContent className="p-0">
                 <div className="bg-slate-50 border-b p-2 flex justify-between items-center px-3">
@@ -538,6 +557,15 @@ function NavigatingView({
                 </div>
             </CardContent>
         </Card>
+        
+        {!isFollowing && (
+            <Button 
+                onClick={() => setIsFollowing(true)}
+                className="h-12 w-12 rounded-full shadow-2xl bg-primary text-white border-none hover:scale-110 active:scale-95 transition-all"
+            >
+                <LocateFixed className="h-6 w-6" />
+            </Button>
+        )}
       </div>
 
       <div className="absolute bottom-10 right-6 z-10 w-64">
