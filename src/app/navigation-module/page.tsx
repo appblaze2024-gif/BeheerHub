@@ -32,6 +32,8 @@ import {
   RefreshCw,
   Navigation,
   X as XIcon,
+  AlertTriangle,
+  ChevronRight,
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -107,6 +109,7 @@ function NavigatingView({
   const [currentRouteGeometry, setCurrentRouteGeometry] = React.useState<any>(null);
   const [currentLeg, setCurrentLeg] = React.useState<any>(null);
   const [isPaused, setIsPaused] = React.useState(false);
+  const [arrivedObject, setArrivedObject] = React.useState<MapObject | null>(null);
   const [distanceRemainingToDestination, setDistanceRemainingToDestination] = React.useState(0);
   const { profile } = useProfile();
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
@@ -124,13 +127,13 @@ function NavigatingView({
   const simStateRef = React.useRef({
     distanceTravelled: 0,
     currentSpeedMs: 0,
-    targetSpeedMs: 11.1, // ~40 km/h (realistischer voor werkvoertuig)
+    targetSpeedMs: 11.1, // ~40 km/h
     lastTimestamp: 0
   });
 
   const nextObject = objectsOnRoute[currentObjectIndex];
 
-  // Calculate HUD data based on current position on the leg
+  // Calculate HUD data
   const navHudData = React.useMemo(() => {
     if (!currentLeg?.steps) return null;
     
@@ -157,7 +160,7 @@ function NavigatingView({
     return null;
   }, [currentLeg, distanceRemainingToDestination]);
 
-  // Dynamic route line - eats the path behind the vehicle
+  // Dynamic route line
   const remainingRouteGeometry = React.useMemo(() => {
     if (!currentRouteGeometry) return null;
     try {
@@ -214,7 +217,7 @@ function NavigatingView({
 
   // Simulation loop
   React.useEffect(() => {
-    if (!isSimulating || !currentRouteGeometry || !nextObject) return;
+    if (!isSimulating || !currentRouteGeometry || !nextObject || arrivedObject) return;
 
     const coords = currentRouteGeometry.coordinates;
     if (coords.length < 2) return;
@@ -223,7 +226,7 @@ function NavigatingView({
     const totalDistance = turf.length(line, { units: 'meters' });
 
     const animate = (timestamp: number) => {
-        if (isPaused) {
+        if (isPaused || arrivedObject) {
             simStateRef.current.lastTimestamp = timestamp;
             animationRef.current = requestAnimationFrame(animate);
             return;
@@ -233,15 +236,13 @@ function NavigatingView({
         const deltaTime = (timestamp - simStateRef.current.lastTimestamp) / 1000;
         simStateRef.current.lastTimestamp = timestamp;
 
-        // Dynamic speed based on distance to next point/maneuver
         const distanceToDestination = totalDistance - simStateRef.current.distanceTravelled;
         if (distanceToDestination < 30) {
-            simStateRef.current.targetSpeedMs = 4; // slow down for arrival
+            simStateRef.current.targetSpeedMs = 4;
         } else {
-            simStateRef.current.targetSpeedMs = 11.1; // ~40 km/h
+            simStateRef.current.targetSpeedMs = 11.1; 
         }
 
-        // Acceleration/Deceleration
         const accel = simStateRef.current.targetSpeedMs > simStateRef.current.currentSpeedMs ? 3 : 6;
         simStateRef.current.currentSpeedMs += (simStateRef.current.targetSpeedMs - simStateRef.current.currentSpeedMs) * deltaTime * accel;
         simStateRef.current.distanceTravelled += simStateRef.current.currentSpeedMs * deltaTime;
@@ -249,12 +250,9 @@ function NavigatingView({
         setDistanceRemainingToDestination(Math.max(0, totalDistance - simStateRef.current.distanceTravelled));
 
         if (simStateRef.current.distanceTravelled >= totalDistance) {
-            // Arrived at current point
             const finalCoord = coords[coords.length - 1];
             setUserLocation({ latitude: finalCoord[1], longitude: finalCoord[0], speed: 0, heading: 0 });
-            setCompletedObjects(prev => [...prev, nextObject.id]);
-            setCurrentObjectIndex(prev => prev + 1);
-            simStateRef.current.distanceTravelled = 0;
+            setArrivedObject(nextObject);
             return;
         }
 
@@ -281,11 +279,11 @@ function NavigatingView({
     return () => {
         if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-  }, [isSimulating, isPaused, currentRouteGeometry, nextObject?.id]);
+  }, [isSimulating, isPaused, arrivedObject, currentRouteGeometry, nextObject?.id]);
 
-  // Fetch Directions from current location to next object
+  // Fetch Directions
   React.useEffect(() => {
-    if (!userLocation || !nextObject) return;
+    if (!userLocation || !nextObject || arrivedObject) return;
     const fetchRoute = async () => {
       const { longitude, latitude } = userLocation;
       const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${longitude},${latitude};${nextObject.longitude},${nextObject.latitude}?steps=true&geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}&language=nl`;
@@ -301,20 +299,28 @@ function NavigatingView({
       } catch (error) {}
     };
     fetchRoute();
-  }, [nextObject?.id]);
+  }, [nextObject?.id, arrivedObject]);
   
   // Real GPS arrival check
   React.useEffect(() => {
-    if (isSimulating || !userLocation || !nextObject) return;
+    if (isSimulating || !userLocation || !nextObject || arrivedObject) return;
     const userPoint = turf.point([userLocation.longitude, userLocation.latitude]);
     const objectPoint = turf.point([nextObject.longitude, nextObject.latitude]);
     if (turf.distance(userPoint, objectPoint, { units: 'meters' }) < 15) { 
-      setCompletedObjects(prev => [...prev, nextObject.id]);
-      setCurrentObjectIndex(prev => prev + 1);
+      setArrivedObject(nextObject);
     }
-  }, [userLocation?.latitude, userLocation?.longitude, nextObject?.id, isSimulating]);
+  }, [userLocation?.latitude, userLocation?.longitude, nextObject?.id, isSimulating, arrivedObject]);
 
-  if (currentObjectIndex >= objectsOnRoute.length && objectsOnRoute.length > 0) {
+  const handleArrivedAction = (type: 'finish' | 'issue') => {
+    if (!arrivedObject) return;
+    setCompletedObjects(prev => [...prev, arrivedObject.id]);
+    setArrivedObject(null);
+    setCurrentObjectIndex(prev => prev + 1);
+    simStateRef.current.distanceTravelled = 0;
+    simStateRef.current.currentSpeedMs = 0;
+  };
+
+  if (currentObjectIndex >= objectsOnRoute.length && objectsOnRoute.length > 0 && !arrivedObject) {
     return (
         <div className="flex flex-col items-center justify-center h-full gap-4 bg-background p-6 text-center">
             <CheckCircle2 className="h-16 w-16 text-green-500" />
@@ -342,7 +348,7 @@ function NavigatingView({
             longitude={userLocation.longitude} 
             latitude={userLocation.latitude} 
             anchor="center"
-            rotation={isSimulating ? 0 : (userLocation.heading || 0)} // Pijl staat altijd "vooruit" op scherm
+            rotation={isSimulating ? 0 : (userLocation.heading || 0)}
           >
             <div className="relative flex items-center justify-center">
                 <div className="absolute h-16 w-16 bg-blue-500/20 rounded-full animate-pulse" />
@@ -355,7 +361,6 @@ function NavigatingView({
           </Marker>
         )}
 
-        {/* Alleen objecten tonen die nog NIET bezocht zijn */}
         {objectsOnRoute.map((obj, idx) => {
             if (completedObjects.includes(obj.id)) return null;
             return (
@@ -377,7 +382,7 @@ function NavigatingView({
         )}
       </MapGL>
       
-      {navHudData && (
+      {navHudData && !arrivedObject && (
           <div className="absolute top-6 left-1/2 -translate-x-1/2 z-10 w-[90%] max-w-lg">
               <Card className="bg-slate-900/95 backdrop-blur-xl text-white shadow-2xl border-none overflow-hidden">
                   <CardContent className="p-4 flex items-center gap-5">
@@ -392,6 +397,37 @@ function NavigatingView({
                               {navHudData.instruction}
                           </p>
                       </div>
+                  </CardContent>
+              </Card>
+          </div>
+      )}
+
+      {arrivedObject && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6">
+              <Card className="w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
+                  <CardHeader className="text-center pb-2">
+                      <div className="mx-auto bg-green-100 p-3 rounded-full w-16 h-16 flex items-center justify-center mb-4">
+                          <MapPin className="h-8 w-8 text-green-600 fill-current" />
+                      </div>
+                      <CardTitle className="text-2xl font-black uppercase tracking-tight">Bestemming Bereikt</CardTitle>
+                      <CardDescription className="font-bold text-slate-500">
+                          Unit ID: <span className="text-slate-900">{arrivedObject.id}</span>
+                      </CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-6 pt-2 space-y-3">
+                      <Button 
+                        onClick={() => handleArrivedAction('finish')} 
+                        className="w-full h-14 bg-green-600 hover:bg-green-700 text-lg font-black uppercase tracking-tight gap-2"
+                      >
+                          <CheckCircle2 className="h-5 w-5" /> Afronden & Door
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => handleArrivedAction('issue')} 
+                        className="w-full h-12 border-2 border-orange-200 text-orange-600 hover:bg-orange-50 font-black uppercase tracking-tight gap-2"
+                      >
+                          <AlertTriangle className="h-4 w-4" /> Issue Melden
+                      </Button>
                   </CardContent>
               </Card>
           </div>
@@ -551,7 +587,6 @@ export default function StartNavigationPage() {
     
     const startCoords = startLoc || { latitude: objectsOnMap[0].latitude, longitude: objectsOnMap[0].longitude };
     
-    // Nearest Neighbor Path Optimization
     const unvisited = [...objectsOnMap];
     const sortedObjects: MapObject[] = [];
     let currentPos = startCoords;
