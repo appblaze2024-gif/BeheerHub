@@ -33,7 +33,6 @@ import {
   Navigation,
   X as XIcon,
   AlertTriangle,
-  ChevronRight,
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -45,7 +44,6 @@ import * as turf from '@turf/turf';
 import { Progress } from '@/components/ui/progress';
 import { useProfile } from '@/firebase/profile-provider';
 import { useToast } from '@/components/ui/use-toast';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -163,17 +161,17 @@ function NavigatingView({
 
   // Dynamic route line
   const remainingRouteGeometry = React.useMemo(() => {
-    if (!currentRouteGeometry) return null;
+    if (!currentRouteGeometry || isCalculatingRoute) return null;
     try {
         const coords = currentRouteGeometry.coordinates;
-        if (coords.length < 2) return currentRouteGeometry;
+        if (!Array.isArray(coords) || coords.length < 2) return currentRouteGeometry;
 
         const line = turf.lineString(coords);
         const totalDist = turf.length(line, { units: 'meters' });
         
         let startDist = 0;
         if (isSimulating) {
-            startDist = simStateRef.current.distanceTravelled;
+            startDist = Math.min(simStateRef.current.distanceTravelled, totalDist - 0.1);
         } else if (userLocation) {
             const startPoint = turf.point([userLocation.longitude, userLocation.latitude]);
             const snappedStart = turf.nearestPointOnLine(line, startPoint);
@@ -187,7 +185,7 @@ function NavigatingView({
     } catch (e) { 
         return currentRouteGeometry; 
     }
-  }, [currentRouteGeometry, userLocation?.latitude, userLocation?.longitude, isSimulating]);
+  }, [currentRouteGeometry, userLocation?.latitude, userLocation?.longitude, isSimulating, isCalculatingRoute]);
 
   // Watch real position
   React.useEffect(() => {
@@ -199,12 +197,15 @@ function NavigatingView({
         
         if (currentRouteGeometry) {
             try {
-                const line = turf.lineString(currentRouteGeometry.coordinates);
-                const totalDist = turf.length(line, { units: 'meters' });
-                const userPoint = turf.point([longitude, latitude]);
-                const snapped = turf.nearestPointOnLine(line, userPoint);
-                const distToStart = turf.length(turf.lineSlice(turf.point(currentRouteGeometry.coordinates[0]), snapped, line), { units: 'meters' });
-                setDistanceRemainingToDestination(Math.max(0, totalDist - distToStart));
+                const coords = currentRouteGeometry.coordinates;
+                if (coords && coords.length >= 2) {
+                    const line = turf.lineString(coords);
+                    const totalDist = turf.length(line, { units: 'meters' });
+                    const userPoint = turf.point([longitude, latitude]);
+                    const snapped = turf.nearestPointOnLine(line, userPoint);
+                    const distToStart = turf.length(turf.lineSlice(turf.point(coords[0]), snapped, line), { units: 'meters' });
+                    setDistanceRemainingToDestination(Math.max(0, totalDist - distToStart));
+                }
             } catch (e) {}
         }
       },
@@ -221,13 +222,20 @@ function NavigatingView({
     if (!isSimulating || !currentRouteGeometry || !nextObject || arrivedObject || isCalculatingRoute) return;
 
     const coords = currentRouteGeometry.coordinates;
-    if (coords.length < 2) return;
+    if (!Array.isArray(coords) || coords.length < 2) return;
 
-    const line = turf.lineString(coords);
+    let line: any;
+    try {
+        line = turf.lineString(coords);
+    } catch (e) {
+        return;
+    }
+    
     const totalDistance = turf.length(line, { units: 'meters' });
+    if (totalDistance <= 0) return;
 
     const animate = (timestamp: number) => {
-        if (isPaused || arrivedObject || isCalculatingRoute) {
+        if (isPaused || arrivedObject || isCalculatingRoute || !currentRouteGeometry) {
             simStateRef.current.lastTimestamp = timestamp;
             animationRef.current = requestAnimationFrame(animate);
             return;
@@ -257,21 +265,25 @@ function NavigatingView({
             return;
         }
 
-        const currentPoint = turf.along(line, simStateRef.current.distanceTravelled, { units: 'meters' });
-        const lookAheadPoint = turf.along(line, Math.min(simStateRef.current.distanceTravelled + 4, totalDistance), { units: 'meters' });
-        
-        const [lng, lat] = currentPoint.geometry.coordinates;
-        const heading = (turf.bearing(currentPoint, lookAheadPoint) + 360) % 360;
+        try {
+            const currentPoint = turf.along(line, simStateRef.current.distanceTravelled, { units: 'meters' });
+            const lookAheadPoint = turf.along(line, Math.min(simStateRef.current.distanceTravelled + 4, totalDistance), { units: 'meters' });
+            
+            const [lng, lat] = currentPoint.geometry.coordinates;
+            const heading = (turf.bearing(currentPoint, lookAheadPoint) + 360) % 360;
 
-        setUserLocation({ latitude: lat, longitude: lng, speed: simStateRef.current.currentSpeedMs, heading: heading });
+            setUserLocation({ latitude: lat, longitude: lng, speed: simStateRef.current.currentSpeedMs, heading: heading });
 
-        setViewState(prev => ({
-            ...prev,
-            latitude: lat,
-            longitude: lng,
-            bearing: heading,
-            zoom: 18.5 - (simStateRef.current.currentSpeedMs / 20), 
-        }));
+            setViewState(prev => ({
+                ...prev,
+                latitude: lat,
+                longitude: lng,
+                bearing: heading,
+                zoom: 18.5 - (simStateRef.current.currentSpeedMs / 20), 
+            }));
+        } catch (e) {
+            console.warn("Turf error during simulation", e);
+        }
 
         animationRef.current = requestAnimationFrame(animate);
     };
@@ -301,7 +313,6 @@ function NavigatingView({
       } catch (error) {
           console.error("Failed to fetch route:", error);
       } finally {
-          // Give a small delay for background rendering of the line before hiding loader
           setTimeout(() => setIsCalculatingRoute(false), 500);
       }
     };
@@ -326,6 +337,7 @@ function NavigatingView({
     setCurrentObjectIndex(prev => prev + 1);
     simStateRef.current.distanceTravelled = 0;
     simStateRef.current.currentSpeedMs = 0;
+    setCurrentRouteGeometry(null); // Clear segment to avoidCoord is required error while calculating next
   };
 
   if (currentObjectIndex >= objectsOnRoute.length && objectsOnRoute.length > 0 && !arrivedObject && !isCalculatingRoute) {
@@ -358,7 +370,7 @@ function NavigatingView({
             anchor="center"
             rotation={isSimulating ? 0 : (userLocation.heading || 0)}
           >
-            <div className="relative flex items-center justify-center">
+            <div className="relative flex items-center justify-center transition-all duration-100 ease-linear">
                 <div className="absolute h-16 w-16 bg-blue-500/20 rounded-full animate-pulse" />
                 <div className="h-12 w-12 bg-blue-600 rounded-full border-[4px] border-white shadow-2xl flex items-center justify-center">
                     <svg viewBox="0 0 24 24" className="h-7 w-7 text-white fill-current">
