@@ -142,14 +142,14 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   
   return (
     <>
-      <Sidebar isCollapsed={false} className="w-full bg-slate-900 border-none">
-          <SidebarHeader className="p-6 border-b border-white/5">
+      <Sidebar isCollapsed={false} className="w-full bg-white border-r border-slate-200 shadow-none">
+          <SidebarHeader className="p-6 border-b border-slate-100">
             <div className="flex items-center gap-4 w-full">
               <div className="bg-primary h-10 w-10 rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
                 <LayoutGrid className="text-white h-6 w-6" />
               </div>
               <div className="flex flex-col">
-                  <span className="font-black text-white uppercase tracking-tighter text-lg leading-none">BeheerHub</span>
+                  <span className="font-black text-slate-900 uppercase tracking-tighter text-lg leading-none">BeheerHub</span>
                   <span className="text-[10px] text-primary font-black uppercase tracking-[0.2em] mt-1">Smart Infra</span>
               </div>
             </div>
@@ -157,18 +157,18 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
 
           <SidebarContent className="p-4 space-y-6 no-scrollbar">
             <div className="space-y-2 px-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500 pl-1">Actief Project</Label>
+              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Actief Project</Label>
               <Select
                 value={selectedProjectId || ''}
                 onValueChange={(value) => setSelectedProjectId(value === '' ? null : value)}
                 disabled={isLoadingProjects || isLoadingProject}
               >
-                <SelectTrigger className="bg-white/5 border-white/10 text-white h-11 font-bold">
+                <SelectTrigger className="bg-slate-50 border-slate-200 text-slate-900 h-11 font-bold focus:ring-primary/20">
                   <SelectValue placeholder="Kies een project..." />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-white/10 text-white">
+                <SelectContent className="bg-white border-slate-200 text-slate-900">
                   {projects?.map((project) => (
-                    <SelectItem key={project.id} value={project.id!} className="focus:bg-primary focus:text-white">
+                    <SelectItem key={project.id} value={project.id!} className="focus:bg-slate-100">
                       {project.projectnaam}
                     </SelectItem>
                   ))}
@@ -188,11 +188,11 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                             "h-11 text-sm font-bold justify-between transition-all rounded-xl px-4",
                             pathname.startsWith(item.href) 
                               ? "bg-primary text-white shadow-lg shadow-primary/20" 
-                              : "text-slate-400 hover:bg-white/5 hover:text-white"
+                              : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                           )}
                         >
                           <div className="flex items-center gap-3">
-                            <item.icon className={cn("h-5 w-5", pathname.startsWith(item.href) ? "text-white" : "text-slate-500")} />
+                            <item.icon className={cn("h-5 w-5", pathname.startsWith(item.href) ? "text-white" : "text-slate-400")} />
                             <span>{item.label}</span>
                           </div>
                           <div className="flex items-center gap-2">
@@ -204,7 +204,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                         </SidebarMenuButton>
                       </CollapsibleTrigger>
                       <CollapsibleContent className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down overflow-hidden">
-                        <SidebarMenuSub className="border-l-2 border-white/5 ml-6 mt-1 space-y-1">
+                        <SidebarMenuSub className="border-l-2 border-slate-100 ml-6 mt-1 space-y-1">
                           {item.subItems.filter(subItem => {
                               if (isSuperUser) return true;
                               if (!item.module) return true;
@@ -218,7 +218,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                                   onClick={onNavigate} 
                                   className={cn(
                                     "flex justify-between w-full items-center h-9 px-4 rounded-lg font-bold text-xs",
-                                    pathname === subItem.href ? "text-white bg-white/10" : "text-slate-500 hover:text-white"
+                                    pathname === subItem.href ? "text-primary bg-primary/5" : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
                                   )}
                                 >
                                   <span>{subItem.label}</span>
@@ -240,11 +240,11 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                         "h-11 text-sm font-bold transition-all rounded-xl px-4",
                         pathname === item.href 
                           ? "bg-primary text-white shadow-lg shadow-primary/20" 
-                          : "text-slate-400 hover:bg-white/5 hover:text-white"
+                          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                       )}
                     >
                       <Link href={item.href} onClick={onNavigate}>
-                        <item.icon className={cn("h-5 w-5", pathname === item.href ? "text-white" : "text-slate-500")} />
+                        <item.icon className={cn("h-5 w-5", pathname === item.href ? "text-white" : "text-slate-400")} />
                         <span>{item.label}</span>
                       </Link>
                     </SidebarMenuButton>
@@ -254,23 +254,23 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
             </SidebarMenu>
           </SidebarContent>
 
-          <SidebarFooter className="p-4 border-t border-white/5">
-              <div className="bg-white/5 rounded-2xl p-3 flex items-center gap-3">
-                <Avatar className="h-9 w-9 ring-2 ring-primary/20">
+          <SidebarFooter className="p-4 border-t border-slate-100">
+              <div className="bg-slate-50 rounded-2xl p-3 flex items-center gap-3 border border-slate-100">
+                <Avatar className="h-9 w-9 ring-2 ring-white shadow-sm">
                   <AvatarImage src={user?.photoURL || undefined} />
                   <AvatarFallback className="bg-primary text-white font-black text-xs">
                     {getInitials(profile?.firstName, profile?.lastName)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col min-w-0">
-                  <p className="text-xs font-black text-white truncate">{profile?.displayName}</p>
+                  <p className="text-xs font-black text-slate-900 truncate">{profile?.displayName}</p>
                   <p className="text-[10px] font-bold text-slate-500 truncate uppercase tracking-tighter">{profile?.role}</p>
                 </div>
               </div>
-              <div className='mt-2 text-center text-[10px] font-black uppercase tracking-widest text-slate-600 flex items-center justify-center gap-2'>
+              <div className='mt-2 text-center text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center justify-center gap-2'>
                   <span>{version}</span>
                   {isSuperUser && (
-                    <Button variant="ghost" size="icon" className="h-5 w-5 text-slate-600 hover:text-white" onClick={() => setIsVersionDialogOpen(true)}>
+                    <Button variant="ghost" size="icon" className="h-5 w-5 text-slate-400 hover:text-primary" onClick={() => setIsVersionDialogOpen(true)}>
                       <Settings className="h-3 w-3" />
                     </Button>
                   )}
