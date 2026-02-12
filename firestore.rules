@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -11,12 +12,12 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
     }
 
     function hasRole(role) {
@@ -31,14 +32,16 @@ service cloud.firestore {
              getUserData().role in ['Super admin', 'toezichthouder'];
     }
 
-    // Specifieke regel voor gebruikersprofielen
+    // Gebruikersprofielen
     match /users/{userId} {
+      // Iedereen mag profielen inzien (voor zoekfuncties en dialogen)
       allow read: if isSignedIn();
+      // Alleen eigenaar of admin mag schrijven
       allow write: if isOwner(userId) || hasRole('Super admin');
 
-      // Routes subcollectie
+      // Routes subcollectie (Rittenregistratie)
       match /routes/{routeId} {
-        // Toegang voor eigenaar OF toezichthouders/admins
+        // BELANGRIJK: Privileged users moeten alle routes kunnen 'listen' voor de geschiedenis
         allow read: if isOwner(userId) || isPrivileged();
         allow write: if isOwner(userId) || hasRole('Super admin');
       }

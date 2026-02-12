@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -8,12 +9,18 @@
         "id": { "type": "string" },
         "email": { "type": "string", "format": "email" },
         "displayName": { "type": "string" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
         "role": { "type": "string", "enum": ["Super admin", "toezichthouder", "ondersteuner", "medewerkers"] },
         "status": { "type": "string" },
         "wijk": { "type": "string" },
+        "veegroute": { "type": "string" },
+        "prullenbakkenroute": { "type": "string" },
         "nfcTagId": { "type": "string" },
         "lastSelectedProjectId": { "type": "string" },
-        "permissions": { "type": "object" }
+        "permissions": { "type": "object" },
+        "schouwenGemeente": { "type": "string" },
+        "schouwenMapStyle": { "type": "string" }
       },
       "required": ["id", "email", "role"]
     },
@@ -26,6 +33,14 @@
         "projectnaam": { "type": "string" },
         "locatie": { "type": "string" },
         "opdrachtgever": { "type": "string" },
+        "startdatum": { "type": "string" },
+        "einddatum": { "type": "string" },
+        "bestek": { "type": "string" },
+        "besteknummer": { "type": "string" },
+        "versie": { "type": "string" },
+        "datum": { "type": "string" },
+        "omschrijving": { "type": "string" },
+        "materieelIds": { "type": "array", "items": { "type": "string" } },
         "vehicleAvailability": { "type": "object" },
         "wijken": { "type": "array" },
         "veegroutes": { "type": "array" },
@@ -43,7 +58,8 @@
         "functie": { "type": "string" },
         "status": { "type": "string" },
         "planningOrder": { "type": "number" },
-        "urenPerDag": { "type": "object" }
+        "urenPerDag": { "type": "object" },
+        "avatarUrl": { "type": "string" }
       }
     },
     "Melding": {
@@ -56,9 +72,15 @@
         "hoofdcategorie": { "type": "string" },
         "subcategorie": { "type": "string" },
         "datum": { "type": "string" },
+        "tijdstip": { "type": "string" },
         "latitude": { "type": "number" },
         "longitude": { "type": "number" },
-        "extra_informatie": { "type": "string" }
+        "extra_informatie": { "type": "string" },
+        "straatnaam": { "type": "string" },
+        "huisnummer": { "type": "string" },
+        "plaats": { "type": "string" },
+        "wijk": { "type": "string" },
+        "melder": { "type": "string" }
       }
     },
     "Route": {
@@ -69,6 +91,7 @@
         "userId": { "type": "string" },
         "projectId": { "type": "string" },
         "routeName": { "type": "string" },
+        "date": { "type": "string" },
         "startTime": { "type": "string", "format": "date-time" },
         "endTime": { "type": "string", "format": "date-time" },
         "completedObjects": { "type": "array", "items": { "type": "string" } },
@@ -84,7 +107,12 @@
         "id": { "type": "string" },
         "name": { "type": "string" },
         "vulgraad": { "type": "number" },
-        "status": { "type": "string" }
+        "status": { "type": "string" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "currentDistanceCm": { "type": "number" },
+        "binDepthCm": { "type": "number" },
+        "measurementFrequency": { "type": "number" }
       }
     }
   },
@@ -103,6 +131,15 @@
     "/projects/{projectId}": {
       "schema": { "$ref": "#/entities/Project" },
       "description": "Projectgegevens."
+    },
+    "/projects/{projectId}/diensten/{dienstId}": {
+      "description": "Ingeplande diensten op projecten."
+    },
+    "/projects/{projectId}/bestanden/{bestandId}": {
+      "description": "Bestanden gekoppeld aan projecten."
+    },
+    "/projects/{projectId}/folders/{folderId}": {
+      "description": "Mappenstructuur voor projectbestanden."
     },
     "/medewerkers/{medewerkerId}": {
       "schema": { "$ref": "#/entities/Medewerker" },
@@ -124,6 +161,9 @@
     },
     "/objects/{objectId}": {
       "description": "Areaal objecten."
+    },
+    "/settings/{settingId}": {
+      "description": "Systeeminstellingen (statussen, categorieën, etc.)"
     }
   }
 }
