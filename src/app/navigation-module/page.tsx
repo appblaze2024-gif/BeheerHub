@@ -135,6 +135,7 @@ function NavigatingView({
   const [hasReachedCurrentTarget, setHasReachedCurrentTarget] = React.useState(false);
   const [isFollowing, setIsFollowing] = React.useState(true);
   const [gpsError, setGpsError] = React.useState<'permission' | 'signal' | null>(null);
+  const [offRouteSince, setOffRouteSince] = React.useState<number | null>(null);
   const hasFitBoundsRef = React.useRef(false);
   
   const { profile } = useProfile();
@@ -180,6 +181,32 @@ function NavigatingView({
     } catch (e) {}
     return userLocation;
   }, [userLocation, currentRouteGeometry]);
+
+  // REROUTING LOGIC
+  React.useEffect(() => {
+    if (!userLocation || !currentRouteGeometry || isCalculatingRoute || isSimulating) return;
+    
+    try {
+        const coords = currentRouteGeometry.coordinates;
+        const line = turf.lineString(coords);
+        const pt = turf.point([userLocation.longitude, userLocation.latitude]);
+        const snapped = turf.nearestPointOnLine(line, pt, { units: 'meters' });
+        const distance = snapped.properties.dist || 0;
+
+        if (distance > 50) { // 50 meter drempelwaarde voor "van de route af"
+            if (!offRouteSince) {
+                setOffRouteSince(Date.now());
+            } else if (Date.now() - offRouteSince > 5000) { // 5 seconden drempelwaarde
+                console.log("Andere weg gekozen, route wordt herberekend...");
+                setCurrentRouteGeometry(null);
+                setOffRouteSince(null);
+                lastFetchedTargetId.current = null; // Forceer een refetch
+            }
+        } else {
+            setOffRouteSince(null);
+        }
+    } catch (e) {}
+  }, [userLocation?.latitude, userLocation?.longitude, currentRouteGeometry, isCalculatingRoute, offRouteSince, isSimulating]);
 
   const navHudData = React.useMemo(() => {
     if (!currentLeg?.steps) return null;
