@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { FilePenLine, Plus, Trash2, Upload, Download, MapPin, Map as MapIcon, MoreHorizontal, Copy, Home, Truck, Search, ChevronRight, CornerDownRight } from 'lucide-react';
+import { FilePenLine, Plus, Trash2, Upload, Download, MapPin, Map as MapIcon, MoreHorizontal, Copy, Home, Truck, Search, ChevronRight, CornerDownRight, PlusCircle } from 'lucide-react';
 import {
   useFirestore,
   useCollection,
@@ -853,27 +853,20 @@ function PrullenbakkenroutesTab({
   const sortedRoutes = React.useMemo(() => {
     if (!prullenbakkenroutes) return [];
     
-    // Sort all primarily by name
-    const sorted = [...prullenbakkenroutes].sort((a, b) => a.naam.localeCompare(b.naam, undefined, { numeric: true }));
-    
+    // Primarily group by parentId
+    const roots = prullenbakkenroutes.filter(r => !r.parentId).sort((a, b) => a.naam.localeCompare(b.naam, undefined, { numeric: true }));
     const result: Prullenbakkenroute[] = [];
-    const processed = new Set<string>();
 
-    // Step 1: Add all roots (main routes) and their immediate children
-    sorted.filter(r => !r.parentId).forEach(root => {
-        result.push(root);
-        processed.add(root.id);
-        
-        sorted.filter(c => c.parentId === root.id).forEach(child => {
-            result.push(child);
-            processed.add(child.id);
-        });
+    roots.forEach(root => {
+      result.push(root);
+      const children = prullenbakkenroutes.filter(c => c.parentId === root.id).sort((a, b) => a.naam.localeCompare(b.naam, undefined, { numeric: true }));
+      result.push(...children);
     });
     
-    // Step 2: Add any remaining routes (orphans)
-    sorted.filter(r => !processed.has(r.id)).forEach(orphan => {
-        result.push(orphan);
-    });
+    // Add any that might be orphaned
+    const processedIds = new Set(result.map(r => r.id));
+    const orphans = prullenbakkenroutes.filter(r => !processedIds.has(r.id));
+    result.push(...orphans);
 
     return result;
   }, [prullenbakkenroutes]);
@@ -899,11 +892,27 @@ function PrullenbakkenroutesTab({
     setPrullenbakkenroutes(prev => [
       ...(prev || []),
       {
-        id: new Date().toISOString(),
+        id: new Date().toISOString() + Math.random(),
         naam: '',
         locatie: '',
         subGebieden: '[]',
         parentId: null,
+      },
+    ]);
+  };
+
+  const addSubRoute = (parent: Prullenbakkenroute) => {
+    setPrullenbakkenroutes(prev => [
+      ...(prev || []),
+      {
+        id: new Date().toISOString() + Math.random(),
+        naam: `${parent.naam} - `,
+        locatie: parent.locatie,
+        subGebieden: '[]',
+        parentId: parent.id,
+        startAdres: parent.startAdres,
+        startLatitude: parent.startLatitude,
+        startLongitude: parent.startLongitude,
       },
     ]);
   };
@@ -948,28 +957,28 @@ function PrullenbakkenroutesTab({
         </h3>
       </div>
       
-      <div className="border-2 border-slate-200 rounded-lg overflow-hidden bg-white shadow-sm">
-        <Table className="border-collapse table-fixed w-full">
-          <TableHeader className="bg-slate-50 border-b-2 border-slate-200">
+      <div className="border-2 border-black rounded-lg overflow-hidden bg-white shadow-sm">
+        <Table className="border-collapse table-fixed w-full border-black">
+          <TableHeader className="bg-slate-100 border-b-2 border-black">
             <TableRow className="hover:bg-transparent h-12">
-              <TableHead className="font-black text-slate-900 uppercase tracking-tighter text-[11px] w-[300px]">Prullenbakkenroute (↳ Sub)</TableHead>
-              <TableHead className="font-black text-slate-900 uppercase tracking-tighter text-[11px] w-[180px]">Hoofdroute</TableHead>
-              <TableHead className="font-black text-slate-900 uppercase tracking-tighter text-[11px] w-[200px]">Locatie</TableHead>
-              <TableHead className="font-black text-slate-900 uppercase tracking-tighter text-[11px] w-[80px] text-center">Units</TableHead>
-              <TableHead className="font-black text-slate-900 uppercase tracking-tighter text-[11px] w-[120px] text-center">Kaart</TableHead>
-              <TableHead className="font-black text-slate-900 uppercase tracking-tighter text-[11px] w-[120px] text-center">Startpunt</TableHead>
-              <TableHead className="w-[60px] text-right"></TableHead>
+              <TableHead className="font-black text-black uppercase tracking-tighter text-[11px] w-[300px] border-r border-black">Prullenbakkenroute (↳ Sub)</TableHead>
+              <TableHead className="font-black text-black uppercase tracking-tighter text-[11px] w-[180px] border-r border-black">Hoofdroute</TableHead>
+              <TableHead className="font-black text-black uppercase tracking-tighter text-[11px] w-[200px] border-r border-black">Locatie</TableHead>
+              <TableHead className="font-black text-black uppercase tracking-tighter text-[11px] w-[80px] text-center border-r border-black">Units</TableHead>
+              <TableHead className="font-black text-black uppercase tracking-tighter text-[11px] w-[120px] text-center border-r border-black">Kaart</TableHead>
+              <TableHead className="font-black text-black uppercase tracking-tighter text-[11px] w-[120px] text-center border-r border-black">Startpunt</TableHead>
+              <TableHead className="w-[80px] text-right"></TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody className="divide-y divide-slate-100">
+          <TableBody className="divide-y divide-black">
             {sortedRoutes.map((route) => {
               const isSub = !!route.parentId;
               return (
                 <TableRow key={route.id} className={cn(
                     "hover:bg-slate-50/50 transition-colors h-14",
-                    isSub && "bg-slate-50/20"
+                    isSub ? "bg-slate-50/40" : "bg-white"
                 )}>
-                  <TableCell className="p-2 align-middle">
+                  <TableCell className="p-2 align-middle border-r border-black">
                     <div className={cn("flex items-center gap-2", isSub && "pl-6")}>
                       {isSub && <CornerDownRight className="h-4 w-4 text-slate-400 shrink-0" />}
                       <Input 
@@ -978,19 +987,19 @@ function PrullenbakkenroutesTab({
                           onChange={(e) => handleInputChange(route.id, 'naam', e.target.value)} 
                           disabled={!canEdit}
                           className={cn(
-                              "h-9 text-sm border-slate-200 focus:ring-2 focus:ring-primary/20", 
-                              isSub ? "font-medium italic text-slate-600" : "font-black text-slate-900"
+                              "h-9 text-sm border-slate-300 focus:ring-2 focus:ring-primary/20", 
+                              isSub ? "font-medium italic text-slate-600" : "font-black text-black"
                           )}
                       />
                     </div>
                   </TableCell>
-                  <TableCell className="p-2 align-middle">
+                  <TableCell className="p-2 align-middle border-r border-black">
                       <Select 
                           value={route.parentId || 'none'} 
                           onValueChange={(val) => handleInputChange(route.id, 'parentId', val === 'none' ? null : val)}
                           disabled={!canEdit}
                       >
-                          <SelectTrigger className="h-9 border-slate-200 text-xs font-bold text-slate-700">
+                          <SelectTrigger className="h-9 border-slate-300 text-xs font-bold text-slate-700">
                               <SelectValue placeholder="Kies hoofdroute" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1004,48 +1013,62 @@ function PrullenbakkenroutesTab({
                           </SelectContent>
                       </Select>
                   </TableCell>
-                  <TableCell className="p-2 align-middle">
+                  <TableCell className="p-2 align-middle border-r border-black">
                     <Input 
                       value={route.locatie} 
                       placeholder="Stad / Wijk..."
                       onChange={(e) => handleInputChange(route.id, 'locatie', e.target.value)} 
                       disabled={!canEdit}
-                      className="h-9 text-sm border-slate-200 font-medium"
+                      className="h-9 text-sm border-slate-300 font-medium"
                     />
                   </TableCell>
-                  <TableCell className="p-2 align-middle text-center">
-                    <Badge variant="secondary" className="font-mono text-[11px] font-black h-6 px-2 min-w-[35px] justify-center bg-slate-100 text-slate-700 border-2">
+                  <TableCell className="p-2 align-middle text-center border-r border-black">
+                    <Badge variant="secondary" className="font-mono text-[11px] font-black h-6 px-2 min-w-[35px] justify-center bg-slate-100 text-slate-700 border border-slate-300">
                         {objectCounts[route.id] ?? 0}
                     </Badge>
                   </TableCell>
-                  <TableCell className="p-2 align-middle text-center">
-                    <Button variant="outline" size="sm" onClick={() => setMapRoute(route)} className="h-9 w-full border-slate-200 hover:bg-slate-100 text-[11px] font-black uppercase tracking-tighter gap-2 shadow-sm">
+                  <TableCell className="p-2 align-middle text-center border-r border-black">
+                    <Button variant="outline" size="sm" onClick={() => setMapRoute(route)} className="h-9 w-full border-slate-300 hover:bg-slate-100 text-[11px] font-black uppercase tracking-tighter gap-2 shadow-sm">
                       <MapIcon className="h-3.5 w-3.5" />
                       Gebied
                     </Button>
                   </TableCell>
-                  <TableCell className="p-2 align-middle text-center">
-                    <Button variant={route.startAdres ? "secondary" : "outline"} size="sm" onClick={() => setStartLocRoute(route)} className={cn("h-9 w-full border-slate-200 text-[11px] font-black uppercase tracking-tighter gap-2 shadow-sm", route.startAdres && "bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200")}>
+                  <TableCell className="p-2 align-middle text-center border-r border-black">
+                    <Button variant={route.startAdres ? "secondary" : "outline"} size="sm" onClick={() => setStartLocRoute(route)} className={cn("h-9 w-full border-slate-300 text-[11px] font-black uppercase tracking-tighter gap-2 shadow-sm", route.startAdres && "bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200")}>
                       <Home className="h-3.5 w-3.5" />
                       {route.startAdres ? 'Info' : 'Instellen'}
                     </Button>
                   </TableCell>
                   <TableCell className="p-2 align-middle text-right">
-                    {canEdit && (
-                      <Button variant="ghost" size="icon" onClick={() => removeRow(route.id)} className="h-9 w-9 text-slate-300 hover:text-red-600 hover:bg-red-50 transition-colors">
-                        <Trash2 className="h-4.5 w-4.5" />
-                      </Button>
-                    )}
+                    <div className="flex justify-end gap-1">
+                        {!isSub && canEdit && (
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon" onClick={() => addSubRoute(route)} className="h-9 w-9 text-blue-600 hover:bg-blue-50">
+                                            <PlusCircle className="h-4.5 w-4.5" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Sub-route +</TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        )}
+                        {canEdit && (
+                        <Button variant="ghost" size="icon" onClick={() => removeRow(route.id)} className="h-9 w-9 text-slate-300 hover:text-red-600 hover:bg-red-50 transition-colors">
+                            <Trash2 className="h-4.5 w-4.5" />
+                        </Button>
+                        )}
+                    </div>
                   </TableCell>
                 </TableRow>
               );
             })}
           </TableBody>
-          <TableFooter className="bg-slate-50 border-t-2 border-slate-200">
+          <TableFooter className="bg-slate-200 border-t-2 border-black">
             <TableRow className="hover:bg-transparent h-14">
-              <TableCell colSpan={3} className="font-black uppercase tracking-widest text-[10px] text-slate-500 pl-4">Totaal unieke objecten in routes</TableCell>
-              <TableCell className="text-center">
-                  <Badge className="bg-slate-900 text-white font-mono text-xs px-2.5 py-1">{totalObjectsInRoutes}</Badge>
+              <TableCell colSpan={3} className="font-black uppercase tracking-widest text-[10px] text-slate-600 pl-4 border-r border-black">Totaal unieke objecten in alle routes</TableCell>
+              <TableCell className="text-center border-r border-black">
+                  <Badge className="bg-black text-white font-mono text-xs px-2.5 py-1">{totalObjectsInRoutes}</Badge>
               </TableCell>
               <TableCell colSpan={3} />
             </TableRow>
@@ -1055,8 +1078,8 @@ function PrullenbakkenroutesTab({
 
       {canEdit && (
         <div className="flex justify-start pt-2">
-            <Button variant="outline" onClick={addRow} className="border-2 border-dashed border-slate-300 hover:border-primary hover:bg-primary/5 font-black uppercase tracking-widest text-xs py-6 px-8 rounded-xl transition-all">
-                <Plus className="mr-2 h-5 w-5" /> Nieuwe (Sub)Route Toevoegen
+            <Button variant="outline" onClick={addRow} className="border-2 border-dashed border-black hover:bg-slate-50 font-black uppercase tracking-widest text-xs py-6 px-8 rounded-xl transition-all">
+                <Plus className="mr-2 h-5 w-5" /> Nieuwe Hoofdroute Toevoegen
             </Button>
         </div>
       )}
