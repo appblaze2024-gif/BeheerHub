@@ -52,6 +52,10 @@ function Header() {
     return `${firstInitial}${lastInitial}`.toUpperCase();
   };
 
+  /**
+   * Universele paginatitel-generator.
+   * Vertaalt technische routes naar de standaard BeheerHub stijl.
+   */
   const getPageTitle = () => {
     const parts = pathname.split('/').filter(Boolean);
     if (parts.length === 0) return 'Dashboard';
@@ -107,7 +111,7 @@ function Header() {
         
         <div className="flex flex-col">
             <h2 className="text-sm font-black uppercase tracking-widest text-slate-900">{getPageTitle()}</h2>
-            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter">System / {pathname.replace('/', '') || 'Home'}</p>
+            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter">Systeem / {pathname.replace('/', '') || 'Home'}</p>
         </div>
       </div>
 

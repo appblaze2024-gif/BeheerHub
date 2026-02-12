@@ -33,6 +33,10 @@ export interface MenuItem {
   subItems?: SubMenuItem[];
 }
 
+/**
+ * Centrale configuratie voor de navigatie van BeheerHub.
+ * Dit is het 'vaste gegeven' voor de structuur van de software.
+ */
 export const allMenuItems: MenuItem[] = [
     { href: '/', label: 'Dashboard', icon: LayoutDashboard },
     { 

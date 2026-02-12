@@ -22,6 +22,10 @@ const TabsList = React.forwardRef<
 ))
 TabsList.displayName = TabsPrimitive.List.displayName
 
+/**
+ * Gestandaardiseerde TabsTrigger voor BeheerHub.
+ * Gebruikt vetgedrukte hoofdletters en Indigo-accenten.
+ */
 const TabsTrigger = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Trigger>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
