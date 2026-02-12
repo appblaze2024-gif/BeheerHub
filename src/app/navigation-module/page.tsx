@@ -686,7 +686,7 @@ function NavigatingView({
         {/* Progress Card */}
         <Card className={cn(
             "bg-white/95 backdrop-blur-xl border-none shadow-2xl overflow-hidden shrink-0",
-            isMobile ? "w-full" : "w-64"
+            isMobile ? "hidden" : "flex w-64"
         )}>
             <CardContent className="p-3 md:p-4 space-y-2">
                 <div className="flex justify-between items-end">
