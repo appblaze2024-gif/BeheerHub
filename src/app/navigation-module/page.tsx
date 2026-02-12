@@ -719,13 +719,6 @@ function NavigatingView({
                         </Button>
                     </div>
                 </Card>
-                <div className="flex justify-start w-full px-4 mb-2">
-                    <Badge className="bg-red-600 text-white font-black text-[10px] uppercase tracking-tighter px-3 h-7 rounded-full gap-2 shadow-lg">
-                        <span className="flex items-center justify-center bg-white text-red-600 rounded-full h-4 w-4 text-[8px]">N</span>
-                        1 Issue
-                        <XIcon className="h-3 w-3" />
-                    </Badge>
-                </div>
             </div>
         ) : (
             <div className="w-full max-w-4xl flex items-end justify-between gap-4">
