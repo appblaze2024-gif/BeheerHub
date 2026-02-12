@@ -165,7 +165,6 @@ function NavigatingView({
 
   const nextObject = objectsOnRoute[currentObjectIndex];
 
-  // Visual smoothing effect
   React.useEffect(() => {
     let lastTime = performance.now();
     
@@ -356,14 +355,13 @@ function NavigatingView({
         const distToStart = turf.length(turf.lineSlice(turf.point(coords[0]), snapped, line), { units: 'meters' });
         const remaining = Math.max(0, totalDist - distToStart);
         
-        setDistanceRemainingToDestination(prev => Math.abs(prev - remaining) > 1 ? remaining : prev);
+        setDistanceRemainingToDestination(prev => Math.abs(prev - remaining) > 1 ? Math.round(remaining) : prev);
         setHasReachedCurrentTarget(remaining < 80);
     } catch (e) {}
   }, [targetLocation?.latitude, targetLocation?.longitude, currentRouteGeometry, isSimulating]);
 
   const lastFetchedTargetId = React.useRef<string | null>(null);
 
-  // Simulation physics effect
   React.useEffect(() => {
     if (!isSimulating || !currentRouteGeometry || !nextObject || arrivedObject || isCalculatingRoute) return;
 
@@ -402,8 +400,7 @@ function NavigatingView({
         
         const remaining = Math.max(0, totalDistance - simStateRef.current.distanceTravelled);
         
-        // Critical: Update distance state only if significant change to avoid React loop
-        setDistanceRemainingToDestination(prev => Math.abs(prev - remaining) > 1 ? remaining : prev);
+        setDistanceRemainingToDestination(prev => Math.abs(prev - remaining) > 1 ? Math.round(remaining) : prev);
 
         if (simStateRef.current.distanceTravelled >= totalDistance - 0.2) {
             const finalCoord = coords[coords.length - 1];
@@ -437,8 +434,6 @@ function NavigatingView({
   React.useEffect(() => {
     if (!targetLocation || !nextObject || arrivedObject || isCalculatingRoute) return;
     
-    // In simulation mode, we don't want to re-fetch on every targetLocation change (which is every frame)
-    // We only fetch when the target object ID changes OR when the geometry is missing.
     if (lastFetchedTargetId.current === nextObject.id && currentRouteGeometry) return;
 
     const fetchRoute = async () => {
@@ -453,7 +448,7 @@ function NavigatingView({
           const route = data.routes[0];
           setCurrentRouteGeometry(route.geometry);
           setCurrentLeg(route.legs[0]);
-          setDistanceRemainingToDestination(route.legs[0].distance);
+          setDistanceRemainingToDestination(Math.round(route.legs[0].distance));
           setHasReachedCurrentTarget(route.legs[0].distance < 80);
         }
       } catch (error) {
@@ -463,7 +458,6 @@ function NavigatingView({
       }
     };
     fetchRoute();
-    // Removed targetLocation from dependencies to prevent simulation infinite loop
   }, [nextObject?.id, arrivedObject, isSimulating, isCalculatingRoute, currentRouteGeometry === null]);
   
   const handleArrivedAction = (type: 'finish' | 'issue') => {
@@ -524,7 +518,7 @@ function NavigatingView({
   }
 
   if (isCalculatingRoute && !currentRouteGeometry) {
-    return <LoadingScreen message="Route berekent..." />;
+    return <LoadingScreen message="Route berekenen..." />;
   }
 
   return (
@@ -547,14 +541,12 @@ function NavigatingView({
             longitude={smoothLocation.longitude} 
             latitude={smoothLocation.latitude} 
             anchor="center"
-            // Use map alignment so the arrow always points in the actual heading direction
             rotationAlignment="map"
             rotation={smoothLocation.heading || 0} 
           >
             <div className="relative flex items-center justify-center">
                 <div className="absolute h-16 w-16 bg-blue-500/20 rounded-full animate-pulse" />
                 <div className="h-12 w-12 bg-blue-600 rounded-full border-[4px] border-white shadow-2xl flex items-center justify-center transition-transform duration-75">
-                    {/* Professional Navigation Arrow SVG - perfectly symmetrical and straight */}
                     <svg viewBox="0 0 24 24" className="h-7 w-7 text-white fill-current">
                         <path d="M12 2L4.5 20.29L12 18L19.5 20.29L12 2Z" />
                     </svg>
@@ -637,8 +629,8 @@ function NavigatingView({
         )}
       </div>
 
-      {/* Speedometer Gauge in Top Right (replacing previous drawn circle) */}
-      <div className="absolute top-20 right-4 z-[70]">
+      {/* Speedometer Gauge - Moved lower to avoid overlap with error banners */}
+      <div className="absolute bottom-[160px] right-4 z-[70]">
           <div className="h-20 w-20 rounded-full bg-white/95 backdrop-blur shadow-2xl border-4 border-slate-100 flex flex-col items-center justify-center overflow-hidden">
               <div className="flex flex-col items-center leading-none z-10">
                   <span className="text-2xl font-black text-slate-900 tabular-nums">{speedKmh}</span>
