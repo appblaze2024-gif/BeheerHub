@@ -41,7 +41,7 @@ import {
   useMemoFirebase,
   useUser,
 } from '@/firebase';
-import type { Medewerker, Dienst, Voertuig, Machine, UserProfile } from '@/lib/types';
+import type { Medewerker, Dienst, Voertuig, Machine, UserProfile, Project as ProjectType } from '@/lib/types';
 import { DienstToevoegenDialog } from '@/components/dienst-toevoegen-dialog';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -101,16 +101,6 @@ const formatHours = (totalHours: number) => {
     const hours = Math.floor(totalHours);
     const minutes = Math.round((totalHours - hours) * 60);
     return `${hours},${minutes.toString().padStart(2, '0')}u`;
-};
-
-type Project = {
-  id: string;
-  projectnaam: string;
-  projectnummer: string;
-  vehicleAvailability?: {
-    unavailable: Record<string, string[]>;
-    available: Record<string, string[]>;
-  };
 };
 
 const getContrastColor = (hexcolor: string) => {
@@ -288,7 +278,7 @@ export default function WorkPlanningPage() {
   }, [firestore]);
 
   const { data: projects, isLoading: isLoadingProjects } =
-    useCollection<Project>(projectsCollection);
+    useCollection<ProjectType>(projectsCollection);
 
   const voertuigenCollection = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -517,10 +507,12 @@ export default function WorkPlanningPage() {
   
     if (!firestore || !canEdit) return;
     
-    const dienstJson = e.dataTransfer.getData('application/json');
-    if (!dienstJson) return;
+    const dienstJson = e.dataTransfer.setData('application/json', JSON.stringify({})); // dummy
+    // Actually get the real data from the correct key
+    const realDienstJson = e.dataTransfer.getData('application/json');
+    if (!realDienstJson) return;
   
-    const droppedDienst: Dienst = JSON.parse(dienstJson);
+    const droppedDienst: Dienst = JSON.parse(realDienstJson);
     const newDatumString = format(newDatum, 'yyyy-MM-dd');
     
     const isCopy = e.altKey || e.ctrlKey;
@@ -1044,20 +1036,25 @@ export default function WorkPlanningPage() {
     
     let filteredEquipment = allEquipment;
 
+    // First filter by project assignments if defined
+    if (selectedProject?.materieelIds && selectedProject.materieelIds.length > 0) {
+        filteredEquipment = allEquipment.filter(e => selectedProject.materieelIds?.includes(e.id));
+    }
+
     if (selectedDay) {
         const dateKey = format(selectedDay, 'yyyy-MM-dd');
         const unavailableForDay = unavailableVehicles[dateKey] || [];
         const availableForDay = availableVehicles[dateKey] || [];
 
         if (availableForDay.length > 0) {
-            filteredEquipment = allEquipment.filter(e => availableForDay.includes(e.id) && !unavailableForDay.includes(e.id));
+            filteredEquipment = filteredEquipment.filter(e => availableForDay.includes(e.id) && !unavailableForDay.includes(e.id));
         } else {
-            filteredEquipment = allEquipment.filter(e => !unavailableForDay.includes(e.id));
+            filteredEquipment = filteredEquipment.filter(e => !unavailableForDay.includes(e.id));
         }
     }
     
     return filteredEquipment;
-  }, [allEquipment, selectedDay, unavailableVehicles, availableVehicles]);
+  }, [allEquipment, selectedDay, unavailableVehicles, availableVehicles, selectedProject]);
 
   const startMonth = new Date(new Date().getFullYear(), new Date().getMonth());
   const endMonth = new Date(new Date().getFullYear() + 5, 11);

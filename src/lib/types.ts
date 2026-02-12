@@ -1,4 +1,3 @@
-
 export type UserPermissions = {
   [module: string]: {
     view?: boolean;
@@ -203,6 +202,7 @@ export type Project = {
   versie: string;
   datum: string;
   omschrijving: string;
+  materieelIds?: string[];
   werksoorten: Werksoort[];
   boekingregels?: Boekingregel[];
   wijken?: Wijk[];
@@ -215,14 +215,14 @@ export type Project = {
 };
 
 export type Bestand = {
-    id: string;
-    name: string;
-    type: string;
-    size: number;
-    url: string;
-    uploadedAt: string;
-    storagePath: string;
-    folderId?: string | null;
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  url: string;
+  uploadedAt: string;
+  storagePath: string;
+  folderId?: string | null;
 };
 
 export interface Folder {

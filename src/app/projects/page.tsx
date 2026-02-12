@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { FilePenLine, Plus, Trash2, Upload, Download, MapPin, Map as MapIcon, MoreHorizontal, Copy, Home } from 'lucide-react';
+import { FilePenLine, Plus, Trash2, Upload, Download, MapPin, Map as MapIcon, MoreHorizontal, Copy, Home, Truck, Search } from 'lucide-react';
 import {
   useFirestore,
   useCollection,
@@ -53,7 +53,8 @@ import { useProject } from '@/context/project-context';
 import * as turf from '@turf/turf';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
-import type { Object as MapObject, Project, Werksoort, Veegroute, Prullenbakkenroute, Boekingregel, Bestand } from '@/lib/types';
+import type { Object as MapObject, Project, Werksoort, Veegroute, Prullenbakkenroute, Boekingregel, Bestand, Voertuig, Machine } from '@/lib/types';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const EMPTY_PROJECT: Project = {
   projectnummer: '',
@@ -67,6 +68,7 @@ const EMPTY_PROJECT: Project = {
   versie: '',
   datum: '',
   omschrijving: '',
+  materieelIds: [],
   werksoorten: [],
   boekingregels: [],
   wijken: [],
@@ -940,6 +942,97 @@ function PrullenbakkenroutesTab({
   );
 }
 
+function VoertuigenTab({
+  assignedIds,
+  onToggle,
+  canEdit
+}: {
+  assignedIds: string[];
+  onToggle: (id: string, checked: boolean) => void;
+  canEdit: boolean;
+}) {
+  const firestore = useFirestore();
+  const [searchTerm, setSearchTerm] = React.useState('');
+
+  const voertuigenCol = useMemoFirebase(() => firestore ? collection(firestore, 'voertuigen') : null, [firestore]);
+  const machinesCol = useMemoFirebase(() => firestore ? collection(firestore, 'machines') : null, [firestore]);
+
+  const { data: voertuigen } = useCollection<Voertuig>(voertuigenCol);
+  const { data: machines } = useCollection<Machine>(machinesCol);
+
+  const allMaterieel = React.useMemo(() => {
+    const list: any[] = [];
+    if (voertuigen) list.push(...voertuigen.map(v => ({ ...v, type: 'Voertuig' })));
+    if (machines) list.push(...machines.map(m => ({ ...m, type: 'Machine' })));
+    return list.sort((a, b) => {
+      const numA = a.voertuignummer || a.machinenummer || a.id;
+      const numB = b.voertuignummer || b.machinenummer || b.id;
+      return numA.localeCompare(numB, undefined, { numeric: true, sensitivity: 'base' });
+    });
+  }, [voertuigen, machines]);
+
+  const filtered = allMaterieel.filter(m => {
+    const query = searchTerm.toLowerCase();
+    return (
+      m.id.toLowerCase().includes(query) ||
+      (m.voertuignummer || '').toLowerCase().includes(query) ||
+      (m.machinenummer || '').toLowerCase().includes(query) ||
+      (m.merk || '').toLowerCase().includes(query) ||
+      (m.model || '').toLowerCase().includes(query)
+    );
+  });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">Project Materieel</CardTitle>
+        <p className="text-sm text-muted-foreground">Koppel voertuigen en machines aan dit project om ze beschikbaar te maken in de werkplanning.</p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input 
+            placeholder="Zoek materieel..." 
+            className="pl-9" 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="border rounded-md">
+          <ScrollArea className="h-[400px]">
+            <div className="divide-y">
+              {filtered.map((item) => {
+                const isAssigned = assignedIds.includes(item.id);
+                const number = item.voertuignummer || item.machinenummer || '-';
+                return (
+                  <div key={item.id} className="flex items-center justify-between p-3 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <Checkbox 
+                        id={`mat-${item.id}`} 
+                        checked={isAssigned} 
+                        onCheckedChange={(checked) => onToggle(item.id, !!checked)}
+                        disabled={!canEdit}
+                      />
+                      <div className="flex flex-col">
+                        <Label htmlFor={`mat-${item.id}`} className="font-bold text-sm cursor-pointer">{number} - {item.merk} {item.model}</Label>
+                        <span className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">{item.type} | {item.id}</span>
+                      </div>
+                    </div>
+                    {isAssigned && <Badge className="bg-green-100 text-green-700 border-green-200">Gekoppeld</Badge>}
+                  </div>
+                );
+              })}
+              {filtered.length === 0 && (
+                <div className="p-8 text-center text-muted-foreground">Geen materieel gevonden.</div>
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 
 export default function ProjectsPage() {
   const firestore = useFirestore();
@@ -1016,6 +1109,7 @@ export default function ProjectsPage() {
         setCurrentProject({
             ...EMPTY_PROJECT,
             ...project,
+            materieelIds: project.materieelIds || [],
             wijken: project.wijken || [],
             veegroutes: project.veegroutes || [],
             prullenbakkenroutes: project.prullenbakkenroutes || [],
@@ -1089,12 +1183,21 @@ export default function ProjectsPage() {
     return profile?.permissions?.projects?.tabs?.[tabId] ?? true;
   };
 
+  const handleToggleMaterieel = (id: string, checked: boolean) => {
+    setCurrentProject(prev => {
+      const currentIds = prev.materieelIds || [];
+      const newIds = checked ? [...currentIds, id] : currentIds.filter(i => i !== id);
+      return { ...prev, materieelIds: newIds };
+    });
+  };
+
   return (
     <div className="flex flex-col flex-1 min-h-0">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
         <div className="px-6 pt-6 overflow-x-auto">
           <TabsList className="inline-flex">
             {canViewTab('project') && <TabsTrigger value="project">Project</TabsTrigger>}
+            {canViewTab('voertuigen') && <TabsTrigger value="voertuigen">Voertuigen</TabsTrigger>}
             {canViewTab('werksoorten') && <TabsTrigger value="werksoorten">Werksoorten</TabsTrigger>}
             {canViewTab('boekingregels') && <TabsTrigger value="boekingregels">Boekingregels</TabsTrigger>}
             {canViewTab('afspraken') && <TabsTrigger value="afspraken">Afspraken</TabsTrigger>}
@@ -1213,14 +1316,21 @@ export default function ProjectsPage() {
               <CardContent>
                 <Textarea rows={4} value={currentProject.omschrijving} onChange={(e) => handleInputChange('omschrijving', e.target.value)} disabled={!canEdit}/>
               </CardContent>
-            </Card>
 
-            <div className="flex justify-start gap-2">
+            <div className="flex justify-start gap-2 p-6 pt-0">
               {canEdit && <Button onClick={handleSave}>Opslaan</Button>}
               {canCreate && <Button variant="outline" onClick={handleNew}>Nieuw</Button>}
               {canDelete && <Button variant="destructive" onClick={handleDelete} disabled={!currentProject.id}>Verwijder</Button>}
             </div>
+            </Card>
           </div>
+        </TabsContent>}
+        {canViewTab('voertuigen') && <TabsContent value="voertuigen" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
+          <VoertuigenTab 
+            assignedIds={currentProject.materieelIds || []} 
+            onToggle={handleToggleMaterieel}
+            canEdit={canEdit}
+          />
         </TabsContent>}
         {canViewTab('werksoorten') && <TabsContent value="werksoorten" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
           <WerksoortenTab werksoorten={currentProject.werksoorten} setWerksoorten={(newWerksoorten) => setCurrentProject(prev => ({...prev, werksoorten: typeof newWerksoorten === 'function' ? newWerksoorten(prev.werksoorten) : newWerksoorten}))} canEdit={canEdit} />

@@ -1,16 +1,15 @@
-
 {
   "entities": {
     "AppSettings": {
-        "title": "Application Settings",
-        "type": "object",
-        "description": "Stores global application settings like version number.",
-        "properties": {
-            "version": {
-                "type": "string",
-                "description": "The application version string."
-            }
+      "title": "Application Settings",
+      "type": "object",
+      "description": "Stores global application settings like version number.",
+      "properties": {
+        "version": {
+          "type": "string",
+          "description": "The application version string."
         }
+      }
     },
     "Sensor": {
       "title": "Sensor",
@@ -33,19 +32,19 @@
       "required": ["id", "name", "type", "status"]
     },
     "Folder": {
-        "title": "Folder",
-        "type": "object",
-        "description": "Represents a folder to organize files.",
-        "properties": {
-            "id": { "type": "string" },
-            "name": { "type": "string" },
-            "createdAt": { "type": "string", "format": "date-time" },
-            "folderId": {
-                "type": ["string", "null"],
-                "description": "The ID of the parent folder. Null if in root."
-            }
-        },
-        "required": ["name", "createdAt"]
+      "title": "Folder",
+      "type": "object",
+      "description": "Represents a folder to organize files.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "folderId": {
+          "type": ["string", "null"],
+          "description": "The ID of the parent folder. Null if in root."
+        }
+      },
+      "required": ["name", "createdAt"]
     },
     "Besteksmelding": {
       "title": "Besteksmelding",
@@ -133,6 +132,11 @@
         "omschrijving": {
           "type": "string"
         },
+        "materieelIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of vehicle/machine IDs assigned to this project."
+        },
         "werksoorten": {
           "type": "array",
           "items": {
@@ -152,10 +156,10 @@
           }
         },
         "prullenbakkenroutes": {
-            "type": "array",
-            "items": {
-                "$ref": "#/backend/entities/Prullenbakkenroute"
-            }
+          "type": "array",
+          "items": {
+            "$ref": "#/backend/entities/Prullenbakkenroute"
+          }
         },
         "vehicleAvailability": {
           "type": "object",
@@ -202,55 +206,55 @@
       "required": ["id", "werksoort"]
     },
     "Wijk": {
-        "title": "Wijk",
-        "type": "object",
-        "description": "Represents a district within a project.",
-        "properties": {
-            "id": { "type": "string" },
-            "naam": { "type": "string" },
-            "locatie": { "type": "string" },
-            "subGebieden": { "type": "string" },
-            "roadTypes": { "type": "array", "items": { "type": "string" } }
-        },
-        "required": ["naam"]
+      "title": "Wijk",
+      "type": "object",
+      "description": "Represents a district within a project.",
+      "properties": {
+        "id": { "type": "string" },
+        "naam": { "type": "string" },
+        "locatie": { "type": "string" },
+        "subGebieden": { "type": "string" },
+        "roadTypes": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["naam"]
     },
     "Veegroute": {
-        "title": "Veegroute",
-        "type": "object",
-        "description": "Represents a sweeping route within a project.",
-        "properties": {
-            "id": { "type": "string" },
-            "naam": { "type": "string" },
-            "locatie": { "type": "string" },
-            "subGebieden": { "type": "string" },
-            "roadTypes": { "type": "array", "items": { "type": "string" } }
-        },
-        "required": ["naam"]
+      "title": "Veegroute",
+      "type": "object",
+      "description": "Represents a sweeping route within a project.",
+      "properties": {
+        "id": { "type": "string" },
+        "naam": { "type": "string" },
+        "locatie": { "type": "string" },
+        "subGebieden": { "type": "string" },
+        "roadTypes": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["naam"]
     },
     "Prullenbakkenroute": {
-        "title": "Prullenbakkenroute",
-        "type": "object",
-        "description": "Represents a trash can route within a project.",
-        "properties": {
-            "id": { "type": "string" },
-            "naam": { "type": "string" },
-            "locatie": { "type": "string" },
-            "subGebieden": { "type": "string" },
-            "roadTypes": { "type": "array", "items": { "type": "string" } }
-        },
-        "required": ["naam"]
+      "title": "Prullenbakkenroute",
+      "type": "object",
+      "description": "Represents a trash can route within a project.",
+      "properties": {
+        "id": { "type": "string" },
+        "naam": { "type": "string" },
+        "locatie": { "type": "string" },
+        "subGebieden": { "type": "string" },
+        "roadTypes": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["naam"]
     },
     "Boekingregel": {
-        "title": "Boekingregel",
-        "type": "object",
-        "description": "Represents an internal booking rule for work planning.",
-        "properties": {
-            "id": { "type": "string" },
-            "naam": { "type": "string" }
-        },
-        "required": ["naam"]
+      "title": "Boekingregel",
+      "type": "object",
+      "description": "Represents an internal booking rule for work planning.",
+      "properties": {
+        "id": { "type": "string" },
+        "naam": { "type": "string" }
+      },
+      "required": ["naam"]
     },
-     "Object": {
+    "Object": {
       "title": "Object",
       "type": "object",
       "description": "Represents a physical object in the world.",
@@ -349,28 +353,28 @@
           }
         },
         "wijk": {
-            "type": "string",
-            "description": "The district/area the user is associated with."
+          "type": "string",
+          "description": "The district/area the user is associated with."
         },
         "veegroute": {
-            "type": "string",
-            "description": "The sweeping route the user is associated with."
+          "type": "string",
+          "description": "The sweeping route the user is associated with."
         },
         "prullenbakkenroute": {
-            "type": "string",
-            "description": "The trash can route the user is associated with."
+          "type": "string",
+          "description": "The trash can route the user is associated with."
         },
         "schouwenGemeente": {
           "type": "string",
           "description": "The municipality the user is associated with for inspections (schouwen)."
         },
         "schouwenMapStyle": {
-            "type": "string",
-            "description": "The user's preferred map style for the inspection map."
+          "type": "string",
+          "description": "The user's preferred map style for the inspection map."
         },
         "lastSelectedProjectId": {
-            "type": ["string", "null"],
-            "description": "The ID of the last project the user selected."
+          "type": ["string", "null"],
+          "description": "The ID of the last project the user selected."
         },
         "nfcTagId": {
           "type": "string",
@@ -436,13 +440,13 @@
       {
         "path": "/users/{userId}/routes/{routeId}",
         "definition": {
-            "entityName": "Route",
-            "schema": { "$ref": "#/backend/entities/Route" },
-            "description": "Stores user-specific route history.",
-            "params": [
-                { "name": "userId", "description": "The ID of the user." },
-                { "name": "routeId", "description": "The ID of the route history entry." }
-            ]
+          "entityName": "Route",
+          "schema": { "$ref": "#/backend/entities/Route" },
+          "description": "Stores user-specific route history.",
+          "params": [
+            { "name": "userId", "description": "The ID of the user." },
+            { "name": "routeId", "description": "The ID of the route history entry." }
+          ]
         }
       },
       {
@@ -524,12 +528,12 @@
       {
         "path": "/medewerkers/{medewerkerId}",
         "definition": {
-            "entityName": "Medewerker",
-            "schema": { "$ref": "#/backend/entities/Medewerker" },
-            "description": "Stores all employees for the application.",
-            "params": [
-                { "name": "medewerkerId", "description": "The ID of the employee." }
-            ]
+          "entityName": "Medewerker",
+          "schema": { "$ref": "#/backend/entities/Medewerker" },
+          "description": "Stores all employees for the application.",
+          "params": [
+            { "name": "medewerkerId", "description": "The ID of the employee." }
+          ]
         }
       },
       {
