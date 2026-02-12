@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { FilePenLine, Plus, Trash2, Upload, Download, MapPin, Map as MapIcon, MoreHorizontal, Copy, Home, Truck, Search } from 'lucide-react';
+import { FilePenLine, Plus, Trash2, Upload, Download, MapPin, Map as MapIcon, MoreHorizontal, Copy, Home, Truck, Search, ChevronRight } from 'lucide-react';
 import {
   useFirestore,
   useCollection,
@@ -143,30 +143,49 @@ function WerksoortenTab({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-[1fr_2fr_1fr_1fr_1fr_auto] gap-x-4 px-1 text-sm font-semibold">
-        <Label>Postnummer</Label>
-        <Label>Werksoort</Label>
-        <Label>Eenheid</Label>
-        <Label>Fictieve H.</Label>
-        <Label>Uurprijs</Label>
-        <span />
+      <div className="border rounded-md">
+        <Table>
+          <TableHeader className="bg-muted/50">
+            <TableRow>
+              <TableHead className="font-bold">Postnummer</TableHead>
+              <TableHead className="font-bold">Werksoort</TableHead>
+              <TableHead className="font-bold">Eenheid</TableHead>
+              <TableHead className="font-bold">Fictieve H.</TableHead>
+              <TableHead className="font-bold">Uurprijs</TableHead>
+              <TableHead className="w-[50px]"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {werksoorten.map((ws) => (
+              <TableRow key={ws.id} className="hover:bg-muted/30">
+                <TableCell>
+                  <Input value={ws.postnummer} onChange={(e) => handleInputChange(ws.id, 'postnummer', e.target.value)} disabled={!canEdit} className="h-8" />
+                </TableCell>
+                <TableCell>
+                  <Input value={ws.werksoort} onChange={(e) => handleInputChange(ws.id, 'werksoort', e.target.value)} disabled={!canEdit} className="h-8" />
+                </TableCell>
+                <TableCell>
+                  <Input value={ws.eenheid} onChange={(e) => handleInputChange(ws.id, 'eenheid', e.target.value)} disabled={!canEdit} className="h-8" />
+                </TableCell>
+                <TableCell>
+                  <Input value={ws.fictieveH} onChange={(e) => handleInputChange(ws.id, 'fictieveH', e.target.value)} disabled={!canEdit} className="h-8" />
+                </TableCell>
+                <TableCell>
+                  <Input value={ws.uurprijs} onChange={(e) => handleInputChange(ws.id, 'uurprijs', e.target.value)} disabled={!canEdit} className="h-8" />
+                </TableCell>
+                <TableCell>
+                  {canEdit && (
+                    <Button variant="ghost" size="icon" onClick={() => removeRow(ws.id)} className="h-8 w-8 text-destructive">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
-      {werksoorten.map((werksoort) => (
-        <div
-          key={werksoort.id}
-          className="grid grid-cols-[1fr_2fr_1fr_1fr_1fr_auto] items-center gap-x-4"
-        >
-          <Input value={werksoort.postnummer} onChange={(e) => handleInputChange(werksoort.id, 'postnummer', e.target.value)} disabled={!canEdit}/>
-          <Input value={werksoort.werksoort} onChange={(e) => handleInputChange(werksoort.id, 'werksoort', e.target.value)} disabled={!canEdit}/>
-          <Input value={werksoort.eenheid} onChange={(e) => handleInputChange(werksoort.id, 'eenheid', e.target.value)} disabled={!canEdit}/>
-          <Input value={werksoort.fictieveH} onChange={(e) => handleInputChange(werksoort.id, 'fictieveH', e.target.value)} disabled={!canEdit}/>
-          <Input value={werksoort.uurprijs} onChange={(e) => handleInputChange(werksoort.id, 'uurprijs', e.target.value)} disabled={!canEdit}/>
-          {canEdit && <Button variant="ghost" size="icon" onClick={() => removeRow(werksoort.id)}>
-            <Trash2 className="h-4 w-4 text-destructive" />
-          </Button>}
-        </div>
-      ))}
-      {canEdit && <Button variant="outline" onClick={addRow}>Regel toevoegen</Button>}
+      {canEdit && <Button variant="outline" size="sm" onClick={addRow}><Plus className="mr-2 h-4 w-4" /> Regel toevoegen</Button>}
     </div>
   );
 }
@@ -832,9 +851,26 @@ function PrullenbakkenroutesTab({
 
   const sortedRoutes = React.useMemo(() => {
     if (!prullenbakkenroutes) return [];
-    return [...prullenbakkenroutes].sort((a, b) =>
-      a.naam.localeCompare(b.naam, undefined, { numeric: true, sensitivity: 'base' })
-    );
+    
+    // Build tree structure
+    const roots = prullenbakkenroutes.filter(r => !r.parentId);
+    const children = prullenbakkenroutes.filter(r => r.parentId);
+    
+    const result: Prullenbakkenroute[] = [];
+    
+    roots.sort((a, b) => a.naam.localeCompare(b.naam, undefined, { numeric: true })).forEach(root => {
+        result.push(root);
+        const dependents = children
+            .filter(c => c.parentId === root.id)
+            .sort((a, b) => a.naam.localeCompare(b.naam, undefined, { numeric: true }));
+        result.push(...dependents);
+    });
+    
+    // Add orphans
+    const orphans = children.filter(c => !roots.find(r => r.id === c.parentId));
+    result.push(...orphans);
+
+    return result;
   }, [prullenbakkenroutes]);
 
   const totalObjectsInRoutes = React.useMemo(() => {
@@ -862,6 +898,7 @@ function PrullenbakkenroutesTab({
         naam: '',
         locatie: '',
         subGebieden: '[]',
+        parentId: null,
       },
     ]);
   };
@@ -873,7 +910,7 @@ function PrullenbakkenroutesTab({
   const handleInputChange = (
     id: string,
     field: keyof Prullenbakkenroute,
-    value: string
+    value: any
   ) => {
     setPrullenbakkenroutes(prev => (prev || []).map((r) => (r.id === id ? { ...r, [field]: value } : r)));
   };
@@ -909,6 +946,7 @@ function PrullenbakkenroutesTab({
           <TableHeader className="bg-muted/50">
             <TableRow>
               <TableHead className="font-bold">Prullenbakkenroute</TableHead>
+              <TableHead className="font-bold">Hoofdroute</TableHead>
               <TableHead className="font-bold">Locatie</TableHead>
               <TableHead className="font-bold text-center">Objecten</TableHead>
               <TableHead className="font-bold text-center">Gebied</TableHead>
@@ -918,14 +956,37 @@ function PrullenbakkenroutesTab({
           </TableHeader>
           <TableBody>
             {sortedRoutes.map((route) => (
-              <TableRow key={route.id} className="hover:bg-muted/30">
+              <TableRow key={route.id} className={cn("hover:bg-muted/30", route.parentId && "bg-slate-50/50")}>
                 <TableCell>
-                  <Input 
-                    value={route.naam} 
-                    onChange={(e) => handleInputChange(route.id, 'naam', e.target.value)} 
-                    disabled={!canEdit}
-                    className="h-8"
-                  />
+                  <div className={cn("flex items-center gap-2", route.parentId && "pl-6")}>
+                    {route.parentId && <ChevronRight className="h-3 w-3 text-muted-foreground" />}
+                    <Input 
+                        value={route.naam} 
+                        onChange={(e) => handleInputChange(route.id, 'naam', e.target.value)} 
+                        disabled={!canEdit}
+                        className="h-8"
+                    />
+                  </div>
+                </TableCell>
+                <TableCell>
+                    <Select 
+                        value={route.parentId || 'none'} 
+                        onValueChange={(val) => handleInputChange(route.id, 'parentId', val === 'none' ? null : val)}
+                        disabled={!canEdit}
+                    >
+                        <SelectTrigger className="h-8 min-w-[140px]">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="none">-- Geen (Hoofd) --</SelectItem>
+                            {prullenbakkenroutes
+                                .filter(r => r.id !== route.id && !r.parentId)
+                                .map(r => (
+                                    <SelectItem key={r.id} value={r.id}>{r.naam}</SelectItem>
+                                ))
+                            }
+                        </SelectContent>
+                    </Select>
                 </TableCell>
                 <TableCell>
                   <Input 
@@ -939,20 +1000,20 @@ function PrullenbakkenroutesTab({
                   {objectCounts[route.id] ?? 0}
                 </TableCell>
                 <TableCell className="text-center">
-                  <Button variant="outline" size="sm" onClick={() => setMapRoute(route)}>
+                  <Button variant="outline" size="sm" onClick={() => setMapRoute(route)} className="h-8">
                     <MapIcon className="mr-2 h-4 w-4" />
-                    {canEdit ? 'Bewerken' : 'Bekijken'}
+                    Bewerken
                   </Button>
                 </TableCell>
                 <TableCell className="text-center">
-                  <Button variant={route.startAdres ? "secondary" : "outline"} size="sm" onClick={() => setStartLocRoute(route)}>
+                  <Button variant={route.startAdres ? "secondary" : "outline"} size="sm" onClick={() => setStartLocRoute(route)} className="h-8">
                     <Home className={cn("mr-2 h-4 w-4", route.startAdres && "text-primary")} />
                     {route.startAdres ? 'Instellingen' : 'Instellen'}
                   </Button>
                 </TableCell>
                 <TableCell className="text-right">
                   {canEdit && (
-                    <Button variant="ghost" size="icon" onClick={() => removeRow(route.id)}>
+                    <Button variant="ghost" size="icon" onClick={() => removeRow(route.id)} className="h-8 w-8">
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   )}
@@ -962,12 +1023,9 @@ function PrullenbakkenroutesTab({
           </TableBody>
           <TableFooter>
             <TableRow className="bg-muted/30 font-bold">
-              <TableCell>Totaal</TableCell>
-              <TableCell />
+              <TableCell colSpan={3}>Totaal unieke objecten in alle routes</TableCell>
               <TableCell className="text-center font-mono">{totalObjectsInRoutes}</TableCell>
-              <TableCell />
-              <TableCell />
-              <TableCell />
+              <TableCell colSpan={3} />
             </TableRow>
           </TableFooter>
         </Table>

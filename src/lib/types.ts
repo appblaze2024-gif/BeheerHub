@@ -187,6 +187,7 @@ export interface Prullenbakkenroute {
   startLatitude?: number;
   startLongitude?: number;
   startAdres?: string;
+  parentId?: string | null;
 }
 
 export type Project = {
