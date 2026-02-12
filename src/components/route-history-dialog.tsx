@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, where } from 'firebase/firestore';
-import { Loader2, Calendar, User as UserIcon, CheckCircle2, XCircle, Clock, ChevronRight } from 'lucide-react';
+import { Loader2, Calendar, User as UserIcon, CheckCircle2, XCircle, Clock, History } from 'lucide-react';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -20,6 +20,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Label } from '@/components/ui/label';
 import type { UserProfile, Route } from '@/lib/types';
 
 interface RouteHistoryDialogProps {
