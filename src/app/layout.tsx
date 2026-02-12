@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
+import { LoadingScreen } from '@/components/loading-screen';
 
 
 function Header() {
@@ -205,7 +206,7 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
 
     try {
       const [hours, minutes] = shift.eind.split(':').map(Number);
-      if (isNaN(hours) || iisNaN(minutes)) return;
+      if (isNaN(hours) || isNaN(minutes)) return;
 
       const now = new Date();
       const endTimeToday = new Date();
@@ -229,14 +230,7 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
   }, [profile, isProfileLoading, auth]);
 
   if (isUserLoading || isProfileLoading) {
-      return (
-        <div className="flex h-screen items-center justify-center bg-slate-50">
-          <div className="flex flex-col items-center gap-4">
-            <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-            <p className="text-xs font-black uppercase tracking-widest text-slate-400">BeheerHub Laden...</p>
-          </div>
-        </div>
-      );
+      return <LoadingScreen className="h-screen" />;
   }
 
   return (

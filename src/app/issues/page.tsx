@@ -63,6 +63,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { LoadingScreen } from '@/components/loading-screen';
 
 
 type Project = {
@@ -669,7 +670,7 @@ export default function IssuesPage() {
 
 
   if (isLoadingMeldingen || isLoadingProjects || (selectedMeldingId && isLoadingObjects)) {
-      return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>
+      return <LoadingScreen />;
   }
   
   return (
@@ -1200,9 +1201,7 @@ export default function IssuesPage() {
                 </div>
             </Tabs>
         ) : (
-            <div className="flex-1 flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
+            <LoadingScreen />
         )}
         {fullScreenPhoto && (
             <Dialog open={!!fullScreenPhoto} onOpenChange={(open) => !open && setFullScreenPhoto(null)}>
