@@ -50,6 +50,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { RouteHistoryDialog } from '@/components/route-history-dialog';
 import { LoadingScreen } from '@/components/loading-screen';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -142,34 +143,6 @@ function NavigatingView({
 
   const nextObject = objectsOnRoute[currentObjectIndex];
 
-  // DYNAMIC REROUTING LOGIC: Find nearest unvisited object whenever user moves significantly
-  React.useEffect(() => {
-    if (!userLocation || isCalculatingRoute || arrivedObject || objectsOnRoute.length <= 1) return;
-
-    const unvisitedObjects = objectsOnRoute.filter(obj => !completedObjects.includes(obj.id));
-    if (unvisitedObjects.length === 0) return;
-
-    const currentPoint = turf.point([userLocation.longitude, userLocation.latitude]);
-    let nearestDist = Infinity;
-    let nearestIdx = currentObjectIndex;
-
-    unvisitedObjects.forEach(obj => {
-        const objPoint = turf.point([obj.longitude, obj.latitude]);
-        const dist = turf.distance(currentPoint, objPoint, { units: 'meters' });
-        if (dist < nearestDist) {
-            nearestDist = dist;
-            nearestIdx = objectsOnRoute.findIndex(o => o.id === obj.id);
-        }
-    });
-
-    if (nearestIdx !== currentObjectIndex && nearestDist < (distanceRemainingToDestination - 50)) {
-        setCurrentObjectIndex(nearestIdx);
-        setCurrentRouteGeometry(null);
-        setCurrentLeg(null);
-        setHasReachedCurrentTarget(false);
-    }
-  }, [userLocation?.latitude, userLocation?.longitude, completedObjects, objectsOnRoute, isCalculatingRoute, arrivedObject, currentObjectIndex, distanceRemainingToDestination]);
-
   // ROAD SNAPPING
   const snappedLocation = React.useMemo(() => {
     if (!userLocation || !currentRouteGeometry) return userLocation;
@@ -218,34 +191,13 @@ function NavigatingView({
     return null;
   }, [currentLeg, distanceRemainingToDestination]);
 
-  // Optimized line slicing
+  // Optimized line display - simplified to ensure it always shows
   const remainingRouteGeometry = React.useMemo(() => {
     if (!currentRouteGeometry || isCalculatingRoute) return null;
-    try {
-        const coords = currentRouteGeometry.coordinates;
-        if (!Array.isArray(coords) || coords.length < 2) return currentRouteGeometry;
+    return currentRouteGeometry;
+  }, [currentRouteGeometry, isCalculatingRoute]);
 
-        const line = turf.lineString(coords);
-        const totalDist = turf.length(line, { units: 'meters' });
-        
-        let startDist = 0;
-        if (isSimulating) {
-            startDist = Math.min(simStateRef.current.distanceTravelled, Math.max(0, totalDist - 0.1));
-        } else if (userLocation) {
-            const startPoint = turf.point([userLocation.longitude, userLocation.latitude]);
-            const snappedStart = turf.nearestPointOnLine(line, startPoint);
-            startDist = turf.length(turf.lineSlice(turf.point(coords[0]), snappedStart, line), { units: 'meters' });
-        }
-
-        if (startDist >= totalDist - 0.5) return null;
-        const sliced = turf.lineSliceAlong(line, startDist, totalDist, { units: 'meters' });
-        return sliced.geometry;
-    } catch (e) { 
-        return currentRouteGeometry; 
-    }
-  }, [currentRouteGeometry, userLocation?.latitude, userLocation?.longitude, isSimulating, isCalculatingRoute]);
-
-  // LIVE GPS
+  // LIVE GPS - Fixed watchPosition dependency
   React.useEffect(() => {
     if (isSimulating) return;
     
@@ -254,7 +206,7 @@ function NavigatingView({
         setGpsError(null);
         const { latitude, longitude, speed, heading } = position.coords;
         const speedMs = speed || 0;
-        setUserLocation({ latitude, longitude, speed: speedMs, heading });
+        setUserLocation(prev => ({ ...prev, latitude, longitude, speed: speedMs, heading: heading ?? prev?.heading ?? 0 }));
         
         if (isFollowing && !isPaused) {
             const currentSpeedKmh = speedMs * 3.6;
@@ -267,20 +219,6 @@ function NavigatingView({
                 pitch: 65,
             }));
         }
-
-        if (currentRouteGeometry) {
-            try {
-                const coords = currentRouteGeometry.coordinates;
-                const line = turf.lineString(coords);
-                const totalDist = turf.length(line, { units: 'meters' });
-                const userPoint = turf.point([longitude, latitude]);
-                const snapped = turf.nearestPointOnLine(line, userPoint);
-                const distToStart = turf.length(turf.lineSlice(turf.point(coords[0]), snapped, line), { units: 'meters' });
-                const remaining = Math.max(0, totalDist - distToStart);
-                setDistanceRemainingToDestination(remaining);
-                setHasReachedCurrentTarget(remaining < 100);
-            } catch (e) {}
-        }
       },
       (error) => {
         if (error.code === 1) setGpsError('permission');
@@ -289,7 +227,23 @@ function NavigatingView({
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [isSimulating, currentRouteGeometry, isFollowing, isPaused]);
+  }, [isSimulating, isFollowing, isPaused]);
+
+  // Update distance remaining when user moves
+  React.useEffect(() => {
+    if (!userLocation || !currentRouteGeometry || isSimulating) return;
+    try {
+        const coords = currentRouteGeometry.coordinates;
+        const line = turf.lineString(coords);
+        const totalDist = turf.length(line, { units: 'meters' });
+        const userPoint = turf.point([userLocation.longitude, userLocation.latitude]);
+        const snapped = turf.nearestPointOnLine(line, userPoint);
+        const distToStart = turf.length(turf.lineSlice(turf.point(coords[0]), snapped, line), { units: 'meters' });
+        const remaining = Math.max(0, totalDist - distToStart);
+        setDistanceRemainingToDestination(remaining);
+        setHasReachedCurrentTarget(remaining < 100);
+    } catch (e) {}
+  }, [userLocation?.latitude, userLocation?.longitude, currentRouteGeometry, isSimulating]);
 
   // SIMULATION ANIMATION
   React.useEffect(() => {
