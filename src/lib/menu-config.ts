@@ -75,6 +75,7 @@ export const allMenuItems: MenuItem[] = [
       subItems: [
         { href: '/issues', label: 'Werkbonnen', id: 'werkbonnen' },
         { href: '/issues/open', label: 'Openstaand', id: 'open' },
+        { href: '/issues/new', label: 'Melding maken', id: 'new' },
         { href: '/issues/portal', label: 'Portaal', id: 'portal' },
         { href: '/issues/archive', label: 'Archief', id: 'archive' },
       ]
