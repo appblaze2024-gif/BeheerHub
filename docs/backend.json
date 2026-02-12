@@ -1,388 +1,252 @@
 {
   "entities": {
-    "AppSettings": {
-      "title": "Application Settings",
-      "type": "object",
-      "description": "Stores global application settings like version number.",
-      "properties": {
-        "version": {
-          "type": "string",
-          "description": "The application version string."
-        }
-      }
-    },
-    "Sensor": {
-      "title": "Sensor",
-      "type": "object",
-      "description": "Represents an IoT sensor device.",
-      "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "type": { "type": "string", "enum": ["TOF200C", "Temperatuur", "Luchtkwaliteit", "GPS Tracker", "Waterpeil"] },
-        "status": { "type": "string", "enum": ["Online", "Offline", "Batterij laag", "Onderhoud"] },
-        "latitude": { "type": "number" },
-        "longitude": { "type": "number" },
-        "lastSeen": { "type": "string", "format": "date-time" },
-        "batteryLevel": { "type": "number" },
-        "vulgraad": { "type": "number", "description": "Percentage gevuld (0-100)" },
-        "currentDistanceCm": { "type": "number", "description": "Laatst gemeten afstand in cm" },
-        "binDepthCm": { "type": "number", "description": "Totale diepte van de bak in cm voor kalibratie" },
-        "measurementFrequency": { "type": "number", "description": "Aantal metingen per 24 uur" }
-      },
-      "required": ["id", "name", "type", "status"]
-    },
-    "Folder": {
-      "title": "Folder",
-      "type": "object",
-      "description": "Represents a folder to organize files.",
-      "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "folderId": {
-          "type": ["string", "null"],
-          "description": "The ID of the parent folder. Null if in root."
-        }
-      },
-      "required": ["name", "createdAt"]
-    },
-    "Besteksmelding": {
-      "title": "Besteksmelding",
-      "type": "object",
-      "description": "Represents a report related to a specific work item in the project specifications (bestek).",
-      "properties": {
-        "id": { "type": "string" },
-        "projectId": { "type": "string" },
-        "werksoort": { "type": "string" },
-        "latitude": { "type": "number" },
-        "longitude": { "type": "number" },
-        "omschrijving": { "type": "string" },
-        "fotos": { "type": "array", "items": { "type": "string" } },
-        "datum": { "type": "string", "format": "date" },
-        "status": {
-          "type": "string",
-          "enum": ["Nieuw", "In behandeling", "Afgerond"]
-        }
-      },
-      "required": ["projectId", "werksoort", "latitude", "longitude", "datum", "status"]
-    },
-    "Route": {
-      "title": "Route",
-      "type": "object",
-      "description": "Represents a user-driven route history.",
-      "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "projectId": { "type": "string" },
-        "originalRouteId": { "type": "string" },
-        "routeName": { "type": "string" },
-        "date": { "type": "string", "format": "date" },
-        "startTime": { "type": "string", "format": "date-time" },
-        "endTime": { "type": "string", "format": "date-time" },
-        "allObjectIds": { "type": "array", "items": { "type": "string" } },
-        "completedObjects": { "type": "array", "items": { "type": "string" } },
-        "skippedObjects": { "type": "array", "items": { "type": "string" } },
-        "totalObjects": { "type": "number" }
-      },
-      "required": ["userId", "projectId", "originalRouteId", "routeName", "date", "startTime"]
-    },
-    "Project": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Project",
-      "type": "object",
-      "description": "Represents a project.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the project."
-        },
-        "projectnummer": {
-          "type": "string"
-        },
-        "projectnaam": {
-          "type": "string"
-        },
-        "locatie": {
-          "type": "string"
-        },
-        "opdrachtgever": {
-          "type": "string"
-        },
-        "startdatum": {
-          "type": "string",
-          "format": "date"
-        },
-        "einddatum": {
-          "type": "string",
-          "format": "date"
-        },
-        "bestek": {
-          "type": "string"
-        },
-        "besteknummer": {
-          "type": "string"
-        },
-        "versie": {
-          "type": "string"
-        },
-        "datum": {
-          "type": "string",
-          "format": "date"
-        },
-        "omschrijving": {
-          "type": "string"
-        },
-        "materieelIds": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "List of vehicle/machine IDs assigned to this project."
-        },
-        "werksoorten": {
-          "type": "array",
-          "items": {
-            "$ref": "#/backend/entities/Werksoort"
-          }
-        },
-        "wijken": {
-          "type": "array",
-          "items": {
-            "$ref": "#/backend/entities/Wijk"
-          }
-        },
-        "veegroutes": {
-          "type": "array",
-          "items": {
-            "$ref": "#/backend/entities/Veegroute"
-          }
-        },
-        "prullenbakkenroutes": {
-          "type": "array",
-          "items": {
-            "$ref": "#/backend/entities/Prullenbakkenroute"
-          }
-        },
-        "vehicleAvailability": {
-          "type": "object",
-          "description": "Stores vehicle availability per day for this project.",
-          "properties": {
-            "unavailable": {
-              "type": "object",
-              "additionalProperties": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              }
-            },
-            "available": {
-              "type": "object",
-              "additionalProperties": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
-      },
-      "required": [
-        "projectnummer",
-        "projectnaam"
-      ]
-    },
-    "Werksoort": {
-      "title": "Werksoort",
-      "type": "object",
-      "description": "Represents a work type within a project specification.",
-      "properties": {
-        "id": { "type": "string" },
-        "postnummer": { "type": "string" },
-        "werksoort": { "type": "string" },
-        "eenheid": { "type": "string" },
-        "fictieveH": { "type": "string" },
-        "uurprijs": { "type": "string" }
-      },
-      "required": ["id", "werksoort"]
-    },
-    "Wijk": {
-      "title": "Wijk",
-      "type": "object",
-      "description": "Represents a district within a project.",
-      "properties": {
-        "id": { "type": "string" },
-        "naam": { "type": "string" },
-        "locatie": { "type": "string" },
-        "subGebieden": { "type": "string" },
-        "roadTypes": { "type": "array", "items": { "type": "string" } }
-      },
-      "required": ["naam"]
-    },
-    "Veegroute": {
-      "title": "Veegroute",
-      "type": "object",
-      "description": "Represents a sweeping route within a project.",
-      "properties": {
-        "id": { "type": "string" },
-        "naam": { "type": "string" },
-        "locatie": { "type": "string" },
-        "subGebieden": { "type": "string" },
-        "roadTypes": { "type": "array", "items": { "type": "string" } }
-      },
-      "required": ["naam"]
-    },
-    "Prullenbakkenroute": {
-      "title": "Prullenbakkenroute",
-      "type": "object",
-      "description": "Represents a trash can route within a project.",
-      "properties": {
-        "id": { "type": "string" },
-        "naam": { "type": "string" },
-        "locatie": { "type": "string" },
-        "subGebieden": { "type": "string" },
-        "roadTypes": { "type": "array", "items": { "type": "string" } }
-      },
-      "required": ["naam"]
-    },
-    "Boekingregel": {
-      "title": "Boekingregel",
-      "type": "object",
-      "description": "Represents an internal booking rule for work planning.",
-      "properties": {
-        "id": { "type": "string" },
-        "naam": { "type": "string" }
-      },
-      "required": ["naam"]
-    },
-    "Object": {
-      "title": "Object",
-      "type": "object",
-      "description": "Represents a physical object in the world.",
-      "properties": {
-        "id": { "type": "string", "description": "Unique identifier for the object." },
-        "latitude": { "type": "number", "description": "The latitude coordinate of the object." },
-        "longitude": { "type": "number", "description": "The longitude coordinate of the object." },
-        "locatieType": { "type": "string" },
-        "locatieSubType": { "type": "string" },
-        "kwaliteit": { "type": "string" },
-        "isActief": { "type": "boolean" },
-        "straatnaam": { "type": "string" },
-        "huisnummer": { "type": "string" },
-        "waarschuwing": { "type": "string" },
-        "vulgraad": { "type": "number" },
-        "locatieWerkgebieden": { "type": "array", "items": { "type": "string" } }
-      },
-      "required": ["id", "latitude", "longitude"]
-    },
-    "Bestand": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Bestand",
-      "type": "object",
-      "description": "Represents a file with its metadata.",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "type": {
-          "type": "string"
-        },
-        "size": {
-          "type": "number"
-        },
-        "url": {
-          "type": "string",
-          "format": "uri"
-        },
-        "uploadedAt": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "storagePath": {
-          "type": "string"
-        },
-        "folderId": {
-          "type": ["string", "null"],
-          "description": "The ID of the folder this file belongs to. Null if in root."
-        }
-      }
-    },
     "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "UserProfile",
       "type": "object",
-      "description": "Represents a user's profile and display preferences.",
+      "description": "Represents the profile information for a business user, typically linked to an authentication system's user ID.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "The user's unique ID, same as their auth UID."
+          "description": "Unique identifier for the UserProfile entity. This typically corresponds to the authenticated user's ID (UID)."
         },
-        "email": {
+        "businessName": {
           "type": "string",
+          "description": "The registered name of the small business associated with this user profile."
+        },
+        "contactEmail": {
+          "type": "string",
+          "description": "The primary contact email address for the business.",
           "format": "email"
         },
-        "displayName": {
-          "type": "string"
-        },
-        "firstName": {
+        "contactPhone": {
           "type": "string",
-          "description": "The user's first name."
+          "description": "The primary contact phone number for the business."
         },
-        "lastName": {
+        "address": {
           "type": "string",
-          "description": "The user's last name."
+          "description": "The physical address of the business."
         },
-        "sidebarCollapsed": {
-          "boolean": "description",
-          "description": "User's preference for the sidebar state."
-        },
-        "role": {
+        "currency": {
           "type": "string",
-          "description": "User role for display purposes."
+          "description": "The default currency code (e.g., 'USD', 'EUR') used for financial tracking within the application."
         },
-        "permissions": {
-          "type": "object",
-          "description": "Granular permissions for the user, structured by module.",
-          "additionalProperties": {
-            "type": "object",
-            "description": "Action-based permissions for a module.",
-            "additionalProperties": {
-              "type": "boolean"
-            }
-          }
-        },
-        "wijk": {
+        "createdAt": {
           "type": "string",
-          "description": "The district/area the user is associated with."
+          "description": "Timestamp when the user profile was created.",
+          "format": "date-time"
         },
-        "veegroute": {
+        "updatedAt": {
           "type": "string",
-          "description": "The sweeping route the user is associated with."
-        },
-        "prullenbakkenroute": {
-          "type": "string",
-          "description": "The trash can route the user is associated with."
-        },
-        "schouwenGemeente": {
-          "type": "string",
-          "description": "The municipality the user is associated with for inspections (schouwen)."
-        },
-        "schouwenMapStyle": {
-          "type": "string",
-          "description": "The user's preferred map style for the inspection map."
-        },
-        "lastSelectedProjectId": {
-          "type": ["string", "null"],
-          "description": "The ID of the last project the user selected."
-        },
-        "nfcTagId": {
-          "type": "string",
-          "description": "Unique identifier of the user's NFC tag for login."
+          "description": "Timestamp when the user profile was last updated.",
+          "format": "date-time"
         }
       },
       "required": [
-        "id"
+        "id",
+        "businessName",
+        "contactEmail",
+        "currency",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Revenue": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Revenue",
+      "type": "object",
+      "description": "Records individual revenue entries for a business, contributing to overall financial tracking.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Revenue entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the UserProfile that owns this revenue entry. (Relationship: UserProfile 1:N Revenue)"
+        },
+        "amount": {
+          "type": "number",
+          "description": "The monetary value of the revenue item."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of what this revenue item is for."
+        },
+        "date": {
+          "type": "string",
+          "description": "The date when the revenue was received or recorded.",
+          "format": "date-time"
+        },
+        "source": {
+          "type": "string",
+          "description": "The origin or type of revenue (e.g., 'Sales', 'Service Fee', 'Subscription')."
+        },
+        "isRecurring": {
+          "type": "boolean",
+          "description": "Indicates if this revenue item is part of a recurring income stream."
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "The method by which the revenue was received (e.g., 'Credit Card', 'Bank Transfer', 'Cash')."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the revenue entry was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the revenue entry was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "amount",
+        "description",
+        "date",
+        "source",
+        "isRecurring",
+        "paymentMethod",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Expense": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Expense",
+      "type": "object",
+      "description": "Records individual expense entries for a business, enabling detailed cost tracking.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Expense entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the UserProfile that incurred this expense. (Relationship: UserProfile 1:N Expense)"
+        },
+        "amount": {
+          "type": "number",
+          "description": "The monetary value of the expense item."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of what this expense item is for."
+        },
+        "date": {
+          "type": "string",
+          "description": "The date when the expense occurred or was recorded.",
+          "format": "date-time"
+        },
+        "category": {
+          "type": "string",
+          "description": "The category of the expense (e.g., 'Rent', 'Utilities', 'Marketing', 'Supplies')."
+        },
+        "isRecurring": {
+          "type": "boolean",
+          "description": "Indicates if this expense item is part of a recurring cost."
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "The method by which the expense was paid (e.g., 'Credit Card', 'Bank Transfer', 'Cash')."
+        },
+        "receiptUrl": {
+          "type": "string",
+          "description": "An optional URL to a scanned receipt or invoice for the expense.",
+          "format": "uri"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the expense entry was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the expense entry was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "amount",
+        "description",
+        "date",
+        "category",
+        "isRecurring",
+        "paymentMethod",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Appointment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Appointment",
+      "type": "object",
+      "description": "Manages scheduled meetings or events within the business calendar.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Appointment entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the UserProfile that scheduled this appointment. (Relationship: UserProfile 1:N Appointment)"
+        },
+        "title": {
+          "type": "string",
+          "description": "A concise title for the appointment."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed description of the appointment's purpose or agenda."
+        },
+        "startTime": {
+          "type": "string",
+          "description": "The scheduled start date and time of the appointment.",
+          "format": "date-time"
+        },
+        "endTime": {
+          "type": "string",
+          "description": "The scheduled end date and time of the appointment.",
+          "format": "date-time"
+        },
+        "location": {
+          "type": "string",
+          "description": "The physical or virtual location where the appointment will take place."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the appointment (e.g., 'Scheduled', 'Confirmed', 'Completed', 'Cancelled')."
+        },
+        "reminderSent": {
+          "type": "boolean",
+          "description": "A flag indicating whether an automated reminder for this appointment has been sent."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the appointment entry was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the appointment entry was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "title",
+        "startTime",
+        "endTime",
+        "status",
+        "reminderSent",
+        "createdAt",
+        "updatedAt"
       ]
     }
   },
@@ -395,169 +259,82 @@
   "firestore": {
     "structure": [
       {
-        "path": "/sensors/{sensorId}",
-        "definition": {
-          "entityName": "Sensor",
-          "schema": { "$ref": "#/backend/entities/Sensor" },
-          "description": "Stores IoT sensor data.",
-          "params": [
-            { "name": "sensorId", "description": "The unique ID of the sensor." }
-          ]
-        }
-      },
-      {
-        "path": "/settings/{docId}",
-        "definition": {
-          "entityName": "AppSettings",
-          "schema": {
-            "$ref": "#/backend/entities/AppSettings"
-          },
-          "description": "Stores global application settings. Use a specific document ID like 'main' for specific settings.",
-          "params": [
-            {
-              "name": "docId",
-              "description": "The ID of the setting document (e.g., 'main')."
-            }
-          ]
-        }
-      },
-      {
         "path": "/users/{userId}",
         "definition": {
           "entityName": "UserProfile",
           "schema": {
             "$ref": "#/backend/entities/UserProfile"
           },
-          "description": "Stores user-specific profile data and preferences.",
+          "description": "Stores individual business user profiles. The document ID matches the authenticated user's ID (`userId`). Includes an `id` field which must match `userId` for clear ownership and authorization independence.",
           "params": [
             {
               "name": "userId",
-              "description": "The ID of the user."
+              "description": "The unique identifier of the authenticated user, corresponding to Firebase Authentication UID."
             }
           ]
         }
       },
       {
-        "path": "/users/{userId}/routes/{routeId}",
+        "path": "/users/{userId}/revenues/{revenueId}",
         "definition": {
-          "entityName": "Route",
-          "schema": { "$ref": "#/backend/entities/Route" },
-          "description": "Stores user-specific route history.",
-          "params": [
-            { "name": "userId", "description": "The ID of the user." },
-            { "name": "routeId", "description": "The ID of the route history entry." }
-          ]
-        }
-      },
-      {
-        "path": "/projects/{projectId}",
-        "definition": {
-          "entityName": "Project",
+          "entityName": "Revenue",
           "schema": {
-            "$ref": "#/backend/entities/Project"
+            "$ref": "#/backend/entities/Revenue"
           },
-          "description": "Stores all projects for the application.",
+          "description": "Stores individual revenue entries for a specific user. Includes a denormalized `userId` field which must match the parent `userId` in the path and `request.auth.uid` for robust authorization independence.",
           "params": [
             {
-              "name": "projectId",
-              "description": "The ID of the project."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/projects/{projectId}/besteksmeldingen/{besteksmeldingId}",
-        "definition": {
-          "entityName": "Besteksmelding",
-          "schema": {
-            "$ref": "#/backend/entities/Besteksmelding"
-          },
-          "description": "Stores specification reports for a specific project.",
-          "params": [
-            {
-              "name": "projectId",
-              "description": "The ID of the project."
+              "name": "userId",
+              "description": "The unique identifier of the user who owns this revenue entry."
             },
             {
-              "name": "besteksmeldingId",
-              "description": "The ID of the specification report."
+              "name": "revenueId",
+              "description": "The unique identifier for a specific revenue entry."
             }
           ]
         }
       },
       {
-        "path": "/projects/{projectId}/bestanden/{bestandId}",
+        "path": "/users/{userId}/expenses/{expenseId}",
         "definition": {
-          "entityName": "Bestand",
+          "entityName": "Expense",
           "schema": {
-            "$ref": "#/backend/entities/Bestand"
+            "$ref": "#/backend/entities/Expense"
           },
-          "description": "Stores files for a specific project.",
+          "description": "Stores individual expense entries for a specific user. Includes a denormalized `userId` field which must match the parent `userId` in the path and `request.auth.uid` for robust authorization independence.",
           "params": [
             {
-              "name": "projectId",
-              "description": "The ID of the project."
+              "name": "userId",
+              "description": "The unique identifier of the user who incurred this expense."
             },
             {
-              "name": "bestandId",
-              "description": "The ID of the file."
+              "name": "expenseId",
+              "description": "The unique identifier for a specific expense entry."
             }
           ]
         }
       },
       {
-        "path": "/projects/{projectId}/folders/{folderId}",
+        "path": "/users/{userId}/appointments/{appointmentId}",
         "definition": {
-          "entityName": "Folder",
+          "entityName": "Appointment",
           "schema": {
-            "$ref": "#/backend/entities/Folder"
+            "$ref": "#/backend/entities/Appointment"
           },
-          "description": "Stores folders for a specific project.",
+          "description": "Stores individual appointment entries for a specific user. Includes a denormalized `userId` field which must match the parent `userId` in the path and `request.auth.uid` for robust authorization independence.",
           "params": [
             {
-              "name": "projectId",
-              "description": "The ID of the project."
+              "name": "userId",
+              "description": "The unique identifier of the user who scheduled this appointment."
             },
             {
-              "name": "folderId",
-              "description": "The ID of the folder."
+              "name": "appointmentId",
+              "description": "The unique identifier for a specific appointment entry."
             }
-          ]
-        }
-      },
-      {
-        "path": "/medewerkers/{medewerkerId}",
-        "definition": {
-          "entityName": "Medewerker",
-          "schema": { "$ref": "#/backend/entities/Medewerker" },
-          "description": "Stores all employees for the application.",
-          "params": [
-            { "name": "medewerkerId", "description": "The ID of the employee." }
-          ]
-        }
-      },
-      {
-        "path": "/objects/{objectId}",
-        "definition": {
-          "entityName": "Object",
-          "schema": { "$ref": "#/backend/entities/Object" },
-          "description": "Stores all physical objects for the application.",
-          "params": [
-            { "name": "objectId", "description": "The ID of the object." }
-          ]
-        }
-      },
-      {
-        "path": "/meldingen/{meldingId}",
-        "definition": {
-          "entityName": "Melding",
-          "schema": { "$ref": "#/backend/entities/Melding" },
-          "description": "Stores all issues/reports for the application.",
-          "params": [
-            { "name": "meldingId", "description": "The ID of the issue." }
           ]
         }
       }
-    ]
+    ],
+    "reasoning": "The recommended Firestore structure for BizBoard prioritizes strong user ownership, authorization independence, and debuggability. All user-specific data is housed within subcollections directly under a user's profile document, following the pattern `/users/{userId}/<subcollectionName>/{docId}`. This design adheres to the core principles:\n\n1.  **Authorization Independence (CRITICAL):** Each document in a subcollection (e.g., `/users/{userId}/revenues/{revenueId}`) will contain a denormalized `userId` field. This `userId` field *must* match the `{userId}` wildcard in its path and also `request.auth.uid`. This allows security rules to evaluate ownership and access permissions directly from the document itself and its path, without needing expensive and non-atomic `get()` operations on parent documents. For instance, a rule can simply check `allow read, write: if request.auth.uid == userId && resource.data.userId == userId;`. This makes atomic operations (like creating a user profile and their first revenue entry in a single batch) inherently secure and debuggable.\n\n2.  **QAPs (Rules are not Filters):** By enforcing path-based ownership (e.g., all documents in `/users/{userId}/revenues` belong to `{userId}`), `list` operations are inherently secure and efficient. When a user requests to list documents from `/users/5l56WagvKGXxqnUJ5t4oBlnJSM73/revenues`, the security rules can check `request.auth.uid == '5l56WagvKGXxqnUJ5t4oBlnJSM73'`, ensuring that only the owner can list their own revenues. There's no need for client-side filtering or complex rule logic to restrict what documents are returned, guaranteeing that only authorized data is ever returned by a query. The error reported (`path: \"/databases/(default)/documents/users/5l56WagvKGXxqnUJ5t4oBlnJSM73/routes\"`) suggests the client code is attempting to query a collection named `routes`. Based on the provided entities, there is no `Route` entity. The client code should be updated to query the appropriate collections like `revenues`, `expenses`, or `appointments` under the user's path.\n\n3.  **Structural Segregation:** Each subcollection (`revenues`, `expenses`, `appointments`) stores a homogeneous set of documents with identical security requirements (private to the user). This avoids mixing data with different access patterns in a single collection, simplifying security rules significantly.\n\n4.  **DBAC (Database-Based Access Control):** All authorization is handled by checking `request.auth.uid` against the path wildcards and the denormalized `userId` field within the documents. No custom claims or server-side logic are required for basic access control, aligning with Firebase's best practices.\n\nThis structure provides a clear, scalable, and highly secure foundation for the BizBoard application, making security rules straightforward to write, test, and maintain."
   }
 }

@@ -1,14 +1,123 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    // A function that always returns true to allow all access.
-    function allowAll() {
-      return true;
+
+    /**
+     * BIZBOARD SECURITY RULES DOCUMENTATION
+     *
+     * Core Philosophy: 
+     * This ruleset implements a strict User-Ownership model. Access to any data is predicated 
+     * on the authenticated user's ID matching the specific path segment and internal 
+     * ownership fields of the document. 
+     *
+     * Data Structure:
+     * All application data is hierarchically organized under the /users/{userId} path. 
+     * Subcollections (revenues, expenses, appointments) are nested within the user's root document.
+     *
+     * Key Security Decisions:
+     * 1. Strict Ownership: Users can only read, list, create, update, or delete their own data.
+     * 2. Relational Integrity: On creation, documents must include a 'userId' or 'id' field 
+     *    that matches the path wildcard. This ensures data remains linked to the correct owner.
+     * 3. Immutability: Ownership fields are protected from modification during updates.
+     * 4. Explicit Denials: Any collection not explicitly defined in the IR (e.g., 'routes') 
+     *    will be denied by default, consistent with the Firebase 'deny-all' default posture.
+     *
+     * Denormalization for Authorization:
+     * To ensure high performance and avoid costly get() calls, every document in a subcollection 
+     * contains a denormalized 'userId' field. This allows rules to verify ownership 
+     * instantaneously by comparing the field to both the path wildcard and the auth token.
+     */
+
+    // --- HELPER FUNCTIONS ---
+
+    /** Checks if the request is from an authenticated user. */
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    match /{document=**} {
-      allow read, write: if allowAll();
+    /** Checks if the authenticated user matches the provided userId wildcard. */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /** Combines ownership check with a check that the resource exists (for updates/deletes). */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /** Verifies that the internal ID of a user profile matches the path and auth UID. */
+    function isValidUserConsistency(userId) {
+      return request.resource.data.id == userId;
+    }
+
+    /** Verifies that the internal userId of a sub-document matches the path and auth UID. */
+    function isValidDataConsistency(userId) {
+      return request.resource.data.userId == userId;
+    }
+
+    // --- COLLECTION RULES ---
+
+    /**
+     * @description Rules for the UserProfile entity. Users manage their own profiles.
+     * @path /users/{userId}
+     * @allow (get, list, create, update, delete) if request.auth.uid == userId.
+     * @deny (all) if the authenticated UID does not match the document ID.
+     * @principle Enforces self-creation and strict owner-only access.
+     */
+    match /users/{userId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUserConsistency(userId);
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description Rules for Revenue entries. Private to the owning user.
+       * @path /users/{userId}/revenues/{revenueId}
+       * @allow (create) if auth UID matches userId path and document data.
+       * @deny (list) if auth UID is different from the userId in the path.
+       * @principle Path-based and field-based ownership validation.
+       */
+      match /revenues/{revenueId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidDataConsistency(userId);
+        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+        allow delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description Rules for Expense entries. Private to the owning user.
+       * @path /users/{userId}/expenses/{expenseId}
+       * @allow (get) for the owner of the parent user document.
+       * @deny (update) if attempting to change the 'userId' field.
+       * @principle Immutability of ownership fields for relational integrity.
+       */
+      match /expenses/{expenseId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidDataConsistency(userId);
+        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+        allow delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description Rules for Appointment entries. Private to the owning user.
+       * @path /users/{userId}/appointments/{appointmentId}
+       * @allow (delete) if the user is the owner and the record exists.
+       * @deny (create) if the provided userId in data does not match the authenticated user.
+       * @principle Robustness for state-changing operations via existence checks.
+       */
+      match /appointments/{appointmentId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidDataConsistency(userId);
+        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+        allow delete: if isExistingOwner(userId);
+      }
+      
+      /**
+       * DEBUGGING NOTE:
+       * The error report mentioned a path: /users/{userId}/routes.
+       * There is no 'Route' entity defined in the architecture. 
+       * Access to undefined subcollections is denied by default.
+       */
     }
   }
 }
