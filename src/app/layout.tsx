@@ -72,7 +72,7 @@ function Header() {
       'objects': 'Objecten',
       'spec-reports': 'Bestek',
       'navigation-module': 'Navigatie',
-      'iot': 'IoT',
+      'iot': 'Internet of Things',
       'mail': 'Mail',
       'profile': 'Mijn Profiel',
       'settings': 'Instellingen',

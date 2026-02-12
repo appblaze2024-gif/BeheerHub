@@ -75,7 +75,7 @@ export default function IoTPage() {
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
   const [selectedSensorId, setSelectedSensorId] = React.useState<string | null>(null);
-  const [copied, setCopied] = React.useState(false);
+  const [copied = false, setCopied] = React.useState(false);
 
   // AI State
   const [aiPrompt, setAiPrompt] = React.useState('');
@@ -214,13 +214,13 @@ void loop() {
   const activeCode = customCode || defaultEsp32Code;
 
   if (isLoading) {
-    return <LoadingScreen message="IoT Dashboard laden..." />;
+    return <LoadingScreen message="Internet of Things Dashboard laden..." />;
   }
 
   return (
     <div className="flex flex-col flex-1 p-4 min-h-0 bg-slate-50 dark:bg-zinc-950 overflow-hidden">
       <PageHeader 
-        title="IoT & Sensoren" 
+        title="Internet of Things & Sensoren" 
         description="Beheer hardware-koppelingen via unieke serienummers."
         className="p-0 mb-4"
       >

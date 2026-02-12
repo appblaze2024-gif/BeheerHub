@@ -87,7 +87,7 @@ export const allMenuItems: MenuItem[] = [
     { href: '/objects', label: 'Objecten', icon: MapPin, module: 'objects' },
     { href: '/spec-reports', label: 'Bestek', icon: FileWarning, module: 'specReports' },
     { href: '/navigation-module', label: 'Navigatie', icon: Navigation, module: 'navigation' },
-    { href: '/iot', label: 'IoT', icon: Cpu, module: 'iot' },
+    { href: '/iot', label: 'Internet of Things', icon: Cpu, module: 'iot' },
     { href: '/mail', label: 'Mail', icon: Mail, module: 'mail' },
     { href: '/profile', label: 'Mijn Profiel', icon: User, module: 'users' },
     { href: '/settings', label: 'Instellingen', icon: Settings },
