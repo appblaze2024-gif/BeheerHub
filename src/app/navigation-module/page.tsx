@@ -91,33 +91,6 @@ const routeLayerCasing: Layer = {
   },
 };
 
-function getManeuverIcon(step: any) {
-    if (!step) return <ArrowUp className="h-10 w-10 text-white" />;
-    
-    const modifier = step?.maneuver?.modifier;
-    const type = step?.maneuver?.type;
-
-    if (type === 'arrive') return <CheckCircle2 className="h-10 w-10 text-green-400" />;
-    if (type === 'depart') return <ArrowUp className="h-10 w-10 text-white" />;
-    
-    switch (modifier) {
-        case 'left': return <CornerUpLeft className="h-10 w-10 text-white" />;
-        case 'right': return <CornerUpRight className="h-10 w-10 text-white" />;
-        case 'slight left': return <ArrowUpLeft className="h-10 w-10 text-white" />;
-        case 'slight right': return <ArrowUpRight className="h-10 w-10 text-white" />;
-        case 'sharp left': return <CornerUpLeft className="h-10 w-10 text-white stroke-[3]" />;
-        case 'sharp right': return <CornerUpRight className="h-10 w-10 text-white stroke-[3]" />;
-        case 'uturn': return <RotateCcw className="h-10 w-10 text-white" />;
-        case 'straight': return <ArrowUp className="h-10 w-10 text-white" />;
-        default: {
-            if (type && type.includes('roundabout')) {
-                return <RefreshCw className="h-10 w-10 text-white" />;
-            }
-            return <ArrowUp className="h-10 w-10 text-white" />;
-        }
-    }
-}
-
 function NavigatingView({ 
     objectsOnRoute, 
     onExit,
@@ -148,6 +121,27 @@ function NavigatingView({
   const [offRouteSince, setOffRouteSince] = React.useState<number | null>(null);
   const [throttledGeometry, setThrottledGeometry] = React.useState<any>(null);
   
+  // Drawer state for mobile
+  const [isDrawerExpanded, setIsDrawerExpanded] = React.useState(false);
+  const touchStartY = React.useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartY.current === null) return;
+    const touchEndY = e.changedTouches[0].clientY;
+    const deltaY = touchStartY.current - touchEndY;
+
+    if (deltaY > 50) { // Swipe up
+      setIsDrawerExpanded(true);
+    } else if (deltaY < -50) { // Swipe down
+      setIsDrawerExpanded(false);
+    }
+    touchStartY.current = null;
+  };
+
   const { profile } = useProfile();
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
   const { toast } = useToast();
@@ -681,7 +675,7 @@ function NavigatingView({
 
       {/* Navigation Toolbar - Bottom Drawer */}
       <div className={cn(
-          "absolute bottom-0 left-0 right-0 z-10 w-full flex flex-col items-center",
+          "absolute bottom-0 left-0 right-0 z-[80] w-full flex flex-col items-center",
           isMobile ? "px-0" : "px-6 pb-6"
       )}>
         {!isFollowing && (
@@ -691,7 +685,15 @@ function NavigatingView({
         )}
 
         {isMobile ? (
-            <Card className="w-full bg-white shadow-[0_-10px_40px_rgba(0,0,0,0.1)] border-none rounded-t-[40px] pt-2 pb-8 px-8 overflow-hidden">
+            <Card 
+                className={cn(
+                    "w-full bg-white shadow-[0_-10px_40px_rgba(0,0,0,0.1)] border-none rounded-t-[40px] pt-2 pb-8 px-8 transition-all duration-300 ease-in-out cursor-pointer",
+                    isDrawerExpanded ? "max-h-[300px]" : "max-h-[140px]"
+                )}
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+                onClick={() => setIsDrawerExpanded(!isDrawerExpanded)}
+            >
                 <div className="h-1.5 w-12 bg-slate-200 rounded-full mx-auto mb-6" />
                 <div className="flex items-center justify-between">
                     <div className="flex flex-col items-center">
@@ -708,18 +710,30 @@ function NavigatingView({
                     </div>
                 </div>
                 
-                <div className="mt-8 flex gap-4">
-                    <Button variant="ghost" size="lg" className="h-14 w-14 rounded-full bg-slate-50 border-none shrink-0" onClick={() => setIsPaused(!isPaused)}>
+                <div className={cn(
+                    "mt-8 flex gap-4 transition-all duration-300",
+                    isDrawerExpanded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 pointer-events-none"
+                )}>
+                    <Button 
+                        variant="ghost" 
+                        size="lg" 
+                        className="h-14 w-14 rounded-full bg-slate-50 border-none shrink-0" 
+                        onClick={(e) => { e.stopPropagation(); setIsPaused(!isPaused); }}
+                    >
                         {isPaused ? <Play className="h-6 w-6 fill-current text-blue-600" /> : <Pause className="h-6 w-6 fill-current text-blue-600" />}
                     </Button>
-                    <Button variant="destructive" size="lg" className="h-14 flex-1 rounded-full text-lg font-black uppercase tracking-tighter" onClick={onExit}>
+                    <Button 
+                        variant="destructive" 
+                        size="lg" 
+                        className="h-14 flex-1 rounded-full text-lg font-black uppercase tracking-tighter" 
+                        onClick={(e) => { e.stopPropagation(); onExit(); }}
+                    >
                         STOP RIT
                     </Button>
                 </div>
             </Card>
         ) : (
             <div className="w-full max-w-4xl flex items-end justify-between gap-4">
-                {/* Desktop View remain similar but polished */}
                 <Card className="shadow-2xl bg-white/95 backdrop-blur-xl border-none overflow-hidden w-40">
                     <CardContent className="p-0">
                         <div className="bg-slate-50 border-b p-2 flex justify-between items-center px-3">
@@ -1031,7 +1045,7 @@ export default function StartNavigationPage() {
       {isPrivileged && (
           <RouteHistoryDialog
             open={isHistoryDialogOpen}
-            onOpenChange={setIsHistoryDialogOpen}
+            onOpenChange={isHistoryDialogOpen => setIsHistoryDialogOpen(isHistoryDialogOpen)}
             projectId={selectedProjectId}
           />
       )}
