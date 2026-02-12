@@ -52,6 +52,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { RouteHistoryDialog } from '@/components/route-history-dialog';
 import { LoadingScreen } from '@/components/loading-screen';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -124,6 +125,7 @@ function NavigatingView({
     isSimulating?: boolean
 }) {
   const mapRef = React.useRef<MapRef>(null);
+  const isMobile = useIsMobile(768);
   const [targetLocation, setTargetLocation] = React.useState<{ latitude: number, longitude: number, speed: number | null, heading: number | null } | null>(initialUserLocation ? { ...initialUserLocation, speed: 0, heading: 0 } : null);
   const [smoothLocation, setSmoothLocation] = React.useState<{ latitude: number, longitude: number, speed: number | null, heading: number | null } | null>(initialUserLocation ? { ...initialUserLocation, speed: 0, heading: 0 } : null);
   
@@ -172,13 +174,11 @@ function NavigatingView({
         lastTime = time;
 
         if (targetLocation && smoothLocation && !isPaused) {
-            // LERP (Linear Interpolation) factor - higher means more responsive, lower means smoother
             const lerpFactor = isSimulating ? 1 : 0.15; 
             
             const newLat = smoothLocation.latitude + (targetLocation.latitude - smoothLocation.latitude) * lerpFactor;
             const newLng = smoothLocation.longitude + (targetLocation.longitude - smoothLocation.longitude) * lerpFactor;
             
-            // Heading smoothing - use shortest path around circle
             let diff = (targetLocation.heading || 0) - (smoothLocation.heading || 0);
             while (diff < -180) diff += 360;
             while (diff > 180) diff -= 360;
@@ -584,43 +584,42 @@ function NavigatingView({
         )}
       </MapGL>
       
-      {gpsError && (
-          <div className="absolute top-24 left-1/2 -translate-x-1/2 z-[70] w-[90%] max-w-sm">
-              <Alert variant="destructive" className="bg-red-600 text-white border-none shadow-2xl">
-                  <div className="flex items-center gap-3">
-                      {gpsError === 'permission' ? <XIcon className="h-5 w-5" /> : <SignalLow className="h-5 w-5 animate-pulse" />}
-                      <div>
-                          <AlertTitle className="font-black uppercase tracking-tight text-xs">
-                              {gpsError === 'permission' ? 'Locatie Toegang Geweigerd' : 'Zwak GPS Signaal'}
-                          </AlertTitle>
-                          <AlertDescription className="text-[10px] opacity-90 font-bold">
-                              {gpsError === 'permission' ? 'Schakel locatietoegang in bij instellingen.' : 'Uw locatie wordt gezocht...'}
-                          </AlertDescription>
-                      </div>
-                  </div>
-              </Alert>
-          </div>
-      )}
+      {/* HUD - Top Area */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[70] w-[92%] max-w-lg flex flex-col gap-3">
+        {navHudData && !arrivedObject && !isCalculatingRoute && (
+            <Card className="bg-slate-900/95 backdrop-blur-xl text-white shadow-2xl border-none overflow-hidden animate-in slide-in-from-top duration-300">
+                <CardContent className="p-3 md:p-4 flex items-center gap-4 md:gap-5">
+                    <div className="bg-blue-600 p-2 md:p-3 rounded-xl shadow-inner">
+                        {getManeuverIcon(navHudData.step)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                        <p className="text-3xl md:text-4xl font-black tracking-tighter tabular-nums mb-0.5 leading-none">
+                            {navHudData.distance > 1000 ? `${(navHudData.distance/1000).toFixed(1)} km` : `${Math.round(navHudData.distance)} m`}
+                        </p>
+                        <p className="text-[10px] md:text-xs font-black opacity-80 uppercase tracking-widest leading-tight truncate">
+                            {navHudData.instruction}
+                        </p>
+                    </div>
+                </CardContent>
+            </Card>
+        )}
 
-      {navHudData && !arrivedObject && !isCalculatingRoute && (
-          <div className="absolute top-6 left-1/2 -translate-x-1/2 z-10 w-[90%] max-w-lg">
-              <Card className="bg-slate-900/95 backdrop-blur-xl text-white shadow-2xl border-none overflow-hidden">
-                  <CardContent className="p-4 flex items-center gap-5">
-                      <div className="bg-blue-600 p-3 rounded-xl shadow-inner">
-                          {getManeuverIcon(navHudData.step)}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                          <p className="text-4xl font-black tracking-tighter tabular-nums mb-0.5">
-                              {navHudData.distance > 1000 ? `${(navHudData.distance/1000).toFixed(1)} km` : `${Math.round(navHudData.distance)} m`}
-                          </p>
-                          <p className="text-xs font-black opacity-80 uppercase tracking-widest leading-tight truncate">
-                              {navHudData.instruction}
-                          </p>
-                      </div>
-                  </CardContent>
-              </Card>
-          </div>
-      )}
+        {gpsError && (
+            <Alert variant="destructive" className="bg-red-600 text-white border-none shadow-2xl animate-in slide-in-from-top duration-300">
+                <div className="flex items-center gap-3">
+                    {gpsError === 'permission' ? <XIcon className="h-5 w-5" /> : <SignalLow className="h-5 w-5 animate-pulse" />}
+                    <div>
+                        <AlertTitle className="font-black uppercase tracking-tight text-[10px] md:text-xs">
+                            {gpsError === 'permission' ? 'Locatie Toegang Geweigerd' : 'Zwak GPS Signaal'}
+                        </AlertTitle>
+                        <AlertDescription className="text-[9px] md:text-[10px] opacity-90 font-bold">
+                            {gpsError === 'permission' ? 'Schakel locatietoegang in bij instellingen.' : 'Uw locatie wordt gezocht...'}
+                        </AlertDescription>
+                    </div>
+                </div>
+            </Alert>
+        )}
+      </div>
 
       {arrivedObject && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6">
@@ -645,49 +644,64 @@ function NavigatingView({
           </div>
       )}
 
-      <div className="absolute bottom-10 left-6 z-10 flex flex-col gap-3">
-         <Card className="w-40 shadow-2xl bg-white/95 backdrop-blur-xl border-none overflow-hidden">
+      {/* Navigation Toolbar - Bottom Area */}
+      <div className={cn(
+          "absolute bottom-6 left-1/2 -translate-x-1/2 z-10 w-[94%] max-w-4xl flex items-end justify-between gap-4",
+          isMobile && "flex-col items-center gap-3"
+      )}>
+        {/* Speedometer */}
+        <Card className={cn(
+            "shadow-2xl bg-white/95 backdrop-blur-xl border-none overflow-hidden shrink-0",
+            isMobile ? "w-32" : "w-40"
+        )}>
             <CardContent className="p-0">
-                <div className="bg-slate-50 border-b p-2 flex justify-between items-center px-3">
-                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">Snelheid</span>
-                    <Badge variant="outline" className="text-[8px] font-black text-blue-600 border-blue-200">MAX 50</Badge>
+                <div className="bg-slate-50 border-b p-1.5 md:p-2 flex justify-between items-center px-3">
+                    <span className="text-[8px] md:text-[10px] font-black uppercase text-slate-400 tracking-tighter">Snelheid</span>
+                    <Badge variant="outline" className="text-[7px] md:text-[8px] font-black text-blue-600 border-blue-200 h-4 px-1">MAX 50</Badge>
                 </div>
-                <div className="p-3 flex items-baseline gap-1 justify-center">
-                    <span className="text-5xl font-black tracking-tighter tabular-nums text-slate-900">{speedKmh}</span>
-                    <span className="text-[10px] font-black text-slate-400 uppercase">km/h</span>
+                <div className="p-2 md:p-3 flex items-baseline gap-1 justify-center">
+                    <span className={cn("font-black tracking-tighter tabular-nums text-slate-900", isMobile ? "text-4xl" : "text-5xl")}>{speedKmh}</span>
+                    <span className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase">km/h</span>
                 </div>
             </CardContent>
         </Card>
-        {!isFollowing && (
-            <Button onClick={() => setIsFollowing(true)} className="h-12 w-12 rounded-full shadow-2xl bg-primary text-white border-none hover:scale-110 active:scale-95 transition-all flex items-center justify-center">
-                <LocateFixed className="h-6 w-6" />
-            </Button>
-        )}
-      </div>
 
-      <div className="absolute bottom-10 right-6 z-10 w-64">
-          <Card className="bg-white/95 backdrop-blur-xl border-none shadow-2xl p-4">
-              <div className="space-y-2.5">
-                  <div className="flex justify-between items-end">
-                      <div>
-                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Route Voortgang</p>
-                          <p className="text-lg font-black text-slate-900 leading-none">{completedObjects.length} <span className="text-slate-300">/ {objectsOnRoute.length}</span></p>
-                      </div>
-                      <div className="text-right">
-                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Volgende stop</p>
-                          <p className="text-sm font-black text-blue-600 truncate max-w-[120px]">{nextObject?.id}</p>
-                      </div>
-                  </div>
-                  <Progress value={(completedObjects.length / (objectsOnRoute.length || 1)) * 100} className="h-1.5 bg-slate-100" />
-              </div>
-          </Card>
-      </div>
+        {/* Central Controls Group */}
+        <div className="flex items-center gap-3">
+            {!isFollowing && (
+                <Button onClick={() => setIsFollowing(true)} className="h-12 w-12 md:h-14 md:w-14 rounded-full shadow-2xl bg-primary text-white border-none hover:scale-110 active:scale-95 transition-all flex items-center justify-center">
+                    <LocateFixed className="h-6 w-6" />
+                </Button>
+            )}
+            <div className="flex gap-2 p-1.5 bg-white/95 backdrop-blur-xl rounded-full shadow-2xl border border-slate-100">
+                <Button variant="ghost" size="lg" className="h-12 w-12 md:h-14 md:w-14 rounded-full hover:bg-slate-50 transition-all flex items-center justify-center p-0" onClick={() => setIsPaused(!isPaused)}>
+                    {isPaused ? <Play className="h-6 w-6 md:h-7 md:w-7 fill-current text-blue-600" /> : <Pause className="h-6 w-6 md:h-7 md:w-7 fill-current text-blue-600" />}
+                </Button>
+                <Button variant="destructive" size="lg" className="h-12 w-12 md:h-14 md:w-14 rounded-full shadow-xl border-none hover:scale-105 active:scale-95 transition-all flex items-center justify-center p-0" onClick={onExit}>
+                    <XIcon className="h-6 w-6 md:h-7 md:w-7" />
+                </Button>
+            </div>
+        </div>
 
-      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10 flex gap-3">
-            <Button variant="secondary" size="lg" className="h-14 w-14 rounded-full shadow-2xl bg-white/95 backdrop-blur-xl border-none hover:scale-110 active:scale-95 transition-all flex items-center justify-center" onClick={() => setIsPaused(!isPaused)}>
-                {isPaused ? <Play className="h-7 w-7 fill-current text-blue-600" /> : <Pause className="h-7 w-7 fill-current text-blue-600" />}
-            </Button>
-            <Button variant="destructive" size="lg" className="h-14 w-14 rounded-full shadow-2xl border-none hover:scale-110 active:scale-95 transition-all flex items-center justify-center" onClick={onExit}><XIcon className="h-7 w-7" /></Button>
+        {/* Progress Card */}
+        <Card className={cn(
+            "bg-white/95 backdrop-blur-xl border-none shadow-2xl overflow-hidden shrink-0",
+            isMobile ? "w-full" : "w-64"
+        )}>
+            <CardContent className="p-3 md:p-4 space-y-2">
+                <div className="flex justify-between items-end">
+                    <div>
+                        <p className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Route Voortgang</p>
+                        <p className="text-base md:text-lg font-black text-slate-900 leading-none">{completedObjects.length} <span className="text-slate-300">/ {objectsOnRoute.length}</span></p>
+                    </div>
+                    <div className="text-right min-w-0 max-w-[120px]">
+                        <p className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Volgende</p>
+                        <p className="text-[10px] md:text-xs font-black text-blue-600 truncate">{nextObject?.id}</p>
+                    </div>
+                </div>
+                <Progress value={(completedObjects.length / (objectsOnRoute.length || 1)) * 100} className="h-1 md:h-1.5 bg-slate-100" />
+            </CardContent>
+        </Card>
       </div>
     </div>
   );
