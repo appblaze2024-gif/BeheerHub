@@ -192,7 +192,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                           )}
                         >
                           <div className="flex items-center gap-3">
-                            <item.icon className={cn("h-5 w-5", pathname.startsWith(item.href) ? "text-white" : "text-slate-400")} />
+                            <item.icon className={cn("h-5 w-5", pathname.startsWith(item.href) ? "text-black" : "text-slate-400")} />
                             <span>{item.label}</span>
                           </div>
                           <div className="flex items-center gap-2">
@@ -244,7 +244,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                       )}
                     >
                       <Link href={item.href} onClick={onNavigate}>
-                        <item.icon className={cn("h-5 w-5", pathname === item.href ? "text-white" : "text-slate-400")} />
+                        <item.icon className={cn("h-5 w-5", pathname === item.href ? "text-black" : "text-slate-400")} />
                         <span>{item.label}</span>
                       </Link>
                     </SidebarMenuButton>
