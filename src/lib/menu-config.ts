@@ -5,8 +5,6 @@ import {
   ClipboardList,
   MapPin,
   Users,
-  Users2,
-  Newspaper,
   Folder,
   Truck,
   FileText,
@@ -37,15 +35,36 @@ export interface MenuItem {
 
 export const allMenuItems: MenuItem[] = [
     { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/projects', label: 'Projecten', icon: Folder, module: 'projects' },
-    { href: '/employees', label: 'Medewerkers', icon: Users, module: 'employees' },
-    { href: '/work-planning', label: 'Werkplanning', icon: ClipboardList, module: 'workPlanning' },
-    { href: '/weekly-reports', label: 'Weekstaten', icon: FileText, module: 'weeklyReports' },
-    { href: '/reports', label: 'Rapporten', icon: FileText, module: 'reports' },
-    { href: '/bestanden', label: 'Bestanden', icon: Folder, module: 'bestanden' },
-    { href: '/vehicles', label: 'Wagenpark', icon: Truck, module: 'vehicles' },
-    { href: '/objects', label: 'Objecten', icon: MapPin, module: 'objects' },
-    { href: '/inventory', label: 'Voorraadbeheer', icon: Warehouse, module: 'inventory' },
+    { 
+      href: '/projects', 
+      label: 'Projecten', 
+      icon: Folder, 
+      module: 'projects',
+      subItems: [
+        { href: '/projects', label: 'Projectbeheer', id: 'project' },
+        { href: '/bestanden', label: 'Documenten', id: 'bestanden' },
+      ]
+    },
+    { 
+      href: '/employees', 
+      label: 'Personeel', 
+      icon: Users, 
+      module: 'employees',
+      subItems: [
+        { href: '/employees', label: 'Medewerkers', id: 'overzicht' },
+        { href: '/work-planning', label: 'Werkplanning', id: 'work-planning' },
+      ]
+    },
+    { 
+      href: '/vehicles', 
+      label: 'Wagenpark', 
+      icon: Truck, 
+      module: 'vehicles',
+      subItems: [
+        { href: '/vehicles', label: 'Voertuigen & Machines', id: 'materieel' },
+        { href: '/weekly-reports', label: 'Weekstaten', id: 'weekly-reports' },
+      ]
+    },
     { 
       href: '/issues', 
       label: 'Meldingen', 
@@ -53,14 +72,14 @@ export const allMenuItems: MenuItem[] = [
       module: 'issues',
       subItems: [
         { href: '/issues', label: 'Werkbonnen', id: 'werkbonnen' },
-        { href: '/issues/open', label: 'Openstaande meldingen', id: 'open' },
-        { href: '/issues/new', label: 'Melding maken', id: 'new' },
-        { href: '/issues/archive', label: 'Meldingen archief', id: 'archive' },
-        { href: '/issues/portal', label: 'Meldingenportaal', id: 'portal' },
+        { href: '/issues/open', label: 'Openstaand', id: 'open' },
+        { href: '/issues/portal', label: 'Portaal', id: 'portal' },
+        { href: '/issues/archive', label: 'Archief', id: 'archive' },
       ]
     },
-    { href: '/spec-reports', label: 'Besteksmeldingen', icon: FileWarning, module: 'specReports' },
-    { href: '/navigation-module', label: 'Navigatiemodule', icon: Navigation, module: 'navigation' },
+    { href: '/objects', label: 'Objecten', icon: MapPin, module: 'objects' },
+    { href: '/spec-reports', label: 'Bestek', icon: FileWarning, module: 'specReports' },
+    { href: '/navigation-module', label: 'Navigatie', icon: Navigation, module: 'navigation' },
     { href: '/iot', label: 'IoT', icon: Cpu, module: 'iot' },
     { href: '/mail', label: 'Mail', icon: Mail, module: 'mail' },
     { href: '/profile', label: 'Mijn Profiel', icon: User, module: 'users' },

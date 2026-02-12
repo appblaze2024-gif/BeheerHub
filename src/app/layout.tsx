@@ -22,7 +22,7 @@ import { format, isAfter } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from '@/components/ui/sheet';
-import { Menu, Search, Bell, User, Settings } from 'lucide-react';
+import { Menu, Search, Bell, User, Settings, LogOut, ChevronRight } from 'lucide-react';
 import { AppSidebar } from '@/components/app-sidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
@@ -39,6 +39,7 @@ import { Input } from '@/components/ui/input';
 
 function Header() {
   const auth = useAuth();
+  const pathname = usePathname();
   const { user } = useUser();
   const { profile } = useProfile();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -51,85 +52,101 @@ function Header() {
     return `${firstInitial}${lastInitial}`.toUpperCase();
   };
 
+  const getPageTitle = () => {
+    const parts = pathname.split('/').filter(Boolean);
+    if (parts.length === 0) return 'Dashboard';
+    const main = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+    if (parts.length > 1) {
+        return `${main} > ${parts[1].charAt(0).toUpperCase() + parts[1].slice(1)}`;
+    }
+    return main;
+  };
+
   return (
-    <header className="bg-background flex h-16 shrink-0 items-center justify-between border-b border-border px-4 md:px-6 shadow-sm z-10">
-      <div className="flex items-center gap-2">
+    <header className="bg-background flex h-16 shrink-0 items-center justify-between border-b px-4 md:px-8 z-10">
+      <div className="flex items-center gap-6">
         <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="hover:bg-slate-100 rounded-xl">
               <Menu className="h-6 w-6" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="inset-y-4 left-4 h-[calc(100svh-2rem)] w-80 rounded-lg p-0">
-            <SheetHeader>
-                <SheetTitle className="sr-only">Zijmenu</SheetTitle>
+          <SheetContent side="left" className="p-0 border-none w-80">
+            <SheetHeader className="sr-only">
+                <SheetTitle>Navigatie Menu</SheetTitle>
             </SheetHeader>
             <AppSidebar onNavigate={() => setIsSidebarOpen(false)} />
           </SheetContent>
         </Sheet>
-        {isSearchOpen ? (
-          <div className="relative flex-1 max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              ref={searchInputRef}
-              placeholder="Zoeken..."
-              className="pl-9"
-              autoFocus
-              onBlur={() => setIsSearchOpen(false)}
-            />
-          </div>
-        ) : (
-          <Button variant="ghost" size="icon" onClick={() => setIsSearchOpen(true)}>
-            <Search className="h-5 w-5" />
-          </Button>
-        )}
+        
+        <div className="flex flex-col">
+            <h2 className="text-sm font-black uppercase tracking-widest text-slate-900">{getPageTitle()}</h2>
+            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter">System / {pathname.replace('/', '') || 'Home'}</p>
+        </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon">
+      <div className="flex items-center gap-3">
+        <div className="hidden md:flex items-center relative mr-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Snel zoeken..."
+              className="pl-9 h-10 w-64 bg-slate-50 border-transparent focus:bg-white focus:border-slate-200 rounded-xl"
+            />
+        </div>
+
+        <Button variant="ghost" size="icon" className="rounded-xl relative">
           <Bell className="h-5 w-5" />
+          <span className="absolute top-2 right-2 h-2 w-2 bg-red-500 rounded-full border-2 border-white" />
         </Button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-              <Avatar className="h-10 w-10">
+            <Button variant="ghost" className="relative h-10 w-10 rounded-xl p-0 hover:bg-slate-50 transition-all">
+              <Avatar className="h-10 w-10 rounded-xl border-2 border-white shadow-sm">
                 <AvatarImage src={user?.photoURL || undefined} alt={profile?.displayName || ''} />
-                <AvatarFallback>
+                <AvatarFallback className="bg-primary text-white font-black text-xs">
                   {getInitials(profile?.firstName, profile?.lastName)}
                 </AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56" align="end" forceMount>
-            <DropdownMenuLabel className="font-normal">
+          <DropdownMenuContent className="w-64 mt-2 rounded-2xl shadow-xl border-slate-100 p-2" align="end" forceMount>
+            <DropdownMenuLabel className="font-normal p-4">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">{profile?.displayName}</p>
-                <p className="text-xs leading-none text-muted-foreground">
+                <p className="text-sm font-black leading-none">{profile?.displayName}</p>
+                <p className="text-xs font-bold leading-none text-muted-foreground mt-1">
                   {user?.email}
                 </p>
               </div>
             </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-                <Link href="/profile">
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Mijn Profiel</span>
-                </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-                <Link href="/settings">
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Instellingen</span>
-                </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => {
-              localStorage.removeItem('impersonatedUserProfileId');
-              signOut(auth);
-            }}>
-              Log uit
-            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-slate-100" />
+            <div className="p-1 space-y-1">
+                <DropdownMenuItem asChild className="rounded-xl h-10 font-bold focus:bg-slate-50">
+                    <Link href="/profile" className="flex items-center w-full">
+                        <User className="mr-3 h-4 w-4 text-primary" />
+                        <span>Mijn Profiel</span>
+                    </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className="rounded-xl h-10 font-bold focus:bg-slate-50">
+                    <Link href="/settings" className="flex items-center w-full">
+                        <Settings className="mr-3 h-4 w-4 text-primary" />
+                        <span>Instellingen</span>
+                    </Link>
+                </DropdownMenuItem>
+            </div>
+            <DropdownMenuSeparator className="bg-slate-100" />
+            <div className="p-1">
+                <DropdownMenuItem 
+                    onClick={() => {
+                        localStorage.removeItem('impersonatedUserProfileId');
+                        signOut(auth);
+                    }}
+                    className="rounded-xl h-10 font-bold text-red-600 focus:bg-red-50 focus:text-red-600"
+                >
+                    <LogOut className="mr-3 h-4 w-4" />
+                    Log uit
+                </DropdownMenuItem>
+            </div>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -144,7 +161,7 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
   const { profile, isLoading: isProfileLoading } = useProfile();
   const auth = useAuth();
 
-  // Auto-logout at the end of a shift for 'medewerkers'
+  // Auto-logout logic for 'medewerkers'
   useEffect(() => {
     if (isProfileLoading || !profile || profile.role !== 'medewerkers' || !profile.urenPerDag) {
       return;
@@ -159,10 +176,7 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
 
     try {
       const [hours, minutes] = shift.eind.split(':').map(Number);
-      if (isNaN(hours) || isNaN(minutes)) {
-        console.error("Invalid time format in user profile:", shift.eind);
-        return;
-      }
+      if (isNaN(hours) || isNaN(minutes)) return;
 
       const now = new Date();
       const endTimeToday = new Date();
@@ -171,63 +185,27 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
       if (now.getTime() > endTimeToday.getTime()) {
         if (auth.currentUser?.metadata.lastSignInTime) {
           const lastLoginTime = new Date(auth.currentUser.metadata.lastSignInTime);
-          if (isAfter(lastLoginTime, endTimeToday)) {
-            return;
-          }
+          if (isAfter(lastLoginTime, endTimeToday)) return;
         }
         signOut(auth);
         return;
       }
 
       const timeUntilLogout = endTimeToday.getTime() - now.getTime();
-      const logoutTimer = setTimeout(() => {
-        signOut(auth);
-      }, timeUntilLogout);
-
+      const logoutTimer = setTimeout(() => signOut(auth), timeUntilLogout);
       return () => clearTimeout(logoutTimer);
     } catch (e) {
-      console.error("Error setting up auto-logout:", e);
+      console.error("Auto-logout error:", e);
     }
   }, [profile, isProfileLoading, auth]);
 
-  // Auto-logout after 60 minutes of inactivity
-  useEffect(() => {
-    let inactivityTimer: NodeJS.Timeout;
-
-    const logout = () => {
-      if (auth) {
-        localStorage.removeItem('impersonatedUserProfileId');
-        signOut(auth);
-      }
-    };
-
-    const resetTimer = () => {
-      clearTimeout(inactivityTimer);
-      inactivityTimer = setTimeout(logout, 60 * 60 * 1000); // 60 minutes
-    };
-
-    const events: (keyof WindowEventMap)[] = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
-    
-    const resetTimerOnActivity = () => resetTimer();
-
-    events.forEach((event) => {
-      window.addEventListener(event, resetTimerOnActivity, { passive: true });
-    });
-    
-    resetTimer(); // Initialize timer
-
-    return () => {
-      clearTimeout(inactivityTimer);
-      events.forEach((event) => {
-        window.removeEventListener(event, resetTimerOnActivity);
-      });
-    };
-  }, [auth]);
-
   if (isUserLoading || isProfileLoading) {
       return (
-        <div className="flex h-screen items-center justify-center">
-          Laden...
+        <div className="flex h-screen items-center justify-center bg-slate-50">
+          <div className="flex flex-col items-center gap-4">
+            <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+            <p className="text-xs font-black uppercase tracking-widest text-slate-400">BeheerHub Laden...</p>
+          </div>
         </div>
       );
   }
@@ -235,7 +213,7 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className={cn('font-body antialiased flex flex-col h-svh overflow-hidden')}>
       {isHeaderVisible && <Header />}
-      <main className="flex-1 flex flex-col overflow-auto bg-gray-100 dark:bg-gray-900">
+      <main className="flex-1 flex flex-col overflow-auto bg-[#F8FAFC]">
         {children}
       </main>
       <Toaster />
@@ -250,14 +228,10 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   const [isMounted, setIsMounted] = useState(false);
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  useEffect(() => setIsMounted(true), []);
 
   const mode = searchParams.get('mode');
   const oobCode = searchParams.get('oobCode');
-
-  // This handles the case where the password reset link from the email incorrectly points to any page other than the reset page.
   const isPasswordResetFlow = mode === 'resetPassword' && oobCode;
 
   useEffect(() => {
@@ -269,62 +243,17 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   const isPublicPage = pathname === '/login' || pathname.startsWith('/reset-password');
 
   useEffect(() => {
-    // Don't run auth checks until client is mounted, auth is resolved, and we're not in a password reset flow.
-    if (!isMounted || isUserLoading || isPasswordResetFlow) {
-      return;
-    }
-
-    if (!user && !isPublicPage) {
-      router.push('/login');
-    } else if (user && pathname === '/login') {
-      router.push('/');
-    }
+    if (!isMounted || isUserLoading || isPasswordResetFlow) return;
+    if (!user && !isPublicPage) router.push('/login');
+    else if (user && pathname === '/login') router.push('/');
   }, [user, isUserLoading, pathname, router, isPublicPage, isMounted, isPasswordResetFlow]);
 
-  if (!isMounted) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        Laden...
-      </div>
-    );
-  }
+  if (!isMounted) return null;
 
-  // While redirecting for password reset, show a loading indicator.
-  if (isPasswordResetFlow && pathname !== '/reset-password') {
-    return <div className="flex h-screen items-center justify-center">Een ogenblik geduld...</div>;
-  }
-  
-  if (isUserLoading && !isPublicPage) {
-     return (
-      <div className="flex h-screen items-center justify-center">
-        Laden...
-      </div>
-    );
-  }
-  
-  if (!user && !isPublicPage) {
-    // This check is important, but we must make sure we don't block the reset flow
-    if (isPasswordResetFlow) {
-        return <>{children}</>;
-    }
-    return (
-       <div className="flex h-screen items-center justify-center">
-        Laden...
-      </div>
-    )
-  }
-
-  if (isPublicPage) {
-    return <>{children}</>;
-  }
+  if (isPublicPage) return <>{children}</>;
 
   return <ProtectedAppLayout>{children}</ProtectedAppLayout>;
 }
-
-function AppLayoutFallback() {
-    return <div className="flex h-screen items-center justify-center">Laden...</div>;
-}
-
 
 export default function RootLayout({
   children,
@@ -335,24 +264,17 @@ export default function RootLayout({
     <html lang="nl" suppressHydrationWarning>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-        <title>BeheerHub</title>
+        <title>BeheerHub | Smart Infra Management</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap"
-          rel="stylesheet"
-        />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
       </head>
-      <body>
+      <body className="no-scrollbar">
         <FirebaseClientProvider>
           <ProfileProvider>
             <ProjectProvider>
               <NavigationUIProvider>
-                <Suspense fallback={<AppLayoutFallback />}>
+                <Suspense fallback={null}>
                   <AppLayout>{children}</AppLayout>
                 </Suspense>
               </NavigationUIProvider>
