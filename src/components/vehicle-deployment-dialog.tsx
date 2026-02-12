@@ -227,7 +227,7 @@ export function VehicleDeploymentDialog({
                                         item.status === 'unavailable' && "text-red-600",
                                         item.status === 'available' && "text-green-600"
                                     )}>
-                                        {item.isDoubleAssigned ? "Dubbel" : item.status === 'scheduled' ? "Inzet" : item.status === 'unavailable' ? "Defect" : "Vrij"}
+                                        {item.isDoubleAssigned ? "Dubbel" : item.status === 'scheduled' ? "Inzet" : item.status === 'unavailable' ? "Garage" : "Vrij"}
                                     </span>
                                 </div>
                             </div>
@@ -281,7 +281,7 @@ export function VehicleDeploymentDialog({
                                                 </Button>
                                             </TooltipTrigger>
                                             <TooltipContent>
-                                                <p>{item.isUnavailable ? "Beschikbaar maken" : "Markeer als defect/beurt"}</p>
+                                                <p>{item.isUnavailable ? "Beschikbaar maken" : "Markeer als garage/beurt"}</p>
                                             </TooltipContent>
                                         </Tooltip>
                                     </TooltipProvider>
