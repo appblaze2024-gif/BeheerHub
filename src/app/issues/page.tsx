@@ -137,6 +137,7 @@ export default function IssuesPage() {
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const isMobile = useIsMobile();
   
   React.useEffect(() => {
     setIsHeaderVisible(false);
@@ -675,13 +676,13 @@ export default function IssuesPage() {
   
   return (
     <div className="flex flex-col flex-1 h-full min-h-0">
-        <header className="p-4 border-b bg-gray-50 dark:bg-gray-900/50 flex-row items-center justify-between shrink-0 flex">
-            <div className="flex items-center gap-4">
-                 <Button variant="outline" size="icon" onClick={() => router.push('/')}>
+        <header className="p-4 border-b bg-gray-50 dark:bg-gray-900/50 flex flex-col sm:flex-row items-start sm:items-center justify-between shrink-0 gap-4">
+            <div className="flex items-center gap-4 w-full sm:w-auto">
+                 <Button variant="outline" size="icon" onClick={() => router.push('/')} className="shrink-0">
                     <ArrowLeft className="h-4 w-4" />
                 </Button>
                  <Select value={selectedMeldingId || ''} onValueChange={setSelectedMeldingId}>
-                    <SelectTrigger className="w-72">
+                    <SelectTrigger className="w-full sm:w-72">
                       <SelectValue>
                         {filteredMeldingen.length > 0 ? `Meldingen (${filteredMeldingen.length})` : 'Geen meldingen'}
                       </SelectValue>
@@ -697,7 +698,7 @@ export default function IssuesPage() {
             </div>
 
             {selectedMelding ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                   {selectedProjectId && (
                   <Link href={`/navigation-module?projectId=${selectedProjectId}&lat=${selectedMelding.latitude}&lng=${selectedMelding.longitude}&straat=${encodeURIComponent(selectedMelding.straatnaam || '')}`} passHref>
                       <Button variant="outline" size="icon" className="h-9 w-9 bg-primary text-white hover:bg-primary/90 shadow-lg shadow-black/20">
@@ -707,7 +708,7 @@ export default function IssuesPage() {
                   )}
                   {selectedMelding.workStartedAt ? (
                     <Button
-                      className="bg-orange-500 hover:bg-orange-600 text-white font-bold h-9"
+                      className="bg-orange-500 hover:bg-orange-600 text-white font-bold h-9 flex-1 sm:flex-none"
                       onClick={handleAfronden}
                       disabled={isSubmitting}
                     >
@@ -716,7 +717,7 @@ export default function IssuesPage() {
                     </Button>
                   ) : (
                     <Button
-                      className="bg-green-500 hover:bg-green-600 text-white font-bold h-9"
+                      className="bg-green-500 hover:bg-green-600 text-white font-bold h-9 flex-1 sm:flex-none"
                       onClick={handleStartWork}
                       disabled={isSubmitting}
                     >
@@ -730,78 +731,78 @@ export default function IssuesPage() {
         {filteredMeldingen.length === 0 ? (
             <div className="p-6">
               <Card>
-                <CardContent className="text-center p-6 pt-6">
-                  <Bell className="mx-auto h-12 w-12 text-muted-foreground" />
-                  <p className="mt-4 text-lg font-semibold">Geen meldingen gevonden</p>
-                  <p className="text-muted-foreground">Er zijn geen meldingen die overeenkomen met de huidige filters.</p>
+                <CardContent className="text-center p-6 pt-12">
+                  <Bell className="mx-auto h-12 w-12 text-muted-foreground opacity-20" />
+                  <p className="mt-4 text-lg font-black uppercase tracking-tight">Geen meldingen gevonden</p>
+                  <p className="text-muted-foreground text-sm">Er zijn geen meldingen die overeenkomen met de huidige filters.</p>
                 </CardContent>
               </Card>
             </div>
         ) : selectedMelding ? (
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-                <div className="px-6 pt-4 overflow-x-auto">
-                    <TabsList>
+                <div className="px-4 md:px-6 pt-4 overflow-x-auto no-scrollbar">
+                    <TabsList className="w-max inline-flex">
                         {werkbonNavItems.map(item => (
-                            <TabsTrigger key={item.label} value={item.label} className="gap-2">
+                            <TabsTrigger key={item.label} value={item.label} className="gap-2 shrink-0">
                                 <item.icon className="h-4 w-4 shrink-0" />
                                 <span>{item.label}</span>
-                                {item.label === 'Documenten' && uploadedFiles.length > 0 && <Badge variant="secondary" className="ml-1">{uploadedFiles.length}</Badge>}
-                                {item.label === "Foto's" && (uploadedPhotos.length + afhandelingFotos.length) > 0 && <Badge variant="secondary" className="ml-1">{uploadedPhotos.length + afhandelingFotos.length}</Badge>}
-                                {item.label === 'Werkzaamheden' && tasks.length > 0 && tasks.filter(t => !t.completed).length > 0 && <Badge variant="secondary" className="ml-1">{tasks.filter(t => !t.completed).length}</Badge>}
+                                {item.label === 'Documenten' && uploadedFiles.length > 0 && <Badge variant="secondary" className="ml-1 h-4 px-1 text-[9px]">{uploadedFiles.length}</Badge>}
+                                {item.label === "Foto's" && (uploadedPhotos.length + afhandelingFotos.length) > 0 && <Badge variant="secondary" className="ml-1 h-4 px-1 text-[9px]">{uploadedPhotos.length + afhandelingFotos.length}</Badge>}
+                                {item.label === 'Werkzaamheden' && tasks.length > 0 && tasks.filter(t => !t.completed).length > 0 && <Badge variant="secondary" className="ml-1 h-4 px-1 text-[9px]">{tasks.filter(t => !t.completed).length}</Badge>}
                             </TabsTrigger>
                         ))}
                     </TabsList>
                 </div>
                 
-                <div className="flex-1 overflow-y-auto p-6">
+                <div className="flex-1 overflow-y-auto p-4 md:p-6">
                     <TabsContent value="Werkzaamheden" className="mt-0">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <Card className="flex flex-col h-full min-h-[400px]">
-                            <CardHeader>
-                            <CardTitle className="text-lg font-semibold">Werkbon Details</CardTitle>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <Card className="flex flex-col h-full min-h-[300px]">
+                            <CardHeader className="p-4 border-b">
+                                <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Werkbon Details</CardTitle>
                             </CardHeader>
-                            <CardContent className="flex-1 space-y-4 p-4 pt-0 text-xs">
-                            <div className="grid grid-cols-2 gap-x-6 gap-y-2 border-b pb-2">
+                            <CardContent className="flex-1 space-y-4 p-4 pt-4 text-xs">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 border-b pb-4">
                                 <div className="space-y-1">
-                                <p className="text-muted-foreground">Intakenr:</p>
-                                <p className="font-semibold text-sm">{selectedMelding.intakenummer}</p>
+                                <p className="text-muted-foreground font-bold uppercase text-[9px] tracking-widest">Intakenr:</p>
+                                <p className="font-black text-sm">{selectedMelding.intakenummer}</p>
                                 </div>
                                 <div className="space-y-1">
-                                <p className="text-muted-foreground">Datum:</p>
-                                <p className="font-semibold text-sm">{format(new Date(selectedMelding.datum), 'dd-MM-yy')} {selectedMelding.tijdstip}</p>
+                                <p className="text-muted-foreground font-bold uppercase text-[9px] tracking-widest">Datum:</p>
+                                <p className="font-black text-sm">{format(new Date(selectedMelding.datum), 'dd-MM-yy')} {selectedMelding.tijdstip}</p>
                                 </div>
-                                <div className="col-span-2 space-y-1">
-                                <p className="text-muted-foreground">Adres:</p>
-                                <p className="font-semibold text-sm">{selectedMelding.straatnaam} {selectedMelding.huisnummer || ''}, {selectedMelding.postcode} {selectedMelding.plaats}</p>
+                                <div className="sm:col-span-2 space-y-1">
+                                <p className="text-muted-foreground font-bold uppercase text-[9px] tracking-widest">Adres:</p>
+                                <p className="font-black text-sm leading-tight">{selectedMelding.straatnaam} {selectedMelding.huisnummer || ''}, {selectedMelding.postcode} {selectedMelding.plaats}</p>
                                 </div>
                                 <div className="space-y-1">
-                                <p className="text-muted-foreground">Melder:</p>
-                                <p className="font-semibold text-sm">{selectedMelding.melder}</p>
+                                <p className="text-muted-foreground font-bold uppercase text-[9px] tracking-widest">Melder:</p>
+                                <p className="font-black text-sm">{selectedMelding.melder}</p>
                                 </div>
                             </div>
                             <div className="space-y-4 pt-2">
-                                <div className="grid grid-cols-3 gap-4">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                 <div className="space-y-1">
-                                    <p className="text-muted-foreground">Hoofdcategorie</p>
-                                    <p className="text-sm font-semibold">{selectedMelding.hoofdcategorie}</p>
+                                    <p className="text-muted-foreground font-bold uppercase text-[9px] tracking-widest">Hoofdindeling</p>
+                                    <p className="text-xs font-black">{selectedMelding.hoofdcategorie}</p>
                                 </div>
                                 <div className="space-y-1">
-                                    <p className="text-muted-foreground">Subcategorie</p>
-                                    <p className="text-sm font-semibold">{selectedMelding.subcategorie}</p>
+                                    <p className="text-muted-foreground font-bold uppercase text-[9px] tracking-widest">Indeling</p>
+                                    <p className="text-xs font-black">{selectedMelding.subcategorie}</p>
                                 </div>
                                 <div className="space-y-1">
-                                    <p className="text-muted-foreground">Status</p>
-                                    <p className="text-sm font-semibold">{selectedMelding.status}</p>
+                                    <p className="text-muted-foreground font-bold uppercase text-[9px] tracking-widest">Status</p>
+                                    <p className="text-xs font-black">{selectedMelding.status}</p>
                                 </div>
                                 </div>
                                 <div className="space-y-1">
-                                <p className="text-muted-foreground">Omschrijving</p>
-                                <p className="text-sm whitespace-pre-wrap font-semibold">{selectedMelding.extra_informatie}</p>
+                                <p className="text-muted-foreground font-bold uppercase text-[9px] tracking-widest">Omschrijving</p>
+                                <p className="text-xs whitespace-pre-wrap font-medium leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-100 italic">{selectedMelding.extra_informatie}</p>
                                 </div>
                             </div>
                             </CardContent>
                         </Card>
-                        <div className='rounded-lg overflow-hidden border h-full min-h-[400px]'>
+                        <div className='rounded-xl overflow-hidden border h-full min-h-[300px] lg:min-h-[400px] shadow-sm'>
                             <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} />
                         </div>
                         </div>
@@ -809,7 +810,7 @@ export default function IssuesPage() {
                     <TabsContent value="Opmerkingen" className="mt-0">
                         <Card>
                             <CardHeader>
-                                <CardTitle className="text-lg font-semibold">Opmerkingen bij afronding</CardTitle>
+                                <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Opmerkingen bij afronding</CardTitle>
                             </CardHeader>
                             <CardContent>
                             <Form {...form}>
@@ -822,7 +823,7 @@ export default function IssuesPage() {
                                             <FormControl>
                                                 <Textarea 
                                                     placeholder="Voeg een opmerking toe over de afhandeling..."
-                                                    rows={15}
+                                                    rows={isMobile ? 10 : 15}
                                                     {...field} 
                                                 />
                                             </FormControl>
@@ -836,72 +837,85 @@ export default function IssuesPage() {
                         </Card>
                     </TabsContent>
                     <TabsContent value="Locatiegegevens" className="mt-0">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <div className="space-y-6">
                                 <Collapsible defaultOpen>
                                     <CollapsibleTrigger className="w-full">
-                                        <CardHeader className="flex flex-row items-center justify-between p-0 mb-4">
-                                            <CardTitle>Locatie Details</CardTitle>
+                                        <div className="flex flex-row items-center justify-between py-2 border-b">
+                                            <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">Locatie Details</h3>
                                             <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                                        </CardHeader>
+                                        </div>
                                     </CollapsibleTrigger>
                                     <CollapsibleContent>
-                                        <CardContent className="space-y-2 p-0">
-                                            <div className="flex justify-between text-sm">
-                                                <span className="font-semibold text-muted-foreground">Adres:</span>
-                                                <span>{selectedMelding.straatnaam} {selectedMelding.huisnummer}</span>
+                                        <CardContent className="space-y-3 p-4 pt-4 bg-white rounded-xl border mt-2">
+                                            <div className="flex justify-between text-xs font-medium">
+                                                <span className="text-muted-foreground uppercase tracking-tighter">Adres:</span>
+                                                <span className="font-black text-right">{selectedMelding.straatnaam} {selectedMelding.huisnummer}</span>
                                             </div>
-                                            <div className="flex justify-between text-sm">
-                                                <span className="font-semibold text-muted-foreground">Postcode:</span>
-                                                <span>{selectedMelding.postcode}</span>
+                                            <div className="flex justify-between text-xs font-medium">
+                                                <span className="text-muted-foreground uppercase tracking-tighter">Postcode:</span>
+                                                <span className="font-black text-right">{selectedMelding.postcode}</span>
                                             </div>
-                                            <div className="flex justify-between text-sm">
-                                                <span className="font-semibold text-muted-foreground">Plaats:</span>
-                                                <span>{selectedMelding.plaats}</span>
+                                            <div className="flex justify-between text-xs font-medium">
+                                                <span className="text-muted-foreground uppercase tracking-tighter">Plaats:</span>
+                                                <span className="font-black text-right">{selectedMelding.plaats}</span>
                                             </div>
-                                            <div className="flex justify-between text-sm">
-                                                <span className="font-semibold text-muted-foreground">Werkgebied:</span>
-                                                <span>{selectedMelding.werkgebied || '-'}</span>
+                                            <div className="flex justify-between text-xs font-medium">
+                                                <span className="text-muted-foreground uppercase tracking-tighter">Werkgebied:</span>
+                                                <span className="font-black text-right">{selectedMelding.werkgebied || '-'}</span>
                                             </div>
-                                            <div className="flex justify-between text-sm">
-                                                <span className="font-semibold text-muted-foreground">Coördinaten:</span>
-                                                <span>{selectedMelding.latitude.toFixed(5)}, {selectedMelding.longitude.toFixed(5)}</span>
+                                            <div className="flex justify-between text-xs font-medium">
+                                                <span className="text-muted-foreground uppercase tracking-tighter">Coördinaten:</span>
+                                                <span className="font-mono bg-slate-50 px-1 rounded">{selectedMelding.latitude.toFixed(5)}, {selectedMelding.longitude.toFixed(5)}</span>
                                             </div>
                                         </CardContent>
                                     </CollapsibleContent>
                                 </Collapsible>
                                 <Collapsible defaultOpen>
                                     <CollapsibleTrigger className="w-full">
-                                        <CardHeader className="flex flex-row items-center justify-between p-0 mb-4">
-                                            <CardTitle>Objecten in de buurt (100m)</CardTitle>
+                                        <div className="flex flex-row items-center justify-between py-2 border-b">
+                                            <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">Objecten in de buurt (100m)</h3>
                                             <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                                        </CardHeader>
+                                        </div>
                                     </CollapsibleTrigger>
                                     <CollapsibleContent>
-                                        <CardContent className="p-0">
+                                        <CardContent className="p-0 pt-2">
                                             {nearbyObjects.length > 0 ? (
-                                                <div className="space-y-1 max-h-40 overflow-y-auto pr-2">
-                                                    {nearbyObjects.slice(0, 5).map(obj => (
+                                                <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                                                    {nearbyObjects.slice(0, 8).map(obj => (
                                                         <div 
                                                             key={obj.id} 
                                                             className={cn(
-                                                                "text-sm p-2 bg-muted rounded-md cursor-pointer hover:bg-secondary",
-                                                                highlightedObject?.id === obj.id && "bg-secondary"
+                                                                "text-xs p-3 rounded-xl border transition-all cursor-pointer",
+                                                                highlightedObject?.id === obj.id 
+                                                                    ? "bg-primary text-white border-primary shadow-lg scale-[1.02]" 
+                                                                    : "bg-white border-slate-100 hover:border-slate-200 shadow-sm"
                                                             )}
                                                             onClick={() => setHighlightedObject(obj)}
                                                         >
-                                                             <span className={cn(highlightedObject?.id === obj.id && "font-bold")}>{obj.id} - {obj.straatnaam || ''}</span>
+                                                             <div className="flex justify-between items-start">
+                                                                <span className="font-black uppercase tracking-tight">{obj.id}</span>
+                                                                {obj.vulgraad !== undefined && (
+                                                                    <Badge variant="outline" className={cn("text-[9px] h-4", highlightedObject?.id === obj.id ? "border-white/30 text-white" : "text-primary border-primary/20")}>
+                                                                        {obj.vulgraad}%
+                                                                    </Badge>
+                                                                )}
+                                                             </div>
+                                                             <p className={cn("text-[10px] mt-1 font-bold", highlightedObject?.id === obj.id ? "text-white/80" : "text-slate-400")}>{obj.straatnaam || ''} {obj.locatieSubType || ''}</p>
                                                         </div>
                                                     ))}
                                                 </div>
                                             ) : (
-                                                <p className="text-sm text-muted-foreground">Geen objecten gevonden.</p>
+                                                <div className="p-12 text-center text-muted-foreground bg-slate-50 rounded-xl border border-dashed">
+                                                    <Info className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                                                    <p className="text-[10px] font-black uppercase tracking-widest">Geen objecten gevonden.</p>
+                                                </div>
                                             )}
                                         </CardContent>
                                     </CollapsibleContent>
                                 </Collapsible>
                             </div>
-                            <div className="min-h-[400px]">
+                            <div className="min-h-[300px] lg:min-h-[400px] rounded-xl overflow-hidden border shadow-sm">
                                 <MapboxView 
                                     latitude={selectedMelding.latitude} 
                                     longitude={selectedMelding.longitude} 
@@ -914,13 +928,13 @@ export default function IssuesPage() {
                     <TabsContent value="Documenten" className="mt-0">
                         <Card>
                             <CardHeader>
-                                <CardTitle>Documenten</CardTitle>
+                                <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Documenten</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div 
                                     className={cn(
-                                        "border-2 border-dashed border-muted-foreground/30 rounded-lg p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50 transition-colors",
-                                        isDraggingDocument && "bg-muted/50 border-primary"
+                                        "border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-50 transition-all",
+                                        isDraggingDocument && "bg-blue-50 border-primary"
                                     )}
                                     onDragEnter={() => setIsDraggingDocument(true)}
                                     onDragLeave={() => setIsDraggingDocument(false)}
@@ -928,9 +942,9 @@ export default function IssuesPage() {
                                     onDrop={handleDropDocuments}
                                     onClick={() => document.getElementById('document-file-input')?.click()}
                                 >
-                                    <UploadCloud className="h-12 w-12 text-muted-foreground" />
-                                    <p className="mt-4 font-semibold">Sleep bestanden hierheen of klik om te uploaden</p>
-                                    <p className="text-sm text-muted-foreground">PDF, Word, Excel, afbeeldingen, etc.</p>
+                                    <UploadCloud className="h-12 w-12 text-slate-300" />
+                                    <p className="mt-4 font-black uppercase tracking-tight text-slate-900">Sleep bestanden of klik</p>
+                                    <p className="text-xs text-slate-400 font-medium mt-1">PDF, Word, Excel, afbeeldingen...</p>
                                     <input
                                         type="file"
                                         id="document-file-input"
@@ -942,22 +956,23 @@ export default function IssuesPage() {
                                 
                                 {Object.entries(uploadProgress).map(([name, progress]) => (
                                 <div key={name} className="space-y-1 mt-2">
-                                    <p className="text-sm font-medium">{name}</p>
-                                    <Progress value={progress} className="w-full h-2" />
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{name}</p>
+                                    <Progress value={progress} className="w-full h-1.5" />
                                 </div>
                                 ))}
                                 
                                 {uploadedFiles.length > 0 && (
-                                    <div className="border rounded-md mt-4">
+                                    <div className="border rounded-xl mt-4 divide-y">
                                     {uploadedFiles.map((file) => (
                                         <div
                                         key={file.storagePath}
-                                        className="grid grid-cols-[1fr_auto_auto] gap-4 items-center px-4 py-2 border-b last:border-b-0"
+                                        className="grid grid-cols-[1fr_auto_auto] gap-4 items-center px-4 py-3"
                                         >
-                                        <a href={file.url} target="_blank" rel="noopener noreferrer" className="truncate flex items-center gap-2 hover:underline">
-                                            <FileIcon className="h-4 w-4 shrink-0" /> {file.name}
+                                        <a href={file.url} target="_blank" rel="noopener noreferrer" className="truncate flex items-center gap-3 hover:underline">
+                                            <div className="bg-slate-100 p-2 rounded-lg"><FileIcon className="h-4 w-4 text-slate-500 shrink-0" /></div>
+                                            <span className="text-xs font-black text-slate-900">{file.name}</span>
                                         </a>
-                                        <span className='text-sm text-muted-foreground'>{formatBytes(file.size)}</span>
+                                        <span className='text-[10px] font-black text-slate-400 uppercase'>{formatBytes(file.size)}</span>
                                         {canDeleteFile && (
                                         <AlertDialog>
                                             <AlertDialogTrigger asChild>
@@ -965,23 +980,23 @@ export default function IssuesPage() {
                                                 type="button"
                                                 variant="ghost"
                                                 size="icon"
-                                                className="h-8 w-8"
+                                                className="h-8 w-8 text-slate-300 hover:text-red-600 hover:bg-red-50"
                                                 disabled={isSubmitting}
                                             >
-                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                                <Trash2 className="h-4 w-4" />
                                             </Button>
                                             </AlertDialogTrigger>
                                             <AlertDialogContent>
                                                 <AlertDialogHeader>
                                                     <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
                                                     <AlertDialogDescription>
-                                                        Weet u zeker dat u het bestand "{file.name}" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.
+                                                        Weet u zeker dat u het bestand "{file.name}" wilt verwijderen?
                                                     </AlertDialogDescription>
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter>
                                                     <AlertDialogCancel>Annuleren</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleFileDelete(file)}>
-                                                        Doorgaan
+                                                    <AlertDialogAction onClick={() => handleFileDelete(file)} className="bg-red-600">
+                                                        Verwijderen
                                                     </AlertDialogAction>
                                                 </AlertDialogFooter>
                                             </AlertDialogContent>
@@ -996,36 +1011,36 @@ export default function IssuesPage() {
                     </TabsContent>
                     <TabsContent value="Foto's" className="mt-0">
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <Card className="flex flex-col min-h-[400px]">
-                            <CardHeader>
-                                <CardTitle>Foto's van Melding</CardTitle>
+                        <Card className="flex flex-col min-h-[300px] lg:min-h-[400px]">
+                            <CardHeader className="p-4 border-b">
+                                <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Foto's van Melding</CardTitle>
                             </CardHeader>
-                            <CardContent className="flex-1 flex flex-col p-4 pt-0 min-h-0">
+                            <CardContent className="flex-1 flex flex-col p-4 min-h-0">
                                 {uploadedPhotos.length > 0 ? (
                                 <div className="space-y-4 flex flex-col flex-1 min-h-0">
                                     <div
-                                        className="w-full relative rounded-md overflow-hidden border group cursor-pointer h-40 flex-shrink-0"
+                                        className="w-full relative rounded-2xl overflow-hidden border group cursor-pointer h-48 lg:h-64 flex-shrink-0 bg-slate-50"
                                         onClick={() => mainPhoto && setFullScreenPhoto(mainPhoto)}
                                     >
                                     {mainPhoto ? (
                                         <>
-                                        <Image src={mainPhoto.url} alt={mainPhoto.name} fill className="object-contain" />
+                                        <Image src={mainPhoto.url} alt={mainPhoto.name} fill className="object-contain p-2" />
                                         <div className="absolute inset-0 bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                             <Maximize className="h-10 w-10" />
                                         </div>
                                         </>
                                     ) : (
-                                        <div className="flex items-center justify-center h-full bg-muted text-muted-foreground">Geen foto geselecteerd</div>
+                                        <div className="flex items-center justify-center h-full text-muted-foreground text-[10px] font-black uppercase tracking-widest">Geen selectie</div>
                                     )}
                                     </div>
                                     {uploadedPhotos.length > 1 && (
-                                    <div className="flex gap-2 overflow-x-auto pb-2 shrink-0">
+                                    <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
                                         {uploadedPhotos.map(photo => (
                                         <div
                                             key={photo.storagePath}
                                             className={cn(
-                                            "relative shrink-0 w-16 h-16 rounded-md overflow-hidden cursor-pointer border-2",
-                                            mainPhoto?.storagePath === photo.storagePath ? "border-primary" : "border-transparent"
+                                            "relative shrink-0 w-16 h-16 rounded-xl overflow-hidden cursor-pointer border-2 transition-all",
+                                            mainPhoto?.storagePath === photo.storagePath ? "border-primary scale-105 shadow-md" : "border-transparent opacity-70"
                                             )}
                                             onClick={() => setMainPhoto(photo)}
                                         >
@@ -1036,21 +1051,22 @@ export default function IssuesPage() {
                                     )}
                                 </div>
                                 ) : (
-                                <div className="flex h-full min-h-[200px] items-center justify-center text-center text-muted-foreground">
-                                    Geen foto's bij deze melding.
+                                <div className="flex h-full min-h-[200px] items-center justify-center text-center text-muted-foreground bg-slate-50 rounded-xl border border-dashed">
+                                    <Camera className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                                    <p className="text-[10px] font-black uppercase tracking-widest">Geen foto's</p>
                                 </div>
                                 )}
                             </CardContent>
                         </Card>
-                        <Card className="flex flex-col min-h-[400px]">
-                          <CardHeader>
-                            <CardTitle>Foto's van Medewerker</CardTitle>
+                        <Card className="flex flex-col min-h-[300px] lg:min-h-[400px]">
+                          <CardHeader className="p-4 border-b">
+                            <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Foto's van Medewerker</CardTitle>
                           </CardHeader>
-                          <CardContent className="flex-1 flex flex-col space-y-4 p-4 pt-0 min-h-0">
+                          <CardContent className="flex-1 flex flex-col space-y-4 p-4 min-h-0">
                             <div
                               className={cn(
-                                "border-2 border-dashed border-muted-foreground/30 rounded-lg flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50 transition-colors flex-1",
-                                isDraggingAfhandelingPhoto && "bg-muted/50 border-primary"
+                                "border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-50 transition-all flex-1 min-h-[120px]",
+                                isDraggingAfhandelingPhoto && "bg-blue-50 border-primary"
                               )}
                               onDragEnter={() => setIsDraggingAfhandelingPhoto(true)}
                               onDragLeave={() => setIsDraggingAfhandelingPhoto(false)}
@@ -1058,8 +1074,8 @@ export default function IssuesPage() {
                               onDrop={handleAfhandelingPhotoDrop}
                               onClick={() => document.getElementById('afhandeling-photo-file-input')?.click()}
                             >
-                              <UploadCloud className="h-12 w-12 text-muted-foreground" />
-                              <p className="mt-4 font-semibold">Sleep foto's hierheen of klik om te uploaden</p>
+                              <UploadCloud className="h-10 w-10 text-slate-300" />
+                              <p className="mt-2 text-xs font-black uppercase tracking-tight text-slate-900">Nieuwe foto uploaden</p>
                               <input
                                 type="file"
                                 id="afhandeling-photo-file-input"
@@ -1074,39 +1090,39 @@ export default function IssuesPage() {
                                 <div className="space-y-2">
                                     {Object.entries(uploadProgress).map(([name, progress]) => (
                                         <div key={name} className="space-y-1 mt-2">
-                                            <p className="text-sm font-medium">{name}</p>
-                                            <Progress value={progress} className="w-full h-2" />
+                                            <p className="text-[10px] font-black uppercase text-slate-400">{name}</p>
+                                            <Progress value={progress} className="w-full h-1.5" />
                                         </div>
                                     ))}
                                 </div>
                             )}
                     
                             {afhandelingFotos.length > 0 && (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 overflow-y-auto">
+                                <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2 overflow-y-auto max-h-[300px] pr-1">
                                     {afhandelingFotos.map((photo) => (
-                                    <div key={photo.storagePath} className="relative group aspect-square">
-                                        <Image src={photo.url} alt={photo.name} fill className="object-cover rounded-md" />
+                                    <div key={photo.storagePath} className="relative group aspect-square rounded-xl overflow-hidden border bg-slate-100 shadow-sm">
+                                        <Image src={photo.url} alt={photo.name} fill className="object-cover" />
                                         <div
                                             className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
                                             onClick={() => setFullScreenPhoto(photo)}
                                         >
-                                            <Maximize className="h-8 w-8 text-white" />
+                                            <Maximize className="h-6 w-6 text-white" />
                                         </div>
                                         <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <AlertDialog>
                                                 <AlertDialogTrigger asChild>
-                                                    <Button type="button" variant="destructive" size="icon" className="h-7 w-7" disabled={isSubmitting}>
-                                                        <Trash2 className="h-4 w-4" />
+                                                    <Button type="button" variant="destructive" size="icon" className="h-6 w-6 rounded-full" disabled={isSubmitting}>
+                                                        <Trash2 className="h-3 w-3" />
                                                     </Button>
                                                 </AlertDialogTrigger>
                                                 <AlertDialogContent>
                                                     <AlertDialogHeader>
                                                         <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
-                                                        <AlertDialogDescription>Weet u zeker dat u deze foto wilt verwijderen?</AlertDialogDescription>
+                                                        <AlertDialogDescription>Deze foto wordt permanent verwijderd.</AlertDialogDescription>
                                                     </AlertDialogHeader>
                                                     <AlertDialogFooter>
                                                         <AlertDialogCancel>Annuleren</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleAfhandelingPhotoDelete(photo)}>Doorgaan</AlertDialogAction>
+                                                        <AlertDialogAction onClick={() => handleAfhandelingPhotoDelete(photo)} className="bg-red-600">Verwijderen</AlertDialogAction>
                                                     </AlertDialogFooter>
                                                 </AlertDialogContent>
                                             </AlertDialog>
@@ -1122,40 +1138,43 @@ export default function IssuesPage() {
                     <TabsContent value="Hoeveelheid" className="mt-0">
                         <Card>
                             <CardHeader>
-                                <CardTitle>Geregistreerd Materiaal</CardTitle>
+                                <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Geregistreerd Materiaal</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-6">
                                 <div className="space-y-2">
                                     {hoeveelheden.length > 0 ? (
                                         hoeveelheden.map((item) => (
-                                        <div key={item.id} className="flex items-center justify-between p-2 bg-muted rounded-md text-sm">
+                                        <div key={item.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs font-bold">
                                             <div className="flex-1 grid grid-cols-3 gap-2 items-center">
-                                                <span className="font-medium">{item.type}</span>
-                                                <span>{item.aantal}</span>
-                                                <span>{item.eenheid}</span>
+                                                <span className="font-black uppercase tracking-tight text-slate-900">{item.type}</span>
+                                                <span className="text-primary">{item.aantal}</span>
+                                                <span className="text-slate-400 uppercase tracking-widest text-[10px]">{item.eenheid}</span>
                                             </div>
-                                            <Button variant="ghost" size="icon" onClick={() => handleRemoveHoeveelheid(item.id)}>
-                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-600 hover:bg-red-50" onClick={() => handleRemoveHoeveelheid(item.id)}>
+                                                <Trash2 className="h-4 w-4" />
                                             </Button>
                                         </div>
                                         ))
                                     ) : (
-                                        <p className="text-sm text-muted-foreground text-center py-4">Nog geen hoeveelheden toegevoegd.</p>
+                                        <div className="p-12 text-center text-muted-foreground bg-slate-50 rounded-xl border border-dashed">
+                                            <Package className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                                            <p className="text-[10px] font-black uppercase tracking-widest">Geen materiaal geregistreerd</p>
+                                        </div>
                                     )}
                                 </div>
-                                <div className="flex items-end gap-2 border-t pt-4">
-                                    <div className="flex-1 space-y-1">
-                                        <Label htmlFor="type">Type</Label>
-                                        <Input id="type" placeholder="bv. Zwerfafval" value={newHoeveelheidType} onChange={(e) => setNewHoeveelheidType(e.target.value)} />
+                                <div className="flex flex-col sm:flex-row items-end gap-3 border-t pt-6">
+                                    <div className="flex-1 w-full space-y-1.5">
+                                        <Label htmlFor="type" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Type Materiaal</Label>
+                                        <Input id="type" placeholder="bv. Zwerfafval" value={newHoeveelheidType} onChange={(e) => setNewHoeveelheidType(e.target.value)} className="h-10" />
                                     </div>
-                                    <div className="w-24 space-y-1">
-                                        <Label htmlFor="aantal">Aantal</Label>
-                                        <Input id="aantal" type="number" placeholder="0" value={newHoeveelheidAantal} onChange={(e) => setNewHoeveelheidAantal(e.target.value)} />
+                                    <div className="w-full sm:w-24 space-y-1.5">
+                                        <Label htmlFor="aantal" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Aantal</Label>
+                                        <Input id="aantal" type="number" placeholder="0" value={newHoeveelheidAantal} onChange={(e) => setNewHoeveelheidAantal(e.target.value)} className="h-10" />
                                     </div>
-                                    <div className="w-32 space-y-1">
-                                        <Label htmlFor="eenheid">Eenheid</Label>
+                                    <div className="w-full sm:w-32 space-y-1.5">
+                                        <Label htmlFor="eenheid" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Eenheid</Label>
                                         <Select value={newHoeveelheidEenheid} onValueChange={setNewHoeveelheidEenheid}>
-                                            <SelectTrigger id="eenheid">
+                                            <SelectTrigger id="eenheid" className="h-10 font-bold">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -1166,7 +1185,7 @@ export default function IssuesPage() {
                                             </SelectContent>
                                         </Select>
                                     </div>
-                                    <Button onClick={handleAddHoeveelheid}>
+                                    <Button onClick={handleAddHoeveelheid} className="w-full sm:w-auto h-10 font-black uppercase tracking-tight">
                                         <Plus className="h-4 w-4 mr-2" />
                                         Toevoegen
                                     </Button>
@@ -1177,21 +1196,21 @@ export default function IssuesPage() {
                     <TabsContent value="Uren" className="mt-0">
                         <Card>
                             <CardHeader>
-                                <CardTitle>Urenregistratie</CardTitle>
-                                <CardDescription>
+                                <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Urenregistratie</CardTitle>
+                                <CardDescription className="text-xs font-medium">
                                     Totaal gewerkte tijd voor deze melding. De timer start als de werkbon wordt gestart.
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent className="p-6 space-y-4">
-                                 <div className="space-y-2 max-w-xs">
-                                    <Label>Geregistreerde tijd</Label>
-                                    <div className="text-xl font-bold p-2">
+                            <CardContent className="p-6 space-y-6">
+                                 <div className="space-y-2 bg-slate-50 p-6 rounded-2xl border border-slate-100 max-w-sm">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Geregistreerde tijd</Label>
+                                    <div className="text-3xl font-black tabular-nums tracking-tighter text-slate-900">
                                         {elapsedTime}
                                     </div>
                                     {selectedMelding?.workStartedAt && (
-                                        <div className="text-sm text-green-600 flex items-center gap-2">
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                            Timer loopt...
+                                        <div className="text-xs font-bold text-green-600 flex items-center gap-2 mt-2">
+                                            <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
+                                            Live registratie actief...
                                         </div>
                                     )}
                                 </div>
@@ -1205,9 +1224,9 @@ export default function IssuesPage() {
         )}
         {fullScreenPhoto && (
             <Dialog open={!!fullScreenPhoto} onOpenChange={(open) => !open && setFullScreenPhoto(null)}>
-                <DialogContent className="max-w-[95vw] h-auto max-h-[95vh] p-0 bg-transparent border-0 shadow-none flex items-center justify-center">
+                <DialogContent className="max-w-[95vw] h-auto max-h-[95vh] p-0 bg-black/90 border-0 shadow-2xl flex items-center justify-center overflow-hidden rounded-none">
                     <DialogHeader className="sr-only">
-                        <DialogTitle>Vergrote afbeelding: {fullScreenPhoto.name}</DialogTitle>
+                        <DialogTitle>Vergroting: {fullScreenPhoto.name}</DialogTitle>
                     </DialogHeader>
                     <Image 
                         src={fullScreenPhoto.url} 
@@ -1216,7 +1235,7 @@ export default function IssuesPage() {
                         height={1080}
                         className="object-contain w-auto h-auto max-w-full max-h-full"
                     />
-                    <DialogClose className="absolute top-2 right-2 rounded-full bg-black/50 p-1.5 text-white opacity-70 hover:opacity-100 transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                    <DialogClose className="absolute top-4 right-4 rounded-full bg-white/10 backdrop-blur-md p-2 text-white hover:bg-white/20 transition-all outline-none">
                         <X className="h-6 w-6" />
                     </DialogClose>
                 </DialogContent>

@@ -16,6 +16,7 @@ import {
   FileText,
   AlertCircle,
   Wrench,
+  Truck,
 } from 'lucide-react';
 import { collection, doc } from 'firebase/firestore';
 import { format } from 'date-fns';
@@ -122,21 +123,15 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
   const { data: documents, isLoading: documentsLoading } = useCollection<any>(documentsCollection);
 
   React.useEffect(() => {
-    if (!selectedItem && filteredMaterieel && filteredMaterieel.length > 0) {
+    if (!selectedItem && filteredMaterieel && filteredMaterieel.length > 0 && !isTablet) {
       setSelectedItem(filteredMaterieel[0]);
     } else if (selectedItem && filteredMaterieel) {
       if (!filteredMaterieel.find((v) => v.id === selectedItem.id)) {
-        setSelectedItem(filteredMaterieel.length > 0 ? filteredMaterieel[0] : null);
+        setSelectedItem(null);
       }
     }
-  }, [filteredMaterieel, selectedItem]);
+  }, [filteredMaterieel, selectedItem, isTablet]);
   
-  React.useEffect(() => {
-    if (isTablet) {
-        setSelectedItem(null);
-    }
-  }, [isTablet]);
-
   const [editingDamage, setEditingDamage] = React.useState<any | null>(null);
   const [isDamageDialogOpen, setIsDamageDialogOpen] = React.useState(false);
   const [editingDocument, setEditingDocument] = React.useState<any | null>(null);
@@ -187,73 +182,91 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
   }
 
   return (
-    <div className="grid lg:grid-cols-[300px_1fr] gap-6 min-h-0 h-full">
-        <Card className={cn("flex-col h-full min-h-0", isTablet && !selectedItem ? "flex" : "hidden lg:flex")}>
-          <CardHeader>
-            <Input 
-                placeholder={`Zoek ${materieelType}...`}
-                className="pl-9" 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+    <div className="grid lg:grid-cols-[300px_1fr] gap-6 min-h-0 h-full relative">
+        <Card className={cn(
+            "flex-col h-full min-h-0", 
+            isTablet && selectedItem ? "hidden" : "flex"
+        )}>
+          <CardHeader className="p-4 border-b">
+            <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                    placeholder={`Zoek ${materieelType}...`}
+                    className="pl-9 h-9" 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
           </CardHeader>
-          <CardContent className="p-2 flex-1 min-h-0 overflow-y-auto">
-            <div className="flex flex-col space-y-1 pr-2">
+          <CardContent className="p-2 flex-1 min-h-0 overflow-y-auto no-scrollbar">
+            <div className="flex flex-col space-y-1">
               {filteredMaterieel && filteredMaterieel.length > 0 ? (
                 filteredMaterieel.map((item) => (
                   <div
                     key={item.id}
                     onClick={() => setSelectedItem(item)}
-                    className={`flex items-start justify-between p-3 rounded-md text-left cursor-pointer ${
-                      selectedItem?.id === item.id && !isTablet
-                        ? 'bg-secondary'
-                        : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                    }`}
+                    className={cn(
+                        "flex items-start justify-between p-3 rounded-xl text-left cursor-pointer transition-all",
+                        selectedItem?.id === item.id && !isTablet
+                            ? "bg-primary text-white shadow-lg scale-[1.02]"
+                            : "hover:bg-slate-50 dark:hover:bg-slate-800"
+                    )}
                   >
-                    <div className="flex-1">
-                       <div className="inline-flex items-center bg-yellow-400 rounded-sm border-2 border-black overflow-hidden font-mono font-bold text-black text-sm">
-                        <div className="bg-blue-600 px-1 py-0.5 text-white text-xs">
-                           <span className='font-sans'>NL</span>
+                    <div className="flex-1 min-w-0">
+                       <div className={cn(
+                           "inline-flex items-center rounded-sm border-[1.5px] overflow-hidden font-mono font-bold text-[10px]",
+                           selectedItem?.id === item.id && !isTablet ? "bg-yellow-400 border-black text-black" : "bg-yellow-400 border-black text-black"
+                       )}>
+                        <div className="bg-blue-600 px-1 py-0.5 text-white">
+                           <span className='font-sans text-[8px]'>NL</span>
                         </div>
-                        <span className="px-2 py-0.5 tracking-wider">{item.id}</span>
+                        <span className="px-1.5 py-0.5 tracking-wider">{item.id}</span>
                       </div>
-                      <p className="text-sm text-muted-foreground mt-1">
+                      <p className={cn("text-xs font-black mt-1.5 truncate uppercase tracking-tight", selectedItem?.id === item.id && !isTablet ? "text-white" : "text-slate-900")}>
                         {item.merk} {item.model}
                       </p>
                       {(item.type || item.bouwjaar) && (
-                        <p className="text-xs text-muted-foreground">
-                          {item.type}
-                          {item.type && item.bouwjaar && ' ' }
-                          {item.bouwjaar && `(${item.bouwjaar})`}
+                        <p className={cn("text-[10px] font-bold uppercase tracking-tighter mt-0.5", selectedItem?.id === item.id && !isTablet ? "text-white/70" : "text-slate-400")}>
+                          {item.type} {item.bouwjaar && `(${item.bouwjaar})`}
                         </p>
                       )}
                     </div>
+                    {selectedItem?.id !== item.id && (
+                        <ChevronRight className="h-4 w-4 text-slate-300 mt-1" />
+                    )}
                   </div>
                 ))
               ) : (
-                <div className="text-center text-muted-foreground p-4">
-                  Geen {materieelType} gevonden.
+                <div className="text-center p-12 text-muted-foreground bg-slate-50/50 rounded-2xl m-2">
+                  <Truck className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                  <p className="font-bold uppercase text-[10px] tracking-widest">Geen {materieelType}</p>
                 </div>
               )}
             </div>
           </CardContent>
         </Card>
 
-        <div className={cn("flex-col gap-6 min-h-0", selectedItem ? "flex" : "hidden lg:flex")}>
+        <div className={cn(
+            "flex-col gap-6 min-h-0", 
+            selectedItem ? "flex" : "hidden lg:flex"
+        )}>
           {selectedItem ? (
             <>
-              <Card>
-                <CardHeader>
+              <Card className="rounded-2xl shadow-sm border-slate-100 overflow-hidden">
+                <CardHeader className="bg-slate-50/50 border-b p-4 md:p-6">
                   <div className="flex items-start justify-between">
-                    <div className='flex items-center gap-2'>
+                    <div className='flex items-center gap-3'>
                        {isTablet && (
-                          <Button variant="ghost" size="icon" onClick={() => setSelectedItem(null)}>
+                          <Button variant="ghost" size="icon" onClick={() => setSelectedItem(null)} className="h-9 w-9 rounded-full bg-white shadow-sm border border-slate-200">
                             <ArrowLeft className="h-4 w-4" />
                           </Button>
                         )}
-                        <h2 className="text-2xl font-bold">
-                          {selectedItem?.id}
-                        </h2>
+                        <div>
+                            <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-900 leading-none mb-1">
+                            {selectedItem?.id}
+                            </h2>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{selectedItem?.merk} {selectedItem?.model}</p>
+                        </div>
                     </div>
                     <Badge
                       variant={
@@ -261,22 +274,23 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                           ? 'outline'
                           : 'destructive'
                       }
-                      className={
+                      className={cn(
+                        "font-black uppercase text-[10px] tracking-widest px-3 h-6",
                         selectedItem?.status === 'Actief'
-                          ? 'text-green-600 border-green-600 bg-green-50 dark:bg-green-900/10'
-                          : ''
-                      }
+                          ? 'text-green-600 border-green-200 bg-green-50'
+                          : 'bg-red-600 text-white'
+                      )}
                     >
                       {selectedItem?.status ?? 'Onbekend'}
                     </Badge>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col lg:flex-row gap-6">
+                <CardContent className="p-6">
+                  <div className="flex flex-col xl:flex-row gap-8">
                     <div className="flex-1">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold">
-                          Algemene gegevens
+                      <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">
+                          Specificaties
                         </h3>
                         {canEdit && <AddVehicleDialog
                           vehicle={selectedItem}
@@ -284,68 +298,69 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                           onOpenChange={setIsVehicleDialogOpen}
                           materieelType={materieelType}
                         >
-                          <Button variant="ghost" size="icon" onClick={handleEditVehicle}>
-                            <Pencil className="h-4 w-4" />
+                          <Button variant="outline" size="sm" className="h-8 font-bold" onClick={handleEditVehicle}>
+                            <Pencil className="mr-2 h-3.5 w-3.5" />
+                            Bewerken
                           </Button>
                         </AddVehicleDialog>}
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                        <div className="flex justify-between border-b pb-2">
-                          <span className="text-muted-foreground">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-4">
+                        <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
+                          <span className="text-slate-400 uppercase tracking-tighter">
                             {idLabel}
                           </span>
-                          <span className="font-medium">
+                          <span className="text-slate-900 font-black">
                             {selectedItem?.id}
                           </span>
                         </div>
-                        <div className="flex justify-between border-b pb-2">
-                          <span className="text-muted-foreground">
+                        <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
+                          <span className="text-slate-400 uppercase tracking-tighter">
                             {numberLabel}
                           </span>
-                          <span className="font-medium">
+                          <span className="text-slate-900 font-black">
                             {selectedItem?.[numberField] ?? '-'}
                           </span>
                         </div>
-                        <div className="flex justify-between border-b pb-2">
-                          <span className="text-muted-foreground">Merk</span>
-                          <span className="font-medium">
+                        <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
+                          <span className="text-slate-400 uppercase tracking-tighter">Merk</span>
+                          <span className="text-slate-900 font-black">
                             {selectedItem?.merk}
                           </span>
                         </div>
-                        <div className="flex justify-between border-b pb-2">
-                          <span className="text-muted-foreground">Model</span>
-                          <span className="font-medium">
+                        <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
+                          <span className="text-slate-400 uppercase tracking-tighter">Model</span>
+                          <span className="text-slate-900 font-black">
                             {selectedItem?.model}
                           </span>
                         </div>
-                        <div className="flex justify-between border-b pb-2">
-                          <span className="text-muted-foreground">Type</span>
-                          <span className="font-medium">
+                        <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
+                          <span className="text-slate-400 uppercase tracking-tighter">Type</span>
+                          <span className="text-slate-900 font-black">
                             {selectedItem?.type ?? '-'}
                           </span>
                         </div>
-                        <div className="flex justify-between border-b pb-2">
-                          <span className="text-muted-foreground">
+                        <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
+                          <span className="text-slate-400 uppercase tracking-tighter">
                             Bouwjaar
                           </span>
-                          <span className="font-medium">
+                          <span className="text-slate-900 font-black">
                             {selectedItem?.bouwjaar ?? '-'}
                           </span>
                         </div>
 
-                        <div className="flex justify-between border-b pb-2">
-                          <span className="text-muted-foreground">
+                        <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
+                          <span className="text-slate-400 uppercase tracking-tighter">
                             Brandstof
                           </span>
-                          <span className="font-medium">
+                          <span className="text-slate-900 font-black">
                             {selectedItem?.brandstof ?? '-'}
                           </span>
                         </div>
-                        <div className="flex justify-between border-b pb-2">
-                          <span className="text-muted-foreground">
+                        <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
+                          <span className="text-slate-400 uppercase tracking-tighter">
                             APK vervaldatum
                           </span>
-                          <span className="font-medium">
+                          <span className="text-slate-900 font-black">
                             {selectedItem?.apk_vervaldatum
                               ? format(
                                   new Date(selectedItem.apk_vervaldatum),
@@ -354,11 +369,11 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                               : '-'}
                           </span>
                         </div>
-                        <div className="flex justify-between border-b pb-2">
-                          <span className="text-muted-foreground">
+                        <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
+                          <span className="text-slate-400 uppercase tracking-tighter">
                             Opbouw keuring
                           </span>
-                          <span className="font-medium">
+                          <span className="text-slate-900 font-black">
                             {selectedItem?.opbouw_keuring
                               ? format(
                                   new Date(selectedItem.opbouw_keuring),
@@ -367,11 +382,11 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                               : '-'}
                           </span>
                         </div>
-                        <div className="flex justify-between border-b pb-2">
-                          <span className="text-muted-foreground">
+                        <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
+                          <span className="text-slate-400 uppercase tracking-tighter">
                             Bandenwissel
                           </span>
-                          <span className="font-medium">
+                          <span className="text-slate-900 font-black">
                             {selectedItem?.bandenwissel
                               ? format(
                                   new Date(selectedItem.bandenwissel),
@@ -387,178 +402,198 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
               </Card>
 
               <Tabs defaultValue="maintenance" className="flex-1 flex flex-col min-h-0">
-                <TabsList>
-                  {canViewTab('maintenance') && <TabsTrigger value="maintenance">Onderhoud</TabsTrigger>}
-                  {canViewTab('damages') && <TabsTrigger value="damages">Schade</TabsTrigger>}
-                  {canViewTab('documents') && <TabsTrigger value="documents">Documenten</TabsTrigger>}
-                </TabsList>
+                <div className="overflow-x-auto no-scrollbar pb-1">
+                    <TabsList className="w-max inline-flex">
+                        {canViewTab('maintenance') && <TabsTrigger value="maintenance">Onderhoud</TabsTrigger>}
+                        {canViewTab('damages') && <TabsTrigger value="damages">Schade</TabsTrigger>}
+                        {canViewTab('documents') && <TabsTrigger value="documents">Documenten</TabsTrigger>}
+                    </TabsList>
+                </div>
                 
                 {canViewTab('maintenance') && <TabsContent value="maintenance" className="flex-1 mt-4">
-                   <Card className="h-full flex flex-col">
-                    <CardHeader className="flex-row items-center justify-between">
-                      <CardTitle>Onderhoud</CardTitle>
+                   <Card className="h-full flex flex-col rounded-2xl shadow-sm border-slate-100 overflow-hidden">
+                    <CardHeader className="flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border-b">
+                      <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Onderhoudshistorie</CardTitle>
                       {canEdit && <AddMaintenanceDialog materieelId={selectedItem.id} materieelType={materieelType}>
-                        <Button size="sm">
+                        <Button size="sm" className="w-full sm:w-auto h-8 font-black uppercase tracking-tight">
                           <Plus className="mr-2 h-4 w-4" />
-                          Onderhoud toevoegen
+                          Toevoegen
                         </Button>
                       </AddMaintenanceDialog>}
                     </CardHeader>
-                    <CardContent className="flex-1 overflow-auto">
-                      <Table>
-                        <TableHeader className="bg-muted/50 sticky top-0 z-10">
-                          <TableRow>
-                            <TableHead>Datum</TableHead>
-                            <TableHead>Omschrijving</TableHead>
-                            <TableHead>Type</TableHead>
-                            <TableHead>Details</TableHead>
-                            <TableHead className="text-right">Kosten</TableHead>
-                            <TableHead className="w-[50px]"></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {maintenanceLoading ? (
-                            <TableRow><TableCell colSpan={6} className="text-center py-10"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
-                          ) : maintenance && maintenance.length > 0 ? (
-                            maintenance.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((item: any) => (
-                              <TableRow key={item.id} className="group">
-                                <TableCell>{format(new Date(item.date), 'dd-MM-yyyy')}</TableCell>
-                                <TableCell className="font-medium">{item.description}</TableCell>
-                                <TableCell>{item.type}</TableCell>
-                                <TableCell className="text-muted-foreground max-w-[200px] truncate" title={item.details}>{item.details || '-'}</TableCell>
-                                <TableCell className="text-right">€ {Number(item.cost || 0).toLocaleString('nl-NL', { minimumFractionDigits: 2 })}</TableCell>
-                                <TableCell>
-                                  {canDelete && (
-                                    <AlertDialog>
-                                      <AlertDialogTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="h-4 w-4" /></Button>
-                                      </AlertDialogTrigger>
-                                      <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                          <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
-                                          <AlertDialogDescription>Deze actie kan niet ongedaan worden gemaakt. Dit zal het onderhoudsrecord permanent verwijderen.</AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                          <AlertDialogCancel>Annuleren</AlertDialogCancel>
-                                          <AlertDialogAction onClick={() => handleDeleteMaintenance(item.id)}>Doorgaan</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                      </AlertDialogContent>
-                                    </AlertDialog>
-                                  )}
-                                </TableCell>
-                              </TableRow>
-                            ))
-                          ) : (
-                            <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground">Geen onderhoudshistorie gevonden.</TableCell></TableRow>
-                          )}
-                        </TableBody>
-                      </Table>
+                    <CardContent className="flex-1 overflow-auto p-0">
+                      <div className="overflow-x-auto">
+                        <Table className="min-w-[700px]">
+                            <TableHeader className="bg-slate-50/50 sticky top-0 z-10">
+                            <TableRow className="hover:bg-transparent">
+                                <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Datum</TableHead>
+                                <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Omschrijving</TableHead>
+                                <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Type</TableHead>
+                                <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Details</TableHead>
+                                <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3 text-right">Kosten</TableHead>
+                                <TableHead className="w-[50px]"></TableHead>
+                            </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                            {maintenanceLoading ? (
+                                <TableRow><TableCell colSpan={6} className="text-center py-10"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></TableCell></TableRow>
+                            ) : maintenance && maintenance.length > 0 ? (
+                                maintenance.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((item: any) => (
+                                <TableRow key={item.id} className="group hover:bg-slate-50/50 transition-colors border-b border-slate-100">
+                                    <TableCell className="text-xs font-bold text-slate-600">{format(new Date(item.date), 'dd-MM-yyyy')}</TableCell>
+                                    <TableCell className="font-black text-xs text-slate-900">{item.description}</TableCell>
+                                    <TableCell><Badge variant="secondary" className="text-[9px] font-black uppercase px-2 h-5 bg-slate-100 border-none">{item.type}</Badge></TableCell>
+                                    <TableCell className="text-[11px] text-slate-400 max-w-[200px] truncate italic" title={item.details}>{item.details || '-'}</TableCell>
+                                    <TableCell className="text-right font-black text-xs">€ {Number(item.cost || 0).toLocaleString('nl-NL', { minimumFractionDigits: 2 })}</TableCell>
+                                    <TableCell>
+                                    {canDelete && (
+                                        <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="h-4 w-4" /></Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                            <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
+                                            <AlertDialogDescription>Dit onderhoudsrecord wordt permanent verwijderd.</AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDeleteMaintenance(item.id)} className="bg-red-600">Verwijderen</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                        </AlertDialog>
+                                    )}
+                                    </TableCell>
+                                </TableRow>
+                                ))
+                            ) : (
+                                <TableRow><TableCell colSpan={6} className="text-center py-16 text-muted-foreground bg-slate-50/30">
+                                    <Wrench className="h-10 w-10 mx-auto mb-3 opacity-10" />
+                                    <p className="text-[10px] font-black uppercase tracking-widest">Geen onderhoudshistorie</p>
+                                </TableCell></TableRow>
+                            )}
+                            </TableBody>
+                        </Table>
+                      </div>
                     </CardContent>
                   </Card>
                 </TabsContent>}
 
                 {canViewTab('damages') && <TabsContent value="damages" className="flex-1 mt-4">
-                  <Card className="h-full flex flex-col">
-                    <CardHeader className="flex-row items-center justify-between">
-                      <CardTitle>Schade</CardTitle>
-                      {canEdit && <Button size="sm" onClick={handleAddNewDamage}>
+                  <Card className="h-full flex flex-col rounded-2xl shadow-sm border-slate-100 overflow-hidden">
+                    <CardHeader className="flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border-b">
+                      <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Schademeldingen</CardTitle>
+                      {canEdit && <Button size="sm" onClick={handleAddNewDamage} className="w-full sm:w-auto h-8 font-black uppercase tracking-tight">
                         <Plus className="mr-2 h-4 w-4" />
                         Schade melden
                       </Button>}
                     </CardHeader>
-                    <CardContent className="flex-1 overflow-auto">
-                      <Table>
-                        <TableHeader className="bg-muted/50 sticky top-0 z-10">
-                          <TableRow>
-                            <TableHead>Datum</TableHead>
-                            <TableHead>Omschrijving</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-center">Bestanden</TableHead>
-                            <TableHead className="w-[50px]"></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {damagesLoading ? (
-                            <TableRow><TableCell colSpan={5} className="text-center py-10"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
-                          ) : damages && damages.length > 0 ? (
-                            damages.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((item: any) => (
-                              <TableRow key={item.id} className="group cursor-pointer hover:bg-muted/30" onClick={() => handleEditDamage(item)}>
-                                <TableCell>{format(new Date(item.date), 'dd-MM-yyyy')}</TableCell>
-                                <TableCell className="font-medium truncate max-w-xs">{item.description}</TableCell>
-                                <TableCell>
-                                  <Badge variant={item.status === 'Afgehandeld' ? 'outline' : 'secondary'}>
-                                    {item.status || 'Open'}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="text-center">
-                                  {item.files?.length > 0 ? (
-                                    <div className="flex items-center justify-center gap-1 text-muted-foreground">
-                                      <FileIcon className="h-4 w-4" />
-                                      <span className="text-xs">{item.files.length}</span>
-                                    </div>
-                                  ) : '-'}
-                                </TableCell>
-                                <TableCell>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="h-4 w-4" /></Button>
-                                </TableCell>
-                              </TableRow>
-                            ))
-                          ) : (
-                            <TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground">Geen schademeldingen gevonden.</TableCell></TableRow>
-                          )}
-                        </TableBody>
-                      </Table>
+                    <CardContent className="flex-1 overflow-auto p-0">
+                      <div className="overflow-x-auto">
+                        <Table className="min-w-[600px]">
+                            <TableHeader className="bg-slate-50/50 sticky top-0 z-10">
+                            <TableRow className="hover:bg-transparent">
+                                <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Datum</TableHead>
+                                <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Omschrijving</TableHead>
+                                <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Status</TableHead>
+                                <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3 text-center">Bestanden</TableHead>
+                                <TableHead className="w-[50px]"></TableHead>
+                            </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                            {damagesLoading ? (
+                                <TableRow><TableCell colSpan={5} className="text-center py-10"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></TableCell></TableRow>
+                            ) : damages && damages.length > 0 ? (
+                                damages.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((item: any) => (
+                                <TableRow key={item.id} className="group cursor-pointer hover:bg-slate-50/50 transition-colors border-b border-slate-100" onClick={() => handleEditDamage(item)}>
+                                    <TableCell className="text-xs font-bold text-slate-600">{format(new Date(item.date), 'dd-MM-yyyy')}</TableCell>
+                                    <TableCell className="font-black text-xs text-slate-900 truncate max-w-xs">{item.description}</TableCell>
+                                    <TableCell>
+                                    <Badge variant={item.status === 'Afgehandeld' ? 'outline' : 'secondary'} className={cn(
+                                        "text-[9px] font-black uppercase px-2 h-5",
+                                        item.status === 'Afgehandeld' ? "text-green-600 border-green-200" : "bg-orange-100 text-orange-600 border-none"
+                                    )}>
+                                        {item.status || 'Open'}
+                                    </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                    {item.files?.length > 0 ? (
+                                        <div className="flex items-center justify-center gap-1.5 text-slate-400">
+                                        <FileIcon className="h-3.5 w-3.5" />
+                                        <span className="text-[10px] font-black">{item.files.length}</span>
+                                        </div>
+                                    ) : '-'}
+                                    </TableCell>
+                                    <TableCell>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="h-4 w-4" /></Button>
+                                    </TableCell>
+                                </TableRow>
+                                ))
+                            ) : (
+                                <TableRow><TableCell colSpan={5} className="text-center py-16 text-muted-foreground bg-slate-50/30">
+                                    <AlertCircle className="h-10 w-10 mx-auto mb-3 opacity-10" />
+                                    <p className="text-[10px] font-black uppercase tracking-widest">Geen schademeldingen</p>
+                                </TableCell></TableRow>
+                            )}
+                            </TableBody>
+                        </Table>
+                      </div>
                     </CardContent>
                   </Card>
                 </TabsContent>}
 
                 {canViewTab('documents') && <TabsContent value="documents" className="flex-1 mt-4">
-                  <Card className="h-full flex flex-col">
-                    <CardHeader className="flex-row items-center justify-between">
-                      <CardTitle>Documenten</CardTitle>
-                      {canEdit && <Button size="sm" onClick={handleAddNewDocument}>
+                  <Card className="h-full flex flex-col rounded-2xl shadow-sm border-slate-100 overflow-hidden">
+                    <CardHeader className="flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border-b">
+                      <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Projectbestanden</CardTitle>
+                      {canEdit && <Button size="sm" onClick={handleAddNewDocument} className="w-full sm:w-auto h-8 font-black uppercase tracking-tight">
                         <Plus className="mr-2 h-4 w-4" />
-                        Document toevoegen
+                        Toevoegen
                       </Button>}
                     </CardHeader>
-                    <CardContent className="flex-1 overflow-auto">
-                      <Table>
-                        <TableHeader className="bg-muted/50 sticky top-0 z-10">
-                          <TableRow>
-                            <TableHead>Titel</TableHead>
-                            <TableHead>Omschrijving</TableHead>
-                            <TableHead>Toegevoegd op</TableHead>
-                            <TableHead className="text-center">Bestanden</TableHead>
-                            <TableHead className="w-[50px]"></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {documentsLoading ? (
-                            <TableRow><TableCell colSpan={5} className="text-center py-10"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
-                          ) : documents && documents.length > 0 ? (
-                            documents.sort((a: any, b: any) => new Date(b.updatedAt?.seconds * 1000 || 0).getTime() - new Date(a.updatedAt?.seconds * 1000 || 0).getTime()).map((item: any) => (
-                              <TableRow key={item.id} className="group cursor-pointer hover:bg-muted/30" onClick={() => handleEditDocument(item)}>
-                                <TableCell className="font-medium">{item.title}</TableCell>
-                                <TableCell className="text-muted-foreground truncate max-w-xs">{item.description || '-'}</TableCell>
-                                <TableCell>{item.updatedAt ? format(new Date(item.updatedAt.seconds * 1000), 'dd-MM-yyyy') : '-'}</TableCell>
-                                <TableCell className="text-center">
-                                  {item.files?.length > 0 ? (
-                                    <div className="flex items-center justify-center gap-1 text-muted-foreground">
-                                      <FileIcon className="h-4 w-4" />
-                                      <span className="text-xs">{item.files.length}</span>
-                                    </div>
-                                  ) : '-'}
-                                </TableCell>
-                                <TableCell>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="h-4 w-4" /></Button>
-                                </TableCell>
-                              </TableRow>
-                            ))
-                          ) : (
-                            <TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground">Geen documenten gevonden.</TableCell></TableRow>
-                          )}
-                        </TableBody>
-                      </Table>
+                    <CardContent className="flex-1 overflow-auto p-0">
+                      <div className="overflow-x-auto">
+                        <Table className="min-w-[600px]">
+                            <TableHeader className="bg-slate-50/50 sticky top-0 z-10">
+                            <TableRow className="hover:bg-transparent">
+                                <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Titel</TableHead>
+                                <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Omschrijving</TableHead>
+                                <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Datum</TableHead>
+                                <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3 text-center">Bijlagen</TableHead>
+                                <TableHead className="w-[50px]"></TableHead>
+                            </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                            {documentsLoading ? (
+                                <TableRow><TableCell colSpan={5} className="text-center py-10"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></TableCell></TableRow>
+                            ) : documents && documents.length > 0 ? (
+                                documents.sort((a: any, b: any) => new Date(b.updatedAt?.seconds * 1000 || 0).getTime() - new Date(a.updatedAt?.seconds * 1000 || 0).getTime()).map((item: any) => (
+                                <TableRow key={item.id} className="group cursor-pointer hover:bg-slate-50/50 transition-colors border-b border-slate-100" onClick={() => handleEditDocument(item)}>
+                                    <TableCell className="font-black text-xs text-slate-900">{item.title}</TableCell>
+                                    <TableCell className="text-[11px] text-slate-400 truncate max-w-xs italic">{item.description || '-'}</TableCell>
+                                    <TableCell className="text-xs font-bold text-slate-600">{item.updatedAt ? format(new Date(item.updatedAt.seconds * 1000), 'dd-MM-yyyy') : '-'}</TableCell>
+                                    <TableCell className="text-center">
+                                    {item.files?.length > 0 ? (
+                                        <div className="flex items-center justify-center gap-1.5 text-slate-400">
+                                        <FileIcon className="h-3.5 w-3.5" />
+                                        <span className="text-[10px] font-black">{item.files.length}</span>
+                                        </div>
+                                    ) : '-'}
+                                    </TableCell>
+                                    <TableCell>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="h-4 w-4" /></Button>
+                                    </TableCell>
+                                </TableRow>
+                                ))
+                            ) : (
+                                <TableRow><TableCell colSpan={5} className="text-center py-16 text-muted-foreground bg-slate-50/30">
+                                    <FileText className="h-10 w-10 mx-auto mb-3 opacity-10" />
+                                    <p className="text-[10px] font-black uppercase tracking-widest">Geen documenten</p>
+                                </TableCell></TableRow>
+                            )}
+                            </TableBody>
+                        </Table>
+                      </div>
                     </CardContent>
                   </Card>
                 </TabsContent>}
@@ -581,8 +616,9 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
               />
             </>
           ) : (
-            <div className="flex items-center justify-center h-full text-muted-foreground">
-              Selecteer een item om de details te bekijken.
+            <div className="flex flex-col items-center justify-center h-full p-12 text-center bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-200">
+                <Truck className="h-12 w-12 text-slate-300 mb-4 opacity-20" />
+                <p className="font-bold uppercase text-[10px] tracking-widest text-slate-400">Selecteer een item uit de lijst om de details te bekijken.</p>
             </div>
           )}
         </div>
@@ -609,22 +645,22 @@ export default function MaterieelBeheerPage() {
   };
   
   return (
-    <div className="grid grid-rows-[auto_1fr] flex-1 min-h-0">
+    <div className="grid grid-rows-[auto_1fr] flex-1 min-h-0 bg-white">
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as MaterieelType)} className="flex-1 flex flex-col min-h-0">
-        <header className="flex flex-col sm:flex-row items-center justify-between gap-4 p-6">
-            <TabsList>
-                <TabsTrigger value="voertuigen">Voertuigen</TabsTrigger>
-                <TabsTrigger value="machines">Machines</TabsTrigger>
+        <header className="flex flex-col md:flex-row items-center justify-between gap-4 p-4 md:p-6 border-b bg-slate-50/30">
+            <TabsList className="w-full sm:w-auto">
+                <TabsTrigger value="voertuigen" className="flex-1 sm:flex-none">Voertuigen</TabsTrigger>
+                <TabsTrigger value="machines" className="flex-1 sm:flex-none">Machines</TabsTrigger>
             </TabsList>
-            <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setIsApkDialogOpen(true)}>
-                <CalendarCheck className="mr-2 h-4 w-4" /> APK
+            <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto no-scrollbar pb-1">
+            <Button variant="outline" size="sm" onClick={() => setIsApkDialogOpen(true)} className="shrink-0 font-bold h-9">
+                <CalendarCheck className="mr-2 h-4 w-4 text-primary" /> APK
             </Button>
-            <Button variant="outline" onClick={() => setIsMaintenanceDialogOpen(true)}>
-                <Wrench className="mr-2 h-4 w-4" /> Onderhoud
+            <Button variant="outline" size="sm" onClick={() => setIsMaintenanceDialogOpen(true)} className="shrink-0 font-bold h-9">
+                <Wrench className="mr-2 h-4 w-4 text-primary" /> Onderhoud
             </Button>
             {canCreate && <AddVehicleDialog materieelType={activeTab}>
-                <Button>
+                <Button size="sm" className="shrink-0 font-black h-9 uppercase tracking-tight">
                 <Plus className="mr-2 h-4 w-4" /> Nieuw
                 </Button>
             </AddVehicleDialog>}
@@ -633,21 +669,21 @@ export default function MaterieelBeheerPage() {
                 onOpenChange={setIsImporting}
                 onSuccess={handleImportSuccess}
             >
-                <Button variant="outline" disabled={activeTab === 'machines'}>
+                <Button variant="outline" size="sm" disabled={activeTab === 'machines'} className="shrink-0 font-bold h-9">
                 <Upload className="mr-2 h-4 w-4" />
                 Import
                 </Button>
             </VehicleImportDialog>
-            <Button variant="outline">
+            <Button variant="outline" size="sm" className="shrink-0 font-bold h-9">
                 <Download className="mr-2 h-4 w-4" />
                 Export
             </Button>
             </div>
         </header>
-        <TabsContent value="voertuigen" className="px-6 pb-6 flex-1 min-h-0">
+        <TabsContent value="voertuigen" className="p-4 md:p-6 flex-1 min-h-0">
           <MaterielView materieelType="voertuigen" canEdit={canEdit} canDelete={canDelete} />
         </TabsContent>
-        <TabsContent value="machines" className="px-6 pb-6 flex-1 min-h-0">
+        <TabsContent value="machines" className="p-4 md:p-6 flex-1 min-h-0">
           <MaterielView materieelType="machines" canEdit={canEdit} canDelete={canDelete} />
         </TabsContent>
       </Tabs>

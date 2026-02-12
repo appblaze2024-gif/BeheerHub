@@ -26,7 +26,9 @@ import {
   Battery,
   Zap,
   Smartphone,
-  X as XIcon
+  X as XIcon,
+  ChevronLeft,
+  ArrowLeft,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFirestore, useCollection, deleteDocumentNonBlocking, useMemoFirebase } from '@/firebase';
@@ -69,10 +71,12 @@ import {
 } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { LoadingScreen } from '@/components/loading-screen';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export default function IoTPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const isTablet = useIsMobile(1024);
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
   const [selectedSensorId, setSelectedSensorId] = React.useState<string | null>(null);
   const [copied = false, setCopied] = React.useState(false);
@@ -218,63 +222,66 @@ void loop() {
   }
 
   return (
-    <div className="flex flex-col flex-1 p-4 min-h-0 bg-slate-50 dark:bg-zinc-950 overflow-hidden">
+    <div className="flex flex-col flex-1 p-4 md:p-6 min-h-0 bg-slate-50 dark:bg-zinc-950 overflow-hidden">
       <PageHeader 
-        title="Internet of Things & Sensoren" 
+        title="Internet of Things" 
         description="Beheer hardware-koppelingen via unieke serienummers."
-        className="p-0 mb-4"
+        className="p-0 mb-6"
       >
-        <Button onClick={() => setIsAddDialogOpen(true)} className="font-bold">
+        <Button onClick={() => setIsAddDialogOpen(true)} className="font-black h-10 uppercase tracking-tight">
           <Plus className="mr-2 h-4 w-4" /> Nieuwe Sensor
         </Button>
       </PageHeader>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-        <Card className="shadow-none border-slate-200">
-          <CardContent className="p-3 flex items-center justify-between">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <Card className="shadow-sm border-slate-100 rounded-2xl overflow-hidden">
+          <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Apparaten</p>
-              <p className="text-xl font-black">{sensors?.length || 0}</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Apparaten</p>
+              <p className="text-3xl font-black text-slate-900 leading-none">{sensors?.length || 0}</p>
             </div>
-            <Cpu className="h-5 w-5 text-blue-500" />
+            <div className="bg-blue-50 p-3 rounded-2xl"><Cpu className="h-6 w-6 text-blue-500" /></div>
           </CardContent>
         </Card>
-        <Card className="shadow-none border-slate-200">
-          <CardContent className="p-3 flex items-center justify-between">
+        <Card className="shadow-sm border-slate-100 rounded-2xl overflow-hidden">
+          <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">API Methode</p>
-              <p className="text-xl font-black">REST PATCH</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">API Methode</p>
+              <p className="text-3xl font-black text-slate-900 leading-none">REST</p>
             </div>
-            <Terminal className="h-5 w-5 text-purple-500" />
+            <div className="bg-purple-50 p-3 rounded-2xl"><Terminal className="h-6 w-6 text-purple-500" /></div>
           </CardContent>
         </Card>
-        <Card className="shadow-none border-slate-200">
-          <CardContent className="p-3 flex items-center justify-between">
+        <Card className="shadow-sm border-slate-100 rounded-2xl overflow-hidden hidden lg:flex">
+          <CardContent className="p-4 flex items-center justify-between w-full">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Gem. Vulgraad</p>
-              <p className="text-xl font-black text-green-600">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Gem. Vulgraad</p>
+              <p className="text-3xl font-black text-green-600 leading-none">
                 {sensors?.length ? Math.round(sensors.reduce((acc, s) => acc + (s.vulgraad || 0), 0) / sensors.length) : 0}%
               </p>
             </div>
-            <Wifi className="h-5 w-5 text-green-500" />
+            <div className="bg-green-50 p-3 rounded-2xl"><Wifi className="h-6 w-6 text-green-500" /></div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="flex-1 grid grid-cols-1 xl:grid-cols-12 gap-4 min-h-0 overflow-hidden">
-        <Card className="xl:col-span-3 flex flex-col shadow-none overflow-hidden border-slate-200">
-          <CardHeader className="p-3 border-b bg-muted/20">
-            <CardTitle className="text-xs font-bold uppercase tracking-tight">Gekoppelde Units</CardTitle>
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0 overflow-hidden">
+        <Card className={cn(
+            "lg:col-span-3 flex flex-col shadow-sm rounded-2xl overflow-hidden border-slate-100",
+            isTablet && selectedSensorId ? "hidden" : "flex"
+        )}>
+          <CardHeader className="p-4 border-b bg-slate-50/50">
+            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Gekoppelde Units</CardTitle>
           </CardHeader>
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto no-scrollbar">
             {sensors && sensors.length > 0 ? (
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-slate-50">
                 {sensors.map(sensor => (
                   <div 
                     key={sensor.id} 
                     className={cn(
-                      "p-3 flex items-start gap-3 cursor-pointer hover:bg-slate-50 transition-all",
-                      selectedSensorId === sensor.id && "bg-white shadow-sm border-l-4 border-l-primary pl-2"
+                      "p-4 flex items-start gap-4 cursor-pointer transition-all hover:bg-slate-50/50",
+                      selectedSensorId === sensor.id && !isTablet && "bg-blue-50 border-l-4 border-l-primary"
                     )}
                     onClick={() => {
                         setSelectedSensorId(sensor.id);
@@ -283,26 +290,26 @@ void loop() {
                     }}
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start mb-1">
-                        <p className="font-bold text-xs truncate pr-2">{sensor.name}</p>
+                      <div className="flex justify-between items-start mb-1.5">
+                        <p className="font-black text-xs uppercase tracking-tight text-slate-900 truncate pr-2">{sensor.name}</p>
                         {getStatusBadge(sensor.status)}
                       </div>
-                      <div className="flex flex-col gap-1">
+                      <div className="flex flex-col gap-2">
                         <div className="flex items-center justify-between">
-                          <code className="text-[9px] bg-slate-100 px-1 rounded font-mono text-muted-foreground">{sensor.id}</code>
-                          <span className="text-[10px] font-black">{sensor.vulgraad || 0}%</span>
+                          <code className="text-[9px] bg-white border border-slate-200 px-1.5 py-0.5 rounded font-mono font-bold text-slate-500 uppercase">{sensor.id}</code>
+                          <span className="text-[10px] font-black text-slate-900">{sensor.vulgraad || 0}%</span>
                         </div>
                         <Progress value={sensor.vulgraad || 0} variant="gauge" className="h-1" />
                       </div>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0"><MoreVertical className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-slate-600"><MoreVertical className="h-4 w-4" /></Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-600 font-bold">
                               <Trash2 className="mr-2 h-4 w-4" /> Verwijderen
                             </DropdownMenuItem>
                           </AlertDialogTrigger>
@@ -313,7 +320,7 @@ void loop() {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Annuleren</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(sensor.id)} className="bg-destructive text-white hover:bg-destructive/90">Verwijderen</AlertDialogAction>
+                              <AlertDialogAction onClick={() => handleDelete(sensor.id)} className="bg-red-600">Verwijderen</AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
@@ -323,32 +330,39 @@ void loop() {
                 ))}
               </div>
             ) : (
-              <div className="text-center p-12 text-muted-foreground">
-                <List className="h-8 w-8 mx-auto mb-3 opacity-20" />
-                <p className="text-[10px] font-bold uppercase tracking-widest">Geen apparaten</p>
+              <div className="flex flex-col items-center justify-center h-full p-12 text-center text-slate-300">
+                <List className="h-12 w-12 mb-4 opacity-10" />
+                <p className="text-[10px] font-black uppercase tracking-widest">Geen apparaten</p>
               </div>
             )}
           </div>
         </Card>
 
-        <Card className="xl:col-span-9 flex flex-col shadow-none border-slate-200 overflow-hidden">
+        <Card className={cn(
+            "lg:col-span-9 flex flex-col shadow-sm rounded-2xl border-slate-100 overflow-hidden",
+            !selectedSensor && "hidden lg:flex"
+        )}>
           {selectedSensor ? (
             <Tabs defaultValue="map" className="flex-1 flex flex-col">
-              <div className="px-4 py-2 border-b bg-muted/10 flex items-center justify-between">
-                <TabsList className="h-8 bg-transparent gap-2">
-                  <TabsTrigger value="map" className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 text-xs font-bold gap-2">
-                    <MapPin className="h-3 w-3" /> Dashboard
-                  </TabsTrigger>
-                  <TabsTrigger value="code" className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 text-xs font-bold gap-2">
-                    <Code2 className="h-3 w-3" /> Hardware Code
-                  </TabsTrigger>
-                </TabsList>
-                <div className="flex items-center gap-3">
-                    <div className="hidden sm:flex items-center gap-2">
-                        <p className="text-[9px] font-black text-muted-foreground uppercase">Serienummer:</p>
-                        <span className="text-[10px] font-mono font-bold bg-slate-200 px-1.5 py-0.5 rounded">{selectedSensor.id}</span>
-                    </div>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedSensorId(null)}><XIcon className="h-4 w-4" /></Button>
+              <div className="px-4 py-2 border-b bg-slate-50/50 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    {isTablet && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-white shadow-sm border border-slate-200 mr-2" onClick={() => setSelectedSensorId(null)}>
+                            <ArrowLeft className="h-4 w-4 text-slate-600" />
+                        </Button>
+                    )}
+                    <TabsList className="h-9 bg-transparent gap-2 p-0">
+                    <TabsTrigger value="map" className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 h-full rounded-lg text-[10px] font-black uppercase tracking-widest gap-2">
+                        <MapPin className="h-3.5 w-3.5" /> Dashboard
+                    </TabsTrigger>
+                    <TabsTrigger value="code" className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 h-full rounded-lg text-[10px] font-black uppercase tracking-widest gap-2">
+                        <Code2 className="h-3.5 w-3.5" /> Hardware Code
+                    </TabsTrigger>
+                    </TabsList>
+                </div>
+                <div className="hidden sm:flex items-center gap-3">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Unit ID:</p>
+                    <span className="text-[10px] font-mono font-bold bg-white border border-slate-200 px-2 py-0.5 rounded shadow-sm uppercase">{selectedSensor.id}</span>
                 </div>
               </div>
 
@@ -366,38 +380,38 @@ void loop() {
                     highlightedObject={selectedSensor ? { id: selectedSensor.id, latitude: selectedSensor.latitude, longitude: selectedSensor.longitude } : null}
                   />
                   
-                  <div className="absolute top-4 right-4 z-10 w-64 space-y-3">
-                    <Card className="bg-white/95 backdrop-blur shadow-xl border-slate-200 overflow-hidden">
-                      <div className="bg-slate-900 px-3 py-2 flex items-center justify-between">
-                        <p className="text-[10px] font-black text-white uppercase tracking-widest">Live Sensor Data</p>
+                  <div className="absolute top-4 right-4 z-10 w-full max-w-[240px] space-y-3">
+                    <Card className="bg-white/95 backdrop-blur shadow-2xl border-none rounded-2xl overflow-hidden">
+                      <div className="bg-slate-900 px-4 py-2 flex items-center justify-between">
+                        <p className="text-[9px] font-black text-white uppercase tracking-widest">Live Sensor Status</p>
                         <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
                       </div>
-                      <CardContent className="p-4 space-y-4">
+                      <CardContent className="p-5 space-y-5">
                         <div className="flex justify-between items-end">
                           <div>
-                            <p className="text-[9px] font-black text-muted-foreground uppercase">Vulgraad</p>
-                            <p className="text-3xl font-black">{selectedSensor.vulgraad || 0}%</p>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Vulgraad</p>
+                            <p className="text-4xl font-black text-slate-900 leading-none">{selectedSensor.vulgraad || 0}%</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-[9px] font-black text-muted-foreground uppercase">Afstand</p>
-                            <p className="text-sm font-bold text-slate-600">{selectedSensor.currentDistanceCm || 0} cm</p>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Afstand</p>
+                            <p className="text-sm font-black text-slate-600">{selectedSensor.currentDistanceCm || 0} cm</p>
                           </div>
                         </div>
-                        <Progress value={selectedSensor.vulgraad || 0} variant="gauge" className="h-2" />
+                        <Progress value={selectedSensor.vulgraad || 0} variant="gauge" className="h-2 bg-slate-100" />
                         
-                        <div className="grid grid-cols-2 gap-2 pt-2 border-t">
+                        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50">
                           <div className="flex items-center gap-2">
-                            <Ruler className="h-3 w-3 text-slate-400" />
+                            <div className="bg-slate-100 p-1.5 rounded-lg"><Ruler className="h-3.5 w-3.5 text-slate-500" /></div>
                             <div>
-                              <p className="text-[8px] font-black text-muted-foreground uppercase">Bak Diepte</p>
-                              <p className="text-[10px] font-bold">{selectedSensor.binDepthCm || 100} cm</p>
+                              <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Bak Diepte</p>
+                              <p className="text-[10px] font-black text-slate-900">{selectedSensor.binDepthCm || 100} cm</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Clock className="h-3 w-3 text-slate-400" />
+                            <div className="bg-slate-100 p-1.5 rounded-lg"><Clock className="h-3.5 w-3.5 text-slate-500" /></div>
                             <div>
-                              <p className="text-[8px] font-black text-muted-foreground uppercase">Frequentie</p>
-                              <p className="text-[10px] font-bold">{selectedSensor.measurementFrequency || 24} / 24u</p>
+                              <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Freq / 24u</p>
+                              <p className="text-[10px] font-black text-slate-900">{selectedSensor.measurementFrequency || 24}x</p>
                             </div>
                           </div>
                         </div>
@@ -406,24 +420,24 @@ void loop() {
                   </div>
 
                   <div className="absolute bottom-4 left-4 right-4 z-10">
-                      <Card className="bg-zinc-900/95 backdrop-blur text-zinc-100 border-none shadow-2xl overflow-hidden">
-                          <div className="bg-zinc-800 px-3 py-1.5 flex items-center justify-between border-b border-zinc-700">
-                              <p className="text-[9px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-2">
-                                  <Terminal className="h-3 w-3" /> REST API Endpoint
+                      <Card className="bg-slate-900/95 backdrop-blur-xl text-white border-none shadow-2xl rounded-2xl overflow-hidden">
+                          <div className="bg-white/5 px-4 py-2 flex items-center justify-between border-b border-white/5">
+                              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                  <Terminal className="h-3.5 w-3.5" /> REST API Endpoint
                               </p>
                               <Button 
                                   variant="ghost" 
                                   size="sm" 
-                                  className="h-6 text-[9px] text-zinc-400 hover:text-white"
+                                  className="h-7 text-[9px] font-black uppercase tracking-widest hover:bg-white/10"
                                   onClick={() => copyToClipboard(apiEndpoint)}
                               >
-                                  {copied ? <Check className="h-3 w-3 mr-1 text-green-500" /> : <Copy className="h-3 w-3 mr-1" />}
-                                  Kopieer URL
+                                  {copied ? <Check className="h-3.5 w-3.5 mr-1.5 text-green-400" /> : <Copy className="h-3.5 w-3.5 mr-1.5" />}
+                                  Kopieer
                               </Button>
                           </div>
-                          <CardContent className="p-3">
-                              <div className="bg-black/50 p-2 rounded font-mono text-[9px] break-all border border-zinc-800 text-green-400">
-                                  PATCH {apiEndpoint}
+                          <CardContent className="p-4">
+                              <div className="bg-black/40 p-3 rounded-xl font-mono text-[9px] break-all border border-white/5 text-blue-400 shadow-inner">
+                                  <span className="text-purple-400 mr-2">PATCH</span> {apiEndpoint}
                               </div>
                           </CardContent>
                       </Card>
@@ -431,81 +445,83 @@ void loop() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="code" className="flex-1 m-0 flex flex-col xl:flex-row overflow-hidden">
-                <div className="flex-1 flex flex-col bg-zinc-950 p-4 min-h-0 border-r border-zinc-800">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                            <div className="bg-blue-500/20 p-2 rounded-lg">
-                                <BookOpen className="h-4 w-4 text-blue-400" />
+              <TabsContent value="code" className="flex-1 m-0 flex flex-col xl:flex-row overflow-hidden bg-zinc-950">
+                <div className="flex-1 flex flex-col p-4 md:p-6 min-h-0 border-r border-zinc-800">
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-4">
+                            <div className="bg-blue-500/10 p-2.5 rounded-xl border border-blue-500/20">
+                                <BookOpen className="h-5 w-5 text-blue-400" />
                             </div>
                             <div>
-                                <h3 className="text-zinc-100 text-sm font-bold">C++ Sketch (Kalibratie actief)</h3>
-                                <p className="text-zinc-500 text-[10px]">Setup: {selectedBoard} | Diepte: {binDepth}cm</p>
+                                <h3 className="text-zinc-100 text-sm font-black uppercase tracking-tight">C++ Sketch</h3>
+                                <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">{selectedBoard} | {binDepth}cm</p>
                             </div>
                         </div>
                         <Button 
                             variant="secondary" 
                             size="sm" 
-                            className="text-xs font-bold gap-2"
+                            className="h-9 px-5 font-black uppercase tracking-tight gap-2 bg-zinc-800 text-zinc-100 hover:bg-zinc-700"
                             onClick={() => copyToClipboard(activeCode)}
                         >
-                            <Copy className="h-3 w-3" /> Kopieer
+                            <Copy className="h-4 w-4" /> Kopieer Code
                         </Button>
                     </div>
-                    <div className="flex-1 bg-black/40 rounded border border-zinc-800 p-4 overflow-auto scrollbar-hide">
-                        <pre className="text-[11px] font-mono text-blue-300 leading-relaxed">
+                    <div className="flex-1 bg-black/40 rounded-2xl border border-zinc-800 p-6 overflow-auto custom-scrollbar">
+                        <pre className="text-[11px] font-mono text-blue-300/90 leading-relaxed">
                             {activeCode}
                         </pre>
                     </div>
                 </div>
 
                 <div className="w-full xl:w-80 flex flex-col bg-zinc-900 border-l border-zinc-800">
-                    <div className="p-4 border-b border-zinc-800 flex flex-col gap-3 bg-zinc-900/50">
+                    <div className="p-4 md:p-6 border-b border-zinc-800 flex flex-col gap-4 bg-zinc-900/50">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <Sparkles className="h-4 w-4 text-purple-400" />
-                                <h4 className="text-xs font-black text-zinc-100 uppercase tracking-wider">IoT Assistent</h4>
+                                <Sparkles className="h-4 w-4 text-purple-400 animate-pulse" />
+                                <h4 className="text-[10px] font-black text-zinc-100 uppercase tracking-widest">IoT Assistent</h4>
                             </div>
                             <TooltipProvider>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <Badge variant="secondary" className="text-[9px] bg-zinc-800 text-zinc-400 gap-1">
-                                            <Zap className="h-2 w-2" /> {requestCount} / 1500
+                                        <Badge variant="secondary" className="text-[9px] bg-zinc-800 text-zinc-500 border-zinc-700 h-5 px-2 gap-1 font-black">
+                                            <Zap className="h-2.5 w-2.5" /> {requestCount} / 1500
                                         </Badge>
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                        <p className="text-xs">Dagelijkse gratis limiet. Max 15 per minuut.</p>
+                                        <p className="text-xs">Dagelijkse limiet voor dit project.</p>
                                     </TooltipContent>
                                 </Tooltip>
                             </TooltipProvider>
                         </div>
                         <Select value={selectedBoard} onValueChange={setSelectedBoard}>
-                            <SelectTrigger className="h-8 bg-zinc-950 border-zinc-800 text-zinc-100 text-[10px] font-bold">
+                            <SelectTrigger className="h-10 bg-zinc-950 border-zinc-800 text-zinc-100 text-[10px] font-black uppercase tracking-widest focus:ring-purple-500/20">
                                 <SelectValue placeholder="Kies hardware setup" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
                                 <SelectItem value="ESP32">ESP32 (WiFi)</SelectItem>
-                                <SelectItem value="ESP32 + SIM800L (GSM)">ESP32 + SIM800L (GSM/GPRS)</SelectItem>
+                                <SelectItem value="ESP32 + SIM800L (GSM)">ESP32 + SIM800L (GSM)</SelectItem>
                                 <SelectItem value="ESP8266">ESP8266 (WiFi)</SelectItem>
                                 <SelectItem value="Arduino Nano RP2040">Nano RP2040 (WiFi)</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
                     
-                    <ScrollArea className="flex-1 p-4">
+                    <ScrollArea className="flex-1 p-4 md:p-6">
                         {chatHistory.length === 0 ? (
-                            <div className="text-center py-8">
-                                <Info className="h-8 w-8 text-zinc-700 mx-auto mb-3" />
-                                <p className="text-xs text-zinc-500 font-medium">Pas de code aan. Bijv: "Gebruik een SIM800L module voor GPRS verbinding op afstand."</p>
+                            <div className="text-center py-12 flex flex-col items-center">
+                                <div className="bg-zinc-800/50 p-4 rounded-full mb-4">
+                                    <Info className="h-8 w-8 text-zinc-600" />
+                                </div>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 max-w-[160px] leading-relaxed">Vraag om aanpassingen, bijv: "Gebruik GPRS"</p>
                             </div>
                         ) : (
                             <div className="space-y-4">
                                 {chatHistory.map((msg, i) => (
                                     <div key={i} className={cn(
-                                        "p-2 rounded text-[11px] leading-relaxed",
-                                        msg.role === 'user' ? "bg-purple-500/10 text-purple-200 border border-purple-500/20" : "bg-zinc-800 text-zinc-300 border border-zinc-700"
+                                        "p-3 rounded-2xl text-[11px] leading-relaxed font-medium transition-all",
+                                        msg.role === 'user' ? "bg-purple-500/10 text-purple-200 border border-purple-500/20 ml-4" : "bg-zinc-800 text-zinc-300 border border-zinc-700 mr-4"
                                     )}>
-                                        <p className="font-black uppercase text-[8px] mb-1 opacity-50">{msg.role === 'user' ? 'Jij' : 'Assistent'}</p>
+                                        <p className="font-black uppercase text-[8px] mb-1.5 opacity-40 tracking-widest">{msg.role === 'user' ? 'Gebruiker' : 'Assistent'}</p>
                                         {msg.content}
                                     </div>
                                 ))}
@@ -513,11 +529,11 @@ void loop() {
                         )}
                     </ScrollArea>
 
-                    <div className="p-4 border-t border-zinc-800 bg-zinc-950/30">
+                    <div className="p-4 md:p-6 border-t border-zinc-800 bg-zinc-950/30">
                         <div className="relative">
                             <Textarea 
-                                placeholder="Vraag om een aanpassing..."
-                                className="min-h-[80px] bg-zinc-950 border-zinc-800 text-zinc-100 text-xs resize-none pr-10"
+                                placeholder="Typ uw vraag..."
+                                className="min-h-[100px] bg-zinc-950 border-zinc-800 text-zinc-100 text-[11px] font-medium resize-none pr-12 rounded-2xl shadow-inner focus:ring-purple-500/20"
                                 value={aiPrompt}
                                 onChange={(e) => setAiPrompt(e.target.value)}
                                 onKeyDown={(e) => {
@@ -530,42 +546,42 @@ void loop() {
                             <Button 
                                 size="icon" 
                                 variant="ghost" 
-                                className="absolute right-2 bottom-2 h-7 w-7 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
+                                className="absolute right-3 bottom-3 h-8 w-8 rounded-full text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
                                 onClick={handleGenerateCode}
                                 disabled={isGenerating || !aiPrompt.trim()}
                             >
                                 {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                             </Button>
                         </div>
-                        <p className="text-[9px] text-zinc-600 mt-2 text-center">De AI gebruikt de actuele Firebase-config van dit project.</p>
+                        <p className="text-[8px] text-zinc-600 mt-3 text-center font-black uppercase tracking-widest">Gegenereerd met BeheerHub AI Engine</p>
                     </div>
                 </div>
               </TabsContent>
             </Tabs>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-12 bg-white dark:bg-zinc-950">
-                <div className="bg-slate-50 dark:bg-zinc-900 p-10 rounded-full mb-6 relative">
-                    <Cpu className="h-16 w-16 text-slate-300 dark:text-zinc-700" />
-                    <div className="absolute top-0 right-0 h-6 w-6 bg-primary rounded-full flex items-center justify-center text-white animate-bounce">
-                        <ArrowRight className="h-4 w-4" />
+                <div className="bg-slate-50 dark:bg-zinc-900 p-12 rounded-full mb-8 relative">
+                    <Cpu className="h-20 w-20 text-slate-200 dark:text-zinc-800" />
+                    <div className="absolute top-2 right-2 h-8 w-8 bg-primary rounded-full flex items-center justify-center text-white animate-bounce shadow-lg">
+                        <ArrowRight className="h-5 w-5" />
                     </div>
                 </div>
-                <h3 className="text-xl font-black tracking-tight mb-2">Configureer & Monitor</h3>
-                <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-8">
-                    Selecteer een apparaat in de lijst links om de bijbehorende <strong>kalibratie</strong>, <strong>vulgraad</strong> en <strong>Arduino code</strong> te bekijken.
+                <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900 mb-2">Configureer Hardware</h3>
+                <p className="text-sm text-slate-400 font-medium max-w-sm mx-auto mb-10">
+                    Selecteer een apparaat in de lijst om de <strong>kalibratie</strong>, <strong>live data</strong> en <strong>Arduino code</strong> te beheren.
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left max-w-2xl">
-                    <div className="p-4 rounded-lg border bg-slate-50 dark:bg-zinc-900/50">
-                        <h4 className="text-xs font-bold uppercase mb-1 flex items-center gap-2"><Plus className="h-3 w-3 text-primary" /> Stap 1</h4>
-                        <p className="text-[11px] text-muted-foreground">Registreer je hardware en stel de diepte van de prullenbak in.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left max-w-2xl w-full">
+                    <div className="p-5 rounded-2xl border-2 border-slate-50 bg-slate-50/30">
+                        <h4 className="text-[10px] font-black uppercase mb-2 text-primary tracking-widest flex items-center gap-2"><Plus className="h-3 w-3" /> Stap 1</h4>
+                        <p className="text-[11px] text-slate-500 font-bold leading-relaxed uppercase tracking-tighter">Registreer hardware en stel de bak-diepte in.</p>
                     </div>
-                    <div className="p-4 rounded-lg border bg-slate-50 dark:bg-zinc-900/50">
-                        <h4 className="text-xs font-bold uppercase mb-1 flex items-center gap-2"><List className="h-3 w-3 text-primary" /> Stap 2</h4>
-                        <p className="text-[11px] text-muted-foreground">Klik op de sensor in de lijst aan de linkerkant.</p>
+                    <div className="p-5 rounded-2xl border-2 border-slate-50 bg-slate-50/30">
+                        <h4 className="text-[10px] font-black uppercase mb-2 text-primary tracking-widest flex items-center gap-2"><List className="h-3 w-3" /> Stap 2</h4>
+                        <p className="text-[11px] text-slate-500 font-bold leading-relaxed uppercase tracking-tighter">Klik op een actieve sensor in de linker lijst.</p>
                     </div>
-                    <div className="p-4 rounded-lg border bg-slate-50 dark:bg-zinc-900/50">
-                        <h4 className="text-xs font-bold uppercase mb-1 flex items-center gap-2"><Smartphone className="h-3 w-3 text-primary" /> Stap 3</h4>
-                        <p className="text-[11px] text-muted-foreground">Kies je setup (WiFi of GSM) en upload de gegenereerde code.</p>
+                    <div className="p-5 rounded-2xl border-2 border-slate-50 bg-slate-50/30">
+                        <h4 className="text-[10px] font-black uppercase mb-2 text-primary tracking-widest flex items-center gap-2"><Smartphone className="h-3 w-3" /> Stap 3</h4>
+                        <p className="text-[11px] text-slate-500 font-bold leading-relaxed uppercase tracking-tighter">Kies je board (WiFi/GSM) en upload de code.</p>
                     </div>
                 </div>
             </div>

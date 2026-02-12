@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
-import { Search, ListFilter, ArrowLeft } from 'lucide-react';
+import { Search, ListFilter, ArrowLeft, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { Melding } from '@/lib/types';
@@ -20,6 +20,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useNavigationUI } from '@/context/navigation-ui-context';
+import { LoadingScreen } from '@/components/loading-screen';
 
 const openStatuses = [
   "Intern doorgezet",
@@ -87,101 +88,91 @@ export default function OpenIssuesPage() {
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      <header className="flex items-center justify-between p-4 border-b shrink-0">
+      <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border-b shrink-0 gap-4 bg-slate-50/50">
         <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={() => router.back()}>
+            <Button variant="outline" size="icon" onClick={() => router.back()} className="shrink-0 rounded-full h-9 w-9">
                 <ArrowLeft className="h-4 w-4" />
             </Button>
-            <h1 className="text-xl font-bold">Openstaande Meldingen</h1>
+            <h1 className="text-xl font-black uppercase tracking-tight">Openstaande Meldingen</h1>
         </div>
-        <div className="flex items-center gap-2">
-            <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex-1 sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                     placeholder="Zoek meldingen..."
-                    className="pl-8"
+                    className="pl-9 h-9 border-slate-200"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
             </div>
-            <Button variant="outline">
+            <Button variant="outline" size="sm" className="h-9">
                 <ListFilter className="mr-2 h-4 w-4" />
-                Filters
+                Filter
             </Button>
         </div>
       </header>
 
       <div className="flex-1 overflow-auto p-4">
-        <Table className="border-collapse border border-slate-200 w-full">
-            <TableHeader className="sticky top-0 bg-slate-50 z-10 dark:bg-slate-800">
-            <TableRow>
-                <TableHead className="py-2 px-3 border border-slate-200">Intakenr.</TableHead>
-                <TableHead className="py-2 px-3 border border-slate-200">Extern meldingsnr.</TableHead>
-                <TableHead className="py-2 px-3 border border-slate-200">Datum</TableHead>
-                <TableHead className="py-2 px-3 border border-slate-200">Tijd</TableHead>
-                <TableHead className="py-2 px-3 border border-slate-200">Hoofdcategorie</TableHead>
-                <TableHead className="py-2 px-3 border border-slate-200">Subcategorie</TableHead>
-                <TableHead className="py-2 px-3 border border-slate-200">Adres</TableHead>
-                <TableHead className="py-2 px-3 border border-slate-200">Wijk</TableHead>
-                <TableHead className="py-2 px-3 border border-slate-200">Melder</TableHead>
-                <TableHead className="py-2 px-3 border border-slate-200">Aangenomen door</TableHead>
-                <TableHead className="py-2 px-3 border border-slate-200">Omschrijving</TableHead>
-                <TableHead className="py-2 px-3 border border-slate-200">Status</TableHead>
-            </TableRow>
-            </TableHeader>
-            <TableBody>
-            {isLoadingMeldingen ? (
-                <TableRow>
-                <TableCell colSpan={12} className="h-24 text-center border border-slate-200">
-                    Meldingen laden...
-                </TableCell>
-                </TableRow>
-            ) : filteredMeldingen.length === 0 ? (
-                 <TableRow>
-                    <TableCell colSpan={12} className="h-24 text-center border border-slate-200">
-                        Geen openstaande meldingen gevonden.
-                    </TableCell>
-                </TableRow>
-            ) : (
-                filteredMeldingen.map((melding) => {
-                  let displayStatus = melding.status;
-                  if (melding.status === 'Nieuw') {
-                    try {
-                      if (!isToday(new Date(melding.datum))) {
-                        displayStatus = 'Open';
-                      }
-                    } catch (e) {
-                       // if date is invalid, keep status as is
-                    }
-                  }
-                  
-                  return (
-                    <TableRow key={melding.id} onClick={() => router.push(`/issues/new?id=${melding.id}`)} className="cursor-pointer h-auto hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                        <TableCell className="font-medium py-1 px-3 border border-slate-200">{melding.intakenummer || '-'}</TableCell>
-                        <TableCell className="py-1 px-3 border border-slate-200">{melding.extern_meldingsnummer || '-'}</TableCell>
-                        <TableCell className="py-1 px-3 border border-slate-200">{melding.datum ? format(new Date(melding.datum), 'dd-MM-yyyy') : '-'}</TableCell>
-                        <TableCell className="py-1 px-3 border border-slate-200">{melding.tijdstip || '-'}</TableCell>
-                        <TableCell className="py-1 px-3 border border-slate-200">{melding.hoofdcategorie || '-'}</TableCell>
-                        <TableCell className="py-1 px-3 border border-slate-200">{melding.subcategorie || '-'}</TableCell>
-                        <TableCell className="truncate py-1 px-3 border border-slate-200">{[melding.straatnaam, melding.plaats].filter(Boolean).join(', ') || '-'}</TableCell>
-                        <TableCell className="truncate py-1 px-3 border border-slate-200">{melding.wijk || '-'}</TableCell>
-                        <TableCell className='truncate py-1 px-3 border border-slate-200'>{melding.melder || '-'}</TableCell>
-                        <TableCell className='truncate py-1 px-3 border border-slate-200'>{melding.aangenomen_door || '-'}</TableCell>
-                        <TableCell className="max-w-xs truncate py-1 px-3 border border-slate-200">{melding.extra_informatie || '-'}</TableCell>
-                        <TableCell className="py-1 px-3 border border-slate-200">
-                        <Badge
-                            className="text-white"
-                            style={{ backgroundColor: statusColorMap[displayStatus] || 'bg-gray-500' }}
-                        >
-                            {displayStatus}
-                        </Badge>
-                        </TableCell>
-                    </TableRow>
-                  )
-                })
-            )}
-            </TableBody>
-        </Table>
+        {isLoadingMeldingen ? (
+            <LoadingScreen message="Meldingen laden..." />
+        ) : filteredMeldingen.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full p-12 text-center bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-200">
+                <Info className="h-12 w-12 text-slate-300 mb-4" />
+                <p className="font-black uppercase tracking-tight text-slate-900">Geen openstaande meldingen</p>
+                <p className="text-sm text-slate-500 mt-1">Alle actieve meldingen zijn verwerkt of voldoen niet aan de zoekterm.</p>
+            </div>
+        ) : (
+            <div className="border rounded-xl overflow-hidden shadow-sm bg-white">
+                <div className="overflow-x-auto">
+                    <Table className="border-collapse w-full">
+                        <TableHeader className="sticky top-0 bg-slate-100 z-10">
+                        <TableRow className="hover:bg-transparent border-b-2 border-slate-200">
+                            <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Intakenr.</TableHead>
+                            <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200 hidden lg:table-cell">Extern nr.</TableHead>
+                            <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Datum</TableHead>
+                            <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200 hidden md:table-cell">Hoofdindeling</TableHead>
+                            <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Indeling</TableHead>
+                            <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Adres</TableHead>
+                            <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200 hidden xl:table-cell">Wijk</TableHead>
+                            <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500">Status</TableHead>
+                        </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredMeldingen.map((melding) => {
+                            let displayStatus = melding.status;
+                            if (melding.status === 'Nieuw') {
+                                try {
+                                if (!isToday(new Date(melding.datum))) {
+                                    displayStatus = 'Open';
+                                }
+                                } catch (e) {}
+                            }
+                            
+                            return (
+                                <TableRow key={melding.id} onClick={() => router.push(`/issues/new?id=${melding.id}`)} className="cursor-pointer h-12 hover:bg-blue-50/50 transition-colors border-b border-slate-100">
+                                    <TableCell className="font-black py-2 px-4 border-r border-slate-100">{melding.intakenummer || '-'}</TableCell>
+                                    <TableCell className="py-2 px-4 border-r border-slate-100 hidden lg:table-cell text-slate-400 font-bold">{melding.extern_meldingsnummer || '-'}</TableCell>
+                                    <TableCell className="py-2 px-4 border-r border-slate-100 text-xs font-bold text-slate-600">{melding.datum ? format(new Date(melding.datum), 'dd-MM-yy') : '-'}</TableCell>
+                                    <TableCell className="py-2 px-4 border-r border-slate-100 hidden md:table-cell font-medium text-slate-500">{melding.hoofdcategorie || '-'}</TableCell>
+                                    <TableCell className="py-2 px-4 border-r border-slate-100 font-bold text-slate-900">{melding.subcategorie || '-'}</TableCell>
+                                    <TableCell className="truncate py-2 px-4 border-r border-slate-100 max-w-[200px] text-xs font-medium">{[melding.straatnaam, melding.huisnummer].filter(Boolean).join(' ') || '-'}</TableCell>
+                                    <TableCell className="truncate py-2 px-4 border-r border-slate-100 hidden xl:table-cell text-xs">{melding.wijk || '-'}</TableCell>
+                                    <TableCell className="py-2 px-4">
+                                        <Badge
+                                            className="text-[9px] font-black uppercase tracking-tighter h-5 px-2 text-white border-none"
+                                            style={{ backgroundColor: statusColorMap[displayStatus] || '#94a3b8' }}
+                                        >
+                                            {displayStatus}
+                                        </Badge>
+                                    </TableCell>
+                                </TableRow>
+                            )
+                            })}
+                        </TableBody>
+                    </Table>
+                </div>
+            </div>
+        )}
       </div>
     </div>
   );

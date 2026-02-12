@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { ChevronLeft, ChevronRight, Clock, MoreHorizontal, Plus, Printer, Trash2, Copy, ClipboardCopy, FileText, Save, ListOrdered, Eye, EyeOff, Loader2, Truck } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, MoreHorizontal, Plus, Printer, Trash2, Copy, ClipboardCopy, FileText, Save, ListOrdered, Eye, EyeOff, Loader2, Truck, Filter } from 'lucide-react';
 import {
   startOfWeek,
   endOfWeek,
@@ -190,7 +190,7 @@ const DienstItem = ({ dienst, onEdit, onDelete, onContextMenu, isNonWorkingDay, 
                     )}
                 </div>
                 {dienst.voertuignummer && (
-                    <p className={cn("truncate text-xs", !hasCustomColor && 'text-muted-foreground')}>Voertuig: {dienst.voertuignummer}</p>
+                    <p className={cn("truncate text-[10px] mt-0.5", !hasCustomColor && 'text-muted-foreground')}>Nr: {dienst.voertuignummer}</p>
                 )}
                 {canEdit && <Button 
                     variant="ghost" 
@@ -507,8 +507,6 @@ export default function WorkPlanningPage() {
   
     if (!firestore || !canEdit) return;
     
-    const dienstJson = e.dataTransfer.setData('application/json', JSON.stringify({})); // dummy
-    // Actually get the real data from the correct key
     const realDienstJson = e.dataTransfer.getData('application/json');
     if (!realDienstJson) return;
   
@@ -829,6 +827,7 @@ export default function WorkPlanningPage() {
       <Button 
         key="toggle-visibility" 
         variant={isVisibilityMode ? "default" : "outline"} 
+        size="sm"
         onClick={() => {
             if (isVisibilityMode) {
                 setPendingStatusChanges({});
@@ -840,25 +839,27 @@ export default function WorkPlanningPage() {
         {isVisibilityMode ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
       </Button>,
       ...(isVisibilityMode ? [
-          <Button key="save-visibility" onClick={handleSaveVisibility} disabled={Object.keys(pendingStatusChanges).length === 0}>
+          <Button key="save-visibility" size="sm" onClick={handleSaveVisibility} disabled={Object.keys(pendingStatusChanges).length === 0}>
             Zichtbaarheid Opslaan
           </Button>
       ] : []),
-      <Button key="vehicle-deployment" variant="outline" onClick={() => setIsVehicleDeploymentOpen(true)}><Truck className="mr-2 h-4 w-4" /> Voertuigeninzet</Button>,
-      <Button key="print-day" variant="outline" onClick={() => setIsPrintDayDialogOpen(true)}><Printer className="mr-2 h-4 w-4" /> Print Dag</Button>,
-      <Button key="print-week" variant="outline" onClick={handlePrintWeek}><Printer className="mr-2 h-4 w-4" /> Print Week</Button>,
-      <Button key="save-pdf" variant="outline" onClick={() => setIsSaveWeekDialogOpen(true)} disabled={!selectedProjectId}><Save className="mr-2 h-4 w-4" /> Opslaan als PDF</Button>,
-      <Button key="edit-volgorde" variant="outline" onClick={() => setIsVolgordeDialogOpen(true)} disabled={!canEdit}><ListOrdered className="mr-2 h-4 w-4" /> Volgorde bewerken</Button>,
+      <Button key="vehicle-deployment" variant="outline" size="sm" onClick={() => setIsVehicleDeploymentOpen(true)}><Truck className="mr-2 h-4 w-4" /> Voertuigeninzet</Button>,
+      <Button key="print-day" variant="outline" size="sm" onClick={() => setIsPrintDayDialogOpen(true)}><Printer className="mr-2 h-4 w-4" /> Print Dag</Button>,
+      <Button key="print-week" variant="outline" size="sm" onClick={handlePrintWeek}><Printer className="mr-2 h-4 w-4" /> Print Week</Button>,
+      <Button key="save-pdf" variant="outline" size="sm" onClick={() => setIsSaveWeekDialogOpen(true)} disabled={!selectedProjectId}><Save className="mr-2 h-4 w-4" /> Opslaan als PDF</Button>,
+      <Button key="edit-volgorde" variant="outline" size="sm" onClick={() => setIsVolgordeDialogOpen(true)} disabled={!canEdit}><ListOrdered className="mr-2 h-4 w-4" /> Volgorde bewerken</Button>,
     ];
 
     if (isMobile) {
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon"><MoreHorizontal className="h-4 w-4"/></Button>
+            <Button variant="outline" size="icon" className="h-9 w-9"><Filter className="h-4 w-4"/></Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            {buttons.map((btn, i) => <DropdownMenuItem key={i}>{React.cloneElement(btn, { variant: 'ghost', className: 'w-full justify-start' })}</DropdownMenuItem>)}
+          <DropdownMenuContent align="start" className="w-56">
+            <DropdownMenuLabel>Planning Acties</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {buttons.map((btn, i) => <DropdownMenuItem key={i} asChild>{React.cloneElement(btn, { variant: 'ghost', className: 'w-full justify-start h-9 px-2' })}</DropdownMenuItem>)}
           </DropdownMenuContent>
         </DropdownMenu>
       )
@@ -1048,68 +1049,63 @@ export default function WorkPlanningPage() {
   const endMonth = new Date(new Date().getFullYear() + 5, 11);
 
   return (
-    <div className="flex flex-col flex-1 h-full min-h-0" id="planning-container">
-      <header className="flex flex-col md:flex-row items-center justify-between gap-4 p-6">
-        <div className="flex items-center gap-2">
+    <div className="flex flex-col flex-1 h-full min-h-0 bg-white" id="planning-container">
+      <header className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 p-4 md:p-6 border-b bg-slate-50/30">
+        <div className="flex items-center gap-2 w-full lg:w-auto">
           {renderActionButtons()}
-          <span className="text-sm font-medium text-muted-foreground hidden lg:inline">
-            Project:
-          </span>
           <Select
             value={selectedProjectId || ''}
             onValueChange={(value) => setSelectedProjectId(value || null)}
             disabled={isLoadingProjects}
           >
-            <SelectTrigger className="w-full md:w-[280px]">
-              <SelectValue placeholder="Selecteer een project" />
+            <SelectTrigger className="flex-1 lg:w-[280px] h-9 font-bold">
+              <SelectValue placeholder="Project selecteren..." />
             </SelectTrigger>
             <SelectContent>
               {projects?.map((project) => (
                 <SelectItem key={project.id} value={project.id!}>
-                  {project.projectnaam} [{project.projectnummer}]
+                  {project.projectnaam}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={prevWeek}>
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          <Popover>
-            <PopoverTrigger asChild>
-                <Button variant={'outline'} className="w-64 justify-center text-sm font-semibold">
-                    {format(start, 'd MMMM', { locale: nl })} -{' '}
-                    {format(end, 'd MMMM yyyy', { locale: nl })}
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-                <Calendar
-                    mode="single"
-                    selected={currentDate}
-                    onSelect={(date) => date && setCurrentDate(date)}
-                    captionLayout="dropdown"
-                    startMonth={startMonth}
-                    endMonth={endMonth}
-                    initialFocus
-                    locale={nl}
-                />
-            </PopoverContent>
-          </Popover>
-          <Button variant="ghost" size="icon" onClick={nextWeek}>
-            <ChevronRight className="h-5 w-5" />
-          </Button>
-          <Button>Uren controleren</Button>
+        <div className="flex items-center gap-2 w-full lg:w-auto justify-between lg:justify-end">
+          <div className="flex items-center gap-1 bg-white p-1 rounded-xl shadow-sm border border-slate-200">
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={prevWeek}>
+                <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button variant={'ghost'} className="h-8 px-2 font-black uppercase text-[10px] tracking-widest text-slate-600">
+                        {format(start, 'd MMM', { locale: nl })} - {format(end, 'd MMM yyyy', { locale: nl })}
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                        mode="single"
+                        selected={currentDate}
+                        onSelect={(date) => date && setCurrentDate(date)}
+                        captionLayout="dropdown"
+                        startMonth={startMonth}
+                        endMonth={endMonth}
+                        initialFocus
+                        locale={nl}
+                    />
+                </PopoverContent>
+            </Popover>
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={nextWeek}>
+                <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button size="sm" className="font-black h-9 uppercase tracking-tight px-4">Controle</Button>
         </div>
       </header>
-      <div className="flex-1 overflow-auto border-t">
+      <div className="flex-1 overflow-auto">
         <div className="grid grid-cols-[250px_repeat(7,1fr)] min-w-[1200px]">
-          <div className="sticky top-0 z-20 p-2 bg-slate-100 border-b border-r">
-            <div className="grid grid-rows-3 h-full">
-              <div className="row-span-2"></div>
-              <div className="flex items-end">
-                <span className="font-semibold text-sm">Medewerker</span>
-              </div>
+          <div className="sticky top-0 left-0 z-30 p-3 bg-slate-100 border-b-2 border-r-2 border-slate-200">
+            <div className="flex flex-col h-full justify-end">
+                <span className="font-black uppercase tracking-widest text-[10px] text-slate-400">Medewerker</span>
             </div>
           </div>
           {weekDays.map((day) => (
@@ -1117,46 +1113,38 @@ export default function WorkPlanningPage() {
               key={day.toISOString()}
               onContextMenu={(e) => handleDayHeaderContextMenu(e, day)}
               className={cn(
-                "sticky top-0 z-20 p-2 text-center bg-slate-100 border-b border-r day-column cursor-context-menu",
-                isToday(day) && "ring-2 ring-inset ring-black"
+                "sticky top-0 z-20 p-2 text-center bg-slate-100 border-b-2 border-r border-slate-200 day-column cursor-context-menu transition-all",
+                isToday(day) && "bg-slate-200"
               )}
             >
-              <p className="font-semibold capitalize text-sm">
-                {format(day, 'eee', { locale: nl })}
+              <p className="font-black uppercase tracking-tighter text-xs text-slate-900">
+                {format(day, 'eeee', { locale: nl })}
               </p>
-              <p className="text-xs text-muted-foreground">
-                {format(day, 'dd-MM', { locale: nl })}
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                {format(day, 'dd MMM', { locale: nl })}
               </p>
+              {isToday(day) && <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary" />}
             </div>
           ))}
 
           {isLoadingMedewerkers || isProfileLoading ? (
             <div className="col-span-8 p-4">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className='grid grid-cols-[250px_repeat(7,1fr)]'>
-                    <div className='p-3 border-b border-r'>
-                        <div className="flex items-center gap-3">
-                           <Skeleton className="h-8 w-8 rounded-full" />
-                           <Skeleton className="h-4 w-24" />
-                        </div>
-                    </div>
-                    {Array.from({ length: 7 }).map((_, j) => (
-                         <div key={j} className="p-2 border-b border-r min-h-[80px]" />
-                    ))}
-                </div>
-              ))}
+              <LoadingScreen message="Planning laden..." />
             </div>
           ) : !canView ? (
-              <div className="col-span-8 p-8 text-center text-muted-foreground">U heeft geen rechten om deze planning te bekijken.</div>
+              <div className="col-span-8 p-12 text-center text-muted-foreground bg-slate-50/50">
+                  <EyeOff className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                  <p className="font-black uppercase text-xs tracking-widest">Geen toegangsrechten</p>
+              </div>
           ) : (
             groupedMedewerkers.map((group) => (
               <React.Fragment key={group.name}>
-                <div className="col-span-8 p-3 bg-slate-200 dark:bg-slate-800 border-b border-r flex items-center">
-                  <span className="font-bold text-xs uppercase tracking-widest text-slate-600 dark:text-slate-400">{group.name}</span>
+                <div className="col-span-8 p-3 bg-slate-200/50 dark:bg-slate-800/50 border-b border-r border-slate-200 flex items-center sticky left-0 z-10">
+                  <span className="font-black text-[10px] uppercase tracking-widest text-slate-500">{group.name}</span>
                 </div>
                 {group.items.map((medewerker) => (
                   <React.Fragment key={medewerker.id}>
-                    <div className="flex flex-col justify-center p-3 border-b border-r medewerker-header">
+                    <div className="flex flex-col justify-center p-3 border-b border-r-2 border-slate-200 medewerker-header sticky left-0 bg-white z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                       <div className="flex items-center gap-3">
                         {isVisibilityMode && (
                           <Checkbox
@@ -1174,17 +1162,17 @@ export default function WorkPlanningPage() {
                             className="h-4 w-4"
                           />
                         )}
-                        <Avatar className="h-8 w-8">
+                        <Avatar className="h-8 w-8 ring-2 ring-white shadow-sm shrink-0">
                            <AvatarImage
                                 src={medewerker.avatarUrl}
                                 alt={`${medewerker.voornaam} ${medewerker.achternaam}`}
                               />
-                          <AvatarFallback>{getInitials(medewerker.voornaam, medewerker.achternaam)}</AvatarFallback>
+                          <AvatarFallback className="text-[10px] font-black bg-primary text-white">{getInitials(medewerker.voornaam, medewerker.achternaam)}</AvatarFallback>
                         </Avatar>
-                        <span className="font-semibold text-sm truncate">{`${medewerker.voornaam || ''} ${medewerker.tussenvoegsel || ''} ${medewerker.achternaam || ''}`.trim()}</span>
+                        <span className="font-black text-xs truncate text-slate-900">{`${medewerker.voornaam || ''} ${medewerker.tussenvoegsel || ''} ${medewerker.achternaam || ''}`.trim()}</span>
                       </div>
-                      <div className="mt-1 pl-11 space-y-0.5">
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <div className="mt-1.5 pl-11">
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
                           <Clock className="h-3 w-3" />
                           <span>{formatHours(calculateWeekHours(medewerker.id))} / {formatHours(getWeekContractHours(medewerker))}</span>
                         </div>
@@ -1229,16 +1217,16 @@ export default function WorkPlanningPage() {
                             className={cn(
                                 "group relative p-2 border-b border-r min-h-[80px] flex flex-col gap-1 transition-colors day-column",
                                 isVisuallyNonWorkingDay
-                                    ? 'bg-black' 
-                                    : isToday(day) ? "bg-muted/50" : "",
-                                isDragOver && !isVisuallyNonWorkingDay && "bg-blue-100 dark:bg-blue-900/30",
-                                isSelected && !isVisuallyNonWorkingDay && "bg-primary/10",
-                                !isVisuallyNonWorkingDay && canEdit && "cursor-pointer"
+                                    ? 'bg-slate-900/90' 
+                                    : isToday(day) ? "bg-slate-50/50" : "bg-white",
+                                isDragOver && !isVisuallyNonWorkingDay && "bg-blue-50 dark:bg-blue-900/30",
+                                isSelected && !isVisuallyNonWorkingDay && "bg-primary/5",
+                                !isVisuallyNonWorkingDay && canEdit && "cursor-pointer hover:bg-slate-50"
                             )}
                         >
                             <div className="flex-1 space-y-1 relative z-10">
                               {isLoadingDiensten ? (
-                                  <Skeleton className="h-10 w-full" />
+                                  <Skeleton className="h-10 w-full rounded-lg" />
                               ) : (
                                 dienstenForDay?.map(dienst => (
                                     <DienstItem key={dienst.id} dienst={dienst} onEdit={handleOpenSheetForEdit} onDelete={handleDienstDelete} onContextMenu={(e, d) => {
@@ -1261,13 +1249,13 @@ export default function WorkPlanningPage() {
           <DropdownMenuTrigger
             style={contextMenu ? { position: 'fixed', left: contextMenu.x, top: contextMenu.y } : {}}
           />
-          <DropdownMenuContent onContextMenu={(e) => e.preventDefault()}>
+          <DropdownMenuContent onContextMenu={(e) => e.preventDefault()} className="w-56 rounded-xl shadow-xl p-2 border-slate-100">
             {contextMenu?.cellContext && (
                 <DropdownMenuItem onClick={() => {
                     handleOpenSheetForNew(contextMenu.cellContext!.medewerker, contextMenu.cellContext!.datum);
                     setContextMenu(null);
-                }}>
-                    <Plus className="mr-2 h-4 w-4" />
+                }} className="h-10 font-bold rounded-lg">
+                    <Plus className="mr-3 h-4 w-4 text-primary" />
                     Nieuwe dienst
                 </DropdownMenuItem>
             )}
@@ -1275,21 +1263,21 @@ export default function WorkPlanningPage() {
               <DropdownMenuItem onClick={() => {
                   setCopiedDienst(contextMenu.dienst!);
                   setContextMenu(null);
-                }}>
-                <Copy className="mr-2 h-4 w-4" />
+                }} className="h-10 font-bold rounded-lg">
+                <Copy className="mr-3 h-4 w-4 text-primary" />
                 Kopiëren
               </DropdownMenuItem>
             )}
             
             {contextMenu?.dayHeaderContext && (
                 <>
-                    <DropdownMenuItem onClick={handleCopyDay}>
-                        <Copy className="mr-2 h-4 w-4" />
+                    <DropdownMenuItem onClick={handleCopyDay} className="h-10 font-bold rounded-lg">
+                        <Copy className="mr-3 h-4 w-4 text-primary" />
                         Kopieer Dag
                     </DropdownMenuItem>
                     {copiedDay && (
-                        <DropdownMenuItem onClick={() => contextMenu.dayHeaderContext && handlePasteDay(contextMenu.dayHeaderContext.datum)}>
-                            <ClipboardCopy className="mr-2 h-4 w-4" />
+                        <DropdownMenuItem onClick={() => contextMenu.dayHeaderContext && handlePasteDay(contextMenu.dayHeaderContext.datum)} className="h-10 font-bold rounded-lg">
+                            <ClipboardCopy className="mr-3 h-4 w-4 text-primary" />
                             Plak Dag
                         </DropdownMenuItem>
                     )}
@@ -1299,14 +1287,14 @@ export default function WorkPlanningPage() {
             {(contextMenu?.cellContext || contextMenu?.dienst) && (copiedDienst || selectedCells.length > 0) && <DropdownMenuSeparator />}
 
             {copiedDienst && (
-              <DropdownMenuItem onClick={handlePaste} disabled={selectedCells.length === 0}>
-                <ClipboardCopy className="mr-2 h-4 w-4" />
+              <DropdownMenuItem onClick={handlePaste} disabled={selectedCells.length === 0} className="h-10 font-bold rounded-lg">
+                <ClipboardCopy className="mr-3 h-4 w-4 text-primary" />
                 Plakken
               </DropdownMenuItem>
             )}
             {selectedCells.length > 0 && (
-                <DropdownMenuItem onClick={handleDeleteSelected} className="text-destructive focus:text-destructive">
-                    <Trash2 className="mr-2 h-4 w-4" />
+                <DropdownMenuItem onClick={handleDeleteSelected} className="h-10 font-bold rounded-lg text-red-600 focus:text-red-600 focus:bg-red-50">
+                    <Trash2 className="mr-3 h-4 w-4" />
                     Verwijder selectie
                 </DropdownMenuItem>
             )}

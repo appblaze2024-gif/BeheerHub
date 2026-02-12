@@ -22,7 +22,7 @@ import { format, isAfter } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from '@/components/ui/sheet';
-import { Menu, Search, Bell, User, Settings, LogOut, ChevronRight } from 'lucide-react';
+import { Menu, Search, Bell, User, Settings, LogOut, ChevronRight, LayoutGrid } from 'lucide-react';
 import { AppSidebar } from '@/components/app-sidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
@@ -46,6 +46,7 @@ function Header() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const getInitials = (firstName?: string, lastName?: string) => {
     const firstInitial = firstName?.[0] || '';
@@ -85,7 +86,7 @@ function Header() {
     const mainKey = parts[0].toLowerCase();
     const main = translations[mainKey] || parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
     
-    if (parts.length > 1) {
+    if (parts.length > 1 && !isMobile) {
         const subKey = parts[1].toLowerCase();
         const sub = translations[subKey] || parts[1].charAt(0).toUpperCase() + parts[1].slice(1);
         return `${main} > ${sub}`;
@@ -94,15 +95,15 @@ function Header() {
   };
 
   return (
-    <header className="bg-background flex h-16 shrink-0 items-center justify-between border-b px-4 md:px-8 z-10">
-      <div className="flex items-center gap-6">
+    <header className="bg-white/80 backdrop-blur-md flex h-16 shrink-0 items-center justify-between border-b px-4 md:px-8 z-40 sticky top-0">
+      <div className="flex items-center gap-2 md:gap-6">
         <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="hover:bg-slate-100 rounded-xl">
-              <Menu className="h-6 w-6" />
+            <Button variant="ghost" size="icon" className="hover:bg-slate-100 rounded-xl h-10 w-10">
+              <Menu className="h-6 w-6 text-slate-900" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="p-0 border-none w-80">
+          <SheetContent side="left" className="p-0 border-none w-full sm:w-80">
             <SheetHeader className="sr-only">
                 <SheetTitle>Navigatie Menu</SheetTitle>
             </SheetHeader>
@@ -111,53 +112,54 @@ function Header() {
         </Sheet>
         
         <div className="flex flex-col">
-            <h2 className="text-sm font-black uppercase tracking-widest text-slate-900">{getPageTitle()}</h2>
+            <h2 className="text-sm font-black uppercase tracking-tighter text-slate-900 truncate max-w-[120px] sm:max-w-none">{getPageTitle()}</h2>
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <div className="hidden md:flex items-center relative mr-2">
+      <div className="flex items-center gap-1.5 md:gap-3">
+        <div className="hidden lg:flex items-center relative mr-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
+            <input
+              type="text"
               placeholder="Snel zoeken..."
-              className="pl-9 h-10 w-64 bg-slate-50 border-transparent focus:bg-white focus:border-slate-200 rounded-xl"
+              className="pl-9 h-10 w-64 bg-slate-50 border-transparent focus:bg-white focus:border-slate-200 rounded-xl text-sm font-bold outline-none transition-all"
             />
         </div>
 
-        <Button variant="ghost" size="icon" className="rounded-xl relative">
-          <Bell className="h-5 w-5" />
-          <span className="absolute top-2 right-2 h-2 w-2 bg-red-500 rounded-full border-2 border-white" />
+        <Button variant="ghost" size="icon" className="rounded-xl relative h-10 w-10">
+          <Bell className="h-5 w-5 text-slate-600" />
+          <span className="absolute top-2.5 right-2.5 h-2 w-2 bg-red-500 rounded-full border-2 border-white" />
         </Button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-10 w-10 rounded-xl p-0 hover:bg-slate-50 transition-all">
-              <Avatar className="h-10 w-10 rounded-xl border-2 border-white shadow-sm">
+            <Button variant="ghost" className="relative h-10 w-10 rounded-xl p-0 hover:bg-slate-50 transition-all ml-1">
+              <Avatar className="h-9 w-9 rounded-xl border-2 border-white shadow-sm ring-1 ring-slate-100">
                 <AvatarImage src={user?.photoURL || undefined} alt={profile?.displayName || ''} />
-                <AvatarFallback className="bg-primary text-white font-black text-xs">
+                <AvatarFallback className="bg-primary text-white font-black text-[10px]">
                   {getInitials(profile?.firstName, profile?.lastName)}
                 </AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-64 mt-2 rounded-2xl shadow-xl border-slate-100 p-2" align="end" forceMount>
+          <DropdownMenuContent className="w-64 mt-2 rounded-2xl shadow-2xl border-slate-100 p-2" align="end" forceMount>
             <DropdownMenuLabel className="font-normal p-4">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-black leading-none">{profile?.displayName}</p>
-                <p className="text-xs font-bold leading-none text-muted-foreground mt-1">
+                <p className="text-sm font-black leading-none text-slate-900">{profile?.displayName}</p>
+                <p className="text-[10px] font-black leading-none text-muted-foreground mt-1 uppercase tracking-widest">
                   {user?.email}
                 </p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-slate-100" />
             <div className="p-1 space-y-1">
-                <DropdownMenuItem asChild className="rounded-xl h-10 font-bold focus:bg-slate-50">
+                <DropdownMenuItem asChild className="rounded-xl h-10 font-bold focus:bg-slate-50 cursor-pointer">
                     <Link href="/profile" className="flex items-center w-full">
                         <User className="mr-3 h-4 w-4 text-primary" />
                         <span>Mijn Profiel</span>
                     </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild className="rounded-xl h-10 font-bold focus:bg-slate-50">
+                <DropdownMenuItem asChild className="rounded-xl h-10 font-bold focus:bg-slate-50 cursor-pointer">
                     <Link href="/settings" className="flex items-center w-full">
                         <Settings className="mr-3 h-4 w-4 text-primary" />
                         <span>Instellingen</span>
@@ -171,10 +173,10 @@ function Header() {
                         localStorage.removeItem('impersonatedUserProfileId');
                         signOut(auth);
                     }}
-                    className="rounded-xl h-10 font-bold text-red-600 focus:bg-red-50 focus:text-red-600"
+                    className="rounded-xl h-10 font-black uppercase tracking-tight text-red-600 focus:bg-red-50 focus:text-red-600 cursor-pointer"
                 >
                     <LogOut className="mr-3 h-4 w-4" />
-                    Log uit
+                    Uitloggen
                 </DropdownMenuItem>
             </div>
           </DropdownMenuContent>
@@ -234,9 +236,9 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className={cn('font-body antialiased flex flex-col h-svh overflow-hidden')}>
+    <div className={cn('font-body antialiased flex flex-col h-svh overflow-hidden bg-slate-50')}>
       {isHeaderVisible && <Header />}
-      <main className="flex-1 flex flex-col overflow-auto bg-[#F8FAFC]">
+      <main className="flex-1 flex flex-col overflow-auto no-scrollbar">
         {children}
       </main>
       <Toaster />
@@ -284,15 +286,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="nl" suppressHydrationWarning>
+    <html lang="nl" suppressHydrationWarning className="h-full">
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, interactive-widget=resizer-content" />
         <title>BeheerHub | Smart Infra Management</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
       </head>
-      <body className="no-scrollbar">
+      <body className="h-full overflow-hidden bg-slate-50 antialiased">
         <FirebaseClientProvider>
           <ProfileProvider>
             <ProjectProvider>

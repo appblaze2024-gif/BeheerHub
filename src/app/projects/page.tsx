@@ -152,8 +152,8 @@ function WerksoortenTab({
 
   return (
     <div className="space-y-4">
-      <div className="border rounded-md">
-        <Table>
+      <div className="border rounded-md overflow-x-auto">
+        <Table className="min-w-[600px]">
           <TableHeader className="bg-muted/50">
             <TableRow>
               <TableHead className="font-bold">Postnummer</TableHead>
@@ -238,8 +238,8 @@ function BoekingregelsTab({ projectId, canEdit }: { projectId: string | undefine
   
   if (!projectId) {
     return (
-      <div className="flex items-center justify-center h-full text-muted-foreground">
-        Selecteer eerst een project om boekingregels te beheren.
+      <div className="flex items-center justify-center h-full text-muted-foreground p-12 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+        <p className="font-bold uppercase text-xs tracking-widest">Selecteer eerst een project om boekingregels te beheren.</p>
       </div>
     );
   }
@@ -315,45 +315,47 @@ function AfsprakenTab({ projectId, canEdit, canDelete }: { projectId: string | u
 
   if (!projectId) {
     return (
-      <div className="flex items-center justify-center h-full text-muted-foreground">
-        Selecteer eerst een project om afspraken te bekijken of toe te voegen.
+      <div className="flex items-center justify-center h-full text-muted-foreground p-12 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+        <p className="font-bold uppercase text-xs tracking-widest">Selecteer eerst een project om afspraken te beheren.</p>
       </div>
     );
   }
 
   return (
     <Card>
-      <CardHeader className='flex-row items-center justify-between'>
+      <CardHeader className='flex-col sm:flex-row items-start sm:items-center justify-between gap-4'>
         <CardTitle className="text-lg">Afspraken</CardTitle>
-        {canEdit && <Button size="sm" onClick={handleNewAfspraak}><Plus className='mr-2 h-4 w-4' /> Nieuwe afspraak</Button>}
+        {canEdit && <Button size="sm" onClick={handleNewAfspraak} className="w-full sm:w-auto"><Plus className='mr-2 h-4 w-4' /> Nieuwe afspraak</Button>}
       </CardHeader>
-      <CardContent>
-        <div className="border rounded-md">
-          <div className="grid grid-cols-[2fr_1fr_1fr_2fr_auto] gap-x-4 p-4 font-semibold bg-muted">
-            <div>Onderwerp</div>
-            <div>Datum</div>
-            <div>Tijd</div>
-            <div>Notities</div>
-            <div />
-          </div>
-          {isLoading ? (
-            <div className='p-4 text-center text-muted-foreground'>Afspraken laden...</div>
-          ) : afspraken && afspraken.length > 0 ? (
-            afspraken.map(afspraak => (
-              <div key={afspraak.id} className="grid grid-cols-[2fr_1fr_1fr_2fr_auto] items-center gap-x-4 p-4 border-t">
-                <div className='truncate'>{afspraak.onderwerp}</div>
-                <div>{afspraak.datum}</div>
-                <div>{afspraak.tijd}</div>
-                <div className='truncate'>{afspraak.notities}</div>
-                <div className='flex items-center gap-2'>
-                  {canEdit && <Button variant='ghost' size='icon' onClick={() => handleEditAfspraak(afspraak)}><FilePenLine className='h-4 w-4' /></Button>}
-                  {canDelete && <Button variant='ghost' size='icon' onClick={() => handleDeleteAfspraak(afspraak.id!)}><Trash2 className='h-4 w-4 text-destructive' /></Button>}
+      <CardContent className="p-0 sm:p-6">
+        <div className="border rounded-md overflow-x-auto">
+          <div className="min-w-[800px]">
+            <div className="grid grid-cols-[2fr_1fr_1fr_2fr_auto] gap-x-4 p-4 font-semibold bg-muted">
+                <div>Onderwerp</div>
+                <div>Datum</div>
+                <div>Tijd</div>
+                <div>Notities</div>
+                <div />
+            </div>
+            {isLoading ? (
+                <div className='p-12 text-center text-muted-foreground'><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
+            ) : afspraken && afspraken.length > 0 ? (
+                afspraken.map(afspraak => (
+                <div key={afspraak.id} className="grid grid-cols-[2fr_1fr_1fr_2fr_auto] items-center gap-x-4 p-4 border-t hover:bg-slate-50 transition-colors">
+                    <div className='truncate font-bold text-slate-900'>{afspraak.onderwerp}</div>
+                    <div className="text-xs">{afspraak.datum}</div>
+                    <div className="text-xs">{afspraak.tijd}</div>
+                    <div className='truncate text-xs text-slate-500 italic'>{afspraak.notities}</div>
+                    <div className='flex items-center gap-1 justify-end'>
+                    {canEdit && <Button variant='ghost' size='icon' className="h-8 w-8" onClick={() => handleEditAfspraak(afspraak)}><FilePenLine className='h-4 w-4' /></Button>}
+                    {canDelete && <Button variant='ghost' size='icon' className="h-8 w-8 text-red-600" onClick={() => handleDeleteAfspraak(afspraak.id!)}><Trash2 className='h-4 w-4' /></Button>}
+                    </div>
                 </div>
-              </div>
-            ))
-          ) : (
-             <div className='p-4 text-center text-muted-foreground'>Nog geen afspraken voor dit project.</div>
-          )}
+                ))
+            ) : (
+                <div className='p-8 text-center text-muted-foreground'>Nog geen afspraken voor dit project.</div>
+            )}
+          </div>
         </div>
       </CardContent>
       {canEdit && <AfspraakDialog 
@@ -396,49 +398,51 @@ function OrganisatieTab({ projectId, wijken, canEdit, canDelete }: { projectId: 
 
   if (!projectId) {
     return (
-      <div className="flex items-center justify-center h-full text-muted-foreground">
-        Selecteer eerst een project om contacten te bekijken of toe te voegen.
+      <div className="flex items-center justify-center h-full text-muted-foreground p-12 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+        <p className="font-bold uppercase text-xs tracking-widest">Selecteer eerst een project om de organisatie te beheren.</p>
       </div>
     );
   }
 
   return (
     <Card>
-      <CardHeader className='flex-row items-center justify-between'>
+      <CardHeader className='flex-col sm:flex-row items-start sm:items-center justify-between gap-4'>
         <CardTitle className="text-lg">Organisatie</CardTitle>
-        {canEdit && <Button size="sm" onClick={handleNewContact}><Plus className='mr-2 h-4 w-4' /> Nieuw Contact</Button>}
+        {canEdit && <Button size="sm" onClick={handleNewContact} className="w-full sm:w-auto"><Plus className='mr-2 h-4 w-4' /> Nieuw Contact</Button>}
       </CardHeader>
-      <CardContent>
-        <div className="border rounded-md">
-          <div className="grid grid-cols-[2fr_2fr_2fr_2fr_1fr_1fr_auto] gap-x-4 p-4 font-semibold bg-muted">
-            <div>Naam</div>
-            <div>Rol</div>
-            <div>Bedrijf</div>
-            <div>Wijk</div>
-            <div>Telefoon</div>
-            <div>Email</div>
-            <div />
-          </div>
-          {isLoading ? (
-            <div className='p-4 text-center text-muted-foreground'>Contacten laden...</div>
-          ) : contacten && contacten.length > 0 ? (
-            contacten.map(contact => (
-              <div key={contact.id} className="grid grid-cols-[2fr_2fr_2fr_2fr_1fr_1fr_auto] items-center gap-x-4 p-4 border-t">
-                <div className='truncate'>{contact.naam}</div>
-                <div className='truncate'>{contact.rol}</div>
-                <div className='truncate'>{contact.bedrijf || '-'}</div>
-                <div className='truncate'>{contact.wijk || '-'}</div>
-                <div className='truncate'>{contact.telefoon}</div>
-                <div className='truncate'>{contact.email}</div>
-                <div className='flex items-center gap-2'>
-                  {canEdit && <Button variant='ghost' size='icon' onClick={() => handleEditContact(contact)}><FilePenLine className='h-4 w-4' /></Button>}
-                  {canDelete && <Button variant='ghost' size='icon' onClick={() => handleDeleteContact(contact.id!)}><Trash2 className='h-4 w-4 text-destructive' /></Button>}
+      <CardContent className="p-0 sm:p-6">
+        <div className="border rounded-md overflow-x-auto">
+          <div className="min-w-[1000px]">
+            <div className="grid grid-cols-[2fr_2fr_2fr_2fr_1fr_1.5fr_auto] gap-x-4 p-4 font-black uppercase tracking-widest text-[10px] text-slate-400 bg-slate-50">
+                <div>Naam</div>
+                <div>Rol</div>
+                <div>Bedrijf</div>
+                <div>Wijk</div>
+                <div>Telefoon</div>
+                <div>Email</div>
+                <div />
+            </div>
+            {isLoading ? (
+                <div className='p-12 text-center text-muted-foreground'><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
+            ) : contacten && contacten.length > 0 ? (
+                contacten.map(contact => (
+                <div key={contact.id} className="grid grid-cols-[2fr_2fr_2fr_2fr_1fr_1.5fr_auto] items-center gap-x-4 p-4 border-t hover:bg-slate-50 transition-colors">
+                    <div className='truncate font-bold text-slate-900'>{contact.naam}</div>
+                    <div className='truncate text-xs text-slate-600'>{contact.rol}</div>
+                    <div className='truncate text-xs text-slate-500 font-medium'>{contact.bedrijf || '-'}</div>
+                    <div className='truncate text-xs font-bold'>{contact.wijk || '-'}</div>
+                    <div className='truncate text-[11px]'>{contact.telefoon}</div>
+                    <div className='truncate text-[11px] text-blue-600'>{contact.email}</div>
+                    <div className='flex items-center gap-1 justify-end'>
+                    {canEdit && <Button variant='ghost' size='icon' className="h-8 w-8" onClick={() => handleEditContact(contact)}><FilePenLine className='h-4 w-4' /></Button>}
+                    {canDelete && <Button variant='ghost' size='icon' className="h-8 w-8 text-red-600" onClick={() => handleDeleteContact(contact.id!)}><Trash2 className='h-4 w-4' /></Button>}
+                    </div>
                 </div>
-              </div>
-            ))
-          ) : (
-             <div className='p-4 text-center text-muted-foreground'>Nog geen contacten voor dit project.</div>
-          )}
+                ))
+            ) : (
+                <div className='p-8 text-center text-muted-foreground'>Nog geen contacten voor dit project.</div>
+            )}
+          </div>
         </div>
       </CardContent>
       {canEdit && <OrganisatieContactDialog
@@ -491,61 +495,63 @@ function BestandenTab({ projectId, canEdit, canDelete }: { projectId: string | u
 
   if (!projectId) {
     return (
-      <div className="flex items-center justify-center h-full text-muted-foreground">
-        Selecteer eerst een project om bestanden te bekijken of te uploaden.
+      <div className="flex items-center justify-center h-full text-muted-foreground p-12 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+        <p className="font-bold uppercase text-xs tracking-widest">Selecteer eerst een project om bestanden te beheren.</p>
       </div>
     );
   }
 
   return (
     <Card>
-      <CardHeader className='flex-row items-center justify-between'>
+      <CardHeader className='flex-col sm:flex-row items-start sm:items-center justify-between gap-4'>
         <CardTitle className="text-lg">Bestanden</CardTitle>
-        {canEdit && <Button size="sm" onClick={() => setIsDialogOpen(true)}><Upload className='mr-2 h-4 w-4' /> Bestanden uploaden</Button>}
+        {canEdit && <Button size="sm" onClick={() => setIsDialogOpen(true)} className="w-full sm:w-auto"><Upload className='mr-2 h-4 w-4' /> Bestanden uploaden</Button>}
       </CardHeader>
-      <CardContent>
-        <div className="border rounded-md">
-          <div className="grid grid-cols-[3fr_1fr_1fr_1fr_auto] gap-x-4 p-4 font-semibold bg-muted">
-            <div>Bestandsnaam</div>
-            <div>Type</div>
-            <div>Grootte</div>
-            <div>Datum</div>
-            <div />
-          </div>
-          {isLoading ? (
-            <div className='p-4 text-center text-muted-foreground'>Bestanden laden...</div>
-          ) : bestanden && bestanden.length > 0 ? (
-            bestanden.map(bestand => (
-              <div
-                key={bestand.id} 
-                className="grid grid-cols-[3fr_1fr_1fr_1fr_auto] items-center gap-x-4 p-4 border-t"
-              >
-                <a 
-                  href={bestand.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className='truncate font-medium text-blue-600 hover:underline'
+      <CardContent className="p-0 sm:p-6">
+        <div className="border rounded-md overflow-x-auto">
+          <div className="min-w-[700px]">
+            <div className="grid grid-cols-[3fr_1fr_1fr_1fr_auto] gap-x-4 p-4 font-black uppercase tracking-widest text-[10px] text-slate-400 bg-slate-50">
+                <div>Bestandsnaam</div>
+                <div>Type</div>
+                <div>Grootte</div>
+                <div>Datum</div>
+                <div />
+            </div>
+            {isLoading ? (
+                <div className='p-12 text-center text-muted-foreground'><Loader2 className="h-8 w-8 animate-spin mx-auto" /></div>
+            ) : bestanden && bestanden.length > 0 ? (
+                bestanden.map(bestand => (
+                <div
+                    key={bestand.id} 
+                    className="grid grid-cols-[3fr_1fr_1fr_1fr_auto] items-center gap-x-4 p-4 border-t hover:bg-slate-50 transition-colors"
                 >
-                  {bestand.name}
-                </a>
-                <div className="truncate">{bestand.type}</div>
-                <div>{formatBytes(bestand.size)}</div>
-                <div>{new Date(bestand.uploadedAt).toLocaleDateString('nl-NL')}</div>
-                <div className='flex items-center gap-1 justify-end'>
-                    <a href={bestand.url} download={bestand.name}>
-                        <Button variant='ghost' size='icon'>
-                            <Download className='h-4 w-4' />
-                        </Button>
+                    <a 
+                    href={bestand.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className='truncate font-bold text-blue-600 hover:underline text-sm'
+                    >
+                    {bestand.name}
                     </a>
-                   {canDelete && <Button variant='ghost' size='icon' onClick={(e) => handleDeleteBestand(e, bestand)}>
-                    <Trash2 className='h-4 w-4 text-destructive' />
-                  </Button>}
+                    <div className="truncate text-xs text-slate-500 uppercase">{bestand.type.split('/')[1] || bestand.type}</div>
+                    <div className="text-xs">{formatBytes(bestand.size)}</div>
+                    <div className="text-xs">{new Date(bestand.uploadedAt).toLocaleDateString('nl-NL')}</div>
+                    <div className='flex items-center gap-1 justify-end'>
+                        <a href={bestand.url} download={bestand.name}>
+                            <Button variant='ghost' size='icon' className="h-8 w-8">
+                                <Download className='h-4 w-4' />
+                            </Button>
+                        </a>
+                    {canDelete && <Button variant='ghost' size='icon' className="h-8 w-8 text-red-600" onClick={(e) => handleDeleteBestand(e, bestand)}>
+                        <Trash2 className='h-4 w-4' />
+                    </Button>}
+                    </div>
                 </div>
-              </div>
-            ))
-          ) : (
-             <div className='p-4 text-center text-muted-foreground'>Nog geen bestanden geüpload voor dit project.</div>
-          )}
+                ))
+            ) : (
+                <div className='p-8 text-center text-muted-foreground'>Nog geen bestanden geüpload.</div>
+            )}
+          </div>
         </div>
       </CardContent>
       {canEdit && <ProjectBestandenDialog
@@ -650,8 +656,8 @@ function WijkenTab({
 
   return (
     <div className="space-y-4">
-      <div className="border rounded-md">
-        <Table>
+      <div className="border rounded-md overflow-x-auto">
+        <Table className="min-w-[600px]">
           <TableHeader className="bg-muted/50">
             <TableRow>
               <TableHead className="font-bold">Wijknaam</TableHead>
@@ -784,8 +790,8 @@ function VeegroutesTab({
 
   return (
     <div className="space-y-4">
-      <div className="border rounded-md">
-        <Table>
+      <div className="border rounded-md overflow-x-auto">
+        <Table className="min-w-[600px]">
           <TableHeader className="bg-muted/50">
             <TableRow>
               <TableHead className="font-bold">Veegroute</TableHead>
@@ -965,8 +971,8 @@ function PrullenbakkenroutesTab({
         </h3>
       </div>
       
-      <div className="border-2 border-black rounded-lg overflow-hidden bg-white shadow-sm">
-        <Table className="border-collapse table-fixed w-full border-black">
+      <div className="border-2 border-black rounded-lg overflow-hidden bg-white shadow-sm overflow-x-auto">
+        <Table className="border-collapse table-fixed w-full border-black min-w-[1000px]">
           <TableHeader className="bg-slate-100 border-b-2 border-black">
             <TableRow className="hover:bg-transparent h-12">
               <TableHead className="font-black text-black uppercase tracking-tighter text-[11px] w-[300px] border-r border-black">Prullenbakkenroute (↳ Sub)</TableHead>
@@ -1086,7 +1092,7 @@ function PrullenbakkenroutesTab({
 
       {canEdit && (
         <div className="flex justify-start pt-2">
-            <Button variant="outline" onClick={addRow} className="border-2 border-dashed border-black hover:bg-slate-50 font-black uppercase tracking-widest text-xs py-6 px-8 rounded-xl transition-all">
+            <Button variant="outline" onClick={addRow} className="border-2 border-dashed border-black hover:bg-slate-50 font-black uppercase tracking-widest text-xs py-6 px-8 rounded-xl transition-all w-full sm:w-auto">
                 <Plus className="mr-2 h-5 w-5" /> Nieuwe Hoofdroute Toevoegen
             </Button>
         </div>
@@ -1168,7 +1174,7 @@ function VoertuigenTab({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input 
             placeholder="Zoek materieel..." 
-            className="pl-9" 
+            className="pl-9 h-10" 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -1193,12 +1199,15 @@ function VoertuigenTab({
                         <span className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">{item.type} | {item.id}</span>
                       </div>
                     </div>
-                    {isAssigned && <Badge className="bg-green-100 text-green-700 border-green-200">Gekoppeld</Badge>}
+                    {isAssigned && <Badge className="bg-green-100 text-green-700 border-green-200 h-5 text-[9px] font-black uppercase px-2">Gekoppeld</Badge>}
                   </div>
                 );
               })}
               {filtered.length === 0 && (
-                <div className="p-8 text-center text-muted-foreground">Geen materieel gevonden.</div>
+                <div className="p-12 text-center text-muted-foreground">
+                    <Truck className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                    <p className="font-bold uppercase text-xs tracking-widest">Geen materieel gevonden.</p>
+                </div>
               )}
             </div>
           </ScrollArea>
@@ -1372,8 +1381,8 @@ export default function ProjectsPage() {
   return (
     <div className="flex flex-col flex-1 min-h-0">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-        <div className="px-6 pt-6 overflow-x-auto">
-          <TabsList className="inline-flex">
+        <div className="px-4 md:px-6 pt-4 md:pt-6 overflow-x-auto no-scrollbar">
+          <TabsList className="w-max inline-flex">
             {canViewTab('project') && <TabsTrigger value="project">Project</TabsTrigger>}
             {canViewTab('voertuigen') && <TabsTrigger value="voertuigen">Voertuigen</TabsTrigger>}
             {canViewTab('werksoorten') && <TabsTrigger value="werksoorten">Werksoorten</TabsTrigger>}
@@ -1386,31 +1395,33 @@ export default function ProjectsPage() {
           </TabsList>
         </div>
 
-        <div className="flex items-center gap-4 mt-6 px-6">
-          <Label
-            htmlFor="select-project"
-            className="font-semibold whitespace-nowrap"
-          >
-            Selecteer Project:
-          </Label>
-          <Select
-            value={selectedProjectId || 'new'}
-            onValueChange={handleProjectSelect}
-            disabled={isLoading}
-          >
-            <SelectTrigger className="w-full max-w-lg">
-              <SelectValue placeholder="Selecteer een project" />
-            </SelectTrigger>
-            <SelectContent>
-              {canCreate && <SelectItem value="new">-- Nieuw Project --</SelectItem>}
-              {projects?.map((project) => (
-                <SelectItem key={project.id} value={project.id!}>
-                  {project.projectnaam} [{project.projectnummer}]
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button variant="outline" onClick={() => setIsGlobalWijkMapOpen(true)}>
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mt-6 px-4 md:px-6">
+          <div className="flex items-center gap-3 w-full md:flex-1">
+            <Label
+                htmlFor="select-project"
+                className="font-bold uppercase text-[10px] tracking-widest text-slate-400 whitespace-nowrap"
+            >
+                Project:
+            </Label>
+            <Select
+                value={selectedProjectId || 'new'}
+                onValueChange={handleProjectSelect}
+                disabled={isLoading}
+            >
+                <SelectTrigger className="w-full md:max-w-lg h-10 font-bold">
+                <SelectValue placeholder="Selecteer een project" />
+                </SelectTrigger>
+                <SelectContent>
+                {canCreate && <SelectItem value="new">-- Nieuw Project --</SelectItem>}
+                {projects?.map((project) => (
+                    <SelectItem key={project.id} value={project.id!}>
+                    {project.projectnaam} [{project.projectnummer}]
+                    </SelectItem>
+                ))}
+                </SelectContent>
+            </Select>
+          </div>
+          <Button variant="outline" className="w-full md:w-auto h-10 font-bold" onClick={() => setIsGlobalWijkMapOpen(true)}>
             <MapIcon className="mr-2 h-4 w-4" />
             {selectedProjectId ? 'Toon Project Wijken' : 'Toon Alle Wijken'}
           </Button>
@@ -1418,111 +1429,111 @@ export default function ProjectsPage() {
 
         {canViewTab('project') && <TabsContent
           value="project"
-          className="flex-1 overflow-y-auto pt-6 pb-2 px-6"
+          className="flex-1 overflow-y-auto pt-6 pb-2 px-4 md:px-6"
         >
-          <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Project</CardTitle>
+          <div className="space-y-6">
+            <Card className="rounded-2xl border-slate-100 shadow-sm overflow-hidden">
+              <CardHeader className="bg-slate-50/50 border-b p-4">
+                <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Project Basisgegevens</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                    <div>
-                        <Label htmlFor="projectnummer" className="text-xs font-semibold">Projectnummer</Label>
-                        <Input id="projectnummer" value={currentProject.projectnummer} onChange={(e) => handleInputChange('projectnummer', e.target.value)} disabled />
+              <CardContent className="space-y-6 p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <div className="space-y-1.5">
+                        <Label htmlFor="projectnummer" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Projectnummer</Label>
+                        <Input id="projectnummer" value={currentProject.projectnummer} className="h-10 font-bold bg-slate-50" disabled />
                     </div>
-                     <div>
-                        <Label htmlFor="projectnaam" className="text-xs font-semibold">Projectnaam</Label>
-                        <Input id="projectnaam" value={currentProject.projectnaam} onChange={(e) => handleInputChange('projectnaam', e.target.value)} disabled={!canEdit} />
+                     <div className="space-y-1.5">
+                        <Label htmlFor="projectnaam" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Projectnaam</Label>
+                        <Input id="projectnaam" value={currentProject.projectnaam} onChange={(e) => handleInputChange('projectnaam', e.target.value)} disabled={!canEdit} className="h-10 font-bold" />
                     </div>
-                     <div>
-                        <Label htmlFor="locatie" className="text-xs font-semibold">Locatie</Label>
-                        <Input id="locatie" value={currentProject.locatie} onChange={(e) => handleInputChange('locatie', e.target.value)} disabled={!canEdit}/>
+                     <div className="space-y-1.5">
+                        <Label htmlFor="locatie" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Locatie</Label>
+                        <Input id="locatie" value={currentProject.locatie} onChange={(e) => handleInputChange('locatie', e.target.value)} disabled={!canEdit} className="h-10 font-bold" />
                     </div>
-                     <div>
-                        <Label htmlFor="opdrachtgever" className="text-xs font-semibold">Opdrachtgever</Label>
-                        <Input id="opdrachtgever" value={currentProject.opdrachtgever} onChange={(e) => handleInputChange('opdrachtgever', e.target.value)} disabled={!canEdit}/>
+                     <div className="space-y-1.5">
+                        <Label htmlFor="opdrachtgever" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Opdrachtgever</Label>
+                        <Input id="opdrachtgever" value={currentProject.opdrachtgever} onChange={(e) => handleInputChange('opdrachtgever', e.target.value)} disabled={!canEdit} className="h-10 font-bold" />
                     </div>
-                     <div>
-                        <Label htmlFor="startdatum" className="text-xs font-semibold">Startdatum</Label>
-                        <Input id="startdatum" type="date" value={currentProject.startdatum} onChange={(e) => handleInputChange('startdatum', e.target.value)} disabled={!canEdit}/>
+                     <div className="space-y-1.5">
+                        <Label htmlFor="startdatum" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Startdatum</Label>
+                        <Input id="startdatum" type="date" value={currentProject.startdatum} onChange={(e) => handleInputChange('startdatum', e.target.value)} disabled={!canEdit} className="h-10 font-bold" />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="einddatum" className="text-xs font-semibold">Einddatum</Label>
-                        <Input id="einddatum" type="date" value={currentProject.einddatum} onChange={(e) => handleInputChange('einddatum', e.target.value)} disabled={isEndDateHeden || !canEdit} />
-                        <div className="flex items-center space-x-2">
+                        <Label htmlFor="einddatum" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Einddatum</Label>
+                        <Input id="einddatum" type="date" value={currentProject.einddatum} onChange={(e) => handleInputChange('einddatum', e.target.value)} disabled={isEndDateHeden || !canEdit} className="h-10 font-bold" />
+                        <div className="flex items-center space-x-2 pl-1">
                             <Checkbox id="heden" checked={isEndDateHeden} onCheckedChange={(checked) => handleHedenCheckboxChange(!!checked)} disabled={!canEdit} />
-                            <label htmlFor="heden" className="text-sm font-medium leading-none">Heden</label>
+                            <label htmlFor="heden" className="text-[10px] font-black uppercase tracking-widest text-slate-500 leading-none cursor-pointer">Lopend (Heden)</label>
                         </div>
                     </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Bestek</CardTitle>
+            <Card className="rounded-2xl border-slate-100 shadow-sm overflow-hidden">
+              <CardHeader className="bg-slate-50/50 border-b p-4">
+                <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Bestek & Versiebeheer</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                   <div>
-                        <Label htmlFor="bestek" className="text-xs font-semibold">Bestek</Label>
-                        <Input id="bestek" value={currentProject.bestek} onChange={(e) => handleInputChange('bestek', e.target.value)} disabled={!canEdit}/>
+              <CardContent className="space-y-6 p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                   <div className="space-y-1.5">
+                        <Label htmlFor="bestek" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Bestek</Label>
+                        <Input id="bestek" value={currentProject.bestek} onChange={(e) => handleInputChange('bestek', e.target.value)} disabled={!canEdit} className="h-10 font-bold" />
                     </div>
-                     <div>
-                        <Label htmlFor="besteknummer" className="text-xs font-semibold">Besteknummer</Label>
-                        <Input id="besteknummer" value={currentProject.besteknummer} onChange={(e) => handleInputChange('besteknummer', e.target.value)} disabled={!canEdit}/>
+                     <div className="space-y-1.5">
+                        <Label htmlFor="besteknummer" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Besteknummer</Label>
+                        <Input id="besteknummer" value={currentProject.besteknummer} onChange={(e) => handleInputChange('besteknummer', e.target.value)} disabled={!canEdit} className="h-10 font-bold" />
                     </div>
-                     <div>
-                        <Label htmlFor="versie" className="text-xs font-semibold">Versie</Label>
-                        <Input id="versie" value={currentProject.versie} onChange={(e) => handleInputChange('versie', e.target.value)} disabled={!canEdit}/>
+                     <div className="space-y-1.5">
+                        <Label htmlFor="versie" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Versie</Label>
+                        <Input id="versie" value={currentProject.versie} onChange={(e) => handleInputChange('versie', e.target.value)} disabled={!canEdit} className="h-10 font-bold" />
                     </div>
-                     <div>
-                        <Label htmlFor="datum" className="text-xs font-semibold">Datum</Label>
-                        <Input id="datum" type="date" value={currentProject.datum} onChange={(e) => handleInputChange('datum', e.target.value)} disabled={!canEdit}/>
+                     <div className="space-y-1.5">
+                        <Label htmlFor="datum" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Publicatiedatum</Label>
+                        <Input id="datum" type="date" value={currentProject.datum} onChange={(e) => handleInputChange('datum', e.target.value)} disabled={!canEdit} className="h-10 font-bold" />
                     </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">
-                  Korte omschrijving werkzaamheden
+            <Card className="rounded-2xl border-slate-100 shadow-sm overflow-hidden">
+              <CardHeader className="bg-slate-50/50 border-b p-4">
+                <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">
+                  Projectomschrijving
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <Textarea rows={4} value={currentProject.omschrijving} onChange={(e) => handleInputChange('omschrijving', e.target.value)} disabled={!canEdit}/>
+              <CardContent className="p-6">
+                <Textarea rows={6} value={currentProject.omschrijving} onChange={(e) => handleInputChange('omschrijving', e.target.value)} disabled={!canEdit} className="resize-none font-medium leading-relaxed" placeholder="Geef hier een gedetailleerde omschrijving van het project en de specifieke werkzaamheden..." />
               </CardContent>
 
-            <div className="flex justify-start gap-2 p-6 pt-0">
-              {canEdit && <Button onClick={handleSave}>Opslaan</Button>}
-              {canCreate && <Button variant="outline" onClick={handleNew}>Nieuw</Button>}
-              {canDelete && <Button variant="destructive" onClick={handleDelete} disabled={!currentProject.id}>Verwijder</Button>}
-            </div>
+              <div className="flex flex-col sm:flex-row justify-start gap-3 p-6 pt-0">
+                {canEdit && <Button onClick={handleSave} className="h-11 px-8 font-black uppercase tracking-tight">Project Opslaan</Button>}
+                {canCreate && <Button variant="outline" onClick={handleNew} className="h-11 px-8 font-black uppercase tracking-tight">Nieuw Project</Button>}
+                {canDelete && <Button variant="destructive" onClick={handleDelete} disabled={!currentProject.id} className="h-11 px-8 font-black uppercase tracking-tight sm:ml-auto">Verwijderen</Button>}
+              </div>
             </Card>
           </div>
         </TabsContent>}
-        {canViewTab('voertuigen') && <TabsContent value="voertuigen" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
+        {canViewTab('voertuigen') && <TabsContent value="voertuigen" className="flex-1 overflow-y-auto pt-6 pb-2 px-4 md:px-6">
           <VoertuigenTab 
             assignedIds={currentProject.materieelIds || []} 
             onToggle={handleToggleMaterieel}
             canEdit={canEdit}
           />
         </TabsContent>}
-        {canViewTab('werksoorten') && <TabsContent value="werksoorten" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
+        {canViewTab('werksoorten') && <TabsContent value="werksoorten" className="flex-1 overflow-y-auto pt-6 pb-2 px-4 md:px-6">
           <WerksoortenTab werksoorten={currentProject.werksoorten} setWerksoorten={(newWerksoorten) => setCurrentProject(prev => ({...prev, werksoorten: typeof newWerksoorten === 'function' ? newWerksoorten(prev.werksoorten) : newWerksoorten}))} canEdit={canEdit} />
         </TabsContent>}
-        {canViewTab('boekingregels') && <TabsContent value="boekingregels" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
+        {canViewTab('boekingregels') && <TabsContent value="boekingregels" className="flex-1 overflow-y-auto pt-6 pb-2 px-4 md:px-6">
           <BoekingregelsTab projectId={selectedProjectId} canEdit={canEdit} />
         </TabsContent>}
-        {canViewTab('afspraken') && <TabsContent value="afspraken" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
+        {canViewTab('afspraken') && <TabsContent value="afspraken" className="flex-1 overflow-y-auto pt-6 pb-2 px-4 md:px-6">
           <AfsprakenTab projectId={selectedProjectId} canEdit={canEdit} canDelete={canDelete} />
         </TabsContent>}
-        {canViewTab('organisatie') && <TabsContent value="organisatie" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
+        {canViewTab('organisatie') && <TabsContent value="organisatie" className="flex-1 overflow-y-auto pt-6 pb-2 px-4 md:px-6">
           <OrganisatieTab projectId={selectedProjectId} wijken={currentProject.wijken} canEdit={canEdit} canDelete={canDelete} />
         </TabsContent>}
-        {canViewTab('wijken') && <TabsContent value="wijken" className="flex-1 overflow-y-auto pt-6 pb-2 px-6">
+        {canViewTab('wijken') && <TabsContent value="wijken" className="flex-1 overflow-y-auto pt-6 pb-2 px-4 md:px-6">
           <WijkenTab 
             wijken={currentProject.wijken || []} 
             setCurrentProject={setCurrentProject} 
@@ -1531,10 +1542,10 @@ export default function ProjectsPage() {
             firestore={firestore}
           />
         </TabsContent>}
-        {canViewTab('veegroutes') && <TabsContent value="veegroutes" className="flex-1 overflow-y-auto p-6">
+        {canViewTab('veegroutes') && <TabsContent value="veegroutes" className="flex-1 overflow-y-auto p-4 md:p-6">
           <VeegroutesTab veegroutes={currentProject.veegroutes || []} setCurrentProject={setCurrentProject} canEdit={canEdit} projectId={currentProject.id} firestore={firestore}/>
         </TabsContent>}
-        {canViewTab('prullenbakkenroutes') && <TabsContent value="prullenbakkenroutes" className="flex-1 overflow-y-auto p-6">
+        {canViewTab('prullenbakkenroutes') && <TabsContent value="prullenbakkenroutes" className="flex-1 overflow-y-auto p-4 md:p-6">
           <PrullenbakkenroutesTab 
             prullenbakkenroutes={currentProject.prullenbakkenroutes || []} 
             setCurrentProject={setCurrentProject} 
