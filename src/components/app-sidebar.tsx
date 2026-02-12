@@ -145,7 +145,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       <Sidebar isCollapsed={false} className="w-full bg-white border-r border-slate-200 shadow-none">
           <SidebarHeader className="p-6 border-b border-slate-100">
             <div className="flex items-center gap-4 w-full">
-              <div className="bg-primary h-10 w-10 rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
+              <div className="bg-primary h-10 w-10 rounded-xl flex items-center justify-center shadow-lg shadow-black/20">
                 <LayoutGrid className="text-white h-6 w-6" />
               </div>
               <div className="flex flex-col">
@@ -186,7 +186,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                           className={cn(
                             "h-11 text-sm font-bold justify-between transition-all rounded-xl px-4",
                             pathname.startsWith(item.href) 
-                              ? "bg-primary text-white shadow-lg shadow-primary/20" 
+                              ? "bg-primary text-white shadow-lg shadow-black/20" 
                               : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                           )}
                         >
@@ -238,7 +238,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                       className={cn(
                         "h-11 text-sm font-bold transition-all rounded-xl px-4",
                         pathname === item.href 
-                          ? "bg-primary text-white shadow-lg shadow-primary/20" 
+                          ? "bg-primary text-white shadow-lg shadow-black/20" 
                           : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                       )}
                     >
