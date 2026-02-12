@@ -164,7 +164,6 @@ function NavigatingView({
 
     // If another object is significantly closer (or just the new closest), switch target
     if (nearestIdx !== currentObjectIndex && nearestDist < (distanceRemainingToDestination - 50)) {
-        console.log("Switching target to nearer object:", objectsOnRoute[nearestIdx].id);
         setCurrentObjectIndex(nearestIdx);
         setCurrentRouteGeometry(null);
         setCurrentLeg(null);
@@ -395,7 +394,7 @@ function NavigatingView({
       }
     };
     fetchRoute();
-  }, [nextObject?.id, arrivedObject, isSimulating]);
+  }, [nextObject?.id, arrivedObject, isSimulating, userLocation?.latitude, userLocation?.longitude]);
   
   const handleArrivedAction = (type: 'finish' | 'issue') => {
     if (!arrivedObject) return;
