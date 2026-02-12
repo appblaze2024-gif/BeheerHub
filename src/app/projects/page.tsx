@@ -50,6 +50,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useProject } from '@/context/project-context';
 import * as turf from '@turf/turf';
 import { Separator } from '@/components/ui/separator';
@@ -970,7 +976,7 @@ function PrullenbakkenroutesTab({
               <TableHead className="w-[80px] text-right"></TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody className="divide-y divide-black">
+          <TableBody>
             {sortedRoutes.map((route) => {
               const isSub = !!route.parentId;
               return (
