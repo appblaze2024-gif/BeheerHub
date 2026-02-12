@@ -17,6 +17,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
@@ -819,7 +821,7 @@ function VeegroutesTab({
           </TableBody>
         </Table>
       </div>
-      {canEdit && <Button variant="outline" size="sm" onClick={addRow}><Plus className="mr-2 h-4 w-4" /> Veegroute toevoegen</Button>}
+      {canEdit && <Button variant="outline" size="sm" onClickaddRow}><Plus className="mr-2 h-4 w-4" /> Veegroute toevoegen</Button>}
       
       {mapRoute && (
         <VeegrouteMapDialog
