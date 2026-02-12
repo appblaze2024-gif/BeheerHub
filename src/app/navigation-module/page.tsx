@@ -659,7 +659,7 @@ function NavigatingView({
       {/* Navigation Toolbar - Bottom Drawer */}
       <div className={cn(
           "absolute bottom-0 left-0 right-0 z-[80] w-full flex flex-col items-center",
-          isMobile ? "px-0" : "px-6 pb-6"
+          isMobile ? "px-3 pb-3" : "px-6 pb-6"
       )}>
         {!isFollowing && (
             <Button onClick={() => setIsFollowing(true)} className="h-12 w-12 md:h-14 md:w-14 rounded-full shadow-2xl bg-primary text-white border-none hover:scale-110 active:scale-95 transition-all flex items-center justify-center mb-4">
@@ -670,7 +670,7 @@ function NavigatingView({
         {isMobile ? (
             <Card 
                 className={cn(
-                    "w-full bg-white shadow-[0_-10px_40px_rgba(0,0,0,0.1)] border-none rounded-t-[40px] pt-2 pb-8 px-8 transition-all duration-300 ease-in-out cursor-pointer",
+                    "w-full bg-white shadow-2xl border-none rounded-[32px] pt-2 pb-6 px-8 transition-all duration-300 ease-in-out cursor-pointer",
                     isDrawerExpanded ? "max-h-[300px]" : "max-h-[140px]"
                 )}
                 onTouchStart={handleTouchStart}
