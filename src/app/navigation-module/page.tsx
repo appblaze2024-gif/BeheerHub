@@ -637,6 +637,35 @@ function NavigatingView({
         )}
       </div>
 
+      {/* Speedometer Gauge in Top Right (replacing previous drawn circle) */}
+      <div className="absolute top-20 right-4 z-[70]">
+          <div className="h-20 w-20 rounded-full bg-white/95 backdrop-blur shadow-2xl border-4 border-slate-100 flex flex-col items-center justify-center overflow-hidden">
+              <div className="flex flex-col items-center leading-none z-10">
+                  <span className="text-2xl font-black text-slate-900 tabular-nums">{speedKmh}</span>
+                  <span className="text-[8px] font-black uppercase text-slate-400 mt-0.5 tracking-widest">km/h</span>
+              </div>
+              <svg className="absolute inset-0 -rotate-90 p-1" viewBox="0 0 100 100">
+                  <circle 
+                    cx="50" cy="50" r="44" 
+                    fill="none" stroke="currentColor" 
+                    strokeWidth="6" className="text-slate-100" 
+                  />
+                  <circle 
+                    cx="50" cy="50" r="44" 
+                    fill="none" stroke="currentColor" 
+                    strokeWidth="6" 
+                    strokeDasharray={2 * Math.PI * 44}
+                    strokeDashoffset={2 * Math.PI * 44 * (1 - Math.min(speedKmh, 50) / 50)}
+                    className={cn(
+                        "transition-all duration-500",
+                        speedKmh > 50 ? "text-red-500" : "text-blue-600"
+                    )}
+                    strokeLinecap="round"
+                  />
+              </svg>
+          </div>
+      </div>
+
       {arrivedObject && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6">
               <Card className="w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
