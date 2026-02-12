@@ -29,6 +29,7 @@ interface VehicleDeploymentDialogProps {
   onToggleUnavailability: (dateKey: string, vehicleId: string, checked: boolean) => void;
   medewerkers: Medewerker[] | null;
   canEdit?: boolean;
+  projectMaterieelIds?: string[];
 }
 
 export function VehicleDeploymentDialog({
@@ -41,6 +42,7 @@ export function VehicleDeploymentDialog({
   onToggleUnavailability,
   medewerkers,
   canEdit = false,
+  projectMaterieelIds,
 }: VehicleDeploymentDialogProps) {
   const [selectedDay, setSelectedDay] = React.useState<string>('');
 
@@ -58,7 +60,12 @@ export function VehicleDeploymentDialog({
     const unavailableIds = unavailableVehicles[selectedDay] || [];
     const dayDiensten = diensten?.filter(d => d.datum === selectedDay) || [];
     
-    return allEquipment.map(item => {
+    // Filter equipment based on project selection if IDs are provided
+    const filteredEquipment = projectMaterieelIds && projectMaterieelIds.length > 0
+        ? allEquipment.filter(item => projectMaterieelIds.includes(item.id))
+        : allEquipment;
+    
+    return filteredEquipment.map(item => {
         const id = item.id;
         const name = (item as any).voertuignummer || (item as any).machinenummer || item.id;
         const isUnavailable = unavailableIds.includes(id);
@@ -91,7 +98,7 @@ export function VehicleDeploymentDialog({
             })
         };
     });
-  }, [selectedDay, allEquipment, unavailableVehicles, diensten, medewerkers]);
+  }, [selectedDay, allEquipment, unavailableVehicles, diensten, medewerkers, projectMaterieelIds]);
 
   const scheduledCount = deploymentData.filter(d => d.status === 'scheduled').length;
   const availableCount = deploymentData.filter(d => d.status === 'available').length;
@@ -153,7 +160,7 @@ export function VehicleDeploymentDialog({
                             <p className="text-[10px] text-green-600 dark:text-green-400 font-black uppercase tracking-widest mb-1">Beschikbaar</p>
                             <p className="text-4xl font-black text-green-700 dark:text-green-300 leading-none">{availableCount}</p>
                         </div>
-                        <div className="bg-green-100 dark:bg-green-900/50 p-2 rounded-full">
+                        <div className="bg-green-100 dark:bg-blue-900/50 p-2 rounded-full">
                             <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
                         </div>
                     </CardContent>
@@ -164,7 +171,7 @@ export function VehicleDeploymentDialog({
                             <p className="text-[10px] text-red-600 dark:text-red-400 font-black uppercase tracking-widest mb-1">Uit Inzet</p>
                             <p className="text-4xl font-black text-red-700 dark:text-red-300 leading-none">{unavailableCount}</p>
                         </div>
-                        <div className="bg-red-100 dark:bg-red-900/50 p-2 rounded-full">
+                        <div className="bg-red-100 dark:bg-blue-900/50 p-2 rounded-full">
                             <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
                         </div>
                     </CardContent>

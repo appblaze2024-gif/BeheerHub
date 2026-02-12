@@ -824,18 +824,6 @@ export default function WorkPlanningPage() {
     doc.save(`dagplanning_${format(dayToPrint, 'yyyy-MM-dd')}.pdf`);
   };
 
-  React.useEffect(() => {
-    const afterPrint = () => {
-       document.body.className = document.body.className.replace(/print-(day|week)-view/g, '').trim();
-    };
-
-    window.addEventListener('afterprint', afterPrint);
-
-    return () => {
-        window.removeEventListener('afterprint', afterPrint);
-    };
-  }, []);
-
   const renderActionButtons = () => {
     const buttons = [
       <Button 
@@ -1366,6 +1354,7 @@ export default function WorkPlanningPage() {
             onToggleUnavailability={handleUnavailableVehicleToggle}
             medewerkers={medewerkers}
             canEdit={canEdit}
+            projectMaterieelIds={selectedProject?.materieelIds}
         />
     </div>
   );
