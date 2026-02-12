@@ -164,7 +164,7 @@ function NavigatingView({
 
   const nextObject = objectsOnRoute[currentObjectIndex];
 
-  // Visual smoothing effect
+  // Visual smoothing effect - Simplified dependencies to prevent depth error
   React.useEffect(() => {
     let lastTime = performance.now();
     
@@ -172,16 +172,18 @@ function NavigatingView({
         const deltaTime = (time - lastTime) / 1000;
         lastTime = time;
 
-        if (targetLocation && smoothLocation && !isPaused) {
+        setSmoothLocation(prevSmooth => {
+            if (!targetLocation || !prevSmooth || isPaused) return prevSmooth;
+
             const lerpFactor = isSimulating ? 1 : 0.15; 
             
-            const newLat = smoothLocation.latitude + (targetLocation.latitude - smoothLocation.latitude) * lerpFactor;
-            const newLng = smoothLocation.longitude + (targetLocation.longitude - smoothLocation.longitude) * lerpFactor;
+            const newLat = prevSmooth.latitude + (targetLocation.latitude - prevSmooth.latitude) * lerpFactor;
+            const newLng = prevSmooth.longitude + (targetLocation.longitude - prevSmooth.longitude) * lerpFactor;
             
-            let diff = (targetLocation.heading || 0) - (smoothLocation.heading || 0);
+            let diff = (targetLocation.heading || 0) - (prevSmooth.heading || 0);
             while (diff < -180) diff += 360;
             while (diff > 180) diff -= 360;
-            const newHeading = (smoothLocation.heading || 0) + diff * (lerpFactor * 0.5);
+            const newHeading = (prevSmooth.heading || 0) + diff * (lerpFactor * 0.5);
 
             const newSmooth = {
                 latitude: newLat,
@@ -190,22 +192,24 @@ function NavigatingView({
                 heading: newHeading
             };
 
-            setSmoothLocation(newSmooth);
-
+            // Camera follow logic
             if (isFollowing && !arrivedObject) {
                 const currentSpeedKmh = (targetLocation.speed || 0) * 3.6;
                 const targetZoom = Math.max(15, 18.5 - (Math.min(currentSpeedKmh, 80) / 30));
                 
-                setViewState(prev => ({
-                    ...prev,
+                setViewState(prevView => ({
+                    ...prevView,
                     latitude: newLat,
                     longitude: newLng,
                     bearing: newHeading,
-                    zoom: prev.zoom + (targetZoom - prev.zoom) * 0.05,
+                    zoom: prevView.zoom + (targetZoom - prevView.zoom) * 0.05,
                     pitch: 65,
                 }));
             }
-        }
+
+            return newSmooth;
+        });
+
         smoothingAnimationRef.current = requestAnimationFrame(animateSmoothly);
     };
 
@@ -213,7 +217,7 @@ function NavigatingView({
     return () => {
         if (smoothingAnimationRef.current) cancelAnimationFrame(smoothingAnimationRef.current);
     };
-  }, [targetLocation, smoothLocation, isFollowing, isPaused, arrivedObject, isSimulating]);
+  }, [targetLocation?.latitude, targetLocation?.longitude, isFollowing, isPaused, arrivedObject, isSimulating]);
 
   const snappedLocation = React.useMemo(() => {
     if (!smoothLocation || !currentRouteGeometry) return smoothLocation;
@@ -351,7 +355,9 @@ function NavigatingView({
         const snapped = turf.nearestPointOnLine(line, userPoint);
         const distToStart = turf.length(turf.lineSlice(turf.point(coords[0]), snapped, line), { units: 'meters' });
         const remaining = Math.max(0, totalDist - distToStart);
-        setDistanceRemainingToDestination(remaining);
+        
+        // Only update if difference is more than 1 meter to prevent redundant renders
+        setDistanceRemainingToDestination(prev => Math.abs(prev - remaining) > 1 ? remaining : prev);
         setHasReachedCurrentTarget(remaining < 80);
     } catch (e) {}
   }, [targetLocation?.latitude, targetLocation?.longitude, currentRouteGeometry, isSimulating]);
@@ -395,7 +401,9 @@ function NavigatingView({
         simStateRef.current.distanceTravelled += simStateRef.current.currentSpeedMs * deltaTime;
         
         const remaining = Math.max(0, totalDistance - simStateRef.current.distanceTravelled);
-        setDistanceRemainingToDestination(remaining);
+        
+        // Throttled updates for HUD
+        setDistanceRemainingToDestination(prev => Math.abs(prev - remaining) > 1 ? remaining : prev);
 
         if (simStateRef.current.distanceTravelled >= totalDistance - 0.2) {
             const finalCoord = coords[coords.length - 1];
@@ -430,6 +438,9 @@ function NavigatingView({
   React.useEffect(() => {
     if (!targetLocation || !nextObject || arrivedObject || isCalculatingRoute) return;
     
+    // IMPORTANT: In simulation mode, only fetch once at the start of each object leg
+    if (isSimulating && lastFetchedTargetId.current === nextObject.id && currentRouteGeometry) return;
+    
     if (lastFetchedTargetId.current === nextObject.id && currentRouteGeometry) return;
 
     const fetchRoute = async () => {
@@ -454,7 +465,7 @@ function NavigatingView({
       }
     };
     fetchRoute();
-  }, [nextObject?.id, arrivedObject, isSimulating, targetLocation?.latitude, targetLocation?.longitude, currentRouteGeometry, isCalculatingRoute]);
+  }, [nextObject?.id, arrivedObject, isSimulating, targetLocation?.latitude, targetLocation?.longitude, isCalculatingRoute]); // Removed currentRouteGeometry from deps
   
   const handleArrivedAction = (type: 'finish' | 'issue') => {
     if (!arrivedObject) return;
@@ -537,12 +548,15 @@ function NavigatingView({
             longitude={smoothLocation.longitude} 
             latitude={smoothLocation.latitude} 
             anchor="center"
+            // If following, rotation is 0 because the map bearing handles the orientation. 
+            // If not following, rotation is the car's heading.
             rotation={isFollowing ? 0 : (smoothLocation.heading || 0)} 
           >
             <div className="relative flex items-center justify-center">
                 <div className="absolute h-16 w-16 bg-blue-500/20 rounded-full animate-pulse" />
                 <div className="h-12 w-12 bg-blue-600 rounded-full border-[4px] border-white shadow-2xl flex items-center justify-center transition-transform duration-75">
-                    <Navigation2 className="h-7 w-7 text-white fill-current rotate-[45deg]" />
+                    {/* Navigation2 points top-right (45 deg) by default. -45 makes it point North (up). */}
+                    <Navigation2 className="h-7 w-7 text-white fill-current -rotate-45" />
                 </div>
             </div>
           </Marker>
