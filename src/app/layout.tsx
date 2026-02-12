@@ -55,9 +55,35 @@ function Header() {
   const getPageTitle = () => {
     const parts = pathname.split('/').filter(Boolean);
     if (parts.length === 0) return 'Dashboard';
-    const main = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+    
+    const translations: Record<string, string> = {
+      'projects': 'Projecten',
+      'bestanden': 'Documenten',
+      'employees': 'Personeel',
+      'work-planning': 'Werkplanning',
+      'vehicles': 'Wagenpark',
+      'weekly-reports': 'Weekstaten',
+      'issues': 'Meldingen',
+      'objects': 'Objecten',
+      'spec-reports': 'Bestek',
+      'navigation-module': 'Navigatie',
+      'iot': 'IoT',
+      'mail': 'Mail',
+      'profile': 'Mijn Profiel',
+      'settings': 'Instellingen',
+      'open': 'Openstaand',
+      'new': 'Melding maken',
+      'portal': 'Portaal',
+      'archive': 'Archief'
+    };
+
+    const mainKey = parts[0].toLowerCase();
+    const main = translations[mainKey] || parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+    
     if (parts.length > 1) {
-        return `${main} > ${parts[1].charAt(0).toUpperCase() + parts[1].slice(1)}`;
+        const subKey = parts[1].toLowerCase();
+        const sub = translations[subKey] || parts[1].charAt(0).toUpperCase() + parts[1].slice(1);
+        return `${main} > ${sub}`;
     }
     return main;
   };
