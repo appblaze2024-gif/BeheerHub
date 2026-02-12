@@ -1,260 +1,69 @@
+
 {
   "entities": {
     "UserProfile": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "UserProfile",
+      "description": "Gebruikersprofiel binnen BeheerHub met rollen en permissies.",
       "type": "object",
-      "description": "Represents the profile information for a business user, typically linked to an authentication system's user ID.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the UserProfile entity. This typically corresponds to the authenticated user's ID (UID)."
-        },
-        "businessName": {
-          "type": "string",
-          "description": "The registered name of the small business associated with this user profile."
-        },
-        "contactEmail": {
-          "type": "string",
-          "description": "The primary contact email address for the business.",
-          "format": "email"
-        },
-        "contactPhone": {
-          "type": "string",
-          "description": "The primary contact phone number for the business."
-        },
-        "address": {
-          "type": "string",
-          "description": "The physical address of the business."
-        },
-        "currency": {
-          "type": "string",
-          "description": "The default currency code (e.g., 'USD', 'EUR') used for financial tracking within the application."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the user profile was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the user profile was last updated.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["Super admin", "toezichthouder", "ondersteuner", "medewerkers"] },
+        "status": { "type": "string" },
+        "wijk": { "type": "string" },
+        "nfcTagId": { "type": "string" }
       },
-      "required": [
-        "id",
-        "businessName",
-        "contactEmail",
-        "currency",
-        "createdAt",
-        "updatedAt"
-      ]
+      "required": ["id", "email", "role"]
     },
-    "Revenue": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Revenue",
+    "Project": {
+      "title": "Project",
+      "description": "Beheer van infra- en reinigingsprojecten.",
       "type": "object",
-      "description": "Records individual revenue entries for a business, contributing to overall financial tracking.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Revenue entity."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the UserProfile that owns this revenue entry. (Relationship: UserProfile 1:N Revenue)"
-        },
-        "amount": {
-          "type": "number",
-          "description": "The monetary value of the revenue item."
-        },
-        "description": {
-          "type": "string",
-          "description": "A brief description of what this revenue item is for."
-        },
-        "date": {
-          "type": "string",
-          "description": "The date when the revenue was received or recorded.",
-          "format": "date-time"
-        },
-        "source": {
-          "type": "string",
-          "description": "The origin or type of revenue (e.g., 'Sales', 'Service Fee', 'Subscription')."
-        },
-        "isRecurring": {
-          "type": "boolean",
-          "description": "Indicates if this revenue item is part of a recurring income stream."
-        },
-        "paymentMethod": {
-          "type": "string",
-          "description": "The method by which the revenue was received (e.g., 'Credit Card', 'Bank Transfer', 'Cash')."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the revenue entry was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the revenue entry was last updated.",
-          "format": "date-time"
-        }
+        "projectnummer": { "type": "string" },
+        "projectnaam": { "type": "string" },
+        "locatie": { "type": "string" },
+        "opdrachtgever": { "type": "string" }
       },
-      "required": [
-        "id",
-        "userId",
-        "amount",
-        "description",
-        "date",
-        "source",
-        "isRecurring",
-        "paymentMethod",
-        "createdAt",
-        "updatedAt"
-      ]
+      "required": ["projectnummer", "projectnaam"]
     },
-    "Expense": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Expense",
+    "Medewerker": {
+      "title": "Medewerker",
+      "description": "Personeelsgegevens en werkroosters.",
       "type": "object",
-      "description": "Records individual expense entries for a business, enabling detailed cost tracking.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Expense entity."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the UserProfile that incurred this expense. (Relationship: UserProfile 1:N Expense)"
-        },
-        "amount": {
-          "type": "number",
-          "description": "The monetary value of the expense item."
-        },
-        "description": {
-          "type": "string",
-          "description": "A brief description of what this expense item is for."
-        },
-        "date": {
-          "type": "string",
-          "description": "The date when the expense occurred or was recorded.",
-          "format": "date-time"
-        },
-        "category": {
-          "type": "string",
-          "description": "The category of the expense (e.g., 'Rent', 'Utilities', 'Marketing', 'Supplies')."
-        },
-        "isRecurring": {
-          "type": "boolean",
-          "description": "Indicates if this expense item is part of a recurring cost."
-        },
-        "paymentMethod": {
-          "type": "string",
-          "description": "The method by which the expense was paid (e.g., 'Credit Card', 'Bank Transfer', 'Cash')."
-        },
-        "receiptUrl": {
-          "type": "string",
-          "description": "An optional URL to a scanned receipt or invoice for the expense.",
-          "format": "uri"
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the expense entry was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the expense entry was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "userId",
-        "amount",
-        "description",
-        "date",
-        "category",
-        "isRecurring",
-        "paymentMethod",
-        "createdAt",
-        "updatedAt"
-      ]
+        "voornaam": { "type": "string" },
+        "achternaam": { "type": "string" },
+        "functie": { "type": "string" },
+        "status": { "type": "string" }
+      }
     },
-    "Appointment": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Appointment",
+    "Melding": {
+      "title": "Melding",
+      "description": "Meldingen openbare ruimte en werkbonnen.",
       "type": "object",
-      "description": "Manages scheduled meetings or events within the business calendar.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Appointment entity."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the UserProfile that scheduled this appointment. (Relationship: UserProfile 1:N Appointment)"
-        },
-        "title": {
-          "type": "string",
-          "description": "A concise title for the appointment."
-        },
-        "description": {
-          "type": "string",
-          "description": "A detailed description of the appointment's purpose or agenda."
-        },
-        "startTime": {
-          "type": "string",
-          "description": "The scheduled start date and time of the appointment.",
-          "format": "date-time"
-        },
-        "endTime": {
-          "type": "string",
-          "description": "The scheduled end date and time of the appointment.",
-          "format": "date-time"
-        },
-        "location": {
-          "type": "string",
-          "description": "The physical or virtual location where the appointment will take place."
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the appointment (e.g., 'Scheduled', 'Confirmed', 'Completed', 'Cancelled')."
-        },
-        "reminderSent": {
-          "type": "boolean",
-          "description": "A flag indicating whether an automated reminder for this appointment has been sent."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the appointment entry was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the appointment entry was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "userId",
-        "title",
-        "startTime",
-        "endTime",
-        "status",
-        "reminderSent",
-        "createdAt",
-        "updatedAt"
-      ]
+        "intakenummer": { "type": "string" },
+        "status": { "type": "string" },
+        "hoofdcategorie": { "type": "string" },
+        "subcategorie": { "type": "string" }
+      }
+    },
+    "Route": {
+      "title": "Route",
+      "description": "Gereden ritten door medewerkers.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "routeName": { "type": "string" },
+        "startTime": { "type": "string", "format": "date-time" },
+        "completedObjects": { "type": "array", "items": { "type": "string" } }
+      }
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["password"]
   },
   "firestore": {
     "structure": [
@@ -262,79 +71,55 @@
         "path": "/users/{userId}",
         "definition": {
           "entityName": "UserProfile",
-          "schema": {
-            "$ref": "#/backend/entities/UserProfile"
-          },
-          "description": "Stores individual business user profiles. The document ID matches the authenticated user's ID (`userId`). Includes an `id` field which must match `userId` for clear ownership and authorization independence.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the authenticated user, corresponding to Firebase Authentication UID."
-            }
-          ]
+          "description": "Gebruikersprofielen."
         }
       },
       {
-        "path": "/users/{userId}/revenues/{revenueId}",
+        "path": "/users/{userId}/routes/{routeId}",
         "definition": {
-          "entityName": "Revenue",
-          "schema": {
-            "$ref": "#/backend/entities/Revenue"
-          },
-          "description": "Stores individual revenue entries for a specific user. Includes a denormalized `userId` field which must match the parent `userId` in the path and `request.auth.uid` for robust authorization independence.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user who owns this revenue entry."
-            },
-            {
-              "name": "revenueId",
-              "description": "The unique identifier for a specific revenue entry."
-            }
-          ]
+          "entityName": "Route",
+          "description": "Gereden ritten per gebruiker."
         }
       },
       {
-        "path": "/users/{userId}/expenses/{expenseId}",
+        "path": "/projects/{projectId}",
         "definition": {
-          "entityName": "Expense",
-          "schema": {
-            "$ref": "#/backend/entities/Expense"
-          },
-          "description": "Stores individual expense entries for a specific user. Includes a denormalized `userId` field which must match the parent `userId` in the path and `request.auth.uid` for robust authorization independence.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user who incurred this expense."
-            },
-            {
-              "name": "expenseId",
-              "description": "The unique identifier for a specific expense entry."
-            }
-          ]
+          "entityName": "Project",
+          "description": "Projectgegevens."
         }
       },
       {
-        "path": "/users/{userId}/appointments/{appointmentId}",
+        "path": "/medewerkers/{medewerkerId}",
         "definition": {
-          "entityName": "Appointment",
-          "schema": {
-            "$ref": "#/backend/entities/Appointment"
-          },
-          "description": "Stores individual appointment entries for a specific user. Includes a denormalized `userId` field which must match the parent `userId` in the path and `request.auth.uid` for robust authorization independence.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user who scheduled this appointment."
-            },
-            {
-              "name": "appointmentId",
-              "description": "The unique identifier for a specific appointment entry."
-            }
-          ]
+          "entityName": "Medewerker",
+          "description": "Personeelsbestand."
+        }
+      },
+      {
+        "path": "/meldingen/{meldingId}",
+        "definition": {
+          "entityName": "Melding",
+          "description": "Meldingen en werkbonnen."
+        }
+      },
+      {
+        "path": "/voertuigen/{voertuigId}",
+        "definition": {
+          "description": "Wagenpark."
+        }
+      },
+      {
+        "path": "/machines/{machineId}",
+        "definition": {
+          "description": "Machinepark."
+        }
+      },
+      {
+        "path": "/objects/{objectId}",
+        "definition": {
+          "description": "Areaal objecten (prullenbakken, etc)."
         }
       }
-    ],
-    "reasoning": "The recommended Firestore structure for BizBoard prioritizes strong user ownership, authorization independence, and debuggability. All user-specific data is housed within subcollections directly under a user's profile document, following the pattern `/users/{userId}/<subcollectionName>/{docId}`. This design adheres to the core principles:\n\n1.  **Authorization Independence (CRITICAL):** Each document in a subcollection (e.g., `/users/{userId}/revenues/{revenueId}`) will contain a denormalized `userId` field. This `userId` field *must* match the `{userId}` wildcard in its path and also `request.auth.uid`. This allows security rules to evaluate ownership and access permissions directly from the document itself and its path, without needing expensive and non-atomic `get()` operations on parent documents. For instance, a rule can simply check `allow read, write: if request.auth.uid == userId && resource.data.userId == userId;`. This makes atomic operations (like creating a user profile and their first revenue entry in a single batch) inherently secure and debuggable.\n\n2.  **QAPs (Rules are not Filters):** By enforcing path-based ownership (e.g., all documents in `/users/{userId}/revenues` belong to `{userId}`), `list` operations are inherently secure and efficient. When a user requests to list documents from `/users/5l56WagvKGXxqnUJ5t4oBlnJSM73/revenues`, the security rules can check `request.auth.uid == '5l56WagvKGXxqnUJ5t4oBlnJSM73'`, ensuring that only the owner can list their own revenues. There's no need for client-side filtering or complex rule logic to restrict what documents are returned, guaranteeing that only authorized data is ever returned by a query. The error reported (`path: \"/databases/(default)/documents/users/5l56WagvKGXxqnUJ5t4oBlnJSM73/routes\"`) suggests the client code is attempting to query a collection named `routes`. Based on the provided entities, there is no `Route` entity. The client code should be updated to query the appropriate collections like `revenues`, `expenses`, or `appointments` under the user's path.\n\n3.  **Structural Segregation:** Each subcollection (`revenues`, `expenses`, `appointments`) stores a homogeneous set of documents with identical security requirements (private to the user). This avoids mixing data with different access patterns in a single collection, simplifying security rules significantly.\n\n4.  **DBAC (Database-Based Access Control):** All authorization is handled by checking `request.auth.uid` against the path wildcards and the denormalized `userId` field within the documents. No custom claims or server-side logic are required for basic access control, aligning with Firebase's best practices.\n\nThis structure provides a clear, scalable, and highly secure foundation for the BizBoard application, making security rules straightforward to write, test, and maintain."
+    ]
   }
 }
