@@ -60,10 +60,12 @@ export const allMenuItems: MenuItem[] = [
       label: 'Wagenpark', 
       icon: Truck, 
       module: 'vehicles',
-      subItems: [
-        { href: '/vehicles', label: 'Voertuigen & Machines', id: 'materieel' },
-        { href: '/weekly-reports', label: 'Weekstaten', id: 'weekly-reports' },
-      ]
+    },
+    { 
+      href: '/weekly-reports', 
+      label: 'Weekstaten', 
+      icon: ClipboardList, 
+      module: 'weeklyReports' 
     },
     { 
       href: '/issues', 
