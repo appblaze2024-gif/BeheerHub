@@ -152,7 +152,9 @@ function NavigatingView({
     longitude: initialUserLocation?.longitude || 5.2913,
   });
 
-  const animationRef = React.useRef<number | null>(null);
+  const smoothingAnimationRef = React.useRef<number | null>(null);
+  const simAnimationRef = React.useRef<number | null>(null);
+  
   const simStateRef = React.useRef({
     distanceTravelled: 0,
     currentSpeedMs: 0,
@@ -162,6 +164,7 @@ function NavigatingView({
 
   const nextObject = objectsOnRoute[currentObjectIndex];
 
+  // Visual smoothing effect
   React.useEffect(() => {
     let lastTime = performance.now();
     
@@ -203,12 +206,12 @@ function NavigatingView({
                 }));
             }
         }
-        animationRef.current = requestAnimationFrame(animateSmoothly);
+        smoothingAnimationRef.current = requestAnimationFrame(animateSmoothly);
     };
 
-    animationRef.current = requestAnimationFrame(animateSmoothly);
+    smoothingAnimationRef.current = requestAnimationFrame(animateSmoothly);
     return () => {
-        if (animationRef.current) cancelAnimationFrame(animationRef.current);
+        if (smoothingAnimationRef.current) cancelAnimationFrame(smoothingAnimationRef.current);
     };
   }, [targetLocation, smoothLocation, isFollowing, isPaused, arrivedObject, isSimulating]);
 
@@ -353,6 +356,7 @@ function NavigatingView({
     } catch (e) {}
   }, [targetLocation?.latitude, targetLocation?.longitude, currentRouteGeometry, isSimulating]);
 
+  // Simulation physics effect
   React.useEffect(() => {
     if (!isSimulating || !currentRouteGeometry || !nextObject || arrivedObject || isCalculatingRoute) return;
 
@@ -367,10 +371,15 @@ function NavigatingView({
     const totalDistance = turf.length(line, { units: 'meters' });
     if (totalDistance <= 0) return;
 
+    // Reset simulation progress when geometry changes
+    simStateRef.current.distanceTravelled = 0;
+    simStateRef.current.currentSpeedMs = 0;
+    simStateRef.current.lastTimestamp = 0;
+
     const runSimulation = (timestamp: number) => {
         if (isPaused || arrivedObject || isCalculatingRoute || !currentRouteGeometry) {
             simStateRef.current.lastTimestamp = timestamp;
-            animationRef.current = requestAnimationFrame(runSimulation);
+            simAnimationRef.current = requestAnimationFrame(runSimulation);
             return;
         }
 
@@ -407,12 +416,12 @@ function NavigatingView({
             setTargetLocation({ latitude: lat, longitude: lng, speed: simStateRef.current.currentSpeedMs, heading: heading });
         } catch (e) {}
 
-        animationRef.current = requestAnimationFrame(runSimulation);
+        simAnimationRef.current = requestAnimationFrame(runSimulation);
     };
 
-    animationRef.current = requestAnimationFrame(runSimulation);
+    simAnimationRef.current = requestAnimationFrame(runSimulation);
     return () => {
-        if (animationRef.current) cancelAnimationFrame(animationRef.current);
+        if (simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current);
     };
   }, [isSimulating, isPaused, arrivedObject, currentRouteGeometry, nextObject?.id, isCalculatingRoute]);
 
@@ -437,11 +446,6 @@ function NavigatingView({
           setCurrentLeg(route.legs[0]);
           setDistanceRemainingToDestination(route.legs[0].distance);
           setHasReachedCurrentTarget(route.legs[0].distance < 80);
-          
-          if (isSimulating) {
-              simStateRef.current.distanceTravelled = 0;
-              simStateRef.current.currentSpeedMs = 0;
-          }
         }
       } catch (error) {
           console.error("Failed to fetch route:", error);
@@ -478,9 +482,6 @@ function NavigatingView({
     setCurrentRouteGeometry(null);
     setCurrentLeg(null);
     lastFetchedTargetId.current = null;
-    if (isSimulating) {
-        simStateRef.current = { distanceTravelled: 0, currentSpeedMs: 0, targetSpeedMs: 13.8, lastTimestamp: 0 };
-    }
   };
 
   const speedKmh = targetLocation?.speed ? Math.round(targetLocation.speed * 3.6) : 0;
@@ -762,6 +763,7 @@ export default function StartNavigationPage() {
   const isPrivileged = isSuperUser || profile?.role === 'toezichthouder';
   
   const [userLocation, setUserLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
+  const [tripStartLocation, setTripStartLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
   const [routeType, setRouteType] = React.useState<'veeg' | 'prullenbak' | null>(null);
   const [selectedRouteId, setSelectedRouteId] = React.useState<string>('--nieuwe-route--');
   const [navigationState, setNavigationState] = React.useState<'setup' | 'navigating'>('setup');
@@ -816,6 +818,7 @@ export default function StartNavigationPage() {
           name: searchParams.get('straat') || 'Bestemming'
       };
       setObjectsOnRoute([meldingObject]);
+      setTripStartLocation(userLocation);
       setNavigationState('navigating');
     }
   }, [searchParams, selectedProjectId, setSelectedProjectId, navigationState, userLocation]);
@@ -910,6 +913,7 @@ export default function StartNavigationPage() {
     }
     
     setObjectsOnRoute(sortedObjects);
+    setTripStartLocation(startCoords);
     setNavigationState('navigating');
     setIsStarting(false);
   };
@@ -923,7 +927,7 @@ export default function StartNavigationPage() {
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {navigationState === 'navigating' ? (
-        <NavigatingView objectsOnRoute={objectsOnRoute} onExit={() => { setNavigationState('setup'); setObjectsOnRoute([]); if (searchParams.has('lat')) router.back(); }} initialUserLocation={userLocation} isSimulating={isSimulationMode} />
+        <NavigatingView objectsOnRoute={objectsOnRoute} onExit={() => { setNavigationState('setup'); setObjectsOnRoute([]); if (searchParams.has('lat')) router.back(); }} initialUserLocation={tripStartLocation} isSimulating={isSimulationMode} />
       ) : (
         <div className="w-full h-full relative">
           <MapGL ref={mapRef} initialViewState={{ longitude: 5.2913, latitude: 52.1326, zoom: 7 }} style={{ width: '100%', height: '100%' }} mapStyle={mapStyle} mapboxAccessToken={MAPBOX_TOKEN} onClick={e => setUserLocation({ latitude: e.lngLat.lat, longitude: e.lngLat.lng })} interactive={true}>
