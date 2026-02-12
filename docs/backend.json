@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "UserProfile": {
@@ -13,7 +12,8 @@
         "status": { "type": "string" },
         "wijk": { "type": "string" },
         "nfcTagId": { "type": "string" },
-        "lastSelectedProjectId": { "type": "string" }
+        "lastSelectedProjectId": { "type": "string" },
+        "permissions": { "type": "object" }
       },
       "required": ["id", "email", "role"]
     },
@@ -26,7 +26,10 @@
         "projectnaam": { "type": "string" },
         "locatie": { "type": "string" },
         "opdrachtgever": { "type": "string" },
-        "vehicleAvailability": { "type": "object" }
+        "vehicleAvailability": { "type": "object" },
+        "wijken": { "type": "array" },
+        "veegroutes": { "type": "array" },
+        "prullenbakkenroutes": { "type": "array" }
       },
       "required": ["projectnummer", "projectnaam"]
     },
@@ -39,7 +42,8 @@
         "achternaam": { "type": "string" },
         "functie": { "type": "string" },
         "status": { "type": "string" },
-        "planningOrder": { "type": "number" }
+        "planningOrder": { "type": "number" },
+        "urenPerDag": { "type": "object" }
       }
     },
     "Melding": {
@@ -53,7 +57,8 @@
         "subcategorie": { "type": "string" },
         "datum": { "type": "string" },
         "latitude": { "type": "number" },
-        "longitude": { "type": "number" }
+        "longitude": { "type": "number" },
+        "extra_informatie": { "type": "string" }
       }
     },
     "Route": {
@@ -87,67 +92,38 @@
     "providers": ["password"]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "UserProfile",
-          "description": "Gebruikersprofielen."
-        }
-      },
-      {
-        "path": "/users/{userId}/routes/{routeId}",
-        "definition": {
-          "entityName": "Route",
-          "description": "Gereden ritten per gebruiker."
-        }
-      },
-      {
-        "path": "/projects/{projectId}",
-        "definition": {
-          "entityName": "Project",
-          "description": "Projectgegevens."
-        }
-      },
-      {
-        "path": "/medewerkers/{medewerkerId}",
-        "definition": {
-          "entityName": "Medewerker",
-          "description": "Personeelsbestand."
-        }
-      },
-      {
-        "path": "/meldingen/{meldingId}",
-        "definition": {
-          "entityName": "Melding",
-          "description": "Meldingen en werkbonnen."
-        }
-      },
-      {
-        "path": "/sensors/{sensorId}",
-        "definition": {
-          "entityName": "Sensor",
-          "description": "IoT sensoren."
-        }
-      },
-      {
-        "path": "/voertuigen/{voertuigId}",
-        "definition": {
-          "description": "Wagenpark."
-        }
-      },
-      {
-        "path": "/machines/{machineId}",
-        "definition": {
-          "description": "Machinepark."
-        }
-      },
-      {
-        "path": "/objects/{objectId}",
-        "definition": {
-          "description": "Areaal objecten."
-        }
-      }
-    ]
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Gebruikersprofielen."
+    },
+    "/users/{userId}/routes/{routeId}": {
+      "schema": { "$ref": "#/entities/Route" },
+      "description": "Gereden ritten per gebruiker."
+    },
+    "/projects/{projectId}": {
+      "schema": { "$ref": "#/entities/Project" },
+      "description": "Projectgegevens."
+    },
+    "/medewerkers/{medewerkerId}": {
+      "schema": { "$ref": "#/entities/Medewerker" },
+      "description": "Personeelsbestand."
+    },
+    "/meldingen/{meldingId}": {
+      "schema": { "$ref": "#/entities/Melding" },
+      "description": "Meldingen en werkbonnen."
+    },
+    "/sensors/{sensorId}": {
+      "schema": { "$ref": "#/entities/Sensor" },
+      "description": "IoT sensoren."
+    },
+    "/voertuigen/{voertuigId}": {
+      "description": "Wagenpark."
+    },
+    "/machines/{machineId}": {
+      "description": "Machinepark."
+    },
+    "/objects/{objectId}": {
+      "description": "Areaal objecten."
+    }
   }
 }
