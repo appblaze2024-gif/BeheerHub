@@ -150,7 +150,6 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
               </div>
               <div className="flex flex-col">
                   <span className="font-black text-slate-900 uppercase tracking-tighter text-lg leading-none">BeheerHub</span>
-                  <span className="text-[10px] text-primary font-black uppercase tracking-[0.2em] mt-1">Smart Infra</span>
               </div>
             </div>
           </SidebarHeader>
