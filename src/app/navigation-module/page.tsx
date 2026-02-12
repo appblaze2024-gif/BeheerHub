@@ -361,6 +361,8 @@ function NavigatingView({
     } catch (e) {}
   }, [targetLocation?.latitude, targetLocation?.longitude, currentRouteGeometry, isSimulating]);
 
+  const lastFetchedTargetId = React.useRef<string | null>(null);
+
   // Simulation physics effect
   React.useEffect(() => {
     if (!isSimulating || !currentRouteGeometry || !nextObject || arrivedObject || isCalculatingRoute) return;
@@ -400,6 +402,7 @@ function NavigatingView({
         
         const remaining = Math.max(0, totalDistance - simStateRef.current.distanceTravelled);
         
+        // Critical: Update distance state only if significant change to avoid React loop
         setDistanceRemainingToDestination(prev => Math.abs(prev - remaining) > 1 ? remaining : prev);
 
         if (simStateRef.current.distanceTravelled >= totalDistance - 0.2) {
@@ -430,11 +433,12 @@ function NavigatingView({
     };
   }, [isSimulating, isPaused, arrivedObject, currentRouteGeometry, nextObject?.id, isCalculatingRoute]);
 
-  const lastFetchedTargetId = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     if (!targetLocation || !nextObject || arrivedObject || isCalculatingRoute) return;
     
+    // In simulation mode, we don't want to re-fetch on every targetLocation change (which is every frame)
+    // We only fetch when the target object ID changes OR when the geometry is missing.
     if (lastFetchedTargetId.current === nextObject.id && currentRouteGeometry) return;
 
     const fetchRoute = async () => {
@@ -459,7 +463,8 @@ function NavigatingView({
       }
     };
     fetchRoute();
-  }, [nextObject?.id, arrivedObject, isSimulating, targetLocation?.latitude, targetLocation?.longitude, isCalculatingRoute, currentRouteGeometry]);
+    // Removed targetLocation from dependencies to prevent simulation infinite loop
+  }, [nextObject?.id, arrivedObject, isSimulating, isCalculatingRoute, currentRouteGeometry === null]);
   
   const handleArrivedAction = (type: 'finish' | 'issue') => {
     if (!arrivedObject) return;
@@ -519,7 +524,7 @@ function NavigatingView({
   }
 
   if (isCalculatingRoute && !currentRouteGeometry) {
-    return <LoadingScreen message="Route berekenen..." />;
+    return <LoadingScreen message="Route berekent..." />;
   }
 
   return (
@@ -542,13 +547,16 @@ function NavigatingView({
             longitude={smoothLocation.longitude} 
             latitude={smoothLocation.latitude} 
             anchor="center"
-            rotation={isFollowing ? 0 : (smoothLocation.heading || 0)} 
+            // Use map alignment so the arrow always points in the actual heading direction
+            rotationAlignment="map"
+            rotation={smoothLocation.heading || 0} 
           >
             <div className="relative flex items-center justify-center">
                 <div className="absolute h-16 w-16 bg-blue-500/20 rounded-full animate-pulse" />
                 <div className="h-12 w-12 bg-blue-600 rounded-full border-[4px] border-white shadow-2xl flex items-center justify-center transition-transform duration-75">
+                    {/* Professional Navigation Arrow SVG - perfectly symmetrical and straight */}
                     <svg viewBox="0 0 24 24" className="h-7 w-7 text-white fill-current">
-                        <path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z" />
+                        <path d="M12 2L4.5 20.29L12 18L19.5 20.29L12 2Z" />
                     </svg>
                 </div>
             </div>
