@@ -37,6 +37,10 @@ import {
   LocateFixed,
   SignalLow,
   History,
+  Navigation2,
+  Volume2,
+  MessageSquareWarning,
+  Route as RouteIcon
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -53,6 +57,7 @@ import { RouteHistoryDialog } from '@/components/route-history-dialog';
 import { LoadingScreen } from '@/components/loading-screen';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { addSeconds, format as formatDate } from 'date-fns';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -496,6 +501,24 @@ function NavigatingView({
     }
   };
 
+  const speedKmh = targetLocation?.speed ? Math.round(targetLocation.speed * 3.6) : 0;
+  
+  const arrivalTime = React.useMemo(() => {
+    if (!currentLeg?.duration) return formatDate(new Date(), 'HH:mm');
+    const durationSeconds = (distanceRemainingToDestination / (currentLeg.distance || 1)) * currentLeg.duration;
+    return formatDate(addSeconds(new Date(), durationSeconds), 'HH:mm');
+  }, [currentLeg, distanceRemainingToDestination]);
+
+  const durationMin = React.useMemo(() => {
+    if (!currentLeg?.duration) return '0';
+    const durationSeconds = (distanceRemainingToDestination / (currentLeg.distance || 1)) * currentLeg.duration;
+    return Math.round(durationSeconds / 60);
+  }, [currentLeg, distanceRemainingToDestination]);
+
+  const distanceKm = React.useMemo(() => {
+    return (distanceRemainingToDestination / 1000).toFixed(1);
+  }, [distanceRemainingToDestination]);
+
   if (currentObjectIndex >= objectsOnRoute.length && objectsOnRoute.length > 0 && !arrivedObject && !isCalculatingRoute) {
     return (
         <div className="flex flex-col items-center justify-center h-full gap-4 bg-background p-6 text-center">
@@ -510,8 +533,6 @@ function NavigatingView({
   if (isCalculatingRoute && !currentRouteGeometry) {
     return <LoadingScreen message="Route berekenen..." />;
   }
-
-  const speedKmh = targetLocation?.speed ? Math.round(targetLocation.speed * 3.6) : 0;
 
   return (
     <div className="w-full h-full relative bg-slate-100 overflow-hidden">
@@ -538,9 +559,7 @@ function NavigatingView({
             <div className="relative flex items-center justify-center">
                 <div className="absolute h-16 w-16 bg-blue-500/20 rounded-full animate-pulse" />
                 <div className="h-12 w-12 bg-blue-600 rounded-full border-[4px] border-white shadow-2xl flex items-center justify-center transition-transform duration-75">
-                    <svg viewBox="0 0 24 24" className="h-7 w-7 text-white fill-current">
-                        <path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z" />
-                    </svg>
+                    <Navigation2 className="h-7 w-7 text-white fill-current rotate-[45deg]" />
                 </div>
             </div>
           </Marker>
@@ -584,23 +603,24 @@ function NavigatingView({
         )}
       </MapGL>
       
-      {/* HUD - Top Area */}
+      {/* HUD - Top Area (Black Nav Card) */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[70] w-[92%] max-w-lg flex flex-col gap-3">
         {navHudData && !arrivedObject && !isCalculatingRoute && (
-            <Card className="bg-slate-900/95 backdrop-blur-xl text-white shadow-2xl border-none overflow-hidden animate-in slide-in-from-top duration-300">
-                <CardContent className="p-3 md:p-4 flex items-center gap-4 md:gap-5">
-                    <div className="bg-blue-600 p-2 md:p-3 rounded-xl shadow-inner">
-                        {getManeuverIcon(navHudData.step)}
+            <Card className="bg-black text-white shadow-2xl border-none overflow-hidden animate-in slide-in-from-top duration-300 rounded-[28px] py-4">
+                <CardContent className="p-4 flex items-center gap-6">
+                    <div className="bg-white/10 p-3 rounded-2xl">
+                        <Navigation2 className="h-10 w-10 text-white fill-current" />
                     </div>
                     <div className="min-w-0 flex-1">
-                        <p className="text-3xl md:text-4xl font-black tracking-tighter tabular-nums mb-0.5 leading-none">
-                            {navHudData.distance > 1000 ? `${(navHudData.distance/1000).toFixed(1)} km` : `${Math.round(navHudData.distance)} m`}
+                        <p className="text-2xl font-black tracking-tight leading-none mb-1">
+                            {navHudData.instruction.split(' op ')[0] || 'Navigeer'} op
                         </p>
-                        <p className="text-[10px] md:text-xs font-black opacity-80 uppercase tracking-widest leading-tight truncate">
-                            {navHudData.instruction}
+                        <p className="text-3xl font-black tracking-tighter leading-tight truncate">
+                            {navHudData.instruction.split(' op ')[1] || 'de weg'}
                         </p>
                     </div>
                 </CardContent>
+                <div className="h-1.5 w-12 bg-white/20 rounded-full mx-auto -mb-2 mt-2" />
             </Card>
         )}
 
@@ -620,6 +640,21 @@ function NavigatingView({
             </Alert>
         )}
       </div>
+
+      {/* Floating Action Buttons (Right Sidebar) */}
+      {isMobile && (
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-3">
+              <Button size="icon" variant="secondary" className="h-14 w-14 rounded-full bg-white shadow-xl border-none">
+                  <RouteIcon className="h-6 w-6 text-black" />
+              </Button>
+              <Button size="icon" variant="secondary" className="h-14 w-14 rounded-full bg-white shadow-xl border-none">
+                  <Volume2 className="h-6 w-6 text-black" />
+              </Button>
+              <Button size="icon" variant="secondary" className="h-14 w-14 rounded-full bg-white shadow-xl border-none">
+                  <MessageSquareWarning className="h-6 w-6 text-black" fill="currentColor" />
+              </Button>
+          </div>
+      )}
 
       {arrivedObject && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6">
@@ -644,64 +679,86 @@ function NavigatingView({
           </div>
       )}
 
-      {/* Navigation Toolbar - Bottom Area */}
+      {/* Navigation Toolbar - Bottom Drawer */}
       <div className={cn(
-          "absolute bottom-6 left-1/2 -translate-x-1/2 z-10 w-[94%] max-w-4xl flex items-end justify-between gap-4",
-          isMobile && "flex-col items-center gap-3"
+          "absolute bottom-0 left-0 right-0 z-10 w-full flex flex-col items-center",
+          isMobile ? "px-0" : "px-6 pb-6"
       )}>
-        {/* Speedometer */}
-        <Card className={cn(
-            "shadow-2xl bg-white/95 backdrop-blur-xl border-none overflow-hidden shrink-0",
-            isMobile ? "w-32" : "w-40"
-        )}>
-            <CardContent className="p-0">
-                <div className="bg-slate-50 border-b p-1.5 md:p-2 flex justify-between items-center px-3">
-                    <span className="text-[8px] md:text-[10px] font-black uppercase text-slate-400 tracking-tighter">Snelheid</span>
-                    <Badge variant="outline" className="text-[7px] md:text-[8px] font-black text-blue-600 border-blue-200 h-4 px-1">MAX 50</Badge>
-                </div>
-                <div className="p-2 md:p-3 flex items-baseline gap-1 justify-center">
-                    <span className={cn("font-black tracking-tighter tabular-nums text-slate-900", isMobile ? "text-4xl" : "text-5xl")}>{speedKmh}</span>
-                    <span className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase">km/h</span>
-                </div>
-            </CardContent>
-        </Card>
+        {!isFollowing && (
+            <Button onClick={() => setIsFollowing(true)} className="h-12 w-12 md:h-14 md:w-14 rounded-full shadow-2xl bg-primary text-white border-none hover:scale-110 active:scale-95 transition-all flex items-center justify-center mb-4">
+                <LocateFixed className="h-6 w-6" />
+            </Button>
+        )}
 
-        {/* Central Controls Group */}
-        <div className="flex items-center gap-3">
-            {!isFollowing && (
-                <Button onClick={() => setIsFollowing(true)} className="h-12 w-12 md:h-14 md:w-14 rounded-full shadow-2xl bg-primary text-white border-none hover:scale-110 active:scale-95 transition-all flex items-center justify-center">
-                    <LocateFixed className="h-6 w-6" />
-                </Button>
-            )}
-            <div className="flex gap-2 p-1.5 bg-white/95 backdrop-blur-xl rounded-full shadow-2xl border border-slate-100">
-                <Button variant="ghost" size="lg" className="h-12 w-12 md:h-14 md:w-14 rounded-full hover:bg-slate-50 transition-all flex items-center justify-center p-0" onClick={() => setIsPaused(!isPaused)}>
-                    {isPaused ? <Play className="h-6 w-6 md:h-7 md:w-7 fill-current text-blue-600" /> : <Pause className="h-6 w-6 md:h-7 md:w-7 fill-current text-blue-600" />}
-                </Button>
-                <Button variant="destructive" size="lg" className="h-12 w-12 md:h-14 md:w-14 rounded-full shadow-xl border-none hover:scale-105 active:scale-95 transition-all flex items-center justify-center p-0" onClick={onExit}>
-                    <XIcon className="h-6 w-6 md:h-7 md:w-7" />
-                </Button>
+        {isMobile ? (
+            <Card className="w-full bg-white shadow-[0_-10px_40px_rgba(0,0,0,0.1)] border-none rounded-t-[40px] pt-2 pb-8 px-8 overflow-hidden">
+                <div className="h-1.5 w-12 bg-slate-200 rounded-full mx-auto mb-6" />
+                <div className="flex items-center justify-between">
+                    <div className="flex flex-col items-center">
+                        <p className="text-2xl font-black text-black leading-none mb-1">{arrivalTime}</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">aankomst</p>
+                    </div>
+                    <div className="flex flex-col items-center">
+                        <p className="text-2xl font-black text-black leading-none mb-1">{durationMin}</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">min.</p>
+                    </div>
+                    <div className="flex flex-col items-center">
+                        <p className="text-2xl font-black text-black leading-none mb-1">{distanceKm}</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">km</p>
+                    </div>
+                </div>
+                
+                <div className="mt-8 flex gap-4">
+                    <Button variant="ghost" size="lg" className="h-14 w-14 rounded-full bg-slate-50 border-none shrink-0" onClick={() => setIsPaused(!isPaused)}>
+                        {isPaused ? <Play className="h-6 w-6 fill-current text-blue-600" /> : <Pause className="h-6 w-6 fill-current text-blue-600" />}
+                    </Button>
+                    <Button variant="destructive" size="lg" className="h-14 flex-1 rounded-full text-lg font-black uppercase tracking-tighter" onClick={onExit}>
+                        STOP RIT
+                    </Button>
+                </div>
+            </Card>
+        ) : (
+            <div className="w-full max-w-4xl flex items-end justify-between gap-4">
+                {/* Desktop View remain similar but polished */}
+                <Card className="shadow-2xl bg-white/95 backdrop-blur-xl border-none overflow-hidden w-40">
+                    <CardContent className="p-0">
+                        <div className="bg-slate-50 border-b p-2 flex justify-between items-center px-3">
+                            <span className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">Snelheid</span>
+                            <Badge variant="outline" className="text-[8px] font-black text-blue-600 border-blue-200 h-4 px-1">MAX 50</Badge>
+                        </div>
+                        <div className="p-3 flex items-baseline gap-1 justify-center">
+                            <span className="font-black tracking-tighter tabular-nums text-slate-900 text-5xl">{speedKmh}</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase">km/h</span>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <div className="flex gap-2 p-1.5 bg-white/95 backdrop-blur-xl rounded-full shadow-2xl border border-slate-100">
+                    <Button variant="ghost" size="lg" className="h-14 w-14 rounded-full hover:bg-slate-50 transition-all flex items-center justify-center p-0" onClick={() => setIsPaused(!isPaused)}>
+                        {isPaused ? <Play className="h-7 w-7 fill-current text-blue-600" /> : <Pause className="h-7 w-7 fill-current text-blue-600" />}
+                    </Button>
+                    <Button variant="destructive" size="lg" className="h-14 w-14 rounded-full shadow-xl border-none hover:scale-105 active:scale-95 transition-all flex items-center justify-center p-0" onClick={onExit}>
+                        <XIcon className="h-7 w-7" />
+                    </Button>
+                </div>
+
+                <Card className="bg-white/95 backdrop-blur-xl border-none shadow-2xl overflow-hidden w-64">
+                    <CardContent className="p-4 space-y-2">
+                        <div className="flex justify-between items-end">
+                            <div>
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Aankomst: {arrivalTime}</p>
+                                <p className="text-lg font-black text-slate-900 leading-none">{durationMin} min <span className="text-slate-300">/ {distanceKm} km</span></p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Voortgang</p>
+                                <p className="text-xs font-black text-blue-600">{completedObjects.length}/{objectsOnRoute.length}</p>
+                            </div>
+                        </div>
+                        <Progress value={(completedObjects.length / (objectsOnRoute.length || 1)) * 100} className="h-1.5 bg-slate-100" />
+                    </CardContent>
+                </Card>
             </div>
-        </div>
-
-        {/* Progress Card */}
-        <Card className={cn(
-            "bg-white/95 backdrop-blur-xl border-none shadow-2xl overflow-hidden shrink-0",
-            isMobile ? "hidden" : "flex w-64"
-        )}>
-            <CardContent className="p-3 md:p-4 space-y-2">
-                <div className="flex justify-between items-end">
-                    <div>
-                        <p className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Route Voortgang</p>
-                        <p className="text-base md:text-lg font-black text-slate-900 leading-none">{completedObjects.length} <span className="text-slate-300">/ {objectsOnRoute.length}</span></p>
-                    </div>
-                    <div className="text-right min-w-0 max-w-[120px]">
-                        <p className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Volgende</p>
-                        <p className="text-[10px] md:text-xs font-black text-blue-600 truncate">{nextObject?.id}</p>
-                    </div>
-                </div>
-                <Progress value={(completedObjects.length / (objectsOnRoute.length || 1)) * 100} className="h-1 md:h-1.5 bg-slate-100" />
-            </CardContent>
-        </Card>
+        )}
       </div>
     </div>
   );
