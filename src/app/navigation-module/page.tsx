@@ -120,7 +120,6 @@ function NavigatingView({
   const [offRouteSince, setOffRouteSince] = React.useState<number | null>(null);
   const [throttledGeometry, setThrottledGeometry] = React.useState<any>(null);
   
-  // Drawer state for mobile
   const [isDrawerExpanded, setIsDrawerExpanded] = React.useState(false);
   const touchStartY = React.useRef<number | null>(null);
 
@@ -133,9 +132,9 @@ function NavigatingView({
     const touchEndY = e.changedTouches[0].clientY;
     const deltaY = touchStartY.current - touchEndY;
 
-    if (deltaY > 50) { // Swipe up
+    if (deltaY > 50) { 
       setIsDrawerExpanded(true);
-    } else if (deltaY < -50) { // Swipe down
+    } else if (deltaY < -50) { 
       setIsDrawerExpanded(false);
     }
     touchStartY.current = null;
@@ -163,7 +162,6 @@ function NavigatingView({
 
   const nextObject = objectsOnRoute[currentObjectIndex];
 
-  // POSITION SMOOTHING & INTERPOLATION (60FPS LOOP)
   React.useEffect(() => {
     let lastTime = performance.now();
     
@@ -214,7 +212,6 @@ function NavigatingView({
     };
   }, [targetLocation, smoothLocation, isFollowing, isPaused, arrivedObject, isSimulating]);
 
-  // ROAD SNAPPING
   const snappedLocation = React.useMemo(() => {
     if (!smoothLocation || !currentRouteGeometry) return smoothLocation;
     try {
@@ -236,12 +233,9 @@ function NavigatingView({
     return smoothLocation;
   }, [smoothLocation, currentRouteGeometry]);
 
-  // REROUTING LOGIC
   React.useEffect(() => {
     if (!targetLocation || !currentRouteGeometry || isCalculatingRoute || isSimulating) return;
     
-    if (targetLocation.latitude === 52.1326 && targetLocation.longitude === 5.2913) return;
-
     try {
         const coords = currentRouteGeometry.coordinates;
         const line = turf.lineString(coords);
@@ -289,7 +283,6 @@ function NavigatingView({
     return null;
   }, [currentLeg, distanceRemainingToDestination]);
 
-  // ROUTE CONSUMPTION (DISAPPEARING LINE)
   React.useEffect(() => {
     if (!currentRouteGeometry || isCalculatingRoute || !snappedLocation) {
         setThrottledGeometry(null);
@@ -320,7 +313,6 @@ function NavigatingView({
     }
   }, [currentRouteGeometry, isCalculatingRoute, snappedLocation?.longitude, snappedLocation?.latitude]);
 
-  // LIVE GPS WATCHER
   React.useEffect(() => {
     if (isSimulating) return;
     
@@ -346,7 +338,6 @@ function NavigatingView({
     return () => navigator.geolocation.clearWatch(watchId);
   }, [isSimulating]);
 
-  // UPDATE REMAINING DISTANCE
   React.useEffect(() => {
     if (!targetLocation || !currentRouteGeometry || isSimulating) return;
     try {
@@ -362,7 +353,6 @@ function NavigatingView({
     } catch (e) {}
   }, [targetLocation?.latitude, targetLocation?.longitude, currentRouteGeometry, isSimulating]);
 
-  // SIMULATION MODE ANIMATION
   React.useEffect(() => {
     if (!isSimulating || !currentRouteGeometry || !nextObject || arrivedObject || isCalculatingRoute) return;
 
@@ -426,7 +416,6 @@ function NavigatingView({
     };
   }, [isSimulating, isPaused, arrivedObject, currentRouteGeometry, nextObject?.id, isCalculatingRoute]);
 
-  // ROUTE CALCULATION FETCH
   const lastFetchedTargetId = React.useRef<string | null>(null);
 
   React.useEffect(() => {
@@ -596,7 +585,6 @@ function NavigatingView({
         )}
       </MapGL>
       
-      {/* HUD - Top Area (Black Nav Card) */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[70] w-[92%] max-w-lg flex flex-col gap-3">
         {navHudData && !arrivedObject && !isCalculatingRoute && (
             <Card className="bg-black text-white shadow-2xl border-none overflow-hidden animate-in slide-in-from-top duration-300 rounded-[24px] py-2">
@@ -656,7 +644,6 @@ function NavigatingView({
           </div>
       )}
 
-      {/* Navigation Toolbar - Bottom Drawer */}
       <div className={cn(
           "absolute bottom-0 left-0 right-0 z-[80] w-full flex flex-col items-center",
           isMobile ? "px-3 pb-3" : "px-6 pb-6"
@@ -774,7 +761,7 @@ export default function StartNavigationPage() {
   const isSuperUser = profile?.role === 'Super admin';
   const isPrivileged = isSuperUser || profile?.role === 'toezichthouder';
   
-  const [userLocation, setUserLocation] = React.useState<{ latitude: number; longitude: number }>({ latitude: 52.1326, longitude: 5.2913 });
+  const [userLocation, setUserLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
   const [routeType, setRouteType] = React.useState<'veeg' | 'prullenbak' | null>(null);
   const [selectedRouteId, setSelectedRouteId] = React.useState<string>('--nieuwe-route--');
   const [navigationState, setNavigationState] = React.useState<'setup' | 'navigating'>('setup');
@@ -791,20 +778,17 @@ export default function StartNavigationPage() {
     return () => setIsHeaderVisible(true);
   }, [navigationState, setIsHeaderVisible]);
 
-  // Optimized GPS Initial Lock
   React.useEffect(() => {
     if (!navigator.geolocation) return;
 
-    // Fast initial rough location
     navigator.geolocation.getCurrentPosition(
         (pos) => {
             setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
         },
         null,
-        { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
 
-    // Continuous precise watch
     const watchId = navigator.geolocation.watchPosition(
         (pos) => {
             setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
@@ -824,7 +808,7 @@ export default function StartNavigationPage() {
         setSelectedProjectId(projectIdFromUrl);
     }
 
-    if (lat && lng && navigationState !== 'navigating') {
+    if (lat && lng && navigationState !== 'navigating' && userLocation) {
       const meldingObject: MapObject = { 
           id: `Bestemming`, 
           latitude: parseFloat(lat), 
@@ -834,7 +818,7 @@ export default function StartNavigationPage() {
       setObjectsOnRoute([meldingObject]);
       setNavigationState('navigating');
     }
-  }, [searchParams, selectedProjectId, setSelectedProjectId, navigationState]);
+  }, [searchParams, selectedProjectId, setSelectedProjectId, navigationState, userLocation]);
 
   const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
   const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
@@ -929,6 +913,12 @@ export default function StartNavigationPage() {
     setNavigationState('navigating');
     setIsStarting(false);
   };
+
+  const isNavigatingByUrl = searchParams.has('lat') && searchParams.has('lng');
+
+  if (isNavigatingByUrl && !userLocation && navigationState !== 'navigating') {
+      return <LoadingScreen message="Wachten op GPS signaal..." />;
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
