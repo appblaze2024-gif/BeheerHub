@@ -32,18 +32,23 @@ service cloud.firestore {
              getUserData().role in ['Super admin', 'toezichthouder'];
     }
 
+    // GLOBALE REGEL: Super admin mag alles
+    match /{document=**} {
+      allow read, write: if hasRole('Super admin');
+    }
+
     // Gebruikersprofielen
     match /users/{userId} {
       // Iedereen mag profielen inzien (voor zoekfuncties en dialogen)
       allow read: if isSignedIn();
       // Alleen eigenaar of admin mag schrijven
-      allow write: if isOwner(userId) || hasRole('Super admin');
+      allow write: if isOwner(userId);
 
       // Routes subcollectie (Rittenregistratie)
       match /routes/{routeId} {
-        // BELANGRIJK: Privileged users moeten alle routes kunnen 'listen' voor de geschiedenis
+        // Geprivilegieerde gebruikers moeten alle ritten kunnen inzien voor rapportages
         allow read: if isOwner(userId) || isPrivileged();
-        allow write: if isOwner(userId) || hasRole('Super admin');
+        allow write: if isOwner(userId);
       }
     }
 
@@ -103,7 +108,7 @@ service cloud.firestore {
     // Systeeminstellingen
     match /settings/{settingId} {
       allow read: if isSignedIn();
-      allow write: if hasRole('Super admin');
+      allow write: if isPrivileged();
     }
   }
 }
