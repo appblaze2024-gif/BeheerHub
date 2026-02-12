@@ -22,6 +22,7 @@ import {
   useCollection,
   useFirestore,
   deleteDocumentNonBlocking,
+  useMemoFirebase,
 } from '@/firebase';
 import { MedewerkerDialog } from '@/components/medewerker-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -63,7 +64,7 @@ export default function EmployeesPage() {
   const canEdit = isSuperUser || !!profile?.permissions?.employees?.edit;
   const canDelete = isSuperUser || !!profile?.permissions?.employees?.delete;
 
-  const medewerkersCollection = React.useMemo(() => {
+  const medewerkersCollection = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'medewerkers');
   }, [firestore]);

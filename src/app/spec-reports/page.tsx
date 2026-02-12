@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import MapGL, { Marker, Popup } from 'react-map-gl';
-import { useCollection, useFirestore } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import { Plus, Search, List, Map as MapIcon, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -93,14 +93,14 @@ export default function SpecReportsPage() {
   const canEdit = isSuperUser || !!profile?.permissions?.specReports?.edit;
   const canDelete = isSuperUser || !!profile?.permissions?.specReports?.delete;
 
-  const projectsCollection = React.useMemo(() => {
+  const projectsCollection = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'projects');
   }, [firestore]);
 
   const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsCollection);
 
-  const bestekmeldingenCollection = React.useMemo(() => {
+  const bestekmeldingenCollection = useMemoFirebase(() => {
     if (!firestore || !selectedProjectId) return null;
     return collection(firestore, 'projects', selectedProjectId, 'besteksmeldingen');
   }, [firestore, selectedProjectId]);

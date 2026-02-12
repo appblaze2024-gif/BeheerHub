@@ -29,7 +29,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { useCollection, useFirestore, useFirebaseApp } from '@/firebase';
+import { useCollection, useFirestore, useFirebaseApp, useMemoFirebase } from '@/firebase';
 import { collection, doc, query, where, getDocs, writeBatch, type DocumentReference, deleteDoc } from 'firebase/firestore';
 import { getStorage, ref, deleteObject } from 'firebase/storage';
 import { Label } from '@/components/ui/label';
@@ -120,13 +120,13 @@ export default function BestandenPage() {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = React.useState(false);
   const [treeKey, setTreeKey] = React.useState(Date.now());
 
-  const projectsCollection = React.useMemo(() => {
+  const projectsCollection = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'projects');
   }, [firestore]);
   const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsCollection);
 
-  const allFoldersQuery = React.useMemo(() => {
+  const allFoldersQuery = useMemoFirebase(() => {
     if (!firestore || !selectedProjectId) return null;
     return collection(firestore, 'projects', selectedProjectId, 'folders');
   }, [firestore, selectedProjectId]);
@@ -158,7 +158,7 @@ export default function BestandenPage() {
   }, [allFolders]);
 
 
-  const bestandenCollection = React.useMemo(() => {
+  const bestandenCollection = useMemoFirebase(() => {
     if (!firestore || !selectedProjectId) return null;
     const q = collection(firestore, 'projects', selectedProjectId, 'bestanden');
     if (selectedFolderId === 'root') {
