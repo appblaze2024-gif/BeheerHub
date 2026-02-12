@@ -39,7 +39,10 @@ import {
   Navigation2,
   Volume2,
   MessageSquareWarning,
-  Route as RouteIcon
+  Route as RouteIcon,
+  Maximize,
+  Minimize,
+  X
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -165,6 +168,7 @@ function NavigatingView({
 
   const nextObject = objectsOnRoute[currentObjectIndex];
 
+  // Logic for the smooth navigation animation
   React.useEffect(() => {
     let lastTime = performance.now();
     
@@ -175,11 +179,13 @@ function NavigatingView({
         setSmoothLocation(prevSmooth => {
             if (!targetLocation || !prevSmooth || isPaused) return prevSmooth;
 
+            // Lerp position for visual smoothness
             const lerpFactor = isSimulating ? 1 : 0.15; 
             
             const newLat = prevSmooth.latitude + (targetLocation.latitude - prevSmooth.latitude) * lerpFactor;
             const newLng = prevSmooth.longitude + (targetLocation.longitude - prevSmooth.longitude) * lerpFactor;
             
+            // Shortest path interpolation for heading
             let diff = (targetLocation.heading || 0) - (prevSmooth.heading || 0);
             while (diff < -180) diff += 360;
             while (diff > 180) diff -= 360;
@@ -192,6 +198,7 @@ function NavigatingView({
                 heading: newHeading
             };
 
+            // Camera follow logic
             if (isFollowing && !arrivedObject) {
                 const currentSpeedKmh = (targetLocation.speed || 0) * 3.6;
                 const targetZoom = Math.max(15, 18.5 - (Math.min(currentSpeedKmh, 80) / 30));
@@ -218,6 +225,7 @@ function NavigatingView({
     };
   }, [targetLocation?.latitude, targetLocation?.longitude, isFollowing, isPaused, arrivedObject, isSimulating]);
 
+  // Snap to road logic
   const snappedLocation = React.useMemo(() => {
     if (!smoothLocation || !currentRouteGeometry) return smoothLocation;
     try {
@@ -239,6 +247,7 @@ function NavigatingView({
     return smoothLocation;
   }, [smoothLocation, currentRouteGeometry]);
 
+  // Off-route detection
   React.useEffect(() => {
     if (!targetLocation || !currentRouteGeometry || isCalculatingRoute || isSimulating) return;
     
@@ -263,6 +272,7 @@ function NavigatingView({
     } catch (e) {}
   }, [targetLocation?.latitude, targetLocation?.longitude, currentRouteGeometry, isCalculatingRoute, offRouteSince, isSimulating]);
 
+  // Turn-by-turn logic
   const navHudData = React.useMemo(() => {
     if (!currentLeg?.steps) return null;
     
@@ -289,6 +299,7 @@ function NavigatingView({
     return null;
   }, [currentLeg, distanceRemainingToDestination]);
 
+  // Slice the route geometry to only show what's ahead
   React.useEffect(() => {
     if (!currentRouteGeometry || isCalculatingRoute || !snappedLocation) {
         setThrottledGeometry(null);
@@ -319,6 +330,7 @@ function NavigatingView({
     }
   }, [currentRouteGeometry, isCalculatingRoute, snappedLocation?.longitude, snappedLocation?.latitude]);
 
+  // Real GPS watch
   React.useEffect(() => {
     if (isSimulating) return;
     
@@ -344,6 +356,7 @@ function NavigatingView({
     return () => navigator.geolocation.clearWatch(watchId);
   }, [isSimulating]);
 
+  // Update distance remaining based on GPS position
   React.useEffect(() => {
     if (!targetLocation || !currentRouteGeometry || isSimulating) return;
     try {
@@ -355,13 +368,15 @@ function NavigatingView({
         const distToStart = turf.length(turf.lineSlice(turf.point(coords[0]), snapped, line), { units: 'meters' });
         const remaining = Math.max(0, totalDist - distToStart);
         
-        setDistanceRemainingToDestination(prev => Math.abs(prev - remaining) > 1 ? Math.round(remaining) : prev);
+        const roundedRemaining = Math.round(remaining);
+        setDistanceRemainingToDestination(prev => prev !== roundedRemaining ? roundedRemaining : prev);
         setHasReachedCurrentTarget(remaining < 80);
     } catch (e) {}
   }, [targetLocation?.latitude, targetLocation?.longitude, currentRouteGeometry, isSimulating]);
 
   const lastFetchedTargetId = React.useRef<string | null>(null);
 
+  // Simulation loop
   React.useEffect(() => {
     if (!isSimulating || !currentRouteGeometry || !nextObject || arrivedObject || isCalculatingRoute) return;
 
@@ -392,7 +407,7 @@ function NavigatingView({
         simStateRef.current.lastTimestamp = timestamp;
 
         const distanceToDestination = totalDistance - simStateRef.current.distanceTravelled;
-        simStateRef.current.targetSpeedMs = distanceToDestination < 40 ? 3 : 13.8;
+        simStateRef.current.targetSpeedMs = distanceToDestination < 40 ? 3 : 13.8; // Slow down near destination
 
         const accel = simStateRef.current.targetSpeedMs > simStateRef.current.currentSpeedMs ? 4 : 8;
         simStateRef.current.currentSpeedMs += (simStateRef.current.targetSpeedMs - simStateRef.current.currentSpeedMs) * deltaTime * accel;
@@ -400,7 +415,8 @@ function NavigatingView({
         
         const remaining = Math.max(0, totalDistance - simStateRef.current.distanceTravelled);
         
-        setDistanceRemainingToDestination(prev => Math.abs(prev - remaining) > 1 ? Math.round(remaining) : prev);
+        const roundedRemaining = Math.round(remaining);
+        setDistanceRemainingToDestination(prev => prev !== roundedRemaining ? roundedRemaining : prev);
 
         if (simStateRef.current.distanceTravelled >= totalDistance - 0.2) {
             const finalCoord = coords[coords.length - 1];
@@ -431,6 +447,7 @@ function NavigatingView({
   }, [isSimulating, isPaused, arrivedObject, currentRouteGeometry, nextObject?.id, isCalculatingRoute]);
 
 
+  // Route fetcher
   React.useEffect(() => {
     if (!targetLocation || !nextObject || arrivedObject || isCalculatingRoute) return;
     
@@ -448,8 +465,9 @@ function NavigatingView({
           const route = data.routes[0];
           setCurrentRouteGeometry(route.geometry);
           setCurrentLeg(route.legs[0]);
-          setDistanceRemainingToDestination(Math.round(route.legs[0].distance));
-          setHasReachedCurrentTarget(route.legs[0].distance < 80);
+          const remaining = Math.round(route.legs[0].distance);
+          setDistanceRemainingToDestination(remaining);
+          setHasReachedCurrentTarget(remaining < 80);
         }
       } catch (error) {
           console.error("Failed to fetch route:", error);
@@ -489,6 +507,8 @@ function NavigatingView({
   };
 
   const speedKmh = targetLocation?.speed ? Math.round(targetLocation.speed * 3.6) : 0;
+  const speedLimit = 50;
+  const isSpeeding = speedKmh > speedLimit;
   
   const arrivalTime = React.useMemo(() => {
     if (!currentLeg?.duration) return formatDate(new Date(), 'HH:mm');
@@ -631,26 +651,35 @@ function NavigatingView({
 
       {/* Speedometer Gauge - Moved lower to avoid overlap with error banners */}
       <div className="absolute bottom-[160px] right-4 z-[70]">
-          <div className="h-20 w-20 rounded-full bg-white/95 backdrop-blur shadow-2xl border-4 border-slate-100 flex flex-col items-center justify-center overflow-hidden">
+          <div className={cn(
+              "h-20 w-20 rounded-full backdrop-blur shadow-2xl border-4 flex flex-col items-center justify-center overflow-hidden transition-colors duration-500",
+              isSpeeding ? "bg-red-50/95 border-red-200" : "bg-white/95 border-slate-100"
+          )}>
               <div className="flex flex-col items-center leading-none z-10">
-                  <span className="text-2xl font-black text-slate-900 tabular-nums">{speedKmh}</span>
-                  <span className="text-[8px] font-black uppercase text-slate-400 mt-0.5 tracking-widest">km/h</span>
+                  <span className={cn(
+                      "text-2xl font-black tabular-nums transition-colors",
+                      isSpeeding ? "text-red-600" : "text-slate-900"
+                  )}>{speedKmh}</span>
+                  <span className={cn(
+                      "text-[8px] font-black uppercase mt-0.5 tracking-widest",
+                      isSpeeding ? "text-red-400" : "text-slate-400"
+                  )}>km/h</span>
               </div>
               <svg className="absolute inset-0 -rotate-90 p-1" viewBox="0 0 100 100">
                   <circle 
                     cx="50" cy="50" r="44" 
                     fill="none" stroke="currentColor" 
-                    strokeWidth="6" className="text-slate-100" 
+                    strokeWidth="6" className={isSpeeding ? "text-red-100" : "text-slate-100"} 
                   />
                   <circle 
                     cx="50" cy="50" r="44" 
                     fill="none" stroke="currentColor" 
                     strokeWidth="6" 
                     strokeDasharray={2 * Math.PI * 44}
-                    strokeDashoffset={2 * Math.PI * 44 * (1 - Math.min(speedKmh, 50) / 50)}
+                    strokeDashoffset={2 * Math.PI * 44 * (1 - Math.min(speedKmh, speedLimit) / speedLimit)}
                     className={cn(
                         "transition-all duration-500",
-                        speedKmh > 50 ? "text-red-500" : "text-blue-600"
+                        isSpeeding ? "text-red-600" : "text-blue-600"
                     )}
                     strokeLinecap="round"
                   />
@@ -743,15 +772,18 @@ function NavigatingView({
             </div>
         ) : (
             <div className="w-full max-w-4xl flex items-end justify-between gap-4">
-                <Card className="shadow-2xl bg-white/95 backdrop-blur-xl border-none overflow-hidden w-40">
+                <Card className={cn(
+                    "shadow-2xl backdrop-blur-xl border-none overflow-hidden w-40 transition-colors duration-500",
+                    isSpeeding ? "bg-red-50/95" : "bg-white/95"
+                )}>
                     <CardContent className="p-0">
-                        <div className="bg-slate-50 border-b p-2 flex justify-between items-center px-3">
-                            <span className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">Snelheid</span>
-                            <Badge variant="outline" className="text-[8px] font-black text-blue-600 border-blue-200 h-4 px-1">MAX 50</Badge>
+                        <div className={cn("border-b p-2 flex justify-between items-center px-3", isSpeeding ? "bg-red-100/50" : "bg-slate-50")}>
+                            <span className={cn("text-[10px] font-black uppercase tracking-tighter", isSpeeding ? "text-red-600" : "text-slate-400")}>Snelheid</span>
+                            <Badge variant="outline" className={cn("text-[8px] font-black h-4 px-1", isSpeeding ? "text-red-600 border-red-200 bg-red-50" : "text-blue-600 border-blue-200")}>MAX {speedLimit}</Badge>
                         </div>
                         <div className="p-3 flex items-baseline gap-1 justify-center">
-                            <span className="font-black tracking-tighter tabular-nums text-slate-900 text-5xl">{speedKmh}</span>
-                            <span className="text-[10px] font-black text-slate-400 uppercase">km/h</span>
+                            <span className={cn("font-black tracking-tighter tabular-nums text-5xl", isSpeeding ? "text-red-600" : "text-slate-900")}>{speedKmh}</span>
+                            <span className={cn("text-[10px] font-black uppercase", isSpeeding ? "text-red-400" : "text-slate-400")}>km/h</span>
                         </div>
                     </CardContent>
                 </Card>
