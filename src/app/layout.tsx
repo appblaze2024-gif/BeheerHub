@@ -103,7 +103,7 @@ function Header() {
               <Menu className="h-6 w-6 text-slate-900" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="p-0 border-none w-[280px] sm:w-80">
+          <SheetContent side="left" className="p-0 border-none w-[300px] sm:w-80">
             <SheetHeader className="sr-only">
                 <SheetTitle>Navigatie Menu</SheetTitle>
             </SheetHeader>
