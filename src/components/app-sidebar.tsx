@@ -143,7 +143,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   return (
     <>
       <Sidebar isCollapsed={false} className="w-full bg-white border-r border-slate-200 shadow-none">
-          <SidebarHeader className="p-6 border-b border-slate-100">
+          <SidebarHeader className="p-4 border-b border-slate-100">
             <div className="flex items-center gap-4 w-full">
               <div className="bg-primary h-10 w-10 rounded-xl flex items-center justify-center shadow-lg shadow-black/20">
                 <LayoutGrid className="text-white h-6 w-6" />
@@ -154,7 +154,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
             </div>
           </SidebarHeader>
 
-          <SidebarContent className="p-4 space-y-6 no-scrollbar">
+          <SidebarContent className="p-3 space-y-6 no-scrollbar">
             <div className="space-y-2 px-2">
               <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Actief Project</Label>
               <Select
@@ -253,7 +253,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
             </SidebarMenu>
           </SidebarContent>
 
-          <SidebarFooter className="p-4 border-t border-slate-100">
+          <SidebarFooter className="p-3 border-t border-slate-100">
               <div className="bg-slate-50 rounded-2xl p-3 flex items-center gap-3 border border-slate-100">
                 <Avatar className="h-9 w-9 ring-2 ring-white shadow-sm">
                   <AvatarImage src={user?.photoURL || undefined} />
