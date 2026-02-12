@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -35,6 +36,7 @@ import {
   Home,
   LocateFixed,
   SignalLow,
+  History,
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -47,6 +49,7 @@ import { Progress } from '@/components/ui/progress';
 import { useProfile } from '@/firebase/profile-provider';
 import { useToast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { RouteHistoryDialog } from '@/components/route-history-dialog';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -643,6 +646,7 @@ export default function StartNavigationPage() {
   const { setIsHeaderVisible } = useNavigationUI();
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
   const isSuperUser = profile?.role === 'Super admin';
+  const isPrivileged = isSuperUser || profile?.role === 'toezichthouder';
   
   const [userLocation, setUserLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
   const [routeType, setRouteType] = React.useState<'veeg' | 'prullenbak' | null>(null);
@@ -651,6 +655,7 @@ export default function StartNavigationPage() {
   const [objectsOnRoute, setObjectsOnRoute] = React.useState<MapObject[]>([]);
   const [isStarting, setIsStarting] = React.useState(false);
   const [isSimulationMode, setIsSimulationMode] = React.useState(false);
+  const [isHistoryDialogOpen, setIsHistoryDialogOpen] = React.useState(false);
   
   const mapRef = React.useRef<MapRef>(null);
 
@@ -818,59 +823,67 @@ export default function StartNavigationPage() {
                 </Marker>
             ))}
           </MapGL>
-          <Card className="absolute top-4 left-4 z-10 w-full max-w-[320px] shadow-2xl bg-white/95 backdrop-blur border-2 border-slate-100">
-            <CardHeader className="p-4 border-b bg-slate-50/50">
+          <Card className="absolute top-4 left-4 z-10 w-full max-w-[300px] shadow-2xl bg-white/95 backdrop-blur border-2 border-slate-100">
+            <CardHeader className="p-3 border-b bg-slate-50/50">
               <div className="flex items-center gap-3">
-                <Button variant="ghost" size="icon" onClick={() => router.push('/')} className="h-8 w-8 hover:bg-white rounded-full flex items-center justify-center"><ArrowLeft className="h-4 w-4" /></Button>
-                <CardTitle className="text-base font-black uppercase tracking-tighter">Navigatie Setup</CardTitle>
+                <Button variant="ghost" size="icon" onClick={() => router.push('/')} className="h-7 w-7 hover:bg-white rounded-full flex items-center justify-center"><ArrowLeft className="h-3.5 w-3.5" /></Button>
+                <CardTitle className="text-sm font-black uppercase tracking-tighter">Navigatie Setup</CardTitle>
               </div>
             </CardHeader>
-            <CardContent className="p-4 space-y-4">
-              <div className="space-y-1.5">
-                <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Project</Label>
+            <CardContent className="p-3 space-y-3">
+              <div className="space-y-1">
+                <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Project</Label>
                 <Select value={selectedProjectId || ''} onValueChange={v => setSelectedProjectId(v || null)} disabled={isLoadingProjects}>
-                  <SelectTrigger className="h-10 border-2 font-bold"><SelectValue placeholder="Selecteer project" /></SelectTrigger>
+                  <SelectTrigger className="h-8 border font-bold text-xs"><SelectValue placeholder="Selecteer project" /></SelectTrigger>
                   <SelectContent>{projects?.map(p => <SelectItem key={p.id} value={p.id!}>{p.projectnaam}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Type Inzet</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button variant={routeType === 'veeg' ? 'default' : 'outline'} onClick={() => setRouteType('veeg')} disabled={!selectedProjectId} className={cn("font-black h-10 border-2 text-xs", routeType === 'veeg' ? "bg-blue-600 border-blue-600 shadow-md text-white" : "border-slate-200")}>Veegwagen</Button>
-                  <Button variant={routeType === 'prullenbak' ? 'default' : 'outline'} onClick={() => setRouteType('prullenbak')} disabled={!selectedProjectId} className={cn("font-black h-10 border-2 text-xs", routeType === 'prullenbak' ? "bg-blue-600 border-blue-600 shadow-md text-white" : "border-slate-200")}>Prullenbakken</Button>
+              <div className="space-y-1">
+                <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Type Inzet</Label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <Button variant={routeType === 'veeg' ? 'default' : 'outline'} onClick={() => setRouteType('veeg')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[10px]", routeType === 'veeg' ? "bg-blue-600 border-blue-600 shadow-md text-white" : "border-slate-200")}>Veegwagen</Button>
+                  <Button variant={routeType === 'prullenbak' ? 'default' : 'outline'} onClick={() => setRouteType('prullenbak')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[10px]", routeType === 'prullenbak' ? "bg-blue-600 border-blue-600 shadow-md text-white" : "border-slate-200")}>Prullenbakken</Button>
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Route Keuze</Label>
+              <div className="space-y-1">
+                <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Route Keuze</Label>
                 <Select onValueChange={setSelectedRouteId} value={selectedRouteId} disabled={!routeType}>
-                    <SelectTrigger className="h-10 border-2 font-bold"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-8 border font-bold text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
                         <SelectItem value="--nieuwe-route--">-- Kies een route --</SelectItem>
                         {availableRoutes.map((r: any) => (
-                            <SelectItem key={r.id} value={r.id}>{r.naam} {r.startAdres ? ' (Depot)' : ''}</SelectItem>
+                            <SelectItem key={r.id} value={r.id}>{r.naam}</SelectItem>
                         ))}
                     </SelectContent>
                 </Select>
               </div>
-              {selectedRouteDef && 'startAdres' in selectedRouteDef && selectedRouteDef.startAdres && (
-                  <div className="p-2.5 rounded-lg bg-blue-50 border-2 border-blue-100 flex items-start gap-2.5">
-                      <Home className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                      <div className="min-w-0 flex-1"><p className="text-[9px] font-black uppercase text-blue-600 tracking-widest">Route Startpunt</p><p className="text-[11px] font-bold text-slate-700 truncate">{selectedRouteDef.startAdres}</p></div>
-                  </div>
-              )}
-              <div className="flex flex-col gap-2 pt-1">
-                <Button className="w-full h-12 text-base font-black bg-blue-600 hover:bg-blue-700 shadow-xl rounded-xl uppercase tracking-tighter flex items-center justify-center text-white" onClick={() => handleStartRoute(false)} disabled={!selectedRouteId || selectedRouteId === '--nieuwe-route--' || isStarting}>
-                    {isStarting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Navigation className="mr-2 h-5 w-5 fill-current" />} START LIVE RIT
+              <div className="flex flex-col gap-1.5 pt-1">
+                <Button className="w-full h-10 text-xs font-black bg-blue-600 hover:bg-blue-700 shadow-lg rounded-lg uppercase tracking-tighter flex items-center justify-center text-white" onClick={() => handleStartRoute(false)} disabled={!selectedRouteId || selectedRouteId === '--nieuwe-route--' || isStarting}>
+                    {isStarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4 fill-current" />} START LIVE RIT
                 </Button>
-                {isSuperUser && (
-                    <Button variant="outline" className="w-full h-10 border-dashed border-2 border-blue-200 text-blue-600 hover:bg-blue-50/50 font-black uppercase tracking-tighter rounded-xl flex items-center justify-center text-xs" onClick={() => handleStartRoute(true)} disabled={!selectedRouteId || selectedRouteId === '--nieuwe-route--' || isStarting}>
-                        <Gauge className="mr-2 h-4 w-4" /> SIMULATOR STARTEN
-                    </Button>
-                )}
+                <div className="grid grid-cols-2 gap-1.5">
+                    {isPrivileged && (
+                        <Button variant="outline" className="h-8 border-slate-200 text-slate-600 hover:bg-slate-50 font-black uppercase tracking-tighter rounded-lg flex items-center justify-center text-[9px]" onClick={() => setIsHistoryDialogOpen(true)}>
+                            <History className="mr-1.5 h-3 w-3" /> GESCHIEDENIS
+                        </Button>
+                    )}
+                    {isSuperUser && (
+                        <Button variant="outline" className="h-8 border-dashed border-blue-200 text-blue-600 hover:bg-blue-50/50 font-black uppercase tracking-tighter rounded-lg flex items-center justify-center text-[9px]" onClick={() => handleStartRoute(true)} disabled={!selectedRouteId || selectedRouteId === '--nieuwe-route--' || isStarting}>
+                            <Gauge className="mr-1.5 h-3 w-3" /> SIMULATOR
+                        </Button>
+                    )}
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
+      )}
+      {isPrivileged && (
+          <RouteHistoryDialog
+            open={isHistoryDialogOpen}
+            onOpenChange={setIsHistoryDialogOpen}
+            projectId={selectedProjectId}
+          />
       )}
     </div>
   );
