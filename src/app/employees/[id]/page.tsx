@@ -67,6 +67,7 @@ import { useProfile } from '@/firebase/profile-provider';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { AfwezigheidDialog } from '@/components/afwezigheid-dialog';
 import { Loader2 } from 'lucide-react';
+import { LoadingScreen } from '@/components/loading-screen';
 
 
 function DetailField({
@@ -881,11 +882,7 @@ export default function EmployeeDetailPage() {
   };
 
   if (isLoading || isProfileLoading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        Medewerker wordt geladen...
-      </div>
-    );
+    return <LoadingScreen message="Medewerker laden..." />;
   }
 
   if (!medewerker) {

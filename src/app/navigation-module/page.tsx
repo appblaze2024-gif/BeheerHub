@@ -684,7 +684,8 @@ export default function StartNavigationPage() {
   const isSuperUser = profile?.role === 'Super admin';
   const isPrivileged = isSuperUser || profile?.role === 'toezichthouder';
   
-  const [userLocation, setUserLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
+  // Default to a central location in NL so setup isn't blocked on PC
+  const [userLocation, setUserLocation] = React.useState<{ latitude: number; longitude: number }>({ latitude: 52.1326, longitude: 5.2913 });
   const [routeType, setRouteType] = React.useState<'veeg' | 'prullenbak' | null>(null);
   const [selectedRouteId, setSelectedRouteId] = React.useState<string>('--nieuwe-route--');
   const [navigationState, setNavigationState] = React.useState<'setup' | 'navigating'>('setup');
@@ -827,10 +828,6 @@ export default function StartNavigationPage() {
     setIsStarting(false);
   };
 
-  if (!userLocation) {
-    return <LoadingScreen message="Wachten op GPS signaal..." />;
-  }
-  
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {navigationState === 'navigating' ? (
