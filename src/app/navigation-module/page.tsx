@@ -137,6 +137,8 @@ function NavigatingView({
   const [gpsError, setGpsError] = React.useState<'permission' | 'signal' | null>(null);
   const [offRouteSince, setOffRouteSince] = React.useState<number | null>(null);
   const hasFitBoundsRef = React.useRef(false);
+  const lastGeometryUpdatePos = React.useRef<{lng: number, lat: number} | null>(null);
+  const [throtteledGeometry, setThrottledGeometry] = React.useState<any>(null);
   
   const { profile } = useProfile();
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
@@ -186,6 +188,9 @@ function NavigatingView({
   React.useEffect(() => {
     if (!userLocation || !currentRouteGeometry || isCalculatingRoute || isSimulating) return;
     
+    // Skip rerouting if we are on the default Utrecht location
+    if (userLocation.latitude === 52.1326 && userLocation.longitude === 5.2913) return;
+
     try {
         const coords = currentRouteGeometry.coordinates;
         const line = turf.lineString(coords);
@@ -193,14 +198,13 @@ function NavigatingView({
         const snapped = turf.nearestPointOnLine(line, pt, { units: 'meters' });
         const distance = snapped.properties.dist || 0;
 
-        if (distance > 50) { // 50 meter drempelwaarde voor "van de route af"
+        if (distance > 50) { 
             if (!offRouteSince) {
                 setOffRouteSince(Date.now());
-            } else if (Date.now() - offRouteSince > 5000) { // 5 seconden drempelwaarde
-                console.log("Andere weg gekozen, route wordt herberekend...");
+            } else if (Date.now() - offRouteSince > 5000) { 
                 setCurrentRouteGeometry(null);
                 setOffRouteSince(null);
-                lastFetchedTargetId.current = null; // Forceer een refetch
+                lastFetchedTargetId.current = null;
             }
         } else {
             setOffRouteSince(null);
@@ -234,35 +238,56 @@ function NavigatingView({
     return null;
   }, [currentLeg, distanceRemainingToDestination]);
 
-  // DISAPPEARING ROUTE LINE (Slice the line from snapped user position to the end)
-  const remainingRouteGeometry = React.useMemo(() => {
-    if (!currentRouteGeometry || isCalculatingRoute || !snappedLocation) return null;
-    
-    try {
-        const coords = currentRouteGeometry.coordinates;
-        if (!Array.isArray(coords) || coords.length < 2) return null;
-        
-        const line = turf.lineString(coords);
-        const startPoint = turf.point([snappedLocation.longitude, snappedLocation.latitude]);
-        const endPoint = turf.point(coords[coords.length - 1]);
-        
-        // Slice the line: from user position to the end of the route
-        const sliced = turf.lineSlice(startPoint, endPoint, line);
-        
-        return {
-            type: 'Feature' as const,
-            properties: {},
-            geometry: sliced.geometry
-        };
-    } catch (e) {
-        // Fallback to original geometry if slice fails
-        return {
-            type: 'Feature' as const,
-            properties: {},
-            geometry: currentRouteGeometry
-        };
+  // DISAPPEARING ROUTE LINE (Optimized for tablets with throttling)
+  React.useEffect(() => {
+    if (!currentRouteGeometry || isCalculatingRoute || !snappedLocation) {
+        setThrottledGeometry(null);
+        return;
     }
-  }, [currentRouteGeometry, isCalculatingRoute, snappedLocation]);
+
+    const updateGeometry = () => {
+        try {
+            const coords = currentRouteGeometry.coordinates;
+            if (!Array.isArray(coords) || coords.length < 2) return;
+            
+            const line = turf.lineString(coords);
+            const startPoint = turf.point([snappedLocation.longitude, snappedLocation.latitude]);
+            const endPoint = turf.point(coords[coords.length - 1]);
+            
+            const sliced = turf.lineSlice(startPoint, endPoint, line);
+            
+            setThrottledGeometry({
+                type: 'Feature' as const,
+                properties: {},
+                geometry: sliced.geometry
+            });
+            lastGeometryUpdatePos.current = { lng: snappedLocation.longitude, lat: snappedLocation.latitude };
+        } catch (e) {
+            setThrottledGeometry({
+                type: 'Feature' as const,
+                properties: {},
+                geometry: currentRouteGeometry
+            });
+        }
+    };
+
+    // Initial update
+    if (!lastGeometryUpdatePos.current) {
+        updateGeometry();
+        return;
+    }
+
+    // Only update if moved more than 2 meters to save CPU on tablet
+    const distMoved = turf.distance(
+        turf.point([lastGeometryUpdatePos.current.lng, lastGeometryUpdatePos.current.lat]),
+        turf.point([snappedLocation.longitude, snappedLocation.latitude]),
+        { units: 'meters' }
+    );
+
+    if (distMoved > 2) {
+        updateGeometry();
+    }
+  }, [currentRouteGeometry, isCalculatingRoute, snappedLocation?.longitude, snappedLocation?.latitude]);
 
   // LIVE GPS
   React.useEffect(() => {
@@ -392,6 +417,7 @@ function NavigatingView({
   React.useEffect(() => {
     if (!userLocation || !nextObject || arrivedObject || isCalculatingRoute) return;
     
+    // Detect significant location change or target change
     if (lastFetchedTargetId.current === nextObject.id && currentRouteGeometry) return;
 
     const fetchRoute = async () => {
@@ -414,7 +440,6 @@ function NavigatingView({
               simStateRef.current.currentSpeedMs = 0;
           }
 
-          // Initial fit bounds for single destination (werkbon)
           if (!hasFitBoundsRef.current && objectsOnRoute.length === 1 && mapRef.current) {
               try {
                   const line = turf.lineString(route.geometry.coordinates);
@@ -424,7 +449,7 @@ function NavigatingView({
                       duration: 1000
                   });
                   hasFitBoundsRef.current = true;
-                  setIsFollowing(false); // Stop following briefly to let user see full route
+                  setIsFollowing(false);
                   setTimeout(() => setIsFollowing(true), 3000);
               } catch (e) {}
           }
@@ -554,8 +579,8 @@ function NavigatingView({
             );
         })}
 
-        {remainingRouteGeometry && (
-          <Source id="route-line" type="geojson" data={remainingRouteGeometry}>
+        {throtteledGeometry && (
+          <Source id="route-line" type="geojson" data={throtteledGeometry}>
             <Layer {...routeLayerCasing} />
             <Layer {...routeLayer} />
           </Source>
@@ -684,7 +709,6 @@ export default function StartNavigationPage() {
   const isSuperUser = profile?.role === 'Super admin';
   const isPrivileged = isSuperUser || profile?.role === 'toezichthouder';
   
-  // Default to a central location in NL so setup isn't blocked on PC
   const [userLocation, setUserLocation] = React.useState<{ latitude: number; longitude: number }>({ latitude: 52.1326, longitude: 5.2913 });
   const [routeType, setRouteType] = React.useState<'veeg' | 'prullenbak' | null>(null);
   const [selectedRouteId, setSelectedRouteId] = React.useState<string>('--nieuwe-route--');
@@ -693,6 +717,7 @@ export default function StartNavigationPage() {
   const [isStarting, setIsStarting] = React.useState(false);
   const [isSimulationMode, setIsSimulationMode] = React.useState(false);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = React.useState(false);
+  const [hasFirstLocation, setHasFirstLocation] = React.useState(false);
   
   const mapRef = React.useRef<MapRef>(null);
 
@@ -702,10 +727,26 @@ export default function StartNavigationPage() {
     return () => setIsHeaderVisible(true);
   }, [navigationState, setIsHeaderVisible]);
 
+  // Optimized GPS Initial Lock: Try to get a fast location first
   React.useEffect(() => {
     if (!navigator.geolocation) return;
+
+    // Fast initial rough location
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+            setHasFirstLocation(true);
+        },
+        null,
+        { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
+    );
+
+    // Continuous precise watch
     const watchId = navigator.geolocation.watchPosition(
-        (pos) => setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+        (pos) => {
+            setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+            setHasFirstLocation(true);
+        },
         (err) => console.warn("Location error:", err.message),
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
@@ -721,6 +762,7 @@ export default function StartNavigationPage() {
         setSelectedProjectId(projectIdFromUrl);
     }
 
+    // Enter navigation mode immediately if params are present
     if (lat && lng && navigationState !== 'navigating') {
       const meldingObject: MapObject = { 
           id: `Bestemming`, 
