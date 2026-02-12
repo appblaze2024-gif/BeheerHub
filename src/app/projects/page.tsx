@@ -55,6 +55,7 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import type { Object as MapObject, Project, Werksoort, Veegroute, Prullenbakkenroute, Boekingregel, Bestand, Voertuig, Machine } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 
 const EMPTY_PROJECT: Project = {
   projectnummer: '',
