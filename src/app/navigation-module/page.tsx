@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -178,13 +177,11 @@ function NavigatingView({
         setSmoothLocation(prevSmooth => {
             if (!targetLocation || !prevSmooth || isPaused) return prevSmooth;
 
-            // Lerp position for visual smoothness
             const lerpFactor = isSimulating ? 1 : 0.15; 
             
             const newLat = prevSmooth.latitude + (targetLocation.latitude - prevSmooth.latitude) * lerpFactor;
             const newLng = prevSmooth.longitude + (targetLocation.longitude - prevSmooth.longitude) * lerpFactor;
             
-            // Shortest path interpolation for heading
             let diff = (targetLocation.heading || 0) - (prevSmooth.heading || 0);
             while (diff < -180) diff += 360;
             while (diff > 180) diff -= 360;
@@ -197,7 +194,6 @@ function NavigatingView({
                 heading: newHeading
             };
 
-            // Camera follow logic
             if (isFollowing && !arrivedObject) {
                 const currentSpeedKmh = (targetLocation.speed || 0) * 3.6;
                 const targetZoom = Math.max(15, 18.5 - (Math.min(currentSpeedKmh, 80) / 30));
@@ -224,7 +220,6 @@ function NavigatingView({
     };
   }, [targetLocation?.latitude, targetLocation?.longitude, isFollowing, isPaused, arrivedObject, isSimulating]);
 
-  // Snap to road logic
   const snappedLocation = React.useMemo(() => {
     if (!smoothLocation || !currentRouteGeometry) return smoothLocation;
     try {
@@ -246,7 +241,6 @@ function NavigatingView({
     return smoothLocation;
   }, [smoothLocation, currentRouteGeometry]);
 
-  // Off-route detection
   React.useEffect(() => {
     if (!targetLocation || !currentRouteGeometry || isCalculatingRoute || isSimulating) return;
     
@@ -271,7 +265,6 @@ function NavigatingView({
     } catch (e) {}
   }, [targetLocation?.latitude, targetLocation?.longitude, currentRouteGeometry, isCalculatingRoute, offRouteSince, isSimulating]);
 
-  // Turn-by-turn logic
   const navHudData = React.useMemo(() => {
     if (!currentLeg?.steps) return null;
     
@@ -298,7 +291,6 @@ function NavigatingView({
     return null;
   }, [currentLeg, distanceRemainingToDestination]);
 
-  // Slice the route geometry to only show what's ahead
   React.useEffect(() => {
     if (!currentRouteGeometry || isCalculatingRoute || !snappedLocation) {
         setThrottledGeometry(null);
@@ -329,7 +321,6 @@ function NavigatingView({
     }
   }, [currentRouteGeometry, isCalculatingRoute, snappedLocation?.longitude, snappedLocation?.latitude]);
 
-  // Real GPS watch
   React.useEffect(() => {
     if (isSimulating) return;
     
@@ -355,7 +346,6 @@ function NavigatingView({
     return () => navigator.geolocation.clearWatch(watchId);
   }, [isSimulating]);
 
-  // Update distance remaining based on GPS position
   React.useEffect(() => {
     if (!targetLocation || !currentRouteGeometry || isSimulating) return;
     try {
@@ -372,13 +362,14 @@ function NavigatingView({
             setDistanceRemainingToDestination(roundedRemaining);
             lastUpdateDistRef.current = roundedRemaining;
         }
-        setHasReachedCurrentTarget(remaining < 80);
+        
+        const reached = remaining < 80;
+        setHasReachedCurrentTarget(prev => prev !== reached ? reached : prev);
     } catch (e) {}
   }, [targetLocation?.latitude, targetLocation?.longitude, currentRouteGeometry, isSimulating]);
 
   const lastFetchedTargetId = React.useRef<string | null>(null);
 
-  // Simulation loop
   React.useEffect(() => {
     if (!isSimulating || !currentRouteGeometry || !nextObject || arrivedObject || isCalculatingRoute) return;
 
@@ -423,14 +414,15 @@ function NavigatingView({
             lastUpdateDistRef.current = roundedRemaining;
         }
 
+        const reached = remaining < 80;
+        setHasReachedCurrentTarget(prev => prev !== reached ? reached : prev);
+
         if (simStateRef.current.distanceTravelled >= totalDistance - 0.2) {
             const finalCoord = coords[coords.length - 1];
             setTargetLocation({ latitude: finalCoord[1], longitude: finalCoord[0], speed: 0, heading: 0 });
             setHasReachedCurrentTarget(true);
             return;
         } 
-        
-        setHasReachedCurrentTarget(remaining < 80);
 
         try {
             const currentPoint = turf.along(line, simStateRef.current.distanceTravelled, { units: 'meters' });
@@ -452,7 +444,6 @@ function NavigatingView({
   }, [isSimulating, isPaused, arrivedObject, currentRouteGeometry, nextObject?.id, isCalculatingRoute]);
 
 
-  // Route fetcher
   React.useEffect(() => {
     if (!targetLocation || !nextObject || arrivedObject || isCalculatingRoute) return;
     
@@ -572,9 +563,9 @@ function NavigatingView({
           >
             <div className="relative flex items-center justify-center">
                 <div className="absolute h-16 w-16 bg-blue-500/20 rounded-full animate-pulse" />
-                <div className="h-12 w-12 bg-blue-600 rounded-full border-[4px] border-white shadow-2xl flex items-center justify-center transition-transform duration-75">
-                    <svg viewBox="0 0 100 100" className="h-8 w-8 text-white fill-current">
-                        <path d="M50 15 L85 85 L50 70 L15 85 Z" />
+                <div className="h-14 w-14 bg-blue-600 rounded-full border-[4px] border-white shadow-2xl flex items-center justify-center">
+                    <svg viewBox="0 0 100 100" className="h-10 w-10 text-white fill-current">
+                        <path d="M50 5 L90 95 L50 75 L10 95 Z" />
                     </svg>
                 </div>
             </div>
@@ -1019,7 +1010,7 @@ export default function StartNavigationPage() {
             {selectedRouteDef && 'startLatitude' in selectedRouteDef && (selectedRouteDef as any).startLatitude && (selectedRouteDef as any).startLongitude && (
                 <Marker longitude={(selectedRouteDef as any).startLongitude} latitude={(selectedRouteDef as any).startLatitude} anchor="center">
                     <div className="relative flex flex-col items-center">
-                        <div className="absolute h-12 w-12 rounded-full bg-blue-500/20 animate-pulse" />
+                        <div className="absolute h-12 w-12 rounded-full bg-blue-50/20 animate-pulse" />
                         <div className="relative h-10 w-10 rounded-full bg-blue-600 border-4 border-white shadow-2xl flex items-center justify-center">
                             <Home className="h-5 w-5 text-white fill-current" />
                         </div>
