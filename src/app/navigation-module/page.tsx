@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -208,15 +207,35 @@ function NavigatingView({
     return null;
   }, [currentLeg, distanceRemainingToDestination]);
 
-  // Wrap geometry in Feature for guaranteed rendering
+  // DISAPPEARING ROUTE LINE (Slice the line from snapped user position to the end)
   const remainingRouteGeometry = React.useMemo(() => {
-    if (!currentRouteGeometry || isCalculatingRoute) return null;
-    return {
-        type: 'Feature',
-        properties: {},
-        geometry: currentRouteGeometry
-    };
-  }, [currentRouteGeometry, isCalculatingRoute]);
+    if (!currentRouteGeometry || isCalculatingRoute || !snappedLocation) return null;
+    
+    try {
+        const coords = currentRouteGeometry.coordinates;
+        if (!Array.isArray(coords) || coords.length < 2) return null;
+        
+        const line = turf.lineString(coords);
+        const startPoint = turf.point([snappedLocation.longitude, snappedLocation.latitude]);
+        const endPoint = turf.point(coords[coords.length - 1]);
+        
+        // Slice the line: from user position to the end of the route
+        const sliced = turf.lineSlice(startPoint, endPoint, line);
+        
+        return {
+            type: 'Feature' as const,
+            properties: {},
+            geometry: sliced.geometry
+        };
+    } catch (e) {
+        // Fallback to original geometry if slice fails
+        return {
+            type: 'Feature' as const,
+            properties: {},
+            geometry: currentRouteGeometry
+        };
+    }
+  }, [currentRouteGeometry, isCalculatingRoute, snappedLocation]);
 
   // LIVE GPS
   React.useEffect(() => {
