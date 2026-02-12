@@ -16,15 +16,36 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasRole(role) {
+      return isSignedIn() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             getUserData().role == role;
+    }
+
+    function isPrivileged() {
+      return hasRole('Super admin') || hasRole('toezichthouder');
+    }
+
     // Algemene regel voor alle collecties: toegang voor ingelogde gebruikers.
-    // In een productie-omgeving zou dit verder verfijnd kunnen worden per rol.
+    // Specifieke beperkingen worden hieronder gedefinieerd.
     match /{document=**} {
       allow read, write: if isSignedIn();
     }
 
-    // Specifieke regel voor gebruikersroutes om eigenaarschap te garanderen
+    // Specifieke regel voor gebruikersprofielen
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId) || hasRole('Super admin');
+    }
+
+    // Specifieke regel voor gebruikersroutes om toezicht mogelijk te maken
     match /users/{userId}/routes/{routeId} {
-      allow read, write: if isOwner(userId) || isSignedIn(); // Super admins/toezichthouders kunnen ook lezen
+      allow read: if isOwner(userId) || isPrivileged();
+      allow write: if isOwner(userId) || hasRole('Super admin');
     }
     
     // Project specifieke subcollecties

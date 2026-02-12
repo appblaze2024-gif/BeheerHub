@@ -12,7 +12,8 @@
         "role": { "type": "string", "enum": ["Super admin", "toezichthouder", "ondersteuner", "medewerkers"] },
         "status": { "type": "string" },
         "wijk": { "type": "string" },
-        "nfcTagId": { "type": "string" }
+        "nfcTagId": { "type": "string" },
+        "lastSelectedProjectId": { "type": "string" }
       },
       "required": ["id", "email", "role"]
     },
@@ -24,7 +25,8 @@
         "projectnummer": { "type": "string" },
         "projectnaam": { "type": "string" },
         "locatie": { "type": "string" },
-        "opdrachtgever": { "type": "string" }
+        "opdrachtgever": { "type": "string" },
+        "vehicleAvailability": { "type": "object" }
       },
       "required": ["projectnummer", "projectnaam"]
     },
@@ -36,7 +38,8 @@
         "voornaam": { "type": "string" },
         "achternaam": { "type": "string" },
         "functie": { "type": "string" },
-        "status": { "type": "string" }
+        "status": { "type": "string" },
+        "planningOrder": { "type": "number" }
       }
     },
     "Melding": {
@@ -47,7 +50,10 @@
         "intakenummer": { "type": "string" },
         "status": { "type": "string" },
         "hoofdcategorie": { "type": "string" },
-        "subcategorie": { "type": "string" }
+        "subcategorie": { "type": "string" },
+        "datum": { "type": "string" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" }
       }
     },
     "Route": {
@@ -56,9 +62,24 @@
       "type": "object",
       "properties": {
         "userId": { "type": "string" },
+        "projectId": { "type": "string" },
         "routeName": { "type": "string" },
         "startTime": { "type": "string", "format": "date-time" },
-        "completedObjects": { "type": "array", "items": { "type": "string" } }
+        "endTime": { "type": "string", "format": "date-time" },
+        "completedObjects": { "type": "array", "items": { "type": "string" } },
+        "skippedObjects": { "type": "array", "items": { "type": "string" } },
+        "totalObjects": { "type": "number" }
+      }
+    },
+    "Sensor": {
+      "title": "Sensor",
+      "description": "IoT sensor data voor vulgraden.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "vulgraad": { "type": "number" },
+        "status": { "type": "string" }
       }
     }
   },
@@ -103,6 +124,13 @@
         }
       },
       {
+        "path": "/sensors/{sensorId}",
+        "definition": {
+          "entityName": "Sensor",
+          "description": "IoT sensoren."
+        }
+      },
+      {
         "path": "/voertuigen/{voertuigId}",
         "definition": {
           "description": "Wagenpark."
@@ -117,7 +145,7 @@
       {
         "path": "/objects/{objectId}",
         "definition": {
-          "description": "Areaal objecten (prullenbakken, etc)."
+          "description": "Areaal objecten."
         }
       }
     ]
