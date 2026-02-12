@@ -461,6 +461,7 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                                             <AlertDialogCancel>Annuleren</AlertDialogCancel>
                                             <AlertDialogAction onClick={() => handleDeleteMaintenance(item.id)} className="bg-red-600">Verwijderen</AlertDialogAction>
                                             </AlertDialogFooter>
+                                        </AlertDialogContent>
                                         </AlertDialog>
                                     )}
                                     </TableCell>
