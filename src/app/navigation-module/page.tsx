@@ -599,21 +599,20 @@ function NavigatingView({
       {/* HUD - Top Area (Black Nav Card) */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[70] w-[92%] max-w-lg flex flex-col gap-3">
         {navHudData && !arrivedObject && !isCalculatingRoute && (
-            <Card className="bg-black text-white shadow-2xl border-none overflow-hidden animate-in slide-in-from-top duration-300 rounded-[28px] py-4">
-                <CardContent className="p-4 flex items-center gap-6">
-                    <div className="bg-white/10 p-3 rounded-2xl">
-                        <Navigation2 className="h-10 w-10 text-white fill-current" />
+            <Card className="bg-black text-white shadow-2xl border-none overflow-hidden animate-in slide-in-from-top duration-300 rounded-[24px] py-2">
+                <CardContent className="p-3 flex items-center gap-4">
+                    <div className="bg-white/10 p-2 rounded-xl">
+                        <Navigation2 className="h-7 w-7 text-white fill-current" />
                     </div>
                     <div className="min-w-0 flex-1">
-                        <p className="text-2xl font-black tracking-tight leading-none mb-1">
+                        <p className="text-lg font-black tracking-tight leading-none mb-0.5">
                             {navHudData.instruction.split(' op ')[0] || 'Navigeer'} op
                         </p>
-                        <p className="text-3xl font-black tracking-tighter leading-tight truncate">
+                        <p className="text-xl font-black tracking-tighter leading-tight truncate">
                             {navHudData.instruction.split(' op ')[1] || 'de weg'}
                         </p>
                     </div>
                 </CardContent>
-                <div className="h-1.5 w-12 bg-white/20 rounded-full mx-auto -mb-2 mt-2" />
             </Card>
         )}
 
@@ -740,7 +739,7 @@ function NavigatingView({
                     </Button>
                 </div>
 
-                <Card className="bg-white/95 backdrop-blur-xl border-none shadow-2xl overflow-hidden w-64">
+                <Card className="bg-white/95 backdrop-blur-xl border-none shadow-2xl overflow-hidden w-64 hidden md:flex">
                     <CardContent className="p-4 space-y-2">
                         <div className="flex justify-between items-end">
                             <div>
