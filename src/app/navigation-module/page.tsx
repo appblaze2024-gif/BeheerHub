@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -50,6 +49,7 @@ import { useProfile } from '@/firebase/profile-provider';
 import { useToast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { RouteHistoryDialog } from '@/components/route-history-dialog';
+import { LoadingScreen } from '@/components/loading-screen';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -184,11 +184,10 @@ function NavigatingView({
         const snapped = turf.nearestPointOnLine(line, pt, { units: 'meters' });
         
         if (snapped.properties.dist! < 30) {
-            const [lng, lat] = snapped.geometry.coordinates;
             return {
                 ...userLocation,
-                latitude: lat,
-                longitude: lng
+                latitude: snapped.geometry.coordinates[1],
+                longitude: snapped.geometry.coordinates[0]
             };
         }
     } catch (e) {}
@@ -447,6 +446,10 @@ function NavigatingView({
     )
   }
 
+  if (!userLocation || isCalculatingRoute) {
+    return <LoadingScreen message="Navigatie voorbereiden..." />;
+  }
+
   const speedKmh = userLocation?.speed ? Math.round(userLocation.speed * 3.6) : 0;
 
   return (
@@ -552,15 +555,6 @@ function NavigatingView({
                       </div>
                   </CardContent>
               </Card>
-          </div>
-      )}
-
-      {isCalculatingRoute && (
-          <div className="absolute inset-0 z-[60] flex items-center justify-center bg-background/60 backdrop-blur-md">
-              <div className="flex flex-col items-center gap-4 bg-white p-8 rounded-2xl shadow-2xl border border-slate-100">
-                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                  <p className="font-black uppercase tracking-widest text-xs text-slate-500">Route herberekenen...</p>
-              </div>
           </div>
       )}
 

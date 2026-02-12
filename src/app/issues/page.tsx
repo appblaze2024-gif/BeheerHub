@@ -700,7 +700,7 @@ export default function IssuesPage() {
               <div className="flex items-center gap-2">
                   {selectedProjectId && (
                   <Link href={`/navigation-module?projectId=${selectedProjectId}&lat=${selectedMelding.latitude}&lng=${selectedMelding.longitude}&straat=${encodeURIComponent(selectedMelding.straatnaam || '')}`} passHref>
-                      <Button variant="outline" size="icon" className="h-9 w-9 bg-deep-sky-blue hover:bg-sky-400 dark:bg-sky-800/50 dark:hover:bg-sky-800/70">
+                      <Button variant="outline" size="icon" className="h-9 w-9 bg-primary text-white hover:bg-primary/90 shadow-lg shadow-black/20">
                           <Navigation className="h-4 w-4" />
                       </Button>
                   </Link>
@@ -1196,8 +1196,7 @@ export default function IssuesPage() {
                                     )}
                                 </div>
                             </CardContent>
-                        </Card>
-                    </TabsContent>
+                        </TabsContent>
                 </div>
             </Tabs>
         ) : (
