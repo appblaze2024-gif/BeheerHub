@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -638,9 +637,6 @@ function NavigatingView({
       {/* Floating Action Buttons (Right Sidebar) */}
       {isMobile && (
           <div className="absolute right-4 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-3">
-              <Button size="icon" variant="secondary" className="h-14 w-14 rounded-full bg-white shadow-xl border-none">
-                  <RouteIcon className="h-6 w-6 text-black" />
-              </Button>
               <Button size="icon" variant="secondary" className="h-14 w-14 rounded-full bg-white shadow-xl border-none">
                   <Volume2 className="h-6 w-6 text-black" />
               </Button>
