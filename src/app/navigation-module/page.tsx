@@ -634,18 +634,6 @@ function NavigatingView({
         )}
       </div>
 
-      {/* Floating Action Buttons (Right Sidebar) */}
-      {isMobile && (
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-3">
-              <Button size="icon" variant="secondary" className="h-14 w-14 rounded-full bg-white shadow-xl border-none">
-                  <Volume2 className="h-6 w-6 text-black" />
-              </Button>
-              <Button size="icon" variant="secondary" className="h-14 w-14 rounded-full bg-white shadow-xl border-none">
-                  <MessageSquareWarning className="h-6 w-6 text-black" fill="currentColor" />
-              </Button>
-          </div>
-      )}
-
       {arrivedObject && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6">
               <Card className="w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
