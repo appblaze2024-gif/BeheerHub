@@ -103,7 +103,7 @@ function Header() {
               <Menu className="h-6 w-6 text-slate-900" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="p-0 border-none w-[300px] sm:w-80">
+          <SheetContent side="left" className="p-0 border-none w-[320px] sm:w-80">
             <SheetHeader className="sr-only">
                 <SheetTitle>Navigatie Menu</SheetTitle>
             </SheetHeader>
@@ -208,7 +208,7 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
 
     try {
       const [hours, minutes] = shift.eind.split(':').map(Number);
-      if (isNaN(hours) || isNaN(minutes)) return;
+      if (isNaN(hours) || iisNaN(minutes)) return;
 
       const now = new Date();
       const endTimeToday = new Date();
