@@ -57,6 +57,7 @@ import { LoadingScreen } from '@/components/loading-screen';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { addSeconds, format as formatDate } from 'date-fns';
+import { nl } from 'date-fns/locale';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -164,7 +165,7 @@ function NavigatingView({
 
   const nextObject = objectsOnRoute[currentObjectIndex];
 
-  // Visual smoothing effect - Simplified dependencies to prevent depth error
+  // Visual smoothing effect
   React.useEffect(() => {
     let lastTime = performance.now();
     
@@ -192,7 +193,6 @@ function NavigatingView({
                 heading: newHeading
             };
 
-            // Camera follow logic
             if (isFollowing && !arrivedObject) {
                 const currentSpeedKmh = (targetLocation.speed || 0) * 3.6;
                 const targetZoom = Math.max(15, 18.5 - (Math.min(currentSpeedKmh, 80) / 30));
@@ -356,7 +356,6 @@ function NavigatingView({
         const distToStart = turf.length(turf.lineSlice(turf.point(coords[0]), snapped, line), { units: 'meters' });
         const remaining = Math.max(0, totalDist - distToStart);
         
-        // Only update if difference is more than 1 meter to prevent redundant renders
         setDistanceRemainingToDestination(prev => Math.abs(prev - remaining) > 1 ? remaining : prev);
         setHasReachedCurrentTarget(remaining < 80);
     } catch (e) {}
@@ -377,7 +376,6 @@ function NavigatingView({
     const totalDistance = turf.length(line, { units: 'meters' });
     if (totalDistance <= 0) return;
 
-    // Reset simulation progress when geometry changes
     simStateRef.current.distanceTravelled = 0;
     simStateRef.current.currentSpeedMs = 0;
     simStateRef.current.lastTimestamp = 0;
@@ -402,7 +400,6 @@ function NavigatingView({
         
         const remaining = Math.max(0, totalDistance - simStateRef.current.distanceTravelled);
         
-        // Throttled updates for HUD
         setDistanceRemainingToDestination(prev => Math.abs(prev - remaining) > 1 ? remaining : prev);
 
         if (simStateRef.current.distanceTravelled >= totalDistance - 0.2) {
@@ -438,9 +435,6 @@ function NavigatingView({
   React.useEffect(() => {
     if (!targetLocation || !nextObject || arrivedObject || isCalculatingRoute) return;
     
-    // IMPORTANT: In simulation mode, only fetch once at the start of each object leg
-    if (isSimulating && lastFetchedTargetId.current === nextObject.id && currentRouteGeometry) return;
-    
     if (lastFetchedTargetId.current === nextObject.id && currentRouteGeometry) return;
 
     const fetchRoute = async () => {
@@ -465,7 +459,7 @@ function NavigatingView({
       }
     };
     fetchRoute();
-  }, [nextObject?.id, arrivedObject, isSimulating, targetLocation?.latitude, targetLocation?.longitude, isCalculatingRoute]); // Removed currentRouteGeometry from deps
+  }, [nextObject?.id, arrivedObject, isSimulating, targetLocation?.latitude, targetLocation?.longitude, isCalculatingRoute, currentRouteGeometry]);
   
   const handleArrivedAction = (type: 'finish' | 'issue') => {
     if (!arrivedObject) return;
@@ -548,15 +542,14 @@ function NavigatingView({
             longitude={smoothLocation.longitude} 
             latitude={smoothLocation.latitude} 
             anchor="center"
-            // If following, rotation is 0 because the map bearing handles the orientation. 
-            // If not following, rotation is the car's heading.
             rotation={isFollowing ? 0 : (smoothLocation.heading || 0)} 
           >
             <div className="relative flex items-center justify-center">
                 <div className="absolute h-16 w-16 bg-blue-500/20 rounded-full animate-pulse" />
                 <div className="h-12 w-12 bg-blue-600 rounded-full border-[4px] border-white shadow-2xl flex items-center justify-center transition-transform duration-75">
-                    {/* Navigation2 points top-right (45 deg) by default. -45 makes it point North (up). */}
-                    <Navigation2 className="h-7 w-7 text-white fill-current -rotate-45" />
+                    <svg viewBox="0 0 24 24" className="h-7 w-7 text-white fill-current">
+                        <path d="M12 2L4.5 20.29L5.21 21L12 18L18.79 21L19.5 20.29L12 2Z" />
+                    </svg>
                 </div>
             </div>
           </Marker>
@@ -670,53 +663,62 @@ function NavigatingView({
         )}
 
         {isMobile ? (
-            <Card 
-                className={cn(
-                    "w-full bg-white shadow-2xl border-none rounded-[32px] pt-2 pb-6 px-8 transition-all duration-300 ease-in-out cursor-pointer",
-                    isDrawerExpanded ? "max-h-[300px]" : "max-h-[140px]"
-                )}
-                onTouchStart={handleTouchStart}
-                onTouchEnd={handleTouchEnd}
-                onClick={() => setIsDrawerExpanded(!isDrawerExpanded)}
-            >
-                <div className="h-1.5 w-12 bg-slate-200 rounded-full mx-auto mb-6" />
-                <div className="flex items-center justify-between">
-                    <div className="flex flex-col items-center">
-                        <p className="text-2xl font-black text-black leading-none mb-1">{arrivalTime}</p>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">aankomst</p>
+            <div className="w-full flex flex-col items-center gap-3">
+                <Card 
+                    className={cn(
+                        "w-full bg-white shadow-2xl border-none rounded-[32px] pt-2 pb-6 px-8 transition-all duration-300 ease-in-out cursor-pointer",
+                        isDrawerExpanded ? "max-h-[300px]" : "max-h-[140px]"
+                    )}
+                    onTouchStart={handleTouchStart}
+                    onTouchEnd={handleTouchEnd}
+                    onClick={() => setIsDrawerExpanded(!isDrawerExpanded)}
+                >
+                    <div className="h-1.5 w-12 bg-slate-200 rounded-full mx-auto mb-6" />
+                    <div className="flex items-center justify-between">
+                        <div className="flex flex-col items-center">
+                            <p className="text-2xl font-black text-black leading-none mb-1">{arrivalTime}</p>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">aankomst</p>
+                        </div>
+                        <div className="flex flex-col items-center">
+                            <p className="text-2xl font-black text-black leading-none mb-1">{durationMin}</p>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">min.</p>
+                        </div>
+                        <div className="flex flex-col items-center">
+                            <p className="text-2xl font-black text-black leading-none mb-1">{distanceKm}</p>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">km</p>
+                        </div>
                     </div>
-                    <div className="flex flex-col items-center">
-                        <p className="text-2xl font-black text-black leading-none mb-1">{durationMin}</p>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">min.</p>
+                    
+                    <div className={cn(
+                        "mt-8 flex gap-4 transition-all duration-300",
+                        isDrawerExpanded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 pointer-events-none"
+                    )}>
+                        <Button 
+                            variant="ghost" 
+                            size="lg" 
+                            className="h-14 w-14 rounded-full bg-blue-50 border-none shrink-0" 
+                            onClick={(e) => { e.stopPropagation(); setIsPaused(!isPaused); }}
+                        >
+                            {isPaused ? <Play className="h-6 w-6 fill-current text-blue-600" /> : <Pause className="h-6 w-6 fill-current text-blue-600" />}
+                        </Button>
+                        <Button 
+                            variant="destructive" 
+                            size="lg" 
+                            className="h-14 flex-1 rounded-full text-lg font-black uppercase tracking-tighter" 
+                            onClick={(e) => { e.stopPropagation(); onExit(); }}
+                        >
+                            STOP RIT
+                        </Button>
                     </div>
-                    <div className="flex flex-col items-center">
-                        <p className="text-2xl font-black text-black leading-none mb-1">{distanceKm}</p>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">km</p>
-                    </div>
+                </Card>
+                <div className="flex justify-start w-full px-4 mb-2">
+                    <Badge className="bg-red-600 text-white font-black text-[10px] uppercase tracking-tighter px-3 h-7 rounded-full gap-2 shadow-lg">
+                        <span className="flex items-center justify-center bg-white text-red-600 rounded-full h-4 w-4 text-[8px]">N</span>
+                        1 Issue
+                        <XIcon className="h-3 w-3" />
+                    </Badge>
                 </div>
-                
-                <div className={cn(
-                    "mt-8 flex gap-4 transition-all duration-300",
-                    isDrawerExpanded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 pointer-events-none"
-                )}>
-                    <Button 
-                        variant="ghost" 
-                        size="lg" 
-                        className="h-14 w-14 rounded-full bg-slate-50 border-none shrink-0" 
-                        onClick={(e) => { e.stopPropagation(); setIsPaused(!isPaused); }}
-                    >
-                        {isPaused ? <Play className="h-6 w-6 fill-current text-blue-600" /> : <Pause className="h-6 w-6 fill-current text-blue-600" />}
-                    </Button>
-                    <Button 
-                        variant="destructive" 
-                        size="lg" 
-                        className="h-14 flex-1 rounded-full text-lg font-black uppercase tracking-tighter" 
-                        onClick={(e) => { e.stopPropagation(); onExit(); }}
-                    >
-                        STOP RIT
-                    </Button>
-                </div>
-            </Card>
+            </div>
         ) : (
             <div className="w-full max-w-4xl flex items-end justify-between gap-4">
                 <Card className="shadow-2xl bg-white/95 backdrop-blur-xl border-none overflow-hidden w-40">
