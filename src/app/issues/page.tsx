@@ -1196,7 +1196,8 @@ export default function IssuesPage() {
                                     )}
                                 </div>
                             </CardContent>
-                        </TabsContent>
+                        </Card>
+                    </TabsContent>
                 </div>
             </Tabs>
         ) : (
