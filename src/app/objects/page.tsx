@@ -58,7 +58,7 @@ import { cn } from '@/lib/utils';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
-type Area {
+type Area = {
   id: string;
   naam: string;
   subGebieden: string;
