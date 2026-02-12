@@ -20,7 +20,8 @@
         "lastSelectedProjectId": { "type": "string" },
         "permissions": { "type": "object" },
         "schouwenGemeente": { "type": "string" },
-        "schouwenMapStyle": { "type": "string" }
+        "schouwenMapStyle": { "type": "string" },
+        "lastUsedDienstColor": { "type": "string" }
       },
       "required": ["id", "email", "role"]
     },
@@ -54,12 +55,15 @@
       "type": "object",
       "properties": {
         "voornaam": { "type": "string" },
+        "tussenvoegsel": { "type": "string" },
         "achternaam": { "type": "string" },
         "functie": { "type": "string" },
         "status": { "type": "string" },
         "planningOrder": { "type": "number" },
         "urenPerDag": { "type": "object" },
-        "avatarUrl": { "type": "string" }
+        "avatarUrl": { "type": "string" },
+        "personeelsnummer": { "type": "string" },
+        "email": { "type": "string" }
       }
     },
     "Melding": {
@@ -67,6 +71,7 @@
       "description": "Meldingen openbare ruimte en werkbonnen.",
       "type": "object",
       "properties": {
+        "id": { "type": "string" },
         "intakenummer": { "type": "string" },
         "status": { "type": "string" },
         "hoofdcategorie": { "type": "string" },
@@ -80,7 +85,14 @@
         "huisnummer": { "type": "string" },
         "plaats": { "type": "string" },
         "wijk": { "type": "string" },
-        "melder": { "type": "string" }
+        "melder": { "type": "string" },
+        "files": { "type": "array" },
+        "fotos": { "type": "array" },
+        "afhandeling_fotos": { "type": "array" },
+        "tasks": { "type": "array" },
+        "hoeveelheden": { "type": "array" },
+        "gewerkteMinuten": { "type": "number" },
+        "workStartedAt": { "type": "string" }
       }
     },
     "Route": {
@@ -88,6 +100,7 @@
       "description": "Gereden ritten door medewerkers.",
       "type": "object",
       "properties": {
+        "id": { "type": "string" },
         "userId": { "type": "string" },
         "projectId": { "type": "string" },
         "routeName": { "type": "string" },
@@ -106,6 +119,7 @@
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
+        "type": { "type": "string" },
         "vulgraad": { "type": "number" },
         "status": { "type": "string" },
         "latitude": { "type": "number" },
@@ -140,6 +154,9 @@
     },
     "/projects/{projectId}/folders/{folderId}": {
       "description": "Mappenstructuur voor projectbestanden."
+    },
+    "/projects/{projectId}/besteksmeldingen/{meldingId}": {
+      "description": "Besteksmeldingen per project."
     },
     "/medewerkers/{medewerkerId}": {
       "schema": { "$ref": "#/entities/Medewerker" },

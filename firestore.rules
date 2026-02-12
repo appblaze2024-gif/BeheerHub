@@ -42,13 +42,13 @@ service cloud.firestore {
       // Iedereen mag profielen inzien (voor zoekfuncties en dialogen)
       allow read: if isSignedIn();
       // Alleen eigenaar of admin mag schrijven
-      allow write: if isOwner(userId);
+      allow write: if isOwner(userId) || hasRole('Super admin');
 
       // Routes subcollectie (Rittenregistratie)
       match /routes/{routeId} {
         // Geprivilegieerde gebruikers moeten alle ritten kunnen inzien voor rapportages
         allow read: if isOwner(userId) || isPrivileged();
-        allow write: if isOwner(userId);
+        allow write: if isOwner(userId) || isPrivileged();
       }
     }
 
