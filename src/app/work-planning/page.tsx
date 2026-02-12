@@ -67,6 +67,7 @@ import { useProject } from '@/context/project-context';
 import { MedewerkerVolgordeDialog } from '@/components/medewerker-volgorde-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { VehicleDeploymentDialog } from '@/components/vehicle-deployment-dialog';
+import { LoadingScreen } from '@/components/loading-screen';
 
 
 const getInitials = (firstName?: string, lastName?: string) => {
@@ -1027,7 +1028,7 @@ export default function WorkPlanningPage() {
 
     // First filter by project assignments if defined
     if (selectedProject?.materieelIds && selectedProject.materieelIds.length > 0) {
-        filteredEquipment = allEquipment.filter(e => selectedProject.materieelIds?.includes(e.id));
+        filteredEquipment = allEquipment.filter(item => selectedProject.materieelIds?.includes(item.id));
     }
 
     if (selectedDay) {
