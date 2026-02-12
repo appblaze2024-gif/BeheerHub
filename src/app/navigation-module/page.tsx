@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -23,10 +24,6 @@ import {
   MapPin, 
   Gauge, 
   Loader2,
-  ArrowUpLeft,
-  ArrowUpRight,
-  CornerUpLeft,
-  CornerUpRight,
   RotateCcw,
   RefreshCw,
   Navigation,
@@ -126,6 +123,8 @@ function NavigatingView({
   
   const [isDrawerExpanded, setIsDrawerExpanded] = React.useState(false);
   const touchStartY = React.useRef<number | null>(null);
+
+  const lastUpdateDistRef = React.useRef(0);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY;
@@ -369,7 +368,10 @@ function NavigatingView({
         const remaining = Math.max(0, totalDist - distToStart);
         
         const roundedRemaining = Math.round(remaining);
-        setDistanceRemainingToDestination(prev => prev !== roundedRemaining ? roundedRemaining : prev);
+        if (Math.abs(lastUpdateDistRef.current - roundedRemaining) > 2) {
+            setDistanceRemainingToDestination(roundedRemaining);
+            lastUpdateDistRef.current = roundedRemaining;
+        }
         setHasReachedCurrentTarget(remaining < 80);
     } catch (e) {}
   }, [targetLocation?.latitude, targetLocation?.longitude, currentRouteGeometry, isSimulating]);
@@ -407,7 +409,7 @@ function NavigatingView({
         simStateRef.current.lastTimestamp = timestamp;
 
         const distanceToDestination = totalDistance - simStateRef.current.distanceTravelled;
-        simStateRef.current.targetSpeedMs = distanceToDestination < 40 ? 3 : 13.8; // Slow down near destination
+        simStateRef.current.targetSpeedMs = distanceToDestination < 40 ? 3 : 13.8; 
 
         const accel = simStateRef.current.targetSpeedMs > simStateRef.current.currentSpeedMs ? 4 : 8;
         simStateRef.current.currentSpeedMs += (simStateRef.current.targetSpeedMs - simStateRef.current.currentSpeedMs) * deltaTime * accel;
@@ -416,7 +418,10 @@ function NavigatingView({
         const remaining = Math.max(0, totalDistance - simStateRef.current.distanceTravelled);
         
         const roundedRemaining = Math.round(remaining);
-        setDistanceRemainingToDestination(prev => prev !== roundedRemaining ? roundedRemaining : prev);
+        if (Math.abs(lastUpdateDistRef.current - roundedRemaining) > 2) {
+            setDistanceRemainingToDestination(roundedRemaining);
+            lastUpdateDistRef.current = roundedRemaining;
+        }
 
         if (simStateRef.current.distanceTravelled >= totalDistance - 0.2) {
             const finalCoord = coords[coords.length - 1];
@@ -467,6 +472,7 @@ function NavigatingView({
           setCurrentLeg(route.legs[0]);
           const remaining = Math.round(route.legs[0].distance);
           setDistanceRemainingToDestination(remaining);
+          lastUpdateDistRef.current = remaining;
           setHasReachedCurrentTarget(remaining < 80);
         }
       } catch (error) {
@@ -567,8 +573,8 @@ function NavigatingView({
             <div className="relative flex items-center justify-center">
                 <div className="absolute h-16 w-16 bg-blue-500/20 rounded-full animate-pulse" />
                 <div className="h-12 w-12 bg-blue-600 rounded-full border-[4px] border-white shadow-2xl flex items-center justify-center transition-transform duration-75">
-                    <svg viewBox="0 0 24 24" className="h-7 w-7 text-white fill-current">
-                        <path d="M12 2L4.5 20.29L12 18L19.5 20.29L12 2Z" />
+                    <svg viewBox="0 0 100 100" className="h-8 w-8 text-white fill-current">
+                        <path d="M50 15 L85 85 L50 70 L15 85 Z" />
                     </svg>
                 </div>
             </div>
@@ -649,7 +655,6 @@ function NavigatingView({
         )}
       </div>
 
-      {/* Speedometer Gauge - Moved lower to avoid overlap with error banners */}
       <div className="absolute bottom-[160px] right-4 z-[70]">
           <div className={cn(
               "h-20 w-20 rounded-full backdrop-blur shadow-2xl border-4 flex flex-col items-center justify-center overflow-hidden transition-colors duration-500",
