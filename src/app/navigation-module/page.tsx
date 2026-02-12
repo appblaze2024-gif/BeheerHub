@@ -144,7 +144,7 @@ function NavigatingView({
 
   // DYNAMIC REROUTING LOGIC: Find nearest unvisited object whenever user moves significantly
   React.useEffect(() => {
-    if (!userLocation || isCalculatingRoute || arrivedObject || objectsOnRoute.length === 0) return;
+    if (!userLocation || isCalculatingRoute || arrivedObject || objectsOnRoute.length <= 1) return;
 
     const unvisitedObjects = objectsOnRoute.filter(obj => !completedObjects.includes(obj.id));
     if (unvisitedObjects.length === 0) return;
@@ -162,14 +162,13 @@ function NavigatingView({
         }
     });
 
-    // If another object is significantly closer (or just the new closest), switch target
     if (nearestIdx !== currentObjectIndex && nearestDist < (distanceRemainingToDestination - 50)) {
         setCurrentObjectIndex(nearestIdx);
         setCurrentRouteGeometry(null);
         setCurrentLeg(null);
         setHasReachedCurrentTarget(false);
     }
-  }, [userLocation?.latitude, userLocation?.longitude, completedObjects, objectsOnRoute, isCalculatingRoute, arrivedObject]);
+  }, [userLocation?.latitude, userLocation?.longitude, completedObjects, objectsOnRoute, isCalculatingRoute, arrivedObject, currentObjectIndex, distanceRemainingToDestination]);
 
   // ROAD SNAPPING
   const snappedLocation = React.useMemo(() => {
@@ -367,11 +366,17 @@ function NavigatingView({
   }, [isSimulating, isPaused, arrivedObject, currentRouteGeometry, nextObject?.id, isCalculatingRoute, isFollowing]);
 
   // ROUTE CALCULATION
+  const lastFetchedTargetId = React.useRef<string | null>(null);
+
   React.useEffect(() => {
-    if (!userLocation || !nextObject || arrivedObject) return;
+    if (!userLocation || !nextObject || arrivedObject || isCalculatingRoute) return;
     
+    // Only fetch if target changed or we have no route
+    if (lastFetchedTargetId.current === nextObject.id && currentRouteGeometry) return;
+
     const fetchRoute = async () => {
       setIsCalculatingRoute(true);
+      lastFetchedTargetId.current = nextObject.id;
       const { longitude, latitude } = userLocation;
       const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${longitude},${latitude};${nextObject.longitude},${nextObject.latitude}?steps=true&geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}&language=nl`;
       try {
@@ -390,11 +395,11 @@ function NavigatingView({
       } catch (error) {
           console.error("Failed to fetch route:", error);
       } finally {
-          setTimeout(() => setIsCalculatingRoute(false), 600);
+          setIsCalculatingRoute(false);
       }
     };
     fetchRoute();
-  }, [nextObject?.id, arrivedObject, isSimulating, userLocation?.latitude, userLocation?.longitude]);
+  }, [nextObject?.id, arrivedObject, isSimulating, userLocation?.latitude, userLocation?.longitude, currentRouteGeometry, isCalculatingRoute]);
   
   const handleArrivedAction = (type: 'finish' | 'issue') => {
     if (!arrivedObject) return;
@@ -422,6 +427,7 @@ function NavigatingView({
 
     setCurrentRouteGeometry(null);
     setCurrentLeg(null);
+    lastFetchedTargetId.current = null;
     if (isSimulating) {
         simStateRef.current = { distanceTravelled: 0, currentSpeedMs: 0, targetSpeedMs: 13.8, lastTimestamp: 0 };
     }
@@ -445,8 +451,12 @@ function NavigatingView({
     )
   }
 
-  if (!userLocation || isCalculatingRoute) {
-    return <LoadingScreen message="Navigatie voorbereiden..." />;
+  if (!userLocation) {
+    return <LoadingScreen message="Wachten op GPS signaal..." />;
+  }
+
+  if (isCalculatingRoute && !currentRouteGeometry) {
+    return <LoadingScreen message="Route berekenen..." />;
   }
 
   const speedKmh = userLocation?.speed ? Math.round(userLocation.speed * 3.6) : 0;
@@ -613,7 +623,7 @@ function NavigatingView({
                           <p className="text-sm font-black text-blue-600 truncate max-w-[120px]">{nextObject?.id}</p>
                       </div>
                   </div>
-                  <Progress value={(completedObjects.length / objectsOnRoute.length) * 100} className="h-1.5 bg-slate-100" />
+                  <Progress value={(completedObjects.length / (objectsOnRoute.length || 1)) * 100} className="h-1.5 bg-slate-100" />
               </div>
           </Card>
       </div>
@@ -672,9 +682,18 @@ export default function StartNavigationPage() {
     const lat = searchParams.get('lat');
     const lng = searchParams.get('lng');
     const projectIdFromUrl = searchParams.get('projectId');
-    if (projectIdFromUrl && selectedProjectId !== projectIdFromUrl) setSelectedProjectId(projectIdFromUrl);
+    
+    if (projectIdFromUrl && selectedProjectId !== projectIdFromUrl) {
+        setSelectedProjectId(projectIdFromUrl);
+    }
+
     if (lat && lng && navigationState !== 'navigating') {
-      const meldingObject: MapObject = { id: `dest-${lat}-${lng}`, latitude: parseFloat(lat), longitude: parseFloat(lng) };
+      const meldingObject: MapObject = { 
+          id: `Bestemming`, 
+          latitude: parseFloat(lat), 
+          longitude: parseFloat(lng),
+          name: searchParams.get('straat') || 'Bestemming'
+      };
       setObjectsOnRoute([meldingObject]);
       setNavigationState('navigating');
     }
@@ -816,7 +835,7 @@ export default function StartNavigationPage() {
                 </Marker>
             ))}
           </MapGL>
-          <Card className="absolute top-4 left-4 z-10 w-full max-w-[300px] shadow-2xl bg-white/95 backdrop-blur border-2 border-slate-100">
+          <Card className="absolute top-4 left-4 z-10 w-full max-w-[280px] shadow-2xl bg-white/95 backdrop-blur border-2 border-slate-100">
             <CardHeader className="p-3 border-b bg-slate-50/50">
               <div className="flex items-center gap-3">
                 <Button variant="ghost" size="icon" onClick={() => router.push('/')} className="h-7 w-7 hover:bg-white rounded-full flex items-center justify-center"><ArrowLeft className="h-3.5 w-3.5" /></Button>
@@ -851,7 +870,7 @@ export default function StartNavigationPage() {
                 </Select>
               </div>
               <div className="flex flex-col gap-1.5 pt-1">
-                <Button className="w-full h-10 text-xs font-black bg-blue-600 hover:bg-blue-700 shadow-lg rounded-lg uppercase tracking-tighter flex items-center justify-center text-white" onClick={() => handleStartRoute(false)} disabled={!selectedRouteId || selectedRouteId === '--nieuwe-route--' || isStarting}>
+                <Button className="w-full h-9 text-xs font-black bg-blue-600 hover:bg-blue-700 shadow-lg rounded-lg uppercase tracking-tighter flex items-center justify-center text-white" onClick={() => handleStartRoute(false)} disabled={!selectedRouteId || selectedRouteId === '--nieuwe-route--' || isStarting}>
                     {isStarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4 fill-current" />} START LIVE RIT
                 </Button>
                 <div className="grid grid-cols-2 gap-1.5">
