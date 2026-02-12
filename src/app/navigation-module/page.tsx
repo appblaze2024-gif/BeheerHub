@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -64,8 +65,23 @@ const routeLayer: Layer = {
   },
   paint: {
     'line-color': '#3b82f6',
-    'line-width': 8,
-    'line-opacity': 0.8,
+    'line-width': 10,
+    'line-opacity': 0.9,
+  },
+};
+
+const routeLayerCasing: Layer = {
+  id: 'route-casing',
+  type: 'line',
+  source: 'route-line',
+  layout: {
+    'line-join': 'round',
+    'line-cap': 'round',
+  },
+  paint: {
+    'line-color': '#1d4ed8',
+    'line-width': 14,
+    'line-opacity': 0.3,
   },
 };
 
@@ -120,6 +136,7 @@ function NavigatingView({
   const [hasReachedCurrentTarget, setHasReachedCurrentTarget] = React.useState(false);
   const [isFollowing, setIsFollowing] = React.useState(true);
   const [gpsError, setGpsError] = React.useState<'permission' | 'signal' | null>(null);
+  const hasFitBoundsRef = React.useRef(false);
   
   const { profile } = useProfile();
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
@@ -191,13 +208,17 @@ function NavigatingView({
     return null;
   }, [currentLeg, distanceRemainingToDestination]);
 
-  // Optimized line display - simplified to ensure it always shows
+  // Wrap geometry in Feature for guaranteed rendering
   const remainingRouteGeometry = React.useMemo(() => {
     if (!currentRouteGeometry || isCalculatingRoute) return null;
-    return currentRouteGeometry;
+    return {
+        type: 'Feature',
+        properties: {},
+        geometry: currentRouteGeometry
+    };
   }, [currentRouteGeometry, isCalculatingRoute]);
 
-  // LIVE GPS - Fixed watchPosition dependency
+  // LIVE GPS
   React.useEffect(() => {
     if (isSimulating) return;
     
@@ -229,7 +250,7 @@ function NavigatingView({
     return () => navigator.geolocation.clearWatch(watchId);
   }, [isSimulating, isFollowing, isPaused]);
 
-  // Update distance remaining when user moves
+  // Update distance remaining
   React.useEffect(() => {
     if (!userLocation || !currentRouteGeometry || isSimulating) return;
     try {
@@ -325,7 +346,6 @@ function NavigatingView({
   React.useEffect(() => {
     if (!userLocation || !nextObject || arrivedObject || isCalculatingRoute) return;
     
-    // Only fetch if target changed or we have no route
     if (lastFetchedTargetId.current === nextObject.id && currentRouteGeometry) return;
 
     const fetchRoute = async () => {
@@ -337,13 +357,30 @@ function NavigatingView({
         const response = await fetch(url);
         const data = await response.json();
         if (data.routes && data.routes.length > 0) {
-          setCurrentRouteGeometry(data.routes[0].geometry);
-          setCurrentLeg(data.routes[0].legs[0]);
-          setDistanceRemainingToDestination(data.routes[0].legs[0].distance);
-          setHasReachedCurrentTarget(data.routes[0].legs[0].distance < 100);
+          const route = data.routes[0];
+          setCurrentRouteGeometry(route.geometry);
+          setCurrentLeg(route.legs[0]);
+          setDistanceRemainingToDestination(route.legs[0].distance);
+          setHasReachedCurrentTarget(route.legs[0].distance < 100);
+          
           if (isSimulating) {
               simStateRef.current.distanceTravelled = 0;
               simStateRef.current.currentSpeedMs = 0;
+          }
+
+          // Initial fit bounds for single destination (werkbon)
+          if (!hasFitBoundsRef.current && objectsOnRoute.length === 1 && mapRef.current) {
+              try {
+                  const line = turf.lineString(route.geometry.coordinates);
+                  const bbox = turf.bbox(line);
+                  mapRef.current.fitBounds(bbox as [number, number, number, number], {
+                      padding: 100,
+                      duration: 1000
+                  });
+                  hasFitBoundsRef.current = true;
+                  setIsFollowing(false); // Stop following briefly to let user see full route
+                  setTimeout(() => setIsFollowing(true), 3000);
+              } catch (e) {}
           }
         }
       } catch (error) {
@@ -353,7 +390,7 @@ function NavigatingView({
       }
     };
     fetchRoute();
-  }, [nextObject?.id, arrivedObject, isSimulating, userLocation?.latitude, userLocation?.longitude, currentRouteGeometry, isCalculatingRoute]);
+  }, [nextObject?.id, arrivedObject, isSimulating, userLocation?.latitude, userLocation?.longitude, currentRouteGeometry, isCalculatingRoute, objectsOnRoute.length]);
   
   const handleArrivedAction = (type: 'finish' | 'issue') => {
     if (!arrivedObject) return;
@@ -362,7 +399,6 @@ function NavigatingView({
     setArrivedObject(null);
     setHasReachedCurrentTarget(false);
     
-    // Find next nearest automatically
     const remaining = objectsOnRoute.filter(obj => !completedObjects.includes(obj.id) && obj.id !== finishedId);
     if (remaining.length > 0) {
         const currentPt = turf.point([userLocation!.longitude, userLocation!.latitude]);
@@ -376,7 +412,7 @@ function NavigatingView({
         });
         setCurrentObjectIndex(nextIdx);
     } else {
-        setCurrentObjectIndex(objectsOnRoute.length); // Finished
+        setCurrentObjectIndex(objectsOnRoute.length); 
     }
 
     setCurrentRouteGeometry(null);
@@ -478,6 +514,7 @@ function NavigatingView({
 
         {remainingRouteGeometry && (
           <Source id="route-line" type="geojson" data={remainingRouteGeometry}>
+            <Layer {...routeLayerCasing} />
             <Layer {...routeLayer} />
           </Source>
         )}
@@ -729,7 +766,6 @@ export default function StartNavigationPage() {
     const startCoords = startLoc || { latitude: objectsOnMap[0].latitude, longitude: objectsOnMap[0].longitude };
     setUserLocation(startCoords);
 
-    // Initial sort by distance to start
     const unvisited = [...objectsOnMap];
     const sortedObjects: MapObject[] = [];
     let currentPos = startCoords;
