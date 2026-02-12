@@ -56,6 +56,15 @@ import { cn } from '@/lib/utils';
 import type { Object as MapObject, Project, Werksoort, Veegroute, Prullenbakkenroute, Boekingregel, Bestand, Voertuig, Machine } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 const EMPTY_PROJECT: Project = {
   projectnummer: '',
@@ -613,52 +622,60 @@ function WijkenTab({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-x-4 px-1 text-sm font-semibold">
-        <Label>Wijk</Label>
-        <Label>Locatie</Label>
-        <Label>Gebied</Label>
-        <span />
-      </div>
-      {sortedWijken.map((wijk) => (
-        <div
-          key={wijk.id}
-          className="grid grid-cols-[1fr_1fr_auto_auto] items-center gap-x-4"
-        >
-          <Input value={wijk.naam} onChange={(e) => handleInputChange(wijk.id, 'naam', e.target.value)} disabled={!canEdit}/>
-          <Input value={wijk.locatie} onChange={(e) => handleInputChange(wijk.id, 'locatie', e.target.value)} disabled={!canEdit} />
-          <Button variant="outline" onClick={() => setMapWijk(wijk)}>
-            <MapPin className="mr-2 h-4 w-4" />
-            Gebied {canEdit ? 'tekenen/bewerken' : 'bekijken'}
-          </Button>
-          <div className="flex items-center justify-end">
-            {canEdit && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreHorizontal className="h-4 w-4" />
+      <div className="border rounded-md">
+        <Table>
+          <TableHeader className="bg-muted/50">
+            <TableRow>
+              <TableHead className="font-bold">Wijknaam</TableHead>
+              <TableHead className="font-bold">Locatie</TableHead>
+              <TableHead className="font-bold text-center">Kaart</TableHead>
+              <TableHead className="w-[100px] text-right">Acties</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sortedWijken.map((wijk) => (
+              <TableRow key={wijk.id} className="hover:bg-muted/30">
+                <TableCell>
+                  <Input value={wijk.naam} onChange={(e) => handleInputChange(wijk.id, 'naam', e.target.value)} disabled={!canEdit} className="h-8" />
+                </TableCell>
+                <TableCell>
+                  <Input value={wijk.locatie} onChange={(e) => handleInputChange(wijk.id, 'locatie', e.target.value)} disabled={!canEdit} className="h-8" />
+                </TableCell>
+                <TableCell className="text-center">
+                  <Button variant="outline" size="sm" onClick={() => setMapWijk(wijk)}>
+                    <MapPin className="mr-2 h-4 w-4" />
+                    {canEdit ? 'Bewerken' : 'Bekijken'}
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => handleCopyToVeegroutes(wijk)}>
-                    <Copy className="mr-2 h-4 w-4" />
-                    <span>Kopieer naar Veegroutes</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleCopyToPrullenbakkenroutes(wijk)}>
-                    <Copy className="mr-2 h-4 w-4" />
-                    <span>Kopieer naar Prullenbakkenroutes</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => removeRow(wijk.id)} className="text-destructive focus:text-destructive">
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    <span>Verwijderen</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
-        </div>
-      ))}
-      {canEdit && <Button variant="outline" onClick={addRow}>Wijk toevoegen</Button>}
+                </TableCell>
+                <TableCell className="text-right">
+                  {canEdit && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleCopyToVeegroutes(wijk)}>
+                          <Copy className="mr-2 h-4 w-4" /> Kopieer naar Veegroutes
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleCopyToPrullenbakkenroutes(wijk)}>
+                          <Copy className="mr-2 h-4 w-4" /> Kopieer naar Prullenbakken
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => removeRow(wijk.id)} className="text-destructive">
+                          <Trash2 className="mr-2 h-4 w-4" /> Verwijderen
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+      {canEdit && <Button variant="outline" size="sm" onClick={addRow}><Plus className="mr-2 h-4 w-4" /> Wijk toevoegen</Button>}
       
       {mapWijk && (
         <WijkMapDialog
@@ -739,31 +756,44 @@ function VeegroutesTab({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-x-4 px-1 text-sm font-semibold">
-        <Label>Veegroute</Label>
-        <Label>Locatie</Label>
-        <Label>Gebied</Label>
-        <span />
+      <div className="border rounded-md">
+        <Table>
+          <TableHeader className="bg-muted/50">
+            <TableRow>
+              <TableHead className="font-bold">Veegroute</TableHead>
+              <TableHead className="font-bold">Locatie</TableHead>
+              <TableHead className="font-bold text-center">Kaart</TableHead>
+              <TableHead className="w-[100px] text-right">Acties</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sortedRoutes.map((route) => (
+              <TableRow key={route.id} className="hover:bg-muted/30">
+                <TableCell>
+                  <Input value={route.naam} onChange={(e) => handleInputChange(route.id, 'naam', e.target.value)} disabled={!canEdit} className="h-8" />
+                </TableCell>
+                <TableCell>
+                  <Input value={route.locatie} onChange={(e) => handleInputChange(route.id, 'locatie', e.target.value)} disabled={!canEdit} className="h-8" />
+                </TableCell>
+                <TableCell className="text-center">
+                  <Button variant="outline" size="sm" onClick={() => setMapRoute(route)}>
+                    <MapPin className="mr-2 h-4 w-4" />
+                    {canEdit ? 'Bewerken' : 'Bekijken'}
+                  </Button>
+                </TableCell>
+                <TableCell className="text-right">
+                  {canEdit && (
+                    <Button variant="ghost" size="icon" onClick={() => removeRow(route.id)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
-      {sortedRoutes.map((route) => (
-        <div
-          key={route.id}
-          className="grid grid-cols-[1fr_1fr_auto_auto] items-center gap-x-4"
-        >
-          <Input value={route.naam} onChange={(e) => handleInputChange(route.id, 'naam', e.target.value)} disabled={!canEdit} />
-          <Input value={route.locatie} onChange={(e) => handleInputChange(route.id, 'locatie', e.target.value)} disabled={!canEdit}/>
-          <Button variant="outline" onClick={() => setMapRoute(route)}>
-            <MapPin className="mr-2 h-4 w-4" />
-            Gebied {canEdit ? 'tekenen/bewerken' : 'bekijken'}
-          </Button>
-          <div className="flex items-center">
-            {canEdit && <Button variant="ghost" size="icon" onClick={() => removeRow(route.id)}>
-                <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>}
-          </div>
-        </div>
-      ))}
-      {canEdit && <Button variant="outline" onClick={addRow}>Veegroute toevoegen</Button>}
+      {canEdit && <Button variant="outline" size="sm" onClick={addRow}><Plus className="mr-2 h-4 w-4" /> Veegroute toevoegen</Button>}
       
       {mapRoute && (
         <VeegrouteMapDialog
@@ -809,14 +839,11 @@ function PrullenbakkenroutesTab({
 
   const totalObjectsInRoutes = React.useMemo(() => {
     if (!prullenbakkenroutes || !allObjects) return 0;
-    
     const routeNames = new Set(prullenbakkenroutes.map(r => r.naam));
-    
     const uniqueObjectsInRoutes = allObjects.filter(obj => 
       Array.isArray(obj.locatieWerkgebieden) && 
       obj.locatieWerkgebieden.some(gebied => routeNames.has(gebied))
     );
-    
     return uniqueObjectsInRoutes.length;
   }, [allObjects, prullenbakkenroutes]);
 
@@ -873,51 +900,81 @@ function PrullenbakkenroutesTab({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end text-sm text-muted-foreground">
-        Totaal objecten: <span className="font-bold text-foreground ml-1">{totalObjects}</span>
+      <div className="flex justify-between items-center text-sm">
+        <span className="font-semibold text-muted-foreground">Totaal objecten: <span className="text-foreground">{totalObjects}</span></span>
       </div>
-      <div className="grid grid-cols-[1fr_1fr_100px_auto_auto_auto] gap-x-4 px-1 text-sm font-semibold">
-        <Label>Prullenbakkenroute</Label>
-        <Label>Locatie</Label>
-        <Label className="text-center">Objecten</Label>
-        <Label>Gebied</Label>
-        <Label>Startlocatie</Label>
-        <span />
+      
+      <div className="border rounded-md overflow-hidden">
+        <Table>
+          <TableHeader className="bg-muted/50">
+            <TableRow>
+              <TableHead className="font-bold">Prullenbakkenroute</TableHead>
+              <TableHead className="font-bold">Locatie</TableHead>
+              <TableHead className="font-bold text-center">Objecten</TableHead>
+              <TableHead className="font-bold text-center">Gebied</TableHead>
+              <TableHead className="font-bold text-center">Startlocatie</TableHead>
+              <TableHead className="w-[100px] text-right">Acties</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sortedRoutes.map((route) => (
+              <TableRow key={route.id} className="hover:bg-muted/30">
+                <TableCell>
+                  <Input 
+                    value={route.naam} 
+                    onChange={(e) => handleInputChange(route.id, 'naam', e.target.value)} 
+                    disabled={!canEdit}
+                    className="h-8"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Input 
+                    value={route.locatie} 
+                    onChange={(e) => handleInputChange(route.id, 'locatie', e.target.value)} 
+                    disabled={!canEdit}
+                    className="h-8"
+                  />
+                </TableCell>
+                <TableCell className="text-center font-mono">
+                  {objectCounts[route.id] ?? 0}
+                </TableCell>
+                <TableCell className="text-center">
+                  <Button variant="outline" size="sm" onClick={() => setMapRoute(route)}>
+                    <MapIcon className="mr-2 h-4 w-4" />
+                    {canEdit ? 'Bewerken' : 'Bekijken'}
+                  </Button>
+                </TableCell>
+                <TableCell className="text-center">
+                  <Button variant={route.startAdres ? "secondary" : "outline"} size="sm" onClick={() => setStartLocRoute(route)}>
+                    <Home className={cn("mr-2 h-4 w-4", route.startAdres && "text-primary")} />
+                    {route.startAdres ? 'Instellingen' : 'Instellen'}
+                  </Button>
+                </TableCell>
+                <TableCell className="text-right">
+                  {canEdit && (
+                    <Button variant="ghost" size="icon" onClick={() => removeRow(route.id)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+          <TableFooter>
+            <TableRow className="bg-muted/30 font-bold">
+              <TableCell>Totaal</TableCell>
+              <TableCell />
+              <TableCell className="text-center font-mono">{totalObjectsInRoutes}</TableCell>
+              <TableCell />
+              <TableCell />
+              <TableCell />
+            </TableRow>
+          </TableFooter>
+        </Table>
       </div>
-      {sortedRoutes.map((route) => (
-        <div
-          key={route.id}
-          className="grid grid-cols-[1fr_1fr_100px_auto_auto_auto] items-center gap-x-4"
-        >
-          <Input value={route.naam} onChange={(e) => handleInputChange(route.id, 'naam', e.target.value)} disabled={!canEdit}/>
-          <Input value={route.locatie} onChange={(e) => handleInputChange(route.id, 'locatie', e.target.value)} disabled={!canEdit}/>
-          <div className="text-center text-sm">{objectCounts[route.id] ?? 0}</div>
-          <Button variant="outline" size="sm" onClick={() => setMapRoute(route)}>
-            <MapIcon className="mr-2 h-4 w-4" />
-            Gebied {canEdit ? 'bewerken' : 'bekijken'}
-          </Button>
-          <Button variant={route.startAdres ? "secondary" : "outline"} size="sm" onClick={() => setStartLocRoute(route)}>
-            <Home className={cn("mr-2 h-4 w-4", route.startAdres && "text-primary")} />
-            {route.startAdres ? 'Startlocatie' : 'Instellen'}
-          </Button>
-          <div className="flex items-center">
-            {canEdit && <Button variant="ghost" size="icon" onClick={() => removeRow(route.id)}>
-                <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>}
-          </div>
-        </div>
-      ))}
-      {canEdit && <Button variant="outline" onClick={addRow}>Prullenbakkenroute toevoegen</Button>}
-      <div className="border-t pt-4 mt-4">
-        <div className="grid grid-cols-[1fr_1fr_100px_auto_auto_auto] gap-x-4 px-1 text-sm">
-            <span className="font-semibold">Totaal</span>
-            <span/>
-            <div className="text-center font-semibold">{totalObjectsInRoutes}</div>
-            <span/>
-            <span/>
-            <span/>
-        </div>
-      </div>
+
+      {canEdit && <Button variant="outline" size="sm" onClick={addRow}><Plus className="mr-2 h-4 w-4" /> Route toevoegen</Button>}
+      
       {mapRoute && (
         <PrullenbakkenrouteMapDialog
           open={!!mapRoute}
