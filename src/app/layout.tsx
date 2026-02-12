@@ -111,7 +111,6 @@ function Header() {
         
         <div className="flex flex-col">
             <h2 className="text-sm font-black uppercase tracking-widest text-slate-900">{getPageTitle()}</h2>
-            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter">Systeem / {pathname.replace('/', '') || 'Home'}</p>
         </div>
       </div>
 
@@ -206,7 +205,7 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
 
     try {
       const [hours, minutes] = shift.eind.split(':').map(Number);
-      if (isNaN(hours) || isNaN(minutes)) return;
+      if (isNaN(hours) || iisNaN(minutes)) return;
 
       const now = new Date();
       const endTimeToday = new Date();
