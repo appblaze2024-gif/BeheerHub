@@ -7,7 +7,7 @@ import { collection, query, where } from 'firebase/firestore';
 import { Plus, Search, List, Map as MapIcon, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { BestekmeldingDialog } from '@/components/bestekmelding-dialog'; // New component
+import { BestekmeldingDialog } from '@/components/bestekmelding-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +17,7 @@ import type { Besteksmelding } from '@/lib/types';
 import type { Project } from '@/app/projects/page';
 import { useProfile } from '@/firebase/profile-provider';
 import { useProject } from '@/context/project-context';
+import { LoadingScreen } from '@/components/loading-screen';
 
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
@@ -166,6 +167,10 @@ export default function SpecReportsPage() {
       setIsDialogOpen(true);
     }
   }, [selectedMelding, isDialogOpen]);
+
+  if (isLoadingProjects || (isLoadingMeldingen && selectedProjectId)) {
+    return <LoadingScreen message="Besteksmeldingen laden..." />;
+  }
 
   return (
     <div ref={mapContainerRef} className="flex-1 flex flex-col min-h-0 relative">

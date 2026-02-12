@@ -487,10 +487,6 @@ function NavigatingView({
     )
   }
 
-  if (!userLocation) {
-    return <LoadingScreen message="Wachten op GPS signaal..." />;
-  }
-
   if (isCalculatingRoute && !currentRouteGeometry) {
     return <LoadingScreen message="Route berekenen..." />;
   }
@@ -830,6 +826,10 @@ export default function StartNavigationPage() {
     setNavigationState('navigating');
     setIsStarting(false);
   };
+
+  if (!userLocation) {
+    return <LoadingScreen message="Wachten op GPS signaal..." />;
+  }
   
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">

@@ -39,6 +39,7 @@ import type { Dienst } from '@/lib/types';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { useProject } from '@/context/project-context';
+import { LoadingScreen } from '@/components/loading-screen';
 
 
 type Werksoort = {
@@ -133,19 +134,23 @@ export default function WeeklyReportsPage() {
     const urenPerWerksoort: Record<string, number> = {};
 
     if (diensten) {
-      for (const dienst of diensten) {
-        if (!dienst.starttijd || !dienst.eindtijd) continue;
-        const startTijd = parse(dienst.starttijd, 'HH:mm', new Date());
-        const eindTijd = parse(dienst.eindtijd, 'HH:mm', new Date());
-        let duurInMinuten = (eindTijd.getTime() - startTijd.getTime()) / (1000 * 60);
-        
-        if (duurInMinuten < 0) duurInMinuten += 24 * 60; // For overnight shifts
+      for (const d of diensten) {
+        if (!d.starttijd || !d.eindtijd) continue;
+        try {
+          const startTijd = parse(d.starttijd, 'HH:mm', new Date());
+          const eindTijd = parse(d.eindtijd, 'HH:mm', new Date());
+          let duurInMinuten = (eindTijd.getTime() - startTijd.getTime()) / (1000 * 60);
+          
+          if (duurInMinuten < 0) duurInMinuten += 24 * 60; // For overnight shifts
 
-        duurInMinuten -= dienst.onbetaaldePauze || 0;
-        
-        const duurInUren = duurInMinuten / 60;
+          duurInMinuten -= d.onbetaaldePauze || 0;
+          
+          const duurInUren = duurInMinuten / 60;
 
-        urenPerWerksoort[dienst.werksoort] = (urenPerWerksoort[dienst.werksoort] || 0) + duurInUren;
+          urenPerWerksoort[d.werksoort] = (urenPerWerksoort[d.werksoort] || 0) + duurInUren;
+        } catch (e) {
+          // invalid time
+        }
       }
     }
 
@@ -227,6 +232,10 @@ export default function WeeklyReportsPage() {
     return buttons;
   }
 
+  if (isLoadingProjects || (isLoadingDiensten && !reportData.length && selectedProjectId)) {
+    return <LoadingScreen message="Weekstaten laden..." />;
+  }
+
   return (
     <div className="flex flex-col flex-1 p-6 min-h-0 bg-background">
       <header className="bg-white dark:bg-card p-4 rounded-lg shadow-sm mb-6">
@@ -299,11 +308,7 @@ export default function WeeklyReportsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoadingProjects || (isLoadingDiensten && !reportData.length && selectedProjectId) ? (
-                <TableRow>
-                    <TableCell colSpan={12} className="text-center h-24 p-1 border-b border-l border-r border-black">Rapportgegevens laden...</TableCell>
-                </TableRow>
-            ) : reportData.length > 0 ? (
+            {reportData.length > 0 ? (
               reportData.map((item, index) => (
                 <TableRow key={index} className="h-auto">
                   <TableCell className="p-1 border-b border-l border-r border-black">{item.postnummer}</TableCell>

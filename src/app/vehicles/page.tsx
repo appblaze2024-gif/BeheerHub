@@ -65,6 +65,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { LoadingScreen } from '@/components/loading-screen';
 
 type MaterieelType = 'voertuigen' | 'machines';
 
@@ -181,6 +182,10 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
     return profile?.permissions?.vehicles?.tabs?.[tabId] ?? true;
   };
 
+  if (isLoading) {
+    return <LoadingScreen message="Materieel laden..." />;
+  }
+
   return (
     <div className="grid lg:grid-cols-[300px_1fr] gap-6 min-h-0 h-full">
         <Card className={cn("flex-col h-full min-h-0", isTablet && !selectedItem ? "flex" : "hidden lg:flex")}>
@@ -194,11 +199,7 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
           </CardHeader>
           <CardContent className="p-2 flex-1 min-h-0 overflow-y-auto">
             <div className="flex flex-col space-y-1 pr-2">
-              {isLoading ? (
-                <div className="text-center text-muted-foreground p-4">
-                  Laden...
-                </div>
-              ) : filteredMaterieel && filteredMaterieel.length > 0 ? (
+              {filteredMaterieel && filteredMaterieel.length > 0 ? (
                 filteredMaterieel.map((item) => (
                   <div
                     key={item.id}
@@ -579,10 +580,6 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                 canDelete={canDelete}
               />
             </>
-          ) : isLoading ? (
-            <div className="flex items-center justify-center h-full text-muted-foreground">
-              Materieel laden...
-            </div>
           ) : (
             <div className="flex items-center justify-center h-full text-muted-foreground">
               Selecteer een item om de details te bekijken.

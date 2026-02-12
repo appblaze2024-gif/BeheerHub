@@ -25,7 +25,8 @@ import {
   Clock,
   Battery,
   Zap,
-  Smartphone
+  Smartphone,
+  X as XIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFirestore, useCollection, deleteDocumentNonBlocking, useMemoFirebase } from '@/firebase';
@@ -66,6 +67,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { LoadingScreen } from '@/components/loading-screen';
 
 export default function IoTPage() {
   const firestore = useFirestore();
@@ -210,6 +213,10 @@ void loop() {
 
   const activeCode = customCode || defaultEsp32Code;
 
+  if (isLoading) {
+    return <LoadingScreen message="IoT Dashboard laden..." />;
+  }
+
   return (
     <div className="flex flex-col flex-1 p-4 min-h-0 bg-slate-50 dark:bg-zinc-950 overflow-hidden">
       <PageHeader 
@@ -260,9 +267,7 @@ void loop() {
             <CardTitle className="text-xs font-bold uppercase tracking-tight">Gekoppelde Units</CardTitle>
           </CardHeader>
           <div className="flex-1 overflow-y-auto">
-            {isLoading ? (
-              <div className="flex justify-center p-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-            ) : sensors && sensors.length > 0 ? (
+            {sensors && sensors.length > 0 ? (
               <div className="divide-y divide-slate-100">
                 {sensors.map(sensor => (
                   <div 
@@ -570,25 +575,5 @@ void loop() {
 
       <AddSensorDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} />
     </div>
-  );
-}
-
-function XIcon(props: any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M18 6 6 18" />
-      <path d="m6 6 12 12" />
-    </svg>
   );
 }

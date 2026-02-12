@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import {
-  Archive,
   Inbox,
   Send,
   Trash2,
@@ -13,7 +12,6 @@ import {
   Reply,
   ReplyAll,
   Forward,
-  Settings,
   RefreshCw,
   Loader2,
   AlertCircle,
@@ -60,6 +58,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { LabelManagerDialog } from '@/components/label-manager-dialog';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { LoadingScreen } from '@/components/loading-screen';
 
 
 // --- UPDATED TYPE ---
@@ -156,7 +155,6 @@ const initialFolders = [
   { name: 'drafts', label: 'Concepten', icon: File, boxName: 'INBOX/Concepten' },
   { name: 'spam', label: 'Spam', icon: MailWarning, boxName: 'INBOX/Spam' },
   { name: 'trash', label: 'Prullenbak', icon: Trash2, boxName: 'INBOX/Prullenbak' },
-  // { name: 'archive', label: 'Archief', icon: Archive }, // Future feature
 ];
 
 const initialLabels = [
@@ -359,253 +357,257 @@ export default function MailPage() {
 
   return (
     <div className="flex flex-col flex-1 min-h-0 h-full">
-      <div className="flex-1 overflow-hidden p-6 h-full">
-        <div className="grid h-full border rounded-lg lg:grid-cols-[250px_400px_1fr]">
-          
-          {/* Panel 1: Folders */}
-          <div className={cn("border-r p-3 flex-col", isMobile && selectedMail ? "hidden" : "flex")}>
-            <Button className="w-full" onClick={() => { setComposeInitialData({}); setIsComposeOpen(true); }}>
-                <PenSquare className="mr-2 h-4 w-4" />
-                Nieuw Bericht
-            </Button>
+      <div className="flex-1 overflow-hidden p-6 h-full relative">
+        {isLoading && !mails.length ? (
+          <LoadingScreen message="E-mails ophalen..." />
+        ) : (
+          <div className="grid h-full border rounded-lg lg:grid-cols-[250px_400px_1fr]">
+            
+            {/* Panel 1: Folders */}
+            <div className={cn("border-r p-3 flex-col", isMobile && selectedMail ? "hidden" : "flex")}>
+              <Button className="w-full" onClick={() => { setComposeInitialData({}); setIsComposeOpen(true); }}>
+                  <PenSquare className="mr-2 h-4 w-4" />
+                  Nieuw Bericht
+              </Button>
 
-            <nav className="mt-4 space-y-1">
-              {folders.map(folder => (
-                <Button
-                  key={folder.name}
-                  variant={selectedFolder === folder.name ? 'secondary' : 'ghost'}
-                  className="w-full justify-start gap-2"
-                  onClick={() => {
-                    setSelectedFolder(folder.name);
-                    setSelectedMail(null);
-                  }}
-                >
-                  <folder.icon className="h-4 w-4" />
-                  {folder.label}
-                  {!isLoading && !error && selectedFolder === folder.name && (
-                    <span className="ml-auto text-xs text-muted-foreground">
-                        {mails.length}
-                    </span>
-                  )}
-                </Button>
-              ))}
-               <Separator className="my-1" />
-               <CreateFolderDialog onFolderCreated={handleFolderCreated} />
-            </nav>
-          </div>
-
-          {/* Panel 2: Mail list */}
-          <div className={cn("border-r flex flex-col min-h-0", isMobile && selectedMail ? "hidden" : "flex")}>
-            <div className="p-3 border-b flex items-center gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Zoeken..." className="pl-9" />
-              </div>
-              <TooltipProvider>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={() => fetchAndSetEmails(true)} disabled={isLoading}>
-                          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p>E-mails vernieuwen</p></TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <nav className="mt-4 space-y-1">
+                {folders.map(folder => (
+                  <Button
+                    key={folder.name}
+                    variant={selectedFolder === folder.name ? 'secondary' : 'ghost'}
+                    className="w-full justify-start gap-2"
+                    onClick={() => {
+                      setSelectedFolder(folder.name);
+                      setSelectedMail(null);
+                    }}
+                  >
+                    <folder.icon className="h-4 w-4" />
+                    {folder.label}
+                    {!isLoading && !error && selectedFolder === folder.name && (
+                      <span className="ml-auto text-xs text-muted-foreground">
+                          {mails.length}
+                      </span>
+                    )}
+                  </Button>
+                ))}
+                <Separator className="my-1" />
+                <CreateFolderDialog onFolderCreated={handleFolderCreated} />
+              </nav>
             </div>
-            <div className="flex-1 overflow-y-auto">
-              {isLoading ? (
-                <div className="p-8 text-center text-muted-foreground flex flex-col items-center justify-center h-full">
-                    <Loader2 className="h-8 w-8 animate-spin mb-4" />
-                    <p>E-mails ophalen...</p>
+
+            {/* Panel 2: Mail list */}
+            <div className={cn("border-r flex flex-col min-h-0", isMobile && selectedMail ? "hidden" : "flex")}>
+              <div className="p-3 border-b flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input placeholder="Zoeken..." className="pl-9" />
                 </div>
-              ) : error ? (
-                <div className="p-4">
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Fout bij ophalen van e-mail</AlertTitle>
-                      <AlertDescription>
-                        {error}
-                      </AlertDescription>
-                    </Alert>
-                </div>
-              ) : mails.length > 0 ? (
-                mails.map(mail => {
-                  const mailLabelName = mailLabels[mail.id] || 'Geen';
-                  const mailLabel = labels.find(l => l.name === mailLabelName);
-                  
-                  return (
-                    <button
-                      key={mail.id}
-                      className={cn(
-                        "relative flex flex-col items-start gap-2 rounded-lg border-b p-3 text-left text-sm transition-all w-full",
-                        selectedMail?.id === mail.id ? "bg-muted" : "hover:bg-accent"
-                      )}
-                      onClick={() => setSelectedMail(mail)}
-                    >
-                      <div className="flex w-full items-center">
-                        <div className="flex items-center gap-2">
-                          <div className={cn("h-2 w-2 rounded-full", !mail.read && "bg-blue-500")} />
-                          <div className="font-semibold">{mail.fromName}</div>
-                        </div>
-                        <div className="ml-auto flex items-center gap-2">
-                          {mail.attachments && mail.attachments.length > 0 && (
-                              <Paperclip className="h-4 w-4 text-muted-foreground" />
-                          )}
-                          <div className="text-xs text-muted-foreground">
-                              {formatDistanceToNow(new Date(mail.date), { addSuffix: true, locale: nl })}
+                <TooltipProvider>
+                  <Tooltip>
+                      <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" onClick={() => fetchAndSetEmails(true)} disabled={isLoading}>
+                            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                          </Button>
+                      </TooltipTrigger>
+                      <TooltipContent><p>E-mails vernieuwen</p></TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <div className="flex-1 overflow-y-auto relative">
+                {isLoading && !!mails.length && (
+                  <div className="absolute inset-0 bg-background/50 z-10 flex items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  </div>
+                )}
+                {error ? (
+                  <div className="p-4">
+                      <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Fout bij ophalen van e-mail</AlertTitle>
+                        <AlertDescription>
+                          {error}
+                        </AlertDescription>
+                      </Alert>
+                  </div>
+                ) : mails.length > 0 ? (
+                  mails.map(mail => {
+                    const mailLabelName = mailLabels[mail.id] || 'Geen';
+                    const mailLabel = labels.find(l => l.name === mailLabelName);
+                    
+                    return (
+                      <button
+                        key={mail.id}
+                        className={cn(
+                          "relative flex flex-col items-start gap-2 rounded-lg border-b p-3 text-left text-sm transition-all w-full",
+                          selectedMail?.id === mail.id ? "bg-muted" : "hover:bg-accent"
+                        )}
+                        onClick={() => setSelectedMail(mail)}
+                      >
+                        <div className="flex w-full items-center">
+                          <div className="flex items-center gap-2">
+                            <div className={cn("h-2 w-2 rounded-full", !mail.read && "bg-blue-500")} />
+                            <div className="font-semibold">{mail.fromName}</div>
+                          </div>
+                          <div className="ml-auto flex items-center gap-2">
+                            {mail.attachments && mail.attachments.length > 0 && (
+                                <Paperclip className="h-4 w-4 text-muted-foreground" />
+                            )}
+                            <div className="text-xs text-muted-foreground">
+                                {formatDistanceToNow(new Date(mail.date), { addSuffix: true, locale: nl })}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="text-xs font-medium">{mail.subject}</div>
-                      <div className="line-clamp-2 text-xs text-muted-foreground">
-                        {mail.body.replace(/<[^>]*>?/gm, '')}
+                        <div className="text-xs font-medium">{mail.subject}</div>
+                        <div className="line-clamp-2 text-xs text-muted-foreground">
+                          {mail.body.replace(/<[^>]*>?/gm, '')}
+                        </div>
+
+                        {mailLabel && mailLabel.name !== 'Geen' && (
+                            <div
+                                className="absolute right-0 top-0 bottom-0 w-1 rounded-r-lg"
+                                style={{ backgroundColor: mailLabel.color }}
+                            />
+                        )}
+                      </button>
+                    )
+                  })
+                ) : (
+                  <div className="p-8 text-center text-muted-foreground flex flex-col items-center justify-center h-full">
+                    <Inbox className="mx-auto h-12 w-12 mb-4" />
+                    <p>Geen berichten in {folders.find(f => f.name === selectedFolder)?.label || 'deze map'}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Panel 3: Mail content */}
+            <div className={cn("flex flex-col min-h-0", isMobile && !selectedMail ? "hidden" : "flex")}>
+              {selectedMail ? (
+                  <>
+                  <div className="flex items-center p-2 lg:p-4 border-b">
+                      {isMobile && (
+                          <Button variant="ghost" size="icon" className="mr-2" onClick={() => setSelectedMail(null)}>
+                              <ArrowLeft className="h-4 w-4" />
+                          </Button>
+                      )}
+                      <h1 className="text-xl font-bold flex-1 truncate">{selectedMail.subject}</h1>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto">
+                      <div className="p-4 border-b">
+                          <div className="flex items-start gap-4">
+                              <Avatar className="h-10 w-10">
+                                  <AvatarFallback>{selectedMail.fromName.substring(0, 2).toUpperCase()}</AvatarFallback>
+                              </Avatar>
+                              <div className="grid gap-1 flex-1">
+                                  <div className="font-semibold">{selectedMail.fromName} <span className="font-normal text-muted-foreground">&lt;{selectedMail.from}&gt;</span></div>
+                                  <div className="text-xs text-muted-foreground">Aan: {selectedMail.to.join(', ')}</div>
+                                  {selectedMail.cc && selectedMail.cc.length > 0 && (
+                                      <div className="text-xs text-muted-foreground">Cc: {selectedMail.cc.join(', ')}</div>
+                                  )}
+                              </div>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <span>{format(new Date(selectedMail.date), 'HH:mm')}</span>
+                                  <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                                              <Bookmark 
+                                                  className="h-4 w-4" 
+                                                  fill={currentLabel && currentLabel.name !== 'Geen' ? currentLabel.color : 'none'}
+                                                  stroke={currentLabel && currentLabel.name !== 'Geen' ? currentLabel.color : 'currentColor'}
+                                              />
+                                          </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent>
+                                          <DropdownMenuLabel>Label instellen</DropdownMenuLabel>
+                                          <DropdownMenuSeparator />
+                                          {labels.map(label => (
+                                              <DropdownMenuItem 
+                                                  key={label.name}
+                                                  onClick={() => {
+                                                      if (selectedMail) {
+                                                          setMailLabels(prev => ({...prev, [selectedMail.id]: label.name}));
+                                                      }
+                                                  }}
+                                              >
+                                                  <div className="flex items-center gap-2">
+                                                      <div
+                                                        className="h-4 w-4 rounded-sm border"
+                                                        style={{ backgroundColor: label.color !== 'transparent' ? label.color : undefined }}
+                                                      />
+                                                      <span>{label.name}</span>
+                                                  </div>
+                                              </DropdownMenuItem>
+                                          ))}
+                                           <DropdownMenuSeparator />
+                                          <DropdownMenuItem onSelect={() => setIsLabelManagerOpen(true)}>Labels beheren...</DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                  </DropdownMenu>
+                                  <Avatar className="h-8 w-8 text-sm">
+                                      <AvatarFallback>{user?.email?.substring(0,2).toUpperCase() || 'DS'}</AvatarFallback>
+                                  </Avatar>
+                              </div>
+                          </div>
                       </div>
 
-                      {mailLabel && mailLabel.name !== 'Geen' && (
-                          <div
-                              className="absolute right-0 top-0 bottom-0 w-1 rounded-r-lg"
-                              style={{ backgroundColor: mailLabel.color }}
-                          />
+                      <div className="p-4 border-b">
+                          <div className="flex items-center gap-2">
+                              <Button variant="outline" size="sm" onClick={handleReply}><Reply className="mr-2 h-4 w-4" /> Beantwoorden</Button>
+                              <Button variant="outline" size="sm" onClick={handleReplyAll}><ReplyAll className="mr-2 h-4 w-4" /> Allen beantwoorden</Button>
+                              <Button variant="outline" size="sm" onClick={handleForward}><Forward className="mr-2 h-4 w-4" /> Doorsturen</Button>
+                              <Button variant="outline" size="sm" onClick={handleDelete} disabled={isDeleting}>
+                                  {isDeleting ? <Loader2 className='h-4 w-4 animate-spin mr-2' /> : <Trash2 className="h-4 w-4 mr-2" />}
+                                  Verwijderen
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 ml-auto"><MoreVertical className="h-4 w-4" /></Button>
+                          </div>
+                      </div>
+                      
+                      {selectedMail.attachments && selectedMail.attachments.length > 0 && (
+                      <div className="p-4 border-b">
+                          <Collapsible>
+                          <CollapsibleTrigger asChild>
+                              <div className="group flex items-center gap-2 text-sm font-medium cursor-pointer">
+                              <Paperclip className="h-4 w-4" />
+                              <span>{selectedMail.attachments.length} bijlage{selectedMail.attachments.length > 1 ? 'n' : ''}</span>
+                              <ChevronRight className="h-4 w-4 transition-transform group-data-[state=open]:rotate-90" />
+                              </div>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                              <div className="pt-4 space-y-2">
+                              {selectedMail.attachments.map((att, index) => (
+                                  <div key={index} className="flex items-center gap-2 text-sm p-2 rounded-md bg-muted/50">
+                                  <File className="h-6 w-6 text-muted-foreground" />
+                                  <div className="flex-1">
+                                      <p className="font-medium truncate">{att.filename}</p>
+                                      <p className="text-xs text-muted-foreground">{formatBytes(att.size)}</p>
+                                  </div>
+                                  <Button variant="ghost" size="sm" disabled>Weergave</Button>
+                                  <a href={`data:${att.contentType};base64,${att.content}`} download={att.filename}>
+                                      <Button variant="ghost" size="sm">Downloaden</Button>
+                                  </a>
+                                  <Button variant="ghost" size="sm" disabled>Opslaan naar Drive</Button>
+                                  </div>
+                              ))}
+                              </div>
+                          </CollapsibleContent>
+                          </Collapsible>
+                      </div>
                       )}
-                    </button>
-                  )
-                })
+
+                      <div className="p-4 text-sm" dangerouslySetInnerHTML={{ __html: selectedMail.body }} />
+                  </div>
+              </>
               ) : (
-                <div className="p-8 text-center text-muted-foreground flex flex-col items-center justify-center h-full">
-                  <Inbox className="mx-auto h-12 w-12 mb-4" />
-                  <p>Geen berichten in {folders.find(f => f.name === selectedFolder)?.label || 'deze map'}</p>
+                <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
+                  <Inbox className="h-16 w-16" />
+                  <p className="mt-4 text-lg">Selecteer een bericht</p>
+                  <p className="text-sm">Geen bericht geselecteerd om weer te geven.</p>
                 </div>
               )}
             </div>
           </div>
-          
-          {/* Panel 3: Mail content */}
-          <div className={cn("flex flex-col min-h-0", isMobile && !selectedMail ? "hidden" : "flex")}>
-            {selectedMail ? (
-                <>
-                <div className="flex items-center p-2 lg:p-4 border-b">
-                    {isMobile && (
-                        <Button variant="ghost" size="icon" className="mr-2" onClick={() => setSelectedMail(null)}>
-                            <ArrowLeft className="h-4 w-4" />
-                        </Button>
-                    )}
-                    <h1 className="text-xl font-bold flex-1 truncate">{selectedMail.subject}</h1>
-                </div>
-
-                <div className="flex-1 overflow-y-auto">
-                    <div className="p-4 border-b">
-                        <div className="flex items-start gap-4">
-                            <Avatar className="h-10 w-10">
-                                <AvatarFallback>{selectedMail.fromName.substring(0, 2).toUpperCase()}</AvatarFallback>
-                            </Avatar>
-                            <div className="grid gap-1 flex-1">
-                                <div className="font-semibold">{selectedMail.fromName} <span className="font-normal text-muted-foreground">&lt;{selectedMail.from}&gt;</span></div>
-                                <div className="text-xs text-muted-foreground">Aan: {selectedMail.to.join(', ')}</div>
-                                {selectedMail.cc && selectedMail.cc.length > 0 && (
-                                    <div className="text-xs text-muted-foreground">Cc: {selectedMail.cc.join(', ')}</div>
-                                )}
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <span>{format(new Date(selectedMail.date), 'HH:mm')}</span>
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                                            <Bookmark 
-                                                className="h-4 w-4" 
-                                                fill={currentLabel && currentLabel.name !== 'Geen' ? currentLabel.color : 'none'}
-                                                stroke={currentLabel && currentLabel.name !== 'Geen' ? currentLabel.color : 'currentColor'}
-                                            />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent>
-                                        <DropdownMenuLabel>Label instellen</DropdownMenuLabel>
-                                        <DropdownMenuSeparator />
-                                        {labels.map(label => (
-                                            <DropdownMenuItem 
-                                                key={label.name}
-                                                onClick={() => {
-                                                    if (selectedMail) {
-                                                        setMailLabels(prev => ({...prev, [selectedMail.id]: label.name}));
-                                                    }
-                                                }}
-                                            >
-                                                <div className="flex items-center gap-2">
-                                                    <div
-                                                      className="h-4 w-4 rounded-sm border"
-                                                      style={{ backgroundColor: label.color !== 'transparent' ? label.color : undefined }}
-                                                    />
-                                                    <span>{label.name}</span>
-                                                </div>
-                                            </DropdownMenuItem>
-                                        ))}
-                                         <DropdownMenuSeparator />
-                                        <DropdownMenuItem onSelect={() => setIsLabelManagerOpen(true)}>Labels beheren...</DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                                <Avatar className="h-8 w-8 text-sm">
-                                    <AvatarFallback>{user?.email?.substring(0,2).toUpperCase() || 'DS'}</AvatarFallback>
-                                </Avatar>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="p-4 border-b">
-                        <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm" onClick={handleReply}><Reply className="mr-2 h-4 w-4" /> Beantwoorden</Button>
-                            <Button variant="outline" size="sm" onClick={handleReplyAll}><ReplyAll className="mr-2 h-4 w-4" /> Allen beantwoorden</Button>
-                            <Button variant="outline" size="sm" onClick={handleForward}><Forward className="mr-2 h-4 w-4" /> Doorsturen</Button>
-                            <Button variant="outline" size="sm" onClick={handleDelete} disabled={isDeleting}>
-                                {isDeleting ? <Loader2 className='h-4 w-4 animate-spin mr-2' /> : <Trash2 className="h-4 w-4 mr-2" />}
-                                Verwijderen
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 ml-auto"><MoreVertical className="h-4 w-4" /></Button>
-                        </div>
-                    </div>
-                    
-                    {selectedMail.attachments && selectedMail.attachments.length > 0 && (
-                    <div className="p-4 border-b">
-                        <Collapsible>
-                        <CollapsibleTrigger asChild>
-                            <div className="group flex items-center gap-2 text-sm font-medium cursor-pointer">
-                            <Paperclip className="h-4 w-4" />
-                            <span>{selectedMail.attachments.length} bijlage{selectedMail.attachments.length > 1 ? 'n' : ''}</span>
-                            <ChevronRight className="h-4 w-4 transition-transform group-data-[state=open]:rotate-90" />
-                            </div>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                            <div className="pt-4 space-y-2">
-                            {selectedMail.attachments.map((att, index) => (
-                                <div key={index} className="flex items-center gap-2 text-sm p-2 rounded-md bg-muted/50">
-                                <File className="h-6 w-6 text-muted-foreground" />
-                                <div className="flex-1">
-                                    <p className="font-medium truncate">{att.filename}</p>
-                                    <p className="text-xs text-muted-foreground">{formatBytes(att.size)}</p>
-                                </div>
-                                <Button variant="ghost" size="sm" disabled>Weergave</Button>
-                                <a href={`data:${att.contentType};base64,${att.content}`} download={att.filename}>
-                                    <Button variant="ghost" size="sm">Downloaden</Button>
-                                </a>
-                                <Button variant="ghost" size="sm" disabled>Opslaan naar Drive</Button>
-                                </div>
-                            ))}
-                            </div>
-                        </CollapsibleContent>
-                        </Collapsible>
-                    </div>
-                    )}
-
-                    <div className="p-4 text-sm" dangerouslySetInnerHTML={{ __html: selectedMail.body }} />
-                </div>
-            </>
-            ) : (
-              <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
-                <Inbox className="h-16 w-16" />
-                <p className="mt-4 text-lg">Selecteer een bericht</p>
-                <p className="text-sm">Geen bericht geselecteerd om weer te geven.</p>
-              </div>
-            )}
-          </div>
-        </div>
+        )}
       </div>
       <ComposeMailDialog
         open={isComposeOpen}

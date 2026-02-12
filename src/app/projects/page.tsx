@@ -73,6 +73,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { LoadingScreen } from '@/components/loading-screen';
 
 const EMPTY_PROJECT: Project = {
   projectnummer: '',
@@ -1363,6 +1364,10 @@ export default function ProjectsPage() {
       return { ...prev, materieelIds: newIds };
     });
   };
+
+  if (isLoading || isProfileLoading) {
+    return <LoadingScreen message="Projecten laden..." />;
+  }
 
   return (
     <div className="flex flex-col flex-1 min-h-0">

@@ -670,7 +670,7 @@ export default function IssuesPage() {
 
 
   if (isLoadingMeldingen || isLoadingProjects || (selectedMeldingId && isLoadingObjects)) {
-      return <LoadingScreen />;
+      return <LoadingScreen message="Werkbonnen laden..." />;
   }
   
   return (
@@ -1201,7 +1201,7 @@ export default function IssuesPage() {
                 </div>
             </Tabs>
         ) : (
-            <LoadingScreen />
+            <LoadingScreen message="Werkbonnen laden..." />
         )}
         {fullScreenPhoto && (
             <Dialog open={!!fullScreenPhoto} onOpenChange={(open) => !open && setFullScreenPhoto(null)}>

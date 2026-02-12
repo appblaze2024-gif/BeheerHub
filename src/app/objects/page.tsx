@@ -51,6 +51,7 @@ import * as turf from '@turf/turf';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useProject } from '@/context/project-context';
+import { LoadingScreen } from '@/components/loading-screen';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -141,9 +142,6 @@ export default function ObjectsPage() {
   const objectsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     const colRef = collection(firestore, 'objects');
-    
-    // On the map, if we have selected areas, we could filter here.
-    // However, for the list view, we usually want the full list for searching.
     return colRef;
   }, [firestore]);
   
@@ -268,6 +266,9 @@ export default function ObjectsPage() {
     return counts;
   }, [objects, projectAreas]);
 
+  if (isLoadingObjects || isLoadingProjects) {
+    return <LoadingScreen message="Objecten laden..." />;
+  }
 
   return (
     <div className="flex flex-col flex-1 h-full min-h-0 bg-background">
@@ -329,11 +330,7 @@ export default function ObjectsPage() {
            <Separator />
            <div className="flex-1 overflow-y-auto">
               <div className="flex flex-col space-y-1 p-2">
-               {isLoadingObjects ? (
-                  <div className="text-center text-muted-foreground p-4">
-                   Laden...
-                 </div>
-               ) : filteredObjectsList && filteredObjectsList.length > 0 ? (
+               {filteredObjectsList && filteredObjectsList.length > 0 ? (
                  filteredObjectsList.map((obj) => (
                    <div
                      key={obj.id}
@@ -571,7 +568,7 @@ export default function ObjectsPage() {
              </Card>
              ) : (
                  <div className="flex items-center justify-center h-full text-muted-foreground">
-                     {isLoadingObjects ? 'Objecten laden...' : 'Selecteer een object om de details te zien.'}
+                     Selecteer een object om de details te zien.
                  </div>
              )}
          </main>

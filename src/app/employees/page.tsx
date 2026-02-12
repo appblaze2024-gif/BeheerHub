@@ -46,6 +46,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import type { Medewerker } from '@/lib/types';
 import { useProfile } from '@/firebase/profile-provider';
+import { LoadingScreen } from '@/components/loading-screen';
 
 
 export default function EmployeesPage() {
@@ -171,113 +172,113 @@ export default function EmployeesPage() {
         </div>
       </header>
       <div className="flex-1 px-6 pb-6 min-h-0">
-        <Card className="h-full flex flex-col">
-          <CardContent className="p-0 flex-1 overflow-auto">
-            <div className="h-full">
-              <div className="min-w-[800px] divide-y divide-gray-200 dark:divide-gray-800">
-                <div className="grid grid-cols-[40px_1fr_1fr_1fr_1fr_1fr_50px] px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider sticky top-0 bg-card z-10">
-                  <Checkbox 
-                    onCheckedChange={handleSelectAll}
-                    checked={isAllSelected}
-                    aria-label="Selecteer alle rijen"
-                    disabled={!canDelete}
-                  />
-                  <span>Naam</span>
-                  <span>E-mail</span>
-                  <span>Telefoon</span>
-                  <span>Mobiel</span>
-                  <span>Status</span>
-                  <span />
-                </div>
-                {isLoading || isProfileLoading ? (
-                  <div className="p-4 text-center text-muted-foreground">
-                    Medewerkers laden...
+        <Card className="h-full flex flex-col overflow-hidden">
+          <CardContent className="p-0 flex-1 overflow-auto relative">
+            {isLoading || isProfileLoading ? (
+              <LoadingScreen message="Medewerkers laden..." />
+            ) : (
+              <div className="h-full">
+                <div className="min-w-[800px] divide-y divide-gray-200 dark:divide-gray-800">
+                  <div className="grid grid-cols-[40px_1fr_1fr_1fr_1fr_1fr_50px] px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider sticky top-0 bg-card z-10">
+                    <Checkbox 
+                      onCheckedChange={handleSelectAll}
+                      checked={isAllSelected}
+                      aria-label="Selecteer alle rijen"
+                      disabled={!canDelete}
+                    />
+                    <span>Naam</span>
+                    <span>E-mail</span>
+                    <span>Telefoon</span>
+                    <span>Mobiel</span>
+                    <span>Status</span>
+                    <span />
                   </div>
-                ) : filteredMedewerkers.length > 0 ? (
-                  filteredMedewerkers.map((medewerker) => (
-                    <div
-                      key={medewerker.id}
-                      onClick={() => handleRowClick(medewerker.id)}
-                      className="grid grid-cols-[40px_1fr_1fr_1fr_1fr_1fr_50px] items-center px-4 py-3 text-sm cursor-pointer hover:bg-muted/50"
-                    >
-                      <Checkbox
-                        onCheckedChange={(checked) => {
-                            handleSelectRow(medewerker.id, !!checked)
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                        checked={selectedRows.includes(medewerker.id)}
-                        aria-label={`Selecteer ${medewerker.voornaam} ${medewerker.achternaam}`}
-                        disabled={!canDelete}
-                      />
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage
-                            src={medewerker.avatarUrl}
-                            alt={`${medewerker.voornaam} ${medewerker.achternaam}`}
-                          />
-                          <AvatarFallback>
-                            {getInitials(medewerker.voornaam, medewerker.achternaam)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="font-medium truncate">{`${medewerker.voornaam || ''} ${medewerker.tussenvoegsel || ''} ${medewerker.achternaam || ''}`.trim()}</span>
-                      </div>
-                      <span className="truncate">{medewerker.email || '-'}</span>
-                      <span className="truncate">{medewerker.telefoonnummer || '-'}</span>
-                      <span className="truncate">{medewerker.mobiel || '-'}</span>
-                      <Badge
-                        variant={medewerker.status === 'Actief' || medewerker.status === 'Inactief' ? 'outline' : 'secondary'}
-                        className={
-                            medewerker.status === 'Actief' ? 'text-green-600 border-green-600 w-14 justify-center'
-                            : medewerker.status === 'Inactief' ? 'text-red-600 border-red-600 w-14 justify-center'
-                            : 'px-2'
-                        }
+                  {filteredMedewerkers.length > 0 ? (
+                    filteredMedewerkers.map((medewerker) => (
+                      <div
+                        key={medewerker.id}
+                        onClick={() => handleRowClick(medewerker.id)}
+                        className="grid grid-cols-[40px_1fr_1fr_1fr_1fr_1fr_50px] items-center px-4 py-3 text-sm cursor-pointer hover:bg-muted/50"
                       >
-                        {medewerker.status}
-                      </Badge>
-                      {(canEdit || canDelete) && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
-                              <span className="sr-only">Open menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {canEdit && <DropdownMenuItem onClick={(e) => handleEdit(e, medewerker)}>Bewerken</DropdownMenuItem>}
-                            {canDelete && <>
-                              <DropdownMenuSeparator />
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Verwijderen</DropdownMenuItem>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                    <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        Deze actie kan niet ongedaan worden gemaakt. Dit zal de medewerker permanent verwijderen.
-                                    </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                    <AlertDialogCancel>Annuleren</AlertDialogCancel>
-                                    <AlertDialogAction onClick={(e) => handleDelete(e, medewerker.id)}>
-                                        Doorgaan
-                                    </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </>}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
+                        <Checkbox
+                          onCheckedChange={(checked) => {
+                              handleSelectRow(medewerker.id, !!checked)
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          checked={selectedRows.includes(medewerker.id)}
+                          aria-label={`Selecteer ${medewerker.voornaam} ${medewerker.achternaam}`}
+                          disabled={!canDelete}
+                        />
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage
+                              src={medewerker.avatarUrl}
+                              alt={`${medewerker.voornaam} ${medewerker.achternaam}`}
+                            />
+                            <AvatarFallback>
+                              {getInitials(medewerker.voornaam, medewerker.achternaam)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="font-medium truncate">{`${medewerker.voornaam || ''} ${medewerker.tussenvoegsel || ''} ${medewerker.achternaam || ''}`.trim()}</span>
+                        </div>
+                        <span className="truncate">{medewerker.email || '-'}</span>
+                        <span className="truncate">{medewerker.telefoonnummer || '-'}</span>
+                        <span className="truncate">{medewerker.mobiel || '-'}</span>
+                        <Badge
+                          variant={medewerker.status === 'Actief' || medewerker.status === 'Inactief' ? 'outline' : 'secondary'}
+                          className={
+                              medewerker.status === 'Actief' ? 'text-green-600 border-green-600 w-14 justify-center'
+                              : medewerker.status === 'Inactief' ? 'text-red-600 border-red-600 w-14 justify-center'
+                              : 'px-2'
+                          }
+                        >
+                          {medewerker.status}
+                        </Badge>
+                        {(canEdit || canDelete) && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {canEdit && <DropdownMenuItem onClick={(e) => handleEdit(e, medewerker)}>Bewerken</DropdownMenuItem>}
+                              {canDelete && <>
+                                <DropdownMenuSeparator />
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Verwijderen</DropdownMenuItem>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                      <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                          Deze actie kan niet ongedaan worden gemaakt. Dit zal de medewerker permanent verwijderen.
+                                      </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                      <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                                      <AlertDialogAction onClick={(e) => handleDelete(e, medewerker.id)}>
+                                          Doorgaan
+                                      </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </>}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-8 text-center text-muted-foreground">
+                      Geen medewerkers gevonden.
                     </div>
-                  ))
-                ) : (
-                  <div className="p-8 text-center text-muted-foreground">
-                    Geen medewerkers gevonden.
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>
