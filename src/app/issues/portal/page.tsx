@@ -112,8 +112,7 @@ export default function MeldingenportaalPage() {
   const handleForwardDialogChange = (open: boolean) => {
     setForwardDialogOpen(open);
     if (!open) {
-      // Small delay to ensure the dialog animation finishes before clearing the selection
-      setTimeout(() => setSelectedMeldingForForward(null), 300);
+      setSelectedMeldingForForward(null);
     }
   }
 

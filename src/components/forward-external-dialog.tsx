@@ -88,8 +88,6 @@ export function ForwardExternalDialog({ open, onOpenChange, melding, onSuccess }
     return [...(melding.files || []), ...(melding.fotos || [])];
   }, [melding]);
 
-  const meldingId = melding?.id;
-
   React.useEffect(() => {
     if (open && melding) {
       const address = `${melding.straatnaam || ''} ${melding.huisnummer || ''}, ${melding.plaats || ''}`.trim();
@@ -120,7 +118,7 @@ Team BeheerHub`;
       setIsSending(false);
       setUserSearchTerm('');
     }
-  }, [open, meldingId, form, allFiles]);
+  }, [open, melding?.id, form, allFiles]);
 
   const toggleAttachment = (path: string) => {
     setSelectedAttachments(prev => 
@@ -204,7 +202,7 @@ Team BeheerHub`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[750px] h-[90vh] flex flex-col p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-[750px] max-h-[90vh] flex flex-col p-0 overflow-hidden">
         <DialogHeader className="p-6 pb-2 shrink-0 border-b">
           <DialogTitle>Melding Extern Doorzetten</DialogTitle>
           <DialogDescription>Stel de e-mail op voor de externe partij of een interne collega.</DialogDescription>
