@@ -111,8 +111,10 @@ export default function MeldingenportaalPage() {
 
   const handleForwardDialogChange = (open: boolean) => {
     setForwardDialogOpen(open);
-    // Don't clear selectedMeldingForForward immediately here to avoid unmount crashes
-    // It will be reset when the dialog is opened again.
+    if (!open) {
+        // Delay clearing the selected melding to avoid unmount animation artifacts or crashes
+        setTimeout(() => setSelectedMeldingForForward(null), 500);
+    }
   }
 
   return (
@@ -122,7 +124,7 @@ export default function MeldingenportaalPage() {
             <Button variant="outline" size="icon" onClick={() => router.back()} className="shrink-0 rounded-full h-9 w-9">
                 <ArrowLeft className="h-4 w-4" />
             </Button>
-            <h1 className="text-xl font-black uppercase tracking-tight">Meldingenportaal</h1>
+            <h1 className="text-xl font-black uppercase tracking-tight text-slate-900">Meldingenportaal</h1>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
             <div className="relative flex-1 sm:w-64">
@@ -134,7 +136,7 @@ export default function MeldingenportaalPage() {
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
             </div>
-            <Button variant="outline" size="sm" className="h-9">
+            <Button variant="outline" size="sm" className="h-9 font-bold">
                 <ListFilter className="mr-2 h-4 w-4" />
                 Filter
             </Button>
@@ -148,13 +150,13 @@ export default function MeldingenportaalPage() {
             <div className="flex flex-col items-center justify-center h-full p-12 text-center bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-200">
                 <Info className="h-12 w-12 text-slate-300 mb-4 opacity-20" />
                 <p className="font-black uppercase tracking-tight text-slate-900">Geen nieuwe aanvragen</p>
-                <p className="text-sm text-slate-500 mt-1">Alle binnengekomen meldingen zijn verwerkt.</p>
+                <p className="text-sm text-slate-500 mt-1 font-medium">Alle binnengekomen meldingen zijn verwerkt.</p>
             </div>
         ) : (
             <div className="border rounded-xl overflow-hidden shadow-sm bg-white">
                 <div className="overflow-x-auto">
                     <Table className="border-collapse w-full">
-                        <TableHeader className="sticky top-0 bg-slate-100 z-10">
+                        <TableHeader className="sticky top-0 bg-slate-100 z-10 shadow-sm">
                         <TableRow className="hover:bg-transparent border-b-2 border-slate-200">
                             <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Intakenr.</TableHead>
                             <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Adres</TableHead>
@@ -180,14 +182,14 @@ export default function MeldingenportaalPage() {
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-xl p-2 border-slate-100">
-                                                <DropdownMenuItem onClick={() => handleStatusChange(melding, 'In behandeling')} className="font-bold rounded-lg h-10">
+                                                <DropdownMenuItem onClick={() => handleStatusChange(melding, 'In behandeling')} className="font-bold rounded-lg h-10 cursor-pointer">
                                                     Accepteren & Doorzetten
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => handleOpenForward(melding)} className="font-bold rounded-lg h-10">
+                                                <DropdownMenuItem onClick={() => handleOpenForward(melding)} className="font-bold rounded-lg h-10 cursor-pointer">
                                                     <Mail className="mr-2 h-4 w-4 text-primary" />
                                                     Extern doorzetten
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => handleStatusChange(melding, 'Niet in beheer')} className="font-bold rounded-lg h-10 text-red-600">
+                                                <DropdownMenuItem onClick={() => handleStatusChange(melding, 'Niet in beheer')} className="font-bold rounded-lg h-10 text-red-600 cursor-pointer">
                                                     Niet in beheer
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>

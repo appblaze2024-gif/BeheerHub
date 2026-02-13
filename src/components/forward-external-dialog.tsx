@@ -172,25 +172,25 @@ export function ForwardExternalDialog({ open, onOpenChange, melding, onSuccess }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[750px] h-[95vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
+      <DialogContent className="sm:max-w-[750px] max-h-[95vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
         <DialogHeader className="p-6 border-b shrink-0 relative bg-slate-50/80 backdrop-blur-md">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <DialogTitle className="text-xl font-black uppercase tracking-tight">Melding Extern Doorzetten</DialogTitle>
+              <DialogTitle className="text-xl font-black uppercase tracking-tight text-slate-900">Melding Extern Doorzetten</DialogTitle>
               <DialogDescription className="font-bold text-slate-500">Stel de e-mail op voor de externe partij of een interne collega.</DialogDescription>
             </div>
             <DialogClose asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-slate-200">
-                <X className="h-5 w-5" />
+              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-slate-200 transition-colors">
+                <X className="h-6 w-6 text-slate-600" />
               </Button>
             </DialogClose>
           </div>
         </DialogHeader>
         
-        <div className="flex-1 overflow-y-auto p-6 bg-white">
+        <div className="flex-1 overflow-y-auto p-6 bg-white custom-scrollbar">
           {melding ? (
             <Form {...form}>
-              <form id="forward-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <form id="forward-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 pb-4">
                 <div className="h-48 w-full rounded-2xl border-2 border-slate-100 overflow-hidden relative shadow-inner bg-slate-100">
                     <MapboxView longitude={melding.longitude} latitude={melding.latitude} interactive={false} />
                     <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border border-slate-200 shadow-sm flex items-center gap-2">
@@ -203,7 +203,7 @@ export function ForwardExternalDialog({ open, onOpenChange, melding, onSuccess }
                         <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Collega selecteren</FormLabel>
                         <div className="relative w-48">
                             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                            <Input placeholder="Zoek collega..." className="h-8 pl-8 text-[10px] font-bold rounded-lg border-slate-200 focus:ring-primary/20" value={userSearchTerm} onChange={(e) => setUserSearchTerm(e.target.value)} />
+                            <Input placeholder="Zoek collega..." className="h-8 pl-8 text-[10px] font-bold rounded-lg border-slate-200 focus:ring-primary/20 bg-white" value={userSearchTerm} onChange={(e) => setUserSearchTerm(e.target.value)} />
                         </div>
                     </div>
                     <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
@@ -256,7 +256,7 @@ export function ForwardExternalDialog({ open, onOpenChange, melding, onSuccess }
                 </div>
 
                 {allFiles.length > 0 && (
-                <div className="space-y-3 pb-4">
+                <div className="space-y-3">
                     <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Bijlagen insluiten ({selectedAttachments.length}/{allFiles.length})</FormLabel>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-2xl border-2 border-slate-100 p-3 bg-slate-50/30">
                         {allFiles.map((file) => (
