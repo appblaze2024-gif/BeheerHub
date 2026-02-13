@@ -8,7 +8,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { format, addDays, isWeekend } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { ArrowLeft, CalendarIcon, Loader2, MapPin, Search, UploadCloud, FileIcon, Trash2, Plus, ChevronUp, ChevronDown } from 'lucide-react';
-import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useFirebaseApp, useCollection, useDoc, setDocumentNonBlocking } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useFirebaseApp, useCollection, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { collection, doc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -152,7 +152,7 @@ export default function NewIssuePage() {
   const [isManageStatusesOpen, setIsManageStatusesOpen] = React.useState(false);
   const [newStatusName, setNewStatusName] = React.useState('');
 
-  const statusesRef = React.useMemo(() => {
+  const statusesRef = useMemoFirebase(() => {
     if (!firestore) return null;
     return doc(firestore, 'settings', 'statuses');
   }, [firestore]);
@@ -201,7 +201,7 @@ export default function NewIssuePage() {
   const [isManageReporterTypesOpen, setIsManageReporterTypesOpen] = React.useState(false);
   const [newReporterTypeName, setNewReporterTypeName] = React.useState('');
 
-  const categoriesRef = React.useMemo(() => {
+  const categoriesRef = useMemoFirebase(() => {
     if (!firestore) return null;
     return doc(firestore, 'settings', 'categories');
   }, [firestore]);
@@ -209,40 +209,40 @@ export default function NewIssuePage() {
   const hoofdcategorieOptions = categoriesData?.hoofdcategorieen || DEFAULT_HOOFDCATEGORIEEN;
   const subcategorieMapping = categoriesData?.subcategorieMapping || DEFAULT_SUBCATEGORIE_MAPPING;
 
-  const departmentsRef = React.useMemo(() => {
+  const departmentsRef = useMemoFirebase(() => {
     if (!firestore) return null;
     return doc(firestore, 'settings', 'departments');
   }, [firestore]);
   const { data: departmentsData } = useDoc<{ names: string[] }>(departmentsRef);
   const departmentOptions = departmentsData?.names || DEFAULT_DEPARTMENTS;
 
-  const handlersRef = React.useMemo(() => {
+  const handlersRef = useMemoFirebase(() => {
     if (!firestore) return null;
     return doc(firestore, 'settings', 'handlers');
   }, [firestore]);
   const { data: handlersData } = useDoc<{ names: string[] }>(handlersRef);
   const handlerOptions = handlersData?.names || DEFAULT_HANDLERS;
 
-  const reporterTypesRef = React.useMemo(() => {
+  const reporterTypesRef = useMemoFirebase(() => {
     if (!firestore) return null;
     return doc(firestore, 'settings', 'reporter_types');
   }, [firestore]);
   const { data: reporterTypesData } = useDoc<{ names: string[] }>(reporterTypesRef);
   const reporterTypeOptions = reporterTypesData?.names || DEFAULT_REPORTER_TYPES;
 
-  const objectsCollection = React.useMemo(() => {
+  const objectsCollection = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'objects');
   }, [firestore]);
   const { data: allObjects } = useCollection<MapObject>(objectsCollection);
   
-  const meldingenCollection = React.useMemo(() => {
+  const meldingenCollection = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'meldingen');
   }, [firestore]);
   const { data: allMeldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenCollection);
 
-  const projectsCollection = React.useMemo(() => {
+  const projectsCollection = useMemoFirebase(() => {
       if (!firestore) return null;
       return collection(firestore, 'projects');
   }, [firestore]);

@@ -346,28 +346,6 @@ function NavigatingView({
     return () => navigator.geolocation.clearWatch(watchId);
   }, [isSimulating]);
 
-  React.useEffect(() => {
-    if (!targetLocation || !currentRouteGeometry || isSimulating) return;
-    try {
-        const coords = currentRouteGeometry.coordinates;
-        const line = turf.lineString(coords);
-        const totalDist = turf.length(line, { units: 'meters' });
-        const userPoint = turf.point([targetLocation.longitude, targetLocation.latitude]);
-        const snapped = turf.nearestPointOnLine(line, userPoint);
-        const distToStart = turf.length(turf.lineSlice(turf.point(coords[0]), snapped, line), { units: 'meters' });
-        const remaining = Math.max(0, totalDist - distToStart);
-        
-        const roundedRemaining = Math.round(remaining);
-        if (Math.abs(lastUpdateDistRef.current - roundedRemaining) > 2) {
-            setDistanceRemainingToDestination(roundedRemaining);
-            lastUpdateDistRef.current = roundedRemaining;
-        }
-        
-        const reached = remaining < 80;
-        setHasReachedCurrentTarget(prev => prev !== reached ? reached : prev);
-    } catch (e) {}
-  }, [targetLocation?.latitude, targetLocation?.longitude, currentRouteGeometry, isSimulating]);
-
   const lastFetchedTargetId = React.useRef<string | null>(null);
 
   React.useEffect(() => {
@@ -415,11 +393,17 @@ function NavigatingView({
         }
 
         const reached = remaining < 80;
-        setHasReachedCurrentTarget(prev => prev !== reached ? reached : prev);
+        setHasReachedCurrentTarget(prev => {
+            if (prev !== reached) return reached;
+            return prev;
+        });
 
         if (simStateRef.current.distanceTravelled >= totalDistance - 0.2) {
             const finalCoord = coords[coords.length - 1];
-            setTargetLocation({ latitude: finalCoord[1], longitude: finalCoord[0], speed: 0, heading: 0 });
+            setTargetLocation(prev => {
+                if (prev && Math.abs(prev.latitude - finalCoord[1]) < 0.00001) return prev;
+                return { latitude: finalCoord[1], longitude: finalCoord[0], speed: 0, heading: 0 };
+            });
             setHasReachedCurrentTarget(true);
             return;
         } 
@@ -431,7 +415,13 @@ function NavigatingView({
             const [lng, lat] = currentPoint.geometry.coordinates;
             const heading = (turf.bearing(currentPoint, lookAheadPoint) + 360) % 360;
 
-            setTargetLocation({ latitude: lat, longitude: lng, speed: simStateRef.current.currentSpeedMs, heading: heading });
+            setTargetLocation(prev => {
+                const d = prev ? turf.distance(turf.point([prev.longitude, prev.latitude]), currentPoint, { units: 'meters' }) : 1;
+                if (d > 0.1) {
+                    return { latitude: lat, longitude: lng, speed: simStateRef.current.currentSpeedMs, heading: heading };
+                }
+                return prev;
+            });
         } catch (e) {}
 
         simAnimationRef.current = requestAnimationFrame(runSimulation);
@@ -534,8 +524,8 @@ function NavigatingView({
     )
   }
 
-  if (isCalculatingRoute && !currentRouteGeometry) {
-    return <LoadingScreen message="Route berekenen..." />;
+  if (!currentRouteGeometry || isCalculatingRoute) {
+    return <LoadingScreen message="Navigatie voorbereiden..." />;
   }
 
   return (
@@ -553,21 +543,20 @@ function NavigatingView({
         mapStyle={mapStyle}
         mapboxAccessToken={MAPBOX_TOKEN}
       >
-        {smoothLocation && (
+        {snappedLocation && (
           <Marker 
-            longitude={smoothLocation.longitude} 
-            latitude={smoothLocation.latitude} 
+            longitude={snappedLocation.longitude} 
+            latitude={snappedLocation.latitude} 
             anchor="center"
             rotationAlignment="map"
-            rotation={smoothLocation.heading || 0} 
+            pitchAlignment="map"
+            rotation={snappedLocation.heading || 0} 
           >
-            <div className="relative flex items-center justify-center">
-                <div className="absolute h-16 w-16 bg-blue-500/20 rounded-full animate-pulse" />
-                <div className="h-14 w-14 bg-blue-600 rounded-full border-[4px] border-white shadow-2xl flex items-center justify-center">
-                    <svg viewBox="0 0 100 100" className="h-10 w-10 text-white fill-current">
-                        <path d="M50 5 L90 95 L50 75 L10 95 Z" />
-                    </svg>
-                </div>
+            <div className="relative flex items-center justify-center w-12 h-12">
+                <div className="absolute h-12 w-12 bg-blue-500/20 rounded-full animate-pulse" />
+                <svg viewBox="0 0 100 100" className="h-10 w-10 text-blue-600 drop-shadow-2xl" style={{ filter: 'drop-shadow(0 4px 3px rgba(0,0,0,0.3))' }}>
+                    <path d="M50 5 L90 95 L50 75 L10 95 Z" fill="currentColor" stroke="white" strokeWidth="4" />
+                </svg>
             </div>
           </Marker>
         )}
@@ -996,7 +985,7 @@ export default function StartNavigationPage() {
         <NavigatingView objectsOnRoute={objectsOnRoute} onExit={() => { setNavigationState('setup'); setObjectsOnRoute([]); if (searchParams.has('lat')) router.back(); }} initialUserLocation={tripStartLocation} isSimulating={isSimulationMode} />
       ) : (
         <div className="w-full h-full relative">
-          <MapGL ref={mapRef} initialViewState={{ longitude: 5.2913, latitude: 52.1326, zoom: 7 }} style={{ width: '100%', height: '100%' }} mapStyle={mapStyle} mapboxAccessToken={MAPBOX_TOKEN} onClick={e => setUserLocation({ latitude: e.lngLat.lat, longitude: e.lngLat.lng })} interactive={true}>
+          <MapGL ref={mapRef} initialViewState={{ longitude: userLocation?.longitude || 5.2913, latitude: userLocation?.latitude || 52.1326, zoom: userLocation ? 14 : 7 }} style={{ width: '100%', height: '100%' }} mapStyle={mapStyle} mapboxAccessToken={MAPBOX_TOKEN} onClick={e => setUserLocation({ latitude: e.lngLat.lat, longitude: e.lngLat.lng })} interactive={true}>
             {userLocation && (
               <Marker longitude={userLocation.longitude} latitude={userLocation.latitude} anchor="center">
                 <div className="relative flex flex-col items-center">
