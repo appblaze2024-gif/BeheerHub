@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -6,17 +5,14 @@ import {
   Filter,
   Save,
   Map,
-  QrCode,
   Plus,
   Search,
   ChevronDown,
   MapPin,
   MoreVertical,
-  MoreHorizontal,
   ChevronRight,
   ImageIcon,
   Upload,
-  RefreshCw,
   List,
   Palette,
   Download,
@@ -54,7 +50,7 @@ import { MapboxView } from '@/components/mapbox-view';
 import { ObjectImportDialog } from '@/components/object-import-dialog';
 import { ObjectExportDialog } from '@/components/object-export-dialog';
 import { useCollection, useFirestore, updateDocumentNonBlocking, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, doc, query, where, orderBy, limit, writeBatch } from 'firebase/firestore';
+import { collection, doc, query, orderBy, limit, writeBatch } from 'firebase/firestore';
 import type { Wijk } from '@/lib/types';
 import * as turf from '@turf/turf';
 import { Label } from '@/components/ui/label';
@@ -780,7 +776,6 @@ export default function ObjectsPage() {
                         ))
                     ) : (
                         <div className="p-8 text-center">
-                            <AlertCircle className="h-6 w-6 text-slate-200 mx-auto mb-2" />
                             <p className="text-[10px] font-bold text-slate-400 uppercase leading-relaxed">Geen routes voor dit project</p>
                         </div>
                     )}

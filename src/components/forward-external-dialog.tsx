@@ -28,10 +28,10 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Textarea } from './ui/textarea';
-import { Checkbox } from './ui/checkbox';
-import { ScrollArea } from './ui/scroll-area';
-import { Badge } from './ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 import type { Melding, UploadedFile, UserProfile } from '@/lib/types';
 import { MapboxView } from './mapbox-view';
 import { cn } from '@/lib/utils';

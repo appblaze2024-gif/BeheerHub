@@ -89,19 +89,17 @@ export function NotificationCenter() {
   // Active Issues Query for the "Meldingen" tab
   const meldingenQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return collection(firestore, 'meldingen');
+    return query(collection(firestore, 'meldingen'), where('status', '==', 'Nieuw'));
   }, [firestore]);
 
-  const { data: meldingenFromDb, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenQuery);
+  const { data: activeMeldingenFromDb } = useCollection<Melding>(meldingenQuery);
 
   const activeMeldingen = React.useMemo(() => {
-    if (!meldingenFromDb) return [];
-    // Only show 'Nieuw' status (portal issues) as requested
-    return meldingenFromDb
-      .filter(m => m.status === 'Nieuw')
+    if (!activeMeldingenFromDb) return [];
+    return [...activeMeldingenFromDb]
       .sort((a, b) => new Date(b.datum).getTime() - new Date(a.datum).getTime())
       .slice(0, 20);
-  }, [meldingenFromDb]);
+  }, [activeMeldingenFromDb]);
 
   // Users Query for starting new chats
   const usersQuery = useMemoFirebase(() => {
@@ -113,7 +111,6 @@ export function NotificationCenter() {
 
   const unreadCount = React.useMemo(() => {
     const unreadMessagesCount = allMessages?.filter((m) => !m.read && m.toUserId === user?.uid).length || 0;
-    // Meldingen count only for privileged users
     const newMeldingenCount = isPrivileged ? activeMeldingen.length : 0;
     return unreadMessagesCount + newMeldingenCount;
   }, [allMessages, activeMeldingen, user?.uid, isPrivileged]);
@@ -200,11 +197,9 @@ export function NotificationCenter() {
         read: false,
       };
 
-      // Message to recipient
       const recipientMsgRef = collection(firestore, 'users', recipientId, 'messages');
       await addDocumentNonBlocking(recipientMsgRef, messageData);
       
-      // Copy to own messages for history
       const senderMsgRef = collection(firestore, 'users', user.uid, 'messages');
       await addDocumentNonBlocking(senderMsgRef, { ...messageData, read: true });
 
@@ -476,11 +471,7 @@ export function NotificationCenter() {
             {isPrivileged && (
               <TabsContent value="alerts" className="m-0">
                 <ScrollArea className="h-[400px]">
-                  {isLoadingMeldingen ? (
-                    <div className="flex items-center justify-center h-40">
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : activeMeldingen && activeMeldingen.length > 0 ? (
+                  {activeMeldingen && activeMeldingen.length > 0 ? (
                     <div className="divide-y divide-slate-50">
                       {activeMeldingen.map((melding) => (
                         <div 
