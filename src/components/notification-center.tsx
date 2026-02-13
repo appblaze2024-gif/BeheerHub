@@ -48,6 +48,7 @@ import {
 import { useProfile } from '@/firebase/profile-provider';
 import type { Message, UserProfile } from '@/lib/types';
 import { useToast } from '@/components/ui/use-toast';
+import { cn } from '@/lib/utils';
 
 export function NotificationCenter() {
   const firestore = useFirestore();
@@ -153,9 +154,19 @@ export function NotificationCenter() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="p-4 border-b bg-slate-50/50 flex items-center justify-between">
             <h3 className="text-sm font-black uppercase tracking-tight">Berichtencentrum</h3>
-            <TabsList className="bg-slate-200/50 h-8 p-1 rounded-lg">
-              <TabsTrigger value="received" className="text-[10px] px-3 h-6 rounded-md">Inbox</TabsTrigger>
-              <TabsTrigger value="new" className="text-[10px] px-3 h-6 rounded-md">Nieuw</TabsTrigger>
+            <TabsList className="bg-slate-950 h-9 p-1 rounded-xl gap-1 border-none shadow-inner">
+              <TabsTrigger 
+                value="received" 
+                className="text-[10px] px-4 h-7 rounded-lg data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-md data-[state=inactive]:text-slate-400 data-[state=inactive]:hover:text-slate-200 transition-all font-black uppercase tracking-widest border-none"
+              >
+                Inbox
+              </TabsTrigger>
+              <TabsTrigger 
+                value="new" 
+                className="text-[10px] px-4 h-7 rounded-lg data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-md data-[state=inactive]:text-slate-400 data-[state=inactive]:hover:text-slate-200 transition-all font-black uppercase tracking-widest border-none"
+              >
+                Nieuw
+              </TabsTrigger>
             </TabsList>
           </div>
 
