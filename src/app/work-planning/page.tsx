@@ -1099,7 +1099,6 @@ export default function WorkPlanningPage() {
                 <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-          <Button size="sm" className="font-black h-9 uppercase tracking-tight px-4">Controle</Button>
         </div>
       </header>
       <div className="flex-1 overflow-auto">
