@@ -1,8 +1,106 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    /**
+     * BEHEERHUB SECURITY RULES
+     * Gecentraliseerde toegangscontrole op basis van rollen.
+     */
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Meldingen en werkbonnen - ALTIJD TOEGANKELIJK VOOR INLOGDE GEBRUIKERS
+    // We plaatsen deze bovenaan voor maximale prioriteit en eenvoud.
+    match /meldingen/{meldingId} {
+      allow read, write: if isSignedIn();
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function userExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function hasRole(role) {
+      return isSignedIn() && userExists() && getUserData().role == role;
+    }
+
+    function isPrivileged() {
+      return isSignedIn() && userExists() && (getUserData().role == 'Super admin' || getUserData().role == 'toezichthouder');
+    }
+
+    // Gebruikersprofielen
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if request.auth.uid == userId || hasRole('Super admin');
+
+      match /routes/{routeId} {
+        allow read: if request.auth.uid == userId || isPrivileged();
+        allow write: if request.auth.uid == userId || isPrivileged();
+      }
+    }
+
+    // Projecten en bijbehorende data
+    match /projects/{projectId} {
+      allow read: if isSignedIn();
+      allow write: if isPrivileged() || hasRole('ondersteuner');
+
+      match /{allSubcollections=**} {
+        allow read: if isSignedIn();
+        allow write: if isPrivileged() || hasRole('ondersteuner');
+      }
+    }
+
+    // Personeelsbestand
+    match /medewerkers/{medewerkerId} {
+      allow read: if isSignedIn();
+      allow write: if isPrivileged() || hasRole('ondersteuner');
+    }
+
+    // IoT Sensoren
+    match /sensors/{sensorId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // Wagenpark en Materieel
+    match /voertuigen/{id} {
+      allow read: if isSignedIn();
+      allow write: if isPrivileged() || hasRole('ondersteuner');
+      match /{allSubcollections=**} {
+        allow read: if isSignedIn();
+        allow write: if isPrivileged() || hasRole('ondersteuner');
+      }
+    }
+    match /machines/{id} {
+      allow read: if isSignedIn();
+      allow write: if isPrivileged() || hasRole('ondersteuner');
+      match /{allSubcollections=**} {
+        allow read: if isSignedIn();
+        allow write: if isPrivileged() || hasRole('ondersteuner');
+      }
+    }
+
+    // Areaal objecten
+    match /objects/{objectId} {
+      allow read: if isSignedIn();
+      allow write: if isPrivileged();
+    }
+    
+    // Systeeminstellingen
+    match /settings/{settingId} {
+      allow read: if isSignedIn();
+      allow write: if isPrivileged();
+    }
+
+    // GLOBALE REGEL: Super admin mag alles (als laatste check)
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if hasRole('Super admin');
     }
   }
 }

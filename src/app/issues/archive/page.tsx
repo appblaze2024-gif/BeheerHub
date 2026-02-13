@@ -1,8 +1,9 @@
+
 'use client';
 
 import * as React from 'react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { Search, ListFilter, ArrowLeft, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,13 +39,12 @@ export default function ArchiveIssuesPage() {
     };
   }, [setIsHeaderVisible]);
 
-  // OPTIMIZED QUERY: Only fetch meldingen with 'Afgerond' status
+  // OPTIMIZED QUERY: Filter by status only to avoid composite index requirements
   const archiveQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
       collection(firestore, 'meldingen'),
-      where('status', '==', closedStatus),
-      orderBy('afhandeling_datum', 'desc')
+      where('status', '==', closedStatus)
     );
   }, [firestore]);
 
@@ -62,14 +62,26 @@ export default function ArchiveIssuesPage() {
 
   const filteredMeldingen = React.useMemo(() => {
     if (!archivedMeldingen) return [];
-    if (!debouncedSearchTerm) return archivedMeldingen;
+    
+    let result = [...archivedMeldingen];
 
-    const lowercasedFilter = debouncedSearchTerm.toLowerCase();
-    return archivedMeldingen.filter(melding => {
-      return Object.values(melding).some(value =>
-        String(value).toLowerCase().includes(lowercasedFilter)
-      );
+    if (debouncedSearchTerm) {
+        const lowercasedFilter = debouncedSearchTerm.toLowerCase();
+        result = result.filter(melding => {
+          return Object.values(melding).some(value =>
+            String(value).toLowerCase().includes(lowercasedFilter)
+          );
+        });
+    }
+
+    // Sort in memory to handle missing fields and avoid index errors
+    result.sort((a, b) => {
+        const dateA = a.afhandeling_datum ? new Date(a.afhandeling_datum).getTime() : 0;
+        const dateB = b.afhandeling_datum ? new Date(b.afhandeling_datum).getTime() : 0;
+        return dateB - dateA;
     });
+
+    return result;
   }, [archivedMeldingen, debouncedSearchTerm]);
 
   return (
