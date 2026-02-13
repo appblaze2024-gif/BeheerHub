@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -773,7 +774,7 @@ export default function ObjectsPage() {
                                 />
                                 <Label htmlFor={`area-${area.id}`} className="flex-1 flex justify-between items-center cursor-pointer">
                                   <span className="text-xs font-black uppercase tracking-tight text-slate-700 group-hover:text-primary transition-colors">{area.naam}</span>
-                                  <Badge variant="outline" className="text-[9px] font-black border-slate-200 bg-white text-slate-400">{objectCountsPerArea[area.id] || 0}</Badge>
+                                  <Badge variant="outline" className="text-[9px] font-black border-slate-200 bg-white text-slate-400">{objectCounts[area.id] || 0}</Badge>
                                 </Label>
                             </div>
                         ))

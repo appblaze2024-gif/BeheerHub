@@ -14,6 +14,7 @@ import {
   Plus,
   ArrowLeft,
   ChevronRight,
+  Search,
 } from 'lucide-react';
 import {
   useCollection,
@@ -60,13 +61,8 @@ export function NotificationCenter() {
   
   const [activeTab, setActiveTab] = React.useState('received');
   const [selectedChatUser, setSelectedChatUser] = React.useState<UserProfile | null>(null);
-  
-  // Create message state for "New" tab
-  const [toUserId, setToUserId] = React.useState('');
-  const [messageContent, setMessageContent] = React.useState('');
+  const [userSearchQuery, setUserSearchQuery] = React.useState('');
   const [isSending, setIsSending] = React.useState(false);
-
-  // Create message state for Chat view
   const [chatReply, setChatReply] = React.useState('');
 
   // Fetch all messages involving the current user
@@ -92,6 +88,18 @@ export function NotificationCenter() {
   const unreadCount = React.useMemo(() => {
     return allMessages?.filter((m) => !m.read && m.toUserId === user?.uid).length || 0;
   }, [allMessages, user?.uid]);
+
+  const filteredUsers = React.useMemo(() => {
+    if (!users) return [];
+    const q = userSearchQuery.toLowerCase();
+    return users
+      .filter(u => u.id !== user?.uid)
+      .filter(u => 
+        (u.displayName || u.email || '').toLowerCase().includes(q) ||
+        (u.role || '').toLowerCase().includes(q)
+      )
+      .sort((a, b) => (a.displayName || a.email || '').localeCompare(b.displayName || b.email || ''));
+  }, [users, userSearchQuery, user?.uid]);
 
   // Messages filtered for the specific selected chat
   const chatMessages = React.useMemo(() => {
@@ -120,13 +128,7 @@ export function NotificationCenter() {
     }
   };
 
-  const handleDeleteMessage = (msgId: string) => {
-    if (!firestore || !user?.uid) return;
-    const msgRef = doc(firestore, 'users', user.uid, 'messages', msgId);
-    deleteDocumentNonBlocking(msgRef);
-  };
-
-  const handleSendMessage = async (recipientId: string, content: string, isReply = false) => {
+  const handleSendMessage = async (recipientId: string, content: string) => {
     if (!firestore || !user?.uid || !recipientId || !content.trim()) return;
     setIsSending(true);
 
@@ -145,21 +147,11 @@ export function NotificationCenter() {
       const recipientMsgRef = collection(firestore, 'users', recipientId, 'messages');
       await addDocumentNonBlocking(recipientMsgRef, messageData);
       
-      // 2. Write to sender's "sent" history (own subcollection)
+      // 2. Write to sender's "sent" history
       const senderMsgRef = collection(firestore, 'users', user.uid, 'messages');
       await addDocumentNonBlocking(senderMsgRef, { ...messageData, read: true });
 
-      if (!isReply) {
-        toast({
-          title: 'Bericht verzonden',
-          description: 'Uw bericht is succesvol afgeleverd.',
-        });
-        setMessageContent('');
-        setToUserId('');
-        setActiveTab('received');
-      } else {
-        setChatReply('');
-      }
+      setChatReply('');
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
@@ -172,8 +164,14 @@ export function NotificationCenter() {
     }
   };
 
+  const getInitials = (firstName?: string, lastName?: string) => {
+    const firstInitial = firstName?.[0] || '';
+    const lastInitial = lastName?.[0] || '';
+    return `${firstInitial}${lastInitial}`.toUpperCase();
+  };
+
   return (
-    <Popover onOpenChange={(open) => { if(!open) setSelectedChatUser(null); }}>
+    <Popover onOpenChange={(open) => { if(!open) { setSelectedChatUser(null); setUserSearchQuery(''); } }}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="rounded-xl relative h-10 w-10 hover:bg-slate-100">
           <Bell className="h-5 w-5 text-slate-600" />
@@ -229,7 +227,7 @@ export function NotificationCenter() {
                   ))
                 ) : (
                   <div className="py-12 text-center text-slate-300">
-                    <p className="text-[10px] font-black uppercase tracking-widest">Begin een gesprek</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest">Begin een gesprek met {selectedChatUser.firstName || 'deze collega'}</p>
                   </div>
                 )}
               </div>
@@ -245,7 +243,7 @@ export function NotificationCenter() {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
-                      handleSendMessage(selectedChatUser.id, chatReply, true);
+                      handleSendMessage(selectedChatUser.id, chatReply);
                     }
                   }}
                 />
@@ -253,7 +251,7 @@ export function NotificationCenter() {
                   size="icon" 
                   className="absolute right-2 bottom-2 h-8 w-8 rounded-full shadow-lg"
                   disabled={!chatReply.trim() || isSending}
-                  onClick={() => handleSendMessage(selectedChatUser.id, chatReply, true)}
+                  onClick={() => handleSendMessage(selectedChatUser.id, chatReply)}
                 >
                   {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 </Button>
@@ -263,7 +261,7 @@ export function NotificationCenter() {
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="p-4 border-b bg-slate-50/50 flex items-center justify-between">
-              <h3 className="text-sm font-black uppercase tracking-tight">Berichten</h3>
+              <h3 className="text-sm font-black uppercase tracking-tight text-slate-900">Communicatie</h3>
               <TabsList className="bg-black h-10 p-1 rounded-xl gap-1 border-none shadow-lg">
                 <TabsTrigger 
                   value="received" 
@@ -289,7 +287,6 @@ export function NotificationCenter() {
                 ) : allMessages && allMessages.length > 0 ? (
                   <div className="divide-y divide-slate-50">
                     {allMessages
-                      // Only show incoming messages in the main inbox list, or unique latest conversations
                       .filter(m => m.toUserId === user?.uid)
                       .map((msg) => (
                       <div 
@@ -332,39 +329,50 @@ export function NotificationCenter() {
               </ScrollArea>
             </TabsContent>
 
-            <TabsContent value="new" className="m-0 p-4 space-y-4">
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Ontvanger</Label>
-                <Select value={toUserId} onValueChange={setToUserId}>
-                  <SelectTrigger className="h-10 font-bold border-slate-200 rounded-xl">
-                    <SelectValue placeholder="Kies een collega..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {users?.filter(u => u.id !== user?.uid).map(u => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.displayName || u.email}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <TabsContent value="new" className="m-0">
+              <div className="p-3 border-b bg-white">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="Zoek collega..." 
+                    className="pl-9 h-9 rounded-xl border-slate-200 text-xs font-bold"
+                    value={userSearchQuery}
+                    onChange={(e) => setUserSearchQuery(e.target.value)}
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Bericht</Label>
-                <Textarea 
-                  placeholder="Typ uw bericht hier..." 
-                  className="min-h-[120px] text-xs font-medium resize-none border-slate-200 rounded-xl"
-                  value={messageContent}
-                  onChange={(e) => setMessageContent(e.target.value)}
-                />
-              </div>
-              <Button 
-                className="w-full h-11 font-black uppercase tracking-tight gap-2 rounded-xl shadow-lg" 
-                disabled={!toUserId || !messageContent.trim() || isSending}
-                onClick={() => handleSendMessage(toUserId, messageContent)}
-              >
-                {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                Bericht Verzenden
-              </Button>
+              <ScrollArea className="h-[350px]">
+                <div className="p-2 space-y-1">
+                  {filteredUsers?.length > 0 ? (
+                    filteredUsers.map(u => (
+                      <button
+                        key={u.id}
+                        className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-all text-left group"
+                        onClick={() => handleOpenChat(u.id)}
+                      >
+                        <Avatar className="h-9 w-9 border-2 border-white shadow-sm ring-1 ring-slate-100 shrink-0">
+                          <AvatarFallback className="bg-primary text-white text-[10px] font-black uppercase">
+                            {getInitials(u.firstName, u.lastName)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-black uppercase tracking-tight text-slate-900 truncate group-hover:text-primary transition-colors">
+                            {u.displayName || u.email}
+                          </p>
+                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-0.5">
+                            {u.role}
+                          </p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-slate-200 group-hover:text-primary transition-all group-hover:translate-x-0.5" />
+                      </button>
+                    ))
+                  ) : (
+                    <div className="py-12 text-center text-slate-300">
+                      <p className="text-[10px] font-black uppercase tracking-widest">Geen collega's gevonden</p>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
             </TabsContent>
           </Tabs>
         )}
@@ -372,5 +380,3 @@ export function NotificationCenter() {
     </Popover>
   );
 }
-
-    
