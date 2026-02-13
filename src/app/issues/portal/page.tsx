@@ -36,7 +36,6 @@ export default function MeldingenportaalPage() {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = React.useState('');
   const { setIsHeaderVisible } = useNavigationUI();
 
-  const [forwardDialogOpen, setForwardDialogOpen] = React.useState(false);
   const [selectedMeldingForForward, setSelectedMeldingForForward] = React.useState<Melding | null>(null);
 
   React.useEffect(() => {
@@ -104,16 +103,9 @@ export default function MeldingenportaalPage() {
     }
   };
 
-  const handleOpenForward = (melding: Melding) => {
-    setSelectedMeldingForForward(melding);
-    setForwardDialogOpen(true);
-  };
-
   const handleForwardDialogChange = (open: boolean) => {
-    setForwardDialogOpen(open);
     if (!open) {
-        // Delay clearing the selected melding to avoid unmount animation artifacts or crashes
-        setTimeout(() => setSelectedMeldingForForward(null), 500);
+      setSelectedMeldingForForward(null);
     }
   }
 
@@ -185,7 +177,7 @@ export default function MeldingenportaalPage() {
                                                 <DropdownMenuItem onClick={() => handleStatusChange(melding, 'In behandeling')} className="font-bold rounded-lg h-10 cursor-pointer">
                                                     Accepteren & Doorzetten
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => handleOpenForward(melding)} className="font-bold rounded-lg h-10 cursor-pointer">
+                                                <DropdownMenuItem onClick={() => setSelectedMeldingForForward(melding)} className="font-bold rounded-lg h-10 cursor-pointer">
                                                     <Mail className="mr-2 h-4 w-4 text-primary" />
                                                     Extern doorzetten
                                                 </DropdownMenuItem>
@@ -205,7 +197,7 @@ export default function MeldingenportaalPage() {
       </div>
 
       <ForwardExternalDialog
-        open={forwardDialogOpen}
+        open={!!selectedMeldingForForward}
         onOpenChange={handleForwardDialogChange}
         melding={selectedMeldingForForward}
         onSuccess={() => {}}

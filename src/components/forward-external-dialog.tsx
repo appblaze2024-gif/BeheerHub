@@ -32,6 +32,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Melding, UserProfile } from '@/lib/types';
 import { MapboxView } from './mapbox-view';
 import { cn } from '@/lib/utils';
@@ -187,99 +188,101 @@ export function ForwardExternalDialog({ open, onOpenChange, melding, onSuccess }
           </div>
         </DialogHeader>
         
-        <div className="flex-1 overflow-y-auto p-6 bg-white custom-scrollbar">
-          {melding ? (
-            <Form {...form}>
-              <form id="forward-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 pb-4">
-                <div className="h-48 w-full rounded-2xl border-2 border-slate-100 overflow-hidden relative shadow-inner bg-slate-100">
-                    <MapboxView longitude={melding.longitude} latitude={melding.latitude} interactive={false} />
-                    <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border border-slate-200 shadow-sm flex items-center gap-2">
-                        <MapPin className="h-3 w-3 text-red-500" /> Locatie Melding (Wordt als kaart bijgevoegd)
-                    </div>
-                </div>
+        <ScrollArea className="flex-1 min-h-0 bg-white">
+          <div className="p-6">
+            {melding ? (
+              <Form {...form}>
+                <form id="forward-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 pb-4">
+                  <div className="h-48 w-full rounded-2xl border-2 border-slate-100 overflow-hidden relative shadow-inner bg-slate-100">
+                      <MapboxView longitude={melding.longitude} latitude={melding.latitude} interactive={false} />
+                      <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border border-slate-200 shadow-sm flex items-center gap-2">
+                          <MapPin className="h-3 w-3 text-red-500" /> Locatie Melding (Wordt als kaart bijgevoegd)
+                      </div>
+                  </div>
 
-                <div className="space-y-4 bg-slate-50/50 p-5 rounded-2xl border-2 border-slate-100">
-                    <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-3">
-                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Collega selecteren</FormLabel>
-                        <div className="relative w-48">
-                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                            <Input placeholder="Zoek collega..." className="h-8 pl-8 text-[10px] font-bold rounded-lg border-slate-200 focus:ring-primary/20 bg-white" value={userSearchTerm} onChange={(e) => setUserSearchTerm(e.target.value)} />
-                        </div>
-                    </div>
-                    <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                        {filteredUsers.map((u) => {
-                            const isChecked = u.email && form.watch('to').split(',').map(e => e.trim()).includes(u.email);
-                            return (
-                                <div key={u.id} className={cn("flex items-center space-x-3 p-2.5 rounded-xl transition-all cursor-pointer group border-2", isChecked ? "bg-white border-primary/20 shadow-sm" : "hover:bg-white border-transparent")} onClick={() => u.email && toggleUserEmail(u.email)}>
-                                    <Checkbox checked={!!isChecked} onCheckedChange={() => u.email && toggleUserEmail(u.email)} className="rounded-md" />
-                                    <div className="min-w-0 flex-1 flex items-center justify-between">
-                                        <p className="text-[11px] font-black uppercase tracking-tight text-slate-900 truncate group-hover:text-primary transition-colors">{u.displayName || u.email}</p>
-                                        <Badge variant="outline" className="text-[8px] h-4 uppercase font-bold tracking-tighter opacity-60 border-slate-200">{u.role}</Badge>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
+                  <div className="space-y-4 bg-slate-50/50 p-5 rounded-2xl border-2 border-slate-100">
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-3">
+                          <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Collega selecteren</FormLabel>
+                          <div className="relative w-48">
+                              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                              <Input placeholder="Zoek collega..." className="h-8 pl-8 text-[10px] font-bold rounded-lg border-slate-200 focus:ring-primary/20 bg-white" value={userSearchTerm} onChange={(e) => setUserSearchTerm(e.target.value)} />
+                          </div>
+                      </div>
+                      <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                          {filteredUsers.map((u) => {
+                              const isChecked = u.email && form.watch('to').split(',').map(e => e.trim()).includes(u.email);
+                              return (
+                                  <div key={u.id} className={cn("flex items-center space-x-3 p-2.5 rounded-xl transition-all cursor-pointer group border-2", isChecked ? "bg-white border-primary/20 shadow-sm" : "hover:bg-white border-transparent")} onClick={() => u.email && toggleUserEmail(u.email)}>
+                                      <Checkbox checked={!!isChecked} onCheckedChange={() => u.email && toggleUserEmail(u.email)} className="rounded-md" />
+                                      <div className="min-w-0 flex-1 flex items-center justify-between">
+                                          <p className="text-[11px] font-black uppercase tracking-tight text-slate-900 truncate group-hover:text-primary transition-colors">{u.displayName || u.email}</p>
+                                          <Badge variant="outline" className="text-[8px] h-4 uppercase font-bold tracking-tighter opacity-60 border-slate-200">{u.role}</Badge>
+                                      </div>
+                                  </div>
+                              );
+                          })}
+                      </div>
+                  </div>
 
-                <div className="space-y-5">
-                  <FormField control={form.control} name="to" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Ontvanger(s)</FormLabel>
-                        <FormControl><Input placeholder="voorbeeld@email.nl" {...field} className="h-11 font-bold rounded-xl border-slate-200" /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                  )} />
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <FormField control={form.control} name="cc" render={({ field }) => (
+                  <div className="space-y-5">
+                    <FormField control={form.control} name="to" render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">CC</FormLabel>
-                          <FormControl><Input placeholder="" {...field} className="h-11 font-bold rounded-xl border-slate-200" /></FormControl>
+                          <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Ontvanger(s)</FormLabel>
+                          <FormControl><Input placeholder="voorbeeld@email.nl" {...field} className="h-11 font-bold rounded-xl border-slate-200" /></FormControl>
                           <FormMessage />
                         </FormItem>
                     )} />
-                    <FormField control={form.control} name="subject" render={({ field }) => (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <FormField control={form.control} name="cc" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">CC</FormLabel>
+                            <FormControl><Input placeholder="" {...field} className="h-11 font-bold rounded-xl border-slate-200" /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                      )} />
+                      <FormField control={form.control} name="subject" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Onderwerp</FormLabel>
+                            <FormControl><Input {...field} className="h-11 font-black rounded-xl border-slate-200" /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                      )} />
+                    </div>
+                    <FormField control={form.control} name="body" render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Onderwerp</FormLabel>
-                          <FormControl><Input {...field} className="h-11 font-black rounded-xl border-slate-200" /></FormControl>
+                          <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Bericht</FormLabel>
+                          <FormControl><Textarea className="min-h-[250px] text-xs font-medium leading-relaxed resize-none rounded-2xl border-slate-200 focus:ring-primary/20" {...field} /></FormControl>
                           <FormMessage />
                         </FormItem>
                     )} />
                   </div>
-                  <FormField control={form.control} name="body" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Bericht</FormLabel>
-                        <FormControl><Textarea className="min-h-[250px] text-xs font-medium leading-relaxed resize-none rounded-2xl border-slate-200 focus:ring-primary/20" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                  )} />
-                </div>
 
-                {allFiles.length > 0 && (
-                <div className="space-y-3">
-                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Bijlagen insluiten ({selectedAttachments.length}/{allFiles.length})</FormLabel>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-2xl border-2 border-slate-100 p-3 bg-slate-50/30">
-                        {allFiles.map((file) => (
-                        <div key={file.storagePath} className={cn("flex items-center space-x-3 p-2.5 rounded-xl transition-all cursor-pointer border-2", selectedAttachments.includes(file.storagePath) ? "bg-white border-primary/20 shadow-sm" : "border-transparent hover:bg-white")} onClick={() => setSelectedAttachments(prev => prev.includes(file.storagePath) ? prev.filter(p => p !== file.storagePath) : [...prev, file.storagePath])}>
-                            <Checkbox checked={selectedAttachments.includes(file.storagePath)} onCheckedChange={() => setSelectedAttachments(prev => prev.includes(file.storagePath) ? prev.filter(p => p !== file.storagePath) : [...prev, file.storagePath])} className="rounded-md" />
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                                <FileIcon className="h-4 w-4 shrink-0 text-slate-400" />
-                                <span className="text-[11px] font-bold text-slate-700 truncate">{file.name}</span>
-                            </div>
-                        </div>
-                        ))}
-                    </div>
-                </div>
-                )}
-              </form>
-            </Form>
-          ) : (
-            <div className="p-20 text-center flex flex-col items-center gap-4">
-                <Loader2 className="h-10 w-10 animate-spin text-primary opacity-20" />
-                <p className="text-xs font-black uppercase tracking-widest text-slate-400">Data laden...</p>
-            </div>
-          )}
-        </div>
+                  {allFiles.length > 0 && (
+                  <div className="space-y-3">
+                      <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Bijlagen insluiten ({selectedAttachments.length}/{allFiles.length})</FormLabel>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-2xl border-2 border-slate-100 p-3 bg-slate-50/30">
+                          {allFiles.map((file) => (
+                          <div key={file.storagePath} className={cn("flex items-center space-x-3 p-2.5 rounded-xl transition-all cursor-pointer border-2", selectedAttachments.includes(file.storagePath) ? "bg-white border-primary/20 shadow-sm" : "border-transparent hover:bg-white")} onClick={() => setSelectedAttachments(prev => prev.includes(file.storagePath) ? prev.filter(p => p !== file.storagePath) : [...prev, file.storagePath])}>
+                              <Checkbox checked={selectedAttachments.includes(file.storagePath)} onCheckedChange={() => setSelectedAttachments(prev => prev.includes(file.storagePath) ? prev.filter(p => p !== file.storagePath) : [...prev, file.storagePath])} className="rounded-md" />
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <FileIcon className="h-4 w-4 shrink-0 text-slate-400" />
+                                  <span className="text-[11px] font-bold text-slate-700 truncate">{file.name}</span>
+                              </div>
+                          </div>
+                          ))}
+                      </div>
+                  </div>
+                  )}
+                </form>
+              </Form>
+            ) : (
+              <div className="p-20 text-center flex flex-col items-center gap-4">
+                  <Loader2 className="h-10 w-10 animate-spin text-primary opacity-20" />
+                  <p className="text-xs font-black uppercase tracking-widest text-slate-400">Data laden...</p>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
         
         <DialogFooter className="p-6 shrink-0 border-t bg-slate-50/80 backdrop-blur-md">
             <Button 
