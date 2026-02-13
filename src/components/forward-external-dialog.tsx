@@ -204,8 +204,8 @@ Team BeheerHub`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col p-0">
-        <DialogHeader className="p-6 pb-2">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col p-0 overflow-hidden">
+        <DialogHeader className="p-6 pb-2 shrink-0">
           <DialogTitle>Melding Extern Doorzetten</DialogTitle>
           <DialogDescription>Stel de e-mail op voor de externe partij of een interne collega.</DialogDescription>
         </DialogHeader>
@@ -213,9 +213,9 @@ Team BeheerHub`;
         {melding ? (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              <ScrollArea className="flex-1 px-6">
-                  <div className="space-y-6 py-4">
-                      <div className="h-40 w-full rounded-xl border-2 overflow-hidden relative shadow-inner">
+              <ScrollArea className="flex-1">
+                  <div className="space-y-6 p-6">
+                      <div className="h-40 w-full rounded-xl border-2 overflow-hidden relative shadow-inner shrink-0">
                           <MapboxView
                               longitude={melding.longitude}
                               latitude={melding.latitude}
@@ -227,7 +227,7 @@ Team BeheerHub`;
                           </div>
                       </div>
 
-                      <div className="space-y-3 bg-slate-50 dark:bg-slate-900/20 p-4 rounded-2xl border-2 border-slate-100">
+                      <div className="space-y-3 bg-slate-50 dark:bg-slate-900/20 p-4 rounded-2xl border-2 border-slate-100 shrink-0">
                           <div className="flex items-center justify-between border-b pb-2 mb-2">
                               <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Collega selecteren</FormLabel>
                               <div className="relative w-40">
@@ -354,7 +354,7 @@ Team BeheerHub`;
                   </div>
               </ScrollArea>
               
-              <DialogFooter className="p-6 pt-4 border-t bg-slate-50/50">
+              <DialogFooter className="p-6 pt-4 border-t bg-slate-50/50 shrink-0">
                   <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSending} className="font-bold">Annuleren</Button>
                   <Button type="submit" disabled={isSending} className="font-black uppercase tracking-tight h-11 px-8">
                       {isSending ? (

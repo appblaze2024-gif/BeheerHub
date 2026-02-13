@@ -201,7 +201,7 @@ export default function MeldingenportaalPage() {
         onOpenChange={(open) => {
             setForwardDialogOpen(open);
             if (!open) {
-                setTimeout(() => setSelectedMeldingForForward(null), 300);
+                setSelectedMeldingForForward(null);
             }
         }}
         melding={selectedMeldingForForward}
