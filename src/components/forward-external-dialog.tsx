@@ -227,7 +227,7 @@ Team BeheerHub`;
                       </div>
 
                       <div className="space-y-3 bg-slate-50 dark:bg-slate-900/20 p-4 rounded-2xl border-2 border-slate-100">
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center justify-between border-b pb-2 mb-2">
                               <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Collega selecteren</FormLabel>
                               <div className="relative w-40">
                                   <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
@@ -239,7 +239,7 @@ Team BeheerHub`;
                                   />
                               </div>
                           </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto no-scrollbar">
+                          <div className="flex flex-col gap-1 max-h-48 overflow-y-auto no-scrollbar pr-1">
                               {filteredUsers.map((u) => {
                                   const isChecked = u.email && form.watch('to').split(',').map(e => e.trim()).includes(u.email);
                                   return (
@@ -247,7 +247,7 @@ Team BeheerHub`;
                                           key={u.id} 
                                           className={cn(
                                               "flex items-center space-x-3 p-2 rounded-xl transition-all cursor-pointer group border-2",
-                                              isChecked ? "bg-primary/5 border-primary/20 shadow-sm" : "hover:bg-white border-transparent"
+                                              isChecked ? "bg-white border-primary/20 shadow-sm" : "hover:bg-white border-transparent"
                                           )}
                                           onClick={() => u.email && toggleUserEmail(u.email)}
                                       >
@@ -255,15 +255,17 @@ Team BeheerHub`;
                                               checked={isChecked || false}
                                               onCheckedChange={() => u.email && toggleUserEmail(u.email)}
                                           />
-                                          <div className="min-w-0">
+                                          <div className="min-w-0 flex-1 flex items-center justify-between">
                                               <p className="text-[11px] font-black uppercase tracking-tight text-slate-900 truncate group-hover:text-primary transition-colors">{u.displayName || u.email}</p>
-                                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter truncate">{u.role}</p>
+                                              <Badge variant="outline" className="text-[8px] h-4 uppercase font-bold tracking-tighter opacity-60">
+                                                  {u.role}
+                                              </Badge>
                                           </div>
                                       </div>
                                   );
                               })}
                               {filteredUsers.length === 0 && (
-                                  <div className="col-span-2 py-4 text-center text-[10px] font-bold text-slate-400 uppercase">Geen collega's gevonden</div>
+                                  <div className="py-4 text-center text-[10px] font-bold text-slate-400 uppercase">Geen collega's gevonden</div>
                               )}
                           </div>
                       </div>
