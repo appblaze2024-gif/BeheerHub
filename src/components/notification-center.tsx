@@ -73,6 +73,8 @@ export function NotificationCenter() {
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [chatReply, setChatReply] = React.useState('');
 
+  const isPrivileged = profile?.role === 'Super admin' || profile?.role === 'toezichthouder';
+
   // Messages Query
   const messagesQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
@@ -95,8 +97,9 @@ export function NotificationCenter() {
 
   const activeMeldingen = React.useMemo(() => {
     if (!meldingenFromDb) return [];
+    // Only show 'Nieuw' status (portal issues) as requested
     return meldingenFromDb
-      .filter(m => ['Nieuw', 'In behandeling', 'Intern doorgezet'].includes(m.status))
+      .filter(m => m.status === 'Nieuw')
       .sort((a, b) => new Date(b.datum).getTime() - new Date(a.datum).getTime())
       .slice(0, 20);
   }, [meldingenFromDb]);
@@ -110,10 +113,11 @@ export function NotificationCenter() {
   const { data: users } = useCollection<UserProfile>(usersQuery);
 
   const unreadCount = React.useMemo(() => {
-    const unreadMessages = allMessages?.filter((m) => !m.read && m.toUserId === user?.uid).length || 0;
-    const newMeldingen = activeMeldingen?.filter(m => m.status === 'Nieuw').length || 0;
-    return unreadMessages + newMeldingen;
-  }, [allMessages, activeMeldingen, user?.uid]);
+    const unreadMessagesCount = allMessages?.filter((m) => !m.read && m.toUserId === user?.uid).length || 0;
+    // Meldingen count only for privileged users
+    const newMeldingenCount = isPrivileged ? activeMeldingen.length : 0;
+    return unreadMessagesCount + newMeldingenCount;
+  }, [allMessages, activeMeldingen, user?.uid, isPrivileged]);
 
   const filteredUsers = React.useMemo(() => {
     if (!users) return [];
@@ -356,12 +360,14 @@ export function NotificationCenter() {
                 >
                   Collega's
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="alerts" 
-                  className="flex-1 text-[10px] h-8 rounded-lg data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-md data-[state=inactive]:text-gray-400 data-[state=inactive]:hover:text-white transition-all font-black uppercase tracking-widest border-none"
-                >
-                  Meldingen
-                </TabsTrigger>
+                {isPrivileged && (
+                  <TabsTrigger 
+                    value="alerts" 
+                    className="flex-1 text-[10px] h-8 rounded-lg data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-md data-[state=inactive]:text-gray-400 data-[state=inactive]:hover:text-white transition-all font-black uppercase tracking-widest border-none"
+                  >
+                    Meldingen
+                  </TabsTrigger>
+                )}
               </TabsList>
             </div>
 
@@ -468,52 +474,54 @@ export function NotificationCenter() {
               </ScrollArea>
             </TabsContent>
 
-            <TabsContent value="alerts" className="m-0">
-              <ScrollArea className="h-[400px]">
-                {isLoadingMeldingen ? (
-                  <div className="flex items-center justify-center h-40">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : activeMeldingen && activeMeldingen.length > 0 ? (
-                  <div className="divide-y divide-slate-50">
-                    {activeMeldingen.map((melding) => (
-                      <div 
-                        key={melding.id} 
-                        className="p-4 hover:bg-slate-50 transition-all cursor-pointer group flex items-start gap-3"
-                        onClick={() => {
-                          router.push(`/issues/new?id=${melding.id}`);
-                        }}
-                      >
-                        <div className={cn(
-                          "p-2 rounded-lg shrink-0",
-                          melding.status === 'Nieuw' ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"
-                        )}>
-                          <AlertCircle className="h-4 w-4" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-0.5">
-                            <span className="font-black text-[10px] uppercase tracking-tighter text-slate-900">{melding.intakenummer}</span>
-                            <span className="text-[8px] font-black uppercase text-slate-400">
-                              {melding.datum ? format(new Date(melding.datum), 'dd MMM') : '-'}
-                            </span>
-                          </div>
-                          <p className="text-xs font-bold text-slate-700 truncate">{melding.subcategorie}</p>
-                          <p className="text-[10px] text-slate-400 truncate mt-0.5 italic">{melding.extra_informatie}</p>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-slate-200 group-hover:text-primary transition-all mt-1" />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-64 text-center p-8">
-                    <div className="bg-slate-100 p-4 rounded-full mb-4">
-                      <Clock className="h-8 w-8 text-slate-300" />
+            {isPrivileged && (
+              <TabsContent value="alerts" className="m-0">
+                <ScrollArea className="h-[400px]">
+                  {isLoadingMeldingen ? (
+                    <div className="flex items-center justify-center h-40">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                     </div>
-                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">Geen actieve meldingen</p>
-                  </div>
-                )}
-              </ScrollArea>
-            </TabsContent>
+                  ) : activeMeldingen && activeMeldingen.length > 0 ? (
+                    <div className="divide-y divide-slate-50">
+                      {activeMeldingen.map((melding) => (
+                        <div 
+                          key={melding.id} 
+                          className="p-4 hover:bg-slate-50 transition-all cursor-pointer group flex items-start gap-3"
+                          onClick={() => {
+                            router.push(`/issues/new?id=${melding.id}`);
+                          }}
+                        >
+                          <div className={cn(
+                            "p-2 rounded-lg shrink-0",
+                            melding.status === 'Nieuw' ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"
+                          )}>
+                            <AlertCircle className="h-4 w-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-0.5">
+                              <span className="font-black text-[10px] uppercase tracking-tighter text-slate-900">{melding.intakenummer}</span>
+                              <span className="text-[8px] font-black uppercase text-slate-400">
+                                {melding.datum ? format(new Date(melding.datum), 'dd MMM') : '-'}
+                              </span>
+                            </div>
+                            <p className="text-xs font-bold text-slate-700 truncate">{melding.subcategorie}</p>
+                            <p className="text-[10px] text-slate-400 truncate mt-0.5 italic">{melding.extra_informatie}</p>
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-slate-200 group-hover:text-primary transition-all mt-1" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-64 text-center p-8">
+                      <div className="bg-slate-100 p-4 rounded-full mb-4">
+                        <Clock className="h-8 w-8 text-slate-300" />
+                      </div>
+                      <p className="text-xs font-black uppercase tracking-widest text-slate-400">Geen nieuwe meldingen</p>
+                    </div>
+                  )}
+                </ScrollArea>
+              </TabsContent>
+            )}
           </Tabs>
         )}
       </PopoverContent>
