@@ -1,9 +1,11 @@
+
 'use client';
 
 import * as React from 'react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import { Search, ListFilter, ArrowLeft, Info } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { Melding } from '@/lib/types';
@@ -21,7 +23,6 @@ import {
 } from '@/components/ui/table';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { LoadingScreen } from '@/components/loading-screen';
-import { cn } from '@/lib/utils';
 
 const openStatuses = [
   "Intern doorgezet",

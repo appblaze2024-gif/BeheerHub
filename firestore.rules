@@ -16,26 +16,21 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
+    function userExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
     function hasRole(role) {
-      return isSignedIn() && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             getUserData().role == role;
+      return isSignedIn() && userExists() && getUserData().role == role;
     }
 
     function isPrivileged() {
-      return isSignedIn() && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             getUserData().role in ['Super admin', 'toezichthouder'];
+      return isSignedIn() && userExists() && (getUserData().role == 'Super admin' || getUserData().role == 'toezichthouder');
     }
 
     // Meldingen en werkbonnen - ALTIJD TOEGANKELIJK VOOR INLOGDE GEBRUIKERS
     match /meldingen/{meldingId} {
-      allow read, write: if isSignedIn();
-    }
-
-    // GLOBALE REGEL: Super admin mag alles
-    match /{document=**} {
-      allow read, write: if hasRole('Super admin');
+      allow get, list, create, update, delete: if isSignedIn();
     }
 
     // Gebruikersprofielen
@@ -100,6 +95,11 @@ service cloud.firestore {
     match /settings/{settingId} {
       allow read: if isSignedIn();
       allow write: if isPrivileged();
+    }
+
+    // GLOBALE REGEL: Super admin mag alles (als laatste check)
+    match /{document=**} {
+      allow read, write: if hasRole('Super admin');
     }
   }
 }

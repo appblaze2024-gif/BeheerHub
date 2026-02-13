@@ -899,7 +899,7 @@ export default function StartNavigationPage() {
 
   const { data: objectsOnMap } = useCollection<MapObject>(objectsOnRouteQuery);
 
-  const routeGeoJSON = React.useMemo(() => {
+  const routeGeoJSONFeatures = React.useMemo(() => {
     if (!selectedRouteDef) return null;
     try {
       const features = JSON.parse(selectedRouteDef.subGebieden);
@@ -915,7 +915,7 @@ export default function StartNavigationPage() {
       if (!map || !selectedRouteDef) return;
       const fit = () => {
           let features: any[] = [];
-          if (routeGeoJSON?.features) features = [...features, ...routeGeoJSON.features];
+          if (routeGeoJSONFeatures?.features) features = [...features, ...routeGeoJSONFeatures.features];
           if (objectsOnMap && objectsOnMap.length > 0) features = [...features, ...objectsOnMap.map(obj => turf.point([obj.longitude, obj.latitude]))];
           if (selectedRouteDef && 'startLatitude' in selectedRouteDef && (selectedRouteDef as any).startLatitude && (selectedRouteDef as any).startLongitude) {
               features.push(turf.point([(selectedRouteDef as any).startLongitude, (selectedRouteDef as any).startLatitude]));
@@ -930,7 +930,7 @@ export default function StartNavigationPage() {
       };
       if (map.isStyleLoaded()) fit();
       else map.once('style.load', fit);
-  }, [selectedRouteId, routeGeoJSON, objectsOnMap, selectedRouteDef]);
+  }, [selectedRouteId, routeGeoJSONFeatures, objectsOnMap, selectedRouteDef]);
 
   const handleStartRoute = async (simulate = false) => {
     setIsSimulationMode(simulate);
@@ -1004,8 +1004,8 @@ export default function StartNavigationPage() {
                     </div>
                 </Marker>
             )}
-            {routeGeoJSON && (
-                <Source id="route-area" type="geojson" data={routeGeoJSON}>
+            {routeGeoJSONFeatures && (
+                <Source id="route-area" type="geojson" data={routeGeoJSONFeatures}>
                     <Layer id="route-area-fill" type="fill" paint={{ 'fill-color': '#3b82f6', 'fill-opacity': 0.05 }} />
                     <Layer id="route-area-outline" type="line" paint={{ 'line-color': '#3b82f6', 'line-width': 1, 'line-dasharray': [2, 2] }} />
                 </Source>

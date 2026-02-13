@@ -13,6 +13,7 @@ import {
 import { collection, doc, deleteDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 
+import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -50,7 +51,6 @@ import {
 import type { Medewerker } from '@/lib/types';
 import { useProfile } from '@/firebase/profile-provider';
 import { LoadingScreen } from '@/components/loading-screen';
-import { cn } from '@/lib/utils';
 
 
 export default function EmployeesPage() {
