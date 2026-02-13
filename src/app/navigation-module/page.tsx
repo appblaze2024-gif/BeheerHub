@@ -166,7 +166,6 @@ function NavigatingView({
 
   const nextObject = objectsOnRoute[currentObjectIndex];
 
-  // Logic for the smooth navigation animation
   React.useEffect(() => {
     let lastTime = performance.now();
     
@@ -388,7 +387,7 @@ function NavigatingView({
         
         const roundedRemaining = Math.round(remaining);
         if (Math.abs(lastUpdateDistRef.current - roundedRemaining) > 2) {
-            setDistanceRemainingToDestination(roundedRemaining);
+            setDistanceRemainingToDestination(prev => prev !== roundedRemaining ? roundedRemaining : prev);
             lastUpdateDistRef.current = roundedRemaining;
         }
 
@@ -452,7 +451,7 @@ function NavigatingView({
           setCurrentRouteGeometry(route.geometry);
           setCurrentLeg(route.legs[0]);
           const remaining = Math.round(route.legs[0].distance);
-          setDistanceRemainingToDestination(remaining);
+          setDistanceRemainingToDestination(prev => Math.abs(prev - remaining) > 1 ? remaining : prev);
           lastUpdateDistRef.current = remaining;
           setHasReachedCurrentTarget(remaining < 80);
         }

@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/table';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { LoadingScreen } from '@/components/loading-screen';
+import { cn } from '@/lib/utils';
 
 const openStatuses = [
   "Intern doorgezet",

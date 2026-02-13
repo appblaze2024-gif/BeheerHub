@@ -208,7 +208,7 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
 
     try {
       const [hours, minutes] = shift.eind.split(':').map(Number);
-      if (isNaN(hours) || iisNaN(minutes)) return;
+      if (isNaN(hours) || isNaN(minutes)) return;
 
       const now = new Date();
       const endTimeToday = new Date();
