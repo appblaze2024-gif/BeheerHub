@@ -4,7 +4,7 @@ import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Loader2, Send, X, FileIcon, MapPin, Search, User } from 'lucide-react';
+import { Loader2, Send, X, FileIcon, MapPin, Search } from 'lucide-react';
 import { sendEmail } from '@/app/mail/actions';
 import { useToast } from '@/components/ui/use-toast';
 import { useFirestore, updateDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
@@ -32,7 +32,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import type { Melding, UploadedFile, UserProfile } from '@/lib/types';
+import type { Melding, UserProfile } from '@/lib/types';
 import { MapboxView } from './mapbox-view';
 import { cn } from '@/lib/utils';
 
@@ -204,8 +204,8 @@ Team BeheerHub`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col p-0 overflow-hidden">
-        <DialogHeader className="p-6 pb-2 shrink-0">
+      <DialogContent className="sm:max-w-[750px] h-[90vh] flex flex-col p-0 overflow-hidden">
+        <DialogHeader className="p-6 pb-2 shrink-0 border-b">
           <DialogTitle>Melding Extern Doorzetten</DialogTitle>
           <DialogDescription>Stel de e-mail op voor de externe partij of een interne collega.</DialogDescription>
         </DialogHeader>
@@ -213,9 +213,10 @@ Team BeheerHub`;
         {melding ? (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              <ScrollArea className="flex-1">
-                  <div className="space-y-6 p-6">
-                      <div className="h-40 w-full rounded-xl border-2 overflow-hidden relative shadow-inner shrink-0">
+              <ScrollArea className="flex-1 px-6">
+                  <div className="space-y-6 py-6">
+                      {/* Map Section */}
+                      <div className="h-48 w-full rounded-xl border-2 overflow-hidden relative shadow-inner shrink-0 bg-slate-100">
                           <MapboxView
                               longitude={melding.longitude}
                               latitude={melding.latitude}
@@ -227,6 +228,7 @@ Team BeheerHub`;
                           </div>
                       </div>
 
+                      {/* Collega List Section */}
                       <div className="space-y-3 bg-slate-50 dark:bg-slate-900/20 p-4 rounded-2xl border-2 border-slate-100 shrink-0">
                           <div className="flex items-center justify-between border-b pb-2 mb-2">
                               <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Collega selecteren</FormLabel>
@@ -240,7 +242,7 @@ Team BeheerHub`;
                                   />
                               </div>
                           </div>
-                          <div className="flex flex-col gap-1 max-h-48 overflow-y-auto no-scrollbar pr-1">
+                          <div className="flex flex-col gap-1 max-h-40 overflow-y-auto no-scrollbar pr-1">
                               {filteredUsers.map((u) => {
                                   const isChecked = u.email && form.watch('to').split(',').map(e => e.trim()).includes(u.email);
                                   return (
@@ -271,59 +273,63 @@ Team BeheerHub`;
                           </div>
                       </div>
 
-                      <FormField
-                      control={form.control}
-                      name="to"
-                      render={({ field }) => (
-                          <FormItem>
-                          <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Ontvanger(s)</FormLabel>
-                          <FormControl>
-                              <Input placeholder="voorbeeld@email.nl, ander@email.nl" {...field} className="h-10 font-bold" />
-                          </FormControl>
-                          <FormMessage />
-                          </FormItem>
-                      )}
-                      />
-                      <FormField
-                      control={form.control}
-                      name="cc"
-                      render={({ field }) => (
-                          <FormItem>
-                          <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">CC</FormLabel>
-                          <FormControl>
-                              <Input placeholder="" {...field} className="h-10 font-bold" />
-                          </FormControl>
-                          <FormMessage />
-                          </FormItem>
-                      )}
-                      />
-                      <FormField
-                      control={form.control}
-                      name="subject"
-                      render={({ field }) => (
-                          <FormItem>
-                          <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Onderwerp</FormLabel>
-                          <FormControl>
-                              <Input {...field} className="h-10 font-black" />
-                          </FormControl>
-                          <FormMessage />
-                          </FormItem>
-                      )}
-                      />
-                      <FormField
-                      control={form.control}
-                      name="body"
-                      render={({ field }) => (
-                          <FormItem>
-                          <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Bericht</FormLabel>
-                          <FormControl>
-                              <Textarea className="min-h-[200px] text-xs font-medium leading-relaxed resize-none" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                          </FormItem>
-                      )}
-                      />
+                      {/* Form Fields Section */}
+                      <div className="space-y-4">
+                        <FormField
+                        control={form.control}
+                        name="to"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Ontvanger(s)</FormLabel>
+                            <FormControl>
+                                <Input placeholder="voorbeeld@email.nl, ander@email.nl" {...field} className="h-10 font-bold" />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name="cc"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">CC</FormLabel>
+                            <FormControl>
+                                <Input placeholder="" {...field} className="h-10 font-bold" />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name="subject"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Onderwerp</FormLabel>
+                            <FormControl>
+                                <Input {...field} className="h-10 font-black" />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name="body"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Bericht</FormLabel>
+                            <FormControl>
+                                <Textarea className="min-h-[250px] text-xs font-medium leading-relaxed resize-none" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                      </div>
 
+                      {/* Attachments Section */}
                       {allFiles.length > 0 && (
                       <div className="space-y-3">
                           <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Bijlagen selecteren ({selectedAttachments.length}/{allFiles.length})</FormLabel>
@@ -373,7 +379,9 @@ Team BeheerHub`;
             </form>
           </Form>
         ) : (
-          <div className="p-12 text-center text-muted-foreground">Gegevens laden...</div>
+          <div className="flex items-center justify-center p-12 text-muted-foreground">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
         )}
       </DialogContent>
     </Dialog>
