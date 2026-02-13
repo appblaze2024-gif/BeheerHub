@@ -111,10 +111,8 @@ export default function MeldingenportaalPage() {
 
   const handleForwardDialogChange = (open: boolean) => {
     setForwardDialogOpen(open);
-    if (!open) {
-      // Clear data immediately but let the component handle its own internal unmounting state
-      setSelectedMeldingForForward(null);
-    }
+    // Don't clear selectedMeldingForForward immediately here to avoid unmount crashes
+    // It will be reset when the dialog is opened again.
   }
 
   return (

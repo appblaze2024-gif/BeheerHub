@@ -47,6 +47,13 @@ type ForwardFormValues = z.infer<typeof forwardSchema>;
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
+interface ForwardExternalDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  melding: Melding | null;
+  onSuccess: () => void;
+}
+
 export function ForwardExternalDialog({ open, onOpenChange, melding, onSuccess }: ForwardExternalDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -165,12 +172,12 @@ export function ForwardExternalDialog({ open, onOpenChange, melding, onSuccess }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[750px] h-[90vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
-        <DialogHeader className="p-6 pb-4 shrink-0 border-b relative bg-slate-50/80 backdrop-blur-md">
+      <DialogContent className="sm:max-w-[750px] h-[95vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
+        <DialogHeader className="p-6 border-b shrink-0 relative bg-slate-50/80 backdrop-blur-md">
           <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle className="text-xl font-black uppercase tracking-tight">Melding Doorzetten</DialogTitle>
-              <DialogDescription className="font-bold text-slate-500">Stuur de details van de melding naar een externe partij of collega.</DialogDescription>
+            <div className="space-y-1">
+              <DialogTitle className="text-xl font-black uppercase tracking-tight">Melding Extern Doorzetten</DialogTitle>
+              <DialogDescription className="font-bold text-slate-500">Stel de e-mail op voor de externe partij of een interne collega.</DialogDescription>
             </div>
             <DialogClose asChild>
               <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-slate-200">
@@ -180,23 +187,23 @@ export function ForwardExternalDialog({ open, onOpenChange, melding, onSuccess }
           </div>
         </DialogHeader>
         
-        <div className="flex-1 overflow-y-auto no-scrollbar">
+        <div className="flex-1 overflow-y-auto p-6 bg-white">
           {melding ? (
             <Form {...form}>
-              <form id="forward-form" onSubmit={form.handleSubmit(onSubmit)} className="p-6 space-y-8">
+              <form id="forward-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                 <div className="h-48 w-full rounded-2xl border-2 border-slate-100 overflow-hidden relative shadow-inner bg-slate-100">
                     <MapboxView longitude={melding.longitude} latitude={melding.latitude} interactive={false} />
                     <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border border-slate-200 shadow-sm flex items-center gap-2">
-                        <MapPin className="h-3 w-3 text-red-500" /> Locatie Melding
+                        <MapPin className="h-3 w-3 text-red-500" /> Locatie Melding (Wordt als kaart bijgevoegd)
                     </div>
                 </div>
 
                 <div className="space-y-4 bg-slate-50/50 p-5 rounded-2xl border-2 border-slate-100">
                     <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-3">
-                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Intern doorzetten naar collega</FormLabel>
+                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Collega selecteren</FormLabel>
                         <div className="relative w-48">
                             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                            <Input placeholder="Zoek op naam of rol..." className="h-8 pl-8 text-[10px] font-bold rounded-lg border-slate-200 focus:ring-primary/20" value={userSearchTerm} onChange={(e) => setUserSearchTerm(e.target.value)} />
+                            <Input placeholder="Zoek collega..." className="h-8 pl-8 text-[10px] font-bold rounded-lg border-slate-200 focus:ring-primary/20" value={userSearchTerm} onChange={(e) => setUserSearchTerm(e.target.value)} />
                         </div>
                     </div>
                     <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
@@ -218,7 +225,7 @@ export function ForwardExternalDialog({ open, onOpenChange, melding, onSuccess }
                 <div className="space-y-5">
                   <FormField control={form.control} name="to" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Ontvanger(s) (komma gescheiden)</FormLabel>
+                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Ontvanger(s)</FormLabel>
                         <FormControl><Input placeholder="voorbeeld@email.nl" {...field} className="h-11 font-bold rounded-xl border-slate-200" /></FormControl>
                         <FormMessage />
                       </FormItem>
@@ -226,7 +233,7 @@ export function ForwardExternalDialog({ open, onOpenChange, melding, onSuccess }
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <FormField control={form.control} name="cc" render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Kopie (CC)</FormLabel>
+                          <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">CC</FormLabel>
                           <FormControl><Input placeholder="" {...field} className="h-11 font-bold rounded-xl border-slate-200" /></FormControl>
                           <FormMessage />
                         </FormItem>
@@ -242,7 +249,7 @@ export function ForwardExternalDialog({ open, onOpenChange, melding, onSuccess }
                   <FormField control={form.control} name="body" render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Bericht</FormLabel>
-                        <FormControl><Textarea className="min-h-[300px] text-xs font-medium leading-relaxed resize-none rounded-2xl border-slate-200 focus:ring-primary/20" {...field} /></FormControl>
+                        <FormControl><Textarea className="min-h-[250px] text-xs font-medium leading-relaxed resize-none rounded-2xl border-slate-200 focus:ring-primary/20" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                   )} />
@@ -281,17 +288,10 @@ export function ForwardExternalDialog({ open, onOpenChange, melding, onSuccess }
                 disabled={isSending || !melding} 
                 className="w-full font-black uppercase tracking-tight h-12 px-8 shadow-xl shadow-primary/20 rounded-xl text-base"
             >
-                {isSending ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Bezig met verzenden...</> : <><Send className="mr-2 h-5 w-5" /> Melding Doorzetten</>}
+                {isSending ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Bezig met verzenden...</> : <><Send className="mr-2 h-5 w-5" /> Verstuur en Doorzetten</>}
             </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-}
-
-interface ForwardExternalDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  melding: Melding | null;
-  onSuccess: () => void;
 }
