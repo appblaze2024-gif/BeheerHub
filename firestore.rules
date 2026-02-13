@@ -16,10 +16,6 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
     function hasRole(role) {
       return isSignedIn() && 
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
@@ -32,6 +28,11 @@ service cloud.firestore {
              getUserData().role in ['Super admin', 'toezichthouder'];
     }
 
+    // Meldingen en werkbonnen - ALTIJD TOEGANKELIJK VOOR INLOGDE GEBRUIKERS
+    match /meldingen/{meldingId} {
+      allow read, write: if isSignedIn();
+    }
+
     // GLOBALE REGEL: Super admin mag alles
     match /{document=**} {
       allow read, write: if hasRole('Super admin');
@@ -39,16 +40,12 @@ service cloud.firestore {
 
     // Gebruikersprofielen
     match /users/{userId} {
-      // Iedereen mag profielen inzien (voor zoekfuncties en dialogen)
       allow read: if isSignedIn();
-      // Alleen eigenaar of admin mag schrijven
-      allow write: if isOwner(userId) || hasRole('Super admin');
+      allow write: if request.auth.uid == userId || hasRole('Super admin');
 
-      // Routes subcollectie (Rittenregistratie)
       match /routes/{routeId} {
-        // Geprivilegieerde gebruikers moeten alle ritten kunnen inzien voor rapportages
-        allow read: if isOwner(userId) || isPrivileged();
-        allow write: if isOwner(userId) || isPrivileged();
+        allow read: if request.auth.uid == userId || isPrivileged();
+        allow write: if request.auth.uid == userId || isPrivileged();
       }
     }
 
@@ -67,12 +64,6 @@ service cloud.firestore {
     match /medewerkers/{medewerkerId} {
       allow read: if isSignedIn();
       allow write: if isPrivileged() || hasRole('ondersteuner');
-    }
-
-    // Meldingen en werkbonnen
-    match /meldingen/{meldingId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
     }
 
     // IoT Sensoren

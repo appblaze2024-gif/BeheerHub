@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -7,7 +8,7 @@ import { z } from 'zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { format, addDays, isWeekend } from 'date-fns';
 import { nl } from 'date-fns/locale';
-import { ArrowLeft, CalendarIcon, Loader2, MapPin, Search, UploadCloud, FileIcon, Trash2, Plus, ChevronUp, ChevronDown, Camera } from 'lucide-react';
+import { ArrowLeft, Loader2, Search, UploadCloud, FileIcon, Trash2, Camera, MapPin, ChevronUp, ChevronDown } from 'lucide-react';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useFirebaseApp, useCollection, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { collection, doc } from 'firebase/firestore';
@@ -30,15 +31,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import type { UploadedFile, Object as MapObject, Melding } from '@/lib/types';
 import { MapboxView } from '@/components/mapbox-view';
 import * as turf from '@turf/turf';
-import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 
@@ -136,7 +134,6 @@ export default function NewIssuePage() {
 
   const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
   const [uploadedPhotos, setUploadedPhotos] = React.useState<UploadedFile[]>([]);
-  const [afhandelingFotos, setAfhandelingFotos] = React.useState<UploadedFile[]>([]);
   const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
   const [isDragging, setIsDragging] = React.useState(false);
   const [isDraggingPhoto, setIsDraggingPhoto] = React.useState(false);
@@ -331,7 +328,6 @@ export default function NewIssuePage() {
       setLocation({ latitude: viewedMeldingFromDb.latitude, longitude: viewedMeldingFromDb.longitude });
       setUploadedFiles(viewedMeldingFromDb.files || []);
       setUploadedPhotos(viewedMeldingFromDb.fotos || []);
-      setAfhandelingFotos(viewedMeldingFromDb.afhandeling_fotos || []);
       
       justSelectedSuggestion.current = true;
       setSearchQuery(`${viewedMeldingFromDb.straatnaam || ''}${viewedMeldingFromDb.huisnummer ? ' ' + viewedMeldingFromDb.huisnummer : ''}, ${viewedMeldingFromDb.plaats || ''}`);
@@ -1310,18 +1306,6 @@ export default function NewIssuePage() {
                                             ))}
                                         </div>
                                     ) : <p className="text-sm text-muted-foreground pt-2">Geen foto's.</p>}
-                                </div>
-                                <div className="space-y-2">
-                                    <h3 className="font-semibold text-base">Foto's van Medewerker</h3>
-                                    {afhandelingFotos.length > 0 ? (
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                            {afhandelingFotos.map(photo => (
-                                            <a key={photo.storagePath} href={photo.url} target="_blank" rel="noopener noreferrer" className="relative group aspect-square">
-                                                    <Image src={photo.url} alt={photo.name} fill className="object-cover rounded-md" />
-                                                </a>
-                                            ))}
-                                        </div>
-                                    ) : <p className="text-sm text-muted-foreground pt-2">Geen foto's van de medewerker.</p>}
                                 </div>
                             </div>
                         ) : (

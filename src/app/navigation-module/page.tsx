@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -16,29 +17,26 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { 
   ArrowLeft, 
-  ArrowUp, 
   Play, 
   CheckCircle2, 
   Pause, 
   MapPin, 
   Gauge, 
   Loader2,
-  RotateCcw,
-  RefreshCw,
-  Navigation,
+  History,
+  Navigation2,
+  List,
+  Clock,
+  Zap,
+  Smartphone,
   X as XIcon,
-  AlertTriangle,
+  ChevronLeft,
   Home,
   LocateFixed,
   SignalLow,
-  History,
-  Navigation2,
-  Volume2,
-  MessageSquareWarning,
-  Route as RouteIcon,
-  Maximize,
-  Minimize,
-  X
+  Navigation,
+  AlertTriangle,
+  RotateCcw
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -183,7 +181,7 @@ function NavigatingView({
             
             let diff = (targetLocation.heading || 0) - (prevSmooth.heading || 0);
             while (diff < -180) diff += 360;
-            while (diff > 180) -= 360;
+            while (diff > 180) diff -= 360;
             const newHeading = (prevSmooth.heading || 0) + diff * (lerpFactor * 0.5);
 
             const newSmooth = {
