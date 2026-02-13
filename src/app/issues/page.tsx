@@ -1063,28 +1063,47 @@ export default function IssuesPage() {
                             <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Foto's van Medewerker</CardTitle>
                           </CardHeader>
                           <CardContent className="flex-1 flex flex-col space-y-4 p-4 min-h-0">
-                            <div
-                              className={cn(
-                                "border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-50 transition-all flex-1 min-h-[120px]",
-                                isDraggingAfhandelingPhoto && "bg-blue-50 border-primary"
-                              )}
-                              onDragEnter={() => setIsDraggingAfhandelingPhoto(true)}
-                              onDragLeave={() => setIsDraggingAfhandelingPhoto(false)}
-                              onDragOver={(e) => e.preventDefault()}
-                              onDrop={handleAfhandelingPhotoDrop}
-                              onClick={() => document.getElementById('afhandeling-photo-file-input')?.click()}
-                            >
-                              <UploadCloud className="h-10 w-10 text-slate-300" />
-                              <p className="mt-2 text-xs font-black uppercase tracking-tight text-slate-900">Nieuwe foto uploaden</p>
-                              <input
+                            <div className="grid grid-cols-2 gap-3 flex-shrink-0">
+                                <div
+                                className={cn(
+                                    "border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-50 transition-all min-h-[120px]",
+                                    isDraggingAfhandelingPhoto && "bg-blue-50 border-primary"
+                                )}
+                                onDragEnter={() => setIsDraggingAfhandelingPhoto(true)}
+                                onDragLeave={() => setIsDraggingAfhandelingPhoto(false)}
+                                onDragOver={(e) => e.preventDefault()}
+                                onDrop={handleAfhandelingPhotoDrop}
+                                onClick={() => document.getElementById('afhandeling-photo-file-input')?.click()}
+                                >
+                                <UploadCloud className="h-8 w-8 text-slate-300" />
+                                <p className="mt-2 text-[10px] font-black uppercase tracking-tight text-slate-900">Galerij</p>
+                                </div>
+
+                                <div
+                                className="border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-50 transition-all min-h-[120px]"
+                                onClick={() => document.getElementById('afhandeling-camera-input')?.click()}
+                                >
+                                <Camera className="h-8 w-8 text-slate-300" />
+                                <p className="mt-2 text-[10px] font-black uppercase tracking-tight text-slate-900">Foto maken</p>
+                                </div>
+                            </div>
+                            
+                            <input
                                 type="file"
                                 id="afhandeling-photo-file-input"
                                 onChange={handleAfhandelingPhotoFileChange}
                                 className="hidden"
                                 multiple
                                 accept="image/*"
-                              />
-                            </div>
+                            />
+                            <input
+                                type="file"
+                                id="afhandeling-camera-input"
+                                onChange={handleAfhandelingPhotoFileChange}
+                                className="hidden"
+                                accept="image/*"
+                                capture="environment"
+                            />
                             
                             {uploadProgress && Object.keys(uploadProgress).length > 0 && (
                                 <div className="space-y-2">

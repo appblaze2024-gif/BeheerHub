@@ -402,7 +402,7 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                 </CardContent>
               </Card>
 
-              <Tabs defaultValue="maintenance" className="flex-1 flex flex-col min-h-0">
+              <Tabs key={selectedItem.id} defaultValue="maintenance" className="flex-1 flex flex-col min-h-0">
                 <div className="overflow-x-auto no-scrollbar pb-1 shrink-0">
                     <TabsList className="w-max inline-flex">
                         {canViewTab('maintenance') && <TabsTrigger value="maintenance">Onderhoud</TabsTrigger>}

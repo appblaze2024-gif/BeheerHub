@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { format, addDays, isWeekend } from 'date-fns';
 import { nl } from 'date-fns/locale';
-import { ArrowLeft, CalendarIcon, Loader2, MapPin, Search, UploadCloud, FileIcon, Trash2, Plus, ChevronUp, ChevronDown } from 'lucide-react';
+import { ArrowLeft, CalendarIcon, Loader2, MapPin, Search, UploadCloud, FileIcon, Trash2, Plus, ChevronUp, ChevronDown, Camera } from 'lucide-react';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useFirebaseApp, useCollection, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { collection, doc } from 'firebase/firestore';
@@ -1326,30 +1326,49 @@ export default function NewIssuePage() {
                             </div>
                         ) : (
                            <div className="h-full flex flex-col gap-4 p-1">
-                                <div
-                                    className={cn(
-                                        "border-2 border-dashed border-muted-foreground/30 rounded-lg p-4 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50 transition-colors flex-1",
-                                        isDraggingPhoto && "bg-muted/50 border-primary"
-                                    )}
-                                    onDragEnter={() => setIsDraggingPhoto(true)}
-                                    onDragLeave={() => setIsDraggingPhoto(false)}
-                                    onDragOver={(e) => e.preventDefault()}
-                                    onDrop={handlePhotoDrop}
-                                    onClick={() => document.getElementById('fotos-file-input')?.click()}
-                                >
-                                    <UploadCloud className="h-10 w-10 text-muted-foreground" />
-                                    <p className="mt-2 text-sm font-semibold">Sleep foto's hierheen of klik om te uploaden</p>
-                                    <p className="text-xs text-muted-foreground">Alleen afbeeldingen.</p>
-                                    <input
-                                        type="file"
-                                        id="fotos-file-input"
-                                        onChange={handlePhotoFileChange}
-                                        className="hidden"
-                                        multiple
-                                        disabled={isUploading}
-                                        accept="image/*"
-                                    />
+                                <div className="grid grid-cols-2 gap-3 flex-shrink-0">
+                                    <div
+                                        className={cn(
+                                            "border-2 border-dashed border-muted-foreground/30 rounded-lg p-4 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50 transition-colors min-h-[120px]",
+                                            isDraggingPhoto && "bg-muted/50 border-primary"
+                                        )}
+                                        onDragEnter={() => setIsDraggingPhoto(true)}
+                                        onDragLeave={() => setIsDraggingPhoto(false)}
+                                        onDragOver={(e) => e.preventDefault()}
+                                        onDrop={handlePhotoDrop}
+                                        onClick={() => document.getElementById('fotos-file-input')?.click()}
+                                    >
+                                        <UploadCloud className="h-8 w-8 text-muted-foreground" />
+                                        <p className="mt-2 text-[10px] font-black uppercase tracking-tight text-slate-900">Galerij</p>
+                                    </div>
+
+                                    <div
+                                        className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-4 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50 transition-colors min-h-[120px]"
+                                        onClick={() => document.getElementById('fotos-camera-input')?.click()}
+                                    >
+                                        <Camera className="h-8 w-8 text-muted-foreground" />
+                                        <p className="mt-2 text-[10px] font-black uppercase tracking-tight text-slate-900">Foto maken</p>
+                                    </div>
                                 </div>
+                                
+                                <input
+                                    type="file"
+                                    id="fotos-file-input"
+                                    onChange={handlePhotoFileChange}
+                                    className="hidden"
+                                    multiple
+                                    disabled={isUploading}
+                                    accept="image/*"
+                                />
+                                <input
+                                    type="file"
+                                    id="fotos-camera-input"
+                                    onChange={handlePhotoFileChange}
+                                    className="hidden"
+                                    disabled={isUploading}
+                                    accept="image/*"
+                                    capture="environment"
+                                />
                                 
                                 {Object.entries(uploadProgress).map(([name, progress]) => (
                                     <div key={name} className="space-y-1">
