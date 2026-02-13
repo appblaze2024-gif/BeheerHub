@@ -721,7 +721,7 @@ export default function NewIssuePage() {
     }
   };
 
-  const handleSuggestionSelect = (feature: any) => {
+  const handleSuggestionClick = (feature: any) => {
     justSelectedSuggestion.current = true;
     const [longitude, latitude] = feature.center;
     setLocation({ latitude, longitude });
@@ -1365,7 +1365,7 @@ export default function NewIssuePage() {
                                         {uploadedPhotos.map((file) => (
                                             <div
                                                 key={file.storagePath}
-                                                className="grid grid-cols-[1fr_auto_auto] gap-4 items-center px-2 py-1 border-b last:border-b-0"
+                                                className="grid grid-cols-[1fr_auto_auto] gap-4 items-center px-4 py-2 border-b last:border-b-0"
                                             >
                                                 <a href={file.url} target="_blank" rel="noopener noreferrer" className="truncate flex items-center gap-2 hover:underline text-xs">
                                                     <FileIcon className="h-4 w-4 shrink-0" /> {file.name}

@@ -13,7 +13,7 @@ import {
   MoreVertical,
   MoreHorizontal,
   ChevronRight,
-  Image as ImageIcon,
+  ImageIcon,
   Upload,
   RefreshCw,
   List,
@@ -24,6 +24,7 @@ import {
   Clock,
   Activity,
   History,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
