@@ -17,6 +17,7 @@ import {
   DialogTitle,
   DialogFooter,
   DialogDescription,
+  DialogClose,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import {
@@ -203,9 +204,13 @@ Team BeheerHub`;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[750px] max-h-[90vh] flex flex-col p-0 overflow-hidden">
-        <DialogHeader className="p-6 pb-2 shrink-0 border-b">
+        <DialogHeader className="p-6 pb-2 shrink-0 border-b relative">
           <DialogTitle>Melding Extern Doorzetten</DialogTitle>
           <DialogDescription>Stel de e-mail op voor de externe partij of een interne collega.</DialogDescription>
+          <DialogClose className="absolute right-4 top-4 rounded-full p-2 hover:bg-slate-100 transition-colors">
+            <X className="h-5 w-5 text-slate-500" />
+            <span className="sr-only">Sluiten</span>
+          </DialogClose>
         </DialogHeader>
         
         {melding ? (
@@ -359,8 +364,7 @@ Team BeheerHub`;
               </ScrollArea>
               
               <DialogFooter className="p-6 pt-4 border-t bg-slate-50/50 shrink-0">
-                  <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSending} className="font-bold">Annuleren</Button>
-                  <Button type="submit" disabled={isSending} className="font-black uppercase tracking-tight h-11 px-8">
+                  <Button type="submit" disabled={isSending} className="w-full font-black uppercase tracking-tight h-11 px-8 shadow-lg shadow-primary/20">
                       {isSending ? (
                           <>
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
