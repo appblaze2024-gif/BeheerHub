@@ -32,6 +32,16 @@ export type UserProfile = {
   nfcTagId?: string;
 };
 
+export interface Message {
+  id: string;
+  fromUserId: string;
+  fromName: string;
+  toUserId: string;
+  content: string;
+  createdAt: string;
+  read: boolean;
+}
+
 export interface Sensor {
   id: string;
   name: string;

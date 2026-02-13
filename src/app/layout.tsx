@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { Metadata } from 'next';
@@ -36,6 +37,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { LoadingScreen } from '@/components/loading-screen';
+import { NotificationCenter } from '@/components/notification-center';
 
 
 function Header() {
@@ -97,7 +99,7 @@ function Header() {
   return (
     <header className="bg-white/80 backdrop-blur-md flex h-16 shrink-0 items-center justify-between border-b px-4 md:px-8 z-40 sticky top-0">
       <div className="flex items-center gap-2 md:gap-6">
-        <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
+        <Sheet open={isSidebarOpen} onOpenChange={isSidebarOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="hover:bg-slate-100 rounded-xl h-10 w-10">
               <Menu className="h-6 w-6 text-slate-900" />
@@ -126,10 +128,7 @@ function Header() {
             />
         </div>
 
-        <Button variant="ghost" size="icon" className="rounded-xl relative h-10 w-10">
-          <Bell className="h-5 w-5 text-slate-600" />
-          <span className="absolute top-2.5 right-2.5 h-2 w-2 bg-red-500 rounded-full border-2 border-white" />
-        </Button>
+        <NotificationCenter />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

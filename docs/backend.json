@@ -25,6 +25,21 @@
       },
       "required": ["id", "email", "role"]
     },
+    "Message": {
+      "title": "Message",
+      "description": "Bericht of notificatie tussen gebruikers.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "fromUserId": { "type": "string" },
+        "fromName": { "type": "string" },
+        "toUserId": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["fromUserId", "toUserId", "content", "createdAt"]
+    },
     "Project": {
       "title": "Project",
       "description": "Beheer van infra- en reinigingsprojecten.",
@@ -51,82 +66,34 @@
     },
     "Medewerker": {
       "title": "Medewerker",
-      "description": "Personeelsgegevens en werkroosters.",
+      "description": "Personeelsbestand gegevens.",
       "type": "object",
       "properties": {
         "voornaam": { "type": "string" },
         "tussenvoegsel": { "type": "string" },
         "achternaam": { "type": "string" },
         "functie": { "type": "string" },
-        "status": { "type": "string" },
-        "planningOrder": { "type": "number" },
-        "urenPerDag": { "type": "object" },
-        "avatarUrl": { "type": "string" },
-        "personeelsnummer": { "type": "string" },
-        "email": { "type": "string" }
+        "status": { "type": "string" }
       }
     },
     "Melding": {
       "title": "Melding",
-      "description": "Meldingen openbare ruimte en werkbonnen.",
+      "description": "Meldingen openbare ruimte.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
         "intakenummer": { "type": "string" },
-        "status": { "type": "string" },
-        "hoofdcategorie": { "type": "string" },
-        "subcategorie": { "type": "string" },
-        "datum": { "type": "string" },
-        "tijdstip": { "type": "string" },
-        "latitude": { "type": "number" },
-        "longitude": { "type": "number" },
-        "extra_informatie": { "type": "string" },
-        "straatnaam": { "type": "string" },
-        "huisnummer": { "type": "string" },
-        "plaats": { "type": "string" },
-        "wijk": { "type": "string" },
-        "melder": { "type": "string" },
-        "files": { "type": "array" },
-        "fotos": { "type": "array" },
-        "afhandeling_fotos": { "type": "array" },
-        "tasks": { "type": "array" },
-        "hoeveelheden": { "type": "array" },
-        "gewerkteMinuten": { "type": "number" },
-        "workStartedAt": { "type": "string" }
-      }
-    },
-    "Route": {
-      "title": "Route",
-      "description": "Gereden ritten door medewerkers.",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "projectId": { "type": "string" },
-        "routeName": { "type": "string" },
-        "date": { "type": "string" },
-        "startTime": { "type": "string", "format": "date-time" },
-        "endTime": { "type": "string", "format": "date-time" },
-        "completedObjects": { "type": "array", "items": { "type": "string" } },
-        "skippedObjects": { "type": "array", "items": { "type": "string" } },
-        "totalObjects": { "type": "number" }
+        "status": { "type": "string" }
       }
     },
     "Sensor": {
       "title": "Sensor",
-      "description": "IoT sensor data voor vulgraden.",
+      "description": "IoT sensor data.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
-        "type": { "type": "string" },
-        "vulgraad": { "type": "number" },
-        "status": { "type": "string" },
-        "latitude": { "type": "number" },
-        "longitude": { "type": "number" },
-        "currentDistanceCm": { "type": "number" },
-        "binDepthCm": { "type": "number" },
-        "measurementFrequency": { "type": "number" }
+        "vulgraad": { "type": "number" }
       }
     }
   },
@@ -138,25 +105,13 @@
       "schema": { "$ref": "#/entities/UserProfile" },
       "description": "Gebruikersprofielen."
     },
-    "/users/{userId}/routes/{routeId}": {
-      "schema": { "$ref": "#/entities/Route" },
-      "description": "Gereden ritten per gebruiker."
+    "/users/{userId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/Message" },
+      "description": "Ontvangen berichten per gebruiker."
     },
     "/projects/{projectId}": {
       "schema": { "$ref": "#/entities/Project" },
       "description": "Projectgegevens."
-    },
-    "/projects/{projectId}/diensten/{dienstId}": {
-      "description": "Ingeplande diensten op projecten."
-    },
-    "/projects/{projectId}/bestanden/{bestandId}": {
-      "description": "Bestanden gekoppeld aan projecten."
-    },
-    "/projects/{projectId}/folders/{folderId}": {
-      "description": "Mappenstructuur voor projectbestanden."
-    },
-    "/projects/{projectId}/besteksmeldingen/{meldingId}": {
-      "description": "Besteksmeldingen per project."
     },
     "/medewerkers/{medewerkerId}": {
       "schema": { "$ref": "#/entities/Medewerker" },
@@ -169,18 +124,6 @@
     "/sensors/{sensorId}": {
       "schema": { "$ref": "#/entities/Sensor" },
       "description": "IoT sensoren."
-    },
-    "/voertuigen/{voertuigId}": {
-      "description": "Wagenpark."
-    },
-    "/machines/{machineId}": {
-      "description": "Machinepark."
-    },
-    "/objects/{objectId}": {
-      "description": "Areaal objecten."
-    },
-    "/settings/{settingId}": {
-      "description": "Systeeminstellingen (statussen, categorieën, etc.)"
     }
   }
 }
