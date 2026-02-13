@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -8,7 +7,7 @@ import { z } from 'zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { format, addDays, isWeekend } from 'date-fns';
 import { nl } from 'date-fns/locale';
-import { ArrowLeft, Loader2, Search, UploadCloud, FileIcon, Trash2, Camera, MapPin, ChevronUp, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Loader2, Search, UploadCloud, FileIcon, Trash2, Camera, MapPin, ChevronUp, ChevronDown, Plus, PlusCircle } from 'lucide-react';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useFirebaseApp, useCollection, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { collection, doc } from 'firebase/firestore';
