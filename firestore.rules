@@ -28,9 +28,9 @@ service cloud.firestore {
       return isSignedIn() && userExists() && (getUserData().role == 'Super admin' || getUserData().role == 'toezichthouder');
     }
 
-    // Meldingen en werkbonnen - CRITICAL: ALTIJD TOEGANKELIJK VOOR INLOGDE GEBRUIKERS
+    // Meldingen en werkbonnen - ALTIJD TOEGANKELIJK VOOR INLOGDE GEBRUIKERS
     match /meldingen/{meldingId} {
-      allow get, list, read, write: if isSignedIn();
+      allow read, write: if isSignedIn();
     }
 
     // Gebruikersprofielen

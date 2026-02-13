@@ -88,16 +88,18 @@ export function NotificationCenter() {
   // Active Issues Query for the "Meldingen" tab
   const meldingenQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    // Show new and in-progress issues
-    return query(
-      collection(firestore, 'meldingen'),
-      where('status', 'in', ['Nieuw', 'In behandeling', 'Intern doorgezet']),
-      orderBy('datum', 'desc'),
-      limit(20)
-    );
+    return collection(firestore, 'meldingen');
   }, [firestore]);
 
-  const { data: activeMeldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenQuery);
+  const { data: meldingenFromDb, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenQuery);
+
+  const activeMeldingen = React.useMemo(() => {
+    if (!meldingenFromDb) return [];
+    return meldingenFromDb
+      .filter(m => ['Nieuw', 'In behandeling', 'Intern doorgezet'].includes(m.status))
+      .sort((a, b) => new Date(b.datum).getTime() - new Date(a.datum).getTime())
+      .slice(0, 20);
+  }, [meldingenFromDb]);
 
   // Users Query for starting new chats
   const usersQuery = useMemoFirebase(() => {

@@ -942,7 +942,7 @@ export default function NewIssuePage() {
                                             <SelectContent>{reporterTypeOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                         </Select>
                                     )} />
-                                    <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0" disabled={isReadOnly} onClick={() => setIsManageReporterTypesOpen(true)}><Search className="h-4 w-4"/></Button>
+                                    <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0" disabled={isReadOnly} onClick={() => setIsManageReporterTypesOpen(true)}><Plus className="h-4 w-4"/></Button>
                                 </div>
                             </FormRow>
                             <FormRow label="Hoofdindeling">
@@ -953,7 +953,7 @@ export default function NewIssuePage() {
                                             <SelectContent>{hoofdcategorieOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                         </Select>
                                     )} />
-                                     <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0" disabled={isReadOnly} onClick={() => setIsManageCategoriesOpen(true)}><Search className="h-4 w-4"/></Button>
+                                     <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0" disabled={isReadOnly} onClick={() => setIsManageCategoriesOpen(true)}><Plus className="h-4 w-4"/></Button>
                                 </div>
                             </FormRow>
                             <FormRow label="Indeling">
@@ -975,7 +975,7 @@ export default function NewIssuePage() {
                                         setIsManageSubcategoriesOpen(true);
                                     }}
                                 >
-                                    <Search className="h-4 w-4"/>
+                                    <PlusCircle className="h-4 w-4"/>
                                 </Button>
                             </div>
                             </FormRow>
@@ -987,7 +987,7 @@ export default function NewIssuePage() {
                                             <SelectContent>{departmentOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                         </Select>
                                     )} />
-                                    <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0" disabled={isReadOnly} onClick={() => setIsManageDepartmentsOpen(true)}><Search className="h-4 w-4"/></Button>
+                                    <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0" disabled={isReadOnly} onClick={() => setIsManageDepartmentsOpen(true)}><Plus className="h-4 w-4"/></Button>
                                 </div>
                             </FormRow>
                             <FormRow label="Behandelaar">
@@ -998,7 +998,7 @@ export default function NewIssuePage() {
                                             <SelectContent>{handlerOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                         </Select>
                                     )} />
-                                    <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0" disabled={isReadOnly} onClick={() => setIsManageHandlersOpen(true)}><Search className="h-4 w-4"/></Button>
+                                    <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0" disabled={isReadOnly} onClick={() => setIsManageHandlersOpen(true)}><Plus className="h-4 w-4"/></Button>
                                 </div>
                             </FormRow>
                             <FormRow label="Status">
@@ -1009,7 +1009,7 @@ export default function NewIssuePage() {
                                             <SelectContent>{statusOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                         </Select>
                                     )} />
-                                    <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0" disabled={isReadOnly && !canEditStatus} onClick={() => setIsManageStatusesOpen(true)}><Search className="h-4 w-4"/></Button>
+                                    <Button type="button" size="icon" variant="outline" className="h-7 w-7 rounded-l-none border-l-0" disabled={isReadOnly && !canEditStatus} onClick={() => setIsManageStatusesOpen(true)}><Plus className="h-4 w-4"/></Button>
                                 </div>
                             </FormRow>
                             <FormRow label="Afgehandeld door">
