@@ -28,9 +28,9 @@ service cloud.firestore {
       return isSignedIn() && userExists() && (getUserData().role == 'Super admin' || getUserData().role == 'toezichthouder');
     }
 
-    // Meldingen en werkbonnen - ALTIJD TOEGANKELIJK VOOR INLOGDE GEBRUIKERS
+    // Meldingen en werkbonnen - CRITICAL: ALTIJD TOEGANKELIJK VOOR INLOGDE GEBRUIKERS
     match /meldingen/{meldingId} {
-      allow get, list, create, update, delete: if isSignedIn();
+      allow read, write: if isSignedIn();
     }
 
     // Gebruikersprofielen
@@ -38,6 +38,13 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if request.auth.uid == userId || hasRole('Super admin');
 
+      // Berichten / Notificaties
+      match /messages/{messageId} {
+        allow read, update, delete: if request.auth.uid == userId || hasRole('Super admin');
+        allow create: if isSignedIn(); 
+      }
+
+      // Routes historie
       match /routes/{routeId} {
         allow read: if request.auth.uid == userId || isPrivileged();
         allow write: if request.auth.uid == userId || isPrivileged();
@@ -97,7 +104,7 @@ service cloud.firestore {
       allow write: if isPrivileged();
     }
 
-    // GLOBALE REGEL: Super admin mag alles (als laatste check)
+    // GLOBALE REGEL: Super admin mag alles
     match /{document=**} {
       allow read, write: if hasRole('Super admin');
     }

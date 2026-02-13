@@ -153,17 +153,17 @@ export function NotificationCenter() {
       <PopoverContent className="w-80 sm:w-96 p-0 mt-2 rounded-2xl shadow-2xl border-slate-100 overflow-hidden" align="end">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="p-4 border-b bg-slate-50/50 flex items-center justify-between">
-            <h3 className="text-sm font-black uppercase tracking-tight">Berichtencentrum</h3>
-            <TabsList className="bg-slate-950 h-9 p-1 rounded-xl gap-1 border-none shadow-inner">
+            <h3 className="text-sm font-black uppercase tracking-tight">Berichten</h3>
+            <TabsList className="bg-black h-10 p-1 rounded-xl gap-1 border-none shadow-lg">
               <TabsTrigger 
                 value="received" 
-                className="text-[10px] px-4 h-7 rounded-lg data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-md data-[state=inactive]:text-slate-400 data-[state=inactive]:hover:text-slate-200 transition-all font-black uppercase tracking-widest border-none"
+                className="text-[11px] px-6 h-8 rounded-lg data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-md data-[state=inactive]:text-gray-400 data-[state=inactive]:hover:text-white transition-all font-black uppercase tracking-widest border-none"
               >
                 Inbox
               </TabsTrigger>
               <TabsTrigger 
                 value="new" 
-                className="text-[10px] px-4 h-7 rounded-lg data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-md data-[state=inactive]:text-slate-400 data-[state=inactive]:hover:text-slate-200 transition-all font-black uppercase tracking-widest border-none"
+                className="text-[11px] px-6 h-8 rounded-lg data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-md data-[state=inactive]:text-gray-400 data-[state=inactive]:hover:text-white transition-all font-black uppercase tracking-widest border-none"
               >
                 Nieuw
               </TabsTrigger>
@@ -229,7 +229,7 @@ export function NotificationCenter() {
                   <div className="bg-slate-100 p-4 rounded-full mb-4">
                     <Mail className="h-8 w-8 text-slate-300" />
                   </div>
-                  <p className="text-xs font-black uppercase tracking-widest text-slate-400">Geen nieuwe berichten</p>
+                  <p className="text-xs font-black uppercase tracking-widest text-slate-400">Geen berichten</p>
                 </div>
               )}
             </ScrollArea>
