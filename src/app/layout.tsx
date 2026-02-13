@@ -99,7 +99,7 @@ function Header() {
   return (
     <header className="bg-white/80 backdrop-blur-md flex h-16 shrink-0 items-center justify-between border-b px-4 md:px-8 z-40 sticky top-0">
       <div className="flex items-center gap-2 md:gap-6">
-        <Sheet open={isSidebarOpen} onOpenChange={isSidebarOpen}>
+        <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="hover:bg-slate-100 rounded-xl h-10 w-10">
               <Menu className="h-6 w-6 text-slate-900" />
