@@ -30,7 +30,7 @@ service cloud.firestore {
 
     // Meldingen en werkbonnen - ALTIJD TOEGANKELIJK VOOR INLOGDE GEBRUIKERS
     match /meldingen/{meldingId} {
-      allow get, list, read, write: if isSignedIn();
+      allow read, write: if isSignedIn();
     }
 
     // Gebruikersprofielen
@@ -38,14 +38,16 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if request.auth.uid == userId || hasRole('Super admin');
 
+      // Berichten / Notificaties
+      match /messages/{messageId} {
+        allow read, list, update, delete: if request.auth.uid == userId || hasRole('Super admin');
+        allow create: if isSignedIn(); 
+      }
+
+      // Routes historie
       match /routes/{routeId} {
         allow read: if request.auth.uid == userId || isPrivileged();
         allow write: if request.auth.uid == userId || isPrivileged();
-      }
-
-      match /messages/{messageId} {
-        allow read, list, update, delete: if request.auth.uid == userId || hasRole('Super admin');
-        allow create: if isSignedIn(); // Iedereen mag een bericht sturen naar een ander
       }
     }
 
@@ -102,7 +104,7 @@ service cloud.firestore {
       allow write: if isPrivileged();
     }
 
-    // GLOBALE REGEL: Super admin mag alles (als laatste check)
+    // GLOBALE REGEL: Super admin mag alles
     match /{document=**} {
       allow read, write: if hasRole('Super admin');
     }

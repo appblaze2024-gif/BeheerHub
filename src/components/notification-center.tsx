@@ -52,6 +52,8 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
@@ -83,7 +85,7 @@ export function NotificationCenter() {
 
   const { data: allMessages, isLoading: isLoadingMessages } = useCollection<Message>(messagesQuery);
 
-  // Active Issues Query for the new "Meldingen" tab
+  // Active Issues Query for the "Meldingen" tab
   const meldingenQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     // Show new and in-progress issues
@@ -197,7 +199,7 @@ export function NotificationCenter() {
       const recipientMsgRef = collection(firestore, 'users', recipientId, 'messages');
       await addDocumentNonBlocking(recipientMsgRef, messageData);
       
-      // Copy to own 'sent' messages for chat history
+      // Copy to own messages for history
       const senderMsgRef = collection(firestore, 'users', user.uid, 'messages');
       await addDocumentNonBlocking(senderMsgRef, { ...messageData, read: true });
 

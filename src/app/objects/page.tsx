@@ -49,7 +49,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { MapboxView } from '@/components/mapbox-view';
 import { ObjectImportDialog } from '@/components/object-import-dialog';
 import { ObjectExportDialog } from '@/components/object-export-dialog';
@@ -511,7 +511,7 @@ export default function ObjectsPage() {
                        <div>
                          <p className={cn("font-black uppercase tracking-tight text-xs", selectedObject?.id === obj.id && !isTablet ? "text-white" : "text-slate-900")}>{obj.id}</p>
                          <p className={cn("text-[10px] font-bold uppercase tracking-widest truncate", selectedObject?.id === obj.id && !isTablet ? "text-white/70" : "text-slate-400")}>
-                           {obj.straatnaam ? `${obj.straatnaam} ${obj.huisnummer || ''}` : (obj.locatieSubType || 'N.B.')}
+                           {obj.straatnaam ? `${obj.straatnaam} ${obj.huisnummer || ''}` : 'Adres onbekend'}
                          </p>
                        </div>
                      </div>
@@ -780,7 +780,7 @@ export default function ObjectsPage() {
                         ))
                     ) : (
                         <div className="p-8 text-center">
-                            <Info className="h-6 w-6 text-slate-200 mx-auto mb-2" />
+                            <AlertCircle className="h-6 w-6 text-slate-200 mx-auto mb-2" />
                             <p className="text-[10px] font-bold text-slate-400 uppercase leading-relaxed">Geen routes voor dit project</p>
                         </div>
                     )}
