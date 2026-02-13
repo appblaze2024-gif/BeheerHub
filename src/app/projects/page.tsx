@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { FilePenLine, Plus, Trash2, Upload, Download, MapPin, Map as MapIcon, MoreHorizontal, Copy, Home, Truck, Search, ChevronRight, CornerDownRight, PlusCircle } from 'lucide-react';
+import { FilePenLine, Plus, Trash2, Upload, Download, MapPin, Map as MapIcon, MoreHorizontal, Copy, Home, Truck, Search, ChevronRight, CornerDownRight, PlusCircle, Loader2 } from 'lucide-react';
 import {
   useFirestore,
   useCollection,
@@ -1060,7 +1060,7 @@ function PrullenbakkenroutesTab({
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button variant="ghost" size="icon" onClick={() => addSubRoute(route)} className="h-9 w-9 text-blue-600 hover:bg-blue-50">
-                                            <PlusCircle className="h-4.5 w-4.5" />
+                                            <PlusCircle className="h-4 w-4" />
                                         </Button>
                                     </TooltipTrigger>
                                     <TooltipContent>Sub-route +</TooltipContent>
@@ -1069,7 +1069,7 @@ function PrullenbakkenroutesTab({
                         )}
                         {canEdit && (
                         <Button variant="ghost" size="icon" onClick={() => removeRow(route.id)} className="h-9 w-9 text-slate-300 hover:text-red-600 hover:bg-red-50 transition-colors">
-                            <Trash2 className="h-4.5 w-4.5" />
+                            <Trash2 className="h-4 w-4" />
                         </Button>
                         )}
                     </div>
