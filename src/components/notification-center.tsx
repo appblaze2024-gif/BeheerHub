@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -488,7 +487,7 @@ export function NotificationCenter() {
                           key={melding.id} 
                           className="p-4 hover:bg-slate-50 transition-all cursor-pointer group flex items-start gap-3"
                           onClick={() => {
-                            router.push(`/issues/new?id=${melding.id}`);
+                            router.push('/issues/portal');
                           }}
                         >
                           <div className={cn(
