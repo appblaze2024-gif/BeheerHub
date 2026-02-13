@@ -17,7 +17,6 @@ import {
   DialogTitle,
   DialogFooter,
   DialogDescription,
-  DialogClose,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,7 +30,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import type { Melding, UserProfile } from '@/lib/types';
 import { MapboxView } from './mapbox-view';
@@ -201,190 +199,183 @@ Team BeheerHub`;
     }
   }
 
+  // Pre-render nothing if no melding, but only if not open to avoid breaking animations
+  if (!open) return null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[750px] max-h-[90vh] flex flex-col p-0 overflow-hidden">
-        <DialogHeader className="p-6 pb-2 shrink-0 border-b relative">
+        <DialogHeader className="p-6 pb-4 shrink-0 border-b relative bg-slate-50/50">
           <DialogTitle>Melding Extern Doorzetten</DialogTitle>
           <DialogDescription>Stel de e-mail op voor de externe partij of een interne collega.</DialogDescription>
-          <DialogClose className="absolute right-4 top-4 rounded-full p-2 hover:bg-slate-100 transition-colors">
-            <X className="h-5 w-5 text-slate-500" />
-            <span className="sr-only">Sluiten</span>
-          </DialogClose>
         </DialogHeader>
         
-        {melding ? (
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              <ScrollArea className="flex-1">
-                  <div className="space-y-6 px-6 py-6">
-                      {/* Map Section */}
-                      <div className="h-48 w-full rounded-xl border-2 overflow-hidden relative shadow-inner shrink-0 bg-slate-100">
-                          <MapboxView
-                              longitude={melding.longitude}
-                              latitude={melding.latitude}
-                              interactive={false}
-                          />
-                          <div className="absolute top-2 left-2 bg-background/90 backdrop-blur-sm px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border shadow-sm flex items-center gap-1.5">
-                              <MapPin className="h-3 w-3 text-red-500" />
-                              Locatie Melding (Wordt als kaart bijgevoegd)
-                          </div>
-                      </div>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            {/* Standard div with overflow-y-auto is safer than ScrollArea component for flex-1 scrolling inside Dialog */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {melding && (
+                  <>
+                    {/* Map Section */}
+                    <div className="h-48 w-full rounded-xl border-2 overflow-hidden relative shadow-inner shrink-0 bg-slate-100">
+                        <MapboxView
+                            longitude={melding.longitude}
+                            latitude={melding.latitude}
+                            interactive={false}
+                        />
+                        <div className="absolute top-2 left-2 bg-background/90 backdrop-blur-sm px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border shadow-sm flex items-center gap-1.5">
+                            <MapPin className="h-3 w-3 text-red-500" />
+                            Locatie Melding
+                        </div>
+                    </div>
 
-                      {/* Collega List Section */}
-                      <div className="space-y-3 bg-slate-50 dark:bg-slate-900/20 p-4 rounded-2xl border-2 border-slate-100 shrink-0">
-                          <div className="flex items-center justify-between border-b pb-2 mb-2">
-                              <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Collega selecteren</FormLabel>
-                              <div className="relative w-40">
-                                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
-                                  <Input 
-                                      placeholder="Zoek collega..." 
-                                      className="h-7 pl-7 text-[10px] font-bold rounded-lg border-slate-200"
-                                      value={userSearchTerm}
-                                      onChange={(e) => setUserSearchTerm(e.target.value)}
-                                  />
-                              </div>
-                          </div>
-                          <div className="flex flex-col gap-1 max-h-40 overflow-y-auto no-scrollbar pr-1">
-                              {filteredUsers.map((u) => {
-                                  const isChecked = u.email && form.watch('to').split(',').map(e => e.trim()).includes(u.email);
-                                  return (
-                                      <div 
-                                          key={u.id} 
-                                          className={cn(
-                                              "flex items-center space-x-3 p-2 rounded-xl transition-all cursor-pointer group border-2",
-                                              isChecked ? "bg-white border-primary/20 shadow-sm" : "hover:bg-white border-transparent"
-                                          )}
-                                          onClick={() => u.email && toggleUserEmail(u.email)}
-                                      >
-                                          <Checkbox 
-                                              checked={isChecked || false}
-                                              onCheckedChange={() => u.email && toggleUserEmail(u.email)}
-                                          />
-                                          <div className="min-w-0 flex-1 flex items-center justify-between">
-                                              <p className="text-[11px] font-black uppercase tracking-tight text-slate-900 truncate group-hover:text-primary transition-colors">{u.displayName || u.email}</p>
-                                              <Badge variant="outline" className="text-[8px] h-4 uppercase font-bold tracking-tighter opacity-60">
-                                                  {u.role}
-                                              </Badge>
-                                          </div>
-                                      </div>
-                                  );
-                              })}
-                              {filteredUsers.length === 0 && (
-                                  <div className="py-4 text-center text-[10px] font-bold text-slate-400 uppercase">Geen collega's gevonden</div>
-                              )}
-                          </div>
-                      </div>
+                    {/* Collega List Section */}
+                    <div className="space-y-3 bg-slate-50 dark:bg-slate-900/20 p-4 rounded-2xl border-2 border-slate-100 shrink-0">
+                        <div className="flex items-center justify-between border-b pb-2 mb-2">
+                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Collega selecteren</FormLabel>
+                            <div className="relative w-40">
+                                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
+                                <Input 
+                                    placeholder="Zoek..." 
+                                    className="h-7 pl-7 text-[10px] font-bold rounded-lg border-slate-200"
+                                    value={userSearchTerm}
+                                    onChange={(e) => setUserSearchTerm(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-1 max-h-40 overflow-y-auto no-scrollbar pr-1">
+                            {filteredUsers.map((u) => {
+                                const isChecked = u.email && form.watch('to').split(',').map(e => e.trim()).includes(u.email);
+                                return (
+                                    <div 
+                                        key={u.id} 
+                                        className={cn(
+                                            "flex items-center space-x-3 p-2 rounded-xl transition-all cursor-pointer group border-2",
+                                            isChecked ? "bg-white border-primary/20 shadow-sm" : "hover:bg-white border-transparent"
+                                        )}
+                                        onClick={() => u.email && toggleUserEmail(u.email)}
+                                    >
+                                        <Checkbox 
+                                            checked={isChecked || false}
+                                            onCheckedChange={() => u.email && toggleUserEmail(u.email)}
+                                        />
+                                        <div className="min-w-0 flex-1 flex items-center justify-between">
+                                            <p className="text-[11px] font-black uppercase tracking-tight text-slate-900 truncate group-hover:text-primary transition-colors">{u.displayName || u.email}</p>
+                                            <Badge variant="outline" className="text-[8px] h-4 uppercase font-bold tracking-tighter opacity-60">
+                                                {u.role}
+                                            </Badge>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
 
-                      {/* Form Fields Section */}
-                      <div className="space-y-4">
-                        <FormField
-                        control={form.control}
-                        name="to"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Ontvanger(s)</FormLabel>
-                            <FormControl>
-                                <Input placeholder="voorbeeld@email.nl, ander@email.nl" {...field} className="h-10 font-bold" />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                        />
-                        <FormField
-                        control={form.control}
-                        name="cc"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">CC</FormLabel>
-                            <FormControl>
-                                <Input placeholder="" {...field} className="h-10 font-bold" />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                        />
-                        <FormField
-                        control={form.control}
-                        name="subject"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Onderwerp</FormLabel>
-                            <FormControl>
-                                <Input {...field} className="h-10 font-black" />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                        />
-                        <FormField
-                        control={form.control}
-                        name="body"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Bericht</FormLabel>
-                            <FormControl>
-                                <Textarea className="min-h-[250px] text-xs font-medium leading-relaxed resize-none" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                        />
-                      </div>
-
-                      {/* Attachments Section */}
-                      {allFiles.length > 0 && (
-                      <div className="space-y-3 pb-6">
-                          <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Bijlagen selecteren ({selectedAttachments.length}/{allFiles.length})</FormLabel>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-2xl border-2 border-slate-100 p-2 bg-slate-50/30">
-                              {allFiles.map((file) => (
-                              <div 
-                                  key={file.storagePath} 
-                                  className={cn(
-                                      "flex items-center space-x-3 p-2 rounded-xl transition-all cursor-pointer border-2",
-                                      selectedAttachments.includes(file.storagePath) ? "bg-white border-primary/20 shadow-sm" : "border-transparent hover:bg-white"
-                                  )}
-                                  onClick={() => toggleAttachment(file.storagePath)}
-                              >
-                                  <Checkbox 
-                                      id={file.storagePath} 
-                                      checked={selectedAttachments.includes(file.storagePath)}
-                                      onCheckedChange={() => toggleAttachment(file.storagePath)}
-                                  />
-                                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                                      <FileIcon className="h-4 w-4 shrink-0 text-slate-400" />
-                                      <span className="text-[11px] font-bold text-slate-700 truncate">{file.name}</span>
-                                  </div>
-                              </div>
-                              ))}
-                          </div>
-                      </div>
+                    {/* Form Fields Section */}
+                    <div className="space-y-4">
+                      <FormField
+                      control={form.control}
+                      name="to"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Ontvanger(s)</FormLabel>
+                          <FormControl>
+                              <Input placeholder="voorbeeld@email.nl" {...field} className="h-10 font-bold" />
+                          </FormControl>
+                          <FormMessage />
+                          </FormItem>
                       )}
-                  </div>
-              </ScrollArea>
-              
-              <DialogFooter className="p-6 pt-4 border-t bg-slate-50/50 shrink-0">
-                  <Button type="submit" disabled={isSending} className="w-full font-black uppercase tracking-tight h-11 px-8 shadow-lg shadow-primary/20">
-                      {isSending ? (
-                          <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Bezig...
-                          </>
-                      ) : (
-                          <>
-                              <Send className="mr-2 h-4 w-4" />
-                              Verstuur en Doorzetten
-                          </>
+                      />
+                      <FormField
+                      control={form.control}
+                      name="cc"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">CC</FormLabel>
+                          <FormControl>
+                              <Input placeholder="" {...field} className="h-10 font-bold" />
+                          </FormControl>
+                          <FormMessage />
+                          </FormItem>
                       )}
-                  </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        ) : (
-          <div className="flex items-center justify-center p-12 text-muted-foreground">
-            <Loader2 className="h-8 w-8 animate-spin" />
-          </div>
-        )}
+                      />
+                      <FormField
+                      control={form.control}
+                      name="subject"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Onderwerp</FormLabel>
+                          <FormControl>
+                              <Input {...field} className="h-10 font-black" />
+                          </FormControl>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                      />
+                      <FormField
+                      control={form.control}
+                      name="body"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Bericht</FormLabel>
+                          <FormControl>
+                              <Textarea className="min-h-[250px] text-xs font-medium leading-relaxed resize-none" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                      />
+                    </div>
+
+                    {/* Attachments Section */}
+                    {allFiles.length > 0 && (
+                    <div className="space-y-3 pb-6">
+                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Bijlagen ({selectedAttachments.length}/{allFiles.length})</FormLabel>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-2xl border-2 border-slate-100 p-2 bg-slate-50/30">
+                            {allFiles.map((file) => (
+                            <div 
+                                key={file.storagePath} 
+                                className={cn(
+                                    "flex items-center space-x-3 p-2 rounded-xl transition-all cursor-pointer border-2",
+                                    selectedAttachments.includes(file.storagePath) ? "bg-white border-primary/20 shadow-sm" : "border-transparent hover:bg-white"
+                                )}
+                                onClick={() => toggleAttachment(file.storagePath)}
+                            >
+                                <Checkbox 
+                                    id={file.storagePath} 
+                                    checked={selectedAttachments.includes(file.storagePath)}
+                                    onCheckedChange={() => toggleAttachment(file.storagePath)}
+                                />
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    <FileIcon className="h-4 w-4 shrink-0 text-slate-400" />
+                                    <span className="text-[11px] font-bold text-slate-700 truncate">{file.name}</span>
+                                </div>
+                            </div>
+                            ))}
+                        </div>
+                    </div>
+                    )}
+                  </>
+                )}
+            </div>
+            
+            <DialogFooter className="p-6 pt-4 border-t bg-slate-50/50 shrink-0">
+                <Button type="submit" disabled={isSending || !melding} className="w-full font-black uppercase tracking-tight h-11 px-8 shadow-lg shadow-primary/20">
+                    {isSending ? (
+                        <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Bezig met versturen...
+                        </>
+                    ) : (
+                        <>
+                            <Send className="mr-2 h-4 w-4" />
+                            Verstuur en Doorzetten
+                        </>
+                    )}
+                </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
