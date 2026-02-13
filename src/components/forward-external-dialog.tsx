@@ -17,6 +17,7 @@ import {
   DialogTitle,
   DialogFooter,
   DialogDescription,
+  DialogClose,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import {
@@ -43,13 +44,6 @@ const forwardSchema = z.object({
 });
 
 type ForwardFormValues = z.infer<typeof forwardSchema>;
-
-interface ForwardExternalDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  melding: Melding | null;
-  onSuccess: () => void;
-}
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -103,7 +97,7 @@ export function ForwardExternalDialog({ open, onOpenChange, melding, onSuccess }
       setIsSending(false);
       setUserSearchTerm('');
     }
-  }, [open, melding?.id, form, allFiles]);
+  }, [open, melding, form, allFiles]);
 
   const toggleUserEmail = (email: string) => {
     if (!email) return;
@@ -171,47 +165,49 @@ export function ForwardExternalDialog({ open, onOpenChange, melding, onSuccess }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[750px] max-h-[90vh] flex flex-col p-0 overflow-hidden">
-        <DialogHeader className="p-6 pb-4 shrink-0 border-b relative bg-slate-50/50">
+      <DialogContent className="sm:max-w-[750px] h-[90vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
+        <DialogHeader className="p-6 pb-4 shrink-0 border-b relative bg-slate-50/80 backdrop-blur-md">
           <div className="flex items-center justify-between">
             <div>
-              <DialogTitle>Melding Extern Doorzetten</DialogTitle>
-              <DialogDescription>Stel de e-mail op voor de externe partij of een interne collega.</DialogDescription>
+              <DialogTitle className="text-xl font-black uppercase tracking-tight">Melding Doorzetten</DialogTitle>
+              <DialogDescription className="font-bold text-slate-500">Stuur de details van de melding naar een externe partij of collega.</DialogDescription>
             </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => onOpenChange(false)}>
-              <X className="h-4 w-4" />
-            </Button>
+            <DialogClose asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-slate-200">
+                <X className="h-5 w-5" />
+              </Button>
+            </DialogClose>
           </div>
         </DialogHeader>
         
-        {melding ? (
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
-              <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                <div className="h-48 w-full rounded-xl border-2 overflow-hidden relative shadow-inner bg-slate-100">
+        <div className="flex-1 overflow-y-auto no-scrollbar">
+          {melding ? (
+            <Form {...form}>
+              <form id="forward-form" onSubmit={form.handleSubmit(onSubmit)} className="p-6 space-y-8">
+                <div className="h-48 w-full rounded-2xl border-2 border-slate-100 overflow-hidden relative shadow-inner bg-slate-100">
                     <MapboxView longitude={melding.longitude} latitude={melding.latitude} interactive={false} />
-                    <div className="absolute top-2 left-2 bg-background/90 backdrop-blur-sm px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border shadow-sm flex items-center gap-1.5">
+                    <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border border-slate-200 shadow-sm flex items-center gap-2">
                         <MapPin className="h-3 w-3 text-red-500" /> Locatie Melding
                     </div>
                 </div>
 
-                <div className="space-y-3 bg-slate-50 dark:bg-slate-900/20 p-4 rounded-2xl border-2 border-slate-100">
-                    <div className="flex items-center justify-between border-b pb-2 mb-2">
-                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Collega selecteren</FormLabel>
-                        <div className="relative w-40">
-                            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
-                            <Input placeholder="Zoek..." className="h-7 pl-7 text-[10px] font-bold rounded-lg border-slate-200" value={userSearchTerm} onChange={(e) => setUserSearchTerm(e.target.value)} />
+                <div className="space-y-4 bg-slate-50/50 p-5 rounded-2xl border-2 border-slate-100">
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-3">
+                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Intern doorzetten naar collega</FormLabel>
+                        <div className="relative w-48">
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                            <Input placeholder="Zoek op naam of rol..." className="h-8 pl-8 text-[10px] font-bold rounded-lg border-slate-200 focus:ring-primary/20" value={userSearchTerm} onChange={(e) => setUserSearchTerm(e.target.value)} />
                         </div>
                     </div>
-                    <div className="flex flex-col gap-1 max-h-40 overflow-y-auto pr-1">
+                    <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                         {filteredUsers.map((u) => {
                             const isChecked = u.email && form.watch('to').split(',').map(e => e.trim()).includes(u.email);
                             return (
-                                <div key={u.id} className={cn("flex items-center space-x-3 p-2 rounded-xl transition-all cursor-pointer group border-2", isChecked ? "bg-white border-primary/20 shadow-sm" : "hover:bg-white border-transparent")} onClick={() => u.email && toggleUserEmail(u.email)}>
-                                    <Checkbox checked={!!isChecked} onCheckedChange={() => u.email && toggleUserEmail(u.email)} />
+                                <div key={u.id} className={cn("flex items-center space-x-3 p-2.5 rounded-xl transition-all cursor-pointer group border-2", isChecked ? "bg-white border-primary/20 shadow-sm" : "hover:bg-white border-transparent")} onClick={() => u.email && toggleUserEmail(u.email)}>
+                                    <Checkbox checked={!!isChecked} onCheckedChange={() => u.email && toggleUserEmail(u.email)} className="rounded-md" />
                                     <div className="min-w-0 flex-1 flex items-center justify-between">
                                         <p className="text-[11px] font-black uppercase tracking-tight text-slate-900 truncate group-hover:text-primary transition-colors">{u.displayName || u.email}</p>
-                                        <Badge variant="outline" className="text-[8px] h-4 uppercase font-bold tracking-tighter opacity-60">{u.role}</Badge>
+                                        <Badge variant="outline" className="text-[8px] h-4 uppercase font-bold tracking-tighter opacity-60 border-slate-200">{u.role}</Badge>
                                     </div>
                                 </div>
                             );
@@ -219,44 +215,46 @@ export function ForwardExternalDialog({ open, onOpenChange, melding, onSuccess }
                     </div>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-5">
                   <FormField control={form.control} name="to" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Ontvanger(s)</FormLabel>
-                        <FormControl><Input placeholder="voorbeeld@email.nl" {...field} className="h-10 font-bold" /></FormControl>
+                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Ontvanger(s) (komma gescheiden)</FormLabel>
+                        <FormControl><Input placeholder="voorbeeld@email.nl" {...field} className="h-11 font-bold rounded-xl border-slate-200" /></FormControl>
                         <FormMessage />
                       </FormItem>
                   )} />
-                  <FormField control={form.control} name="cc" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">CC</FormLabel>
-                        <FormControl><Input placeholder="" {...field} className="h-10 font-bold" /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                  )} />
-                  <FormField control={form.control} name="subject" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Onderwerp</FormLabel>
-                        <FormControl><Input {...field} className="h-10 font-black" /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                  )} />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <FormField control={form.control} name="cc" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Kopie (CC)</FormLabel>
+                          <FormControl><Input placeholder="" {...field} className="h-11 font-bold rounded-xl border-slate-200" /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="subject" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Onderwerp</FormLabel>
+                          <FormControl><Input {...field} className="h-11 font-black rounded-xl border-slate-200" /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                    )} />
+                  </div>
                   <FormField control={form.control} name="body" render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Bericht</FormLabel>
-                        <FormControl><Textarea className="min-h-[250px] text-xs font-medium leading-relaxed resize-none" {...field} /></FormControl>
+                        <FormControl><Textarea className="min-h-[300px] text-xs font-medium leading-relaxed resize-none rounded-2xl border-slate-200 focus:ring-primary/20" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                   )} />
                 </div>
 
                 {allFiles.length > 0 && (
-                <div className="space-y-3 pb-6">
-                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Bijlagen ({selectedAttachments.length}/{allFiles.length})</FormLabel>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-2xl border-2 border-slate-100 p-2 bg-slate-50/30">
+                <div className="space-y-3 pb-4">
+                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Bijlagen insluiten ({selectedAttachments.length}/{allFiles.length})</FormLabel>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-2xl border-2 border-slate-100 p-3 bg-slate-50/30">
                         {allFiles.map((file) => (
-                        <div key={file.storagePath} className={cn("flex items-center space-x-3 p-2 rounded-xl transition-all cursor-pointer border-2", selectedAttachments.includes(file.storagePath) ? "bg-white border-primary/20 shadow-sm" : "border-transparent hover:bg-white")} onClick={() => setSelectedAttachments(prev => prev.includes(file.storagePath) ? prev.filter(p => p !== file.storagePath) : [...prev, file.storagePath])}>
-                            <Checkbox checked={selectedAttachments.includes(file.storagePath)} onCheckedChange={() => setSelectedAttachments(prev => prev.includes(file.storagePath) ? prev.filter(p => p !== file.storagePath) : [...prev, file.storagePath])} />
+                        <div key={file.storagePath} className={cn("flex items-center space-x-3 p-2.5 rounded-xl transition-all cursor-pointer border-2", selectedAttachments.includes(file.storagePath) ? "bg-white border-primary/20 shadow-sm" : "border-transparent hover:bg-white")} onClick={() => setSelectedAttachments(prev => prev.includes(file.storagePath) ? prev.filter(p => p !== file.storagePath) : [...prev, file.storagePath])}>
+                            <Checkbox checked={selectedAttachments.includes(file.storagePath)} onCheckedChange={() => setSelectedAttachments(prev => prev.includes(file.storagePath) ? prev.filter(p => p !== file.storagePath) : [...prev, file.storagePath])} className="rounded-md" />
                             <div className="flex items-center gap-2 flex-1 min-w-0">
                                 <FileIcon className="h-4 w-4 shrink-0 text-slate-400" />
                                 <span className="text-[11px] font-bold text-slate-700 truncate">{file.name}</span>
@@ -266,19 +264,34 @@ export function ForwardExternalDialog({ open, onOpenChange, melding, onSuccess }
                     </div>
                 </div>
                 )}
-              </div>
-              
-              <DialogFooter className="p-6 pt-4 border-t bg-slate-50/50 shrink-0">
-                  <Button type="submit" disabled={isSending} className="w-full font-black uppercase tracking-tight h-11 px-8 shadow-lg shadow-primary/20">
-                      {isSending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Bezig...</> : <><Send className="mr-2 h-4 w-4" /> Verstuur en Doorzetten</>}
-                  </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        ) : (
-          <div className="p-12 text-center text-muted-foreground">Geen melding geselecteerd.</div>
-        )}
+              </form>
+            </Form>
+          ) : (
+            <div className="p-20 text-center flex flex-col items-center gap-4">
+                <Loader2 className="h-10 w-10 animate-spin text-primary opacity-20" />
+                <p className="text-xs font-black uppercase tracking-widest text-slate-400">Data laden...</p>
+            </div>
+          )}
+        </div>
+        
+        <DialogFooter className="p-6 shrink-0 border-t bg-slate-50/80 backdrop-blur-md">
+            <Button 
+                type="submit" 
+                form="forward-form"
+                disabled={isSending || !melding} 
+                className="w-full font-black uppercase tracking-tight h-12 px-8 shadow-xl shadow-primary/20 rounded-xl text-base"
+            >
+                {isSending ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Bezig met verzenden...</> : <><Send className="mr-2 h-5 w-5" /> Melding Doorzetten</>}
+            </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
+}
+
+interface ForwardExternalDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  melding: Melding | null;
+  onSuccess: () => void;
 }

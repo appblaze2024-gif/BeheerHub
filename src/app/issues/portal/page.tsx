@@ -112,8 +112,8 @@ export default function MeldingenportaalPage() {
   const handleForwardDialogChange = (open: boolean) => {
     setForwardDialogOpen(open);
     if (!open) {
-      // Small delay before clearing the selected melding to allow the dialog closing animation to finish cleanly
-      setTimeout(() => setSelectedMeldingForForward(null), 300);
+      // Clear data immediately but let the component handle its own internal unmounting state
+      setSelectedMeldingForForward(null);
     }
   }
 
