@@ -1115,7 +1115,7 @@ export default function NewIssuePage() {
                                         <div
                                             key={suggestion.id}
                                             className="px-4 py-2 text-sm cursor-pointer hover:bg-muted"
-                                            onClick={() => handleSuggestionSelect(suggestion)}
+                                            onClick={() => handleSuggestionClick(suggestion)}
                                         >
                                             {suggestion.place_name}
                                         </div>
@@ -1431,7 +1431,7 @@ export default function NewIssuePage() {
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Statussen beheren</DialogTitle>
-                    <DialogDescription>Voeg nieuwe statussen toe aan de lijst of verwijder bestaande.</DialogDescription>
+                    <DialogDescription>Voeg nieuwe statussen toe aan the lijst of verwijder bestaande.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                     <div className="flex gap-2">
@@ -1629,7 +1629,7 @@ export default function NewIssuePage() {
                                 disabled={!manageSubSelectedCategory}
                             />
                             <Button onClick={handleAddSubcategory} size="icon" disabled={!manageSubSelectedCategory}>
-                                <Plus className="h-4 w-4" />
+                                <PlusCircle className="h-4 w-4" />
                             </Button>
                         </div>
                     </div>

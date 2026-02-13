@@ -45,13 +45,13 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { MapboxView } from '@/components/mapbox-view';
 import { ObjectImportDialog } from '@/components/object-import-dialog';
 import { ObjectExportDialog } from '@/components/object-export-dialog';
 import { useCollection, useFirestore, updateDocumentNonBlocking, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, doc, query, where, orderBy, limit } from 'firebase/firestore';
-import { Wijk } from '@/app/projects/page';
+import type { Wijk } from '@/lib/types';
 import * as turf from '@turf/turf';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -160,7 +160,7 @@ function IoTHistoryColumn({ sensor, history, isLoading }: { sensor: any, history
   }
 
   return (
-    <div className="flex flex-col h-full bg-slate-50/50">
+    <div className="flex flex-col h-full bg-slate-50/50 border-l">
       <div className="p-6 border-b bg-white">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">IOT Live Status</h3>
@@ -187,7 +187,7 @@ function IoTHistoryColumn({ sensor, history, isLoading }: { sensor: any, history
       <div className="flex-1 p-6 space-y-4 overflow-y-auto no-scrollbar">
         <div className="flex items-center gap-2">
           <History className="h-3.5 w-3.5 text-slate-400" />
-          <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Metingen per dag</h4>
+          <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Historie (Metingen)</h4>
         </div>
         
         <div className="space-y-2">
@@ -461,8 +461,8 @@ export default function ObjectsPage() {
                        </div>
                        <div>
                          <p className={cn("font-black uppercase tracking-tight text-xs", selectedObject?.id === obj.id && !isTablet ? "text-white" : "text-slate-900")}>{obj.id}</p>
-                         <p className={cn("text-[10px] font-bold uppercase tracking-widest", selectedObject?.id === obj.id && !isTablet ? "text-white/70" : "text-slate-400")}>
-                           {obj.locatieSubType || 'N.B.'}
+                         <p className={cn("text-[10px] font-bold uppercase tracking-widest truncate", selectedObject?.id === obj.id && !isTablet ? "text-white/70" : "text-slate-400")}>
+                           {obj.straatnaam ? `${obj.straatnaam} ${obj.huisnummer || ''}` : (obj.locatieSubType || 'N.B.')}
                          </p>
                        </div>
                      </div>
