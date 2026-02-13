@@ -108,10 +108,10 @@ export function AddSensorDialog({
   };
 
   const selectObject = (obj: MapObject) => {
-    form.setValue('id', obj.id);
+    // We vullen het ID niet meer in zodat de gebruiker het eigen serienummer kan invoeren
     form.setValue('name', `Sensor ${obj.id}`);
     setLocation({ latitude: obj.latitude, longitude: obj.longitude });
-    setObjectSearchQuery(obj.id);
+    setObjectSearchQuery(''); // Maak de zoekopdracht leeg zodat de dropdown verdwijnt
     setAddressSearchQuery(obj.straatnaam ? `${obj.straatnaam} ${obj.huisnummer || ''}` : '');
   };
 
