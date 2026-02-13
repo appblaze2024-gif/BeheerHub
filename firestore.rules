@@ -30,7 +30,7 @@ service cloud.firestore {
 
     // Meldingen en werkbonnen - CRITICAL: ALTIJD TOEGANKELIJK VOOR INLOGDE GEBRUIKERS
     match /meldingen/{meldingId} {
-      allow read, write: if isSignedIn();
+      allow get, list, read, write: if isSignedIn();
     }
 
     // Gebruikersprofielen
@@ -40,7 +40,7 @@ service cloud.firestore {
 
       // Berichten / Notificaties
       match /messages/{messageId} {
-        allow read, update, delete: if request.auth.uid == userId || hasRole('Super admin');
+        allow read, list, update, delete: if request.auth.uid == userId || hasRole('Super admin');
         allow create: if isSignedIn(); 
       }
 

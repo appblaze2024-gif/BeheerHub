@@ -12,11 +12,6 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Meldingen en werkbonnen - ALTIJD TOEGANKELIJK VOOR INLOGDE GEBRUIKERS
-    match /meldingen/{meldingId} {
-      allow read, write: if isSignedIn();
-    }
-
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
@@ -33,6 +28,11 @@ service cloud.firestore {
       return isSignedIn() && userExists() && (getUserData().role == 'Super admin' || getUserData().role == 'toezichthouder');
     }
 
+    // Meldingen en werkbonnen - ALTIJD TOEGANKELIJK VOOR INLOGDE GEBRUIKERS
+    match /meldingen/{meldingId} {
+      allow get, list, read, write: if isSignedIn();
+    }
+
     // Gebruikersprofielen
     match /users/{userId} {
       allow read: if isSignedIn();
@@ -44,7 +44,7 @@ service cloud.firestore {
       }
 
       match /messages/{messageId} {
-        allow read, update, delete: if request.auth.uid == userId;
+        allow read, list, update, delete: if request.auth.uid == userId || hasRole('Super admin');
         allow create: if isSignedIn(); // Iedereen mag een bericht sturen naar een ander
       }
     }
