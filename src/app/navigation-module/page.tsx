@@ -183,7 +183,7 @@ function NavigatingView({
             
             let diff = (targetLocation.heading || 0) - (prevSmooth.heading || 0);
             while (diff < -180) diff += 360;
-            while (diff > 180) diff -= 360;
+            while (diff > 180) -= 360;
             const newHeading = (prevSmooth.heading || 0) + diff * (lerpFactor * 0.5);
 
             const newSmooth = {
@@ -386,7 +386,7 @@ function NavigatingView({
         const remaining = Math.max(0, totalDistance - simStateRef.current.distanceTravelled);
         
         const roundedRemaining = Math.round(remaining);
-        if (Math.abs(lastUpdateDistRef.current - roundedRemaining) > 2) {
+        if (Math.abs(lastUpdateDistRef.current - roundedRemaining) >= 2) {
             setDistanceRemainingToDestination(prev => prev !== roundedRemaining ? roundedRemaining : prev);
             lastUpdateDistRef.current = roundedRemaining;
         }

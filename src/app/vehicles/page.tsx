@@ -252,8 +252,8 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
             selectedItem ? "flex" : "hidden lg:flex"
         )}>
           {selectedItem ? (
-            <>
-              <Card className="rounded-2xl shadow-sm border-slate-100 overflow-hidden">
+            <div key={selectedItem.id} className="flex flex-col gap-6 flex-1 min-h-0">
+              <Card className="rounded-2xl shadow-sm border-slate-100 overflow-hidden shrink-0">
                 <CardHeader className="bg-slate-50/50 border-b p-4 md:p-6">
                   <div className="flex items-start justify-between">
                     <div className='flex items-center gap-3'>
@@ -403,7 +403,7 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
               </Card>
 
               <Tabs defaultValue="maintenance" className="flex-1 flex flex-col min-h-0">
-                <div className="overflow-x-auto no-scrollbar pb-1">
+                <div className="overflow-x-auto no-scrollbar pb-1 shrink-0">
                     <TabsList className="w-max inline-flex">
                         {canViewTab('maintenance') && <TabsTrigger value="maintenance">Onderhoud</TabsTrigger>}
                         {canViewTab('damages') && <TabsTrigger value="damages">Schade</TabsTrigger>}
@@ -411,7 +411,7 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                     </TabsList>
                 </div>
                 
-                {canViewTab('maintenance') && <TabsContent value="maintenance" className="flex-1 mt-4">
+                {canViewTab('maintenance') && <TabsContent value="maintenance" className="flex-1 mt-4 min-h-0">
                    <Card className="h-full flex flex-col rounded-2xl shadow-sm border-slate-100 overflow-hidden">
                     <CardHeader className="flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border-b">
                       <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Onderhoudshistorie</CardTitle>
@@ -480,7 +480,7 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                   </Card>
                 </TabsContent>}
 
-                {canViewTab('damages') && <TabsContent value="damages" className="flex-1 mt-4">
+                {canViewTab('damages') && <TabsContent value="damages" className="flex-1 mt-4 min-h-0">
                   <Card className="h-full flex flex-col rounded-2xl shadow-sm border-slate-100 overflow-hidden">
                     <CardHeader className="flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border-b">
                       <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Schademeldingen</CardTitle>
@@ -543,7 +543,7 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                   </Card>
                 </TabsContent>}
 
-                {canViewTab('documents') && <TabsContent value="documents" className="flex-1 mt-4">
+                {canViewTab('documents') && <TabsContent value="documents" className="flex-1 mt-4 min-h-0">
                   <Card className="h-full flex flex-col rounded-2xl shadow-sm border-slate-100 overflow-hidden">
                     <CardHeader className="flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border-b">
                       <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Projectbestanden</CardTitle>
@@ -615,7 +615,7 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                 document={editingDocument}
                 canDelete={canDelete}
               />
-            </>
+            </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-full p-12 text-center bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-200">
                 <Truck className="h-12 w-12 text-slate-300 mb-4 opacity-20" />

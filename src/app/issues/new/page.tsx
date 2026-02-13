@@ -1597,7 +1597,7 @@ export default function NewIssuePage() {
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Indelingen beheren</DialogTitle>
-                    <DialogDescription>Beheer de indelingen voor een specifieke hoofdindeling.</DialogDescription>
+                    <DialogDescription>Beheer the indelingen voor een specifieke hoofdindeling.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                     <div className="space-y-2">
