@@ -32,7 +32,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Melding, UserProfile } from '@/lib/types';
 import { MapboxView } from './mapbox-view';
 import { cn } from '@/lib/utils';
@@ -188,7 +187,7 @@ export function ForwardExternalDialog({ open, onOpenChange, melding, onSuccess }
           </div>
         </DialogHeader>
         
-        <ScrollArea className="flex-1 min-h-0 bg-white">
+        <div className="flex-1 overflow-y-auto bg-white">
           <div className="p-6">
             {melding ? (
               <Form {...form}>
@@ -282,7 +281,7 @@ export function ForwardExternalDialog({ open, onOpenChange, melding, onSuccess }
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
         
         <DialogFooter className="p-6 shrink-0 border-t bg-slate-50/80 backdrop-blur-md">
             <Button 
