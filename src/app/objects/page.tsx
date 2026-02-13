@@ -50,7 +50,7 @@ import { MapboxView } from '@/components/mapbox-view';
 import { ObjectImportDialog } from '@/components/object-import-dialog';
 import { ObjectExportDialog } from '@/components/object-export-dialog';
 import { useCollection, useFirestore, updateDocumentNonBlocking, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, doc, query, where, orderBy, limit } from 'firebase/firestore';
+import { collection, doc, query, where, orderBy, limit, writeBatch } from 'firebase/firestore';
 import type { Wijk } from '@/lib/types';
 import * as turf from '@turf/turf';
 import { Label } from '@/components/ui/label';
@@ -63,6 +63,13 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
+import { useToast } from '@/components/ui/use-toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 type Area = {
   id: string;
@@ -225,6 +232,7 @@ function IoTHistoryColumn({ sensor, history, isLoading }: { sensor: any, history
 
 export default function ObjectsPage() {
   const firestore = useFirestore();
+  const { toast } = useToast();
   const isMobile = useIsMobile();
   const isTablet = useIsMobile(1024);
   const [isImporting, setIsImporting] = React.useState(false);
@@ -232,6 +240,7 @@ export default function ObjectsPage() {
   const [selectedObject, setSelectedObject] = React.useState<any | null>(null);
   const [viewMode, setViewMode] = React.useState<'list' | 'map'>('list');
   const [showHeatmap, setShowHeatmap] = React.useState(false);
+  const [isBulkLoading, setIsBulkLoading] = React.useState(false);
 
   const { selectedProjectId, setSelectedProjectId } = useProject();
   const [selectedAreaIds, setSelectedAreaIds] = React.useState<string[]>([]);
@@ -306,6 +315,34 @@ export default function ObjectsPage() {
     const objectRef = doc(firestore, 'objects', selectedObject.id);
     updateDocumentNonBlocking(objectRef, { [field]: value });
     setSelectedObject((prev: any) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSetAllActive = async () => {
+    if (!firestore || !objects) return;
+    setIsBulkLoading(true);
+    const batch = writeBatch(firestore);
+    
+    objects.forEach((obj: any) => {
+      const docRef = doc(firestore, 'objects', obj.id);
+      batch.update(docRef, { isActief: true });
+    });
+
+    try {
+      await batch.commit();
+      toast({
+        title: "Bulk actie voltooid",
+        description: `${objects.length} objecten zijn op actief gezet.`,
+      });
+    } catch (error) {
+      console.error("Fout bij activeren objecten:", error);
+      toast({
+        variant: "destructive",
+        title: "Fout opgetreden",
+        description: "Kon de objecten niet in bulk bijwerken.",
+      });
+    } finally {
+      setIsBulkLoading(false);
+    }
   };
 
   const handleAreaSelectionChange = (areaId: string, checked: boolean) => {
@@ -390,9 +427,19 @@ export default function ObjectsPage() {
           <Button variant="outline" size="sm" className="shrink-0 font-bold h-9">
             <Filter className="mr-2 h-4 w-4" /> Filter
           </Button>
-          <Button variant="outline" size="sm" className="shrink-0 font-bold h-9">
-            <Save className="mr-2 h-4 w-4" /> Opslaan
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="shrink-0 font-bold h-9">
+                {isBulkLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                Bulk Acties <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuItem onClick={handleSetAllActive} className="font-bold cursor-pointer">
+                Zet alle op Actief
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="default" size="sm" className="shrink-0 font-black h-9 uppercase tracking-tight" onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}>
             {viewMode === 'list' ? <Map className="mr-2 h-4 w-4" /> : <List className="mr-2 h-4 w-4" />}
             {viewMode === 'list' ? 'Kaart' : 'Lijst'}
