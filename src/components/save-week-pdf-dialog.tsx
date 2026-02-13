@@ -116,7 +116,11 @@ export function SaveWeekPdfDialog({ open, onOpenChange, project, medewerkers, di
 
     const sortFolders = (folders: FolderWithChildren[]) => {
       if (!folders) return;
-      folders.sort((a, b) => (a?.name || '').localeCompare(b?.name || ''));
+      folders.sort((a, b) => {
+        const timeA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : (a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime() || 0);
+        const timeB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : (b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime() || 0);
+        return timeA - timeB;
+      });
       folders.forEach(f => {
         if (f?.children) {
           sortFolders(f.children);
