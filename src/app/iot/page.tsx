@@ -29,6 +29,7 @@ import {
   X as XIcon,
   ChevronLeft,
   ArrowLeft,
+  Radio,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFirestore, useCollection, deleteDocumentNonBlocking, useMemoFirebase } from '@/firebase';
@@ -121,7 +122,7 @@ export default function IoTPage() {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    toast({ title: 'Gekopieerd', description: 'Code naar klembord gekopieerd.' });
+    toast({ title: 'Gekopieerd', description: 'Informatie naar klembord gekopieerd.' });
   };
 
   const handleGenerateCode = async () => {
@@ -215,7 +216,85 @@ void loop() {
   delay(FREQUENCY_DELAY_MS); 
 }` : '';
 
-  const activeCode = customCode || defaultEsp32Code;
+  const defaultHeltecCode = selectedSensor ? `/*
+ * Heltec CubeCell v2 (LoRaWAN) - TOF Sensor
+ * Gebruik de CubeCell Framework in Arduino IDE.
+ * 
+ * SETUP IN KPN THINGS:
+ * 1. Maak een Device aan in KPN Things met onderstaande keys.
+ * 2. Voeg een 'Webhook' destination toe in het KPN portaal.
+ * 3. Gebruik de REST API Endpoint URL onder de 'Dashboard' tab.
+ * 4. Stel de Webhook in op 'PATCH' met 'Content-Type: application/json'.
+ */
+
+#include "LoRaWan_APP.h"
+#include "Arduino.h"
+
+// --- LoraWAN Keys (Van KPN Things Portaal) ---
+/* OTAA keys, MSB format */
+uint8_t devEui[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+uint8_t appEui[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+uint8_t appKey[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+
+/* LoraWAN region EU868 */
+LoRaMacRegion_t loraWanRegion = ACTIVE_REGION;
+DeviceClass_t  loraWanClass = CLASS_A;
+
+/* Meetinterval: ${frequency} keer per dag */
+uint32_t appTxDutyCycle = ${delayMs}; 
+
+/* OTAA Mode */
+bool overTheAirActivation = true;
+bool loraWanAdr = true;
+bool isTxConfirmed = true;
+uint8_t appPort = 2;
+
+static void prepareTxFrame( uint8_t port )
+{
+    // --- Meting TOF Sensor ---
+    // Placeholder voor VL53L0X of vergelijkbare sensor
+    uint16_t distanceCm = 45; 
+    uint8_t vulgraad = 60; // Berekend o.b.v. bakdiepte ${binDepth}cm
+    
+    appDataSize = 3;
+    appData[0] = (uint8_t)(distanceCm >> 8);
+    appData[1] = (uint8_t)distanceCm;
+    appData[2] = vulgraad;
+}
+
+void setup() {
+    boardInitMcu();
+    Serial.begin(115200);
+}
+
+void loop() {
+    switch( deviceState ) {
+        case DEVICE_STATE_INIT:
+            LoRaWAN.init(loraWanRegion,loraWanClass);
+            break;
+        case DEVICE_STATE_JOIN:
+            LoRaWAN.join();
+            break;
+        case DEVICE_STATE_SEND:
+            prepareTxFrame( appPort );
+            LoRaWAN.send();
+            deviceState = DEVICE_STATE_CYCLE;
+            break;
+        case DEVICE_STATE_CYCLE:
+            txDutyCycleTime = appTxDutyCycle + randr( 0, 1000 );
+            LoRaWAN.cycle(txDutyCycleTime);
+            deviceState = DEVICE_STATE_SLEEP;
+            break;
+        case DEVICE_STATE_SLEEP:
+            LoRaWAN.sleep();
+            break;
+        default:
+            deviceState = DEVICE_STATE_INIT;
+            break;
+    }
+}` : '';
+
+  const activeCode = customCode || (selectedBoard === 'Heltec CubeCell v2 (LoRaWAN)' ? defaultHeltecCode : defaultEsp32Code);
 
   if (isLoading) {
     return <LoadingScreen message="Internet of Things Dashboard laden..." />;
@@ -246,10 +325,10 @@ void loop() {
         <Card className="shadow-sm border-slate-100 rounded-2xl overflow-hidden">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">API Methode</p>
-              <p className="text-3xl font-black text-slate-900 leading-none">REST</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Verbindingen</p>
+              <p className="text-3xl font-black text-slate-900 leading-none">WiFi / LoRa</p>
             </div>
-            <div className="bg-purple-50 p-3 rounded-2xl"><Terminal className="h-6 w-6 text-purple-500" /></div>
+            <div className="bg-purple-50 p-3 rounded-2xl"><Radio className="h-6 w-6 text-purple-500" /></div>
           </CardContent>
         </Card>
         <Card className="shadow-sm border-slate-100 rounded-2xl overflow-hidden hidden lg:flex">
@@ -419,11 +498,11 @@ void loop() {
                     </Card>
                   </div>
 
-                  <div className="absolute bottom-4 left-4 right-4 z-10">
+                  <div className="absolute bottom-4 left-4 right-4 z-10 space-y-2">
                       <Card className="bg-slate-900/95 backdrop-blur-xl text-white border-none shadow-2xl rounded-2xl overflow-hidden">
                           <div className="bg-white/5 px-4 py-2 flex items-center justify-between border-b border-white/5">
                               <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                                  <Terminal className="h-3.5 w-3.5" /> REST API Endpoint
+                                  <Radio className="h-3.5 w-3.5" /> KPN Things Koppeling (REST API)
                               </p>
                               <Button 
                                   variant="ghost" 
@@ -432,12 +511,18 @@ void loop() {
                                   onClick={() => copyToClipboard(apiEndpoint)}
                               >
                                   {copied ? <Check className="h-3.5 w-3.5 mr-1.5 text-green-400" /> : <Copy className="h-3.5 w-3.5 mr-1.5" />}
-                                  Kopieer
+                                  Kopieer URL
                               </Button>
                           </div>
-                          <CardContent className="p-4">
+                          <CardContent className="p-4 space-y-3">
                               <div className="bg-black/40 p-3 rounded-xl font-mono text-[9px] break-all border border-white/5 text-blue-400 shadow-inner">
                                   <span className="text-purple-400 mr-2">PATCH</span> {apiEndpoint}
+                              </div>
+                              <div className="flex items-start gap-2 p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                                <Info className="h-3.5 w-3.5 text-blue-400 shrink-0 mt-0.5" />
+                                <p className="text-[9px] text-blue-200 leading-relaxed font-medium">
+                                    Stel in KPN Things een <strong>Webhook Destination</strong> in met bovenstaande URL. Gebruik de <strong>PATCH</strong> methode en zorg dat de payload JSON-velden (vulgraad, currentDistanceCm) overeenkomen met de Firestore structuur.
+                                </p>
                               </div>
                           </CardContent>
                       </Card>
@@ -453,8 +538,8 @@ void loop() {
                                 <BookOpen className="h-5 w-5 text-blue-400" />
                             </div>
                             <div>
-                                <h3 className="text-zinc-100 text-sm font-black uppercase tracking-tight">C++ Sketch</h3>
-                                <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">{selectedBoard} | {binDepth}cm</p>
+                                <h3 className="text-zinc-100 text-sm font-black uppercase tracking-tight">Arduino Sketch</h3>
+                                <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">{selectedBoard} | TOF Sensor</p>
                             </div>
                         </div>
                         <Button 
@@ -499,9 +584,9 @@ void loop() {
                             </SelectTrigger>
                             <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
                                 <SelectItem value="ESP32">ESP32 (WiFi)</SelectItem>
+                                <SelectItem value="Heltec CubeCell v2 (LoRaWAN)">Heltec CubeCell v2 (LoRaWAN)</SelectItem>
                                 <SelectItem value="ESP32 + SIM800L (GSM)">ESP32 + SIM800L (GSM)</SelectItem>
                                 <SelectItem value="ESP8266">ESP8266 (WiFi)</SelectItem>
-                                <SelectItem value="Arduino Nano RP2040">Nano RP2040 (WiFi)</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -510,9 +595,9 @@ void loop() {
                         {chatHistory.length === 0 ? (
                             <div className="text-center py-12 flex flex-col items-center">
                                 <div className="bg-zinc-800/50 p-4 rounded-full mb-4">
-                                    <Info className="h-8 w-8 text-zinc-600" />
+                                    <Radio className="h-8 w-8 text-zinc-600" />
                                 </div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 max-w-[160px] leading-relaxed">Vraag om aanpassingen, bijv: "Gebruik GPRS"</p>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 max-w-[160px] leading-relaxed">Vraag om aanpassingen, bijv: "Voeg VL53L0X TOF sensor toe"</p>
                             </div>
                         ) : (
                             <div className="space-y-4">
@@ -561,14 +646,14 @@ void loop() {
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-12 bg-white dark:bg-zinc-950">
                 <div className="bg-slate-50 dark:bg-zinc-900 p-12 rounded-full mb-8 relative">
-                    <Cpu className="h-20 w-20 text-slate-200 dark:text-zinc-800" />
+                    <Radio className="h-20 w-20 text-slate-200 dark:text-zinc-800" />
                     <div className="absolute top-2 right-2 h-8 w-8 bg-primary rounded-full flex items-center justify-center text-white animate-bounce shadow-lg">
                         <ArrowRight className="h-5 w-5" />
                     </div>
                 </div>
                 <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900 mb-2">Configureer Hardware</h3>
                 <p className="text-sm text-slate-400 font-medium max-w-sm mx-auto mb-10">
-                    Selecteer een apparaat in de lijst om de <strong>kalibratie</strong>, <strong>live data</strong> en <strong>Arduino code</strong> te beheren.
+                    Selecteer een apparaat in de lijst om de <strong>kalibratie</strong>, <strong>KPN Things koppeling</strong> en <strong>C++ code</strong> te beheren.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left max-w-2xl w-full">
                     <div className="p-5 rounded-2xl border-2 border-slate-50 bg-slate-50/30">
@@ -581,7 +666,7 @@ void loop() {
                     </div>
                     <div className="p-5 rounded-2xl border-2 border-slate-50 bg-slate-50/30">
                         <h4 className="text-[10px] font-black uppercase mb-2 text-primary tracking-widest flex items-center gap-2"><Smartphone className="h-3 w-3" /> Stap 3</h4>
-                        <p className="text-[11px] text-slate-500 font-bold leading-relaxed uppercase tracking-tighter">Kies je board (WiFi/GSM) en upload de code.</p>
+                        <p className="text-[11px] text-slate-500 font-bold leading-relaxed uppercase tracking-tighter">Kies Heltec CubeCell en stel KPN Things in.</p>
                     </div>
                 </div>
             </div>
