@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -550,7 +549,7 @@ function NavigatingView({
             rotation={snappedLocation.heading || 0} 
           >
             <div className="relative flex items-center justify-center w-12 h-12">
-                <div className="absolute h-12 w-12 bg-blue-500/20 rounded-full animate-pulse" />
+                <div className="absolute h-12 w-12 bg-blue-50/20 rounded-full animate-pulse" />
                 <svg viewBox="0 0 100 100" className="h-10 w-10 text-blue-600 drop-shadow-2xl" style={{ filter: 'drop-shadow(0 4px 3px rgba(0,0,0,0.3))' }}>
                     <path d="M50 5 L90 95 L50 75 L10 95 Z" fill="currentColor" stroke="white" strokeWidth="4" />
                 </svg>
