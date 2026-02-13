@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -47,7 +46,9 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { MapboxView } from '@/components/mapbox-view';
 import { ObjectImportDialog } from '@/components/object-import-dialog';
 import { ObjectExportDialog } from '@/components/object-export-dialog';
@@ -61,8 +62,6 @@ import { useProject } from '@/context/project-context';
 import { LoadingScreen } from '@/components/loading-screen';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { useToast } from '@/components/ui/use-toast';
@@ -371,7 +370,7 @@ export default function ObjectsPage() {
     );
   }, [objects, selectedAreaIds, selectedAreas]);
 
- const areaPolygons = React.useMemo(() => {
+  const areaPolygons = React.useMemo(() => {
     return selectedAreas.flatMap(area => {
       try {
         const features = JSON.parse(area.subGebieden);
@@ -544,7 +543,7 @@ export default function ObjectsPage() {
                         )}
                         <div>
                             <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-900 leading-none mb-1">{selectedObject.id}</h2>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{selectedObject.locatieSubType || 'Basis Object'}</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest">{selectedObject.locatieSubType || 'Basis Object'}</p>
                         </div>
                      </div>
 
@@ -774,7 +773,7 @@ export default function ObjectsPage() {
                                 />
                                 <Label htmlFor={`area-${area.id}`} className="flex-1 flex justify-between items-center cursor-pointer">
                                   <span className="text-xs font-black uppercase tracking-tight text-slate-700 group-hover:text-primary transition-colors">{area.naam}</span>
-                                  <Badge variant="outline" className="text-[9px] font-black border-slate-200 bg-white text-slate-400">{objectCounts[area.id] || 0}</Badge>
+                                  <Badge variant="outline" className="text-[9px] font-black border-slate-200 bg-white text-slate-400">{objectCountsPerArea[area.id] || 0}</Badge>
                                 </Label>
                             </div>
                         ))

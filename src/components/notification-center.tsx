@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -23,9 +22,8 @@ import {
   useMemoFirebase,
   addDocumentNonBlocking,
   updateDocumentNonBlocking,
-  deleteDocumentNonBlocking,
 } from '@/firebase';
-import { collection, query, orderBy, limit, doc, where, writeBatch } from 'firebase/firestore';
+import { collection, query, orderBy, limit, doc } from 'firebase/firestore';
 import { formatDistanceToNow, format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 
@@ -39,15 +37,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useProfile } from '@/firebase/profile-provider';
 import type { Message, UserProfile } from '@/lib/types';
 import { useToast } from '@/components/ui/use-toast';
@@ -65,7 +56,6 @@ export function NotificationCenter() {
   const [isSending, setIsSending] = React.useState(false);
   const [chatReply, setChatReply] = React.useState('');
 
-  // Fetch all messages involving the current user
   const messagesQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return query(
@@ -77,7 +67,6 @@ export function NotificationCenter() {
 
   const { data: allMessages, isLoading } = useCollection<Message>(messagesQuery);
 
-  // Fetch all users for contact info
   const usersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'users');
@@ -101,7 +90,6 @@ export function NotificationCenter() {
       .sort((a, b) => (a.displayName || a.email || '').localeCompare(b.displayName || b.email || ''));
   }, [users, userSearchQuery, user?.uid]);
 
-  // Messages filtered for the specific selected chat
   const chatMessages = React.useMemo(() => {
     if (!allMessages || !selectedChatUser || !user) return [];
     return allMessages
@@ -117,7 +105,6 @@ export function NotificationCenter() {
     if (contact) {
       setSelectedChatUser(contact);
       
-      // Mark messages from this user as read
       const unreadFromThisUser = allMessages?.filter(m => m.fromUserId === contactId && !m.read && m.toUserId === user?.uid);
       if (unreadFromThisUser && unreadFromThisUser.length > 0 && firestore && user) {
         unreadFromThisUser.forEach(msg => {
@@ -143,11 +130,9 @@ export function NotificationCenter() {
         read: false,
       };
 
-      // 1. Write to recipient's inbox
       const recipientMsgRef = collection(firestore, 'users', recipientId, 'messages');
       await addDocumentNonBlocking(recipientMsgRef, messageData);
       
-      // 2. Write to sender's "sent" history
       const senderMsgRef = collection(firestore, 'users', user.uid, 'messages');
       await addDocumentNonBlocking(senderMsgRef, { ...messageData, read: true });
 
@@ -351,6 +336,7 @@ export function NotificationCenter() {
                         onClick={() => handleOpenChat(u.id)}
                       >
                         <Avatar className="h-9 w-9 border-2 border-white shadow-sm ring-1 ring-slate-100 shrink-0">
+                          <AvatarImage src={u.id === user?.uid ? user?.photoURL || undefined : undefined} />
                           <AvatarFallback className="bg-primary text-white text-[10px] font-black uppercase">
                             {getInitials(u.firstName, u.lastName)}
                           </AvatarFallback>
