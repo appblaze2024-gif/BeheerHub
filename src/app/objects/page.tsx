@@ -20,6 +20,10 @@ import {
   Palette,
   Download,
   ArrowLeft,
+  Cpu,
+  Clock,
+  Activity,
+  History,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,12 +45,12 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { MapboxView } from '@/components/mapbox-view';
 import { ObjectImportDialog } from '@/components/object-import-dialog';
 import { ObjectExportDialog } from '@/components/object-export-dialog';
-import { useCollection, useFirestore, updateDocumentNonBlocking, useMemoFirebase } from '@/firebase';
-import { collection, doc, query, where } from 'firebase/firestore';
+import { useCollection, useFirestore, updateDocumentNonBlocking, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, doc, query, where, orderBy, limit } from 'firebase/firestore';
 import { Wijk } from '@/app/projects/page';
 import * as turf from '@turf/turf';
 import { Label } from '@/components/ui/label';
@@ -56,8 +60,9 @@ import { LoadingScreen } from '@/components/loading-screen';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-
-const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
+import { Skeleton } from '@/components/ui/skeleton';
+import { format } from 'date-fns';
+import { nl } from 'date-fns/locale';
 
 type Area = {
   id: string;
@@ -70,8 +75,8 @@ type Project = {
   id: string;
   projectnaam: string;
   wijken?: Wijk[];
-  veegroutes?: Wijk[]; // Using Wijk type as it's identical
-  prullenbakkenroutes?: Wijk[]; // Using Wijk type as it's identical
+  veegroutes?: Wijk[];
+  prullenbakkenroutes?: Wijk[];
 };
 
 function PlanningAccordionContent({ selectedObject, handleUpdateField, projects, isLoadingProjects }: { selectedObject: any, handleUpdateField: (field: string, value: any) => void, projects: Project[] | null, isLoadingProjects: boolean }) {
@@ -130,6 +135,94 @@ function PlanningAccordionContent({ selectedObject, handleUpdateField, projects,
   );
 }
 
+function IoTHistoryColumn({ sensor, history, isLoading }: { sensor: any, history: any[] | null, isLoading: boolean }) {
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-40 w-full" />
+      </div>
+    );
+  }
+
+  if (!sensor) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-12 text-center text-slate-300">
+        <div className="bg-slate-50 p-6 rounded-full mb-4">
+          <Cpu className="h-10 w-10 opacity-20" />
+        </div>
+        <p className="text-[10px] font-black uppercase tracking-widest">Geen IOT Unit Gekoppeld</p>
+        <p className="text-[9px] font-medium text-slate-400 mt-2 max-w-[150px]">Koppel een sensor via het IOT dashboard met hetzelfde ID.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-full bg-slate-50/50">
+      <div className="p-6 border-b bg-white">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">IOT Live Status</h3>
+          <Badge variant="outline" className={cn(
+            "text-[9px] h-5 uppercase font-black px-2",
+            sensor.status === 'Online' ? "text-green-600 border-green-200 bg-green-50" : "text-red-600 border-red-200 bg-red-50"
+          )}>
+            {sensor.status || 'Offline'}
+          </Badge>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Vulgraad</p>
+            <p className="text-xl font-black text-slate-900 leading-none">{sensor.vulgraad || 0}%</p>
+          </div>
+          <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Afstand</p>
+            <p className="text-xl font-black text-slate-900 leading-none">{sensor.currentDistanceCm || 0} cm</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 p-6 space-y-4 overflow-y-auto no-scrollbar">
+        <div className="flex items-center gap-2">
+          <History className="h-3.5 w-3.5 text-slate-400" />
+          <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Metingen per dag</h4>
+        </div>
+        
+        <div className="space-y-2">
+          {history && history.length > 0 ? (
+            history.map((log, i) => (
+              <div key={i} className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-100 shadow-sm transition-all hover:border-primary/20">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black text-slate-900">
+                    {log.timestamp ? format(new Date(log.timestamp), 'dd MMM', { locale: nl }) : '--'}
+                  </span>
+                  <span className="text-[9px] font-bold text-slate-400">
+                    {log.timestamp ? format(new Date(log.timestamp), 'HH:mm') : '--:--'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <p className="text-xs font-black text-slate-900 leading-none">{log.vulgraad}%</p>
+                    <p className="text-[8px] font-bold text-slate-400 uppercase">{log.currentDistanceCm} cm</p>
+                  </div>
+                  <Activity className="h-3 w-3 text-primary opacity-40" />
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="p-8 text-center border-2 border-dashed rounded-xl border-slate-100 bg-white/50">
+              <Clock className="h-6 w-6 text-slate-200 mx-auto mb-2" />
+              <p className="text-[9px] font-bold text-slate-400 uppercase">Geen historie beschikbaar</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ObjectsPage() {
   const firestore = useFirestore();
   const isMobile = useIsMobile();
@@ -155,6 +248,22 @@ export default function ObjectsPage() {
 
   const { data: objects, isLoading: isLoadingObjects } = useCollection<any>(objectsQuery);
   const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsCollection);
+
+  const sensorRef = useMemoFirebase(() => {
+    if (!firestore || !selectedObject?.id) return null;
+    return doc(firestore, 'sensors', selectedObject.id);
+  }, [firestore, selectedObject?.id]);
+  const { data: sensor, isLoading: sensorLoading } = useDoc<any>(sensorRef);
+
+  const historyQuery = useMemoFirebase(() => {
+    if (!firestore || !selectedObject?.id) return null;
+    return query(
+      collection(firestore, 'sensors', selectedObject.id, 'history'),
+      orderBy('timestamp', 'desc'),
+      limit(20)
+    );
+  }, [firestore, selectedObject?.id]);
+  const { data: history, isLoading: historyLoading } = useCollection<any>(historyQuery);
 
   const selectedProject = React.useMemo(() => {
     return projects?.find(p => p.id === selectedProjectId) ?? null;
@@ -371,13 +480,13 @@ export default function ObjectsPage() {
          </aside>
  
          <main className={cn(
-             "flex-1 p-4 md:p-6 overflow-y-auto bg-slate-50/30 no-scrollbar",
+             "flex-1 p-0 overflow-y-auto no-scrollbar bg-slate-50/30",
              selectedObject ? "flex" : "hidden lg:flex"
          )}>
               {selectedObject ? (
-               <Card className="h-full border-slate-100 rounded-2xl shadow-sm overflow-hidden flex flex-col bg-white">
-               <CardContent className="p-0 flex-1 flex flex-col xl:grid xl:grid-cols-3 gap-0">
-                 <div className="xl:col-span-2 space-y-6 p-6 border-r border-slate-100">
+               <Card className="h-full border-none rounded-none shadow-none flex-1 flex flex-col bg-white">
+               <CardContent className="p-0 flex-1 flex flex-col xl:grid xl:grid-cols-12 gap-0">
+                 <div className="xl:col-span-5 space-y-6 p-6 border-r border-slate-100 overflow-y-auto no-scrollbar">
                      <div className="flex items-center gap-4 mb-6">
                         {isTablet && (
                             <Button variant="ghost" size="icon" onClick={() => setSelectedObject(null)} className="h-10 w-10 rounded-full bg-slate-50 border border-slate-100 shrink-0">
@@ -509,7 +618,7 @@ export default function ObjectsPage() {
                      <div className="space-y-4 pt-2">
                          <div className="space-y-1.5">
                              <Label htmlFor="warning" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Waarschuwing / Bijzonderheden</Label>
-                             <Textarea id="warning" placeholder="Typ hier eventuele veiligheidsmeldingen of ophaalinstructies..." value={selectedObject.waarschuwing || ''} onChange={(e) => handleUpdateField('waarschuwing', e.target.value)} className="resize-none font-medium italic border-orange-100 focus:ring-orange-500/20 bg-orange-50/30" rows={3} />
+                             <Textarea id="warning" placeholder="Typ hier eventuele veiligheidsmeldingen..." value={selectedObject.waarschuwing || ''} onChange={(e) => handleUpdateField('waarschuwing', e.target.value)} className="resize-none font-medium italic border-orange-100 focus:ring-orange-500/20 bg-orange-50/30" rows={3} />
                          </div>
                          <Separator className="bg-slate-100" />
                          <div>
@@ -524,14 +633,14 @@ export default function ObjectsPage() {
                                     </Badge>
                                 ))
                               ) : (
-                                <p className="text-xs font-medium text-slate-400 italic">Dit object is nog niet gekoppeld aan een route.</p>
+                                <p className="text-xs font-medium text-slate-400 italic">Geen routes gekoppeld.</p>
                               )}
                              </div>
                          </div>
                      </div>
                  </div>
  
-                 <div className="space-y-6 p-6 bg-slate-50/30">
+                 <div className="xl:col-span-4 space-y-6 p-6 bg-slate-50/30 border-r border-slate-100 overflow-y-auto no-scrollbar">
                      <Card className="h-64 rounded-2xl border-slate-100 shadow-sm overflow-hidden bg-white">
                      <CardContent className="p-0 h-full">
                          <MapboxView 
@@ -554,7 +663,7 @@ export default function ObjectsPage() {
                      <Card className="rounded-2xl border-slate-100 shadow-sm overflow-hidden bg-white">
                      <CardContent className="p-6">
                          <div className="flex justify-between items-end mb-3">
-                            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Live Vulgraad</h3>
+                            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Live Vulgraad (GIS)</h3>
                             <span className="text-2xl font-black text-slate-900 leading-none">{selectedObject?.vulgraad || 0}%</span>
                          </div>
                          <Progress value={selectedObject?.vulgraad || 0} variant="gauge" className="h-2 bg-slate-100" />
@@ -565,12 +674,16 @@ export default function ObjectsPage() {
                      </CardContent>
                      </Card>
                  </div>
+
+                 <div className="xl:col-span-3 h-full overflow-hidden">
+                    <IoTHistoryColumn sensor={sensor} history={history} isLoading={sensorLoading || historyLoading} />
+                 </div>
                </CardContent>
              </Card>
              ) : (
-                 <div className="flex flex-col items-center justify-center h-full p-12 text-center bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-200">
+                 <div className="flex flex-col items-center justify-center h-full p-12 text-center bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-200 m-6">
                     <MapPin className="h-16 w-16 text-slate-200 mb-4 opacity-20" />
-                    <p className="font-black uppercase text-[10px] tracking-widest text-slate-400">Selecteer een object uit de lijst om de details te bekijken of te bewerken.</p>
+                    <p className="font-black uppercase text-[10px] tracking-widest text-slate-400">Selecteer een object om de details en IOT metingen te bekijken.</p>
                  </div>
              )}
          </main>

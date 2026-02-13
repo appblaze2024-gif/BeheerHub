@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -161,8 +160,10 @@ export default function OpenIssuesPage() {
                                     <TableCell className="truncate py-2 px-4 border-r border-slate-100 hidden xl:table-cell text-xs">{melding.wijk || '-'}</TableCell>
                                     <TableCell className="py-2 px-4">
                                         <Badge
-                                            className="text-[9px] font-black uppercase tracking-tighter h-5 px-2 text-white border-none"
-                                            style={{ backgroundColor: statusColorMap[displayStatus] || '#94a3b8' }}
+                                            className={cn(
+                                                "text-[9px] font-black uppercase tracking-tighter h-5 px-2 text-white border-none",
+                                                statusColorMap[displayStatus] || 'bg-slate-400'
+                                            )}
                                         >
                                             {displayStatus}
                                         </Badge>
