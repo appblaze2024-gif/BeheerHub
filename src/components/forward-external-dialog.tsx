@@ -213,8 +213,8 @@ Team BeheerHub`;
         {melding ? (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              <ScrollArea className="flex-1 px-6">
-                  <div className="space-y-6 py-6">
+              <ScrollArea className="flex-1">
+                  <div className="space-y-6 px-6 py-6">
                       {/* Map Section */}
                       <div className="h-48 w-full rounded-xl border-2 overflow-hidden relative shadow-inner shrink-0 bg-slate-100">
                           <MapboxView
@@ -331,7 +331,7 @@ Team BeheerHub`;
 
                       {/* Attachments Section */}
                       {allFiles.length > 0 && (
-                      <div className="space-y-3">
+                      <div className="space-y-3 pb-6">
                           <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Bijlagen selecteren ({selectedAttachments.length}/{allFiles.length})</FormLabel>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-2xl border-2 border-slate-100 p-2 bg-slate-50/30">
                               {allFiles.map((file) => (

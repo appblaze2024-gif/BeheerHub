@@ -109,6 +109,14 @@ export default function MeldingenportaalPage() {
     setForwardDialogOpen(true);
   };
 
+  const handleForwardDialogChange = (open: boolean) => {
+    setForwardDialogOpen(open);
+    if (!open) {
+      // Small delay to ensure the dialog animation finishes before clearing the selection
+      setTimeout(() => setSelectedMeldingForForward(null), 300);
+    }
+  }
+
   return (
     <div className="flex flex-col h-screen bg-background">
       <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border-b shrink-0 gap-4 bg-slate-50/50">
@@ -198,12 +206,7 @@ export default function MeldingenportaalPage() {
 
       <ForwardExternalDialog
         open={forwardDialogOpen}
-        onOpenChange={(open) => {
-            setForwardDialogOpen(open);
-            if (!open) {
-                setSelectedMeldingForForward(null);
-            }
-        }}
+        onOpenChange={handleForwardDialogChange}
         melding={selectedMeldingForForward}
         onSuccess={() => {}}
       />
