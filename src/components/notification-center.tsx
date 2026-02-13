@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Search,
   MoreVertical,
+  AlertCircle,
 } from 'lucide-react';
 import {
   useCollection,
@@ -24,9 +25,10 @@ import {
   addDocumentNonBlocking,
   updateDocumentNonBlocking,
 } from '@/firebase';
-import { collection, query, orderBy, limit, doc, writeBatch } from 'firebase/firestore';
+import { collection, query, orderBy, limit, doc, writeBatch, where } from 'firebase/firestore';
 import { formatDistanceToNow, format } from 'date-fns';
 import { nl } from 'date-fns/locale';
+import { useRouter } from 'next/navigation';
 
 import {
   Popover,
@@ -41,7 +43,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useProfile } from '@/firebase/profile-provider';
-import type { Message, UserProfile } from '@/lib/types';
+import type { Message, UserProfile, Melding } from '@/lib/types';
 import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 import {
@@ -49,8 +51,6 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
@@ -61,6 +61,7 @@ export function NotificationCenter() {
   const { user } = useUser();
   const { profile } = useProfile();
   const { toast } = useToast();
+  const router = useRouter();
   
   const [activeTab, setActiveTab] = React.useState('received');
   const [selectedChatUser, setSelectedChatUser] = React.useState<UserProfile | null>(null);
@@ -69,6 +70,7 @@ export function NotificationCenter() {
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [chatReply, setChatReply] = React.useState('');
 
+  // Messages Query
   const messagesQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return query(
@@ -78,8 +80,23 @@ export function NotificationCenter() {
     );
   }, [firestore, user?.uid]);
 
-  const { data: allMessages, isLoading } = useCollection<Message>(messagesQuery);
+  const { data: allMessages, isLoading: isLoadingMessages } = useCollection<Message>(messagesQuery);
 
+  // Active Issues Query for the new "Meldingen" tab
+  const meldingenQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    // Show new and in-progress issues
+    return query(
+      collection(firestore, 'meldingen'),
+      where('status', 'in', ['Nieuw', 'In behandeling', 'Intern doorgezet']),
+      orderBy('datum', 'desc'),
+      limit(20)
+    );
+  }, [firestore]);
+
+  const { data: activeMeldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenQuery);
+
+  // Users Query for starting new chats
   const usersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'users');
@@ -88,8 +105,10 @@ export function NotificationCenter() {
   const { data: users } = useCollection<UserProfile>(usersQuery);
 
   const unreadCount = React.useMemo(() => {
-    return allMessages?.filter((m) => !m.read && m.toUserId === user?.uid).length || 0;
-  }, [allMessages, user?.uid]);
+    const unreadMessages = allMessages?.filter((m) => !m.read && m.toUserId === user?.uid).length || 0;
+    const newMeldingen = activeMeldingen?.filter(m => m.status === 'Nieuw').length || 0;
+    return unreadMessages + newMeldingen;
+  }, [allMessages, activeMeldingen, user?.uid]);
 
   const filteredUsers = React.useMemo(() => {
     if (!users) return [];
@@ -317,37 +336,40 @@ export function NotificationCenter() {
           </div>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="p-4 border-b bg-slate-50/50 flex items-center justify-between gap-4">
-              <h3 className="text-sm font-black uppercase tracking-tight text-slate-900 shrink-0">Berichten</h3>
-              <TabsList className="bg-black h-10 p-1 rounded-xl gap-1 border-none shadow-lg flex-1">
+            <div className="p-4 border-b bg-slate-50/50 flex flex-col gap-4">
+              <h3 className="text-sm font-black uppercase tracking-tight text-slate-900">Communicatie</h3>
+              <TabsList className="bg-black h-10 p-1 rounded-xl gap-1 border-none shadow-lg flex w-full">
                 <TabsTrigger 
                   value="received" 
-                  className="flex-1 text-[11px] h-8 rounded-lg data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-md data-[state=inactive]:text-gray-400 data-[state=inactive]:hover:text-white transition-all font-black uppercase tracking-widest border-none"
+                  className="flex-1 text-[10px] h-8 rounded-lg data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-md data-[state=inactive]:text-gray-400 data-[state=inactive]:hover:text-white transition-all font-black uppercase tracking-widest border-none"
                 >
                   Inbox
                 </TabsTrigger>
                 <TabsTrigger 
                   value="new" 
-                  className="flex-1 text-[11px] h-8 rounded-lg data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-md data-[state=inactive]:text-gray-400 data-[state=inactive]:hover:text-white transition-all font-black uppercase tracking-widest border-none"
+                  className="flex-1 text-[10px] h-8 rounded-lg data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-md data-[state=inactive]:text-gray-400 data-[state=inactive]:hover:text-white transition-all font-black uppercase tracking-widest border-none"
                 >
-                  Nieuw
+                  Collega's
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="alerts" 
+                  className="flex-1 text-[10px] h-8 rounded-lg data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-md data-[state=inactive]:text-gray-400 data-[state=inactive]:hover:text-white transition-all font-black uppercase tracking-widest border-none"
+                >
+                  Meldingen
                 </TabsTrigger>
               </TabsList>
             </div>
 
             <TabsContent value="received" className="m-0">
               <ScrollArea className="h-[400px]">
-                {isLoading ? (
+                {isLoadingMessages ? (
                   <div className="flex items-center justify-center h-40">
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   </div>
                 ) : allMessages && allMessages.length > 0 ? (
                   <div className="divide-y divide-slate-50">
-                    {/* Grouping logic could be added here, but for now show individual unique threads or most recent */}
-                    {/* Showing only messages sent TO user for the inbox list */}
                     {allMessages
                       .filter(m => m.toUserId === user?.uid)
-                      // Filter to show only the last message from each user to avoid clutter
                       .reduce((acc, current) => {
                         const existing = acc.find(m => m.fromUserId === current.fromUserId);
                         if (!existing) acc.push(current);
@@ -438,6 +460,53 @@ export function NotificationCenter() {
                     </div>
                   )}
                 </div>
+              </ScrollArea>
+            </TabsContent>
+
+            <TabsContent value="alerts" className="m-0">
+              <ScrollArea className="h-[400px]">
+                {isLoadingMeldingen ? (
+                  <div className="flex items-center justify-center h-40">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : activeMeldingen && activeMeldingen.length > 0 ? (
+                  <div className="divide-y divide-slate-50">
+                    {activeMeldingen.map((melding) => (
+                      <div 
+                        key={melding.id} 
+                        className="p-4 hover:bg-slate-50 transition-all cursor-pointer group flex items-start gap-3"
+                        onClick={() => {
+                          router.push(`/issues/new?id=${melding.id}`);
+                        }}
+                      >
+                        <div className={cn(
+                          "p-2 rounded-lg shrink-0",
+                          melding.status === 'Nieuw' ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"
+                        )}>
+                          <AlertCircle className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="font-black text-[10px] uppercase tracking-tighter text-slate-900">{melding.intakenummer}</span>
+                            <span className="text-[8px] font-black uppercase text-slate-400">
+                              {melding.datum ? format(new Date(melding.datum), 'dd MMM') : '-'}
+                            </span>
+                          </div>
+                          <p className="text-xs font-bold text-slate-700 truncate">{melding.subcategorie}</p>
+                          <p className="text-[10px] text-slate-400 truncate mt-0.5 italic">{melding.extra_informatie}</p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-slate-200 group-hover:text-primary transition-all mt-1" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-64 text-center p-8">
+                    <div className="bg-slate-100 p-4 rounded-full mb-4">
+                      <Clock className="h-8 w-8 text-slate-300" />
+                    </div>
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">Geen actieve meldingen</p>
+                  </div>
+                )}
               </ScrollArea>
             </TabsContent>
           </Tabs>
