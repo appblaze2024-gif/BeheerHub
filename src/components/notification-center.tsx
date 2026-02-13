@@ -14,6 +14,7 @@ import {
   ArrowLeft,
   ChevronRight,
   Search,
+  MoreVertical,
 } from 'lucide-react';
 import {
   useCollection,
@@ -23,7 +24,7 @@ import {
   addDocumentNonBlocking,
   updateDocumentNonBlocking,
 } from '@/firebase';
-import { collection, query, orderBy, limit, doc } from 'firebase/firestore';
+import { collection, query, orderBy, limit, doc, writeBatch } from 'firebase/firestore';
 import { formatDistanceToNow, format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 
@@ -43,6 +44,17 @@ import { useProfile } from '@/firebase/profile-provider';
 import type { Message, UserProfile } from '@/lib/types';
 import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export function NotificationCenter() {
   const firestore = useFirestore();
@@ -54,6 +66,7 @@ export function NotificationCenter() {
   const [selectedChatUser, setSelectedChatUser] = React.useState<UserProfile | null>(null);
   const [userSearchQuery, setUserSearchQuery] = React.useState('');
   const [isSending, setIsSending] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
   const [chatReply, setChatReply] = React.useState('');
 
   const messagesQuery = useMemoFirebase(() => {
@@ -61,7 +74,7 @@ export function NotificationCenter() {
     return query(
       collection(firestore, 'users', user.uid, 'messages'),
       orderBy('createdAt', 'desc'),
-      limit(50)
+      limit(100)
     );
   }, [firestore, user?.uid]);
 
@@ -115,6 +128,36 @@ export function NotificationCenter() {
     }
   };
 
+  const handleDeleteChat = async () => {
+    if (!firestore || !user?.uid || !selectedChatUser || !chatMessages.length) return;
+    
+    setIsDeleting(true);
+    const batch = writeBatch(firestore);
+    
+    chatMessages.forEach(msg => {
+      const msgRef = doc(firestore, 'users', user.uid, 'messages', msg.id);
+      batch.delete(msgRef);
+    });
+
+    try {
+      await batch.commit();
+      setSelectedChatUser(null);
+      toast({
+        title: 'Chat verwijderd',
+        description: `De conversatie met ${selectedChatUser.displayName || selectedChatUser.email} is gewist.`,
+      });
+    } catch (error) {
+      console.error("Error deleting chat:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Fout bij verwijderen',
+        description: 'Kon de chat niet verwijderen.',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleSendMessage = async (recipientId: string, content: string) => {
     if (!firestore || !user?.uid || !recipientId || !content.trim()) return;
     setIsSending(true);
@@ -130,9 +173,11 @@ export function NotificationCenter() {
         read: false,
       };
 
+      // Message to recipient
       const recipientMsgRef = collection(firestore, 'users', recipientId, 'messages');
       await addDocumentNonBlocking(recipientMsgRef, messageData);
       
+      // Copy to own 'sent' messages for chat history
       const senderMsgRef = collection(firestore, 'users', user.uid, 'messages');
       await addDocumentNonBlocking(senderMsgRef, { ...messageData, read: true });
 
@@ -173,19 +218,43 @@ export function NotificationCenter() {
       <PopoverContent className="w-80 sm:w-96 p-0 mt-2 rounded-2xl shadow-2xl border-slate-100 overflow-hidden" align="end">
         {selectedChatUser ? (
           <div className="flex flex-col h-[500px]">
-            <div className="p-4 border-b bg-black text-white flex items-center gap-3">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-8 w-8 text-white hover:bg-white/10 rounded-full"
-                onClick={() => setSelectedChatUser(null)}
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-black uppercase tracking-tight truncate">{selectedChatUser.displayName || selectedChatUser.email}</p>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mt-0.5">{selectedChatUser.role}</p>
+            <div className="p-4 border-b bg-black text-white flex items-center justify-between">
+              <div className="flex items-center gap-3 min-w-0">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 text-white hover:bg-white/10 rounded-full"
+                  onClick={() => setSelectedChatUser(null)}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <div className="min-w-0">
+                  <p className="text-sm font-black uppercase tracking-tight truncate">{selectedChatUser.displayName || selectedChatUser.email}</p>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mt-0.5">{selectedChatUser.role}</p>
+                </div>
               </div>
+              
+              {chatMessages.length > 0 && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-red-400 hover:bg-white/10 rounded-full">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Chat verwijderen?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Weet u zeker dat u alle berichten in deze conversatie wilt wissen voor uzelf? Dit kan niet ongedaan worden gemaakt.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeleteChat} className="bg-red-600 hover:bg-red-700">Verwijderen</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
             </div>
             
             <ScrollArea className="flex-1 p-4 bg-slate-50/50">
@@ -212,7 +281,10 @@ export function NotificationCenter() {
                   ))
                 ) : (
                   <div className="py-12 text-center text-slate-300">
-                    <p className="text-[10px] font-black uppercase tracking-widest">Begin een gesprek met {selectedChatUser.firstName || 'deze collega'}</p>
+                    <div className="bg-white p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4 border border-slate-100 shadow-sm">
+                        <Plus className="h-8 w-8 text-slate-200" />
+                    </div>
+                    <p className="text-[10px] font-black uppercase tracking-widest">Start een gesprek met {selectedChatUser.firstName || 'deze collega'}</p>
                   </div>
                 )}
               </div>
@@ -245,18 +317,18 @@ export function NotificationCenter() {
           </div>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="p-4 border-b bg-slate-50/50 flex items-center justify-between">
-              <h3 className="text-sm font-black uppercase tracking-tight text-slate-900">Communicatie</h3>
-              <TabsList className="bg-black h-10 p-1 rounded-xl gap-1 border-none shadow-lg">
+            <div className="p-4 border-b bg-slate-50/50 flex items-center justify-between gap-4">
+              <h3 className="text-sm font-black uppercase tracking-tight text-slate-900 shrink-0">Berichten</h3>
+              <TabsList className="bg-black h-10 p-1 rounded-xl gap-1 border-none shadow-lg flex-1">
                 <TabsTrigger 
                   value="received" 
-                  className="text-[11px] px-6 h-8 rounded-lg data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-md data-[state=inactive]:text-gray-400 data-[state=inactive]:hover:text-white transition-all font-black uppercase tracking-widest border-none"
+                  className="flex-1 text-[11px] h-8 rounded-lg data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-md data-[state=inactive]:text-gray-400 data-[state=inactive]:hover:text-white transition-all font-black uppercase tracking-widest border-none"
                 >
                   Inbox
                 </TabsTrigger>
                 <TabsTrigger 
                   value="new" 
-                  className="text-[11px] px-6 h-8 rounded-lg data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-md data-[state=inactive]:text-gray-400 data-[state=inactive]:hover:text-white transition-all font-black uppercase tracking-widest border-none"
+                  className="flex-1 text-[11px] h-8 rounded-lg data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-md data-[state=inactive]:text-gray-400 data-[state=inactive]:hover:text-white transition-all font-black uppercase tracking-widest border-none"
                 >
                   Nieuw
                 </TabsTrigger>
@@ -271,8 +343,16 @@ export function NotificationCenter() {
                   </div>
                 ) : allMessages && allMessages.length > 0 ? (
                   <div className="divide-y divide-slate-50">
+                    {/* Grouping logic could be added here, but for now show individual unique threads or most recent */}
+                    {/* Showing only messages sent TO user for the inbox list */}
                     {allMessages
                       .filter(m => m.toUserId === user?.uid)
+                      // Filter to show only the last message from each user to avoid clutter
+                      .reduce((acc, current) => {
+                        const existing = acc.find(m => m.fromUserId === current.fromUserId);
+                        if (!existing) acc.push(current);
+                        return acc;
+                      }, [] as Message[])
                       .map((msg) => (
                       <div 
                         key={msg.id} 
