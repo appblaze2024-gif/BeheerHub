@@ -631,7 +631,10 @@ function NavigatingView({
         )}
       </div>
 
-      <div className="absolute bottom-[160px] right-4 z-[70]">
+      <div className={cn(
+          "absolute right-4 z-[70] transition-all duration-300",
+          isDrawerExpanded ? "bottom-[320px]" : "bottom-[160px]"
+      )}>
           <div className={cn(
               "h-20 w-20 rounded-full backdrop-blur shadow-2xl border-4 flex flex-col items-center justify-center overflow-hidden transition-colors duration-500",
               isSpeeding ? "bg-red-50/95 border-red-200" : "bg-white/95 border-slate-100"
