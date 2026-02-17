@@ -753,22 +753,6 @@ function NavigatingView({
             </div>
         ) : (
             <div className="w-full max-w-4xl flex items-end justify-between gap-4">
-                <Card className={cn(
-                    "shadow-2xl backdrop-blur-xl border-none overflow-hidden w-40 transition-colors duration-500",
-                    isSpeeding ? "bg-red-50/95" : "bg-white/95"
-                )}>
-                    <CardContent className="p-0">
-                        <div className={cn("border-b p-2 flex justify-between items-center px-3", isSpeeding ? "bg-red-100/50" : "bg-slate-50")}>
-                            <span className={cn("text-[10px] font-black uppercase tracking-tighter", isSpeeding ? "text-red-600" : "text-slate-400")}>Snelheid</span>
-                            <Badge variant="outline" className={cn("text-[8px] font-black h-4 px-1", isSpeeding ? "text-red-600 border-red-200 bg-red-50" : "text-blue-600 border-blue-200")}>MAX {speedLimit}</Badge>
-                        </div>
-                        <div className="p-3 flex items-baseline gap-1 justify-center">
-                            <span className={cn("font-black tracking-tighter tabular-nums text-5xl", isSpeeding ? "text-red-600" : "text-slate-900")}>{speedKmh}</span>
-                            <span className={cn("text-[10px] font-black uppercase", isSpeeding ? "text-red-400" : "text-slate-400")}>km/h</span>
-                        </div>
-                    </CardContent>
-                </Card>
-
                 <div className="flex gap-2 p-1.5 bg-white/95 backdrop-blur-xl rounded-full shadow-2xl border border-slate-100">
                     <Button variant="ghost" size="lg" className="h-14 w-14 rounded-full hover:bg-slate-50 transition-all flex items-center justify-center p-0" onClick={() => setIsPaused(!isPaused)}>
                         {isPaused ? <Play className="h-7 w-7 fill-current text-blue-600" /> : <Pause className="h-7 w-7 fill-current text-blue-600" />}
