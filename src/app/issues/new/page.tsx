@@ -511,27 +511,31 @@ export default function NewIssuePage() {
       try {
         const { parsed, file } = JSON.parse(pendingData);
         
-        // Use setValue instead of reset to avoid reactivity issues with select components
-        if (parsed.intakenummer) form.setValue('intakenummer', parsed.intakenummer);
-        if (parsed.melder) form.setValue('melder', parsed.melder);
-        if (parsed.extern_meldingsnummer) form.setValue('ext_referentie', parsed.extern_meldingsnummer);
-        if (parsed.label_1) form.setValue('hoofdcategorie', parsed.label_1);
-        if (parsed.label_2) form.setValue('subcategorie', parsed.label_2);
-        if (parsed.behandelaar) form.setValue('behandelaar', parsed.behandelaar);
-        if (parsed.extra_informatie) form.setValue('extra_informatie', parsed.extra_informatie);
-        if (parsed.straatnaam) form.setValue('straatnaam', parsed.straatnaam);
-        if (parsed.huisnummer) form.setValue('nummer', parsed.huisnummer);
-        if (parsed.postcode) form.setValue('postcode', parsed.postcode);
-        if (parsed.plaats) form.setValue('plaats', parsed.plaats);
+        const resetData: Partial<NewMeldingFormValues> = {
+            intakenummer: parsed.intakenummer || '',
+            melder: parsed.melder || '',
+            ext_referentie: parsed.extern_meldingsnummer || '',
+            hoofdcategorie: parsed.label_1 || '',
+            subcategorie: parsed.label_2 || '',
+            behandelaar: parsed.behandelaar || '',
+            extra_informatie: parsed.extra_informatie || '',
+            straatnaam: parsed.straatnaam || '',
+            nummer: parsed.huisnummer || '',
+            postcode: parsed.postcode || '',
+            plaats: parsed.plaats || '',
+            status: 'Nieuw',
+        };
 
         if (parsed.datum) {
-            form.setValue('meldingsdatum', new Date(parsed.datum), { shouldValidate: true });
-            form.setValue('voorvaldatum', new Date(parsed.datum), { shouldValidate: true });
+            resetData.meldingsdatum = new Date(parsed.datum);
+            resetData.voorvaldatum = new Date(parsed.datum);
         }
         if (parsed.tijdstip) {
-            form.setValue('meldingsuur', parsed.tijdstip, { shouldValidate: true });
-            form.setValue('voorvaltijd', parsed.tijdstip, { shouldValidate: true });
+            resetData.meldingsuur = parsed.tijdstip;
+            resetData.voorvaltijd = parsed.tijdstip;
         }
+
+        form.reset({ ...form.getValues(), ...resetData });
 
         if (file) {
             setUploadedFiles([file]);
@@ -626,7 +630,7 @@ export default function NewIssuePage() {
                     const features = JSON.parse(wijk.subGebieden);
                     if (Array.isArray(features)) {
                         for (const feature of features) {
-                            if (turf.booleanPointInPolygon(point, feature)) { foundWijk = wijk.naam; break; }
+                            if (feature && turf.booleanPointInPolygon(point, feature)) { foundWijk = wijk.naam; break; }
                         }
                     }
                 } catch (e) {}
@@ -931,7 +935,33 @@ export default function NewIssuePage() {
                             </div></FormItem>
                             {addressSuggestions.length > 0 && (
                                 <div className="absolute z-[100] w-full mt-1 bg-white border rounded-xl shadow-2xl max-h-48 overflow-y-auto">
-                                    {addressSuggestions.map((s) => (<div key={s.id} className="px-4 py-2 text-xs font-bold cursor-pointer hover:bg-slate-50 border-b last:border-0" onClick={() => { setLocation({ latitude: s.center[1], longitude: s.center[0] }); setSearchQuery(s.place_name); setAddressSuggestions([]); }}>{s.place_name}</div>))}
+                                    {addressSuggestions.map((s) => (
+                                        <div 
+                                            key={s.id} 
+                                            className="px-4 py-2 text-xs font-bold cursor-pointer hover:bg-slate-50 border-b last:border-0" 
+                                            onMouseDown={(e) => {
+                                                e.preventDefault();
+                                                const [lng, lat] = s.center;
+                                                setLocation({ latitude: lat, longitude: lng });
+                                                setSearchQuery(s.place_name);
+                                                setAddressSuggestions([]);
+                                                justSelectedSuggestion.current = true;
+                                                
+                                                // Extract individual fields if possible
+                                                const street = s.text || '';
+                                                const houseNum = s.address || '';
+                                                const postcode = s.context?.find((c: any) => c.id.includes('postcode'))?.text || '';
+                                                const place = s.context?.find((c: any) => c.id.includes('place'))?.text || '';
+                                                
+                                                if (street) form.setValue('straatnaam', street);
+                                                if (houseNum) form.setValue('nummer', houseNum);
+                                                if (postcode) form.setValue('postcode', postcode);
+                                                if (place) form.setValue('plaats', place);
+                                            }}
+                                        >
+                                            {s.place_name}
+                                        </div>
+                                    ))}
                                 </div>
                             )}
                         </div>
