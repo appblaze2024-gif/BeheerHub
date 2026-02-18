@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { format, addDays, isWeekend } from 'date-fns';
 import { nl } from 'date-fns/locale';
-import { ArrowLeft, Loader2, Search, UploadCloud, FileIcon, Trash2, Camera, MapPin, ChevronUp, ChevronDown, Plus, PlusCircle, FileUp } from 'lucide-react';
+import { ArrowLeft, Loader2, Search, UploadCloud, FileIcon, Trash2, Camera, MapPin, ChevronUp, ChevronDown, Plus, PlusCircle, FileUp, Sparkles } from 'lucide-react';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useFirebaseApp, useCollection, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { collection, doc } from 'firebase/firestore';
@@ -38,6 +38,7 @@ import { MapboxView } from '@/components/mapbox-view';
 import * as turf from '@turf/turf';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { parseIssuePdf } from '@/ai/flows/parse-issue-pdf-flow';
 
 
 // Local types, as they are not in lib/types.ts but are needed for data fetching
@@ -110,8 +111,10 @@ const DEFAULT_REPORTER_TYPES = ["Burger", "Bedrijf", "Medewerker", "Overheid"];
 
 const FormRow = ({ label, children, labelFor }: { label: string; children: React.ReactNode; labelFor?: string }) => (
     <div className="grid grid-cols-[140px_1fr] items-start gap-x-2 py-0.5">
-        <FormLabel htmlFor={labelFor} className="text-xs text-left pt-2">{label}</FormLabel>
-        {children}
+        <FormLabel htmlFor={labelFor} className="text-xs text-left pt-2 font-bold text-slate-500 uppercase tracking-tighter shrink-0">{label}</FormLabel>
+        <div className="flex-1 min-w-0">
+            {children}
+        </div>
     </div>
 );
 
@@ -125,6 +128,7 @@ export default function NewIssuePage() {
   const app = useFirebaseApp();
   const { setIsHeaderVisible } = useNavigationUI();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isParsingPdf, setIsParsingPdf] = React.useState(false);
 
   const searchParams = useSearchParams();
   const meldingIdFromUrl = searchParams.get('id');
@@ -752,6 +756,62 @@ export default function NewIssuePage() {
     setAddressSuggestions([]);
   };
 
+  const handlePdfUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || file.type !== 'application/pdf') return;
+
+    setIsParsingPdf(true);
+    toast({ description: "Melding PDF wordt uitgelezen door AI..." });
+
+    try {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const base64 = (e.target?.result as string);
+            
+            // 1. Send to Genkit for parsing
+            const parsed = await parseIssuePdf({ pdfDataUri: base64 });
+
+            // 2. Fill the form
+            if (parsed.datum) form.setValue('meldingsdatum', new Date(parsed.datum));
+            if (parsed.tijdstip) form.setValue('meldingsuur', parsed.tijdstip);
+            if (parsed.melder) form.setValue('melder', parsed.melder);
+            if (parsed.extern_meldingsnummer) form.setValue('ext_referentie', parsed.extern_meldingsnummer);
+            if (parsed.hoofdcategorie) form.setValue('hoofdcategorie', parsed.hoofdcategorie);
+            if (parsed.subcategorie) form.setValue('subcategorie', parsed.subcategorie);
+            if (parsed.extra_informatie) form.setValue('extra_informatie', parsed.extra_informatie);
+            
+            if (parsed.straatnaam) form.setValue('straatnaam', parsed.straatnaam);
+            if (parsed.huisnummer) form.setValue('nummer', parsed.huisnummer);
+            if (parsed.postcode) form.setValue('postcode', parsed.postcode);
+            if (parsed.plaats) form.setValue('plaats', parsed.plaats);
+
+            // 3. Search address for map
+            const fullAddress = `${parsed.straatnaam || ''} ${parsed.huisnummer || ''}, ${parsed.plaats || ''}`.trim();
+            if (fullAddress && fullAddress.length > 5) {
+                setSearchQuery(fullAddress);
+                const response = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(fullAddress)}.json?access_token=${MAPBOX_TOKEN}&country=NL&limit=1`);
+                const data = await response.json();
+                if (data.features?.length > 0) {
+                    const [lng, lat] = data.features[0].center;
+                    setLocation({ latitude: lat, longitude: lng });
+                }
+            }
+
+            // 4. Also upload the file as a document
+            await handleDocumentUploads([file]);
+
+            toast({ title: "PDF Uitgelezen", description: "De gegevens zijn automatisch ingevuld." });
+        };
+        reader.readAsDataURL(file);
+    } catch (err) {
+        console.error("AI PDF Parse Error:", err);
+        toast({ variant: 'destructive', title: "Fout bij inlezen", description: "De AI kon deze PDF niet volledig begrijpen." });
+    } finally {
+        setIsParsingPdf(false);
+        if (pdfInputRef.current) pdfInputRef.current.value = '';
+    }
+  };
+
   const handleAddCategory = async () => {
     if (!firestore || !newCategoryName.trim() || !categoriesRef) return;
     const updatedList = [...hoofdcategorieOptions, newCategoryName.trim()];
@@ -900,11 +960,7 @@ export default function NewIssuePage() {
                 <input
                     type="file"
                     ref={pdfInputRef}
-                    onChange={(e) => {
-                        if (e.target.files) {
-                            handleDocumentUploads(e.target.files);
-                        }
-                    }}
+                    onChange={handlePdfUpload}
                     className="hidden"
                     accept="application/pdf"
                 />
@@ -913,9 +969,10 @@ export default function NewIssuePage() {
                     variant="outline" 
                     onClick={() => pdfInputRef.current?.click()} 
                     className="h-8 bg-white border-blue-600 text-blue-600 hover:bg-blue-50" 
-                    disabled={isSubmitting || isUploading}
+                    disabled={isSubmitting || isUploading || isParsingPdf}
                 >
-                    <FileUp className="mr-2 h-4 w-4" /> PDF-uploaden
+                    {isParsingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                    PDF-uitlezen
                 </Button>
                 {isReadOnly ? (
                     <div className='flex gap-2'>
