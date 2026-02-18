@@ -688,7 +688,7 @@ export default function NewIssuePage() {
                         </div>
                         <div className="p-1 pt-2 border-t mt-2">
                             <FormField control={form.control} name="extra_informatie" render={({ field }) => (
-                                <FormItem><FormLabel className="text-[9px] font-black uppercase tracking-widest text-slate-400">Memo</FormLabel><FormControl><Textarea {...field} className="resize-none h-20 text-xs font-medium leading-relaxed" placeholder="Extra informatie over de melding..." disabled={isReadOnly}/></FormItem>
+                                <FormItem><FormLabel className="text-[9px] font-black uppercase tracking-widest text-slate-400">Memo</FormLabel><FormControl><Textarea {...field} className="resize-none h-20 text-xs font-medium leading-relaxed" placeholder="Extra informatie over de melding..." disabled={isReadOnly}/></FormControl></FormItem>
                             )} />
                         </div>
                    </Card>

@@ -19,7 +19,8 @@ service firebase.storage {
     
     // --- WRITE RULES ---
     
-    // Specifieke regel voor AI training samples - Toegankelijk voor Super admins en ingelogde gebruikers
+    // Specifieke regel voor AI training samples - Toegankelijk voor ingelogde gebruikers
+    // Dit is nodig omdat impersonatie op de client gebeurt, de auth.uid blijft van het kiosk-account.
     match /settings/{allPaths=**} {
       allow read, write: if isSignedIn();
     }
