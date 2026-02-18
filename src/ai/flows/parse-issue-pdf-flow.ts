@@ -1,9 +1,7 @@
 'use server';
 /**
  * @fileOverview AI flow voor het uitlezen van "Formulier melding / Klacht" PDF's.
- * Geoptimaliseerd voor de specifieke mapping:
- * PDF "Soort melder" -> App "Hoofdindeling"
- * PDF "Hoofdindeling" -> App "Indeling"
+ * Ondersteunt dynamische instructies van de Super User voor betere mapping.
  */
 
 import { ai } from '@/ai/genkit';
@@ -15,6 +13,7 @@ const ParseIssuePdfInputSchema = z.object({
     .describe(
       "De PDF van de melding als data URI. Verwacht formaat: 'data:application/pdf;base64,<encoded_data>'."
     ),
+  instructions: z.string().optional().describe("Aanvullende instructies van de gebruiker over waar velden te vinden zijn."),
 });
 export type ParseIssuePdfInput = z.infer<typeof ParseIssuePdfInputSchema>;
 
@@ -44,18 +43,24 @@ const prompt = ai.definePrompt({
   input: { schema: ParseIssuePdfInputSchema },
   output: { schema: ParseIssuePdfOutputSchema },
   prompt: `Je bent een expert in het verwerken van "Formulier melding / Klacht" documenten.
-Gebruik de bijgevoegde PDF om alle gegevens te extraheren volgens deze specifieke mapping:
+Gebruik de bijgevoegde PDF om alle gegevens te extraheren.
 
+{{#if instructions}}
+BELANGRIJKE GEBRUIKERSINSTRUCTIES VOOR DEZE PDF:
+{{{instructions}}}
+{{/if}}
+
+STANDAARD MAPPING REGELS:
 1. "Datum" en "Tijdstip" (linksboven) -> datum en tijdstip.
 2. "Intakenummer" (rechtsboven) -> intakenummer.
 3. "Aangenomen door" (rechtsboven) -> behandelaar.
 4. "Melder" (linksboven) -> melder.
 5. "Extern meldingsnummer" (rechtsboven) -> extern_meldingsnummer.
 
-6. Categorie-indeling (CRUCIAAL - VOLG DEZE LOCATIES):
-   - Zoek naar het label "Soort melder" (onder het blok Melder). De waarde die hierachter of direct daaronder staat is label_1. In de app wordt dit de 'Hoofdindeling'.
-   - Zoek naar het label "Hoofdindeling" op de PDF (deze staat fysiek direct ONDER de soort melder regel). De waarde die hierachter of direct daaronder staat is label_2. In de app wordt dit de 'Indeling'.
-   - VOORBEELD: Als er staat "Soort melder: Zwerfvuil" en daaronder "Hoofdindeling: Beplanting", dan is label_1 "Zwerfvuil" en label_2 "Beplanting".
+6. Categorie-indeling (CRUCIAAL):
+   - Zoek naar het label "Soort melder". De waarde hierachter is label_1 (Hoofdindeling).
+   - Zoek naar het label "Hoofdindeling" op de PDF. De waarde hierachter is label_2 (Indeling).
+   - NB: Op veel formulieren staat de waarde voor de 'Indeling' direct onder de 'Hoofdindeling'.
 
 7. "Adres" -> splits op in straatnaam en huisnummer.
 8. "Postcode/Plaats" -> splits op in postcode en plaats.
@@ -66,7 +71,7 @@ PDF Bron: {{media url=pdfDataUri}}
 INSTRUCTIES:
 - Zet de datum om naar YYYY-MM-DD.
 - Zet de tijd naar HH:mm.
-- Wees zeer nauwkeurig met de labels (label_1, label_2). label_2 is ALTIJD wat op de PDF bij "Hoofdindeling" staat.
+- Wees zeer nauwkeurig met de labels (label_1, label_2). 
 - Als een veld ontbreekt, laat het leeg.`,
 });
 

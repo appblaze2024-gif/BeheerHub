@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { format, addDays, isWeekend } from 'date-fns';
-import { ArrowLeft, Loader2, Search, UploadCloud, FileIcon, Trash2, Camera, MapPin, Sparkles } from 'lucide-react';
+import { ArrowLeft, Loader2, Search, UploadCloud, FileIcon, Trash2, Camera, MapPin, Sparkles, Settings2 } from 'lucide-react';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useFirebaseApp, useCollection, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { collection, doc, arrayUnion } from 'firebase/firestore';
@@ -29,6 +29,15 @@ import type { UploadedFile, Object as MapObject, Melding } from '@/lib/types';
 import { MapboxView } from '@/components/mapbox-view';
 import * as turf from '@turf/turf';
 import { parseIssuePdf } from '@/ai/flows/parse-issue-pdf-flow';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 const newMeldingSchema = z.object({
   soort_melder: z.string().optional(),
@@ -95,6 +104,54 @@ const FormRow = ({ label, children, labelFor }: { label: string; children: React
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
+function AIConfigDialog({ instructions, onSave, isSaving }: { instructions: string, onSave: (val: string) => void, isSaving: boolean }) {
+    const [val, setVal] = React.useState(instructions);
+    
+    React.useEffect(() => {
+        setVal(instructions);
+    }, [instructions]);
+
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button variant="outline" className="h-8 border-slate-300 text-slate-600 hover:bg-slate-100">
+                    <Settings2 className="mr-2 h-4 w-4" /> AI Training
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                    <DialogTitle>AI PDF Scan Instructies</DialogTitle>
+                    <DialogDescription>
+                        Leg hier uit waar de AI specifieke velden op de PDF kan vinden. Dit verbetert de herkenning van uw formulieren.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4 space-y-4">
+                    <div className="space-y-2">
+                        <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Instructies</Label>
+                        <Textarea 
+                            value={val} 
+                            onChange={(e) => setVal(e.target.value)}
+                            placeholder="Bv: De 'Hoofdindeling' staat in het blok Melder direct onder de soort melder. De 'Indeling' staat daar weer direct onder."
+                            className="min-h-[200px] text-xs font-medium leading-relaxed"
+                        />
+                    </div>
+                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                        <p className="text-[10px] text-blue-700 font-bold leading-relaxed uppercase">
+                            Tip: Wees specifiek over tekstlabels die als anker dienen voor de gegevens.
+                        </p>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button onClick={() => onSave(val)} disabled={isSaving}>
+                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        Instellingen Opslaan
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 export default function NewIssuePage() {
   const firestore = useFirestore();
   const router = useRouter();
@@ -104,6 +161,7 @@ export default function NewIssuePage() {
   const { setIsHeaderVisible } = useNavigationUI();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isParsingPdf, setIsParsingPdf] = React.useState(false);
+  const [isSavingConfig, setIsSavingConfig] = React.useState(false);
 
   const searchParams = useSearchParams();
   const meldingIdFromUrl = searchParams.get('id');
@@ -121,6 +179,11 @@ export default function NewIssuePage() {
   const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const justSelectedSuggestion = React.useRef(false);
   const pdfInputRef = React.useRef<HTMLInputElement>(null);
+
+  // AI Configuration
+  const aiConfigRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'pdf_config') : null, [firestore]);
+  const { data: aiConfig } = useDoc<{ instructions: string }>(aiConfigRef);
+  const pdfInstructions = aiConfig?.instructions || '';
 
   // Dynamic Settings
   const statusesRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'statuses') : null, [firestore]);
@@ -189,7 +252,7 @@ export default function NewIssuePage() {
   const watchedSubcategorie = form.watch('subcategorie');
   const watchedMeldingsdatum = form.watch('meldingsdatum');
 
-  // Dynamic Options Fix: Ensure values from PDF show up even if not in original DB lists yet
+  // Dynamic Options Fix
   const displayHoofdOptions = React.useMemo(() => {
     const opts = [...hoofdcategorieOptions];
     if (watchedHoofdcategorie && !opts.includes(watchedHoofdcategorie)) opts.push(watchedHoofdcategorie);
@@ -309,6 +372,19 @@ export default function NewIssuePage() {
     form.setValue('werkgebied', foundWijk || 'Geen werkgebied gevonden');
   }, [location, allProjects, form]);
 
+  const handleSaveAIInstructions = async (instructions: string) => {
+    if (!firestore || !aiConfigRef) return;
+    setIsSavingConfig(true);
+    try {
+        await setDocumentNonBlocking(aiConfigRef, { instructions }, { merge: true });
+        toast({ title: "AI Instructies opgeslagen", description: "De PDF-scanner gebruikt nu uw nieuwe configuratie." });
+    } catch (e) {
+        toast({ variant: 'destructive', title: "Fout bij opslaan", description: "Kon de instellingen niet bijwerken." });
+    } finally {
+        setIsSavingConfig(false);
+    }
+  };
+
   const handlePdfUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || file.type !== 'application/pdf' || !firestore) return;
@@ -320,7 +396,10 @@ export default function NewIssuePage() {
         const reader = new FileReader();
         reader.onload = async (e) => {
             const base64 = (e.target?.result as string);
-            const parsed = await parseIssuePdf({ pdfDataUri: base64 });
+            const parsed = await parseIssuePdf({ 
+                pdfDataUri: base64,
+                instructions: pdfInstructions
+            });
 
             // Automatically add new values to settings if they don't exist
             if (parsed.label_1 && !hoofdcategorieOptions.includes(parsed.label_1)) {
@@ -338,10 +417,8 @@ export default function NewIssuePage() {
                 updateDocumentNonBlocking(handlersRef!, { names: arrayUnion(parsed.behandelaar) });
             }
 
-            // Update form fields. Use form.setValue for key fields to ensure trigger updates.
+            // Update form fields
             const currentValues = form.getValues();
-            
-            // Set all values in one go
             form.reset({
                 ...currentValues,
                 meldingsdatum: parsed.datum ? new Date(parsed.datum) : currentValues.meldingsdatum,
@@ -468,6 +545,9 @@ export default function NewIssuePage() {
                 <h1 className="font-semibold text-xs">{viewedMelding ? `Melding: ${viewedMelding.intakenummer}` : `Melding : ${meldingsnummer}`}</h1>
             </div>
             <div className="flex justify-end gap-2">
+                {profile?.role === 'Super admin' && (
+                    <AIConfigDialog instructions={pdfInstructions} onSave={handleSaveAIInstructions} isSaving={isSavingConfig} />
+                )}
                 <input type="file" ref={pdfInputRef} onChange={handlePdfUpload} className="hidden" accept="application/pdf" />
                 <Button type="button" variant="outline" onClick={() => pdfInputRef.current?.click()} className="h-8 bg-white border-blue-600 text-blue-600 hover:bg-blue-50" disabled={isParsingPdf}>
                     {isParsingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />} PDF-scan
