@@ -106,6 +106,7 @@ const FormRow = ({ label, children, labelFor }: { label: string; children: React
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
 function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { instructions: string, onSave: (val: string, pdfUrl?: string) => void, isSaving: boolean, samplePdfUrl?: string }) {
+    const { toast } = useToast();
     const [val, setVal] = React.useState(instructions);
     const [previewUrl, setPreviewUrl] = React.useState<string | undefined>(samplePdfUrl);
     const [isUploadingSample, setIsUploadingSample] = React.useState(false);
@@ -130,8 +131,10 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
             await uploadTask;
             const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
             setPreviewUrl(downloadUrl);
-        } catch (err) {
+            toast({ title: "Sjabloon geüpload", description: "Het voorbeeld is succesvol opgeslagen." });
+        } catch (err: any) {
             console.error("Sample upload error:", err);
+            toast({ variant: 'destructive', title: "Upload mislukt", description: err.message || "U heeft mogelijk geen rechten om dit bestand te overschrijven." });
         } finally {
             setIsUploadingSample(false);
         }
@@ -685,7 +688,7 @@ export default function NewIssuePage() {
                         </div>
                         <div className="p-1 pt-2 border-t mt-2">
                             <FormField control={form.control} name="extra_informatie" render={({ field }) => (
-                                <FormItem><FormLabel className="text-[9px] font-black uppercase tracking-widest text-slate-400">Memo</FormLabel><FormControl><Textarea {...field} className="resize-none h-20 text-xs font-medium leading-relaxed" placeholder="Extra informatie over de melding..." disabled={isReadOnly}/></FormControl></FormItem>
+                                <FormItem><FormLabel className="text-[9px] font-black uppercase tracking-widest text-slate-400">Memo</FormLabel><FormControl><Textarea {...field} className="resize-none h-20 text-xs font-medium leading-relaxed" placeholder="Extra informatie over de melding..." disabled={isReadOnly}/></FormItem>
                             )} />
                         </div>
                    </Card>
