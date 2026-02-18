@@ -902,15 +902,9 @@ export default function NewIssuePage() {
                     </TabsContent>
                     <TabsContent value="fotos" className="flex-1 m-0 p-4 overflow-y-auto bg-slate-50/30">
                         <div className="h-full flex flex-col gap-6">
-                            {!isReadOnly && <div className="grid grid-cols-2 gap-4 shrink-0">
-                                <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white transition-all h-32" onClick={() => document.getElementById('photo-input')?.click()}>
-                                    <UploadCloud className="h-8 w-8 text-slate-300" /><p className="text-[10px] font-black uppercase tracking-widest mt-2 text-slate-500">Galerij</p>
-                                    <input type="file" id="photo-input" onChange={(e) => e.target.files && handlePhotoUploads(e.target.files)} className="hidden" multiple accept="image/*" />
-                                </div>
-                                <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white transition-all h-32" onClick={() => document.getElementById('camera-input')?.click()}>
-                                    <Camera className="h-8 w-8 text-slate-300" /><p className="text-[10px] font-black uppercase tracking-widest mt-2 text-slate-500">Camera</p>
-                                    <input type="file" id="camera-input" onChange={(e) => e.target.files && handlePhotoUploads(e.target.files)} className="hidden" accept="image/*" capture="environment" />
-                                </div>
+                            {!isReadOnly && <div className="border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white hover:border-primary/50 transition-all h-40" onClick={() => document.getElementById('photo-input')?.click()}>
+                                <UploadCloud className="h-10 w-10 text-slate-300" /><p className="mt-3 text-[10px] font-black uppercase tracking-widest text-slate-500">Foto's uploaden</p>
+                                <input type="file" id="photo-input" onChange={(e) => e.target.files && handlePhotoUploads(e.target.files)} className="hidden" multiple accept="image/*" />
                             </div>}
                             <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-10 gap-3">
                                 {uploadedPhotos.map(p => (
