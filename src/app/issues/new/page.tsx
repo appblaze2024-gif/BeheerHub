@@ -159,7 +159,7 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
                     <div className="w-1/2 border-r bg-slate-100 flex flex-col relative">
                         <div className="p-4 border-b bg-white flex justify-between items-center shrink-0">
                             <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Voorbeeld sjabloon</Label>
-                            <input type="file" ref={fileInputRef} onChange={handleUploadSample} className="hidden" accept="application/pdf" />
+                            <input type="file" ref={fileInputRef} onChange={handleUploadSample} className="hidden" accept="application/pdf,image/*" />
                             <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={isUploadingSample} className="h-8">
                                 {isUploadingSample ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4 mr-2" />}
                                 Sjabloon Uploaden
@@ -167,12 +167,19 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
                         </div>
                         <div className="flex-1 overflow-hidden relative bg-slate-200">
                             {previewUrl ? (
-                                <iframe src={`${previewUrl}#toolbar=0&navpanes=0`} className="w-full h-full border-none" />
+                                previewUrl.toLowerCase().includes('.pdf') ? (
+                                    <iframe src={`${previewUrl}#toolbar=0&navpanes=0`} className="w-full h-full border-none" />
+                                ) : (
+                                    <div className="relative w-full h-full p-4 flex items-center justify-center bg-white">
+                                        <img src={previewUrl} alt="Sjabloon" className="max-w-full max-h-full object-contain shadow-lg" />
+                                    </div>
+                                )
                             ) : (
                                 <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 p-8 text-center">
-                                    <FileText className="h-16 w-16 mb-4 opacity-20" />
-                                    <p className="text-xs font-black uppercase tracking-widest">Geen sjabloon geladen</p>
-                                    <p className="text-[10px] mt-2 font-bold max-w-xs">Upload een PDF om te zien waar de AI de informatie vandaan haalt.</p>
+                                    <div className="relative w-full h-full p-4 flex flex-col items-center justify-center bg-white">
+                                        <img src="https://i.ibb.co/vCfshmMD/image.png" alt="Voorbeeld Sjabloon" className="max-w-full max-h-[80%] object-contain shadow-md mb-4" />
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sjabloon: Formulier melding / Klacht</p>
+                                    </div>
                                 </div>
                             )}
                         </div>

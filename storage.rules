@@ -7,8 +7,8 @@ service firebase.storage {
       return request.auth != null;
     }
 
-    // Volledige toegang voor alle ingelogde gebruikers om de unauthorised errors definitief op te lossen.
-    // Dit geldt voor zowel Super admins als kiosk-accounts die via NFC inloggen.
+    // Volledige toegang voor alle ingelogde gebruikers.
+    // Dit garandeert dat Super admins en kiosk-accounts trainingsmateriaal kunnen uploaden.
     match /{allPaths=**} {
       allow read, write: if isSignedIn();
     }
