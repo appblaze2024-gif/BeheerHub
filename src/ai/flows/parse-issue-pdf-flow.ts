@@ -1,6 +1,7 @@
 'use server';
 /**
  * @fileOverview AI flow voor het uitlezen van "Formulier melding / Klacht" PDF's.
+ * Geoptimaliseerd op basis van handgeschreven veldmapping instructies.
  */
 
 import { ai } from '@/ai/genkit';
@@ -21,9 +22,9 @@ const ParseIssuePdfOutputSchema = z.object({
   tijdstip: z.string().optional().describe('Tijd in HH:mm formaat'),
   melder: z.string().optional(),
   extern_meldingsnummer: z.string().optional(),
-  aangenomen_door: z.string().optional(),
-  hoofdcategorie: z.string().optional(),
-  subcategorie: z.string().optional(),
+  behandelaar: z.string().optional().describe('Gekoppeld aan "Aangenomen door"'),
+  soort_melder: z.string().optional().describe('Gekoppeld aan het eerste veld onder de header (bv. Zwerfvuil)'),
+  hoofdindeling: z.string().optional().describe('Gekoppeld aan het tweede veld onder de header (bv. Beplanting)'),
   straatnaam: z.string().optional(),
   huisnummer: z.string().optional(),
   postcode: z.string().optional(),
@@ -40,20 +41,26 @@ const prompt = ai.definePrompt({
   name: 'parseIssuePdfPrompt',
   input: { schema: ParseIssuePdfInputSchema },
   output: { schema: ParseIssuePdfOutputSchema },
-  prompt: `Je bent een expert in het verwerken van gemeentelijke meldingen en klachten formulieren.
-Gebruik de bijgevoegde PDF om alle relevante gegevens te extraheren.
+  prompt: `Je bent een expert in het verwerken van "Formulier melding / Klacht" documenten.
+Gebruik de bijgevoegde PDF om alle gegevens te extraheren volgens deze specifieke mapping:
+
+1. "Datum" en "Tijdstip" (linksboven) -> datum en tijdstip.
+2. "Intakenummer" (rechtsboven) -> intakenummer.
+3. "Aangenomen door" (rechtsboven) -> behandelaar.
+4. "Melder" (linksboven) -> melder.
+5. "Extern meldingsnummer" (rechtsboven) -> extern_meldingsnummer.
+6. Het eerste label onder de melder (bv. "Zwerfvuil") -> soort_melder.
+7. Het label daaronder (bv. "Beplanting") -> hoofdindeling.
+8. "Adres" -> splits op in straatnaam en huisnummer.
+9. "Postcode/Plaats" -> splits op in postcode en plaats.
+10. "Extra informatie melding" -> extra_informatie (volledige tekst).
 
 PDF Bron: {{media url=pdfDataUri}}
 
 INSTRUCTIES:
-1. Extraheer het Intakenummer, de Datum, het Tijdstip en de Melder.
-2. Extraheer het Extern meldingsnummer en de persoon die de melding heeft aangenomen.
-3. Identificeer de hoofdcategorie (zoals Afval, Groen, Straatreiniging) en de subcategorie.
-4. Splits het adres op in straatnaam, huisnummer, postcode en plaats.
-5. Neem de volledige omschrijving onder "Extra informatie melding" over.
-6. Zet de datum om naar YYYY-MM-DD en de tijd naar HH:mm.
-
-Als velden ontbreken of onleesbaar zijn, laat deze dan leeg in de JSON output.`,
+- Zet de datum om naar YYYY-MM-DD.
+- Zet de tijd naar HH:mm.
+- Als een veld ontbreekt, laat het leeg.`,
 });
 
 export const parseIssuePdfFlow = ai.defineFlow(
