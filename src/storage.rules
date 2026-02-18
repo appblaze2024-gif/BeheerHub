@@ -2,21 +2,9 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    // Specifieke toegang voor instellingen (AI Training, etc.)
-    // We staan alle acties toe voor ingelogde gebruikers om permissiefouten bij sjablonen te voorkomen.
-    // Dit geldt ook voor kiosk-accounts (NFC) omdat deze applicatie-gebaseerde rollen gebruiken.
-    match /settings/{allPaths=**} {
-      allow read, write: if isSignedIn();
-    }
-
-    // Algemene toegang voor overige bestanden
+    // Schrijf- en leesrechten voor alle ingelogde gebruikers (inclusief kiosk-accounts)
     match /{allPaths=**} {
-      allow read, write: if isSignedIn();
+      allow read, write: if request.auth != null;
     }
   }
 }

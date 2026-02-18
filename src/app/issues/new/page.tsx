@@ -42,6 +42,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const newMeldingSchema = z.object({
+  intakenummer: z.string().min(1, 'Meldingsnummer is verplicht'),
   soort_melder: z.string().optional(),
   hoofdcategorie: z.string().optional(),
   subcategorie: z.string().optional(),
@@ -381,12 +382,11 @@ export default function NewIssuePage() {
   const { data: allProjects } = useCollection<any>(projectsCollection);
   
   const now = new Date();
-  const meldingIdRef = React.useRef(meldingIdFromUrl || `${format(now, 'yyyyMMdd')}${Math.floor(1000 + Math.random() * 9000)}`);
-  const meldingsnummer = meldingIdRef.current;
 
   const form = useForm<NewMeldingFormValues>({
     resolver: zodResolver(newMeldingSchema),
     defaultValues: {
+      intakenummer: '',
       status: 'Nieuw',
       meldingsdatum: now,
       meldingsuur: format(now, 'HH:mm'),
@@ -421,6 +421,7 @@ export default function NewIssuePage() {
   const watchedSubcategorie = form.watch('subcategorie');
   const watchedBehandelaar = form.watch('behandelaar');
   const watchedMeldingsdatum = form.watch('meldingsdatum');
+  const watchedIntakenummer = form.watch('intakenummer');
 
   const displayHoofdOptions = React.useMemo(() => {
     const opts = [...hoofdcategorieOptions];
@@ -470,6 +471,7 @@ export default function NewIssuePage() {
       setViewedMelding(viewedMeldingFromDb);
       setIsReadOnly(true);
       form.reset({
+        intakenummer: viewedMeldingFromDb.intakenummer || '',
         soort_melder: viewedMeldingFromDb.soort_melder || '',
         hoofdcategorie: viewedMeldingFromDb.hoofdcategorie,
         subcategorie: viewedMeldingFromDb.subcategorie,
@@ -607,6 +609,7 @@ export default function NewIssuePage() {
             const currentValues = form.getValues();
             form.reset({
                 ...currentValues,
+                intakenummer: parsed.intakenummer || currentValues.intakenummer,
                 meldingsdatum: parsed.datum ? new Date(parsed.datum) : currentValues.meldingsdatum,
                 meldingsuur: parsed.tijdstip || currentValues.meldingsuur,
                 melder: parsed.melder || currentValues.melder,
@@ -633,7 +636,8 @@ export default function NewIssuePage() {
             }
 
             const storage = getStorage(app);
-            const storagePath = `meldingen/${meldingsnummer}/documents/${Date.now()}-${file.name}`;
+            const mNum = parsed.intakenummer || 'temp';
+            const storagePath = `meldingen/${mNum}/documents/${Date.now()}-${file.name}`;
             const uploadTask = uploadBytesResumable(ref(storage, storagePath), file);
             await uploadTask;
             const url = await getDownloadURL(uploadTask.snapshot.ref);
@@ -650,11 +654,12 @@ export default function NewIssuePage() {
     }
   };
 
-  const uploadFile = React.useCallback((file: File, meldingId: string, type: 'documents' | 'photos'): Promise<UploadedFile> => {
+  const uploadFile = React.useCallback((file: File, mNum: string, type: 'documents' | 'photos'): Promise<UploadedFile> => {
     return new Promise((resolve, reject) => {
         if (!app) return reject(new Error("Firebase app niet beschikbaar"));
         const storage = getStorage(app);
-        const storagePath = `meldingen/${meldingId}/${type}/${Date.now()}-${file.name}`;
+        const folder = mNum || 'temp';
+        const storagePath = `meldingen/${folder}/${type}/${Date.now()}-${file.name}`;
         const uploadTask = uploadBytesResumable(ref(storage, storagePath), file);
         uploadTask.on('state_changed',
             (snap) => setUploadProgress(prev => ({ ...prev, [file.name]: (snap.bytesTransferred / snap.totalBytes) * 100 })),
@@ -662,35 +667,38 @@ export default function NewIssuePage() {
             () => getDownloadURL(uploadTask.snapshot.ref).then(url => {
                 const nFile = { name: file.name, url, size: file.size, type: file.type, uploadedAt: new Date().toISOString(), storagePath };
                 resolve(nFile);
-                setUploadProgress(prev => { setUploadProgress(prev => { const n = { ...prev }; delete n[file.name]; return prev; }); return prev; });
+                setUploadProgress(prev => { const n = { ...prev }; delete n[file.name]; return prev; });
             })
         );
     });
   }, [app]);
   
   const handleDocumentUploads = React.useCallback(async (files: FileList | File[]) => {
+    const mNum = form.getValues('intakenummer');
     for (const file of Array.from(files)) {
       try {
-        const res = await uploadFile(file, meldingsnummer, 'documents');
+        const res = await uploadFile(file, mNum, 'documents');
         setUploadedFiles(prev => [...prev, res]);
       } catch (error) { toast({ variant: "destructive", title: "Upload mislukt" }); }
     }
-  }, [uploadFile, meldingsnummer, toast]);
+  }, [uploadFile, form, toast]);
   
   const handlePhotoUploads = React.useCallback(async (files: FileList | File[]) => {
+    const mNum = form.getValues('intakenummer');
     for (const file of Array.from(files)) {
       try {
-        const res = await uploadFile(file, meldingsnummer, 'photos');
+        const res = await uploadFile(file, mNum, 'photos');
         setUploadedPhotos(prev => [...prev, res]);
       } catch (error) { toast({ variant: "destructive", title: "Upload mislukt" }); }
     }
-  }, [uploadFile, meldingsnummer, toast]);
+  }, [uploadFile, form, toast]);
 
   const onSubmit = async (data: NewMeldingFormValues) => {
     if (!firestore || isSubmitting) return;
     setIsSubmitting(true);
     try {
        const mData: any = {
+        intakenummer: data.intakenummer,
         soort_melder: data.soort_melder, hoofdcategorie: data.hoofdcategorie, subcategorie: data.subcategorie,
         behandelende_afdeling: data.behandelende_afdeling, behandelaar: data.behandelaar, status: data.status,
         extern_meldingsnummer: data.ext_referentie, straatnaam: data.straatnaam, huisnummer: data.nummer,
@@ -709,7 +717,6 @@ export default function NewIssuePage() {
           await updateDocumentNonBlocking(doc(firestore, 'meldingen', viewedMelding.id), mData);
           router.push('/issues/open');
       } else {
-          mData.intakenummer = meldingsnummer;
           mData.datum = format(data.meldingsdatum || now, 'yyyy-MM-dd');
           mData.tijdstip = data.meldingsuur || format(now, 'HH:mm');
           mData.aangenomen_door = profile?.displayName || profile?.email || 'Onbekend';
@@ -728,7 +735,7 @@ export default function NewIssuePage() {
         <div className="flex-shrink-0 px-4 py-1.5 border-b flex justify-between items-center bg-gray-200/60 dark:bg-gray-800/60">
             <div className="flex items-center gap-2">
                 <Button variant="ghost" size="icon" onClick={() => router.back()}><ArrowLeft className="h-4 w-4" /></Button>
-                <h1 className="font-semibold text-xs">{viewedMelding ? `Melding: ${viewedMelding.intakenummer}` : `Melding : ${meldingsnummer}`}</h1>
+                <h1 className="font-semibold text-xs">{viewedMelding ? `Melding: ${viewedMelding.intakenummer}` : (watchedIntakenummer ? `Melding: ${watchedIntakenummer}` : 'Nieuwe Melding')}</h1>
             </div>
             <div className="flex justify-end gap-2">
                 {profile?.role === 'Super admin' && (
@@ -756,7 +763,11 @@ export default function NewIssuePage() {
                             </div>
                         </CardHeader>
                         <div className="space-y-0.5 p-1">
-                            <FormRow label="Meldingsnummer"><Input value={viewedMelding ? viewedMelding.intakenummer : meldingsnummer} disabled className="h-7 text-xs font-bold"/></FormRow>
+                            <FormRow label="Meldingsnummer">
+                                <FormField control={form.control} name="intakenummer" render={({ field }) => (
+                                    <FormControl><Input {...field} className="h-7 text-xs font-bold" disabled={isReadOnly}/></FormControl>
+                                )} />
+                            </FormRow>
                             <FormRow label="Soort melder">
                                 <FormField control={form.control} name="soort_melder" render={({ field }) => (
                                     <Select onValueChange={field.onChange} value={field.value ?? ''} disabled={isReadOnly}>
