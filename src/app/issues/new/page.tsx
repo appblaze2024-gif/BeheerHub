@@ -338,8 +338,10 @@ export default function NewIssuePage() {
                 updateDocumentNonBlocking(handlersRef!, { names: arrayUnion(parsed.behandelaar) });
             }
 
-            // Set form values using reset to ensure all fields update simultaneously
+            // Update form fields. Use form.setValue for key fields to ensure trigger updates.
             const currentValues = form.getValues();
+            
+            // Set all values in one go
             form.reset({
                 ...currentValues,
                 meldingsdatum: parsed.datum ? new Date(parsed.datum) : currentValues.meldingsdatum,
