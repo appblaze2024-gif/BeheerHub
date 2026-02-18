@@ -28,7 +28,7 @@ import { formatDistanceToNow, format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 
 import { cn } from '@/lib/utils';
-import { useUser, useFirestore, useFirebaseApp, useDoc, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
+import { useUser, useFirestore, useFirebaseApp, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, doc, query, orderBy, limit, serverTimestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
@@ -269,36 +269,22 @@ export default function MailPage() {
         await uploadTask;
         const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
 
-        const mData = {
-            intakenummer: parsed.intakenummer || '',
-            datum: parsed.datum || format(new Date(), 'yyyy-MM-dd'),
-            tijdstip: parsed.tijdstip || format(new Date(), 'HH:mm'),
-            melder: parsed.melder || selectedMail?.fromName || '',
-            extern_meldingsnummer: parsed.extern_meldingsnummer || '',
-            hoofdcategorie: parsed.label_1 || '',
-            subcategorie: parsed.label_2 || '',
-            behandelaar: parsed.behandelaar || '',
-            extra_informatie: parsed.extra_informatie || '',
-            straatnaam: parsed.straatnaam || '',
-            huisnummer: parsed.huisnummer || '',
-            postcode: parsed.postcode || '',
-            plaats: parsed.plaats || '',
-            status: 'Nieuw',
-            files: [{
+        const forwardedData = {
+            parsed,
+            file: {
                 name: attachment.filename,
                 url: downloadUrl,
                 size: attachment.size,
                 type: attachment.contentType,
                 uploadedAt: new Date().toISOString(),
                 storagePath
-            }],
-            createdAt: serverTimestamp(),
-            aangenomen_door: user?.displayName || user?.email || 'System'
+            }
         };
 
-        const docRef = await addDocumentNonBlocking(collection(firestore, 'meldingen'), mData);
-        toast({ title: "Melding aangemaakt", description: "De PDF is succesvol verwerkt." });
-        router.push(`/issues/new?id=${docRef.id}`);
+        // Store data locally and redirect to /issues/new to fill form without saving yet
+        localStorage.setItem('pending_forwarded_melding', JSON.stringify(forwardedData));
+        toast({ title: "Bijlage voorbereid", description: "Gegevens worden nu ingevuld in het meldingsformulier." });
+        router.push(`/issues/new`);
     } catch (err: any) {
         console.error("Forward error:", err);
         toast({ variant: 'destructive', title: "Doorzetten mislukt", description: "De AI kon deze PDF niet volledig begrijpen." });

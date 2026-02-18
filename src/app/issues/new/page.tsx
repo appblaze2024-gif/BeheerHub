@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -7,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { format, addDays, isWeekend } from 'date-fns';
-import { ArrowLeft, Loader2, Search, UploadCloud, FileIcon, Trash2, Camera, MapPin, Sparkles, Settings2, FileText, Eye, X, ZoomIn, ZoomOut, Target, Upload } from 'lucide-react';
+import { ArrowLeft, Loader2, Search, UploadCloud, FileIcon, Trash2, Camera, MapPin, Sparkles, Settings2, FileText, Eye, X, ZoomIn, ZoomOut, Target, Upload, ChevronDown } from 'lucide-react';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useFirebaseApp, useCollection, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { collection, doc, arrayUnion } from 'firebase/firestore';
@@ -505,6 +504,59 @@ export default function NewIssuePage() {
       setSearchQuery(`${viewedMeldingFromDb.straatnaam || ''}${viewedMeldingFromDb.huisnummer ? ' ' + viewedMeldingFromDb.huisnummer : ''}, ${viewedMeldingFromDb.plaats || ''}`);
     }
   }, [viewedMeldingFromDb?.id, meldingIdFromUrl, form]);
+
+  // Logic to pick up forwarded data from MailPage
+  React.useEffect(() => {
+    const pendingData = localStorage.getItem('pending_forwarded_melding');
+    if (pendingData) {
+      try {
+        const { parsed, file } = JSON.parse(pendingData);
+        localStorage.removeItem('pending_forwarded_melding');
+        
+        // Populate form
+        const currentValues = form.getValues();
+        form.reset({
+            ...currentValues,
+            intakenummer: parsed.intakenummer || '',
+            meldingsdatum: parsed.datum ? new Date(parsed.datum) : new Date(),
+            meldingsuur: parsed.tijdstip || '',
+            melder: parsed.melder || '',
+            ext_referentie: parsed.extern_meldingsnummer || '',
+            hoofdcategorie: parsed.label_1 || '',
+            subcategorie: parsed.label_2 || '',
+            behandelaar: parsed.behandelaar || '',
+            extra_informatie: parsed.extra_informatie || '',
+            straatnaam: parsed.straatnaam || '',
+            nummer: parsed.huisnummer || '',
+            postcode: parsed.postcode || '',
+            plaats: parsed.plaats || '',
+        });
+
+        // Handle file
+        if (file) {
+            setUploadedFiles([file]);
+        }
+
+        // Handle location
+        const fullAddress = `${parsed.straatnaam || ''} ${parsed.huisnummer || ''}, ${parsed.plaats || ''}`.trim();
+        if (fullAddress.length > 5) {
+            setSearchQuery(fullAddress);
+            fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(fullAddress)}.json?access_token=${MAPBOX_TOKEN}&country=NL&limit=1`)
+                .then(res => res.json())
+                .then(geo => {
+                    if (geo.features?.length > 0) {
+                        const [lng, lat] = geo.features[0].center;
+                        setLocation({ latitude: lat, longitude: lng });
+                    }
+                });
+        }
+        
+        toast({ title: "Gegevens ingeladen", description: "De melding vanuit de e-mail is voorbereid." });
+      } catch (e) {
+        console.error("Error loading pending forwarded melding:", e);
+      }
+    }
+  }, [form, toast]);
   
   React.useEffect(() => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
@@ -908,13 +960,13 @@ export default function NewIssuePage() {
                             <TabsTrigger value="locatie" className="text-[10px] font-black uppercase">Locatie</TabsTrigger>
                         </TabsList>
                     </div>
-                    <TabsContent value="documenten" className="m-0 p-4 bg-slate-50/30">
-                        <div className="flex flex-col gap-4">
+                    <TabsContent value="documenten" className="m-0 p-4 bg-slate-50/30 overflow-hidden">
+                        <div className="flex flex-col h-full gap-4">
                             {!isReadOnly && <Button type="button" variant="outline" className="w-full h-12 border-dashed border-2 font-bold uppercase text-[10px] tracking-widest" onClick={() => document.getElementById('doc-input')?.click()}>
                                 <UploadCloud className="mr-2 h-4 w-4" /> Bestand uploaden
                             </Button>}
                             <input type="file" id="doc-input" onChange={(e) => e.target.files && handleDocumentUploads(e.target.files)} className="hidden" multiple />
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 overflow-y-auto pr-1">
                                 {uploadedFiles.map((f) => (
                                     <div key={f.storagePath} className="flex items-center justify-between p-3 border rounded-xl bg-white shadow-sm group">
                                         <div className="flex items-center gap-3 truncate">
@@ -929,13 +981,13 @@ export default function NewIssuePage() {
                             </div>
                         </div>
                     </TabsContent>
-                    <TabsContent value="fotos" className="m-0 p-4 bg-slate-50/30">
-                        <div className="flex flex-col gap-4">
+                    <TabsContent value="fotos" className="m-0 p-4 bg-slate-50/30 overflow-hidden">
+                        <div className="flex flex-col h-full gap-4">
                             {!isReadOnly && <Button type="button" variant="outline" className="w-full h-12 border-dashed border-2 font-bold uppercase text-[10px] tracking-widest" onClick={() => document.getElementById('photo-input')?.click()}>
                                 <Upload className="mr-2 h-4 w-4" /> Foto uploaden
                             </Button>}
                             <input type="file" id="photo-input" onChange={(e) => e.target.files && handlePhotoUploads(e.target.files)} className="hidden" multiple accept="image/*" />
-                            <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-10 gap-3">
+                            <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-10 gap-3 overflow-y-auto pr-1">
                                 {uploadedPhotos.map(p => (
                                     <div key={p.storagePath} className="relative aspect-square rounded-xl overflow-hidden border shadow-sm group">
                                         <Image src={p.url} alt={p.name} fill className="object-cover" />
