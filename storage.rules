@@ -7,8 +7,7 @@ service firebase.storage {
       return request.auth != null;
     }
 
-    // Volledige toegang voor alle ingelogde gebruikers.
-    // Dit garandeert dat Super admins en kiosk-accounts trainingsmateriaal kunnen uploaden.
+    // Volledige toegang voor alle ingelogde gebruikers om de AI Training en meldingen te ondersteunen.
     match /{allPaths=**} {
       allow read, write: if isSignedIn();
     }

@@ -134,7 +134,7 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
             toast({ title: "Sjabloon geüpload", description: "Het voorbeeld is succesvol opgeslagen." });
         } catch (err: any) {
             console.error("Sample upload error:", err);
-            toast({ variant: 'destructive', title: "Upload mislukt", description: err.message || "U heeft mogelijk geen rechten om dit bestand te overschrijven." });
+            toast({ variant: 'destructive', title: "Upload mislukt", description: err.message || "Er is een fout opgetreden bij het uploaden van het sjabloon." });
         } finally {
             setIsUploadingSample(false);
         }
@@ -177,7 +177,7 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
                             ) : (
                                 <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 p-8 text-center">
                                     <div className="relative w-full h-full p-4 flex flex-col items-center justify-center bg-white">
-                                        <img src="https://i.ibb.co/vCfshmMD/image.png" alt="Voorbeeld Sjabloon" className="max-w-full max-h-[80%] object-contain shadow-md mb-4" />
+                                        <img src="https://i.ibb.co/nNFZcctf/Schermafbeelding-2026-02-18-104605.png" alt="Sjabloon Voorbeeld" className="max-w-full max-h-[80%] object-contain shadow-md mb-4" />
                                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sjabloon: Formulier melding / Klacht</p>
                                     </div>
                                 </div>
