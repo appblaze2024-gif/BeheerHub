@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -7,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { format, addDays, isWeekend } from 'date-fns';
-import { ArrowLeft, Loader2, Search, UploadCloud, FileIcon, Trash2, Camera, MapPin, Sparkles, Settings2, FileText, Eye } from 'lucide-react';
+import { ArrowLeft, Loader2, Search, UploadCloud, FileIcon, Trash2, Camera, MapPin, Sparkles, Settings2, FileText, Eye, X } from 'lucide-react';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useFirebaseApp, useCollection, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { collection, doc, arrayUnion } from 'firebase/firestore';
@@ -87,7 +86,7 @@ const DEFAULT_SUBCATEGORIE_MAPPING: Record<string, string[]> = {
     "Afval": ["Volle of kapotte afvalbak", "Zwerfafval", "Dumping", "Dierenkadaver"],
     "Weg en straatmeubilair": ["Losse tegel(s)", "Gat in de weg", "Kapotte bank/paal/hek"],
     "Groen": ["Overhangende takken", "Onkruid", "Maaien"],
-    "Water": ["Verstopte put", "Wateroverlast"],
+    "Water": ["Wateroverlast", "Verstopte put"],
     "Zoutkisten": ["Zoutkist leeg"],
     "Overig": ["Overige meldingen"]
 };
@@ -147,7 +146,7 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
             </DialogTrigger>
             <DialogContent className="sm:max-w-[1000px] h-[90vh] flex flex-col p-0 overflow-hidden">
                 <DialogHeader className="p-6 border-b shrink-0">
-                    <DialogTitle className="text-xl font-black uppercase tracking-tight">AI Training & Sjabloon Beheer</DialogTitle>
+                    <DialogTitle className="text-xl font-black uppercase tracking-tight text-slate-900">AI Training & Sjabloon Beheer</DialogTitle>
                     <DialogDescription className="font-bold text-slate-500">
                         Upload een voorbeeld-PDF en leg de AI uit waar de gegevens te vinden zijn.
                     </DialogDescription>
@@ -155,7 +154,7 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
                 
                 <div className="flex-1 flex min-h-0">
                     {/* PDF Preview Area */}
-                    <div className="w-1/2 border-r bg-slate-100 flex flex-col">
+                    <div className="w-1/2 border-r bg-slate-100 flex flex-col relative">
                         <div className="p-4 border-b bg-white flex justify-between items-center shrink-0">
                             <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Voorbeeld sjabloon</Label>
                             <input type="file" ref={fileInputRef} onChange={handleUploadSample} className="hidden" accept="application/pdf" />
@@ -164,14 +163,14 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
                                 Sjabloon Uploaden
                             </Button>
                         </div>
-                        <div className="flex-1 overflow-hidden relative">
+                        <div className="flex-1 overflow-hidden relative bg-slate-200">
                             {previewUrl ? (
                                 <iframe src={`${previewUrl}#toolbar=0&navpanes=0`} className="w-full h-full border-none" />
                             ) : (
-                                <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-300 p-8 text-center">
-                                    <FileText className="h-16 w-16 mb-4 opacity-10" />
+                                <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 p-8 text-center">
+                                    <FileText className="h-16 w-16 mb-4 opacity-20" />
                                     <p className="text-xs font-black uppercase tracking-widest">Geen sjabloon geladen</p>
-                                    <p className="text-[10px] mt-2 font-medium">Upload een lege of gevulde PDF om de AI te trainen.</p>
+                                    <p className="text-[10px] mt-2 font-bold max-w-xs">Upload een PDF om te zien waar de AI de informatie vandaan haalt.</p>
                                 </div>
                             )}
                         </div>
@@ -185,23 +184,23 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
                         <ScrollArea className="flex-1">
                             <div className="p-6 space-y-6">
                                 <div className="space-y-2">
-                                    <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
+                                    <p className="text-[11px] text-slate-500 font-bold leading-relaxed uppercase tracking-tighter">
                                         Leg hieronder uit waar de AI specifieke gegevens op uw formulier kan vinden. Wees zo specifiek mogelijk.
                                     </p>
                                     <Textarea 
                                         value={val} 
                                         onChange={(e) => setVal(e.target.value)}
                                         placeholder="Bv: De 'Hoofdindeling' staat in het blok Melder direct onder de soort melder. Het intakenummer staat altijd rechtsboven naast het label 'Intakenummer:'"
-                                        className="min-h-[300px] text-xs font-medium leading-relaxed border-2 focus:ring-primary/20"
+                                        className="min-h-[350px] text-xs font-medium leading-relaxed border-2 focus:ring-primary/20 shadow-inner"
                                     />
                                 </div>
                                 
-                                <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                                <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 shadow-sm">
                                     <h4 className="text-[10px] font-black uppercase text-blue-700 mb-2 flex items-center gap-2"><Sparkles className="h-3 w-3" /> Tips voor training</h4>
-                                    <ul className="text-[10px] text-blue-600 space-y-1.5 font-bold uppercase tracking-tight">
+                                    <ul className="text-[10px] text-blue-600 space-y-1.5 font-black uppercase tracking-tight">
                                         <li className="flex gap-2">• Gebruik labels als referentiepunten</li>
                                         <li className="flex gap-2">• Geef posities aan (linksboven, rechtsonder)</li>
-                                        <li className="flex gap-2">• Benoem de hiërarchie tussen velden</li>
+                                        <li className="flex gap-2">• Benoem de fysieke volgorde van velden</li>
                                     </ul>
                                 </div>
                             </div>
@@ -321,7 +320,6 @@ export default function NewIssuePage() {
   const watchedSubcategorie = form.watch('subcategorie');
   const watchedMeldingsdatum = form.watch('meldingsdatum');
 
-  // Dynamic Options Fix
   const displayHoofdOptions = React.useMemo(() => {
     const opts = [...hoofdcategorieOptions];
     if (watchedHoofdcategorie && !opts.includes(watchedHoofdcategorie)) opts.push(watchedHoofdcategorie);
@@ -470,7 +468,6 @@ export default function NewIssuePage() {
                 instructions: pdfInstructions
             });
 
-            // Automatically add new values to settings if they don't exist
             if (parsed.label_1 && !hoofdcategorieOptions.includes(parsed.label_1)) {
                 updateDocumentNonBlocking(categoriesRef!, { hoofdcategorieen: arrayUnion(parsed.label_1) });
             }
@@ -486,7 +483,6 @@ export default function NewIssuePage() {
                 updateDocumentNonBlocking(handlersRef!, { names: arrayUnion(parsed.behandelaar) });
             }
 
-            // Update form fields
             const currentValues = form.getValues();
             form.reset({
                 ...currentValues,

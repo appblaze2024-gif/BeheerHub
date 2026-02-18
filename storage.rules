@@ -14,9 +14,9 @@ service firebase.storage {
     
     // --- WRITE RULES ---
     
-    // Rule for AI training samples
+    // Rule for AI training samples - Explicitly allowed for all signed in users
     match /settings/{allPaths=**} {
-      allow write: if isSignedIn();
+      allow read, write: if isSignedIn();
     }
 
     // Rule for 'Besteksmeldingen' photos.
