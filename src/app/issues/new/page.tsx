@@ -17,7 +17,7 @@ import Image from 'next/image';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -505,15 +505,16 @@ export default function NewIssuePage() {
     }
   }, [viewedMeldingFromDb?.id, meldingIdFromUrl, form]);
 
-  // Logic to pick up forwarded data from MailPage
+  const hasProcessedForwarded = React.useRef(false);
   React.useEffect(() => {
+    if (hasProcessedForwarded.current) return;
     const pendingData = localStorage.getItem('pending_forwarded_melding');
     if (pendingData) {
+      hasProcessedForwarded.current = true;
       try {
         const { parsed, file } = JSON.parse(pendingData);
         localStorage.removeItem('pending_forwarded_melding');
         
-        // Ensure new values are added to DB settings
         if (parsed.label_1 && !hoofdcategorieOptions.includes(parsed.label_1)) {
             updateDocumentNonBlocking(categoriesRef!, { hoofdcategorieen: arrayUnion(parsed.label_1) });
         }
@@ -529,7 +530,6 @@ export default function NewIssuePage() {
             updateDocumentNonBlocking(handlersRef!, { names: arrayUnion(parsed.behandelaar) });
         }
 
-        // Populate form using reset but also ensuring all parsed fields are present
         form.reset({
             intakenummer: parsed.intakenummer || '',
             status: 'Nieuw',
@@ -549,12 +549,10 @@ export default function NewIssuePage() {
             voorvaltijd: parsed.tijdstip || format(new Date(), 'HH:mm'),
         });
 
-        // Handle file
         if (file) {
             setUploadedFiles([file]);
         }
 
-        // Handle location
         const fullAddress = `${parsed.straatnaam || ''} ${parsed.huisnummer || ''}, ${parsed.plaats || ''}`.trim();
         if (fullAddress.length > 5) {
             setSearchQuery(fullAddress);
