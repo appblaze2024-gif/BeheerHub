@@ -239,7 +239,7 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
                                 style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', transition: 'transform 0.2s ease-out' }}
                                 onClick={handleImageClick}
                             >
-                                <div className="relative w-full h-[1200px] cursor-crosshair">
+                                <div className="relative w-full h-[1600px] cursor-crosshair">
                                     <Image 
                                         src={previewUrl || "https://i.ibb.co/nNFZcctf/Schermafbeelding-2026-02-18-104605.png"} 
                                         alt="Formulier Sjabloon" 
@@ -419,6 +419,7 @@ export default function NewIssuePage() {
   
   const watchedHoofdcategorie = form.watch('hoofdcategorie');
   const watchedSubcategorie = form.watch('subcategorie');
+  const watchedBehandelaar = form.watch('behandelaar');
   const watchedMeldingsdatum = form.watch('meldingsdatum');
 
   const displayHoofdOptions = React.useMemo(() => {
@@ -441,6 +442,12 @@ export default function NewIssuePage() {
     }
     return options.sort();
   }, [subcategorieMapping, watchedHoofdcategorie, watchedSubcategorie]);
+
+  const displayHandlerOptions = React.useMemo(() => {
+    const opts = [...handlerOptions];
+    if (watchedBehandelaar && !opts.includes(watchedBehandelaar)) opts.push(watchedBehandelaar);
+    return opts;
+  }, [handlerOptions, watchedBehandelaar]);
 
   React.useEffect(() => {
     if (watchedSubcategorie && !watchedHoofdcategorie) {

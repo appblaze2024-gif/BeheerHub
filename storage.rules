@@ -9,6 +9,7 @@ service firebase.storage {
 
     // Specifieke toegang voor instellingen (AI Training, etc.)
     // We staan alle acties toe voor ingelogde gebruikers om permissiefouten bij sjablonen te voorkomen.
+    // Dit geldt ook voor kiosk-accounts (NFC) omdat deze applicatie-gebaseerde rollen gebruiken.
     match /settings/{allPaths=**} {
       allow read, write: if isSignedIn();
     }
