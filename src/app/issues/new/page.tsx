@@ -165,20 +165,20 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
                                 Sjabloon Uploaden
                             </Button>
                         </div>
-                        <div className="flex-1 overflow-hidden relative bg-slate-200">
+                        <div className="flex-1 overflow-hidden relative bg-white">
                             {previewUrl ? (
                                 previewUrl.toLowerCase().includes('.pdf') ? (
                                     <iframe src={`${previewUrl}#toolbar=0&navpanes=0`} className="w-full h-full border-none" />
                                 ) : (
-                                    <div className="relative w-full h-full p-4 flex items-center justify-center bg-white">
-                                        <img src={previewUrl} alt="Sjabloon" className="max-w-full max-h-full object-contain shadow-lg" />
+                                    <div className="relative w-full h-full flex items-center justify-center">
+                                        <img src={previewUrl} alt="Sjabloon" className="w-full h-full object-contain" />
                                     </div>
                                 )
                             ) : (
-                                <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 p-8 text-center">
-                                    <div className="relative w-full h-full p-4 flex flex-col items-center justify-center bg-white">
-                                        <img src="https://i.ibb.co/nNFZcctf/Schermafbeelding-2026-02-18-104605.png" alt="Sjabloon Voorbeeld" className="max-w-full max-h-[80%] object-contain shadow-md mb-4" />
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sjabloon: Formulier melding / Klacht</p>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white group">
+                                    <img src="https://i.ibb.co/nNFZcctf/Schermafbeelding-2026-02-18-104605.png" alt="Sjabloon Voorbeeld" className="w-full h-full object-contain" />
+                                    <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Standaard sjabloon geladen</p>
                                     </div>
                                 </div>
                             )}
@@ -547,7 +547,7 @@ export default function NewIssuePage() {
             () => getDownloadURL(uploadTask.snapshot.ref).then(url => {
                 const nFile = { name: file.name, url, size: file.size, type: file.type, uploadedAt: new Date().toISOString(), storagePath };
                 resolve(nFile);
-                setUploadProgress(prev => { setUploadProgress(prev => { const n = { ...prev }; delete n[file.name]; return n; }); return prev; });
+                setUploadProgress(prev => { setUploadProgress(prev => { const n = { ...prev }; delete n[file.name]; return prev; }); return prev; });
             })
         );
     });
