@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { format, addDays, isWeekend } from 'date-fns';
 import { nl } from 'date-fns/locale';
-import { ArrowLeft, Loader2, Search, UploadCloud, FileIcon, Trash2, Camera, MapPin, ChevronUp, ChevronDown, Plus, PlusCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, Search, UploadCloud, FileIcon, Trash2, Camera, MapPin, ChevronUp, ChevronDown, Plus, PlusCircle, FileUp } from 'lucide-react';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useFirebaseApp, useCollection, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { collection, doc } from 'firebase/firestore';
@@ -143,6 +143,7 @@ export default function NewIssuePage() {
   const [isSearching, setIsSearching] = React.useState(false);
   const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const justSelectedSuggestion = React.useRef(false);
+  const pdfInputRef = React.useRef<HTMLInputElement>(null);
 
   // Status management
   const [isManageStatusesOpen, setIsManageStatusesOpen] = React.useState(false);
@@ -896,6 +897,26 @@ export default function NewIssuePage() {
                 <h1 className="font-semibold text-xs">{viewedMelding ? `Melding: ${viewedMelding.intakenummer}` : `Melding : ${meldingsnummer}`}</h1>
             </div>
             <div className="flex justify-end gap-2">
+                <input
+                    type="file"
+                    ref={pdfInputRef}
+                    onChange={(e) => {
+                        if (e.target.files) {
+                            handleDocumentUploads(e.target.files);
+                        }
+                    }}
+                    className="hidden"
+                    accept="application/pdf"
+                />
+                <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => pdfInputRef.current?.click()} 
+                    className="h-8 bg-white border-blue-600 text-blue-600 hover:bg-blue-50" 
+                    disabled={isSubmitting || isUploading}
+                >
+                    <FileUp className="mr-2 h-4 w-4" /> PDF-uploaden
+                </Button>
                 {isReadOnly ? (
                     <div className='flex gap-2'>
                         <Button type="button" variant="outline" onClick={() => router.back()} className="h-8">Sluiten</Button>
