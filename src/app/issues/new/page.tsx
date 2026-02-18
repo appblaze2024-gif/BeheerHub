@@ -505,12 +505,9 @@ export default function NewIssuePage() {
     }
   }, [viewedMeldingFromDb?.id, meldingIdFromUrl, form]);
 
-  const hasProcessedForwarded = React.useRef(false);
   React.useEffect(() => {
-    if (hasProcessedForwarded.current) return;
     const pendingData = localStorage.getItem('pending_forwarded_melding');
     if (pendingData) {
-      hasProcessedForwarded.current = true;
       try {
         const { parsed, file } = JSON.parse(pendingData);
         localStorage.removeItem('pending_forwarded_melding');

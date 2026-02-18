@@ -254,7 +254,6 @@ export default function MailPage() {
     if (!firestore || !app || isForwarding) return;
     
     setIsForwarding(true);
-    toast({ description: "Bijlage wordt geanalyseerd door AI..." });
 
     try {
         const parsed = await parseIssuePdf({ 
@@ -281,15 +280,12 @@ export default function MailPage() {
             }
         };
 
-        // Store data locally and redirect to /issues/new to fill form without saving yet
         localStorage.setItem('pending_forwarded_melding', JSON.stringify(forwardedData));
-        toast({ title: "Bijlage voorbereid", description: "Gegevens worden nu ingevuld in het meldingsformulier." });
         router.push(`/issues/new`);
     } catch (err: any) {
         console.error("Forward error:", err);
-        toast({ variant: 'destructive', title: "Doorzetten mislukt", description: "De AI kon deze PDF niet volledig begrijpen." });
-    } finally {
         setIsForwarding(false);
+        toast({ variant: 'destructive', title: "Doorzetten mislukt", description: "De AI kon deze PDF niet volledig begrijpen." });
     }
   };
   
@@ -343,7 +339,12 @@ export default function MailPage() {
   const currentLabel = labels.find(l => l.name === currentLabelName);
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 h-full">
+    <div className="flex flex-col flex-1 min-h-0 h-full relative">
+      {isForwarding && (
+        <div className="absolute inset-0 z-[100] bg-white/80 backdrop-blur-sm flex items-center justify-center">
+          <LoadingScreen message="Melding PDF wordt geanalyseerd..." />
+        </div>
+      )}
       <div className="flex-1 overflow-hidden p-6 h-full relative">
         {isLoading && !mails.length ? (
           <LoadingScreen message="E-mails ophalen..." />
