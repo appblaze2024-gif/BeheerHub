@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -127,7 +128,7 @@ const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGt
 function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { instructions: string, onSave: (val: string, pdfUrl?: string) => void, isSaving: boolean, samplePdfUrl?: string }) {
     const { toast } = useToast();
     const [fieldInstructions, setFieldInstructions] = React.useState<Record<string, string>>({});
-    const [previewUrl, setPreviewUrl] = React.useState<string | undefined>(samplePdfUrl);
+    const [previewUrl, setPreviewUrl] = React.useState<string | undefined>(samplePdfUrl || "https://i.ibb.co/nNFZcctf/Schermafbeelding-2026-02-18-104605.png");
     const [isUploadingSample, setIsUploadingSample] = React.useState(false);
     const [zoom, setZoom] = React.useState(1);
     const [activeFieldId, setActiveFieldId] = React.useState<string | null>(null);
@@ -533,16 +534,38 @@ export default function NewIssuePage() {
   
   const nearbyObjects = React.useMemo(() => {
     if (!location || !allObjects) return [];
-    const locationPoint = turf.point([location.longitude, location.latitude]);
-    return allObjects.filter(obj => {
-        if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
-        return turf.distance(locationPoint, turf.point([obj.longitude, obj.latitude]), { units: 'meters' }) <= 100;
-    }).sort((a, b) => turf.distance(turf.point([location.longitude, location.latitude]), turf.point([a.longitude, a.latitude])));
+    
+    const lat = typeof location.latitude === 'number' ? location.latitude : parseFloat(String(location.latitude));
+    const lng = typeof location.longitude === 'number' ? location.longitude : parseFloat(String(location.longitude));
+    
+    if (isNaN(lat) || isNaN(lng)) return [];
+
+    try {
+        const locationPoint = turf.point([lng, lat]);
+        return allObjects.filter(obj => {
+            if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
+            const objLat = typeof obj.latitude === 'number' ? obj.latitude : parseFloat(String(obj.latitude));
+            const objLng = typeof obj.longitude === 'number' ? obj.longitude : parseFloat(String(obj.longitude));
+            if (isNaN(objLat) || isNaN(objLng)) return false;
+            return turf.distance(locationPoint, turf.point([objLng, objLat]), { units: 'meters' }) <= 100;
+        }).sort((a, b) => {
+            const dA = turf.distance(locationPoint, turf.point([a.longitude, a.latitude]));
+            const dB = turf.distance(locationPoint, turf.point([b.longitude, b.latitude]));
+            return dA - dB;
+        });
+    } catch (e) {
+        return [];
+    }
   }, [location, allObjects]);
 
   React.useEffect(() => {
     if (!location || !allProjects) { form.setValue('werkgebied', ''); return; }
-    const point = turf.point([location.longitude, location.latitude]);
+    
+    const lat = typeof location.latitude === 'number' ? location.latitude : parseFloat(String(location.latitude));
+    const lng = typeof location.longitude === 'number' ? location.longitude : parseFloat(String(location.longitude));
+    if (isNaN(lat) || isNaN(lng)) return;
+
+    const point = turf.point([lng, lat]);
     let foundWijk: string | null = null;
     for (const project of allProjects) {
         if (project.wijken) {
@@ -909,7 +932,7 @@ export default function NewIssuePage() {
                     <TabsContent value="fotos" className="m-0 p-4 bg-slate-50/30">
                         <div className="flex flex-col gap-4">
                             {!isReadOnly && <Button type="button" variant="outline" className="w-full h-12 border-dashed border-2 font-bold uppercase text-[10px] tracking-widest" onClick={() => document.getElementById('photo-input')?.click()}>
-                                <Camera className="mr-2 h-4 w-4" /> Foto uploaden
+                                <Upload className="mr-2 h-4 w-4" /> Foto uploaden
                             </Button>}
                             <input type="file" id="photo-input" onChange={(e) => e.target.files && handlePhotoUploads(e.target.files)} className="hidden" multiple accept="image/*" />
                             <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-10 gap-3">
