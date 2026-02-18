@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { format, addDays, isWeekend } from 'date-fns';
-import { ArrowLeft, Loader2, Search, UploadCloud, FileIcon, Trash2, Camera, MapPin, Sparkles, Settings2, FileText, Eye, X } from 'lucide-react';
+import { ArrowLeft, Loader2, Search, UploadCloud, FileIcon, Trash2, Camera, MapPin, Sparkles, Settings2, FileText, Eye, X, ZoomIn, ZoomOut, Target } from 'lucide-react';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useFirebaseApp, useCollection, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { collection, doc, arrayUnion } from 'firebase/firestore';
@@ -126,6 +126,9 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
     const [fieldInstructions, setFieldInstructions] = React.useState<Record<string, string>>({});
     const [previewUrl, setPreviewUrl] = React.useState<string | undefined>(samplePdfUrl);
     const [isUploadingSample, setIsUploadingSample] = React.useState(false);
+    const [zoom, setZoom] = React.useState(1);
+    const [activeFieldId, setActiveFieldId] = React.useState<string | null>(null);
+    const [markers, setMarkers] = React.useState<Record<string, { x: number, y: number }>>({});
     const fileInputRef = React.useRef<HTMLInputElement>(null);
     const app = useFirebaseApp();
 
@@ -145,6 +148,24 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
 
     const handleFieldChange = (id: string, val: string) => {
         setFieldInstructions(prev => ({ ...prev, [id.toLowerCase()]: val }));
+    };
+
+    const handleImageClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!activeFieldId) {
+            toast({ description: "Selecteer eerst een veld om de locatie te koppelen." });
+            return;
+        }
+        
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+        
+        setMarkers(prev => ({ ...prev, [activeFieldId.toLowerCase()]: { x, y } }));
+        
+        const posDesc = `Gelegen op circa ${x.toFixed(0)}% van links en ${y.toFixed(0)}% van boven.`;
+        handleFieldChange(activeFieldId, posDesc);
+        
+        toast({ title: "Locatie gekoppeld", description: `Positie voor ${activeFieldId} opgeslagen.` });
     };
 
     const handleSave = () => {
@@ -191,14 +212,19 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
                         <div>
                             <DialogTitle className="text-xl font-black uppercase tracking-tight text-slate-900">AI Training & Sjabloon Beheer</DialogTitle>
                             <DialogDescription className="font-bold text-slate-500">
-                                Koppel velden aan de visuele layout van uw vaste formulier.
+                                Zoom in en klik op de afbeelding om velden te koppelen aan de visuele layout.
                             </DialogDescription>
                         </div>
                         <div className="flex gap-2">
+                            <div className="flex items-center bg-white border rounded-xl px-2 mr-2">
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setZoom(Math.max(0.5, zoom - 0.25))}><ZoomOut className="h-4 w-4" /></Button>
+                                <span className="text-[10px] font-black w-12 text-center">{Math.round(zoom * 100)}%</span>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setZoom(Math.min(3, zoom + 0.25))}><ZoomIn className="h-4 w-4" /></Button>
+                            </div>
                             <input type="file" ref={fileInputRef} onChange={handleUploadSample} className="hidden" accept="application/pdf,image/*" />
                             <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={isUploadingSample} className="h-9 bg-white">
                                 {isUploadingSample ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4 mr-2" />}
-                                Nieuw Sjabloon Uploaden
+                                Nieuw Sjabloon
                             </Button>
                         </div>
                     </div>
@@ -206,20 +232,37 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
                 
                 <div className="flex-1 flex min-h-0">
                     <div className="w-2/3 border-r bg-slate-900 flex flex-col relative overflow-hidden group">
-                        <div className="absolute inset-0 bg-black/20 z-10 pointer-events-none" />
-                        <div className="flex-1 overflow-auto p-4 flex items-center justify-center custom-scrollbar">
-                            <div className="relative w-full h-full min-h-[1200px]">
-                                <Image 
-                                    src={previewUrl || "https://i.ibb.co/nNFZcctf/Schermafbeelding-2026-02-18-104605.png"} 
-                                    alt="Formulier Sjabloon" 
-                                    fill
-                                    className="object-contain"
-                                    priority
-                                />
+                        <ScrollArea className="flex-1">
+                            <div 
+                                className="relative flex items-center justify-center min-h-full"
+                                style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', transition: 'transform 0.2s ease-out' }}
+                                onClick={handleImageClick}
+                            >
+                                <div className="relative w-full h-[1200px] cursor-crosshair">
+                                    <Image 
+                                        src={previewUrl || "https://i.ibb.co/nNFZcctf/Schermafbeelding-2026-02-18-104605.png"} 
+                                        alt="Formulier Sjabloon" 
+                                        fill
+                                        className="object-contain"
+                                        priority
+                                    />
+                                    {Object.entries(markers).map(([id, pos]) => (
+                                        <div 
+                                            key={id} 
+                                            className="absolute w-6 h-6 -ml-3 -mt-3 bg-primary/80 rounded-full border-2 border-white flex items-center justify-center shadow-lg animate-in zoom-in"
+                                            style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+                                        >
+                                            <Target className="h-3 w-3 text-white" />
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                        <div className="absolute bottom-4 left-4 z-20 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 text-white shadow-lg">
+                        </ScrollArea>
+                        <div className="absolute bottom-4 left-4 z-20 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 text-white shadow-lg flex items-center gap-3">
                             <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Referentie Sjabloon</p>
+                            {activeFieldId && (
+                                <Badge className="bg-primary border-none text-[9px] font-black uppercase">Mappen: {activeFieldId}</Badge>
+                            )}
                         </div>
                     </div>
 
@@ -231,13 +274,24 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
                             <div className="p-6 space-y-6">
                                 <div className="space-y-4">
                                     {MAPPING_FIELDS.map((field) => (
-                                        <div key={field.id} className="space-y-1.5">
-                                            <Label className="text-[9px] font-black uppercase text-slate-400 ml-1">{field.label}</Label>
+                                        <div 
+                                            key={field.id} 
+                                            className={cn(
+                                                "space-y-1.5 p-2 rounded-xl transition-all border-2",
+                                                activeFieldId === field.id ? "border-primary bg-primary/5" : "border-transparent"
+                                            )}
+                                            onFocus={() => setActiveFieldId(field.id)}
+                                        >
+                                            <Label className="text-[9px] font-black uppercase text-slate-400 ml-1 flex justify-between items-center">
+                                                {field.label}
+                                                {markers[field.id.toLowerCase()] && <Target className="h-3 w-3 text-primary" />}
+                                            </Label>
                                             <Input 
                                                 value={fieldInstructions[field.id.toLowerCase()] || ''} 
                                                 onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                                                placeholder={`Instructie voor ${field.label}...`}
-                                                className="h-9 text-xs font-bold border-2 focus:ring-primary/20 shadow-sm"
+                                                onFocus={() => setActiveFieldId(field.id)}
+                                                placeholder={`Klik op afbeelding voor locatie...`}
+                                                className="h-9 text-xs font-bold border-slate-200 focus:ring-primary/20 shadow-sm"
                                             />
                                         </div>
                                     ))}
@@ -246,9 +300,9 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
                                 <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 shadow-sm">
                                     <h4 className="text-[10px] font-black uppercase text-blue-700 mb-2 flex items-center gap-2"><Sparkles className="h-3 w-3" /> Training Tips</h4>
                                     <ul className="text-[10px] text-blue-600 space-y-1.5 font-black uppercase tracking-tight">
-                                        <li className="flex gap-2">• Benoem de positie (linksboven, etc.)</li>
-                                        <li className="flex gap-2">• Gebruik labels (naast "Datum:")</li>
-                                        <li className="flex gap-2">• Wees specifiek voor categoriën</li>
+                                        <li className="flex gap-2">• Selecteer een veld en klik op de afbeelding</li>
+                                        <li className="flex gap-2">• Zoom in voor precieze selectie</li>
+                                        <li className="flex gap-2">• Combineer positie met label-tekst</li>
                                     </ul>
                                 </div>
                             </div>
