@@ -513,13 +513,28 @@ export default function NewIssuePage() {
         const { parsed, file } = JSON.parse(pendingData);
         localStorage.removeItem('pending_forwarded_melding');
         
-        // Populate form
-        const currentValues = form.getValues();
+        // Ensure new values are added to DB settings
+        if (parsed.label_1 && !hoofdcategorieOptions.includes(parsed.label_1)) {
+            updateDocumentNonBlocking(categoriesRef!, { hoofdcategorieen: arrayUnion(parsed.label_1) });
+        }
+        if (parsed.label_2 && parsed.label_1) {
+            const currentSubs = subcategorieMapping[parsed.label_1] || [];
+            if (!currentSubs.includes(parsed.label_2)) {
+                updateDocumentNonBlocking(categoriesRef!, { 
+                    [`subcategorieMapping.${parsed.label_1}`]: arrayUnion(parsed.label_2) 
+                });
+            }
+        }
+        if (parsed.behandelaar && !handlerOptions.includes(parsed.behandelaar)) {
+            updateDocumentNonBlocking(handlersRef!, { names: arrayUnion(parsed.behandelaar) });
+        }
+
+        // Populate form using reset but also ensuring all parsed fields are present
         form.reset({
-            ...currentValues,
             intakenummer: parsed.intakenummer || '',
+            status: 'Nieuw',
             meldingsdatum: parsed.datum ? new Date(parsed.datum) : new Date(),
-            meldingsuur: parsed.tijdstip || '',
+            meldingsuur: parsed.tijdstip || format(new Date(), 'HH:mm'),
             melder: parsed.melder || '',
             ext_referentie: parsed.extern_meldingsnummer || '',
             hoofdcategorie: parsed.label_1 || '',
@@ -530,6 +545,8 @@ export default function NewIssuePage() {
             nummer: parsed.huisnummer || '',
             postcode: parsed.postcode || '',
             plaats: parsed.plaats || '',
+            voorvaldatum: parsed.datum ? new Date(parsed.datum) : new Date(),
+            voorvaltijd: parsed.tijdstip || format(new Date(), 'HH:mm'),
         });
 
         // Handle file
@@ -556,7 +573,7 @@ export default function NewIssuePage() {
         console.error("Error loading pending forwarded melding:", e);
       }
     }
-  }, [form, toast]);
+  }, [form, toast, hoofdcategorieOptions, subcategorieMapping, handlerOptions, categoriesRef, handlersRef]);
   
   React.useEffect(() => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
@@ -776,7 +793,7 @@ export default function NewIssuePage() {
        const mData: any = {
         intakenummer: data.intakenummer,
         soort_melder: data.soort_melder, hoofdcategorie: data.hoofdcategorie, subcategorie: data.subcategorie,
-        behandelende_afdeling: data.behandelende_afdeling, behandelaar: data.behandelaar, status: data.status,
+        behandelende_afdeling: data.behandelaar, behandelaar: data.behandelaar, status: data.status,
         extern_meldingsnummer: data.ext_referentie, straatnaam: data.straatnaam, huisnummer: data.nummer,
         postcode: data.postcode, plaats: data.plaats, wijk: data.wijk, werkgebied: data.werkgebied,
         melder: data.melder, extra_informatie: data.extra_informatie,
