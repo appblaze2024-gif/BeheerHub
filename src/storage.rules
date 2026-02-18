@@ -7,13 +7,13 @@ service firebase.storage {
       return request.auth != null;
     }
 
-    // Specifieke toegang voor AI Training sjablonen in de settings map.
-    // Dit zorgt ervoor dat Super Admins en kiosk-accounts altijd sjablonen kunnen beheren.
+    // Specifieke toegang voor instellingen (AI Training, etc.)
+    // We staan alle acties toe voor ingelogde gebruikers om permissiefouten bij sjablonen te voorkomen.
     match /settings/{allPaths=**} {
       allow read, write: if isSignedIn();
     }
 
-    // Algemene toegang voor overige melding-gerelateerde opslag.
+    // Algemene toegang voor overige bestanden
     match /{allPaths=**} {
       allow read, write: if isSignedIn();
     }

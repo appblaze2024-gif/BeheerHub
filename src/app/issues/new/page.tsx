@@ -428,17 +428,30 @@ export default function NewIssuePage() {
   }, [hoofdcategorieOptions, watchedHoofdcategorie]);
 
   const displaySubOptions = React.useMemo(() => {
-    const opts = [...(subcategorieMapping[watchedHoofdcategorie || ''] || [])];
-    if (watchedSubcategorie && !opts.includes(watchedSubcategorie)) opts.push(watchedSubcategorie);
-    return opts;
+    let options: string[] = [];
+    if (watchedHoofdcategorie) {
+      options = [...(subcategorieMapping[watchedHoofdcategorie] || [])];
+    } else {
+      const allSubs = Object.values(subcategorieMapping).flat();
+      options = Array.from(new Set(allSubs));
+    }
+    
+    if (watchedSubcategorie && !options.includes(watchedSubcategorie)) {
+      options.push(watchedSubcategorie);
+    }
+    return options.sort();
   }, [subcategorieMapping, watchedHoofdcategorie, watchedSubcategorie]);
 
-  const displayHandlerOptions = React.useMemo(() => {
-    const opts = [...handlerOptions];
-    const currentBehandelaar = form.getValues('behandelaar');
-    if (currentBehandelaar && !opts.includes(currentBehandelaar)) opts.push(currentBehandelaar);
-    return opts;
-  }, [handlerOptions, form.watch('behandelaar')]);
+  React.useEffect(() => {
+    if (watchedSubcategorie && !watchedHoofdcategorie) {
+      for (const [hoofd, subs] of Object.entries(subcategorieMapping)) {
+        if (subs.includes(watchedSubcategorie)) {
+          form.setValue('hoofdcategorie', hoofd, { shouldValidate: true });
+          break;
+        }
+      }
+    }
+  }, [watchedSubcategorie, watchedHoofdcategorie, subcategorieMapping, form]);
 
   const viewedMeldingFromDb = React.useMemo(() => {
     if (!meldingIdFromUrl || !allMeldingen) return null;
