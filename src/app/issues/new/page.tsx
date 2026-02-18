@@ -6,28 +6,20 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { format, addDays, isWeekend } from 'date-fns';
-import { nl } from 'date-fns/locale';
-import { ArrowLeft, Loader2, Search, UploadCloud, FileIcon, Trash2, Camera, MapPin, ChevronUp, ChevronDown, Plus, PlusCircle, FileUp, Sparkles } from 'lucide-react';
+import { ArrowLeft, Loader2, Search, UploadCloud, FileIcon, Trash2, Camera, MapPin, Sparkles } from 'lucide-react';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useFirebaseApp, useCollection, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
-import { collection, doc } from 'firebase/firestore';
-import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
+import { collection, doc, arrayUnion } from 'firebase/firestore';
+import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import Image from 'next/image';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
@@ -36,23 +28,7 @@ import { Progress } from '@/components/ui/progress';
 import type { UploadedFile, Object as MapObject, Melding } from '@/lib/types';
 import { MapboxView } from '@/components/mapbox-view';
 import * as turf from '@turf/turf';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { parseIssuePdf } from '@/ai/flows/parse-issue-pdf-flow';
-
-
-// Local types
-interface Wijk {
-    id: string;
-    naam: string;
-    subGebieden: string;
-}
-
-interface Project {
-    id: string;
-    wijken?: Wijk[];
-}
-
 
 const newMeldingSchema = z.object({
   soort_melder: z.string().optional(),
@@ -110,8 +86,8 @@ const DEFAULT_HANDLERS = ["Onbekend"];
 const DEFAULT_REPORTER_TYPES = ["Burger", "Bedrijf", "Medewerker", "Overheid"];
 
 const FormRow = ({ label, children, labelFor }: { label: string; children: React.ReactNode; labelFor?: string }) => (
-    <div className="grid grid-cols-[140px_1fr] items-start gap-x-2 py-0.5">
-        <FormLabel htmlFor={labelFor} className="text-xs text-left pt-2 font-bold text-slate-500 uppercase tracking-tighter shrink-0">{label}</FormLabel>
+    <div className="grid grid-cols-[140px_1fr] items-start gap-x-2 py-0.5 min-h-[32px]">
+        <FormLabel htmlFor={labelFor} className="text-[10px] text-left pt-2 font-bold text-slate-500 uppercase tracking-tighter shrink-0">{label}</FormLabel>
         <div className="flex-1 min-w-0">
             {children}
         </div>
@@ -138,8 +114,6 @@ export default function NewIssuePage() {
   const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
   const [uploadedPhotos, setUploadedPhotos] = React.useState<UploadedFile[]>([]);
   const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
-  const [isDragging, setIsDragging] = React.useState(false);
-  const [isDraggingPhoto, setIsDraggingPhoto] = React.useState(false);
   const [location, setLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
   
   const [addressSuggestions, setAddressSuggestions] = React.useState<any[]>([]);
@@ -152,20 +126,17 @@ export default function NewIssuePage() {
   // Dynamic Settings
   const statusesRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'statuses') : null, [firestore]);
   const categoriesRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'categories') : null, [firestore]);
-  const departmentsRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'departments') : null, [firestore]);
   const handlersRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'handlers') : null, [firestore]);
   const reporterTypesRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'reporter_types') : null, [firestore]);
 
   const { data: statusesData } = useDoc<{ names: string[] }>(statusesRef);
   const { data: categoriesData } = useDoc<{ hoofdcategorieen: string[], subcategorieMapping: Record<string, string[]> }>(categoriesRef);
-  const { data: departmentsData } = useDoc<{ names: string[] }>(departmentsRef);
   const { data: handlersData } = useDoc<{ names: string[] }>(handlersRef);
   const { data: reporterTypesData } = useDoc<{ names: string[] }>(reporterTypesRef);
 
   const statusOptions = statusesData?.names || DEFAULT_STATUS_OPTIONS;
   const hoofdcategorieOptions = categoriesData?.hoofdcategorieen || DEFAULT_HOOFDCATEGORIEEN;
   const subcategorieMapping = categoriesData?.subcategorieMapping || DEFAULT_SUBCATEGORIE_MAPPING;
-  const departmentOptions = departmentsData?.names || DEFAULT_DEPARTMENTS;
   const handlerOptions = handlersData?.names || DEFAULT_HANDLERS;
   const reporterTypeOptions = reporterTypesData?.names || DEFAULT_REPORTER_TYPES;
 
@@ -176,7 +147,7 @@ export default function NewIssuePage() {
   const { data: allMeldingen } = useCollection<Melding>(meldingenCollection);
 
   const projectsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
-  const { data: allProjects } = useCollection<Project>(projectsCollection);
+  const { data: allProjects } = useCollection<any>(projectsCollection);
   
   const now = new Date();
   const meldingIdRef = React.useRef(meldingIdFromUrl || `${format(now, 'yyyyMMdd')}${Math.floor(1000 + Math.random() * 9000)}`);
@@ -292,7 +263,7 @@ export default function NewIssuePage() {
     return allObjects.filter(obj => {
         if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
         return turf.distance(locationPoint, turf.point([obj.longitude, obj.latitude]), { units: 'meters' }) <= 100;
-    }).sort((a, b) => turf.distance(locationPoint, turf.point([a.longitude, a.latitude])) - turf.distance(locationPoint, turf.point([b.longitude, b.latitude])));
+    }).sort((a, b) => turf.distance(turf.point([location.longitude, location.latitude]), turf.point([a.longitude, a.latitude])));
   }, [location, allObjects]);
 
   React.useEffect(() => {
@@ -331,15 +302,15 @@ export default function NewIssuePage() {
             const base64 = (e.target?.result as string);
             const parsed = await parseIssuePdf({ pdfDataUri: base64 });
 
-            // Ensure dynamic settings are updated if AI finds new values
+            // Automatically add new values to settings if they don't exist
             if (parsed.hoofdindeling && !hoofdcategorieOptions.includes(parsed.hoofdindeling)) {
-                await setDocumentNonBlocking(categoriesRef!, { hoofdcategorieen: [...hoofdcategorieOptions, parsed.hoofdindeling] }, { merge: true });
+                updateDocumentNonBlocking(categoriesRef!, { hoofdcategorieen: arrayUnion(parsed.hoofdindeling) });
             }
             if (parsed.behandelaar && !handlerOptions.includes(parsed.behandelaar)) {
-                await setDocumentNonBlocking(handlersRef!, { names: [...handlerOptions, parsed.behandelaar] }, { merge: true });
+                updateDocumentNonBlocking(handlersRef!, { names: arrayUnion(parsed.behandelaar) });
             }
             if (parsed.soort_melder && !reporterTypeOptions.includes(parsed.soort_melder)) {
-                await setDocumentNonBlocking(reporterTypesRef!, { names: [...reporterTypeOptions, parsed.soort_melder] }, { merge: true });
+                updateDocumentNonBlocking(reporterTypesRef!, { names: arrayUnion(parsed.soort_melder) });
             }
 
             if (parsed.datum) form.setValue('meldingsdatum', new Date(parsed.datum));
