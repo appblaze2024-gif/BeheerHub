@@ -510,35 +510,22 @@ export default function NewIssuePage() {
     if (pendingData) {
       try {
         const { parsed, file } = JSON.parse(pendingData);
-        localStorage.removeItem('pending_forwarded_melding');
         
-        if (parsed.label_1 && !hoofdcategorieOptions.includes(parsed.label_1)) {
-            updateDocumentNonBlocking(categoriesRef!, { hoofdcategorieen: arrayUnion(parsed.label_1) });
-        }
-        if (parsed.label_2 && parsed.label_1) {
-            const currentSubs = subcategorieMapping[parsed.label_1] || [];
-            if (!currentSubs.includes(parsed.label_2)) {
-                updateDocumentNonBlocking(categoriesRef!, { 
-                    [`subcategorieMapping.${parsed.label_1}`]: arrayUnion(parsed.label_2) 
-                });
-            }
-        }
-        if (parsed.behandelaar && !handlerOptions.includes(parsed.behandelaar)) {
-            updateDocumentNonBlocking(handlersRef!, { names: arrayUnion(parsed.behandelaar) });
-        }
+        form.reset({
+          ...form.getValues(),
+          intakenummer: parsed.intakenummer || '',
+          melder: parsed.melder || '',
+          ext_referentie: parsed.extern_meldingsnummer || '',
+          hoofdcategorie: parsed.label_1 || '',
+          subcategorie: parsed.label_2 || '',
+          behandelaar: parsed.behandelaar || '',
+          extra_informatie: parsed.extra_informatie || '',
+          straatnaam: parsed.straatnaam || '',
+          nummer: parsed.huisnummer || '',
+          postcode: parsed.postcode || '',
+          plaats: parsed.plaats || '',
+        });
 
-        form.setValue('intakenummer', parsed.intakenummer || '', { shouldValidate: true });
-        form.setValue('melder', parsed.melder || '');
-        form.setValue('ext_referentie', parsed.extern_meldingsnummer || '');
-        form.setValue('hoofdcategorie', parsed.label_1 || '', { shouldValidate: true });
-        form.setValue('subcategorie', parsed.label_2 || '', { shouldValidate: true });
-        form.setValue('behandelaar', parsed.behandelaar || '', { shouldValidate: true });
-        form.setValue('extra_informatie', parsed.extra_informatie || '');
-        form.setValue('straatnaam', parsed.straatnaam || '');
-        form.setValue('nummer', parsed.huisnummer || '');
-        form.setValue('postcode', parsed.postcode || '');
-        form.setValue('plaats', parsed.plaats || '');
-        
         if (parsed.datum) {
             form.setValue('meldingsdatum', new Date(parsed.datum));
             form.setValue('voorvaldatum', new Date(parsed.datum));
@@ -565,12 +552,13 @@ export default function NewIssuePage() {
                 });
         }
         
+        localStorage.removeItem('pending_forwarded_melding');
         toast({ title: "Gegevens ingeladen", description: "De melding vanuit de e-mail is voorbereid." });
       } catch (e) {
         console.error("Error loading pending forwarded melding:", e);
       }
     }
-  }, [form, toast, hoofdcategorieOptions, subcategorieMapping, handlerOptions, categoriesRef, handlersRef]);
+  }, [form, toast]);
   
   React.useEffect(() => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
