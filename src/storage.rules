@@ -7,9 +7,13 @@ service firebase.storage {
       return request.auth != null;
     }
 
-    // Volledige toegang voor alle ingelogde gebruikers om de AI Training en meldingen te ondersteunen.
-    // Inclusief de settings map voor het uploaden van trainings-PDF's.
-    // Verplicht voor NFC kiosk accounts en Super Admins.
+    // Specifieke toegang voor AI Training sjablonen in de settings map.
+    // Dit zorgt ervoor dat Super Admins en kiosk-accounts altijd sjablonen kunnen beheren.
+    match /settings/{allPaths=**} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Algemene toegang voor overige melding-gerelateerde opslag.
     match /{allPaths=**} {
       allow read, write: if isSignedIn();
     }

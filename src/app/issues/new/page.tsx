@@ -25,6 +25,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
 import type { UploadedFile, Object as MapObject, Melding } from '@/lib/types';
 import { MapboxView } from '@/components/mapbox-view';
 import * as turf from '@turf/turf';
