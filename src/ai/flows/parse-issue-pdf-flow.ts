@@ -1,8 +1,7 @@
 'use server';
 /**
  * @fileOverview AI flow voor het uitlezen van "Formulier melding / Klacht" PDF's.
- * Geoptimaliseerd op basis van de specifieke layout: Datum/Intakenummer boven,
- * Categorieën in het midden (Zwerfvuil/Beplanting), en Adres onderaan.
+ * Geoptimaliseerd op basis van de specifieke layout en aangepaste instructies.
  */
 
 import { ai } from '@/ai/genkit';
@@ -14,7 +13,7 @@ const ParseIssuePdfInputSchema = z.object({
     .describe(
       "De PDF van de melding als data URI. Verwacht formaat: 'data:application/pdf;base64,<encoded_data>'."
     ),
-  instructions: z.string().optional().describe("Aanvullende instructies van de gebruiker over waar velden te vinden zijn."),
+  instructions: z.string().optional().describe("Aanvullende veld-specifieke instructies van de gebruiker."),
 });
 export type ParseIssuePdfInput = z.infer<typeof ParseIssuePdfInputSchema>;
 
@@ -47,37 +46,29 @@ const prompt = ai.definePrompt({
 Gebruik de visuele layout van de bijgevoegde PDF om de gegevens exact te extraheren.
 
 {{#if instructions}}
-BELANGRIJKE GEBRUIKERSINSTRUCTIES VOOR DEZE PDF:
+STRIKTE VELD-SPECIFIEKE INSTRUCTIES VOOR DEZE LAYOUT:
 {{{instructions}}}
 {{/if}}
 
-MAPPING REGELS OP BASIS VAN LAYOUT (Sjabloon focus):
-1. HEADER GEGEVENS (Bovenste blok):
-   - "Datum" (linksboven) -> datum (omzetten naar YYYY-MM-DD).
-   - "Tijdstip" (linksboven) -> tijdstip (HH:mm:ss).
-   - "Intakenummer" (rechtsboven) -> intakenummer.
-   - "Aangenomen door" (rechtsboven) -> behandelaar.
-   - "Melder" (linksboven) -> melder.
-   - "Extern meldingsnummer" (rechtsboven) -> extern_meldingsnummer.
+MAPPING BASISREGELS (indien niet overschreven door instructies):
+1. HEADER:
+   - "Datum" (linksboven) -> datum (YYYY-MM-DD).
+   - "Tijdstip" -> tijdstip (HH:mm).
+   - "Intakenummer" -> intakenummer.
+   - "Aangenomen door" -> behandelaar.
 
-2. CATEGORIE SECTIE (Midden):
-   - De waarde linksboven in het witte vlak (bv. "Zwerfvuil") is label_1 (Hoofdindeling).
-   - De waarde direct daaronder (bv. "Beplanting") is label_2 (Indeling).
-   - Negeer waarden aan de rechterkant (zoals "Straatreiniging") tenzij ze specifiek als sub-categorie worden genoemd.
+2. CATEGORIE (Midden):
+   - De waarde linksboven in het witte categorievlak is label_1 (Hoofdindeling).
+   - De waarde direct daaronder is label_2 (Indeling).
 
-3. LOCATIE BLOK:
+3. LOCATIE:
    - "Adres" -> extract de straat en het huisnummer.
-   - "Postcode/Plaats" -> extract de postcode (bv. 2134 AZ) en de plaats (bv. Hoofddorp).
+   - "Postcode/Plaats" -> extract postcode en plaats.
 
 4. INHOUD:
-   - "Extra informatie melding" -> extra_informatie. Extraheer alle tekst die onder dit label staat tot aan de volgende horizontale lijn.
+   - "Extra informatie melding" -> extra_informatie.
 
-PDF Bron: {{media url=pdfDataUri}}
-
-STRIKTE INSTRUCTIE:
-- De waarde van "Soort melder" op het fysieke formulier moet naar Hoofdindeling (label_1).
-- De waarde van "Hoofdindeling" op het fysieke formulier moet naar Indeling (label_2).
-- Zet datums altijd om naar YYYY-MM-DD.`,
+PDF Bron: {{media url=pdfDataUri}}`,
 });
 
 export const parseIssuePdfFlow = ai.defineFlow(

@@ -94,6 +94,22 @@ const DEFAULT_SUBCATEGORIE_MAPPING: Record<string, string[]> = {
 const DEFAULT_HANDLERS = ["Onbekend"];
 const DEFAULT_REPORTER_TYPES = ["Burger", "Bedrijf", "Medewerker", "Overheid"];
 
+const MAPPING_FIELDS = [
+    { id: 'intakenummer', label: 'Intakenummer' },
+    { id: 'datum', label: 'Datum (YYYY-MM-DD)' },
+    { id: 'tijdstip', label: 'Tijdstip (HH:mm)' },
+    { id: 'melder', label: 'Naam melder' },
+    { id: 'extern_meldingsnummer', label: 'Extern meldingsnummer' },
+    { id: 'behandelaar', label: 'Behandelaar (Aangenomen door)' },
+    { id: 'label_1', label: 'Hoofdindeling (Soort melder op PDF)' },
+    { id: 'label_2', label: 'Indeling (Hoofdindeling op PDF)' },
+    { id: 'straatnaam', label: 'Straatnaam' },
+    { id: 'huisnummer', label: 'Huisnummer' },
+    { id: 'postcode', label: 'Postcode' },
+    { id: 'plaats', label: 'Plaats' },
+    { id: 'extra_informatie', label: 'Memo / Extra informatie' },
+];
+
 const FormRow = ({ label, children, labelFor }: { label: string; children: React.ReactNode; labelFor?: string }) => (
     <div className="grid grid-cols-[140px_1fr] items-start gap-x-2 py-0.5 min-h-[32px]">
         <FormLabel htmlFor={labelFor} className="text-[10px] text-left pt-2 font-black uppercase text-slate-400 tracking-tighter shrink-0">{label}</FormLabel>
@@ -107,15 +123,37 @@ const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGt
 
 function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { instructions: string, onSave: (val: string, pdfUrl?: string) => void, isSaving: boolean, samplePdfUrl?: string }) {
     const { toast } = useToast();
-    const [val, setVal] = React.useState(instructions);
+    const [fieldInstructions, setFieldInstructions] = React.useState<Record<string, string>>({});
     const [previewUrl, setPreviewUrl] = React.useState<string | undefined>(samplePdfUrl);
     const [isUploadingSample, setIsUploadingSample] = React.useState(false);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
     const app = useFirebaseApp();
 
     React.useEffect(() => {
-        setVal(instructions);
+        const parsed: Record<string, string> = {};
+        const lines = instructions.split('\n');
+        lines.forEach(line => {
+            const [key, ...valParts] = line.split(':');
+            if (key && valParts.length > 0) {
+                const cleanKey = key.trim().toLowerCase();
+                const cleanVal = valParts.join(':').trim();
+                parsed[cleanKey] = cleanVal;
+            }
+        });
+        setFieldInstructions(parsed);
     }, [instructions]);
+
+    const handleFieldChange = (id: string, val: string) => {
+        setFieldInstructions(prev => ({ ...prev, [id.toLowerCase()]: val }));
+    };
+
+    const handleSave = () => {
+        const serialized = Object.entries(fieldInstructions)
+            .filter(([_, val]) => val.trim() !== '')
+            .map(([key, val]) => `${key.toUpperCase()}: ${val}`)
+            .join('\n');
+        onSave(serialized, previewUrl);
+    };
 
     const handleUploadSample = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -134,7 +172,7 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
             toast({ title: "Sjabloon geüpload", description: "Het voorbeeld is succesvol opgeslagen." });
         } catch (err: any) {
             console.error("Sample upload error:", err);
-            toast({ variant: 'destructive', title: "Upload mislukt", description: err.message || "Er is een fout opgetreden bij het uploaden van het sjabloon." });
+            toast({ variant: 'destructive', title: "Upload mislukt", description: "Controleer uw verbinding en permissies." });
         } finally {
             setIsUploadingSample(false);
         }
@@ -147,68 +185,70 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
                     <Settings2 className="mr-2 h-4 w-4" /> AI Training
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[1000px] h-[90vh] flex flex-col p-0 overflow-hidden">
-                <DialogHeader className="p-6 border-b shrink-0">
-                    <DialogTitle className="text-xl font-black uppercase tracking-tight text-slate-900">AI Training & Sjabloon Beheer</DialogTitle>
-                    <DialogDescription className="font-bold text-slate-500">
-                        Upload een voorbeeld-PDF en leg de AI uit waar de gegevens te vinden zijn.
-                    </DialogDescription>
+            <DialogContent className="sm:max-w-[1200px] h-[95vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
+                <DialogHeader className="p-6 border-b shrink-0 bg-slate-50">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <DialogTitle className="text-xl font-black uppercase tracking-tight text-slate-900">AI Training & Sjabloon Beheer</DialogTitle>
+                            <DialogDescription className="font-bold text-slate-500">
+                                Koppel velden aan de visuele layout van uw vaste formulier.
+                            </DialogDescription>
+                        </div>
+                        <div className="flex gap-2">
+                            <input type="file" ref={fileInputRef} onChange={handleUploadSample} className="hidden" accept="application/pdf,image/*" />
+                            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={isUploadingSample} className="h-9 bg-white">
+                                {isUploadingSample ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4 mr-2" />}
+                                Nieuw Sjabloon Uploaden
+                            </Button>
+                        </div>
+                    </div>
                 </DialogHeader>
                 
                 <div className="flex-1 flex min-h-0">
-                    <div className="w-1/2 border-r bg-slate-100 flex flex-col relative">
-                        <div className="p-4 border-b bg-white flex justify-between items-center shrink-0">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Voorbeeld sjabloon</Label>
-                            <input type="file" ref={fileInputRef} onChange={handleUploadSample} className="hidden" accept="application/pdf,image/*" />
-                            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={isUploadingSample} className="h-8">
-                                {isUploadingSample ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4 mr-2" />}
-                                Sjabloon Uploaden
-                            </Button>
+                    <div className="w-2/3 border-r bg-slate-900 flex flex-col relative overflow-hidden group">
+                        <div className="absolute inset-0 bg-black/20 z-10 pointer-events-none" />
+                        <div className="flex-1 overflow-auto p-4 flex items-center justify-center custom-scrollbar">
+                            <div className="relative w-full h-full min-h-[1200px]">
+                                <Image 
+                                    src={previewUrl || "https://i.ibb.co/nNFZcctf/Schermafbeelding-2026-02-18-104605.png"} 
+                                    alt="Formulier Sjabloon" 
+                                    fill
+                                    className="object-contain"
+                                    priority
+                                />
+                            </div>
                         </div>
-                        <div className="flex-1 overflow-hidden relative bg-white">
-                            {previewUrl ? (
-                                previewUrl.toLowerCase().includes('.pdf') ? (
-                                    <iframe src={`${previewUrl}#toolbar=0&navpanes=0`} className="w-full h-full border-none" />
-                                ) : (
-                                    <div className="relative w-full h-full flex items-center justify-center">
-                                        <img src={previewUrl} alt="Sjabloon" className="w-full h-full object-contain" />
-                                    </div>
-                                )
-                            ) : (
-                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white group">
-                                    <img src="https://i.ibb.co/nNFZcctf/Schermafbeelding-2026-02-18-104605.png" alt="Sjabloon Voorbeeld" className="w-full h-full object-contain" />
-                                    <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm">
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Standaard sjabloon geladen</p>
-                                    </div>
-                                </div>
-                            )}
+                        <div className="absolute bottom-4 left-4 z-20 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 text-white shadow-lg">
+                            <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Referentie Sjabloon</p>
                         </div>
                     </div>
 
-                    <div className="w-1/2 flex flex-col bg-white">
-                        <div className="p-4 border-b shrink-0">
+                    <div className="w-1/3 flex flex-col bg-white">
+                        <div className="p-4 border-b shrink-0 bg-slate-50">
                             <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Veld Mapping Instructies</Label>
                         </div>
                         <ScrollArea className="flex-1">
                             <div className="p-6 space-y-6">
-                                <div className="space-y-2">
-                                    <p className="text-[11px] text-slate-500 font-bold leading-relaxed uppercase tracking-tighter">
-                                        Leg hieronder uit waar de AI specifieke gegevens op uw formulier kan vinden. Wees zo specifiek mogelijk.
-                                    </p>
-                                    <Textarea 
-                                        value={val} 
-                                        onChange={(e) => setVal(e.target.value)}
-                                        placeholder="Bv: De 'Hoofdindeling' staat in het blok Melder direct onder de soort melder. Het intakenummer staat altijd rechtsboven naast het label 'Intakenummer:'"
-                                        className="min-h-[350px] text-xs font-medium leading-relaxed border-2 focus:ring-primary/20 shadow-inner"
-                                    />
+                                <div className="space-y-4">
+                                    {MAPPING_FIELDS.map((field) => (
+                                        <div key={field.id} className="space-y-1.5">
+                                            <Label className="text-[9px] font-black uppercase text-slate-400 ml-1">{field.label}</Label>
+                                            <Input 
+                                                value={fieldInstructions[field.id.toLowerCase()] || ''} 
+                                                onChange={(e) => handleFieldChange(field.id, e.target.value)}
+                                                placeholder={`Instructie voor ${field.label}...`}
+                                                className="h-9 text-xs font-bold border-2 focus:ring-primary/20 shadow-sm"
+                                            />
+                                        </div>
+                                    ))}
                                 </div>
                                 
                                 <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 shadow-sm">
-                                    <h4 className="text-[10px] font-black uppercase text-blue-700 mb-2 flex items-center gap-2"><Sparkles className="h-3 w-3" /> Tips voor training</h4>
+                                    <h4 className="text-[10px] font-black uppercase text-blue-700 mb-2 flex items-center gap-2"><Sparkles className="h-3 w-3" /> Training Tips</h4>
                                     <ul className="text-[10px] text-blue-600 space-y-1.5 font-black uppercase tracking-tight">
-                                        <li className="flex gap-2">• Gebruik labels als referentiepunten</li>
-                                        <li className="flex gap-2">• Geef posities aan (linksboven, rechtsonder)</li>
-                                        <li className="flex gap-2">• Benoem de fysieke volgorde van velden</li>
+                                        <li className="flex gap-2">• Benoem de positie (linksboven, etc.)</li>
+                                        <li className="flex gap-2">• Gebruik labels (naast "Datum:")</li>
+                                        <li className="flex gap-2">• Wees specifiek voor categoriën</li>
                                     </ul>
                                 </div>
                             </div>
@@ -217,9 +257,9 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
                 </div>
 
                 <DialogFooter className="p-6 border-t shrink-0 bg-slate-50">
-                    <Button onClick={() => onSave(val, previewUrl)} disabled={isSaving} className="w-full sm:w-auto font-black uppercase tracking-tight h-11 px-8">
+                    <Button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto font-black uppercase tracking-tight h-12 px-12 shadow-xl shadow-primary/20">
                         {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                        Sjabloon & Instructies Opslaan
+                        Configuratie Opslaan
                     </Button>
                 </DialogFooter>
             </DialogContent>

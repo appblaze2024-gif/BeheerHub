@@ -8,7 +8,7 @@ service firebase.storage {
     }
 
     // Volledige toegang voor alle ingelogde gebruikers om de AI Training en meldingen te ondersteunen.
-    // Dit staat ook toe dat kiosk-accounts (gebruikt voor NFC) instellingen kunnen aanpassen indien nodig.
+    // Inclusief de settings map voor het uploaden van trainings-PDF's.
     match /{allPaths=**} {
       allow read, write: if isSignedIn();
     }
