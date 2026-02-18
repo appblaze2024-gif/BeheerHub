@@ -530,24 +530,26 @@ export default function NewIssuePage() {
             updateDocumentNonBlocking(handlersRef!, { names: arrayUnion(parsed.behandelaar) });
         }
 
-        form.reset({
-            intakenummer: parsed.intakenummer || '',
-            status: 'Nieuw',
-            meldingsdatum: parsed.datum ? new Date(parsed.datum) : new Date(),
-            meldingsuur: parsed.tijdstip || format(new Date(), 'HH:mm'),
-            melder: parsed.melder || '',
-            ext_referentie: parsed.extern_meldingsnummer || '',
-            hoofdcategorie: parsed.label_1 || '',
-            subcategorie: parsed.label_2 || '',
-            behandelaar: parsed.behandelaar || '',
-            extra_informatie: parsed.extra_informatie || '',
-            straatnaam: parsed.straatnaam || '',
-            nummer: parsed.huisnummer || '',
-            postcode: parsed.postcode || '',
-            plaats: parsed.plaats || '',
-            voorvaldatum: parsed.datum ? new Date(parsed.datum) : new Date(),
-            voorvaltijd: parsed.tijdstip || format(new Date(), 'HH:mm'),
-        });
+        form.setValue('intakenummer', parsed.intakenummer || '', { shouldValidate: true });
+        form.setValue('melder', parsed.melder || '');
+        form.setValue('ext_referentie', parsed.extern_meldingsnummer || '');
+        form.setValue('hoofdcategorie', parsed.label_1 || '', { shouldValidate: true });
+        form.setValue('subcategorie', parsed.label_2 || '', { shouldValidate: true });
+        form.setValue('behandelaar', parsed.behandelaar || '', { shouldValidate: true });
+        form.setValue('extra_informatie', parsed.extra_informatie || '');
+        form.setValue('straatnaam', parsed.straatnaam || '');
+        form.setValue('nummer', parsed.huisnummer || '');
+        form.setValue('postcode', parsed.postcode || '');
+        form.setValue('plaats', parsed.plaats || '');
+        
+        if (parsed.datum) {
+            form.setValue('meldingsdatum', new Date(parsed.datum));
+            form.setValue('voorvaldatum', new Date(parsed.datum));
+        }
+        if (parsed.tijdstip) {
+            form.setValue('meldingsuur', parsed.tijdstip);
+            form.setValue('voorvaltijd', parsed.tijdstip);
+        }
 
         if (file) {
             setUploadedFiles([file]);
@@ -697,23 +699,24 @@ export default function NewIssuePage() {
                 updateDocumentNonBlocking(handlersRef!, { names: arrayUnion(parsed.behandelaar) });
             }
 
-            const currentValues = form.getValues();
-            form.reset({
-                ...currentValues,
-                intakenummer: parsed.intakenummer || currentValues.intakenummer,
-                meldingsdatum: parsed.datum ? new Date(parsed.datum) : currentValues.meldingsdatum,
-                meldingsuur: parsed.tijdstip || currentValues.meldingsuur,
-                melder: parsed.melder || currentValues.melder,
-                ext_referentie: parsed.extern_meldingsnummer || currentValues.ext_referentie,
-                hoofdcategorie: parsed.label_1 || currentValues.hoofdcategorie,
-                subcategorie: parsed.label_2 || currentValues.subcategorie,
-                behandelaar: parsed.behandelaar || currentValues.behandelaar,
-                extra_informatie: parsed.extra_informatie || currentValues.extra_informatie,
-                straatnaam: parsed.straatnaam || currentValues.straatnaam,
-                nummer: parsed.huisnummer || currentValues.nummer,
-                postcode: parsed.postcode || currentValues.postcode,
-                plaats: parsed.plaats || currentValues.plaats,
-            });
+            form.setValue('intakenummer', parsed.intakenummer || '', { shouldValidate: true });
+            form.setValue('hoofdcategorie', parsed.label_1 || '', { shouldValidate: true });
+            form.setValue('subcategorie', parsed.label_2 || '', { shouldValidate: true });
+            form.setValue('behandelaar', parsed.behandelaar || '', { shouldValidate: true });
+            form.setValue('melder', parsed.melder || '');
+            form.setValue('ext_referentie', parsed.extern_meldingsnummer || '');
+            form.setValue('extra_informatie', parsed.extra_informatie || '');
+            form.setValue('straatnaam', parsed.straatnaam || '');
+            form.setValue('nummer', parsed.huisnummer || '');
+            form.setValue('postcode', parsed.postcode || '');
+            form.setValue('plaats', parsed.plaats || '');
+            
+            if (parsed.datum) {
+                form.setValue('meldingsdatum', new Date(parsed.datum));
+            }
+            if (parsed.tijdstip) {
+                form.setValue('meldingsuur', parsed.tijdstip);
+            }
 
             const fullAddress = `${parsed.straatnaam || ''} ${parsed.huisnummer || ''}, ${parsed.plaats || ''}`.trim();
             if (fullAddress.length > 5) {
@@ -976,12 +979,12 @@ export default function NewIssuePage() {
                         </TabsList>
                     </div>
                     <TabsContent value="documenten" className="m-0 p-4 bg-slate-50/30 overflow-hidden">
-                        <div className="flex flex-col h-full gap-4">
+                        <div className="flex flex-col gap-4">
                             {!isReadOnly && <Button type="button" variant="outline" className="w-full h-12 border-dashed border-2 font-bold uppercase text-[10px] tracking-widest" onClick={() => document.getElementById('doc-input')?.click()}>
                                 <UploadCloud className="mr-2 h-4 w-4" /> Bestand uploaden
                             </Button>}
                             <input type="file" id="doc-input" onChange={(e) => e.target.files && handleDocumentUploads(e.target.files)} className="hidden" multiple />
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 overflow-y-auto pr-1">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                                 {uploadedFiles.map((f) => (
                                     <div key={f.storagePath} className="flex items-center justify-between p-3 border rounded-xl bg-white shadow-sm group">
                                         <div className="flex items-center gap-3 truncate">
@@ -997,12 +1000,12 @@ export default function NewIssuePage() {
                         </div>
                     </TabsContent>
                     <TabsContent value="fotos" className="m-0 p-4 bg-slate-50/30 overflow-hidden">
-                        <div className="flex flex-col h-full gap-4">
+                        <div className="flex flex-col gap-4">
                             {!isReadOnly && <Button type="button" variant="outline" className="w-full h-12 border-dashed border-2 font-bold uppercase text-[10px] tracking-widest" onClick={() => document.getElementById('photo-input')?.click()}>
                                 <Upload className="mr-2 h-4 w-4" /> Foto uploaden
                             </Button>}
                             <input type="file" id="photo-input" onChange={(e) => e.target.files && handlePhotoUploads(e.target.files)} className="hidden" multiple accept="image/*" />
-                            <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-10 gap-3 overflow-y-auto pr-1">
+                            <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-10 gap-3">
                                 {uploadedPhotos.map(p => (
                                     <div key={p.storagePath} className="relative aspect-square rounded-xl overflow-hidden border shadow-sm group">
                                         <Image src={p.url} alt={p.name} fill className="object-cover" />
