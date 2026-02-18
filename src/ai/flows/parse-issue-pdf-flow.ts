@@ -51,35 +51,33 @@ BELANGRIJKE GEBRUIKERSINSTRUCTIES VOOR DEZE PDF:
 {{{instructions}}}
 {{/if}}
 
-MAPPING REGELS OP BASIS VAN LAYOUT:
-1. HEADER GEGEVENS (Top):
-   - "Datum" (linksboven) -> datum.
-   - "Tijdstip" (linksboven) -> tijdstip.
+MAPPING REGELS OP BASIS VAN LAYOUT (Sjabloon focus):
+1. HEADER GEGEVENS (Bovenste blok):
+   - "Datum" (linksboven) -> datum (omzetten naar YYYY-MM-DD).
+   - "Tijdstip" (linksboven) -> tijdstip (HH:mm:ss).
    - "Intakenummer" (rechtsboven) -> intakenummer.
    - "Aangenomen door" (rechtsboven) -> behandelaar.
    - "Melder" (linksboven) -> melder.
    - "Extern meldingsnummer" (rechtsboven) -> extern_meldingsnummer.
 
 2. CATEGORIE SECTIE (Midden):
-   - De AI moet zoeken naar de teksten tussen de twee horizontale lijnen.
-   - De waarde links (bv. "Zwerfvuil") is label_1 (Hoofdindeling).
+   - De waarde linksboven in het witte vlak (bv. "Zwerfvuil") is label_1 (Hoofdindeling).
    - De waarde direct daaronder (bv. "Beplanting") is label_2 (Indeling).
-   - Negeer teksten aan de rechterkant zoals "Straatreiniging" tenzij ze expliciet als sub-categorie worden genoemd.
+   - Negeer waarden aan de rechterkant (zoals "Straatreiniging") tenzij ze specifiek als sub-categorie worden genoemd.
 
-3. LOCATIE (Onder categorieën):
-   - "Adres" -> split op in straatnaam en huisnummer.
-   - "Postcode/Plaats" -> split op in postcode en plaats (bv. 2134 AZ | Hoofddorp).
+3. LOCATIE BLOK:
+   - "Adres" -> extract de straat en het huisnummer.
+   - "Postcode/Plaats" -> extract de postcode (bv. 2134 AZ) en de plaats (bv. Hoofddorp).
 
-4. INHOUD (Onder Adres):
-   - "Extra informatie melding" -> extra_informatie. Extraheer alle tekst die hieronder staat.
+4. INHOUD:
+   - "Extra informatie melding" -> extra_informatie. Extraheer alle tekst die onder dit label staat tot aan de volgende horizontale lijn.
 
 PDF Bron: {{media url=pdfDataUri}}
 
-INSTRUCTIES:
-- Zet de datum om naar YYYY-MM-DD.
-- Zet de tijd naar HH:mm (verwijder seconden).
-- Wees zeer nauwkeurig met de teksten bij label_1 en label_2.
-- Als een veld ontbreekt, laat het leeg.`,
+STRIKTE INSTRUCTIE:
+- De waarde van "Soort melder" op het fysieke formulier moet naar Hoofdindeling (label_1).
+- De waarde van "Hoofdindeling" op het fysieke formulier moet naar Indeling (label_2).
+- Zet datums altijd om naar YYYY-MM-DD.`,
 });
 
 export const parseIssuePdfFlow = ai.defineFlow(

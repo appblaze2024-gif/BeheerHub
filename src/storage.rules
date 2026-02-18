@@ -7,7 +7,7 @@ service firebase.storage {
       return request.auth != null;
     }
 
-    // Synchronisatie met de hoofdregels voor volledige toegang voor ingelogde gebruikers.
+    // Volledige toegang voor alle ingelogde gebruikers.
     // Dit zorgt ervoor dat de AI Training sjablonen in settings/ altijd schrijfbaar zijn.
     match /{allPaths=**} {
       allow read, write: if isSignedIn();

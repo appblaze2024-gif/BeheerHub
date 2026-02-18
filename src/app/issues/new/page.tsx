@@ -156,7 +156,6 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
                 </DialogHeader>
                 
                 <div className="flex-1 flex min-h-0">
-                    {/* PDF Preview Area */}
                     <div className="w-1/2 border-r bg-slate-100 flex flex-col relative">
                         <div className="p-4 border-b bg-white flex justify-between items-center shrink-0">
                             <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Voorbeeld sjabloon</Label>
@@ -179,7 +178,6 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
                         </div>
                     </div>
 
-                    {/* Instructions Area */}
                     <div className="w-1/2 flex flex-col bg-white">
                         <div className="p-4 border-b shrink-0">
                             <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Veld Mapping Instructies</Label>
@@ -250,13 +248,11 @@ export default function NewIssuePage() {
   const justSelectedSuggestion = React.useRef(false);
   const pdfInputRef = React.useRef<HTMLInputElement>(null);
 
-  // AI Configuration
   const aiConfigRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'pdf_config') : null, [firestore]);
   const { data: aiConfig } = useDoc<{ instructions: string, samplePdfUrl?: string }>(aiConfigRef);
   const pdfInstructions = aiConfig?.instructions || '';
   const samplePdfUrl = aiConfig?.samplePdfUrl;
 
-  // Dynamic Settings
   const statusesRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'statuses') : null, [firestore]);
   const categoriesRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'categories') : null, [firestore]);
   const handlersRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'handlers') : null, [firestore]);
@@ -544,7 +540,7 @@ export default function NewIssuePage() {
             () => getDownloadURL(uploadTask.snapshot.ref).then(url => {
                 const nFile = { name: file.name, url, size: file.size, type: file.type, uploadedAt: new Date().toISOString(), storagePath };
                 resolve(nFile);
-                setUploadProgress(prev => { const n = { ...prev }; delete n[file.name]; return n; });
+                setUploadProgress(prev => { setUploadProgress(prev => { const n = { ...prev }; delete n[file.name]; return n; }); return prev; });
             })
         );
     });
