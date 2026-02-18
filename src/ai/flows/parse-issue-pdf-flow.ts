@@ -1,7 +1,7 @@
 'use server';
 /**
  * @fileOverview AI flow voor het uitlezen van "Formulier melding / Klacht" PDF's.
- * Geoptimaliseerd op basis van specifieke veldmapping instructies.
+ * Geoptimaliseerd op basis van specifieke veldmapping instructies van de gebruiker.
  */
 
 import { ai } from '@/ai/genkit';
@@ -23,8 +23,8 @@ const ParseIssuePdfOutputSchema = z.object({
   melder: z.string().optional(),
   extern_meldingsnummer: z.string().optional(),
   behandelaar: z.string().optional().describe('Gekoppeld aan "Aangenomen door"'),
-  label_1: z.string().optional().describe('Het eerste label onder de header/melder (bv. Zwerfvuil). Wordt gemapt naar Hoofdindeling.'),
-  label_2: z.string().optional().describe('Het tweede label onder de header/melder (bv. Beplanting). Wordt gemapt naar Indeling.'),
+  label_1: z.string().optional().describe('Ingevuld bij "Soort melder" op PDF -> Wordt Hoofdindeling in de app.'),
+  label_2: z.string().optional().describe('Ingevuld bij "Hoofdindeling" op PDF -> Wordt Indeling in de app.'),
   straatnaam: z.string().optional(),
   huisnummer: z.string().optional(),
   postcode: z.string().optional(),
@@ -49,19 +49,20 @@ Gebruik de bijgevoegde PDF om alle gegevens te extraheren volgens deze specifiek
 3. "Aangenomen door" (rechtsboven) -> behandelaar.
 4. "Melder" (linksboven) -> melder.
 5. "Extern meldingsnummer" (rechtsboven) -> extern_meldingsnummer.
-6. Zoek de categorie-labels onder de Melder header (bv. "Zwerfvuil", "Beplanting", "Zwerfafval").
-   - Het eerste/bovenste label -> label_1 (bv. Zwerfvuil).
-   - Het label direct daaronder -> label_2 (bv. Beplanting).
+6. Categorie-indeling (ZEER BELANGRIJK):
+   - Zoek de waarde bij "Soort melder" op het formulier -> dit is label_1.
+   - Zoek de waarde bij "Hoofdindeling" op het formulier -> dit is label_2.
+   - Als deze tekstlabels niet letterlijk aanwezig zijn, pak dan de eerste twee categorie-labels die je onder de header vindt (bv. "Zwerfvuil" en "Beplanting").
 7. "Adres" -> splits op in straatnaam en huisnummer.
 8. "Postcode/Plaats" -> splits op in postcode en plaats.
-9. "Extra informatie melding" -> extra_informatie (volledige tekst).
+9. "Extra informatie melding" -> extra_informatie.
 
 PDF Bron: {{media url=pdfDataUri}}
 
 INSTRUCTIES:
 - Zet de datum om naar YYYY-MM-DD.
 - Zet de tijd naar HH:mm.
-- Extraheer de labels (label_1, label_2) zeer nauwkeurig, dit zijn cruciale categorieën.
+- Wees zeer nauwkeurig met de labels (label_1, label_2). 
 - Als een veld ontbreekt, laat het leeg.`,
 });
 

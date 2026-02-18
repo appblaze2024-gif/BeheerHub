@@ -81,7 +81,6 @@ const DEFAULT_SUBCATEGORIE_MAPPING: Record<string, string[]> = {
     "Overig": ["Overige meldingen"]
 };
 
-const DEFAULT_DEPARTMENTS = ["Buitendienst", "Reiniging", "Groenvoorziening", "Waterbeheer"];
 const DEFAULT_HANDLERS = ["Onbekend"];
 const DEFAULT_REPORTER_TYPES = ["Burger", "Bedrijf", "Medewerker", "Overheid"];
 
@@ -189,7 +188,7 @@ export default function NewIssuePage() {
   const watchedHoofdcategorie = form.watch('hoofdcategorie');
   const watchedMeldingsdatum = form.watch('meldingsdatum');
 
-  // Reactivity Fix: Ensure values from PDF show up even if not in original DB lists yet
+  // Dynamic Options Fix: Ensure values from PDF show up even if not in original DB lists yet
   const currentHoofdValue = form.watch('hoofdcategorie');
   const currentSubValue = form.watch('subcategorie');
   const currentBehandelaar = form.watch('behandelaar');
@@ -326,7 +325,6 @@ export default function NewIssuePage() {
             const parsed = await parseIssuePdf({ pdfDataUri: base64 });
 
             // Automatically add new values to settings if they don't exist
-            // MAPPING: label_1 -> hoofdcategorie, label_2 -> subcategorie
             if (parsed.label_1 && !hoofdcategorieOptions.includes(parsed.label_1)) {
                 updateDocumentNonBlocking(categoriesRef!, { hoofdcategorieen: arrayUnion(parsed.label_1) });
             }
@@ -342,21 +340,23 @@ export default function NewIssuePage() {
                 updateDocumentNonBlocking(handlersRef!, { names: arrayUnion(parsed.behandelaar) });
             }
 
-            if (parsed.datum) form.setValue('meldingsdatum', new Date(parsed.datum));
-            if (parsed.tijdstip) form.setValue('meldingsuur', parsed.tijdstip);
-            if (parsed.melder) form.setValue('melder', parsed.melder);
-            if (parsed.extern_meldingsnummer) form.setValue('ext_referentie', parsed.extern_meldingsnummer);
-            
-            // Set form values
-            if (parsed.label_1) form.setValue('hoofdcategorie', parsed.label_1);
-            if (parsed.label_2) form.setValue('subcategorie', parsed.label_2);
-            
-            if (parsed.behandelaar) form.setValue('behandelaar', parsed.behandelaar);
-            if (parsed.extra_informatie) form.setValue('extra_informatie', parsed.extra_informatie);
-            if (parsed.straatnaam) form.setValue('straatnaam', parsed.straatnaam);
-            if (parsed.huisnummer) form.setValue('nummer', parsed.huisnummer);
-            if (parsed.postcode) form.setValue('postcode', parsed.postcode);
-            if (parsed.plaats) form.setValue('plaats', parsed.plaats);
+            // Set form values using reset to ensure all fields update simultaneously
+            const currentValues = form.getValues();
+            form.reset({
+                ...currentValues,
+                meldingsdatum: parsed.datum ? new Date(parsed.datum) : currentValues.meldingsdatum,
+                meldingsuur: parsed.tijdstip || currentValues.meldingsuur,
+                melder: parsed.melder || currentValues.melder,
+                ext_referentie: parsed.extern_meldingsnummer || currentValues.ext_referentie,
+                hoofdcategorie: parsed.label_1 || currentValues.hoofdcategorie,
+                subcategorie: parsed.label_2 || currentValues.subcategorie,
+                behandelaar: parsed.behandelaar || currentValues.behandelaar,
+                extra_informatie: parsed.extra_informatie || currentValues.extra_informatie,
+                straatnaam: parsed.straatnaam || currentValues.straatnaam,
+                nummer: parsed.huisnummer || currentValues.nummer,
+                postcode: parsed.postcode || currentValues.postcode,
+                plaats: parsed.plaats || currentValues.plaats,
+            });
 
             const fullAddress = `${parsed.straatnaam || ''} ${parsed.huisnummer || ''}, ${parsed.plaats || ''}`.trim();
             if (fullAddress.length > 5) {
