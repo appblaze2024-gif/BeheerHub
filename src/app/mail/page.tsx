@@ -22,12 +22,15 @@ import {
   MoreVertical,
   ChevronRight,
   ArrowLeft,
+  Bell,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 
 import { cn } from '@/lib/utils';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useFirebaseApp, useDoc, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
+import { collection, doc, query, orderBy, limit, serverTimestamp } from 'firebase/firestore';
+import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,6 +45,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ComposeMailDialog } from '@/components/compose-mail-dialog';
 import { fetchEmailsFlow, type EmailAttachment } from '@/ai/flows/fetch-emails-flow';
 import { deleteEmailFlow } from '@/ai/flows/delete-email-flow';
+import { parseIssuePdf } from '@/ai/flows/parse-issue-pdf-flow';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/components/ui/use-toast';
 import { Label } from '@/components/ui/label';
@@ -59,9 +63,8 @@ import {
 import { LabelManagerDialog } from '@/components/label-manager-dialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { LoadingScreen } from '@/components/loading-screen';
+import { useRouter } from 'next/navigation';
 
-
-// --- UPDATED TYPE ---
 type Mail = {
   id: string;
   uid: number;
@@ -71,7 +74,7 @@ type Mail = {
   cc?: string[];
   subject: string;
   body: string;
-  date: string; // ISO string
+  date: string;
   read: boolean;
   attachments?: EmailAttachment[];
 };
@@ -148,7 +151,6 @@ function CreateFolderDialog({ onFolderCreated }: { onFolderCreated: (folderName:
   );
 }
 
-
 const initialFolders = [
   { name: 'inbox', label: 'Postvak IN', icon: Inbox, boxName: 'INBOX' },
   { name: 'sent', label: 'Verzonden items', icon: Send, boxName: 'INBOX/Verzonden items' },
@@ -171,7 +173,6 @@ const initialLabels = [
     { name: 'Geel', color: '#facc15' },
 ];
 
-
 export default function MailPage() {
   const [folders, setFolders] = React.useState(initialFolders);
   const [selectedFolder, setSelectedFolder] = React.useState('inbox');
@@ -180,8 +181,12 @@ export default function MailPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
+  const [isForwarding, setIsForwarding] = React.useState(false);
   const { toast } = useToast();
   const { user } = useUser();
+  const firestore = useFirestore();
+  const app = useFirebaseApp();
+  const router = useRouter();
 
   const [isComposeOpen, setIsComposeOpen] = React.useState(false);
   const [composeInitialData, setComposeInitialData] = React.useState<any>({});
@@ -192,20 +197,18 @@ export default function MailPage() {
   
   const isMobile = useIsMobile();
 
+  const aiConfigRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'pdf_config') : null, [firestore]);
+  const { data: aiConfig } = useDoc<{ instructions: string }>(aiConfigRef);
+
   const selectedMailRef = React.useRef(selectedMail);
   selectedMailRef.current = selectedMail;
 
-
   const fetchAndSetEmails = React.useCallback(async (showLoading = true) => {
-    if (showLoading) {
-      setIsLoading(true);
-    }
+    if (showLoading) setIsLoading(true);
     setError(null);
     try {
       const folder = folders.find(f => f.name === selectedFolder);
-      if (!folder) {
-          throw new Error('Geselecteerde map niet gevonden.');
-      }
+      if (!folder) throw new Error('Geselecteerde map niet gevonden.');
       const fetchedMails = await fetchEmailsFlow(folder.boxName);
       setMails(currentMails => {
         if (JSON.stringify(currentMails) !== JSON.stringify(fetchedMails)) {
@@ -221,9 +224,7 @@ export default function MailPage() {
       console.error("Failed to fetch emails:", error);
       setError(error.message || 'Kon e-mails niet ophalen.');
     } finally {
-      if (showLoading) {
-        setIsLoading(false);
-      }
+      if (showLoading) setIsLoading(false);
     }
   }, [selectedFolder, folders]);
 
@@ -234,36 +235,75 @@ export default function MailPage() {
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!selectedMail) return;
-
     const folder = folders.find(f => f.name === selectedFolder);
     if (!folder) return;
-    
     setIsDeleting(true);
-
     try {
-      await deleteEmailFlow({
-        mailbox: folder.boxName,
-        uid: selectedMail.uid,
-      });
-
-      toast({
-        title: 'E-mail verwijderd',
-        description: 'De e-mail is succesvol verwijderd.',
-      });
-      
-      // Refresh list
+      await deleteEmailFlow({ mailbox: folder.boxName, uid: selectedMail.uid });
+      toast({ title: 'E-mail verwijderd', description: 'De e-mail is succesvol verwijderd.' });
       setMails(currentMails => currentMails.filter(m => m.uid !== selectedMail.uid));
       setSelectedMail(null);
-
     } catch (error: any) {
-      console.error("Failed to delete email:", error);
-      toast({
-        variant: "destructive",
-        title: 'Fout bij verwijderen',
-        description: error.message || 'Kon de e-mail niet verwijderen.',
-      });
+      toast({ variant: "destructive", title: 'Fout bij verwijderen', description: error.message || 'Kon de e-mail niet verwijderen.' });
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleForwardToMelding = async (attachment: EmailAttachment) => {
+    if (!firestore || !app || isForwarding) return;
+    
+    setIsForwarding(true);
+    toast({ description: "Bijlage wordt geanalyseerd door AI..." });
+
+    try {
+        const parsed = await parseIssuePdf({ 
+            pdfDataUri: `data:${attachment.contentType};base64,${attachment.content}`,
+            instructions: aiConfig?.instructions || ''
+        });
+
+        const storage = getStorage(app);
+        const storagePath = `meldingen/${parsed.intakenummer || 'temp'}/documents/${Date.now()}-${attachment.filename}`;
+        const pdfBlob = await fetch(`data:${attachment.contentType};base64,${attachment.content}`).then(r => r.blob());
+        const uploadTask = uploadBytesResumable(ref(storage, storagePath), pdfBlob);
+        await uploadTask;
+        const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+
+        const mData = {
+            intakenummer: parsed.intakenummer || '',
+            datum: parsed.datum || format(new Date(), 'yyyy-MM-dd'),
+            tijdstip: parsed.tijdstip || format(new Date(), 'HH:mm'),
+            melder: parsed.melder || selectedMail?.fromName || '',
+            extern_meldingsnummer: parsed.extern_meldingsnummer || '',
+            hoofdcategorie: parsed.label_1 || '',
+            subcategorie: parsed.label_2 || '',
+            behandelaar: parsed.behandelaar || '',
+            extra_informatie: parsed.extra_informatie || '',
+            straatnaam: parsed.straatnaam || '',
+            huisnummer: parsed.huisnummer || '',
+            postcode: parsed.postcode || '',
+            plaats: parsed.plaats || '',
+            status: 'Nieuw',
+            files: [{
+                name: attachment.filename,
+                url: downloadUrl,
+                size: attachment.size,
+                type: attachment.contentType,
+                uploadedAt: new Date().toISOString(),
+                storagePath
+            }],
+            createdAt: serverTimestamp(),
+            aangenomen_door: user?.displayName || user?.email || 'System'
+        };
+
+        const docRef = await addDocumentNonBlocking(collection(firestore, 'meldingen'), mData);
+        toast({ title: "Melding aangemaakt", description: "De PDF is succesvol verwerkt." });
+        router.push(`/issues/new?id=${docRef.id}`);
+    } catch (err: any) {
+        console.error("Forward error:", err);
+        toast({ variant: 'destructive', title: "Doorzetten mislukt", description: "De AI kon deze PDF niet volledig begrijpen." });
+    } finally {
+        setIsForwarding(false);
     }
   };
   
@@ -280,80 +320,41 @@ export default function MailPage() {
 
   const handleReply = () => {
     if (!selectedMail) return;
-    
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = selectedMail.body;
-    const originalBodyText = tempDiv.textContent || tempDiv.innerText || "";
-
+    const originalBodyText = selectedMail.body.replace(/<[^>]*>?/gm, '');
     const replyBody = `\n\n\n----- Oorspronkelijk bericht -----\nVan: ${selectedMail.fromName} <${selectedMail.from}>\nDatum: ${format(new Date(selectedMail.date), 'd MMM yyyy, HH:mm', { locale: nl })}\nOnderwerp: ${selectedMail.subject}\n\n${originalBodyText}`;
-
-    setComposeInitialData({
-        to: selectedMail.from,
-        subject: `Re: ${selectedMail.subject}`,
-        body: replyBody
-    });
+    setComposeInitialData({ to: selectedMail.from, subject: `Re: ${selectedMail.subject}`, body: replyBody });
     setIsComposeOpen(true);
   };
   
   const handleReplyAll = () => {
     if (!selectedMail || !user) return;
-    
-    // Combine To and Cc recipients
-    const allRecipients = [
-        ...selectedMail.to,
-        ...(selectedMail.cc || [])
-    ];
-    
-    // Add the original sender
+    const allRecipients = [...selectedMail.to, ...(selectedMail.cc || [])];
     const replyToRecipients = [selectedMail.from, ...allRecipients];
-
-    // Filter out the current user's email and remove duplicates
     const uniqueRecipients = [...new Set(replyToRecipients.filter(email => email && email.toLowerCase() !== user.email?.toLowerCase()))];
-    
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = selectedMail.body;
-    const originalBodyText = tempDiv.textContent || tempDiv.innerText || "";
-
+    const originalBodyText = selectedMail.body.replace(/<[^>]*>?/gm, '');
     const replyBody = `\n\n\n----- Oorspronkelijk bericht -----\nVan: ${selectedMail.fromName} <${selectedMail.from}>\nNaar: ${selectedMail.to.join(', ')}\n${selectedMail.cc && selectedMail.cc.length > 0 ? `Cc: ${selectedMail.cc.join(', ')}\n` : ''}Datum: ${format(new Date(selectedMail.date), 'd MMM yyyy, HH:mm', { locale: nl })}\nOnderwerp: ${selectedMail.subject}\n\n${originalBodyText}`;
-
-    setComposeInitialData({
-        to: uniqueRecipients.join(', '),
-        subject: `Re: ${selectedMail.subject}`,
-        body: replyBody
-    });
+    setComposeInitialData({ to: uniqueRecipients.join(', '), subject: `Re: ${selectedMail.subject}`, body: replyBody });
     setIsComposeOpen(true);
   };
 
   const handleForward = () => {
     if (!selectedMail) return;
-
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = selectedMail.body;
-    const originalBodyText = tempDiv.textContent || tempDiv.innerText || "";
-
+    const originalBodyText = selectedMail.body.replace(/<[^>]*>?/gm, '');
     const forwardBody = `\n\n\n----- Doorgestuurd bericht -----\nVan: ${selectedMail.fromName} <${selectedMail.from}>\nDatum: ${format(new Date(selectedMail.date), 'd MMM yyyy, HH:mm', { locale: nl })}\nOnderwerp: ${selectedMail.subject}\nAan: ${selectedMail.to.join(', ')}\n${selectedMail.cc && selectedMail.cc.length > 0 ? `Cc: ${selectedMail.cc.join(', ')}\n` : ''}\n\n${originalBodyText}`;
-
-    setComposeInitialData({
-        to: '', // Empty as requested
-        subject: `Fwd: ${selectedMail.subject}`,
-        body: forwardBody,
-        attachments: selectedMail.attachments || [],
-    });
+    setComposeInitialData({ to: '', subject: `Fwd: ${selectedMail.subject}`, body: forwardBody, attachments: selectedMail.attachments || [] });
     setIsComposeOpen(true);
   };
 
   const formatBytes = (bytes: number, decimals = 2) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
-    const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(decimals)) + ' ' + sizes[i];
   }
   
   const currentLabelName = selectedMail ? mailLabels[selectedMail.id] || 'Geen' : 'Geen';
   const currentLabel = labels.find(l => l.name === currentLabelName);
-
 
   return (
     <div className="flex flex-col flex-1 min-h-0 h-full">
@@ -362,32 +363,14 @@ export default function MailPage() {
           <LoadingScreen message="E-mails ophalen..." />
         ) : (
           <div className="grid h-full border rounded-lg lg:grid-cols-[250px_400px_1fr]">
-            
-            {/* Panel 1: Folders */}
             <div className={cn("border-r p-3 flex-col", isMobile && selectedMail ? "hidden" : "flex")}>
-              <Button className="w-full" onClick={() => { setComposeInitialData({}); setIsComposeOpen(true); }}>
-                  <PenSquare className="mr-2 h-4 w-4" />
-                  Nieuw Bericht
-              </Button>
-
+              <Button className="w-full" onClick={() => { setComposeInitialData({}); setIsComposeOpen(true); }}><PenSquare className="mr-2 h-4 w-4" />Nieuw Bericht</Button>
               <nav className="mt-4 space-y-1">
                 {folders.map(folder => (
-                  <Button
-                    key={folder.name}
-                    variant={selectedFolder === folder.name ? 'secondary' : 'ghost'}
-                    className="w-full justify-start gap-2"
-                    onClick={() => {
-                      setSelectedFolder(folder.name);
-                      setSelectedMail(null);
-                    }}
-                  >
+                  <Button key={folder.name} variant={selectedFolder === folder.name ? 'secondary' : 'ghost'} className="w-full justify-start gap-2" onClick={() => { setSelectedFolder(folder.name); setSelectedMail(null); }}>
                     <folder.icon className="h-4 w-4" />
                     {folder.label}
-                    {!isLoading && !error && selectedFolder === folder.name && (
-                      <span className="ml-auto text-xs text-muted-foreground">
-                          {mails.length}
-                      </span>
-                    )}
+                    {!isLoading && !error && selectedFolder === folder.name && (<span className="ml-auto text-xs text-muted-foreground">{mails.length}</span>)}
                   </Button>
                 ))}
                 <Separator className="my-1" />
@@ -395,231 +378,116 @@ export default function MailPage() {
               </nav>
             </div>
 
-            {/* Panel 2: Mail list */}
             <div className={cn("border-r flex flex-col min-h-0", isMobile && selectedMail ? "hidden" : "flex")}>
               <div className="p-3 border-b flex items-center gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Zoeken..." className="pl-9" />
-                </div>
-                <TooltipProvider>
-                  <Tooltip>
-                      <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => fetchAndSetEmails(true)} disabled={isLoading}>
-                            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                          </Button>
-                      </TooltipTrigger>
-                      <TooltipContent><p>E-mails vernieuwen</p></TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <div className="relative flex-1"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input placeholder="Zoeken..." className="pl-9" /></div>
+                <TooltipProvider><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" onClick={() => fetchAndSetEmails(true)} disabled={isLoading}>{isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}</Button></TooltipTrigger><TooltipContent><p>E-mails vernieuwen</p></TooltipContent></Tooltip></TooltipProvider>
               </div>
               <div className="flex-1 overflow-y-auto relative">
-                {isLoading && !!mails.length && (
-                  <div className="absolute inset-0 bg-background/50 z-10 flex items-center justify-center">
-                    <Loader2 className="h-8 w-8 animate-spin" />
-                  </div>
-                )}
-                {error ? (
-                  <div className="p-4">
-                      <Alert variant="destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Fout bij ophalen van e-mail</AlertTitle>
-                        <AlertDescription>
-                          {error}
-                        </AlertDescription>
-                      </Alert>
-                  </div>
-                ) : mails.length > 0 ? (
+                {isLoading && !!mails.length && (<div className="absolute inset-0 bg-background/50 z-10 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>)}
+                {error ? (<div className="p-4"><Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>Fout bij ophalen van e-mail</AlertTitle><AlertDescription>{error}</AlertDescription></Alert></div>) : mails.length > 0 ? (
                   mails.map(mail => {
                     const mailLabelName = mailLabels[mail.id] || 'Geen';
                     const mailLabel = labels.find(l => l.name === mailLabelName);
-                    
                     return (
-                      <button
-                        key={mail.id}
-                        className={cn(
-                          "relative flex flex-col items-start gap-2 rounded-lg border-b p-3 text-left text-sm transition-all w-full",
-                          selectedMail?.id === mail.id ? "bg-muted" : "hover:bg-accent"
-                        )}
-                        onClick={() => setSelectedMail(mail)}
-                      >
+                      <button key={mail.id} className={cn("relative flex flex-col items-start gap-2 rounded-lg border-b p-3 text-left text-sm transition-all w-full", selectedMail?.id === mail.id ? "bg-muted" : "hover:bg-accent")} onClick={() => setSelectedMail(mail)}>
                         <div className="flex w-full items-center">
-                          <div className="flex items-center gap-2">
-                            <div className={cn("h-2 w-2 rounded-full", !mail.read && "bg-blue-500")} />
-                            <div className="font-semibold">{mail.fromName}</div>
-                          </div>
+                          <div className="flex items-center gap-2"><div className={cn("h-2 w-2 rounded-full", !mail.read && "bg-blue-500")} /><div className="font-semibold">{mail.fromName}</div></div>
                           <div className="ml-auto flex items-center gap-2">
-                            {mail.attachments && mail.attachments.length > 0 && (
-                                <Paperclip className="h-4 w-4 text-muted-foreground" />
-                            )}
-                            <div className="text-xs text-muted-foreground">
-                                {formatDistanceToNow(new Date(mail.date), { addSuffix: true, locale: nl })}
-                            </div>
+                            {mail.attachments && mail.attachments.length > 0 && (<Paperclip className="h-4 w-4 text-muted-foreground" />)}
+                            <div className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(mail.date), { addSuffix: true, locale: nl })}</div>
                           </div>
                         </div>
                         <div className="text-xs font-medium">{mail.subject}</div>
-                        <div className="line-clamp-2 text-xs text-muted-foreground">
-                          {mail.body.replace(/<[^>]*>?/gm, '')}
-                        </div>
-
-                        {mailLabel && mailLabel.name !== 'Geen' && (
-                            <div
-                                className="absolute right-0 top-0 bottom-0 w-1 rounded-r-lg"
-                                style={{ backgroundColor: mailLabel.color }}
-                            />
-                        )}
+                        <div className="line-clamp-2 text-xs text-muted-foreground">{mail.body.replace(/<[^>]*>?/gm, '')}</div>
+                        {mailLabel && mailLabel.name !== 'Geen' && (<div className="absolute right-0 top-0 bottom-0 w-1 rounded-r-lg" style={{ backgroundColor: mailLabel.color }} />)}
                       </button>
                     )
                   })
-                ) : (
-                  <div className="p-8 text-center text-muted-foreground flex flex-col items-center justify-center h-full">
-                    <Inbox className="mx-auto h-12 w-12 mb-4" />
-                    <p>Geen berichten in {folders.find(f => f.name === selectedFolder)?.label || 'deze map'}</p>
-                  </div>
-                )}
+                ) : (<div className="p-8 text-center text-muted-foreground flex flex-col items-center justify-center h-full"><Inbox className="mx-auto h-12 w-12 mb-4" /><p>Geen berichten in {folders.find(f => f.name === selectedFolder)?.label || 'deze map'}</p></div>)}
               </div>
             </div>
             
-            {/* Panel 3: Mail content */}
             <div className={cn("flex flex-col min-h-0", isMobile && !selectedMail ? "hidden" : "flex")}>
               {selectedMail ? (
                   <>
                   <div className="flex items-center p-2 lg:p-4 border-b">
-                      {isMobile && (
-                          <Button variant="ghost" size="icon" className="mr-2" onClick={() => setSelectedMail(null)}>
-                              <ArrowLeft className="h-4 w-4" />
-                          </Button>
-                      )}
+                      {isMobile && (<Button variant="ghost" size="icon" className="mr-2" onClick={() => setSelectedMail(null)}><ArrowLeft className="h-4 w-4" /></Button>)}
                       <h1 className="text-xl font-bold flex-1 truncate">{selectedMail.subject}</h1>
                   </div>
-
                   <div className="flex-1 overflow-y-auto">
                       <div className="p-4 border-b">
                           <div className="flex items-start gap-4">
-                              <Avatar className="h-10 w-10">
-                                  <AvatarFallback>{selectedMail.fromName.substring(0, 2).toUpperCase()}</AvatarFallback>
-                              </Avatar>
+                              <Avatar className="h-10 w-10"><AvatarFallback>{selectedMail.fromName.substring(0, 2).toUpperCase()}</AvatarFallback></Avatar>
                               <div className="grid gap-1 flex-1">
                                   <div className="font-semibold">{selectedMail.fromName} <span className="font-normal text-muted-foreground">&lt;{selectedMail.from}&gt;</span></div>
                                   <div className="text-xs text-muted-foreground">Aan: {selectedMail.to.join(', ')}</div>
-                                  {selectedMail.cc && selectedMail.cc.length > 0 && (
-                                      <div className="text-xs text-muted-foreground">Cc: {selectedMail.cc.join(', ')}</div>
-                                  )}
+                                  {selectedMail.cc && selectedMail.cc.length > 0 && (<div className="text-xs text-muted-foreground">Cc: {selectedMail.cc.join(', ')}</div>)}
                               </div>
                               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                   <span>{format(new Date(selectedMail.date), 'HH:mm')}</span>
                                   <DropdownMenu>
-                                      <DropdownMenuTrigger asChild>
-                                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                                              <Bookmark 
-                                                  className="h-4 w-4" 
-                                                  fill={currentLabel && currentLabel.name !== 'Geen' ? currentLabel.color : 'none'}
-                                                  stroke={currentLabel && currentLabel.name !== 'Geen' ? currentLabel.color : 'currentColor'}
-                                              />
-                                          </Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent>
-                                          <DropdownMenuLabel>Label instellen</DropdownMenuLabel>
-                                          <DropdownMenuSeparator />
-                                          {labels.map(label => (
-                                              <DropdownMenuItem 
-                                                  key={label.name}
-                                                  onClick={() => {
-                                                      if (selectedMail) {
-                                                          setMailLabels(prev => ({...prev, [selectedMail.id]: label.name}));
-                                                      }
-                                                  }}
-                                              >
-                                                  <div className="flex items-center gap-2">
-                                                      <div
-                                                        className="h-4 w-4 rounded-sm border"
-                                                        style={{ backgroundColor: label.color !== 'transparent' ? label.color : undefined }}
-                                                      />
-                                                      <span>{label.name}</span>
-                                                  </div>
-                                              </DropdownMenuItem>
-                                          ))}
-                                           <DropdownMenuSeparator />
-                                          <DropdownMenuItem onSelect={() => setIsLabelManagerOpen(true)}>Labels beheren...</DropdownMenuItem>
+                                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><Bookmark className="h-4 w-4" fill={currentLabel && currentLabel.name !== 'Geen' ? currentLabel.color : 'none'} stroke={currentLabel && currentLabel.name !== 'Geen' ? currentLabel.color : 'currentColor'} /></Button></DropdownMenuTrigger>
+                                      <DropdownMenuContent><DropdownMenuLabel>Label instellen</DropdownMenuLabel><DropdownMenuSeparator />
+                                          {labels.map(label => (<DropdownMenuItem key={label.name} onClick={() => { if (selectedMail) setMailLabels(prev => ({...prev, [selectedMail.id]: label.name})); }}><div className="flex items-center gap-2"><div className="h-4 w-4 rounded-sm border" style={{ backgroundColor: label.color !== 'transparent' ? label.color : undefined }} /><span>{label.name}</span></div></DropdownMenuItem>))}
+                                           <DropdownMenuSeparator /><DropdownMenuItem onSelect={() => setIsLabelManagerOpen(true)}>Labels beheren...</DropdownMenuItem>
                                       </DropdownMenuContent>
                                   </DropdownMenu>
-                                  <Avatar className="h-8 w-8 text-sm">
-                                      <AvatarFallback>{user?.email?.substring(0,2).toUpperCase() || 'DS'}</AvatarFallback>
-                                  </Avatar>
+                                  <Avatar className="h-8 w-8 text-sm"><AvatarFallback>{user?.email?.substring(0,2).toUpperCase() || 'DS'}</AvatarFallback></Avatar>
                               </div>
                           </div>
                       </div>
-
                       <div className="p-4 border-b">
                           <div className="flex items-center gap-2">
                               <Button variant="outline" size="sm" onClick={handleReply}><Reply className="mr-2 h-4 w-4" /> Beantwoorden</Button>
                               <Button variant="outline" size="sm" onClick={handleReplyAll}><ReplyAll className="mr-2 h-4 w-4" /> Allen beantwoorden</Button>
                               <Button variant="outline" size="sm" onClick={handleForward}><Forward className="mr-2 h-4 w-4" /> Doorsturen</Button>
-                              <Button variant="outline" size="sm" onClick={handleDelete} disabled={isDeleting}>
-                                  {isDeleting ? <Loader2 className='h-4 w-4 animate-spin mr-2' /> : <Trash2 className="h-4 w-4 mr-2" />}
-                                  Verwijderen
-                              </Button>
+                              <Button variant="outline" size="sm" onClick={handleDelete} disabled={isDeleting}>{isDeleting ? <Loader2 className='h-4 w-4 animate-spin mr-2' /> : <Trash2 className="h-4 w-4 mr-2" />}Verwijderen</Button>
                               <Button variant="ghost" size="icon" className="h-8 w-8 ml-auto"><MoreVertical className="h-4 w-4" /></Button>
                           </div>
                       </div>
-                      
                       {selectedMail.attachments && selectedMail.attachments.length > 0 && (
                       <div className="p-4 border-b">
-                          <Collapsible>
-                          <CollapsibleTrigger asChild>
-                              <div className="group flex items-center gap-2 text-sm font-medium cursor-pointer">
-                              <Paperclip className="h-4 w-4" />
-                              <span>{selectedMail.attachments.length} bijlage{selectedMail.attachments.length > 1 ? 'n' : ''}</span>
-                              <ChevronRight className="h-4 w-4 transition-transform group-data-[state=open]:rotate-90" />
-                              </div>
-                          </CollapsibleTrigger>
+                          <Collapsible defaultOpen>
+                          <CollapsibleTrigger asChild><div className="group flex items-center gap-2 text-sm font-medium cursor-pointer"><Paperclip className="h-4 w-4" /><span>{selectedMail.attachments.length} bijlage{selectedMail.attachments.length > 1 ? 'n' : ''}</span><ChevronRight className="h-4 w-4 transition-transform group-data-[state=open]:rotate-90" /></div></CollapsibleTrigger>
                           <CollapsibleContent>
                               <div className="pt-4 space-y-2">
-                              {selectedMail.attachments.map((att, index) => (
-                                  <div key={index} className="flex items-center gap-2 text-sm p-2 rounded-md bg-muted/50">
-                                  <File className="h-6 w-6 text-muted-foreground" />
-                                  <div className="flex-1">
-                                      <p className="font-medium truncate">{att.filename}</p>
-                                      <p className="text-xs text-muted-foreground">{formatBytes(att.size)}</p>
-                                  </div>
-                                  <Button variant="ghost" size="sm" disabled>Weergave</Button>
-                                  <a href={`data:${att.contentType};base64,${att.content}`} download={att.filename}>
-                                      <Button variant="ghost" size="sm">Downloaden</Button>
-                                  </a>
-                                  <Button variant="ghost" size="sm" disabled>Opslaan naar Drive</Button>
-                                  </div>
-                              ))}
+                              {selectedMail.attachments.map((att, index) => {
+                                  const isPdf = att.contentType === 'application/pdf' || att.filename.toLowerCase().endsWith('.pdf');
+                                  return (
+                                    <div key={index} className="flex items-center gap-2 text-sm p-3 rounded-xl bg-muted/50 border border-transparent hover:border-primary/20 transition-all">
+                                        <File className="h-6 w-6 text-muted-foreground" />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-bold truncate">{att.filename}</p>
+                                            <p className="text-[10px] uppercase font-black text-muted-foreground">{formatBytes(att.size)}</p>
+                                        </div>
+                                        <div className="flex gap-1">
+                                            {isPdf && (
+                                                <Button variant="secondary" size="sm" onClick={() => handleForwardToMelding(att)} disabled={isForwarding} className="h-8 font-black uppercase text-[10px] tracking-tight bg-blue-600 text-white hover:bg-blue-700">
+                                                    {isForwarding ? <Loader2 className="h-3 w-3 animate-spin mr-1.5" /> : <Bell className="h-3 w-3 mr-1.5" />}
+                                                    Doorzetten naar Meldingen
+                                                </Button>
+                                            )}
+                                            <a href={`data:${att.contentType};base64,${att.content}`} download={att.filename}><Button variant="ghost" size="sm" className="h-8 font-bold">Downloaden</Button></a>
+                                        </div>
+                                    </div>
+                                  );
+                              })}
                               </div>
                           </CollapsibleContent>
                           </Collapsible>
                       </div>
                       )}
-
                       <div className="p-4 text-sm" dangerouslySetInnerHTML={{ __html: selectedMail.body }} />
                   </div>
               </>
-              ) : (
-                <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
-                  <Inbox className="h-16 w-16" />
-                  <p className="mt-4 text-lg">Selecteer een bericht</p>
-                  <p className="text-sm">Geen bericht geselecteerd om weer te geven.</p>
-                </div>
-              )}
+              ) : (<div className="flex h-full flex-col items-center justify-center text-muted-foreground"><Inbox className="h-16 w-16" /><p className="mt-4 text-lg">Selecteer een bericht</p><p className="text-sm">Geen bericht geselecteerd om weer te geven.</p></div>)}
             </div>
           </div>
         )}
       </div>
-      <ComposeMailDialog
-        open={isComposeOpen}
-        onOpenChange={setIsComposeOpen}
-        initialData={composeInitialData}
-      />
-       <LabelManagerDialog
-        open={isLabelManagerOpen}
-        onOpenChange={setIsLabelManagerOpen}
-        labels={labels}
-        onSave={(newLabels) => setLabels(newLabels)}
-      />
+      <ComposeMailDialog open={isComposeOpen} onOpenChange={setIsComposeOpen} initialData={composeInitialData} />
+      <LabelManagerDialog open={isLabelManagerOpen} onOpenChange={setIsLabelManagerOpen} labels={labels} onSave={(newLabels) => setLabels(newLabels)} />
     </div>
   );
 }
