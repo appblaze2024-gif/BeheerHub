@@ -527,12 +527,12 @@ export default function NewIssuePage() {
         });
 
         if (parsed.datum) {
-            form.setValue('meldingsdatum', new Date(parsed.datum));
-            form.setValue('voorvaldatum', new Date(parsed.datum));
+            form.setValue('meldingsdatum', new Date(parsed.datum), { shouldValidate: true });
+            form.setValue('voorvaldatum', new Date(parsed.datum), { shouldValidate: true });
         }
         if (parsed.tijdstip) {
-            form.setValue('meldingsuur', parsed.tijdstip);
-            form.setValue('voorvaltijd', parsed.tijdstip);
+            form.setValue('meldingsuur', parsed.tijdstip, { shouldValidate: true });
+            form.setValue('voorvaltijd', parsed.tijdstip, { shouldValidate: true });
         }
 
         if (file) {
