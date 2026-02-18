@@ -49,17 +49,19 @@ Gebruik de bijgevoegde PDF om alle gegevens te extraheren volgens deze specifiek
 3. "Aangenomen door" (rechtsboven) -> behandelaar.
 4. "Melder" (linksboven) -> melder.
 5. "Extern meldingsnummer" (rechtsboven) -> extern_meldingsnummer.
-6. Het eerste label onder de melder header (bv. "Zwerfvuil") -> label_1.
-7. Het label direct daaronder (bv. "Beplanting") -> label_2.
-8. "Adres" -> splits op in straatnaam en huisnummer.
-9. "Postcode/Plaats" -> splits op in postcode en plaats.
-10. "Extra informatie melding" -> extra_informatie (volledige tekst).
+6. Zoek de categorie-labels onder de Melder header (bv. "Zwerfvuil", "Beplanting", "Zwerfafval").
+   - Het eerste/bovenste label -> label_1 (bv. Zwerfvuil).
+   - Het label direct daaronder -> label_2 (bv. Beplanting).
+7. "Adres" -> splits op in straatnaam en huisnummer.
+8. "Postcode/Plaats" -> splits op in postcode en plaats.
+9. "Extra informatie melding" -> extra_informatie (volledige tekst).
 
 PDF Bron: {{media url=pdfDataUri}}
 
 INSTRUCTIES:
 - Zet de datum om naar YYYY-MM-DD.
 - Zet de tijd naar HH:mm.
+- Extraheer de labels (label_1, label_2) zeer nauwkeurig, dit zijn cruciale categorieën.
 - Als een veld ontbreekt, laat het leeg.`,
 });
 

@@ -189,6 +189,29 @@ export default function NewIssuePage() {
   const watchedHoofdcategorie = form.watch('hoofdcategorie');
   const watchedMeldingsdatum = form.watch('meldingsdatum');
 
+  // Reactivity Fix: Ensure values from PDF show up even if not in original DB lists yet
+  const currentHoofdValue = form.watch('hoofdcategorie');
+  const currentSubValue = form.watch('subcategorie');
+  const currentBehandelaar = form.watch('behandelaar');
+
+  const displayHoofdOptions = React.useMemo(() => {
+    const opts = [...hoofdcategorieOptions];
+    if (currentHoofdValue && !opts.includes(currentHoofdValue)) opts.push(currentHoofdValue);
+    return opts;
+  }, [hoofdcategorieOptions, currentHoofdValue]);
+
+  const displaySubOptions = React.useMemo(() => {
+    const opts = [...(subcategorieMapping[watchedHoofdcategorie || ''] || [])];
+    if (currentSubValue && !opts.includes(currentSubValue)) opts.push(currentSubValue);
+    return opts;
+  }, [subcategorieMapping, watchedHoofdcategorie, currentSubValue]);
+
+  const displayHandlerOptions = React.useMemo(() => {
+    const opts = [...handlerOptions];
+    if (currentBehandelaar && !opts.includes(currentBehandelaar)) opts.push(currentBehandelaar);
+    return opts;
+  }, [handlerOptions, currentBehandelaar]);
+
   const viewedMeldingFromDb = React.useMemo(() => {
     if (!meldingIdFromUrl || !allMeldingen) return null;
     return allMeldingen.find(m => m.id === meldingIdFromUrl);
@@ -303,7 +326,7 @@ export default function NewIssuePage() {
             const parsed = await parseIssuePdf({ pdfDataUri: base64 });
 
             // Automatically add new values to settings if they don't exist
-            // MAPPING CORRECTED: label_1 -> hoofdcategorie, label_2 -> subcategorie
+            // MAPPING: label_1 -> hoofdcategorie, label_2 -> subcategorie
             if (parsed.label_1 && !hoofdcategorieOptions.includes(parsed.label_1)) {
                 updateDocumentNonBlocking(categoriesRef!, { hoofdcategorieen: arrayUnion(parsed.label_1) });
             }
@@ -324,7 +347,7 @@ export default function NewIssuePage() {
             if (parsed.melder) form.setValue('melder', parsed.melder);
             if (parsed.extern_meldingsnummer) form.setValue('ext_referentie', parsed.extern_meldingsnummer);
             
-            // Apply corrected mapping
+            // Set form values
             if (parsed.label_1) form.setValue('hoofdcategorie', parsed.label_1);
             if (parsed.label_2) form.setValue('subcategorie', parsed.label_2);
             
@@ -480,7 +503,7 @@ export default function NewIssuePage() {
                                 <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (
                                     <Select onValueChange={field.onChange} value={field.value ?? ''} disabled={isReadOnly}>
                                         <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer categorie" /></SelectTrigger></FormControl>
-                                        <SelectContent>{hoofdcategorieOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                        <SelectContent>{displayHoofdOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                     </Select>
                                 )} />
                             </FormRow>
@@ -488,7 +511,7 @@ export default function NewIssuePage() {
                                 <FormField control={form.control} name="subcategorie" render={({ field }) => (
                                     <Select onValueChange={field.onChange} value={field.value ?? ''} disabled={isReadOnly}>
                                         <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer indeling" /></SelectTrigger></FormControl>
-                                        <SelectContent>{(subcategorieMapping[watchedHoofdcategorie || ''] || []).map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                        <SelectContent>{displaySubOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                     </Select>
                                 )} />
                             </FormRow>
@@ -496,7 +519,7 @@ export default function NewIssuePage() {
                                 <FormField control={form.control} name="behandelaar" render={({ field }) => (
                                     <Select onValueChange={field.onChange} value={field.value ?? ''} disabled={isReadOnly}>
                                         <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer behandelaar" /></SelectTrigger></FormControl>
-                                        <SelectContent>{handlerOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                        <SelectContent>{displayHandlerOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                     </Select>
                                 )} />
                             </FormRow>
