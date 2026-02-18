@@ -816,14 +816,15 @@ export default function NewIssuePage() {
                             </FormRow>
                         </div>
                         <div className="p-1 pt-2 border-t mt-2">
-                            <FormField control={form.control} name="extra_informatie" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="text-[9px] font-black uppercase tracking-widest text-slate-400">Memo</FormLabel>
-                                    <FormControl>
-                                        <Textarea {...field} className="resize-none h-20 text-xs font-medium leading-relaxed" placeholder="Extra informatie over de melding..." disabled={isReadOnly}/>
-                                    </FormControl>
-                                </FormItem>
-                            )} />
+                            <FormRow label="Memo">
+                                <FormField control={form.control} name="extra_informatie" render={({ field }) => (
+                                    <FormItem>
+                                        <FormControl>
+                                            <Textarea {...field} className="resize-none h-20 text-xs font-medium leading-relaxed" placeholder="Extra informatie over de melding..." disabled={isReadOnly}/>
+                                        </FormControl>
+                                    </FormItem>
+                                )} />
+                            </FormRow>
                         </div>
                    </Card>
                </div>
@@ -923,7 +924,7 @@ export default function NewIssuePage() {
                     </TabsContent>
                     <TabsContent value="locatie" className="flex-1 m-0 flex flex-col min-h-0">
                       <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-0 h-full">
-                        <div className="md:col-span-8 border-r overflow-hidden relative shadow-inner"><MapboxView longitude={location?.longitude} latitude={location?.latitude} /></div>
+                        <div className="md:col-span-8 border-r overflow-hidden relative shadow-inner"><MapboxView longitude={location?.longitude} latitude={location?.latitude} objects={nearbyObjects} /></div>
                         <div className="md:col-span-4 flex flex-col min-h-0 bg-slate-50/50">
                             <div className="p-3 border-b shrink-0 font-black text-[10px] uppercase tracking-widest text-slate-400 bg-white">Objecten in de buurt (100m)</div>
                             <ScrollArea className="flex-1 p-3">
