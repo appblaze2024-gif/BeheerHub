@@ -1,7 +1,8 @@
 'use server';
 /**
  * @fileOverview AI flow voor het uitlezen van "Formulier melding / Klacht" PDF's.
- * Ondersteunt dynamische instructies van de Super User voor betere mapping.
+ * Geoptimaliseerd op basis van de specifieke layout: Datum/Intakenummer boven,
+ * Categorieën in het midden (Zwerfvuil/Beplanting), en Adres onderaan.
  */
 
 import { ai } from '@/ai/genkit';
@@ -24,8 +25,8 @@ const ParseIssuePdfOutputSchema = z.object({
   melder: z.string().optional(),
   extern_meldingsnummer: z.string().optional(),
   behandelaar: z.string().optional().describe('Gekoppeld aan "Aangenomen door"'),
-  label_1: z.string().optional().describe('Waarde bij "Soort melder" op PDF -> Wordt Hoofdindeling in de app.'),
-  label_2: z.string().optional().describe('Waarde bij "Hoofdindeling" op PDF -> Wordt Indeling in de app.'),
+  label_1: z.string().optional().describe('Eerste categoriewaarde (bv. Zwerfvuil) -> Hoofdindeling.'),
+  label_2: z.string().optional().describe('Tweede categoriewaarde (bv. Beplanting) -> Indeling.'),
   straatnaam: z.string().optional(),
   huisnummer: z.string().optional(),
   postcode: z.string().optional(),
@@ -42,36 +43,42 @@ const prompt = ai.definePrompt({
   name: 'parseIssuePdfPrompt',
   input: { schema: ParseIssuePdfInputSchema },
   output: { schema: ParseIssuePdfOutputSchema },
-  prompt: `Je bent een expert in het verwerken van "Formulier melding / Klacht" documenten.
-Gebruik de bijgevoegde PDF om alle gegevens te extraheren.
+  prompt: `Je bent een expert in het verwerken van het "Formulier melding / Klacht" document.
+Gebruik de visuele layout van de bijgevoegde PDF om de gegevens exact te extraheren.
 
 {{#if instructions}}
 BELANGRIJKE GEBRUIKERSINSTRUCTIES VOOR DEZE PDF:
 {{{instructions}}}
 {{/if}}
 
-STANDAARD MAPPING REGELS:
-1. "Datum" en "Tijdstip" (linksboven) -> datum en tijdstip.
-2. "Intakenummer" (rechtsboven) -> intakenummer.
-3. "Aangenomen door" (rechtsboven) -> behandelaar.
-4. "Melder" (linksboven) -> melder.
-5. "Extern meldingsnummer" (rechtsboven) -> extern_meldingsnummer.
+MAPPING REGELS OP BASIS VAN LAYOUT:
+1. HEADER GEGEVENS (Top):
+   - "Datum" (linksboven) -> datum.
+   - "Tijdstip" (linksboven) -> tijdstip.
+   - "Intakenummer" (rechtsboven) -> intakenummer.
+   - "Aangenomen door" (rechtsboven) -> behandelaar.
+   - "Melder" (linksboven) -> melder.
+   - "Extern meldingsnummer" (rechtsboven) -> extern_meldingsnummer.
 
-6. Categorie-indeling (CRUCIAAL):
-   - Zoek naar het label "Soort melder". De waarde hierachter is label_1 (Hoofdindeling).
-   - Zoek naar het label "Hoofdindeling" op de PDF. De waarde hierachter is label_2 (Indeling).
-   - NB: Op veel formulieren staat de waarde voor de 'Indeling' direct onder de 'Hoofdindeling'.
+2. CATEGORIE SECTIE (Midden):
+   - De AI moet zoeken naar de teksten tussen de twee horizontale lijnen.
+   - De waarde links (bv. "Zwerfvuil") is label_1 (Hoofdindeling).
+   - De waarde direct daaronder (bv. "Beplanting") is label_2 (Indeling).
+   - Negeer teksten aan de rechterkant zoals "Straatreiniging" tenzij ze expliciet als sub-categorie worden genoemd.
 
-7. "Adres" -> splits op in straatnaam en huisnummer.
-8. "Postcode/Plaats" -> splits op in postcode en plaats.
-9. "Extra informatie melding" -> extra_informatie.
+3. LOCATIE (Onder categorieën):
+   - "Adres" -> split op in straatnaam en huisnummer.
+   - "Postcode/Plaats" -> split op in postcode en plaats (bv. 2134 AZ | Hoofddorp).
+
+4. INHOUD (Onder Adres):
+   - "Extra informatie melding" -> extra_informatie. Extraheer alle tekst die hieronder staat.
 
 PDF Bron: {{media url=pdfDataUri}}
 
 INSTRUCTIES:
 - Zet de datum om naar YYYY-MM-DD.
-- Zet de tijd naar HH:mm.
-- Wees zeer nauwkeurig met de labels (label_1, label_2). 
+- Zet de tijd naar HH:mm (verwijder seconden).
+- Wees zeer nauwkeurig met de teksten bij label_1 en label_2.
 - Als een veld ontbreekt, laat het leeg.`,
 });
 

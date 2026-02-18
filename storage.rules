@@ -7,9 +7,9 @@ service firebase.storage {
       return request.auth != null;
     }
 
-    // Voor ontwikkeling en wegens het gebruik van een gedeeld kiosk-account voor NFC,
-    // staan we schrijven toe voor alle geauthenticeerde gebruikers.
-    // Dit herstelt ook de toegang tot de settings/ map voor AI Training.
+    // Volledige toegang voor alle ingelogde gebruikers.
+    // Dit garandeert dat zowel Super admins als de kiosk-accounts (NFC)
+    // bestanden kunnen uploaden in alle mappen, inclusief settings/
     match /{allPaths=**} {
       allow read, write: if isSignedIn();
     }

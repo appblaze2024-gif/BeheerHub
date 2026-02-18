@@ -8,7 +8,7 @@ service firebase.storage {
     }
 
     // Synchronisatie met de hoofdregels voor volledige toegang voor ingelogde gebruikers.
-    // Dit garandeert dat de settings/ map ook voor de app-code toegankelijk is.
+    // Dit zorgt ervoor dat de AI Training sjablonen in settings/ altijd schrijfbaar zijn.
     match /{allPaths=**} {
       allow read, write: if isSignedIn();
     }

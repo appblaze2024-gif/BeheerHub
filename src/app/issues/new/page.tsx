@@ -805,7 +805,7 @@ export default function NewIssuePage() {
                                                 <p className="font-black text-[11px] uppercase tracking-tight text-slate-900">{obj.id}</p>
                                                 {obj.vulgraad !== undefined && <Badge variant="outline" className="text-[8px] h-4 font-black border-slate-200">{obj.vulgraad}%</Badge>}
                                             </div>
-                                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter truncate">{obj.locatieSubType} | {obj.straatnaam}</p>
+                                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter truncate">{obj.locatieType} | {obj.straatnaam}</p>
                                         </div>
                                     ))}
                                     {nearbyObjects.length === 0 && <div className="p-8 text-center"><div className="bg-white p-4 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3 shadow-sm border border-slate-100"><MapPin className="h-5 w-5 text-slate-200" /></div><p className="text-[10px] font-black uppercase text-slate-300 tracking-widest">Geen objecten gevonden</p></div>}
