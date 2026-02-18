@@ -186,7 +186,6 @@ export default function IssuesPage() {
   const [isDraggingAfhandelingPhoto, setIsDraggingAfhandelingPhoto] = React.useState(false);
   const [fullScreenPhoto, setFullScreenPhoto] = React.useState<UploadedFile | null>(null);
 
-  // OPTIMIZED QUERY: Filter out 'Afgerond' and 'Nieuw' meldingen at source
   const meldingenQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
@@ -203,7 +202,6 @@ export default function IssuesPage() {
   const { data: meldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenQuery);
   const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
 
-  // OPTIMIZED: Fetch nearby objects only when a melding is selected
   const objectsCollection = useMemoFirebase(() => {
     if (!firestore || !selectedMeldingId) return null;
     return collection(firestore, 'objects');
@@ -517,16 +515,6 @@ export default function IssuesPage() {
     }
   }, [handleFileUploads]);
 
-  const handleDropDocuments = React.useCallback((event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setIsDraggingDocument(false);
-    if (event.dataTransfer.files) {
-        handleFileUploads(event.dataTransfer.files);
-    }
-  }, [handleFileUploads]);
-
-
   const handleFileDelete = async (fileToDelete: UploadedFile) => {
     if (!app || !firestore || !selectedMeldingId) return;
 
@@ -590,15 +578,6 @@ export default function IssuesPage() {
   const handleAfhandelingPhotoFileChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
       handleAfhandelingPhotoUploads(event.target.files);
-    }
-  }, [handleAfhandelingPhotoUploads]);
-
-  const handleAfhandelingPhotoDrop = React.useCallback((event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setIsDraggingAfhandelingPhoto(false);
-    if (event.dataTransfer.files) {
-      handleAfhandelingPhotoUploads(event.dataTransfer.files);
     }
   }, [handleAfhandelingPhotoUploads]);
 
@@ -803,7 +782,7 @@ export default function IssuesPage() {
                             </CardContent>
                         </Card>
                         <div className='rounded-xl overflow-hidden border h-full min-h-[300px] lg:min-h-[400px] shadow-sm'>
-                            <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} />
+                            <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} objects={nearbyObjects} />
                         </div>
                         </div>
                     </TabsContent>
@@ -931,28 +910,16 @@ export default function IssuesPage() {
                                 <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Documenten</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                <div 
-                                    className={cn(
-                                        "border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-50 transition-all",
-                                        isDraggingDocument && "bg-blue-50 border-primary"
-                                    )}
-                                    onDragEnter={() => setIsDraggingDocument(true)}
-                                    onDragLeave={() => setIsDraggingDocument(false)}
-                                    onDragOver={(e) => e.preventDefault()}
-                                    onDrop={handleDropDocuments}
-                                    onClick={() => document.getElementById('document-file-input')?.click()}
-                                >
-                                    <UploadCloud className="h-12 w-12 text-slate-300" />
-                                    <p className="mt-4 font-black uppercase tracking-tight text-slate-900">Sleep bestanden of klik</p>
-                                    <p className="text-xs text-slate-400 font-medium mt-1">PDF, Word, Excel, afbeeldingen...</p>
-                                    <input
-                                        type="file"
-                                        id="document-file-input"
-                                        onChange={handleFileChangeDocuments}
-                                        className="hidden"
-                                        multiple
-                                    />
-                                </div>
+                                <Button variant="outline" className="w-full h-12 border-dashed border-2 font-bold uppercase text-[10px] tracking-widest" onClick={() => document.getElementById('document-file-input')?.click()}>
+                                    <UploadCloud className="mr-2 h-4 w-4" /> Bestand uploaden
+                                </Button>
+                                <input
+                                    type="file"
+                                    id="document-file-input"
+                                    onChange={handleFileChangeDocuments}
+                                    className="hidden"
+                                    multiple
+                                />
                                 
                                 {Object.entries(uploadProgress).map(([name, progress]) => (
                                 <div key={name} className="space-y-1 mt-2">
@@ -1063,30 +1030,9 @@ export default function IssuesPage() {
                             <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Foto's van Medewerker</CardTitle>
                           </CardHeader>
                           <CardContent className="flex-1 flex flex-col space-y-4 p-4 min-h-0">
-                            <div className="grid grid-cols-2 gap-3 flex-shrink-0">
-                                <div
-                                className={cn(
-                                    "border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-50 transition-all min-h-[120px]",
-                                    isDraggingAfhandelingPhoto && "bg-blue-50 border-primary"
-                                )}
-                                onDragEnter={() => setIsDraggingAfhandelingPhoto(true)}
-                                onDragLeave={() => setIsDraggingAfhandelingPhoto(false)}
-                                onDragOver={(e) => e.preventDefault()}
-                                onDrop={handleAfhandelingPhotoDrop}
-                                onClick={() => document.getElementById('afhandeling-photo-file-input')?.click()}
-                                >
-                                <UploadCloud className="h-8 w-8 text-slate-300" />
-                                <p className="mt-2 text-[10px] font-black uppercase tracking-tight text-slate-900">Galerij</p>
-                                </div>
-
-                                <div
-                                className="border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-50 transition-all min-h-[120px]"
-                                onClick={() => document.getElementById('afhandeling-camera-input')?.click()}
-                                >
-                                <Camera className="h-8 w-8 text-slate-300" />
-                                <p className="mt-2 text-[10px] font-black uppercase tracking-tight text-slate-900">Foto maken</p>
-                                </div>
-                            </div>
+                            <Button variant="outline" className="w-full h-12 border-dashed border-2 font-bold uppercase text-[10px] tracking-widest" onClick={() => document.getElementById('afhandeling-photo-file-input')?.click()}>
+                                <Camera className="mr-2 h-4 w-4" /> Foto uploaden
+                            </Button>
                             
                             <input
                                 type="file"
@@ -1095,14 +1041,6 @@ export default function IssuesPage() {
                                 className="hidden"
                                 multiple
                                 accept="image/*"
-                            />
-                            <input
-                                type="file"
-                                id="afhandeling-camera-input"
-                                onChange={handleAfhandelingPhotoFileChange}
-                                className="hidden"
-                                accept="image/*"
-                                capture="environment"
                             />
                             
                             {uploadProgress && Object.keys(uploadProgress).length > 0 && (

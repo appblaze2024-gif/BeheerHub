@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -6,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { format, addDays, isWeekend } from 'date-fns';
-import { ArrowLeft, Loader2, Search, UploadCloud, FileIcon, Trash2, Camera, MapPin, Sparkles, Settings2, FileText, Eye, X, ZoomIn, ZoomOut, Target } from 'lucide-react';
+import { ArrowLeft, Loader2, Search, UploadCloud, FileIcon, Trash2, Camera, MapPin, Sparkles, Settings2, FileText, Eye, X, ZoomIn, ZoomOut, Target, Upload } from 'lucide-react';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useFirebaseApp, useCollection, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { collection, doc, arrayUnion } from 'firebase/firestore';
@@ -38,6 +39,7 @@ import {
   DialogFooter,
   DialogDescription,
   DialogTrigger,
+  DialogClose,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -103,8 +105,8 @@ const MAPPING_FIELDS = [
     { id: 'melder', label: 'Naam melder' },
     { id: 'extern_meldingsnummer', label: 'Extern meldingsnummer' },
     { id: 'behandelaar', label: 'Behandelaar (Aangenomen door)' },
-    { id: 'label_1', label: 'Hoofdindeling (Soort melder op PDF)' },
-    { id: 'label_2', label: 'Indeling (Hoofdindeling op PDF)' },
+    { id: 'label_1', label: 'Hoofdindeling' },
+    { id: 'label_2', label: 'Indeling' },
     { id: 'straatnaam', label: 'Straatnaam' },
     { id: 'huisnummer', label: 'Huisnummer' },
     { id: 'postcode', label: 'Postcode' },
@@ -195,7 +197,7 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
             toast({ title: "Sjabloon geüpload", description: "Het voorbeeld is succesvol opgeslagen." });
         } catch (err: any) {
             console.error("Sample upload error:", err);
-            toast({ variant: 'destructive', title: "Upload mislukt", description: "Controleer uw verbinding en permissies." });
+            toast({ variant: 'destructive', title: "Upload mislukt", description: "Geen toegang tot de map 'settings/'." });
         } finally {
             setIsUploadingSample(false);
         }
@@ -884,33 +886,38 @@ export default function NewIssuePage() {
                             <TabsTrigger value="locatie" className="text-[10px] font-black uppercase">Locatie</TabsTrigger>
                         </TabsList>
                     </div>
-                    <TabsContent value="documenten" className="flex-1 m-0 p-4 overflow-y-auto bg-slate-50/30">
-                        <div className="h-full grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {!isReadOnly && <div className="border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white hover:border-primary/50 transition-all h-40" onClick={() => document.getElementById('doc-input')?.click()}>
-                                <UploadCloud className="h-10 w-10 text-slate-300" /><p className="mt-3 text-[10px] font-black uppercase tracking-widest text-slate-500">Document uploaden</p>
-                                <input type="file" id="doc-input" onChange={(e) => e.target.files && handleDocumentUploads(e.target.files)} className="hidden" multiple />
-                            </div>}
-                            <div className="space-y-2">
+                    <TabsContent value="documenten" className="m-0 p-4 bg-slate-50/30">
+                        <div className="flex flex-col gap-4">
+                            {!isReadOnly && <Button type="button" variant="outline" className="w-full h-12 border-dashed border-2 font-bold uppercase text-[10px] tracking-widest" onClick={() => document.getElementById('doc-input')?.click()}>
+                                <UploadCloud className="mr-2 h-4 w-4" /> Bestand uploaden
+                            </Button>}
+                            <input type="file" id="doc-input" onChange={(e) => e.target.files && handleDocumentUploads(e.target.files)} className="hidden" multiple />
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                                 {uploadedFiles.map((f) => (
-                                    <div key={f.storagePath} className="flex items-center justify-between p-3 border rounded-xl bg-white shadow-sm">
-                                        <div className="flex items-center gap-3 truncate"><FileIcon className="h-5 w-5 text-primary" /><span className="text-xs font-bold truncate">{f.name}</span></div>
-                                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 hover:text-red-600" onClick={() => setUploadedFiles(prev => prev.filter(x => x.storagePath !== f.storagePath))}><Trash2 className="h-4 w-4" /></Button>
+                                    <div key={f.storagePath} className="flex items-center justify-between p-3 border rounded-xl bg-white shadow-sm group">
+                                        <div className="flex items-center gap-3 truncate">
+                                            <FileIcon className="h-4 w-4 text-primary shrink-0" />
+                                            <span className="text-[11px] font-bold truncate">{f.name}</span>
+                                        </div>
+                                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-slate-300 hover:text-red-600 opacity-0 group-hover:opacity-100" onClick={() => setUploadedFiles(prev => prev.filter(x => x.storagePath !== f.storagePath))}>
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
                                     </div>
                                 ))}
                             </div>
                         </div>
                     </TabsContent>
-                    <TabsContent value="fotos" className="flex-1 m-0 p-4 overflow-y-auto bg-slate-50/30">
-                        <div className="h-full flex flex-col gap-6">
-                            {!isReadOnly && <div className="border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white hover:border-primary/50 transition-all h-40" onClick={() => document.getElementById('photo-input')?.click()}>
-                                <UploadCloud className="h-10 w-10 text-slate-300" /><p className="mt-3 text-[10px] font-black uppercase tracking-widest text-slate-500">Foto's uploaden</p>
-                                <input type="file" id="photo-input" onChange={(e) => e.target.files && handlePhotoUploads(e.target.files)} className="hidden" multiple accept="image/*" />
-                            </div>}
+                    <TabsContent value="fotos" className="m-0 p-4 bg-slate-50/30">
+                        <div className="flex flex-col gap-4">
+                            {!isReadOnly && <Button type="button" variant="outline" className="w-full h-12 border-dashed border-2 font-bold uppercase text-[10px] tracking-widest" onClick={() => document.getElementById('photo-input')?.click()}>
+                                <Camera className="mr-2 h-4 w-4" /> Foto uploaden
+                            </Button>}
+                            <input type="file" id="photo-input" onChange={(e) => e.target.files && handlePhotoUploads(e.target.files)} className="hidden" multiple accept="image/*" />
                             <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-10 gap-3">
                                 {uploadedPhotos.map(p => (
                                     <div key={p.storagePath} className="relative aspect-square rounded-xl overflow-hidden border shadow-sm group">
                                         <Image src={p.url} alt={p.name} fill className="object-cover" />
-                                        <Button type="button" variant="destructive" size="icon" className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setUploadedPhotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}><Trash2 className="h-3 w-3" /></Button>
+                                        <Button type="button" variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setUploadedPhotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}><Trash2 className="h-3 w-3" /></Button>
                                     </div>
                                 ))}
                             </div>
@@ -918,7 +925,9 @@ export default function NewIssuePage() {
                     </TabsContent>
                     <TabsContent value="locatie" className="flex-1 m-0 flex flex-col min-h-0">
                       <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-0 h-full">
-                        <div className="md:col-span-8 border-r overflow-hidden relative shadow-inner"><MapboxView longitude={location?.longitude} latitude={location?.latitude} objects={nearbyObjects} /></div>
+                        <div className="md:col-span-8 border-r overflow-hidden relative shadow-inner">
+                            <MapboxView longitude={location?.longitude} latitude={location?.latitude} objects={nearbyObjects} />
+                        </div>
                         <div className="md:col-span-4 flex flex-col min-h-0 bg-slate-50/50">
                             <div className="p-3 border-b shrink-0 font-black text-[10px] uppercase tracking-widest text-slate-400 bg-white">Objecten in de buurt (100m)</div>
                             <ScrollArea className="flex-1 p-3">

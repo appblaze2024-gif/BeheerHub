@@ -1,8 +1,12 @@
+
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Schrijf- en leesrechten voor alle ingelogde gebruikers (inclusief kiosk-accounts)
+    /**
+     * BEHEERHUB STORAGE RULES
+     * Toegankelijk voor alle ingelogde gebruikers (inclusief kiosk-accounts).
+     */
     match /{allPaths=**} {
       allow read, write: if request.auth != null;
     }
