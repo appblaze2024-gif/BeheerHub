@@ -50,9 +50,11 @@ Gebruik de bijgevoegde PDF om alle gegevens te extraheren volgens deze specifiek
 4. "Melder" (linksboven) -> melder.
 5. "Extern meldingsnummer" (rechtsboven) -> extern_meldingsnummer.
 6. Categorie-indeling (ZEER BELANGRIJK):
-   - Zoek de waarde bij "Soort melder" op het formulier -> dit is label_1.
-   - Zoek de waarde bij "Hoofdindeling" op het formulier -> dit is label_2.
-   - Als deze tekstlabels niet letterlijk aanwezig zijn, pak dan de eerste twee categorie-labels die je onder de header vindt (bv. "Zwerfvuil" en "Beplanting").
+   - Zoek de waarde bij "Soort melder" op het formulier -> dit is label_1 (Hoofdindeling in de app).
+   - Zoek de waarde bij "Hoofdindeling" op het formulier -> dit is label_2 (Indeling in de app).
+   - LET OP: Op het formulier staan deze vaak onder de sectie 'Melder'. Als 'Soort melder' bijv. 'Zwerfvuil' is en 'Hoofdindeling' bijv. 'Beplanting', neem dit dan exact zo over.
+   - Als deze tekstlabels niet letterlijk aanwezig zijn, pak dan de eerste twee categorie-labels die je in de tabel of onder de header vindt.
+
 7. "Adres" -> splits op in straatnaam en huisnummer.
 8. "Postcode/Plaats" -> splits op in postcode en plaats.
 9. "Extra informatie melding" -> extra_informatie.
@@ -62,7 +64,7 @@ PDF Bron: {{media url=pdfDataUri}}
 INSTRUCTIES:
 - Zet de datum om naar YYYY-MM-DD.
 - Zet de tijd naar HH:mm.
-- Wees zeer nauwkeurig met de labels (label_1, label_2). 
+- Wees zeer nauwkeurig met de labels (label_1, label_2). Sla geen categorieën over.
 - Als een veld ontbreekt, laat het leeg.`,
 });
 

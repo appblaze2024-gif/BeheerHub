@@ -186,30 +186,28 @@ export default function NewIssuePage() {
   });
   
   const watchedHoofdcategorie = form.watch('hoofdcategorie');
+  const watchedSubcategorie = form.watch('subcategorie');
   const watchedMeldingsdatum = form.watch('meldingsdatum');
 
   // Dynamic Options Fix: Ensure values from PDF show up even if not in original DB lists yet
-  const currentHoofdValue = form.watch('hoofdcategorie');
-  const currentSubValue = form.watch('subcategorie');
-  const currentBehandelaar = form.watch('behandelaar');
-
   const displayHoofdOptions = React.useMemo(() => {
     const opts = [...hoofdcategorieOptions];
-    if (currentHoofdValue && !opts.includes(currentHoofdValue)) opts.push(currentHoofdValue);
+    if (watchedHoofdcategorie && !opts.includes(watchedHoofdcategorie)) opts.push(watchedHoofdcategorie);
     return opts;
-  }, [hoofdcategorieOptions, currentHoofdValue]);
+  }, [hoofdcategorieOptions, watchedHoofdcategorie]);
 
   const displaySubOptions = React.useMemo(() => {
     const opts = [...(subcategorieMapping[watchedHoofdcategorie || ''] || [])];
-    if (currentSubValue && !opts.includes(currentSubValue)) opts.push(currentSubValue);
+    if (watchedSubcategorie && !opts.includes(watchedSubcategorie)) opts.push(watchedSubcategorie);
     return opts;
-  }, [subcategorieMapping, watchedHoofdcategorie, currentSubValue]);
+  }, [subcategorieMapping, watchedHoofdcategorie, watchedSubcategorie]);
 
   const displayHandlerOptions = React.useMemo(() => {
     const opts = [...handlerOptions];
+    const currentBehandelaar = form.getValues('behandelaar');
     if (currentBehandelaar && !opts.includes(currentBehandelaar)) opts.push(currentBehandelaar);
     return opts;
-  }, [handlerOptions, currentBehandelaar]);
+  }, [handlerOptions, form.watch('behandelaar')]);
 
   const viewedMeldingFromDb = React.useMemo(() => {
     if (!meldingIdFromUrl || !allMeldingen) return null;
