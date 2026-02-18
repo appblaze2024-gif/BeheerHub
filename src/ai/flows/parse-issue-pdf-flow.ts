@@ -1,7 +1,7 @@
 'use server';
 /**
  * @fileOverview AI flow voor het uitlezen van "Formulier melding / Klacht" PDF's.
- * Geoptimaliseerd op basis van handgeschreven veldmapping instructies.
+ * Geoptimaliseerd op basis van specifieke veldmapping instructies.
  */
 
 import { ai } from '@/ai/genkit';
@@ -23,8 +23,8 @@ const ParseIssuePdfOutputSchema = z.object({
   melder: z.string().optional(),
   extern_meldingsnummer: z.string().optional(),
   behandelaar: z.string().optional().describe('Gekoppeld aan "Aangenomen door"'),
-  soort_melder: z.string().optional().describe('Gekoppeld aan het eerste veld onder de header (bv. Zwerfvuil)'),
-  hoofdindeling: z.string().optional().describe('Gekoppeld aan het tweede veld onder de header (bv. Beplanting)'),
+  label_1: z.string().optional().describe('Het eerste label onder de header/melder (bv. Zwerfvuil). Wordt gemapt naar Hoofdindeling.'),
+  label_2: z.string().optional().describe('Het tweede label onder de header/melder (bv. Beplanting). Wordt gemapt naar Indeling.'),
   straatnaam: z.string().optional(),
   huisnummer: z.string().optional(),
   postcode: z.string().optional(),
@@ -49,8 +49,8 @@ Gebruik de bijgevoegde PDF om alle gegevens te extraheren volgens deze specifiek
 3. "Aangenomen door" (rechtsboven) -> behandelaar.
 4. "Melder" (linksboven) -> melder.
 5. "Extern meldingsnummer" (rechtsboven) -> extern_meldingsnummer.
-6. Het eerste label onder de melder (bv. "Zwerfvuil") -> soort_melder.
-7. Het label daaronder (bv. "Beplanting") -> hoofdindeling.
+6. Het eerste label onder de melder header (bv. "Zwerfvuil") -> label_1.
+7. Het label direct daaronder (bv. "Beplanting") -> label_2.
 8. "Adres" -> splits op in straatnaam en huisnummer.
 9. "Postcode/Plaats" -> splits op in postcode en plaats.
 10. "Extra informatie melding" -> extra_informatie (volledige tekst).

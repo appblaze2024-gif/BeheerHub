@@ -303,23 +303,32 @@ export default function NewIssuePage() {
             const parsed = await parseIssuePdf({ pdfDataUri: base64 });
 
             // Automatically add new values to settings if they don't exist
-            if (parsed.hoofdindeling && !hoofdcategorieOptions.includes(parsed.hoofdindeling)) {
-                updateDocumentNonBlocking(categoriesRef!, { hoofdcategorieen: arrayUnion(parsed.hoofdindeling) });
+            // MAPPING CORRECTED: label_1 -> hoofdcategorie, label_2 -> subcategorie
+            if (parsed.label_1 && !hoofdcategorieOptions.includes(parsed.label_1)) {
+                updateDocumentNonBlocking(categoriesRef!, { hoofdcategorieen: arrayUnion(parsed.label_1) });
+            }
+            if (parsed.label_2 && parsed.label_1) {
+                const currentSubs = subcategorieMapping[parsed.label_1] || [];
+                if (!currentSubs.includes(parsed.label_2)) {
+                    updateDocumentNonBlocking(categoriesRef!, { 
+                        [`subcategorieMapping.${parsed.label_1}`]: arrayUnion(parsed.label_2) 
+                    });
+                }
             }
             if (parsed.behandelaar && !handlerOptions.includes(parsed.behandelaar)) {
                 updateDocumentNonBlocking(handlersRef!, { names: arrayUnion(parsed.behandelaar) });
-            }
-            if (parsed.soort_melder && !reporterTypeOptions.includes(parsed.soort_melder)) {
-                updateDocumentNonBlocking(reporterTypesRef!, { names: arrayUnion(parsed.soort_melder) });
             }
 
             if (parsed.datum) form.setValue('meldingsdatum', new Date(parsed.datum));
             if (parsed.tijdstip) form.setValue('meldingsuur', parsed.tijdstip);
             if (parsed.melder) form.setValue('melder', parsed.melder);
             if (parsed.extern_meldingsnummer) form.setValue('ext_referentie', parsed.extern_meldingsnummer);
-            if (parsed.hoofdindeling) form.setValue('hoofdcategorie', parsed.hoofdindeling);
+            
+            // Apply corrected mapping
+            if (parsed.label_1) form.setValue('hoofdcategorie', parsed.label_1);
+            if (parsed.label_2) form.setValue('subcategorie', parsed.label_2);
+            
             if (parsed.behandelaar) form.setValue('behandelaar', parsed.behandelaar);
-            if (parsed.soort_melder) form.setValue('soort_melder', parsed.soort_melder);
             if (parsed.extra_informatie) form.setValue('extra_informatie', parsed.extra_informatie);
             if (parsed.straatnaam) form.setValue('straatnaam', parsed.straatnaam);
             if (parsed.huisnummer) form.setValue('nummer', parsed.huisnummer);
