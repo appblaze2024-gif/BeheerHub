@@ -7,64 +7,10 @@ service firebase.storage {
       return request.auth != null;
     }
 
-    // Controleer of de gebruiker de Super admin rol heeft in Firestore
-    function isSuperAdmin() {
-      return isSignedIn() && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'Super admin';
-    }
-
-    // Toestaan van lezen voor alle ingelogde gebruikers
+    // Voor ontwikkeling en wegens het gebruik van een gedeeld kiosk-account voor NFC,
+    // staan we schrijven toe voor alle geauthenticeerde gebruikers.
     match /{allPaths=**} {
-      allow read: if isSignedIn();
-    }
-    
-    // --- WRITE RULES ---
-    
-    // Specifieke regel voor AI training samples - Toegankelijk voor ingelogde gebruikers
-    // Dit is nodig omdat impersonatie op de client gebeurt, de auth.uid blijft van het kiosk-account.
-    match /settings/{allPaths=**} {
       allow read, write: if isSignedIn();
-    }
-
-    // Regel voor 'Besteksmeldingen' foto's.
-    match /projects/{projectId}/besteksmeldingen/{meldingId}/{allPaths=**} {
-      allow write: if isSignedIn();
-    }
-
-    // Regel voor 'Schouwingen' foto's.
-    match /projects/{projectId}/schouwingen/{schouwId}/{allPaths=**} {
-      allow write: if isSignedIn();
-    }
-
-    // Regel voor algemene projectbestanden
-    match /projects/{projectId}/bestanden/{allPaths=**} {
-        allow write: if isSignedIn();
-    }
-    
-    // Regel voor publieke meldingen foto's
-    match /meldingen/{meldingId}/{allPaths=**} {
-        allow write: if isSignedIn();
-    }
-
-    // Regels voor voertuig/machine afbeeldingen en documenten
-    match /voertuigen/{vehicleId}/{allPaths=**} {
-      allow write: if isSignedIn();
-    }
-    
-    match /machines/{machineId}/{allPaths=**} {
-      allow write: if isSignedIn();
-    }
-    
-    match /damages/{materieelId}/{allPaths=**} {
-      allow write: if isSignedIn();
-    }
-    
-    match /documents/{materieelId}/{allPaths=**} {
-      allow write: if isSignedIn();
-    }
-
-    // Catch-all voor schrijven als ingelogd (veiligheidshalve tijdens dev)
-    match /{allPaths=**} {
-      allow write: if isSignedIn();
     }
   }
 }

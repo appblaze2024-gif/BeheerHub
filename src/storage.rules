@@ -1,15 +1,13 @@
 rules_version = '2';
+
 service firebase.storage {
   match /b/{bucket}/o {
-    
+
     function isSignedIn() {
       return request.auth != null;
     }
 
-    match /settings/{allPaths=**} {
-      allow read, write: if isSignedIn();
-    }
-
+    // Synchronisatie met de hoofdregels voor volledige toegang voor ingelogde gebruikers.
     match /{allPaths=**} {
       allow read, write: if isSignedIn();
     }
