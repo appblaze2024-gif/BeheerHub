@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -507,24 +508,22 @@ export default function NewIssuePage() {
 
   React.useEffect(() => {
     const pendingData = localStorage.getItem('pending_forwarded_melding');
-    if (pendingData) {
+    if (pendingData && categoriesData) {
       try {
         const { parsed, file } = JSON.parse(pendingData);
         
-        form.reset({
-          ...form.getValues(),
-          intakenummer: parsed.intakenummer || '',
-          melder: parsed.melder || '',
-          ext_referentie: parsed.extern_meldingsnummer || '',
-          hoofdcategorie: parsed.label_1 || '',
-          subcategorie: parsed.label_2 || '',
-          behandelaar: parsed.behandelaar || '',
-          extra_informatie: parsed.extra_informatie || '',
-          straatnaam: parsed.straatnaam || '',
-          nummer: parsed.huisnummer || '',
-          postcode: parsed.postcode || '',
-          plaats: parsed.plaats || '',
-        });
+        // Use setValue instead of reset to avoid reactivity issues with select components
+        if (parsed.intakenummer) form.setValue('intakenummer', parsed.intakenummer);
+        if (parsed.melder) form.setValue('melder', parsed.melder);
+        if (parsed.extern_meldingsnummer) form.setValue('ext_referentie', parsed.extern_meldingsnummer);
+        if (parsed.label_1) form.setValue('hoofdcategorie', parsed.label_1);
+        if (parsed.label_2) form.setValue('subcategorie', parsed.label_2);
+        if (parsed.behandelaar) form.setValue('behandelaar', parsed.behandelaar);
+        if (parsed.extra_informatie) form.setValue('extra_informatie', parsed.extra_informatie);
+        if (parsed.straatnaam) form.setValue('straatnaam', parsed.straatnaam);
+        if (parsed.huisnummer) form.setValue('nummer', parsed.huisnummer);
+        if (parsed.postcode) form.setValue('postcode', parsed.postcode);
+        if (parsed.plaats) form.setValue('plaats', parsed.plaats);
 
         if (parsed.datum) {
             form.setValue('meldingsdatum', new Date(parsed.datum), { shouldValidate: true });
@@ -558,7 +557,7 @@ export default function NewIssuePage() {
         console.error("Error loading pending forwarded melding:", e);
       }
     }
-  }, [form, toast]);
+  }, [form, toast, categoriesData]);
   
   React.useEffect(() => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
@@ -963,7 +962,7 @@ export default function NewIssuePage() {
                             <TabsTrigger value="locatie" className="text-[10px] font-black uppercase">Locatie</TabsTrigger>
                         </TabsList>
                     </div>
-                    <TabsContent value="documenten" className="m-0 p-4 bg-slate-50/30 overflow-hidden">
+                    <TabsContent value="documenten" className="m-0 p-4 bg-slate-50/30 overflow-visible">
                         <div className="flex flex-col gap-4">
                             {!isReadOnly && <Button type="button" variant="outline" className="w-full h-12 border-dashed border-2 font-bold uppercase text-[10px] tracking-widest" onClick={() => document.getElementById('doc-input')?.click()}>
                                 <UploadCloud className="mr-2 h-4 w-4" /> Bestand uploaden
@@ -984,7 +983,7 @@ export default function NewIssuePage() {
                             </div>
                         </div>
                     </TabsContent>
-                    <TabsContent value="fotos" className="m-0 p-4 bg-slate-50/30 overflow-hidden">
+                    <TabsContent value="fotos" className="m-0 p-4 bg-slate-50/30 overflow-visible">
                         <div className="flex flex-col gap-4">
                             {!isReadOnly && <Button type="button" variant="outline" className="w-full h-12 border-dashed border-2 font-bold uppercase text-[10px] tracking-widest" onClick={() => document.getElementById('photo-input')?.click()}>
                                 <Upload className="mr-2 h-4 w-4" /> Foto uploaden

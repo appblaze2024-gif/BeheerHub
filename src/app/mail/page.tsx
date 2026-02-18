@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -338,13 +339,12 @@ export default function MailPage() {
   const currentLabelName = selectedMail ? mailLabels[selectedMail.id] || 'Geen' : 'Geen';
   const currentLabel = labels.find(l => l.name === currentLabelName);
 
+  if (isForwarding) {
+    return <LoadingScreen message="Melding PDF wordt geanalyseerd door BeheerHub AI..." />;
+  }
+
   return (
     <div className="flex flex-col flex-1 min-h-0 h-full relative">
-      {isForwarding && (
-        <div className="fixed inset-0 z-[100] bg-white/80 backdrop-blur-md flex items-center justify-center">
-          <LoadingScreen message="Melding PDF wordt geanalyseerd door BeheerHub AI..." />
-        </div>
-      )}
       <div className="flex-1 overflow-hidden p-6 h-full relative">
         {isLoading && !mails.length ? (
           <LoadingScreen message="E-mails ophalen..." />
