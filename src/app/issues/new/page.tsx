@@ -86,7 +86,7 @@ const DEFAULT_REPORTER_TYPES = ["Burger", "Bedrijf", "Medewerker", "Overheid"];
 
 const FormRow = ({ label, children, labelFor }: { label: string; children: React.ReactNode; labelFor?: string }) => (
     <div className="grid grid-cols-[140px_1fr] items-start gap-x-2 py-0.5 min-h-[32px]">
-        <FormLabel htmlFor={labelFor} className="text-[10px] text-left pt-2 font-bold text-slate-500 uppercase tracking-tighter shrink-0">{label}</FormLabel>
+        <FormLabel htmlFor={labelFor} className="text-[10px] text-left pt-2 font-black uppercase text-slate-400 tracking-tighter shrink-0">{label}</FormLabel>
         <div className="flex-1 min-w-0">
             {children}
         </div>

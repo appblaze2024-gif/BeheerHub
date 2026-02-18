@@ -49,11 +49,11 @@ Gebruik de bijgevoegde PDF om alle gegevens te extraheren volgens deze specifiek
 3. "Aangenomen door" (rechtsboven) -> behandelaar.
 4. "Melder" (linksboven) -> melder.
 5. "Extern meldingsnummer" (rechtsboven) -> extern_meldingsnummer.
-6. Categorie-indeling (ZEER BELANGRIJK):
-   - Zoek de waarde bij "Soort melder" op het formulier -> dit is label_1 (Hoofdindeling in de app).
-   - Zoek de waarde bij "Hoofdindeling" op het formulier -> dit is label_2 (Indeling in de app).
-   - LET OP: Op het formulier staan deze vaak onder de sectie 'Melder'. Als 'Soort melder' bijv. 'Zwerfvuil' is en 'Hoofdindeling' bijv. 'Beplanting', neem dit dan exact zo over.
-   - Als deze tekstlabels niet letterlijk aanwezig zijn, pak dan de eerste twee categorie-labels die je in de tabel of onder de header vindt.
+
+6. Categorie-indeling (CRUCIAAL - KIJK GOED NAAR DE LABELS):
+   - Zoek naar de tekst "Soort melder" op het formulier. De waarde hierachter/onder is label_1 (dit wordt de Hoofdindeling in de app).
+   - Zoek naar de tekst "Hoofdindeling" op het formulier (deze staat fysiek direct ONDER de soort melder). De waarde hierachter/onder is label_2 (dit wordt de Indeling in de app).
+   - Voorbeeld: Als er staat "Soort melder: Zwerfvuil" en daaronder "Hoofdindeling: Beplanting", dan is label_1 "Zwerfvuil" en label_2 "Beplanting".
 
 7. "Adres" -> splits op in straatnaam en huisnummer.
 8. "Postcode/Plaats" -> splits op in postcode en plaats.
