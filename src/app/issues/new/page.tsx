@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -6,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { format, addDays, isWeekend } from 'date-fns';
-import { ArrowLeft, Loader2, Search, UploadCloud, FileIcon, Trash2, Camera, MapPin, Sparkles, Settings2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Search, UploadCloud, FileIcon, Trash2, Camera, MapPin, Sparkles, Settings2, FileText, Eye } from 'lucide-react';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useFirebaseApp, useCollection, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { collection, doc, arrayUnion } from 'firebase/firestore';
@@ -38,6 +39,7 @@ import {
   DialogDescription,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const newMeldingSchema = z.object({
   soort_melder: z.string().optional(),
@@ -104,12 +106,37 @@ const FormRow = ({ label, children, labelFor }: { label: string; children: React
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
-function AIConfigDialog({ instructions, onSave, isSaving }: { instructions: string, onSave: (val: string) => void, isSaving: boolean }) {
+function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { instructions: string, onSave: (val: string, pdfUrl?: string) => void, isSaving: boolean, samplePdfUrl?: string }) {
     const [val, setVal] = React.useState(instructions);
-    
+    const [previewUrl, setPreviewUrl] = React.useState<string | undefined>(samplePdfUrl);
+    const [isUploadingSample, setIsUploadingSample] = React.useState(false);
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
+    const app = useFirebaseApp();
+
     React.useEffect(() => {
         setVal(instructions);
     }, [instructions]);
+
+    const handleUploadSample = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !app) return;
+
+        setIsUploadingSample(true);
+        const storage = getStorage(app);
+        const storagePath = `settings/ai_training_sample.pdf`;
+        const storageRef = ref(storage, storagePath);
+        
+        try {
+            const uploadTask = uploadBytesResumable(storageRef, file);
+            await uploadTask;
+            const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+            setPreviewUrl(downloadUrl);
+        } catch (err) {
+            console.error("Sample upload error:", err);
+        } finally {
+            setIsUploadingSample(false);
+        }
+    };
 
     return (
         <Dialog>
@@ -118,33 +145,74 @@ function AIConfigDialog({ instructions, onSave, isSaving }: { instructions: stri
                     <Settings2 className="mr-2 h-4 w-4" /> AI Training
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                    <DialogTitle>AI PDF Scan Instructies</DialogTitle>
-                    <DialogDescription>
-                        Leg hier uit waar de AI specifieke velden op de PDF kan vinden. Dit verbetert de herkenning van uw formulieren.
+            <DialogContent className="sm:max-w-[1000px] h-[90vh] flex flex-col p-0 overflow-hidden">
+                <DialogHeader className="p-6 border-b shrink-0">
+                    <DialogTitle className="text-xl font-black uppercase tracking-tight">AI Training & Sjabloon Beheer</DialogTitle>
+                    <DialogDescription className="font-bold text-slate-500">
+                        Upload een voorbeeld-PDF en leg de AI uit waar de gegevens te vinden zijn.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="py-4 space-y-4">
-                    <div className="space-y-2">
-                        <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Instructies</Label>
-                        <Textarea 
-                            value={val} 
-                            onChange={(e) => setVal(e.target.value)}
-                            placeholder="Bv: De 'Hoofdindeling' staat in het blok Melder direct onder de soort melder. De 'Indeling' staat daar weer direct onder."
-                            className="min-h-[200px] text-xs font-medium leading-relaxed"
-                        />
+                
+                <div className="flex-1 flex min-h-0">
+                    {/* PDF Preview Area */}
+                    <div className="w-1/2 border-r bg-slate-100 flex flex-col">
+                        <div className="p-4 border-b bg-white flex justify-between items-center shrink-0">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Voorbeeld sjabloon</Label>
+                            <input type="file" ref={fileInputRef} onChange={handleUploadSample} className="hidden" accept="application/pdf" />
+                            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={isUploadingSample} className="h-8">
+                                {isUploadingSample ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4 mr-2" />}
+                                Sjabloon Uploaden
+                            </Button>
+                        </div>
+                        <div className="flex-1 overflow-hidden relative">
+                            {previewUrl ? (
+                                <iframe src={`${previewUrl}#toolbar=0&navpanes=0`} className="w-full h-full border-none" />
+                            ) : (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-300 p-8 text-center">
+                                    <FileText className="h-16 w-16 mb-4 opacity-10" />
+                                    <p className="text-xs font-black uppercase tracking-widest">Geen sjabloon geladen</p>
+                                    <p className="text-[10px] mt-2 font-medium">Upload een lege of gevulde PDF om de AI te trainen.</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
-                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                        <p className="text-[10px] text-blue-700 font-bold leading-relaxed uppercase">
-                            Tip: Wees specifiek over tekstlabels die als anker dienen voor de gegevens.
-                        </p>
+
+                    {/* Instructions Area */}
+                    <div className="w-1/2 flex flex-col bg-white">
+                        <div className="p-4 border-b shrink-0">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Veld Mapping Instructies</Label>
+                        </div>
+                        <ScrollArea className="flex-1">
+                            <div className="p-6 space-y-6">
+                                <div className="space-y-2">
+                                    <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
+                                        Leg hieronder uit waar de AI specifieke gegevens op uw formulier kan vinden. Wees zo specifiek mogelijk.
+                                    </p>
+                                    <Textarea 
+                                        value={val} 
+                                        onChange={(e) => setVal(e.target.value)}
+                                        placeholder="Bv: De 'Hoofdindeling' staat in het blok Melder direct onder de soort melder. Het intakenummer staat altijd rechtsboven naast het label 'Intakenummer:'"
+                                        className="min-h-[300px] text-xs font-medium leading-relaxed border-2 focus:ring-primary/20"
+                                    />
+                                </div>
+                                
+                                <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                                    <h4 className="text-[10px] font-black uppercase text-blue-700 mb-2 flex items-center gap-2"><Sparkles className="h-3 w-3" /> Tips voor training</h4>
+                                    <ul className="text-[10px] text-blue-600 space-y-1.5 font-bold uppercase tracking-tight">
+                                        <li className="flex gap-2">• Gebruik labels als referentiepunten</li>
+                                        <li className="flex gap-2">• Geef posities aan (linksboven, rechtsonder)</li>
+                                        <li className="flex gap-2">• Benoem de hiërarchie tussen velden</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </ScrollArea>
                     </div>
                 </div>
-                <DialogFooter>
-                    <Button onClick={() => onSave(val)} disabled={isSaving}>
+
+                <DialogFooter className="p-6 border-t shrink-0 bg-slate-50">
+                    <Button onClick={() => onSave(val, previewUrl)} disabled={isSaving} className="w-full sm:w-auto font-black uppercase tracking-tight h-11 px-8">
                         {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                        Instellingen Opslaan
+                        Sjabloon & Instructies Opslaan
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -182,8 +250,9 @@ export default function NewIssuePage() {
 
   // AI Configuration
   const aiConfigRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'pdf_config') : null, [firestore]);
-  const { data: aiConfig } = useDoc<{ instructions: string }>(aiConfigRef);
+  const { data: aiConfig } = useDoc<{ instructions: string, samplePdfUrl?: string }>(aiConfigRef);
   const pdfInstructions = aiConfig?.instructions || '';
+  const samplePdfUrl = aiConfig?.samplePdfUrl;
 
   // Dynamic Settings
   const statusesRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'statuses') : null, [firestore]);
@@ -372,12 +441,12 @@ export default function NewIssuePage() {
     form.setValue('werkgebied', foundWijk || 'Geen werkgebied gevonden');
   }, [location, allProjects, form]);
 
-  const handleSaveAIInstructions = async (instructions: string) => {
+  const handleSaveAIInstructions = async (instructions: string, pdfUrl?: string) => {
     if (!firestore || !aiConfigRef) return;
     setIsSavingConfig(true);
     try {
-        await setDocumentNonBlocking(aiConfigRef, { instructions }, { merge: true });
-        toast({ title: "AI Instructies opgeslagen", description: "De PDF-scanner gebruikt nu uw nieuwe configuratie." });
+        await setDocumentNonBlocking(aiConfigRef, { instructions, samplePdfUrl: pdfUrl || null }, { merge: true });
+        toast({ title: "AI Training opgeslagen", description: "De PDF-sjabloon en instructies zijn succesvol bijgewerkt." });
     } catch (e) {
         toast({ variant: 'destructive', title: "Fout bij opslaan", description: "Kon de instellingen niet bijwerken." });
     } finally {
@@ -546,7 +615,7 @@ export default function NewIssuePage() {
             </div>
             <div className="flex justify-end gap-2">
                 {profile?.role === 'Super admin' && (
-                    <AIConfigDialog instructions={pdfInstructions} onSave={handleSaveAIInstructions} isSaving={isSavingConfig} />
+                    <AIConfigDialog instructions={pdfInstructions} onSave={handleSaveAIInstructions} isSaving={isSavingConfig} samplePdfUrl={samplePdfUrl} />
                 )}
                 <input type="file" ref={pdfInputRef} onChange={handlePdfUpload} className="hidden" accept="application/pdf" />
                 <Button type="button" variant="outline" onClick={() => pdfInputRef.current?.click()} className="h-8 bg-white border-blue-600 text-blue-600 hover:bg-blue-50" disabled={isParsingPdf}>
@@ -559,22 +628,22 @@ export default function NewIssuePage() {
             </div>
         </div>
         <Form {...form}>
-          <form id="new-melding-form" onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
-             <div className="p-3 grid grid-cols-12 gap-4 flex-shrink-0">
-               <div className="col-span-7 space-y-4">
-                    <Card className="bg-gray-50 dark:bg-gray-800/30 p-2">
+          <form id="new-melding-form" onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+             <div className="p-3 grid grid-cols-12 gap-4 shrink-0 bg-white/40 border-b">
+               <div className="col-span-7 space-y-2">
+                    <Card className="bg-gray-50 dark:bg-gray-800/30 p-2 border-none shadow-sm">
                         <CardHeader className="p-1 pb-1 flex-row justify-between items-start">
-                           <CardTitle className="font-semibold text-xs uppercase tracking-widest text-slate-400">Algemene Informatie</CardTitle>
-                           <div className="text-right text-[10px] text-muted-foreground">
+                           <CardTitle className="font-black text-[9px] uppercase tracking-widest text-slate-400">Algemene Informatie</CardTitle>
+                           <div className="text-right text-[8px] font-bold text-muted-foreground uppercase tracking-widest">
                                 Laatst gewijzigd door {viewedMelding ? viewedMelding.aangenomen_door : profile?.displayName || '...'} op {format(new Date(viewedMelding?.datum || now), 'dd-MM-yyyy')}
                             </div>
                         </CardHeader>
                         <div className="space-y-0.5 p-1">
-                            <FormRow label="Meldingsnummer"><Input value={viewedMelding ? viewedMelding.intakenummer : meldingsnummer} disabled className="h-7 text-xs"/></FormRow>
+                            <FormRow label="Meldingsnummer"><Input value={viewedMelding ? viewedMelding.intakenummer : meldingsnummer} disabled className="h-7 text-xs font-bold"/></FormRow>
                             <FormRow label="Soort melder">
                                 <FormField control={form.control} name="soort_melder" render={({ field }) => (
                                     <Select onValueChange={field.onChange} value={field.value ?? ''} disabled={isReadOnly}>
-                                        <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer melder" /></SelectTrigger></FormControl>
+                                        <FormControl><SelectTrigger className="h-7 text-xs font-bold"><SelectValue placeholder="Selecteer melder" /></SelectTrigger></FormControl>
                                         <SelectContent>{reporterTypeOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                     </Select>
                                 )} />
@@ -582,7 +651,7 @@ export default function NewIssuePage() {
                             <FormRow label="Hoofdindeling">
                                 <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (
                                     <Select onValueChange={field.onChange} value={field.value ?? ''} disabled={isReadOnly}>
-                                        <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer categorie" /></SelectTrigger></FormControl>
+                                        <FormControl><SelectTrigger className="h-7 text-xs font-bold"><SelectValue placeholder="Selecteer categorie" /></SelectTrigger></FormControl>
                                         <SelectContent>{displayHoofdOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                     </Select>
                                 )} />
@@ -590,7 +659,7 @@ export default function NewIssuePage() {
                             <FormRow label="Indeling">
                                 <FormField control={form.control} name="subcategorie" render={({ field }) => (
                                     <Select onValueChange={field.onChange} value={field.value ?? ''} disabled={isReadOnly}>
-                                        <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer indeling" /></SelectTrigger></FormControl>
+                                        <FormControl><SelectTrigger className="h-7 text-xs font-bold"><SelectValue placeholder="Selecteer indeling" /></SelectTrigger></FormControl>
                                         <SelectContent>{displaySubOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                     </Select>
                                 )} />
@@ -598,7 +667,7 @@ export default function NewIssuePage() {
                             <FormRow label="Behandelaar">
                                 <FormField control={form.control} name="behandelaar" render={({ field }) => (
                                     <Select onValueChange={field.onChange} value={field.value ?? ''} disabled={isReadOnly}>
-                                        <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer behandelaar" /></SelectTrigger></FormControl>
+                                        <FormControl><SelectTrigger className="h-7 text-xs font-bold"><SelectValue placeholder="Selecteer behandelaar" /></SelectTrigger></FormControl>
                                         <SelectContent>{displayHandlerOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                     </Select>
                                 )} />
@@ -606,121 +675,138 @@ export default function NewIssuePage() {
                             <FormRow label="Status">
                                 <FormField control={form.control} name="status" render={({ field }) => (
                                     <Select onValueChange={field.onChange} value={field.value} disabled={isReadOnly}>
-                                        <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer status" /></SelectTrigger></FormControl>
+                                        <FormControl><SelectTrigger className="h-7 text-xs font-bold"><SelectValue placeholder="Selecteer status" /></SelectTrigger></FormControl>
                                         <SelectContent>{statusOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                     </Select>
                                 )} />
                             </FormRow>
                             <FormRow label="Meldingsdatum">
                                 <div className="flex gap-2 items-center">
-                                    <FormField control={form.control} name="meldingsdatum" render={({ field }) => (<FormControl><Input type='date' className="h-7 text-xs" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} disabled={isReadOnly} /></FormControl>)} />
-                                    <FormField control={form.control} name="meldingsuur" render={({ field }) => (<FormControl><Input type="time" className="h-7 text-xs w-24" {...field} disabled={isReadOnly} /></FormControl>)} />
+                                    <FormField control={form.control} name="meldingsdatum" render={({ field }) => (<FormControl><Input type='date' className="h-7 text-xs font-bold" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} disabled={isReadOnly} /></FormControl>)} />
+                                    <FormField control={form.control} name="meldingsuur" render={({ field }) => (<FormControl><Input type="time" className="h-7 text-xs w-24 font-bold" {...field} disabled={isReadOnly} /></FormControl>)} />
                                 </div>
                             </FormRow>
                         </div>
                         <div className="p-1 pt-2 border-t mt-2">
                             <FormField control={form.control} name="extra_informatie" render={({ field }) => (
-                                <FormItem><FormLabel className="text-xs">Memo</FormLabel><FormControl><Textarea {...field} className="resize-none h-24 text-xs" disabled={isReadOnly}/></FormControl></FormItem>
+                                <FormItem><FormLabel className="text-[9px] font-black uppercase tracking-widest text-slate-400">Memo</FormLabel><FormControl><Textarea {...field} className="resize-none h-20 text-xs font-medium leading-relaxed" placeholder="Extra informatie over de melding..." disabled={isReadOnly}/></FormControl></FormItem>
                             )} />
                         </div>
                    </Card>
                </div>
 
-                <div className="col-span-5 space-y-4">
-                    <Card className='p-2 bg-gray-50 dark:bg-gray-800/30'>
-                        <CardHeader className="p-1 pb-1"><CardTitle className="font-semibold text-xs uppercase tracking-widest text-slate-400">Soort Melding</CardTitle></CardHeader>
+                <div className="col-span-5 space-y-2">
+                    <Card className='p-2 bg-gray-50 dark:bg-gray-800/30 border-none shadow-sm'>
+                        <CardHeader className="p-1 pb-1"><CardTitle className="font-black text-[9px] uppercase tracking-widest text-slate-400">Soort Melding</CardTitle></CardHeader>
                         <div className="space-y-0.5 p-1">
                             <FormRow label="Soort melding">
                                 <FormField control={form.control} name="soort_melding" render={({ field }) => (
                                     <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
-                                        <FormControl><SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Selecteer soort"/></SelectTrigger></FormControl>
+                                        <FormControl><SelectTrigger className="h-7 text-xs font-bold"><SelectValue placeholder="Selecteer soort"/></SelectTrigger></FormControl>
                                         <SelectContent><SelectItem value="Klacht">Klacht</SelectItem><SelectItem value="Verbetering">Verbetering</SelectItem><SelectItem value="Schade">Schade</SelectItem></SelectContent>
                                     </Select>
                                 )} />
                             </FormRow>
-                            <FormRow label="Ext. referentie"><FormField control={form.control} name="ext_referentie" render={({ field }) => (<FormControl><Input {...field} className="h-7 text-xs" disabled={isReadOnly} /></FormControl>)} /></FormRow>
+                            <FormRow label="Ext. referentie"><FormField control={form.control} name="ext_referentie" render={({ field }) => (<FormControl><Input {...field} className="h-7 text-xs font-bold" disabled={isReadOnly} /></FormControl>)} /></FormRow>
                         </div>
                     </Card>
-                    <div className='p-2 border rounded-md bg-gray-50 dark:bg-gray-800/30 space-y-1'>
-                        <h3 className="font-semibold text-xs mb-2 uppercase tracking-widest text-slate-400">Adresgegevens</h3>
+                    <div className='p-3 border rounded-xl bg-gray-50 dark:bg-gray-800/30 space-y-1 shadow-sm'>
+                        <h3 className="font-black text-[9px] mb-2 uppercase tracking-widest text-slate-400">Adresgegevens</h3>
                         <div className="relative">
-                            <FormItem><FormLabel className="text-xs">Zoek Adres</FormLabel><div className="relative flex items-center">
-                                <Input placeholder="Zoek op adres..." className="h-7 text-xs" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} disabled={isReadOnly}/>
-                                {isSearching && <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
+                            <FormItem><div className="relative flex items-center">
+                                <Input placeholder="Zoek op adres..." className="h-8 text-xs font-bold pl-8 rounded-lg" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} disabled={isReadOnly}/>
+                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                                {isSearching && <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-primary" />}
                             </div></FormItem>
                             {addressSuggestions.length > 0 && (
-                                <div className="absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-48 overflow-y-auto">
-                                    {addressSuggestions.map((s) => (<div key={s.id} className="px-4 py-2 text-xs cursor-pointer hover:bg-muted" onClick={() => { setLocation({ latitude: s.center[1], longitude: s.center[0] }); setSearchQuery(s.place_name); setAddressSuggestions([]); }}>{s.place_name}</div>))}
+                                <div className="absolute z-[100] w-full mt-1 bg-white border rounded-xl shadow-2xl max-h-48 overflow-y-auto">
+                                    {addressSuggestions.map((s) => (<div key={s.id} className="px-4 py-2 text-xs font-bold cursor-pointer hover:bg-slate-50 border-b last:border-0" onClick={() => { setLocation({ latitude: s.center[1], longitude: s.center[0] }); setSearchQuery(s.place_name); setAddressSuggestions([]); }}>{s.place_name}</div>))}
                                 </div>
                             )}
                         </div>
                         <div className="grid grid-cols-2 gap-2 pt-2">
-                             <FormField control={form.control} name="straatnaam" render={({ field }) => (<FormItem><FormLabel className='text-xs'>Straatnaam</FormLabel><FormControl><Input {...field} className="h-7 text-xs" disabled={isReadOnly} /></FormControl></FormItem>)} />
-                             <FormField control={form.control} name="nummer" render={({ field }) => (<FormItem><FormLabel className='text-xs'>Nummer</FormLabel><FormControl><Input {...field} className="h-7 text-xs" disabled={isReadOnly} /></FormControl></FormItem>)} />
+                             <FormField control={form.control} name="straatnaam" render={({ field }) => (<FormItem><FormLabel className='text-[8px] font-black uppercase text-slate-400 ml-1'>Straatnaam</FormLabel><FormControl><Input {...field} className="h-7 text-xs font-bold" disabled={isReadOnly} /></FormControl></FormItem>)} />
+                             <FormField control={form.control} name="nummer" render={({ field }) => (<FormItem><FormLabel className='text-[8px] font-black uppercase text-slate-400 ml-1'>Nummer</FormLabel><FormControl><Input {...field} className="h-7 text-xs font-bold" disabled={isReadOnly} /></FormControl></FormItem>)} />
                         </div>
                         <div className="grid grid-cols-2 gap-2">
-                            <FormField control={form.control} name="postcode" render={({ field }) => (<FormItem><FormLabel className='text-xs'>Postcode</FormLabel><FormControl><Input {...field} className="h-7 text-xs" disabled={isReadOnly} /></FormControl></FormItem>)} />
-                             <FormField control={form.control} name="plaats" render={({ field }) => (<FormItem><FormLabel className='text-xs'>Plaats</FormLabel><FormControl><Input {...field} className="h-7 text-xs" disabled={isReadOnly} /></FormControl></FormItem>)} />
+                            <FormField control={form.control} name="postcode" render={({ field }) => (<FormItem><FormLabel className='text-[8px] font-black uppercase text-slate-400 ml-1'>Postcode</FormLabel><FormControl><Input {...field} className="h-7 text-xs font-bold" disabled={isReadOnly} /></FormControl></FormItem>)} />
+                             <FormField control={form.control} name="plaats" render={({ field }) => (<FormItem><FormLabel className='text-[8px] font-black uppercase text-slate-400 ml-1'>Plaats</FormLabel><FormControl><Input {...field} className="h-7 text-xs font-bold" disabled={isReadOnly} /></FormControl></FormItem>)} />
                         </div>
                     </div>
-                    <div className='p-2 border rounded-md bg-gray-50 dark:bg-gray-800/30 space-y-1'>
-                        <h3 className="font-semibold text-xs mb-2 uppercase tracking-widest text-slate-400">Medewerker / Melder</h3>
-                        <FormRow label="Naam melder"><FormField control={form.control} name="melder" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs" disabled={isReadOnly} /></FormControl> )} /></FormRow>
-                        <FormRow label="Telefoon melder"><FormField control={form.control} name="telefoon_melder" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs" disabled={isReadOnly} /></FormControl> )} /></FormRow>
+                    <div className='p-3 border rounded-xl bg-gray-50 dark:bg-gray-800/30 space-y-1 shadow-sm'>
+                        <h3 className="font-black text-[9px] mb-2 uppercase tracking-widest text-slate-400">Medewerker / Melder</h3>
+                        <FormRow label="Naam melder"><FormField control={form.control} name="melder" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs font-bold" disabled={isReadOnly} /></FormControl> )} /></FormRow>
+                        <FormRow label="Telefoon melder"><FormField control={form.control} name="telefoon_melder" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs font-bold" disabled={isReadOnly} /></FormControl> )} /></FormRow>
                     </div>
                 </div>
             </div>
             
-            <div className="flex-1 flex flex-col min-h-0 px-3 pb-3">
+            <div className="flex-1 flex flex-col min-h-0 bg-white">
                  <Tabs defaultValue="locatie" className="flex-1 flex flex-col min-h-0">
-                    <TabsList><TabsTrigger value="documenten">Documenten</TabsTrigger><TabsTrigger value="fotos">Foto's</TabsTrigger><TabsTrigger value="locatie">Locatie</TabsTrigger></TabsList>
-                    <TabsContent value="documenten" className="flex-1 mt-1 overflow-y-auto">
-                        <div className="h-full flex flex-col gap-4 p-1">
-                            {!isReadOnly && <div className="border-2 border-dashed rounded-lg p-4 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50 transition-colors h-32" onClick={() => document.getElementById('doc-input')?.click()}>
-                                <UploadCloud className="h-8 w-8 text-muted-foreground" /><p className="mt-2 text-xs font-semibold">Upload document</p>
+                    <div className="px-4 border-b shrink-0">
+                        <TabsList className="h-10 border-none bg-transparent">
+                            <TabsTrigger value="documenten" className="text-[10px] font-black uppercase">Documenten</TabsTrigger>
+                            <TabsTrigger value="fotos" className="text-[10px] font-black uppercase">Foto's</TabsTrigger>
+                            <TabsTrigger value="locatie" className="text-[10px] font-black uppercase">Locatie</TabsTrigger>
+                        </TabsList>
+                    </div>
+                    <TabsContent value="documenten" className="flex-1 m-0 p-4 overflow-y-auto bg-slate-50/30">
+                        <div className="h-full grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {!isReadOnly && <div className="border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white hover:border-primary/50 transition-all h-40" onClick={() => document.getElementById('doc-input')?.click()}>
+                                <UploadCloud className="h-10 w-10 text-slate-300" /><p className="mt-3 text-[10px] font-black uppercase tracking-widest text-slate-500">Document uploaden</p>
                                 <input type="file" id="doc-input" onChange={(e) => e.target.files && handleDocumentUploads(e.target.files)} className="hidden" multiple />
                             </div>}
                             <div className="space-y-2">
                                 {uploadedFiles.map((f) => (
-                                    <div key={f.storagePath} className="flex items-center justify-between p-2 border rounded-lg bg-white">
-                                        <div className="flex items-center gap-2 truncate"><FileIcon className="h-4 w-4" /><span className="text-xs truncate">{f.name}</span></div>
-                                        <Button type="button" variant="ghost" size="icon" onClick={() => setUploadedFiles(prev => prev.filter(x => x.storagePath !== f.storagePath))}><Trash2 className="h-4 w-4 text-red-500" /></Button>
+                                    <div key={f.storagePath} className="flex items-center justify-between p-3 border rounded-xl bg-white shadow-sm">
+                                        <div className="flex items-center gap-3 truncate"><FileIcon className="h-5 w-5 text-primary" /><span className="text-xs font-bold truncate">{f.name}</span></div>
+                                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 hover:text-red-600" onClick={() => setUploadedFiles(prev => prev.filter(x => x.storagePath !== f.storagePath))}><Trash2 className="h-4 w-4" /></Button>
                                     </div>
                                 ))}
                             </div>
                         </div>
                     </TabsContent>
-                    <TabsContent value="fotos" className="flex-1 mt-1 overflow-y-auto">
-                        <div className="h-full flex flex-col gap-4 p-1">
-                            {!isReadOnly && <div className="grid grid-cols-2 gap-3">
-                                <div className="border-2 border-dashed rounded-lg p-4 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50 h-32" onClick={() => document.getElementById('photo-input')?.click()}>
-                                    <UploadCloud className="h-6 w-6" /><p className="text-[10px] mt-1">Galerij</p>
+                    <TabsContent value="fotos" className="flex-1 m-0 p-4 overflow-y-auto bg-slate-50/30">
+                        <div className="h-full flex flex-col gap-6">
+                            {!isReadOnly && <div className="grid grid-cols-2 gap-4 shrink-0">
+                                <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white transition-all h-32" onClick={() => document.getElementById('photo-input')?.click()}>
+                                    <UploadCloud className="h-8 w-8 text-slate-300" /><p className="text-[10px] font-black uppercase tracking-widest mt-2 text-slate-500">Galerij</p>
                                     <input type="file" id="photo-input" onChange={(e) => e.target.files && handlePhotoUploads(e.target.files)} className="hidden" multiple accept="image/*" />
                                 </div>
-                                <div className="border-2 border-dashed rounded-lg p-4 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50 h-32" onClick={() => document.getElementById('camera-input')?.click()}>
-                                    <Camera className="h-6 w-6" /><p className="text-[10px] mt-1">Camera</p>
+                                <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white transition-all h-32" onClick={() => document.getElementById('camera-input')?.click()}>
+                                    <Camera className="h-8 w-8 text-slate-300" /><p className="text-[10px] font-black uppercase tracking-widest mt-2 text-slate-500">Camera</p>
                                     <input type="file" id="camera-input" onChange={(e) => e.target.files && handlePhotoUploads(e.target.files)} className="hidden" accept="image/*" capture="environment" />
                                 </div>
                             </div>}
-                            <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
+                            <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-10 gap-3">
                                 {uploadedPhotos.map(p => (
-                                    <div key={p.storagePath} className="relative aspect-square rounded-lg overflow-hidden border">
+                                    <div key={p.storagePath} className="relative aspect-square rounded-xl overflow-hidden border shadow-sm group">
                                         <Image src={p.url} alt={p.name} fill className="object-cover" />
-                                        <Button type="button" variant="destructive" size="icon" className="absolute top-1 right-1 h-5 w-5" onClick={() => setUploadedPhotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}><Trash2 className="h-3 w-3" /></Button>
+                                        <Button type="button" variant="destructive" size="icon" className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setUploadedPhotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}><Trash2 className="h-3 w-3" /></Button>
                                     </div>
                                 ))}
                             </div>
                         </div>
                     </TabsContent>
-                    <TabsContent value="locatie" className="flex-1 mt-1 flex flex-col min-h-0">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
-                        <div className="md:col-span-2 border rounded-md overflow-hidden relative"><MapboxView longitude={location?.longitude} latitude={location?.latitude} /></div>
-                        <div className="border rounded-md flex flex-col min-h-0 bg-white">
-                            <div className="p-2 border-b shrink-0 font-bold text-xs uppercase tracking-widest">Objecten in de buurt (100m)</div>
-                            <div className="overflow-y-auto flex-1 p-2 space-y-2">
-                                {nearbyObjects.map(obj => (<div key={obj.id} className="p-2 rounded-lg bg-slate-50 border border-slate-100"><p className="font-black text-[10px]">{obj.id}</p><p className="text-[10px] text-muted-foreground">{obj.locatieSubType}</p></div>))}
-                                {nearbyObjects.length === 0 && <div className="text-xs text-muted-foreground italic p-4 text-center">Geen objecten gevonden.</div>}
-                            </div>
+                    <TabsContent value="locatie" className="flex-1 m-0 flex flex-col min-h-0">
+                      <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-0 h-full">
+                        <div className="md:col-span-8 border-r overflow-hidden relative shadow-inner"><MapboxView longitude={location?.longitude} latitude={location?.latitude} /></div>
+                        <div className="md:col-span-4 flex flex-col min-h-0 bg-slate-50/50">
+                            <div className="p-3 border-b shrink-0 font-black text-[10px] uppercase tracking-widest text-slate-400 bg-white">Objecten in de buurt (100m)</div>
+                            <ScrollArea className="flex-1 p-3">
+                                <div className="space-y-2">
+                                    {nearbyObjects.map(obj => (
+                                        <div key={obj.id} className="p-3 rounded-xl bg-white border border-slate-100 shadow-sm transition-all hover:border-primary/30">
+                                            <div className="flex justify-between items-start mb-1">
+                                                <p className="font-black text-[11px] uppercase tracking-tight text-slate-900">{obj.id}</p>
+                                                {obj.vulgraad !== undefined && <Badge variant="outline" className="text-[8px] h-4 font-black border-slate-200">{obj.vulgraad}%</Badge>}
+                                            </div>
+                                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter truncate">{obj.locatieSubType} | {obj.straatnaam}</p>
+                                        </div>
+                                    ))}
+                                    {nearbyObjects.length === 0 && <div className="p-8 text-center"><div className="bg-white p-4 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3 shadow-sm border border-slate-100"><MapPin className="h-5 w-5 text-slate-200" /></div><p className="text-[10px] font-black uppercase text-slate-300 tracking-widest">Geen objecten gevonden</p></div>}
+                                </div>
+                            </ScrollArea>
                         </div>
                       </div>
                     </TabsContent>
