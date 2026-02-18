@@ -4,19 +4,19 @@ service firebase.storage {
   match /b/{bucket}/o {
     /**
      * BEHEERHUB STORAGE RULES
-     * Toegankelijk voor alle ingelogde gebruikers (inclusief kiosk-accounts).
-     * Nodig voor AI training, mail bijlages en schade foto's.
+     * Toegankelijk voor alle ingelogde gebruikers.
+     * Geforceerde deploy voor AI Training en mail bijlages.
      */
     match /{allPaths=**} {
       allow read, write: if request.auth != null;
     }
     
-    // Expliciete toegang tot instellingen voor AI training
+    // Specifieke rechten voor de settings map (AI sjablonen)
     match /settings/{allPaths=**} {
       allow read, write: if request.auth != null;
     }
     
-    // Expliciete toegang tot meldingen voor doorzetting vanuit mail
+    // Specifieke rechten voor de meldingen map
     match /meldingen/{allPaths=**} {
       allow read, write: if request.auth != null;
     }

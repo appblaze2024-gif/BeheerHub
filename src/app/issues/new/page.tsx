@@ -17,7 +17,7 @@ import Image from 'next/image';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -196,7 +196,7 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
             toast({ title: "Sjabloon geüpload", description: "Het voorbeeld is succesvol opgeslagen." });
         } catch (err: any) {
             console.error("Sample upload error:", err);
-            toast({ variant: 'destructive', title: "Upload mislukt", description: "Geen toegang tot de map 'settings/'." });
+            toast({ variant: 'destructive', title: "Upload mislukt", description: "Fout bij opslaan sjabloon." });
         } finally {
             setIsUploadingSample(false);
         }
