@@ -9,6 +9,7 @@ service firebase.storage {
 
     // Voor ontwikkeling en wegens het gebruik van een gedeeld kiosk-account voor NFC,
     // staan we schrijven toe voor alle geauthenticeerde gebruikers.
+    // Dit herstelt ook de toegang tot de settings/ map voor AI Training.
     match /{allPaths=**} {
       allow read, write: if isSignedIn();
     }
