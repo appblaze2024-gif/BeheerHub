@@ -501,6 +501,7 @@ export default function NewIssuePage() {
       setUploadedPhotos(viewedMeldingFromDb.fotos || []);
       
       justSelectedSuggestion.current = true;
+      setAddressSuggestions([]);
       setSearchQuery(`${viewedMeldingFromDb.straatnaam || ''}${viewedMeldingFromDb.huisnummer ? ' ' + viewedMeldingFromDb.huisnummer : ''}, ${viewedMeldingFromDb.plaats || ''}`);
     }
   }, [viewedMeldingFromDb?.id, meldingIdFromUrl, form]);
@@ -543,6 +544,8 @@ export default function NewIssuePage() {
 
         const fullAddress = `${parsed.straatnaam || ''} ${parsed.huisnummer || ''}, ${parsed.plaats || ''}`.trim();
         if (fullAddress.length > 5) {
+            justSelectedSuggestion.current = true;
+            setAddressSuggestions([]);
             setSearchQuery(fullAddress);
             fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(fullAddress)}.json?access_token=${MAPBOX_TOKEN}&country=NL&limit=1`)
                 .then(res => res.json())
@@ -707,6 +710,8 @@ export default function NewIssuePage() {
 
             const fullAddress = `${parsed.straatnaam || ''} ${parsed.huisnummer || ''}, ${parsed.plaats || ''}`.trim();
             if (fullAddress.length > 5) {
+                justSelectedSuggestion.current = true;
+                setAddressSuggestions([]);
                 setSearchQuery(fullAddress);
                 const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(fullAddress)}.json?access_token=${MAPBOX_TOKEN}&country=NL&limit=1`);
                 const geo = await res.json();
