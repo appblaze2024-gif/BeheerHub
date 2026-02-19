@@ -49,7 +49,6 @@ const CATEGORY_COLORS: Record<string, string> = {
   'Header': 'bg-[#8e24aa] text-white', 
 };
 
-// Bereken beschikbare jaren (vorig jaar t/m 7 jaar in de toekomst)
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: 10 }, (_, i) => CURRENT_YEAR - 1 + i);
 
@@ -60,8 +59,8 @@ export default function AnnualPlanningPage() {
   const [selectedYear, setSelectedYear] = React.useState(CURRENT_YEAR);
   const [isAddingRow, setIsAddingRow] = React.useState(false);
   const [isAddingMilestone, setIsAddingMilestone] = React.useState(false);
+  const [isNewRowDialogOpen, setIsNewRowDialogOpen] = React.useState(false);
 
-  // Firestore Queries (Top-level collections filtered by projectId)
   const planningItemsQuery = useMemoFirebase(() => {
     if (!firestore || !selectedProjectId) return null;
     return query(
@@ -83,7 +82,6 @@ export default function AnnualPlanningPage() {
   const { data: itemsRaw, isLoading: isLoadingItems } = useCollection<AnnualPlanningItem>(planningItemsQuery);
   const { data: milestones, isLoading: isLoadingMilestones } = useCollection<AnnualMilestone>(milestonesQuery);
 
-  // In-memory sortering op basis van 'order' veld
   const items = React.useMemo(() => {
     if (!itemsRaw) return [];
     return [...itemsRaw].sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -124,6 +122,7 @@ export default function AnnualPlanningPage() {
       });
       toast({ title: 'Rij toegevoegd' });
       setIsAddingRow(false);
+      setIsNewRowDialogOpen(false);
     } catch (e) {
       setIsAddingRow(false);
     }
@@ -183,18 +182,18 @@ export default function AnnualPlanningPage() {
   }
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 bg-white overflow-hidden">
+    <div className="flex flex-col h-full bg-white overflow-hidden">
       <PageHeader 
         title={`Jaarplanning ${selectedYear}`} 
         description="Overzicht van inzet en uren voor het gehele jaar."
-        className="border-b"
+        className="border-b shrink-0 py-3"
       >
         <div className="flex items-center gap-2">
           <Select 
             value={selectedYear.toString()} 
             onValueChange={(v) => setSelectedYear(parseInt(v))}
           >
-            <SelectTrigger className="w-[120px] h-9 font-bold bg-white border-2">
+            <SelectTrigger className="w-[120px] h-8 font-bold bg-white border-2">
               <SelectValue placeholder="Kies jaar" />
             </SelectTrigger>
             <SelectContent>
@@ -205,9 +204,9 @@ export default function AnnualPlanningPage() {
           </Select>
 
           <Dialog>
-            <Button asChild variant="outline" size="sm" className="font-bold cursor-pointer h-9 border-2">
+            <Button asChild variant="outline" size="sm" className="font-bold cursor-pointer h-8 border-2">
               <span className="flex items-center">
-                <Settings2 className="mr-2 h-4 w-4" /> Milestone
+                <Settings2 className="mr-2 h-3.5 w-3.5" /> Milestone
               </span>
             </Button>
             <DialogContent>
@@ -234,66 +233,26 @@ export default function AnnualPlanningPage() {
               </form>
             </DialogContent>
           </Dialog>
-
-          <Dialog>
-            <Button asChild size="sm" className="font-black uppercase tracking-tight cursor-pointer h-9 shadow-md">
-              <span className="flex items-center">
-                <Plus className="mr-2 h-4 w-4" /> Regel toevoegen
-              </span>
-            </Button>
-            <DialogContent>
-              <form onSubmit={handleAddRow}>
-                <DialogHeader>
-                  <DialogTitle>Nieuwe Inzet Toevoegen ({selectedYear})</DialogTitle>
-                </DialogHeader>
-                <div className="py-4 space-y-4">
-                  <div className="space-y-2">
-                    <Label>Naam middel / medewerker</Label>
-                    <Input name="name" placeholder="Bijv. Veegmachine 569" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Kleur / Categorie</Label>
-                    <Select name="color" defaultValue="Standaard">
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.keys(CATEGORY_COLORS).map(c => (
-                          <SelectItem key={c} value={c}>{c}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button type="submit" disabled={isAddingRow}>
-                    {isAddingRow && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Toevoegen
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
         </div>
       </PageHeader>
 
-      <div className="flex-1 overflow-auto bg-slate-50 relative">
-        <div className="inline-block min-w-full p-4">
-          <div className="bg-white rounded-xl shadow-2xl border-2 border-slate-200 overflow-hidden">
-            <table className="w-full border-collapse text-[11px] font-bold">
+      <div className="flex-1 overflow-auto bg-slate-50 relative no-scrollbar">
+        <div className="inline-block min-w-full p-2 lg:p-4">
+          <div className="bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden">
+            <table className="w-full border-collapse text-[10px] font-bold table-fixed">
               <thead>
-                <tr className="bg-[#4caf50] text-white h-24">
-                  <th className="sticky left-0 z-20 bg-[#4caf50] border-r-2 border-white min-w-[250px] p-2 text-left align-top">
+                <tr className="bg-[#4caf50] text-white h-16">
+                  <th className="sticky left-0 z-20 bg-[#4caf50] border-r border-white min-w-[180px] p-2 text-left align-top">
                     <div className="flex flex-col h-full justify-between">
-                      <span className="text-sm font-black uppercase tracking-tighter">Jaarplanning {selectedYear}</span>
+                      <span className="text-[11px] font-black uppercase tracking-tighter">Jaarplanning {selectedYear}</span>
                     </div>
                   </th>
                   {WEEKS.map(week => (
-                    <th key={week} className="border-r border-white/20 relative p-0 min-w-[32px] overflow-visible">
+                    <th key={week} className="border-r border-white/20 relative p-0 min-w-[24px] overflow-visible">
                       {milestoneMap[week] && (
                         <div className="absolute inset-0 flex items-center justify-center">
                           <span 
-                            className="whitespace-nowrap uppercase tracking-widest text-[9px] font-black"
+                            className="whitespace-nowrap uppercase tracking-tighter text-[8px] font-black"
                             style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
                           >
                             {milestoneMap[week]}
@@ -302,37 +261,37 @@ export default function AnnualPlanningPage() {
                       )}
                     </th>
                   ))}
-                  <th className="min-w-[80px] bg-[#388e3c]"></th>
+                  <th className="min-w-[60px] bg-[#388e3c]"></th>
                 </tr>
 
-                <tr className="bg-[#8e24aa] text-white h-10">
-                  <th className="sticky left-0 z-20 bg-[#8e24aa] border-r-2 border-white p-2 text-left uppercase tracking-widest">
-                    week nummer
+                <tr className="bg-[#8e24aa] text-white h-8">
+                  <th className="sticky left-0 z-20 bg-[#8e24aa] border-r border-white p-1 text-left uppercase tracking-tighter">
+                    week
                   </th>
                   {WEEKS.map(week => (
                     <th key={week} className={cn(
-                      "border-r border-white/20 text-center",
-                      week % 13 === 0 && "border-r-4 border-red-500"
+                      "border-r border-white/20 text-center font-black",
+                      week % 13 === 0 && "border-r-2 border-red-500"
                     )}>
                       {week}
                     </th>
                   ))}
-                  <th className="bg-[#6a1b9a] text-center uppercase">uren</th>
+                  <th className="bg-[#6a1b9a] text-center uppercase tracking-tighter">tot</th>
                 </tr>
               </thead>
 
               <tbody>
-                {items.length > 0 ? items.map((item) => (
-                  <tr key={item.id} className={cn("border-b border-slate-200 group transition-colors", CATEGORY_COLORS[item.color] || 'bg-white')}>
+                {items.map((item) => (
+                  <tr key={item.id} className={cn("border-b border-slate-100 group transition-colors", CATEGORY_COLORS[item.color] || 'bg-white')}>
                     <td className={cn(
-                      "sticky left-0 z-10 border-r-2 border-slate-200 p-2 truncate flex items-center justify-between",
+                      "sticky left-0 z-10 border-r border-slate-200 p-1.5 truncate flex items-center justify-between",
                       CATEGORY_COLORS[item.color] || 'bg-white'
                     )}>
-                      <span className="truncate pr-2">{item.resourceName}</span>
+                      <span className="truncate pr-1 text-[11px] font-black uppercase tracking-tight">{item.resourceName}</span>
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="h-6 w-6 opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 hover:bg-red-50"
+                        className="h-5 w-5 opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 hover:bg-red-50 shrink-0"
                         onClick={() => handleDeleteRow(item.id)}
                       >
                         <Trash2 className="h-3 w-3" />
@@ -340,44 +299,88 @@ export default function AnnualPlanningPage() {
                     </td>
                     {WEEKS.map(week => (
                       <td key={week} className={cn(
-                        "border-r border-slate-200 p-0 text-center h-10",
-                        week % 13 === 0 && "border-r-4 border-red-500"
+                        "border-r border-slate-100 p-0 text-center h-8",
+                        week % 13 === 0 && "border-r-2 border-red-500"
                       )}>
                         <input
                           type="text"
                           defaultValue={item.weeks?.[week.toString()] || ''}
                           onBlur={(e) => handleCellChange(item.id, week, e.target.value)}
-                          className="w-full h-full bg-transparent text-center focus:bg-white focus:outline-none focus:ring-inset focus:ring-2 focus:ring-primary tabular-nums"
+                          className="w-full h-full bg-transparent text-center focus:bg-white focus:outline-none focus:ring-inset focus:ring-1 focus:ring-primary tabular-nums"
                         />
                       </td>
                     ))}
-                    <td className="bg-slate-50/50 text-center font-black text-xs tabular-nums border-l-2 border-slate-200">
+                    <td className="bg-slate-50/50 text-center font-black text-[10px] tabular-nums border-l border-slate-200">
                       {calculateRowTotal(item.weeks || {}).toLocaleString()}
                     </td>
                   </tr>
-                )) : (
-                  <tr>
-                    <td colSpan={54} className="h-32 text-center text-slate-400 font-bold uppercase italic">
-                      Geen regels gevonden voor {selectedYear}. Voeg een regel toe om te beginnen.
-                    </td>
-                  </tr>
-                )}
+                ))}
+                
+                {/* De '+' rij om een nieuwe regel toe te voegen */}
+                <tr className="bg-slate-50/30">
+                  <td className="sticky left-0 z-10 border-r border-slate-200 p-1 bg-white">
+                    <Dialog open={isNewRowDialogOpen} onOpenChange={setIsNewRowDialogOpen}>
+                      <Button variant="ghost" size="sm" className="w-full h-7 font-black uppercase text-[9px] gap-1 hover:bg-slate-100" onClick={() => setIsNewRowDialogOpen(true)}>
+                        <Plus className="h-3 w-3 text-primary" /> Nieuwe Regel
+                      </Button>
+                      <DialogContent>
+                        <form onSubmit={handleAddRow}>
+                          <DialogHeader>
+                            <DialogTitle>Nieuwe Inzet Toevoegen ({selectedYear})</DialogTitle>
+                          </DialogHeader>
+                          <div className="py-4 space-y-4">
+                            <div className="space-y-2">
+                              <Label>Naam middel / medewerker</Label>
+                              <Input name="name" placeholder="Bijv. Veegmachine 569" required />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Kleur / Categorie</Label>
+                              <Select name="color" defaultValue="Standaard">
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {Object.keys(CATEGORY_COLORS).map(c => (
+                                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <Button type="submit" disabled={isAddingRow}>
+                              {isAddingRow && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                              Toevoegen
+                            </Button>
+                          </DialogFooter>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </td>
+                  {WEEKS.map(week => (
+                    <td key={week} className={cn(
+                      "border-r border-slate-100",
+                      week % 13 === 0 && "border-r-2 border-red-500"
+                    )} />
+                  ))}
+                  <td className="border-l border-slate-200" />
+                </tr>
               </tbody>
 
-              <tfoot className="bg-slate-100 border-t-2 border-slate-300">
-                <tr className="h-12 font-black">
-                  <td className="sticky left-0 z-10 bg-slate-100 border-r-2 border-slate-300 p-2 uppercase tracking-widest text-[10px] text-slate-500">
-                    Totaal inzet per week
+              <tfoot className="bg-slate-100 border-t border-slate-300">
+                <tr className="h-10 font-black">
+                  <td className="sticky left-0 z-10 bg-slate-100 border-r border-slate-300 p-2 uppercase tracking-tighter text-[9px] text-slate-500">
+                    Totaal week
                   </td>
                   {WEEKS.map(week => (
                     <td key={week} className={cn(
                       "text-center tabular-nums border-r border-slate-300",
-                      week % 13 === 0 && "border-r-4 border-red-500"
+                      week % 13 === 0 && "border-r-2 border-red-500"
                     )}>
                       {calculateWeekTotal(week) || ''}
                     </td>
                   ))}
-                  <td className="text-center text-sm text-primary bg-slate-200">
+                  <td className="text-center text-[10px] text-primary bg-slate-200">
                     {grandTotal.toLocaleString()}
                   </td>
                 </tr>
@@ -385,14 +388,14 @@ export default function AnnualPlanningPage() {
             </table>
           </div>
 
-          <div className="mt-6 flex flex-wrap items-center gap-4 text-[10px] font-black uppercase tracking-widest text-slate-400 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <div className="mt-4 flex flex-wrap items-center gap-4 text-[9px] font-black uppercase tracking-widest text-slate-400">
             <div className="flex items-center gap-2">
-              <div className="h-3 w-3 bg-red-500" />
-              <span>Kwartaal / Periode Scheiding</span>
+              <div className="h-2.5 w-2.5 bg-red-500 rounded-sm" />
+              <span>Kwartaal scheiding</span>
             </div>
-            <div className="flex items-center gap-2 ml-0 sm:ml-4">
+            <div className="flex items-center gap-2">
               <Info className="h-3 w-3" />
-              <span>Klik in een cel om uren aan te passen. Gegevens worden per jaar opgeslagen.</span>
+              <span>Direct bewerkbaar. Data wordt automatisch opgeslagen in de cloud.</span>
             </div>
           </div>
         </div>
