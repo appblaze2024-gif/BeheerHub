@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -299,7 +298,7 @@ export default function AnnualPlanningPage() {
           <div className="bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden">
             <table className="w-full border-collapse text-[10px] font-bold table-fixed">
               <thead>
-                <tr className="bg-[#4caf50] text-white h-16">
+                <tr className="bg-[#4caf50] text-white h-32">
                   <th className="sticky left-0 z-20 bg-[#4caf50] border-r border-white min-w-[180px] p-2 text-left align-top">
                     <div className="flex flex-col h-full justify-between">
                       <span className="text-[11px] font-black uppercase tracking-tighter">{displayTitle}</span>
@@ -308,7 +307,7 @@ export default function AnnualPlanningPage() {
                   {WEEKS.map(week => (
                     <th 
                       key={week} 
-                      className="border-r border-white/20 relative p-0 w-8 overflow-visible h-16 group/header-cell cursor-pointer hover:bg-white/10 transition-colors"
+                      className="border-r border-white/20 relative p-0 w-8 overflow-visible h-32 group/header-cell cursor-pointer hover:bg-white/10 transition-colors"
                       onClick={() => handleQuickMilestone(week)}
                     >
                       {milestoneMap[week] ? (
