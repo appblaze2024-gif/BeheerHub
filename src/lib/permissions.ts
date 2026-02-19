@@ -5,6 +5,8 @@ export const permissionConfig = [
         actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }],
         tabs: [
             { id: 'project', label: 'Project' },
+            { id: 'annual-planning', label: 'Jaarplanning' },
+            { id: 'bestanden', label: 'Documenten' },
             { id: 'werksoorten', label: 'Werksoorten' },
             { id: 'boekingregels', label: 'Boekingregels' },
             { id: 'afspraken', label: 'Afspraken' },

@@ -16,6 +16,7 @@ import {
   User,
   FileWarning,
   Cpu,
+  Calendar,
 } from 'lucide-react';
 import { ElementType } from 'react';
 
@@ -46,6 +47,7 @@ export const allMenuItems: MenuItem[] = [
       module: 'projects',
       subItems: [
         { href: '/projects', label: 'Projectbeheer', id: 'project' },
+        { href: '/annual-planning', label: 'Jaarplanning', id: 'annual-planning' },
         { href: '/bestanden', label: 'Documenten', id: 'bestanden' },
       ]
     },
