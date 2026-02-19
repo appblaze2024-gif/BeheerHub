@@ -183,7 +183,7 @@ export default function AnnualPlanningPage() {
   return (
     <div className="flex flex-col flex-1 min-h-0 bg-white overflow-hidden">
       <PageHeader 
-        title={`Inkoop planning ${selectedYear}`} 
+        title={`Jaarplanning ${selectedYear}`} 
         description="Overzicht van inzet en uren voor het gehele jaar."
         className="border-b"
       >
@@ -269,7 +269,7 @@ export default function AnnualPlanningPage() {
                 <tr className="bg-[#4caf50] text-white h-24">
                   <th className="sticky left-0 z-20 bg-[#4caf50] border-r-2 border-white min-w-[250px] p-2 text-left align-top">
                     <div className="flex flex-col h-full justify-between">
-                      <span className="text-sm font-black uppercase tracking-tighter">Inkoop planning {selectedYear}</span>
+                      <span className="text-sm font-black uppercase tracking-tighter">Jaarplanning {selectedYear}</span>
                     </div>
                   </th>
                   {WEEKS.map(week => (
