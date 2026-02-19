@@ -5,7 +5,7 @@ import * as React from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, Loader2, Calendar, Settings2, Info, Pencil, Check } from 'lucide-react';
+import { Plus, Trash2, Loader2, Calendar, Settings2, Info, Pencil, Check, X } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking, useDoc, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, where } from 'firebase/firestore';
 import { useProject } from '@/context/project-context';
@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -66,12 +67,17 @@ export default function AnnualPlanningPage() {
   const { toast } = useToast();
   const [selectedYear, setSelectedYear] = React.useState(CURRENT_YEAR);
   const [isAddingRow, setIsAddingRow] = React.useState(false);
-  const [isAddingMilestone, setIsAddingMilestone] = React.useState(false);
   const [isNewRowDialogOpen, setIsNewRowDialogOpen] = React.useState(false);
   
   // Title editing state
   const [isEditingTitle, setIsEditingTitle] = React.useState(false);
   const [tempTitle, setTempTitle] = React.useState('');
+
+  // Milestone editing state
+  const [isMilestoneDialogOpen, setIsMilestoneDialogOpen] = React.useState(false);
+  const [selectedWeekForMilestone, setSelectedWeekForMilestone] = React.useState<number | null>(null);
+  const [milestoneInput, setMilestoneInput] = React.useState('');
+  const [isSavingMilestone, setIsSavingMilestone] = React.useState(false);
 
   const configId = `${selectedProjectId}_${selectedYear}`;
   const configRef = useMemoFirebase(() => {
@@ -164,25 +170,47 @@ export default function AnnualPlanningPage() {
     }
   };
 
-  const handleAddMilestone = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!selectedProjectId || !firestore) return;
-    const formData = new FormData(e.currentTarget);
-    const label = formData.get('label') as string;
-    const week = parseInt(formData.get('week') as string);
+  const handleQuickMilestone = (week: number) => {
+    const existing = milestones?.find(m => m.weekNumber === week);
+    setMilestoneInput(existing?.label || '');
+    setSelectedWeekForMilestone(week);
+    setIsMilestoneDialogOpen(true);
+  };
 
-    setIsAddingMilestone(true);
+  const handleSaveQuickMilestone = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (selectedWeekForMilestone === null || !firestore || !selectedProjectId) return;
+    
+    setIsSavingMilestone(true);
+    const existing = milestones?.find(m => m.weekNumber === selectedWeekForMilestone);
+    
     try {
-      addDocumentNonBlocking(collection(firestore, 'annual_milestones'), {
-        projectId: selectedProjectId,
-        label,
-        weekNumber: week,
-        year: selectedYear
-      });
-      toast({ title: 'Milestone toegevoegd' });
-      setIsAddingMilestone(false);
+      if (milestoneInput.trim() === '') {
+        if (existing) {
+          deleteDocumentNonBlocking(doc(firestore, 'annual_milestones', existing.id));
+          toast({ title: 'Milestone verwijderd' });
+        }
+      } else {
+        if (existing) {
+          updateDocumentNonBlocking(doc(firestore, 'annual_milestones', existing.id), {
+            label: milestoneInput.trim()
+          });
+          toast({ title: 'Milestone bijgewerkt' });
+        } else {
+          addDocumentNonBlocking(collection(firestore, 'annual_milestones'), {
+            projectId: selectedProjectId,
+            label: milestoneInput.trim(),
+            weekNumber: selectedWeekForMilestone,
+            year: selectedYear
+          });
+          toast({ title: 'Milestone toegevoegd' });
+        }
+      }
+      setIsMilestoneDialogOpen(false);
     } catch (e) {
-      setIsAddingMilestone(false);
+      console.error("Milestone error:", e);
+    } finally {
+      setIsSavingMilestone(false);
     }
   };
 
@@ -263,37 +291,6 @@ export default function AnnualPlanningPage() {
               ))}
             </SelectContent>
           </Select>
-
-          <Dialog>
-            <Button asChild variant="outline" size="sm" className="font-bold cursor-pointer h-8 border-2">
-              <span className="flex items-center">
-                <Settings2 className="mr-2 h-3.5 w-3.5" /> Milestone
-              </span>
-            </Button>
-            <DialogContent>
-              <form onSubmit={handleAddMilestone}>
-                <DialogHeader>
-                  <DialogTitle>Nieuwe Milestone ({selectedYear})</DialogTitle>
-                </DialogHeader>
-                <div className="py-4 space-y-4">
-                  <div className="space-y-2">
-                    <Label>Label</Label>
-                    <Input name="label" placeholder="Bijv. monumenten" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Weeknummer (1-52)</Label>
-                    <Input name="week" type="number" min="1" max="52" required />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button type="submit" disabled={isAddingMilestone}>
-                    {isAddingMilestone && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Opslaan
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
         </div>
       </PageHeader>
 
@@ -309,8 +306,12 @@ export default function AnnualPlanningPage() {
                     </div>
                   </th>
                   {WEEKS.map(week => (
-                    <th key={week} className="border-r border-white/20 relative p-0 w-8 overflow-visible h-8">
-                      {milestoneMap[week] && (
+                    <th 
+                      key={week} 
+                      className="border-r border-white/20 relative p-0 w-8 overflow-visible h-16 group/header-cell cursor-pointer hover:bg-white/10 transition-colors"
+                      onClick={() => handleQuickMilestone(week)}
+                    >
+                      {milestoneMap[week] ? (
                         <div className="absolute inset-0 flex items-center justify-center">
                           <span 
                             className="whitespace-nowrap uppercase tracking-tighter text-[8px] font-black"
@@ -318,6 +319,10 @@ export default function AnnualPlanningPage() {
                           >
                             {milestoneMap[week]}
                           </span>
+                        </div>
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/header-cell:opacity-100 transition-opacity">
+                          <Plus className="h-3.5 w-3.5 text-white/60" />
                         </div>
                       )}
                     </th>
@@ -377,7 +382,6 @@ export default function AnnualPlanningPage() {
                   </tr>
                 ))}
                 
-                {/* De '+' rij om een nieuwe regel toe te voegen */}
                 <tr className="bg-slate-50/30 h-8">
                   <td className="sticky left-0 z-10 border-r border-slate-200 p-1 bg-white h-8">
                     <Dialog open={isNewRowDialogOpen} onOpenChange={setIsNewRowDialogOpen}>
@@ -460,11 +464,39 @@ export default function AnnualPlanningPage() {
             </div>
             <div className="flex items-center gap-2">
               <Info className="h-3 w-3" />
-              <span>Direct bewerkbaar. Klik op de titel om deze aan te passen.</span>
+              <span>Direct bewerkbaar. Klik op de titel of de week-headers om tekst toe te voegen.</span>
             </div>
           </div>
         </div>
       </div>
+
+      <Dialog open={isMilestoneDialogOpen} onOpenChange={setIsMilestoneDialogOpen}>
+        <DialogContent>
+          <form onSubmit={handleSaveQuickMilestone}>
+            <DialogHeader>
+              <DialogTitle>Milestone Week {selectedWeekForMilestone}</DialogTitle>
+              <DialogDescription>
+                Voer tekst in die verticaal in de header wordt getoond. Laat leeg om te verwijderen.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <Input 
+                value={milestoneInput} 
+                onChange={(e) => setMilestoneInput(e.target.value)} 
+                placeholder="Bijv. monumenten"
+                autoFocus
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setIsMilestoneDialogOpen(false)}>Annuleren</Button>
+              <Button type="submit" disabled={isSavingMilestone}>
+                {isSavingMilestone && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Opslaan
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
