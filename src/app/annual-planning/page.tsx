@@ -5,10 +5,9 @@ import * as React from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Trash2, Save, Loader2, Calendar, FileDown, Settings2, Info } from 'lucide-react';
+import { Plus, Trash2, Loader2, Calendar, Settings2, Info } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, where, orderBy, writeBatch } from 'firebase/firestore';
+import { collection, doc, query, where, orderBy } from 'firebase/firestore';
 import { useProject } from '@/context/project-context';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
@@ -45,9 +44,9 @@ const WEEKS = Array.from({ length: 52 }, (_, i) => i + 1);
 
 const CATEGORY_COLORS: Record<string, string> = {
   'Standaard': 'bg-white',
-  'Yellow': 'bg-[#fff9c4]', // Lichtgeel uit afbeelding
-  'Orange': 'bg-[#ffe0b2]', // Lichtoranje uit afbeelding
-  'Header': 'bg-[#8e24aa] text-white', // Paars uit afbeelding
+  'Yellow': 'bg-[#fff9c4]', 
+  'Orange': 'bg-[#ffe0b2]', 
+  'Header': 'bg-[#8e24aa] text-white', 
 };
 
 export default function AnnualPlanningPage() {
@@ -173,7 +172,7 @@ export default function AnnualPlanningPage() {
   return (
     <div className="flex flex-col flex-1 min-h-0 bg-white overflow-hidden">
       <PageHeader 
-        title={`Inkoop planning 2026`} 
+        title={`Inkoop planning ${selectedYear}`} 
         description="Overzicht van inzet en uren voor het gehele jaar."
         className="border-b"
       >
@@ -256,11 +255,10 @@ export default function AnnualPlanningPage() {
           <div className="bg-white rounded-xl shadow-2xl border-2 border-slate-200 overflow-hidden">
             <table className="w-full border-collapse text-[11px] font-bold">
               <thead>
-                {/* Milestone Row (Green Header) */}
                 <tr className="bg-[#4caf50] text-white h-24">
                   <th className="sticky left-0 z-20 bg-[#4caf50] border-r-2 border-white min-w-[250px] p-2 text-left align-top">
                     <div className="flex flex-col h-full justify-between">
-                      <span className="text-sm font-black uppercase tracking-tighter">Inkoop planning Haarlemmermeer {selectedYear}</span>
+                      <span className="text-sm font-black uppercase tracking-tighter">Inkoop planning {selectedYear}</span>
                     </div>
                   </th>
                   {WEEKS.map(week => (
@@ -280,7 +278,6 @@ export default function AnnualPlanningPage() {
                   <th className="min-w-[80px] bg-[#388e3c]"></th>
                 </tr>
 
-                {/* Week Numbers Row (Purple Header) */}
                 <tr className="bg-[#8e24aa] text-white h-10">
                   <th className="sticky left-0 z-20 bg-[#8e24aa] border-r-2 border-white p-2 text-left uppercase tracking-widest">
                     week nummer
@@ -288,7 +285,7 @@ export default function AnnualPlanningPage() {
                   {WEEKS.map(week => (
                     <th key={week} className={cn(
                       "border-r border-white/20 text-center",
-                      week % 13 === 0 && "border-r-4 border-red-500" // Kwartaal lijnen
+                      week % 13 === 0 && "border-r-4 border-red-500"
                     )}>
                       {week}
                     </th>

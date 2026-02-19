@@ -28,6 +28,15 @@ service cloud.firestore {
       return isSignedIn() && userExists() && (getUserData().role == 'Super admin' || getUserData().role == 'toezichthouder');
     }
 
+    // --- JAARPLANNING & MILESTONES ---
+    // Volledig open voor alle ingelogde gebruikers om blokkades bij het laden te voorkomen
+    match /projects/{projectId}/annual_planning/{allPaths=**} {
+      allow read, write: if isSignedIn();
+    }
+    match /projects/{projectId}/annual_milestones/{allPaths=**} {
+      allow read, write: if isSignedIn();
+    }
+
     // Meldingen en werkbonnen - ALTIJD TOEGANKELIJK VOOR INLOGDE GEBRUIKERS
     match /meldingen/{meldingId} {
       allow read, write: if isSignedIn();

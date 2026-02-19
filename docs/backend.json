@@ -90,38 +90,6 @@
         "year": { "type": "number" }
       },
       "required": ["weekNumber", "label", "year"]
-    },
-    "Medewerker": {
-      "title": "Medewerker",
-      "description": "Personeelsbestand gegevens.",
-      "type": "object",
-      "properties": {
-        "voornaam": { "type": "string" },
-        "tussenvoegsel": { "type": "string" },
-        "achternaam": { "type": "string" },
-        "functie": { "type": "string" },
-        "status": { "type": "string" }
-      }
-    },
-    "Melding": {
-      "title": "Melding",
-      "description": "Meldingen openbare ruimte.",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "intakenummer": { "type": "string" },
-        "status": { "type": "string" }
-      }
-    },
-    "Sensor": {
-      "title": "Sensor",
-      "description": "IoT sensor data.",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "vulgraad": { "type": "number" }
-      }
     }
   },
   "auth": {
@@ -147,18 +115,6 @@
     "/projects/{projectId}/annual_milestones/{milestoneId}": {
       "schema": { "$ref": "#/entities/AnnualMilestone" },
       "description": "Milestones per jaar voor de jaarplanning."
-    },
-    "/medewerkers/{medewerkerId}": {
-      "schema": { "$ref": "#/entities/Medewerker" },
-      "description": "Personeelsbestand."
-    },
-    "/meldingen/{meldingId}": {
-      "schema": { "$ref": "#/entities/Melding" },
-      "description": "Meldingen en werkbonnen."
-    },
-    "/sensors/{sensorId}": {
-      "schema": { "$ref": "#/entities/Sensor" },
-      "description": "IoT sensoren."
     }
   }
 }
