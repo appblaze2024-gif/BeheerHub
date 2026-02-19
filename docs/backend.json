@@ -64,6 +64,32 @@
       },
       "required": ["projectnummer", "projectnaam"]
     },
+    "AnnualPlanningItem": {
+      "title": "AnnualPlanningItem",
+      "description": "Planning van inzet (uren) per machine of medewerker voor een heel jaar.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "resourceName": { "type": "string" },
+        "category": { "type": "string" },
+        "year": { "type": "number" },
+        "weeks": { "type": "object", "description": "Mapping van weeknummer (1-52) naar uren." },
+        "color": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["resourceName", "year"]
+    },
+    "AnnualMilestone": {
+      "title": "AnnualMilestone",
+      "description": "Speciale gebeurtenissen of projectfases in een specifieke week.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "weekNumber": { "type": "number" },
+        "label": { "type": "string" },
+        "year": { "type": "number" }
+      }
+    },
     "Medewerker": {
       "title": "Medewerker",
       "description": "Personeelsbestand gegevens.",
@@ -112,6 +138,14 @@
     "/projects/{projectId}": {
       "schema": { "$ref": "#/entities/Project" },
       "description": "Projectgegevens."
+    },
+    "/projects/{projectId}/annual_planning/{itemId}": {
+      "schema": { "$ref": "#/entities/AnnualPlanningItem" },
+      "description": "Jaarplanning items per project."
+    },
+    "/projects/{projectId}/annual_milestones/{milestoneId}": {
+      "schema": { "$ref": "#/entities/AnnualMilestone" },
+      "description": "Milestones per jaar voor de jaarplanning."
     },
     "/medewerkers/{medewerkerId}": {
       "schema": { "$ref": "#/entities/Medewerker" },
