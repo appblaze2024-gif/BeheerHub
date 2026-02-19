@@ -307,7 +307,7 @@ export default function AnnualPlanningPage() {
                   {WEEKS.map(week => (
                     <th 
                       key={week} 
-                      className="border-r border-white/20 relative p-0 w-8 overflow-visible h-32 group/header-cell cursor-pointer hover:bg-white/10 transition-colors"
+                      className="border-r border-white/20 relative p-0 w-6 overflow-visible h-32 group/header-cell cursor-pointer hover:bg-white/10 transition-colors"
                       onClick={() => handleQuickMilestone(week)}
                     >
                       {milestoneMap[week] ? (
@@ -335,7 +335,7 @@ export default function AnnualPlanningPage() {
                   </th>
                   {WEEKS.map(week => (
                     <th key={week} className={cn(
-                      "border-r border-white/20 text-center font-black w-8 h-8",
+                      "border-r border-white/20 text-center font-black w-6 h-8",
                       week % 13 === 0 && "border-r-2 border-red-500"
                     )}>
                       {week}
@@ -352,7 +352,7 @@ export default function AnnualPlanningPage() {
                       "sticky left-0 z-10 border-r border-slate-200 p-1.5 flex items-center justify-between h-8",
                       CATEGORY_COLORS[item.color] || 'bg-white'
                     )}>
-                      <span className="pr-1 text-[11px] font-black uppercase tracking-tight">{item.resourceName}</span>
+                      <span className="pr-1 text-[11px] font-black uppercase tracking-tight whitespace-nowrap overflow-hidden">{item.resourceName}</span>
                       <Button 
                         variant="ghost" 
                         size="icon" 
@@ -364,7 +364,7 @@ export default function AnnualPlanningPage() {
                     </td>
                     {WEEKS.map(week => (
                       <td key={week} className={cn(
-                        "border-r border-slate-100 p-0 text-center h-8 w-8",
+                        "border-r border-slate-100 p-0 text-center h-8 w-6",
                         week % 13 === 0 && "border-r-2 border-red-500"
                       )}>
                         <input
@@ -385,7 +385,7 @@ export default function AnnualPlanningPage() {
                   <td className="sticky left-0 z-10 border-r border-slate-200 p-1 bg-white h-8">
                     <Dialog open={isNewRowDialogOpen} onOpenChange={setIsNewRowDialogOpen}>
                       <Button variant="ghost" size="sm" className="w-full h-6 font-black uppercase text-[9px] gap-1 hover:bg-slate-100" onClick={() => setIsNewRowDialogOpen(true)}>
-                        <Plus className="h-3.5 w-3.5 text-primary" /> Nieuwe Regel
+                        <Plus className="h-3.5 w-3.5 text-primary" />
                       </Button>
                       <DialogContent>
                         <form onSubmit={handleAddRow}>
@@ -423,7 +423,7 @@ export default function AnnualPlanningPage() {
                   </td>
                   {WEEKS.map(week => (
                     <td key={week} className={cn(
-                      "border-r border-slate-100 w-8 h-8",
+                      "border-r border-slate-100 w-6 h-8",
                       week % 13 === 0 && "border-r-2 border-red-500"
                     )} />
                   ))}
@@ -438,7 +438,7 @@ export default function AnnualPlanningPage() {
                   </td>
                   {WEEKS.map(week => (
                     <td key={week} className={cn(
-                      "text-center tabular-nums border-r border-slate-300 w-8 h-8",
+                      "text-center tabular-nums border-r border-slate-300 w-6 h-8",
                       week % 13 === 0 && "border-r-2 border-red-500"
                     )}>
                       {calculateWeekTotal(week) || ''}
@@ -459,7 +459,7 @@ export default function AnnualPlanningPage() {
             </div>
             <div className="flex items-center gap-2">
               <div className="h-3 w-3 bg-slate-200 border border-slate-300 rounded-sm" />
-              <span>Vierkante cellen (32x32px)</span>
+              <span>Compacte cellen (24px breed)</span>
             </div>
             <div className="flex items-center gap-2">
               <Info className="h-3 w-3" />
