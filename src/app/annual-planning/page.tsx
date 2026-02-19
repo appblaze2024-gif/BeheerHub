@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Trash2, Loader2, Calendar, Settings2, Info } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, where, orderBy } from 'firebase/firestore';
+import { collection, doc, query, where } from 'firebase/firestore';
 import { useProject } from '@/context/project-context';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
@@ -58,14 +58,14 @@ export default function AnnualPlanningPage() {
   const [isAddingRow, setIsAddingRow] = React.useState(false);
   const [isAddingMilestone, setIsAddingMilestone] = React.useState(false);
 
-  // Firestore Queries (Nu op top-level collecties om permissiefouten te voorkomen)
+  // Firestore Queries (Top-level collections filtered by projectId)
   const planningItemsQuery = useMemoFirebase(() => {
     if (!firestore || !selectedProjectId) return null;
+    // Sorteren gebeurt in-memory om index-permissiefouten te voorkomen
     return query(
       collection(firestore, 'annual_planning'),
       where('projectId', '==', selectedProjectId),
-      where('year', '==', selectedYear),
-      orderBy('order', 'asc')
+      where('year', '==', selectedYear)
     );
   }, [firestore, selectedProjectId, selectedYear]);
 
@@ -78,8 +78,14 @@ export default function AnnualPlanningPage() {
     );
   }, [firestore, selectedProjectId, selectedYear]);
 
-  const { data: items, isLoading: isLoadingItems } = useCollection<AnnualPlanningItem>(planningItemsQuery);
+  const { data: itemsRaw, isLoading: isLoadingItems } = useCollection<AnnualPlanningItem>(planningItemsQuery);
   const { data: milestones, isLoading: isLoadingMilestones } = useCollection<AnnualMilestone>(milestonesQuery);
+
+  // In-memory sortering op basis van 'order' veld
+  const items = React.useMemo(() => {
+    if (!itemsRaw) return [];
+    return [...itemsRaw].sort((a, b) => (a.order || 0) - (b.order || 0));
+  }, [itemsRaw]);
 
   const milestoneMap = React.useMemo(() => {
     const map: Record<number, string> = {};
@@ -106,7 +112,7 @@ export default function AnnualPlanningPage() {
 
     setIsAddingRow(true);
     try {
-      await addDocumentNonBlocking(collection(firestore, 'annual_planning'), {
+      addDocumentNonBlocking(collection(firestore, 'annual_planning'), {
         projectId: selectedProjectId,
         resourceName: name,
         color: color,
@@ -130,7 +136,7 @@ export default function AnnualPlanningPage() {
 
     setIsAddingMilestone(true);
     try {
-      await addDocumentNonBlocking(collection(firestore, 'annual_milestones'), {
+      addDocumentNonBlocking(collection(firestore, 'annual_milestones'), {
         projectId: selectedProjectId,
         label,
         weekNumber: week,
@@ -143,9 +149,9 @@ export default function AnnualPlanningPage() {
     }
   };
 
-  const handleDeleteRow = async (id: string) => {
+  const handleDeleteRow = (id: string) => {
     if (!firestore) return;
-    await deleteDocumentNonBlocking(doc(firestore, 'annual_planning', id));
+    deleteDocumentNonBlocking(doc(firestore, 'annual_planning', id));
   };
 
   const calculateRowTotal = (weeks: Record<string, string>) => {
