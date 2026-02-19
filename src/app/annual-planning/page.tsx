@@ -299,7 +299,7 @@ export default function AnnualPlanningPage() {
             <table className="w-full border-collapse text-[10px] font-bold table-fixed">
               <thead>
                 <tr className="bg-[#4caf50] text-white h-32">
-                  <th className="sticky left-0 z-20 bg-[#4caf50] border-r border-white min-w-[180px] p-2 text-left align-top">
+                  <th className="sticky left-0 z-20 bg-[#4caf50] border-r border-white min-w-[250px] p-2 text-left align-top">
                     <div className="flex flex-col h-full justify-between">
                       <span className="text-[11px] font-black uppercase tracking-tighter">{displayTitle}</span>
                     </div>
@@ -349,10 +349,10 @@ export default function AnnualPlanningPage() {
                 {items.map((item) => (
                   <tr key={item.id} className={cn("border-b border-slate-100 group transition-colors", CATEGORY_COLORS[item.color] || 'bg-white')}>
                     <td className={cn(
-                      "sticky left-0 z-10 border-r border-slate-200 p-1.5 truncate flex items-center justify-between h-8",
+                      "sticky left-0 z-10 border-r border-slate-200 p-1.5 flex items-center justify-between h-8",
                       CATEGORY_COLORS[item.color] || 'bg-white'
                     )}>
-                      <span className="truncate pr-1 text-[11px] font-black uppercase tracking-tight">{item.resourceName}</span>
+                      <span className="pr-1 text-[11px] font-black uppercase tracking-tight truncate">{item.resourceName}</span>
                       <Button 
                         variant="ghost" 
                         size="icon" 
