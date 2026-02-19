@@ -248,7 +248,7 @@ export default function AnnualPlanningPage() {
                     </div>
                   </th>
                   {WEEKS.map(week => (
-                    <th key={week} className="border-r border-white/20 relative p-0 min-w-[24px] overflow-visible">
+                    <th key={week} className="border-r border-white/20 relative p-0 w-8 overflow-visible">
                       {milestoneMap[week] && (
                         <div className="absolute inset-0 flex items-center justify-center">
                           <span 
@@ -270,7 +270,7 @@ export default function AnnualPlanningPage() {
                   </th>
                   {WEEKS.map(week => (
                     <th key={week} className={cn(
-                      "border-r border-white/20 text-center font-black",
+                      "border-r border-white/20 text-center font-black w-8",
                       week % 13 === 0 && "border-r-2 border-red-500"
                     )}>
                       {week}
@@ -299,7 +299,7 @@ export default function AnnualPlanningPage() {
                     </td>
                     {WEEKS.map(week => (
                       <td key={week} className={cn(
-                        "border-r border-slate-100 p-0 text-center h-8",
+                        "border-r border-slate-100 p-0 text-center h-8 w-8",
                         week % 13 === 0 && "border-r-2 border-red-500"
                       )}>
                         <input
@@ -359,7 +359,7 @@ export default function AnnualPlanningPage() {
                   </td>
                   {WEEKS.map(week => (
                     <td key={week} className={cn(
-                      "border-r border-slate-100",
+                      "border-r border-slate-100 w-8",
                       week % 13 === 0 && "border-r-2 border-red-500"
                     )} />
                   ))}
@@ -374,7 +374,7 @@ export default function AnnualPlanningPage() {
                   </td>
                   {WEEKS.map(week => (
                     <td key={week} className={cn(
-                      "text-center tabular-nums border-r border-slate-300",
+                      "text-center tabular-nums border-r border-slate-300 w-8",
                       week % 13 === 0 && "border-r-2 border-red-500"
                     )}>
                       {calculateWeekTotal(week) || ''}
