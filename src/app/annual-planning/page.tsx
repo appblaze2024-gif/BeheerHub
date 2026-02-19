@@ -311,9 +311,9 @@ export default function AnnualPlanningPage() {
                       onClick={() => handleQuickMilestone(week)}
                     >
                       {milestoneMap[week] ? (
-                        <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="absolute inset-0 flex items-center justify-center py-2">
                           <span 
-                            className="whitespace-nowrap uppercase tracking-tighter text-[8px] font-black"
+                            className="whitespace-nowrap uppercase tracking-widest text-[10px] font-black text-white drop-shadow-sm"
                             style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
                           >
                             {milestoneMap[week]}
@@ -385,7 +385,7 @@ export default function AnnualPlanningPage() {
                   <td className="sticky left-0 z-10 border-r border-slate-200 p-1 bg-white h-8">
                     <Dialog open={isNewRowDialogOpen} onOpenChange={setIsNewRowDialogOpen}>
                       <Button variant="ghost" size="sm" className="w-full h-6 font-black uppercase text-[9px] gap-1 hover:bg-slate-100" onClick={() => setIsNewRowDialogOpen(true)}>
-                        <Plus className="h-3 w-3 text-primary" /> Nieuwe Regel
+                        <Plus className="h-3.5 w-3.5 text-primary" /> Nieuwe Regel
                       </Button>
                       <DialogContent>
                         <form onSubmit={handleAddRow}>
