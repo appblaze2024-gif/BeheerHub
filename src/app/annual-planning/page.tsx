@@ -326,7 +326,7 @@ export default function AnnualPlanningPage() {
                       )}
                     </th>
                   ))}
-                  <th className="min-w-[40px] bg-[#388e3c]"></th>
+                  <th className="w-8 bg-[#388e3c]"></th>
                 </tr>
 
                 <tr className="bg-[#8e24aa] text-white h-8">
@@ -341,7 +341,7 @@ export default function AnnualPlanningPage() {
                       {week}
                     </th>
                   ))}
-                  <th className="bg-[#6a1b9a] text-center uppercase tracking-tighter">tot</th>
+                  <th className="bg-[#6a1b9a] text-center uppercase tracking-tighter w-8">tot</th>
                 </tr>
               </thead>
 
@@ -375,7 +375,7 @@ export default function AnnualPlanningPage() {
                         />
                       </td>
                     ))}
-                    <td className="bg-slate-50/50 text-center font-black text-[10px] tabular-nums border-l border-slate-200 h-8">
+                    <td className="bg-slate-50/50 text-center font-black text-[10px] tabular-nums border-l border-slate-200 h-8 w-8">
                       {calculateRowTotal(item.weeks || {}).toLocaleString()}
                     </td>
                   </tr>
@@ -444,7 +444,7 @@ export default function AnnualPlanningPage() {
                       {calculateWeekTotal(week) || ''}
                     </td>
                   ))}
-                  <td className="text-center text-[10px] text-primary bg-slate-200 h-8">
+                  <td className="text-center text-[10px] text-primary bg-slate-200 h-8 w-8">
                     {grandTotal.toLocaleString()}
                   </td>
                 </tr>
