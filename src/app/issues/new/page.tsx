@@ -9,7 +9,7 @@ import { format, addDays, isWeekend } from 'date-fns';
 import { ArrowLeft, Loader2, Search, UploadCloud, FileIcon, Trash2, Camera, MapPin, Sparkles, Settings2, FileText, Eye, X, ZoomIn, ZoomOut, Target, Upload, ChevronDown } from 'lucide-react';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useFirebaseApp, useCollection, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
-import { collection, doc, arrayUnion } from 'firebase/firestore';
+import { collection, doc, arrayUnion, serverTimestamp, addDoc, updateDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -41,6 +41,7 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { LoadingScreen } from '@/components/loading-screen';
 
 const newMeldingSchema = z.object({
   intakenummer: z.string().min(1, 'Meldingsnummer is verplicht'),
@@ -74,6 +75,7 @@ const newMeldingSchema = z.object({
   afgehandeld_door: z.string().optional(),
   afhandeling_datum: z.date().optional().nullable(),
   afhandeling_tijdstip: z.string().optional(),
+  afhandeling_bijzonderheden: z.string().optional(),
 });
 
 type NewMeldingFormValues = z.infer<typeof newMeldingSchema>;
@@ -415,6 +417,7 @@ export default function NewIssuePage() {
       afgehandeld_door: '',
       afhandeling_datum: null,
       afhandeling_tijdstip: '',
+      afhandeling_bijzonderheden: '',
     },
   });
   
@@ -495,6 +498,7 @@ export default function NewIssuePage() {
         afgehandeld_door: viewedMeldingFromDb.afgehandeld_door || '',
         afhandeling_datum: viewedMeldingFromDb.afhandeling_datum ? new Date(viewedMeldingFromDb.afhandeling_datum) : null,
         afhandeling_tijdstip: viewedMeldingFromDb.afhandeling_tijdstip || '',
+        afhandeling_bijzonderheden: viewedMeldingFromDb.afhandeling_bijzonderheden || '',
       });
       setLocation({ latitude: viewedMeldingFromDb.latitude, longitude: viewedMeldingFromDb.longitude });
       setUploadedFiles(viewedMeldingFromDb.files || []);
@@ -659,88 +663,116 @@ export default function NewIssuePage() {
   };
 
   const handlePdfUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || file.type !== 'application/pdf' || !firestore) return;
+    const files = event.target.files;
+    if (!files || files.length === 0 || !firestore || !app) return;
 
     setIsParsingPdf(true);
-    toast({ description: "Melding PDF wordt uitgelezen door AI..." });
+    setAddressSuggestions([]);
+    const fileArray = Array.from(files);
+    
+    toast({ description: `BeheerHub AI analyseert ${fileArray.length} document(en)...` });
 
     try {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            const base64 = (e.target?.result as string);
+        for (const file of fileArray) {
+            const base64 = await new Promise<string>((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target?.result as string);
+                reader.readAsDataURL(file);
+            });
+
             const parsed = await parseIssuePdf({ 
                 pdfDataUri: base64,
                 instructions: pdfInstructions
             });
 
+            // Geocoding the address from PDF
+            let lat = 0;
+            let lng = 0;
+            const fullAddress = `${parsed.straatnaam || ''} ${parsed.huisnummer || ''}, ${parsed.plaats || ''}`.trim();
+            if (fullAddress.length > 5) {
+                try {
+                    const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(fullAddress)}.json?access_token=${MAPBOX_TOKEN}&country=NL&limit=1`);
+                    const geo = await res.json();
+                    if (geo.features?.length > 0) {
+                        [lng, lat] = geo.features[0].center;
+                    }
+                } catch (e) {}
+            }
+
+            // Automically create new melding
+            const mData: any = {
+                intakenummer: parsed.intakenummer || `M-${Date.now()}`,
+                soort_melder: 'Medewerker',
+                hoofdcategorie: parsed.label_1 || 'Overig',
+                subcategorie: parsed.label_2 || 'Overige meldingen',
+                behandelaar: parsed.behandelaar || 'Onbekend',
+                status: 'Nieuw',
+                melder: parsed.melder || 'Automatisch ingevoerd',
+                extern_meldingsnummer: parsed.extern_meldingsnummer || '',
+                extra_informatie: parsed.extra_informatie || '',
+                straatnaam: parsed.straatnaam || '',
+                huisnummer: parsed.huisnummer || '',
+                postcode: parsed.postcode || '',
+                plaats: parsed.plaats || '',
+                latitude: lat,
+                longitude: lng,
+                datum: parsed.datum || format(new Date(), 'yyyy-MM-dd'),
+                tijdstip: parsed.tijdstip || format(new Date(), 'HH:mm'),
+                aangenomen_door: profile?.displayName || profile?.email || 'Onbekend',
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+            };
+
+            const docRef = await addDoc(collection(firestore, 'meldingen'), mData);
+            const meldingId = docRef.id;
+
+            // Upload PDF to Storage
+            const storage = getStorage(app);
+            const storagePath = `meldingen/${meldingId}/documents/${Date.now()}-${file.name}`;
+            const uploadTask = uploadBytesResumable(ref(storage, storagePath), file);
+            await uploadTask;
+            const url = await getDownloadURL(uploadTask.snapshot.ref);
+
+            const fileObj: UploadedFile = {
+                name: file.name,
+                url,
+                size: file.size,
+                type: file.type,
+                uploadedAt: new Date().toISOString(),
+                storagePath
+            };
+
+            await updateDoc(doc(firestore, 'meldingen', meldingId), {
+                files: [fileObj]
+            });
+
+            // Update global settings if new labels found
             if (parsed.label_1 && !hoofdcategorieOptions.includes(parsed.label_1)) {
                 updateDocumentNonBlocking(categoriesRef!, { hoofdcategorieen: arrayUnion(parsed.label_1) });
             }
             if (parsed.label_2 && parsed.label_1) {
                 const currentSubs = subcategorieMapping[parsed.label_1] || [];
                 if (!currentSubs.includes(parsed.label_2)) {
-                    updateDocumentNonBlocking(categoriesRef!, { 
-                        [`subcategorieMapping.${parsed.label_1}`]: arrayUnion(parsed.label_2) 
-                    });
+                    updateDocumentNonBlocking(categoriesRef!, { [`subcategorieMapping.${parsed.label_1}`]: arrayUnion(parsed.label_2) });
                 }
             }
             if (parsed.behandelaar && !handlerOptions.includes(parsed.behandelaar)) {
                 updateDocumentNonBlocking(handlersRef!, { names: arrayUnion(parsed.behandelaar) });
             }
+        }
 
-            form.setValue('intakenummer', parsed.intakenummer || '', { shouldValidate: true });
-            form.setValue('hoofdcategorie', parsed.label_1 || '', { shouldValidate: true });
-            form.setValue('subcategorie', parsed.label_2 || '', { shouldValidate: true });
-            form.setValue('behandelaar', parsed.behandelaar || '', { shouldValidate: true });
-            form.setValue('melder', parsed.melder || '');
-            form.setValue('ext_referentie', parsed.extern_meldingsnummer || '');
-            form.setValue('extra_informatie', parsed.extra_informatie || '');
-            form.setValue('straatnaam', parsed.straatnaam || '');
-            form.setValue('nummer', parsed.huisnummer || '');
-            form.setValue('postcode', parsed.postcode || '');
-            form.setValue('plaats', parsed.plaats || '');
-            
-            if (parsed.datum) {
-                form.setValue('meldingsdatum', new Date(parsed.datum));
-            }
-            if (parsed.tijdstip) {
-                form.setValue('meldingsuur', parsed.tijdstip);
-            }
-
-            const fullAddress = `${parsed.straatnaam || ''} ${parsed.huisnummer || ''}, ${parsed.plaats || ''}`.trim();
-            if (fullAddress.length > 5) {
-                justSelectedSuggestion.current = true;
-                setAddressSuggestions([]);
-                setSearchQuery(fullAddress);
-                const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(fullAddress)}.json?access_token=${MAPBOX_TOKEN}&country=NL&limit=1`);
-                const geo = await res.json();
-                if (geo.features?.length > 0) {
-                    const [lng, lat] = geo.features[0].center;
-                    setLocation({ latitude: lat, longitude: lng });
-                }
-            }
-
-            const storage = getStorage(app);
-            const mNum = parsed.intakenummer || 'temp';
-            const storagePath = `meldingen/${mNum}/documents/${Date.now()}-${file.name}`;
-            const uploadTask = uploadBytesResumable(ref(storage, storagePath), file);
-            await uploadTask;
-            const url = await getDownloadURL(uploadTask.snapshot.ref);
-            setUploadedFiles(prev => [...prev, { name: file.name, url, size: file.size, type: file.type, uploadedAt: new Date().toISOString(), storagePath }]);
-
-            toast({ title: "PDF Uitgelezen", description: "Gegevens ingevuld en bestand toegevoegd." });
-        };
-        reader.readAsDataURL(file);
+        toast({ title: "Scans voltooid", description: `${fileArray.length} meldingen zijn aangemaakt.` });
+        router.push('/issues/portal');
     } catch (err) {
-        toast({ variant: 'destructive', title: "Fout bij inlezen", description: "De AI kon deze PDF niet volledig begrijpen." });
+        console.error("Batch PDF error:", err);
+        toast({ variant: 'destructive', title: "Fout bij inlezen", description: "Een of meer PDF's konden niet worden verwerkt." });
     } finally {
         setIsParsingPdf(false);
         if (pdfInputRef.current) pdfInputRef.current.value = '';
     }
   };
 
-  const uploadFile = React.useCallback((file: File, mNum: string, type: 'documents' | 'photos'): Promise<UploadedFile> => {
+  const uploadFileLocal = React.useCallback((file: File, mNum: string, type: 'documents' | 'photos'): Promise<UploadedFile> => {
     return new Promise((resolve, reject) => {
         if (!app) return reject(new Error("Firebase app niet beschikbaar"));
         const storage = getStorage(app);
@@ -763,21 +795,21 @@ export default function NewIssuePage() {
     const mNum = form.getValues('intakenummer');
     for (const file of Array.from(files)) {
       try {
-        const res = await uploadFile(file, mNum, 'documents');
+        const res = await uploadFileLocal(file, mNum, 'documents');
         setUploadedFiles(prev => [...prev, res]);
       } catch (error) { toast({ variant: "destructive", title: "Upload mislukt" }); }
     }
-  }, [uploadFile, form, toast]);
+  }, [uploadFileLocal, form, toast]);
   
   const handlePhotoUploads = React.useCallback(async (files: FileList | File[]) => {
     const mNum = form.getValues('intakenummer');
     for (const file of Array.from(files)) {
       try {
-        const res = await uploadFile(file, mNum, 'photos');
+        const res = await uploadFileLocal(file, mNum, 'photos');
         setUploadedPhotos(prev => [...prev, res]);
       } catch (error) { toast({ variant: "destructive", title: "Upload mislukt" }); }
     }
-  }, [uploadFile, form, toast]);
+  }, [uploadFileLocal, form, toast]);
 
   const onSubmit = async (data: NewMeldingFormValues) => {
     if (!firestore || isSubmitting) return;
@@ -818,6 +850,11 @@ export default function NewIssuePage() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden text-sm bg-gray-100 dark:bg-gray-900">
+        {isParsingPdf && (
+            <div className="fixed inset-0 z-[200] bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center">
+                <LoadingScreen message="BeheerHub AI verwerkt documenten..." />
+            </div>
+        )}
         <div className="flex-shrink-0 px-4 py-1.5 border-b flex justify-between items-center bg-gray-200/60 dark:bg-gray-800/60">
             <div className="flex items-center gap-2">
                 <Button variant="ghost" size="icon" onClick={() => router.back()}><ArrowLeft className="h-4 w-4" /></Button>
@@ -827,7 +864,7 @@ export default function NewIssuePage() {
                 {profile?.role === 'Super admin' && (
                     <AIConfigDialog instructions={pdfInstructions} onSave={handleSaveAIInstructions} isSaving={isSavingConfig} samplePdfUrl={samplePdfUrl} />
                 )}
-                <input type="file" ref={pdfInputRef} onChange={handlePdfUpload} className="hidden" accept="application/pdf" />
+                <input type="file" ref={pdfInputRef} onChange={handlePdfUpload} className="hidden" accept="application/pdf" multiple />
                 <Button type="button" variant="outline" onClick={() => pdfInputRef.current?.click()} className="h-8 bg-white border-blue-600 text-blue-600 hover:bg-blue-50" disabled={isParsingPdf}>
                     {isParsingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />} PDF-scan
                 </Button>
