@@ -29,8 +29,8 @@ service cloud.firestore {
     }
 
     // --- JAARPLANNING & MILESTONES: DIRECTE TOEGANG VOOR ALLE INGELOGDE GEBRUIKERS ---
-    // We gebruiken hier de meest directe machtiging om te voorkomen dat complexe rollen-checks
-    // de toegang tot deze specifieke collecties blokkeren.
+    // We plaatsen deze regels bovenaan om te garanderen dat ze altijd worden toegepast
+    // en niet worden overruled door restrictievere regels verderop.
     match /projects/{projectId}/annual_planning/{allPaths=**} {
       allow read, write: if request.auth != null;
     }
