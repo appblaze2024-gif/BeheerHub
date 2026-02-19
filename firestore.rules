@@ -5,20 +5,18 @@ service cloud.firestore {
 
     /**
      * BEHEERHUB SECURITY RULES - ABSOLUTE TOP PRIORITY ACCESS
-     * Expliciete toegang voor collectie-lijsten en documenten om "Missing permissions" te voorkomen.
+     * Expliciete toegang voor jaarplanning onderdelen.
      */
     
-    match /annual_planning {
-      allow read, write: if request.auth != null;
-    }
     match /annual_planning/{allPaths=**} {
       allow read, write: if request.auth != null;
     }
     
-    match /annual_milestones {
+    match /annual_milestones/{allPaths=**} {
       allow read, write: if request.auth != null;
     }
-    match /annual_milestones/{allPaths=**} {
+
+    match /annual_planning_configs/{allPaths=**} {
       allow read, write: if request.auth != null;
     }
 

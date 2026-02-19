@@ -92,6 +92,18 @@
         "year": { "type": "number" }
       },
       "required": ["weekNumber", "label", "year", "projectId"]
+    },
+    "AnnualPlanningConfig": {
+      "title": "AnnualPlanningConfig",
+      "description": "Instellingen per jaarplanning, zoals de weergavetitel.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "projectId": { "type": "string" },
+        "year": { "type": "number" },
+        "title": { "type": "string" }
+      },
+      "required": ["projectId", "year", "title"]
     }
   },
   "auth": {
@@ -112,11 +124,15 @@
     },
     "/annual_planning/{itemId}": {
       "schema": { "$ref": "#/entities/AnnualPlanningItem" },
-      "description": "Jaarplanning items op top-level om permissiefouten te voorkomen."
+      "description": "Jaarplanning items."
     },
     "/annual_milestones/{milestoneId}": {
       "schema": { "$ref": "#/entities/AnnualMilestone" },
-      "description": "Milestones per jaar op top-level."
+      "description": "Milestones per jaar."
+    },
+    "/annual_planning_configs/{configId}": {
+      "schema": { "$ref": "#/entities/AnnualPlanningConfig" },
+      "description": "Configuratie (zoals titels) voor jaarplanningen."
     }
   }
 }

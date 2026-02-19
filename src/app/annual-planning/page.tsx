@@ -1,11 +1,12 @@
+
 'use client';
 
 import * as React from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, Loader2, Calendar, Settings2, Info, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { Plus, Trash2, Loader2, Calendar, Settings2, Info, Pencil, Check } from 'lucide-react';
+import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking, useDoc, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, where } from 'firebase/firestore';
 import { useProject } from '@/context/project-context';
 import { cn } from '@/lib/utils';
@@ -40,6 +41,13 @@ interface AnnualMilestone {
   year: number;
 }
 
+interface AnnualPlanningConfig {
+  id: string;
+  projectId: string;
+  year: number;
+  title: string;
+}
+
 const WEEKS = Array.from({ length: 52 }, (_, i) => i + 1);
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -60,6 +68,18 @@ export default function AnnualPlanningPage() {
   const [isAddingRow, setIsAddingRow] = React.useState(false);
   const [isAddingMilestone, setIsAddingMilestone] = React.useState(false);
   const [isNewRowDialogOpen, setIsNewRowDialogOpen] = React.useState(false);
+  
+  // Title editing state
+  const [isEditingTitle, setIsEditingTitle] = React.useState(false);
+  const [tempTitle, setTempTitle] = React.useState('');
+
+  const configId = `${selectedProjectId}_${selectedYear}`;
+  const configRef = useMemoFirebase(() => {
+    if (!firestore || !selectedProjectId) return null;
+    return doc(firestore, 'annual_planning_configs', configId);
+  }, [firestore, selectedProjectId, configId]);
+
+  const { data: config, isLoading: isLoadingConfig } = useDoc<AnnualPlanningConfig>(configRef);
 
   const planningItemsQuery = useMemoFirebase(() => {
     if (!firestore || !selectedProjectId) return null;
@@ -94,6 +114,22 @@ export default function AnnualPlanningPage() {
     });
     return map;
   }, [milestones]);
+
+  const displayTitle = config?.title || `Jaarplanning ${selectedYear}`;
+
+  const handleSaveTitle = () => {
+    if (!configRef || !tempTitle.trim()) {
+      setIsEditingTitle(false);
+      return;
+    }
+    setDocumentNonBlocking(configRef, {
+      projectId: selectedProjectId,
+      year: selectedYear,
+      title: tempTitle.trim()
+    }, { merge: true });
+    setIsEditingTitle(false);
+    toast({ title: 'Titel bijgewerkt' });
+  };
 
   const handleCellChange = (itemId: string, week: number, value: string) => {
     if (!firestore) return;
@@ -177,17 +213,42 @@ export default function AnnualPlanningPage() {
     );
   }
 
-  if (isLoadingItems || isLoadingMilestones) {
+  if (isLoadingItems || isLoadingMilestones || isLoadingConfig) {
     return <LoadingScreen message="Jaarplanning laden..." />;
   }
 
   return (
     <div className="flex flex-col h-full bg-white overflow-hidden">
       <PageHeader 
-        title={`Jaarplanning ${selectedYear}`} 
+        title={""} 
         description="Overzicht van inzet en uren voor het gehele jaar."
         className="border-b shrink-0 py-3"
       >
+        <div className="flex-1 flex items-center gap-4">
+          {isEditingTitle ? (
+            <div className="flex items-center gap-2">
+              <Input 
+                value={tempTitle} 
+                onChange={(e) => setTempTitle(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle()}
+                className="h-8 font-black uppercase tracking-tight text-lg min-w-[300px]"
+                autoFocus
+              />
+              <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={handleSaveTitle}>
+                <Check className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <div 
+              className="flex items-center gap-2 group cursor-pointer" 
+              onClick={() => { setTempTitle(displayTitle); setIsEditingTitle(true); }}
+            >
+              <h1 className="text-2xl font-black uppercase tracking-tighter text-slate-900 leading-none">{displayTitle}</h1>
+              <Pencil className="h-4 w-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+          )}
+        </div>
+
         <div className="flex items-center gap-2">
           <Select 
             value={selectedYear.toString()} 
@@ -244,11 +305,11 @@ export default function AnnualPlanningPage() {
                 <tr className="bg-[#4caf50] text-white h-16">
                   <th className="sticky left-0 z-20 bg-[#4caf50] border-r border-white min-w-[180px] p-2 text-left align-top">
                     <div className="flex flex-col h-full justify-between">
-                      <span className="text-[11px] font-black uppercase tracking-tighter">Jaarplanning {selectedYear}</span>
+                      <span className="text-[11px] font-black uppercase tracking-tighter">{displayTitle}</span>
                     </div>
                   </th>
                   {WEEKS.map(week => (
-                    <th key={week} className="border-r border-white/20 relative p-0 w-8 overflow-visible">
+                    <th key={week} className="border-r border-white/20 relative p-0 w-8 overflow-visible h-8">
                       {milestoneMap[week] && (
                         <div className="absolute inset-0 flex items-center justify-center">
                           <span 
@@ -270,7 +331,7 @@ export default function AnnualPlanningPage() {
                   </th>
                   {WEEKS.map(week => (
                     <th key={week} className={cn(
-                      "border-r border-white/20 text-center font-black w-8",
+                      "border-r border-white/20 text-center font-black w-8 h-8",
                       week % 13 === 0 && "border-r-2 border-red-500"
                     )}>
                       {week}
@@ -284,7 +345,7 @@ export default function AnnualPlanningPage() {
                 {items.map((item) => (
                   <tr key={item.id} className={cn("border-b border-slate-100 group transition-colors", CATEGORY_COLORS[item.color] || 'bg-white')}>
                     <td className={cn(
-                      "sticky left-0 z-10 border-r border-slate-200 p-1.5 truncate flex items-center justify-between",
+                      "sticky left-0 z-10 border-r border-slate-200 p-1.5 truncate flex items-center justify-between h-8",
                       CATEGORY_COLORS[item.color] || 'bg-white'
                     )}>
                       <span className="truncate pr-1 text-[11px] font-black uppercase tracking-tight">{item.resourceName}</span>
@@ -310,17 +371,17 @@ export default function AnnualPlanningPage() {
                         />
                       </td>
                     ))}
-                    <td className="bg-slate-50/50 text-center font-black text-[10px] tabular-nums border-l border-slate-200">
+                    <td className="bg-slate-50/50 text-center font-black text-[10px] tabular-nums border-l border-slate-200 h-8">
                       {calculateRowTotal(item.weeks || {}).toLocaleString()}
                     </td>
                   </tr>
                 ))}
                 
                 {/* De '+' rij om een nieuwe regel toe te voegen */}
-                <tr className="bg-slate-50/30">
-                  <td className="sticky left-0 z-10 border-r border-slate-200 p-1 bg-white">
+                <tr className="bg-slate-50/30 h-8">
+                  <td className="sticky left-0 z-10 border-r border-slate-200 p-1 bg-white h-8">
                     <Dialog open={isNewRowDialogOpen} onOpenChange={setIsNewRowDialogOpen}>
-                      <Button variant="ghost" size="sm" className="w-full h-7 font-black uppercase text-[9px] gap-1 hover:bg-slate-100" onClick={() => setIsNewRowDialogOpen(true)}>
+                      <Button variant="ghost" size="sm" className="w-full h-6 font-black uppercase text-[9px] gap-1 hover:bg-slate-100" onClick={() => setIsNewRowDialogOpen(true)}>
                         <Plus className="h-3 w-3 text-primary" /> Nieuwe Regel
                       </Button>
                       <DialogContent>
@@ -359,28 +420,28 @@ export default function AnnualPlanningPage() {
                   </td>
                   {WEEKS.map(week => (
                     <td key={week} className={cn(
-                      "border-r border-slate-100 w-8",
+                      "border-r border-slate-100 w-8 h-8",
                       week % 13 === 0 && "border-r-2 border-red-500"
                     )} />
                   ))}
-                  <td className="border-l border-slate-200" />
+                  <td className="border-l border-slate-200 h-8" />
                 </tr>
               </tbody>
 
               <tfoot className="bg-slate-100 border-t border-slate-300">
                 <tr className="h-10 font-black">
-                  <td className="sticky left-0 z-10 bg-slate-100 border-r border-slate-300 p-2 uppercase tracking-tighter text-[9px] text-slate-500">
+                  <td className="sticky left-0 z-10 bg-slate-100 border-r border-slate-300 p-2 uppercase tracking-tighter text-[9px] text-slate-500 h-8">
                     Totaal week
                   </td>
                   {WEEKS.map(week => (
                     <td key={week} className={cn(
-                      "text-center tabular-nums border-r border-slate-300 w-8",
+                      "text-center tabular-nums border-r border-slate-300 w-8 h-8",
                       week % 13 === 0 && "border-r-2 border-red-500"
                     )}>
                       {calculateWeekTotal(week) || ''}
                     </td>
                   ))}
-                  <td className="text-center text-[10px] text-primary bg-slate-200">
+                  <td className="text-center text-[10px] text-primary bg-slate-200 h-8">
                     {grandTotal.toLocaleString()}
                   </td>
                 </tr>
@@ -394,8 +455,12 @@ export default function AnnualPlanningPage() {
               <span>Kwartaal scheiding</span>
             </div>
             <div className="flex items-center gap-2">
+              <div className="h-3 w-3 bg-slate-200 border border-slate-300 rounded-sm" />
+              <span>Vierkante cellen (32x32px)</span>
+            </div>
+            <div className="flex items-center gap-2">
               <Info className="h-3 w-3" />
-              <span>Direct bewerkbaar. Data wordt automatisch opgeslagen in de cloud.</span>
+              <span>Direct bewerkbaar. Klik op de titel om deze aan te passen.</span>
             </div>
           </div>
         </div>
