@@ -296,10 +296,10 @@ export default function AnnualPlanningPage() {
       <div className="flex-1 overflow-auto bg-slate-50 relative no-scrollbar">
         <div className="inline-block min-w-full p-2 lg:p-4">
           <div className="bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden">
-            <table className="w-full border-collapse text-[10px] font-bold table-fixed">
+            <table className="w-full border-collapse text-[10px] font-bold">
               <thead>
                 <tr className="bg-[#4caf50] text-white h-32">
-                  <th className="sticky left-0 z-20 bg-[#4caf50] border-r border-white min-w-[250px] p-2 text-left align-top">
+                  <th className="sticky left-0 z-20 bg-[#4caf50] border-r border-white p-2 text-left align-top whitespace-nowrap w-px">
                     <div className="flex flex-col h-full justify-between">
                       <span className="text-[11px] font-black uppercase tracking-tighter">{displayTitle}</span>
                     </div>
@@ -307,7 +307,7 @@ export default function AnnualPlanningPage() {
                   {WEEKS.map(week => (
                     <th 
                       key={week} 
-                      className="border-r border-white/20 relative p-0 w-6 overflow-visible h-32 group/header-cell cursor-pointer hover:bg-white/10 transition-colors"
+                      className="border-r border-white/20 relative p-0 w-6 min-w-[24px] overflow-visible h-32 group/header-cell cursor-pointer hover:bg-white/10 transition-colors"
                       onClick={() => handleQuickMilestone(week)}
                     >
                       {milestoneMap[week] ? (
@@ -330,12 +330,12 @@ export default function AnnualPlanningPage() {
                 </tr>
 
                 <tr className="bg-[#8e24aa] text-white h-8">
-                  <th className="sticky left-0 z-20 bg-[#8e24aa] border-r border-white p-1 text-left uppercase tracking-tighter">
+                  <th className="sticky left-0 z-20 bg-[#8e24aa] border-r border-white p-1 text-left uppercase tracking-tighter whitespace-nowrap w-px">
                     week
                   </th>
                   {WEEKS.map(week => (
                     <th key={week} className={cn(
-                      "border-r border-white/20 text-center font-black w-6 h-8",
+                      "border-r border-white/20 text-center font-black w-6 min-w-[24px] h-8",
                       week % 13 === 0 && "border-r-2 border-red-500"
                     )}>
                       {week}
@@ -349,10 +349,10 @@ export default function AnnualPlanningPage() {
                 {items.map((item) => (
                   <tr key={item.id} className={cn("border-b border-slate-100 group transition-colors", CATEGORY_COLORS[item.color] || 'bg-white')}>
                     <td className={cn(
-                      "sticky left-0 z-10 border-r border-slate-200 p-1.5 flex items-center justify-between h-8",
+                      "sticky left-0 z-10 border-r border-slate-200 p-1.5 flex items-center justify-between h-8 whitespace-nowrap w-px",
                       CATEGORY_COLORS[item.color] || 'bg-white'
                     )}>
-                      <span className="pr-1 text-[11px] font-black uppercase tracking-tight whitespace-nowrap overflow-hidden">{item.resourceName}</span>
+                      <span className="pr-4 text-[11px] font-black uppercase tracking-tight whitespace-nowrap">{item.resourceName}</span>
                       <Button 
                         variant="ghost" 
                         size="icon" 
@@ -364,7 +364,7 @@ export default function AnnualPlanningPage() {
                     </td>
                     {WEEKS.map(week => (
                       <td key={week} className={cn(
-                        "border-r border-slate-100 p-0 text-center h-8 w-6",
+                        "border-r border-slate-100 p-0 text-center h-8 w-6 min-w-[24px]",
                         week % 13 === 0 && "border-r-2 border-red-500"
                       )}>
                         <input
@@ -382,7 +382,7 @@ export default function AnnualPlanningPage() {
                 ))}
                 
                 <tr className="bg-slate-50/30 h-8">
-                  <td className="sticky left-0 z-10 border-r border-slate-200 p-1 bg-white h-8">
+                  <td className="sticky left-0 z-10 border-r border-slate-200 p-1 bg-white h-8 w-px">
                     <Dialog open={isNewRowDialogOpen} onOpenChange={setIsNewRowDialogOpen}>
                       <Button variant="ghost" size="sm" className="w-full h-6 font-black uppercase text-[9px] gap-1 hover:bg-slate-100" onClick={() => setIsNewRowDialogOpen(true)}>
                         <Plus className="h-3.5 w-3.5 text-primary" />
@@ -423,22 +423,22 @@ export default function AnnualPlanningPage() {
                   </td>
                   {WEEKS.map(week => (
                     <td key={week} className={cn(
-                      "border-r border-slate-100 w-6 h-8",
+                      "border-r border-slate-100 w-6 min-w-[24px] h-8",
                       week % 13 === 0 && "border-r-2 border-red-500"
                     )} />
                   ))}
-                  <td className="border-l border-slate-200 h-8" />
+                  <td className="border-l border-slate-200 h-8 w-8" />
                 </tr>
               </tbody>
 
               <tfoot className="bg-slate-100 border-t border-slate-300">
                 <tr className="h-10 font-black">
-                  <td className="sticky left-0 z-10 bg-slate-100 border-r border-slate-300 p-2 uppercase tracking-tighter text-[9px] text-slate-500 h-8">
+                  <td className="sticky left-0 z-10 bg-slate-100 border-r border-slate-300 p-2 uppercase tracking-tighter text-[9px] text-slate-500 h-8 w-px whitespace-nowrap">
                     Totaal week
                   </td>
                   {WEEKS.map(week => (
                     <td key={week} className={cn(
-                      "text-center tabular-nums border-r border-slate-300 w-6 h-8",
+                      "text-center tabular-nums border-r border-slate-300 w-6 min-w-[24px] h-8",
                       week % 13 === 0 && "border-r-2 border-red-500"
                     )}>
                       {calculateWeekTotal(week) || ''}
