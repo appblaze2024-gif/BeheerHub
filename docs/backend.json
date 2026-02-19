@@ -73,7 +73,7 @@
         "resourceName": { "type": "string" },
         "category": { "type": "string" },
         "year": { "type": "number" },
-        "weeks": { "type": "object", "description": "Mapping van weeknummer (1-52) naar uren." },
+        "weeks": { "type": "object", "description": "Mapping van weeknummer (1-52) naar uren of waardes." },
         "color": { "type": "string" },
         "order": { "type": "number" }
       },
@@ -88,7 +88,8 @@
         "weekNumber": { "type": "number" },
         "label": { "type": "string" },
         "year": { "type": "number" }
-      }
+      },
+      "required": ["weekNumber", "label", "year"]
     },
     "Medewerker": {
       "title": "Medewerker",

@@ -51,22 +51,12 @@ service cloud.firestore {
       }
     }
 
-    // Projecten en bijbehorende data
+    // Projecten en alle bijbehorende subcollecties (Jaarplanning, Milestones, Documenten, etc.)
     match /projects/{projectId} {
       allow read: if isSignedIn();
       allow write: if isPrivileged() || hasRole('ondersteuner');
 
-      // Jaarplanning specifiek
-      match /annual_planning/{itemId} {
-        allow read: if isSignedIn();
-        allow write: if isPrivileged() || hasRole('ondersteuner');
-      }
-
-      match /annual_milestones/{milestoneId} {
-        allow read: if isSignedIn();
-        allow write: if isPrivileged() || hasRole('ondersteuner');
-      }
-
+      // Recursieve wildcard voor alle subcollecties binnen een project
       match /{allSubcollections=**} {
         allow read: if isSignedIn();
         allow write: if isPrivileged() || hasRole('ondersteuner');
