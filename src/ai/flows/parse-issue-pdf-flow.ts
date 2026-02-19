@@ -1,23 +1,13 @@
 'use server';
 /**
  * @fileOverview AI flow voor het uitlezen van "Formulier melding / Klacht" PDF's.
- * Geoptimaliseerd op basis van de specifieke layout en aangepaste instructies.
+ * Ondersteunt nu het extraheren van meerdere bonnen uit één enkel document.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
-const ParseIssuePdfInputSchema = z.object({
-  pdfDataUri: z
-    .string()
-    .describe(
-      "De PDF van de melding als data URI. Verwacht formaat: 'data:application/pdf;base64,<encoded_data>'."
-    ),
-  instructions: z.string().optional().describe("Aanvullende veld-specifieke instructies van de gebruiker."),
-});
-export type ParseIssuePdfInput = z.infer<typeof ParseIssuePdfInputSchema>;
-
-const ParseIssuePdfOutputSchema = z.object({
+const IssueSchema = z.object({
   intakenummer: z.string().optional(),
   datum: z.string().optional().describe('Datum in YYYY-MM-DD formaat'),
   tijdstip: z.string().optional().describe('Tijd in HH:mm formaat'),
@@ -32,6 +22,20 @@ const ParseIssuePdfOutputSchema = z.object({
   plaats: z.string().optional(),
   extra_informatie: z.string().optional(),
 });
+
+const ParseIssuePdfInputSchema = z.object({
+  pdfDataUri: z
+    .string()
+    .describe(
+      "De PDF van de melding als data URI. Verwacht formaat: 'data:application/pdf;base64,<encoded_data>'."
+    ),
+  instructions: z.string().optional().describe("Aanvullende veld-specifieke instructies van de gebruiker."),
+});
+export type ParseIssuePdfInput = z.infer<typeof ParseIssuePdfInputSchema>;
+
+const ParseIssuePdfOutputSchema = z.object({
+  meldingen: z.array(IssueSchema).describe('De lijst met alle unieke meldingen/bonnen die in het document zijn gevonden.'),
+});
 export type ParseIssuePdfOutput = z.infer<typeof ParseIssuePdfOutputSchema>;
 
 export async function parseIssuePdf(input: ParseIssuePdfInput): Promise<ParseIssuePdfOutput> {
@@ -42,15 +46,18 @@ const prompt = ai.definePrompt({
   name: 'parseIssuePdfPrompt',
   input: { schema: ParseIssuePdfInputSchema },
   output: { schema: ParseIssuePdfOutputSchema },
-  prompt: `Je bent een expert in het verwerken van het "Formulier melding / Klacht" document.
-Gebruik de visuele layout van de bijgevoegde PDF om de gegevens exact te extraheren.
+  prompt: `Je bent een expert in het verwerken van "Formulier melding / Klacht" documenten.
+Een enkel document kan MEERDERE afzonderlijke meldingen of bonnen bevatten (vaak één per pagina of gescheiden door koppen).
+
+INSTRUCTIE:
+Scan het volledige document en identificeer ELKE unieke melding. Retourneer een lijst van alle gevonden meldingen.
 
 {{#if instructions}}
-STRIKTE VELD-SPECIFIEKE INSTRUCTIES VOOR DEZE LAYOUT:
+STRIKTE VELD-SPECIFIEKE INSTRUCTIES VOOR DE LAYOUT:
 {{{instructions}}}
 {{/if}}
 
-MAPPING BASISREGELS (indien niet overschreven door instructies):
+MAPPING BASISREGELS PER BON:
 1. HEADER:
    - "Datum" (linksboven) -> datum (YYYY-MM-DD).
    - "Tijdstip" -> tijdstip (HH:mm).

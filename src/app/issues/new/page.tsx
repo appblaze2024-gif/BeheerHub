@@ -636,7 +636,7 @@ export default function NewIssuePage() {
                 try {
                     const features = JSON.parse(wijk.subGebieden);
                     if (Array.isArray(features)) {
-                        for (const feature of features) {
+                        for (const feature of featureCollection.features) {
                             if (feature && turf.booleanPointInPolygon(point, feature)) { foundWijk = wijk.naam; break; }
                         }
                     }
@@ -680,92 +680,94 @@ export default function NewIssuePage() {
                 reader.readAsDataURL(file);
             });
 
-            const parsed = await parseIssuePdf({ 
+            const result = await parseIssuePdf({ 
                 pdfDataUri: base64,
                 instructions: pdfInstructions
             });
 
-            // Geocoding the address from PDF
-            let lat = 0;
-            let lng = 0;
-            const fullAddress = `${parsed.straatnaam || ''} ${parsed.huisnummer || ''}, ${parsed.plaats || ''}`.trim();
-            if (fullAddress.length > 5) {
-                try {
-                    const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(fullAddress)}.json?access_token=${MAPBOX_TOKEN}&country=NL&limit=1`);
-                    const geo = await res.json();
-                    if (geo.features?.length > 0) {
-                        [lng, lat] = geo.features[0].center;
-                    }
-                } catch (e) {}
-            }
-
-            // Automically create new melding
-            const mData: any = {
-                intakenummer: parsed.intakenummer || `M-${Date.now()}`,
-                soort_melder: 'Medewerker',
-                hoofdcategorie: parsed.label_1 || 'Overig',
-                subcategorie: parsed.label_2 || 'Overige meldingen',
-                behandelaar: parsed.behandelaar || 'Onbekend',
-                status: 'Nieuw',
-                melder: parsed.melder || 'Automatisch ingevoerd',
-                extern_meldingsnummer: parsed.extern_meldingsnummer || '',
-                extra_informatie: parsed.extra_informatie || '',
-                straatnaam: parsed.straatnaam || '',
-                huisnummer: parsed.huisnummer || '',
-                postcode: parsed.postcode || '',
-                plaats: parsed.plaats || '',
-                latitude: lat,
-                longitude: lng,
-                datum: parsed.datum || format(new Date(), 'yyyy-MM-dd'),
-                tijdstip: parsed.tijdstip || format(new Date(), 'HH:mm'),
-                aangenomen_door: profile?.displayName || profile?.email || 'Onbekend',
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp(),
-            };
-
-            const docRef = await addDoc(collection(firestore, 'meldingen'), mData);
-            const meldingId = docRef.id;
-
-            // Upload PDF to Storage
-            const storage = getStorage(app);
-            const storagePath = `meldingen/${meldingId}/documents/${Date.now()}-${file.name}`;
-            const uploadTask = uploadBytesResumable(ref(storage, storagePath), file);
-            await uploadTask;
-            const url = await getDownloadURL(uploadTask.snapshot.ref);
-
-            const fileObj: UploadedFile = {
-                name: file.name,
-                url,
-                size: file.size,
-                type: file.type,
-                uploadedAt: new Date().toISOString(),
-                storagePath
-            };
-
-            await updateDoc(doc(firestore, 'meldingen', meldingId), {
-                files: [fileObj]
-            });
-
-            // Update global settings if new labels found
-            if (parsed.label_1 && !hoofdcategorieOptions.includes(parsed.label_1)) {
-                updateDocumentNonBlocking(categoriesRef!, { hoofdcategorieen: arrayUnion(parsed.label_1) });
-            }
-            if (parsed.label_2 && parsed.label_1) {
-                const currentSubs = subcategorieMapping[parsed.label_1] || [];
-                if (!currentSubs.includes(parsed.label_2)) {
-                    updateDocumentNonBlocking(categoriesRef!, { [`subcategorieMapping.${parsed.label_1}`]: arrayUnion(parsed.label_2) });
+            for (const parsed of result.meldingen) {
+                // Geocoding the address from PDF
+                let lat = 0;
+                let lng = 0;
+                const fullAddress = `${parsed.straatnaam || ''} ${parsed.huisnummer || ''}, ${parsed.plaats || ''}`.trim();
+                if (fullAddress.length > 5) {
+                    try {
+                        const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(fullAddress)}.json?access_token=${MAPBOX_TOKEN}&country=NL&limit=1`);
+                        const geo = await res.json();
+                        if (geo.features?.length > 0) {
+                            [lng, lat] = geo.features[0].center;
+                        }
+                    } catch (e) {}
                 }
-            }
-            if (parsed.behandelaar && !handlerOptions.includes(parsed.behandelaar)) {
-                updateDocumentNonBlocking(handlersRef!, { names: arrayUnion(parsed.behandelaar) });
+
+                // Automatically create new melding
+                const mData: any = {
+                    intakenummer: parsed.intakenummer || `M-${Date.now()}`,
+                    soort_melder: 'Medewerker',
+                    hoofdcategorie: parsed.label_1 || 'Overig',
+                    subcategorie: parsed.label_2 || 'Overige meldingen',
+                    behandelaar: parsed.behandelaar || 'Onbekend',
+                    status: 'Nieuw',
+                    melder: parsed.melder || 'Automatisch ingevoerd',
+                    extern_meldingsnummer: parsed.extern_meldingsnummer || '',
+                    extra_informatie: parsed.extra_informatie || '',
+                    straatnaam: parsed.straatnaam || '',
+                    huisnummer: parsed.huisnummer || '',
+                    postcode: parsed.postcode || '',
+                    plaats: parsed.plaats || '',
+                    latitude: lat,
+                    longitude: lng,
+                    datum: parsed.datum || format(new Date(), 'yyyy-MM-dd'),
+                    tijdstip: parsed.tijdstip || format(new Date(), 'HH:mm'),
+                    aangenomen_door: profile?.displayName || profile?.email || 'Onbekend',
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp(),
+                };
+
+                const docRef = await addDoc(collection(firestore, 'meldingen'), mData);
+                const meldingId = docRef.id;
+
+                // Upload PDF to Storage
+                const storage = getStorage(app);
+                const storagePath = `meldingen/${meldingId}/documents/${Date.now()}-${file.name}`;
+                const uploadTask = uploadBytesResumable(ref(storage, storagePath), file);
+                await uploadTask;
+                const url = await getDownloadURL(uploadTask.snapshot.ref);
+
+                const fileObj: UploadedFile = {
+                    name: file.name,
+                    url,
+                    size: file.size,
+                    type: file.type,
+                    uploadedAt: new Date().toISOString(),
+                    storagePath
+                };
+
+                await updateDoc(doc(firestore, 'meldingen', meldingId), {
+                    files: [fileObj]
+                });
+
+                // Update global settings if new labels found
+                if (parsed.label_1 && !hoofdcategorieOptions.includes(parsed.label_1)) {
+                    updateDocumentNonBlocking(categoriesRef!, { hoofdcategorieen: arrayUnion(parsed.label_1) });
+                }
+                if (parsed.label_2 && parsed.label_1) {
+                    const currentSubs = subcategorieMapping[parsed.label_1] || [];
+                    if (!currentSubs.includes(parsed.label_2)) {
+                        updateDocumentNonBlocking(categoriesRef!, { [`subcategorieMapping.${parsed.label_1}`]: arrayUnion(parsed.label_2) });
+                    }
+                }
+                if (parsed.behandelaar && !handlerOptions.includes(parsed.behandelaar)) {
+                    updateDocumentNonBlocking(handlersRef!, { names: arrayUnion(parsed.behandelaar) });
+                }
             }
         }
 
-        toast({ title: "Scans voltooid", description: `${fileArray.length} meldingen zijn aangemaakt.` });
+        toast({ title: "Scans voltooid", description: `${fileArray.length} document(en) verwerkt.` });
         router.push('/issues/portal');
     } catch (err) {
         console.error("Batch PDF error:", err);
-        toast({ variant: 'destructive', title: "Fout bij inlezen", description: "Een of meer PDF's konden niet worden verwerkt." });
+        toast({ variant: 'destructive', title: "Fout bij inlezen", description: "De PDF kon niet volledig worden verwerkt." });
     } finally {
         setIsParsingPdf(false);
         if (pdfInputRef.current) pdfInputRef.current.value = '';
@@ -852,7 +854,7 @@ export default function NewIssuePage() {
     <div className="flex flex-col h-screen overflow-hidden text-sm bg-gray-100 dark:bg-gray-900">
         {isParsingPdf && (
             <div className="fixed inset-0 z-[200] bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center">
-                <LoadingScreen message="BeheerHub AI verwerkt documenten..." />
+                <LoadingScreen message="BeheerHub AI analyseert alle bonnen in het document..." />
             </div>
         )}
         <div className="flex-shrink-0 px-4 py-1.5 border-b flex justify-between items-center bg-gray-200/60 dark:bg-gray-800/60">
