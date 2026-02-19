@@ -56,6 +56,17 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isPrivileged() || hasRole('ondersteuner');
 
+      // Jaarplanning specifiek
+      match /annual_planning/{itemId} {
+        allow read: if isSignedIn();
+        allow write: if isPrivileged() || hasRole('ondersteuner');
+      }
+
+      match /annual_milestones/{milestoneId} {
+        allow read: if isSignedIn();
+        allow write: if isPrivileged() || hasRole('ondersteuner');
+      }
+
       match /{allSubcollections=**} {
         allow read: if isSignedIn();
         allow write: if isPrivileged() || hasRole('ondersteuner');
