@@ -352,7 +352,7 @@ export default function AnnualPlanningPage() {
                       "sticky left-0 z-10 border-r border-slate-200 p-1.5 flex items-center justify-between h-8",
                       CATEGORY_COLORS[item.color] || 'bg-white'
                     )}>
-                      <span className="pr-1 text-[11px] font-black uppercase tracking-tight truncate">{item.resourceName}</span>
+                      <span className="pr-1 text-[11px] font-black uppercase tracking-tight">{item.resourceName}</span>
                       <Button 
                         variant="ghost" 
                         size="icon" 
