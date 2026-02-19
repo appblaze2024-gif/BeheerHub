@@ -28,21 +28,14 @@ service cloud.firestore {
       return isSignedIn() && userExists() && (getUserData().role == 'Super admin' || getUserData().role == 'toezichthouder');
     }
 
-    // --- JAARPLANNING & MILESTONES: DIRECTE TOEGANG OP HOOGSTE NIVEAU ---
-    // Deze regels staan bovenaan om prioriteit te krijgen en list/get/write operaties 
-    // te garanderen voor alle ingelogde gebruikers, inclusief Super Admins.
+    // --- JAARPLANNING & MILESTONES: TOP-LEVEL TOEGANG ---
+    // Verplaatst naar top-level om pad-resolutie problemen en "Missing permissions" errors te voorkomen.
     
-    match /projects/{projectId}/annual_planning {
-      allow read, write: if request.auth != null;
-    }
-    match /projects/{projectId}/annual_planning/{allPaths=**} {
+    match /annual_planning/{itemId} {
       allow read, write: if request.auth != null;
     }
     
-    match /projects/{projectId}/annual_milestones {
-      allow read, write: if request.auth != null;
-    }
-    match /projects/{projectId}/annual_milestones/{allPaths=**} {
+    match /annual_milestones/{milestoneId} {
       allow read, write: if request.auth != null;
     }
 

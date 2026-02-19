@@ -70,6 +70,7 @@
       "type": "object",
       "properties": {
         "id": { "type": "string" },
+        "projectId": { "type": "string" },
         "resourceName": { "type": "string" },
         "category": { "type": "string" },
         "year": { "type": "number" },
@@ -77,7 +78,7 @@
         "color": { "type": "string" },
         "order": { "type": "number" }
       },
-      "required": ["resourceName", "year"]
+      "required": ["resourceName", "year", "projectId"]
     },
     "AnnualMilestone": {
       "title": "AnnualMilestone",
@@ -85,11 +86,12 @@
       "type": "object",
       "properties": {
         "id": { "type": "string" },
+        "projectId": { "type": "string" },
         "weekNumber": { "type": "number" },
         "label": { "type": "string" },
         "year": { "type": "number" }
       },
-      "required": ["weekNumber", "label", "year"]
+      "required": ["weekNumber", "label", "year", "projectId"]
     }
   },
   "auth": {
@@ -108,13 +110,13 @@
       "schema": { "$ref": "#/entities/Project" },
       "description": "Projectgegevens."
     },
-    "/projects/{projectId}/annual_planning/{itemId}": {
+    "/annual_planning/{itemId}": {
       "schema": { "$ref": "#/entities/AnnualPlanningItem" },
-      "description": "Jaarplanning items per project."
+      "description": "Jaarplanning items op top-level om permissiefouten te voorkomen."
     },
-    "/projects/{projectId}/annual_milestones/{milestoneId}": {
+    "/annual_milestones/{milestoneId}": {
       "schema": { "$ref": "#/entities/AnnualMilestone" },
-      "description": "Milestones per jaar voor de jaarplanning."
+      "description": "Milestones per jaar op top-level."
     }
   }
 }

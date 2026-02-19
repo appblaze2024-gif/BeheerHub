@@ -17,7 +17,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -25,6 +24,7 @@ import { LoadingScreen } from '@/components/loading-screen';
 
 interface AnnualPlanningItem {
   id: string;
+  projectId: string;
   resourceName: string;
   category: string;
   year: number;
@@ -35,6 +35,7 @@ interface AnnualPlanningItem {
 
 interface AnnualMilestone {
   id: string;
+  projectId: string;
   weekNumber: number;
   label: string;
   year: number;
@@ -57,11 +58,12 @@ export default function AnnualPlanningPage() {
   const [isAddingRow, setIsAddingRow] = React.useState(false);
   const [isAddingMilestone, setIsAddingMilestone] = React.useState(false);
 
-  // Firestore Queries
+  // Firestore Queries (Nu op top-level collecties om permissiefouten te voorkomen)
   const planningItemsQuery = useMemoFirebase(() => {
     if (!firestore || !selectedProjectId) return null;
     return query(
-      collection(firestore, 'projects', selectedProjectId, 'annual_planning'),
+      collection(firestore, 'annual_planning'),
+      where('projectId', '==', selectedProjectId),
       where('year', '==', selectedYear),
       orderBy('order', 'asc')
     );
@@ -70,7 +72,8 @@ export default function AnnualPlanningPage() {
   const milestonesQuery = useMemoFirebase(() => {
     if (!firestore || !selectedProjectId) return null;
     return query(
-      collection(firestore, 'projects', selectedProjectId, 'annual_milestones'),
+      collection(firestore, 'annual_milestones'),
+      where('projectId', '==', selectedProjectId),
       where('year', '==', selectedYear)
     );
   }, [firestore, selectedProjectId, selectedYear]);
@@ -87,8 +90,8 @@ export default function AnnualPlanningPage() {
   }, [milestones]);
 
   const handleCellChange = (itemId: string, week: number, value: string) => {
-    if (!selectedProjectId || !firestore) return;
-    const itemRef = doc(firestore, 'projects', selectedProjectId, 'annual_planning', itemId);
+    if (!firestore) return;
+    const itemRef = doc(firestore, 'annual_planning', itemId);
     updateDocumentNonBlocking(itemRef, {
       [`weeks.${week}`]: value
     });
@@ -103,7 +106,8 @@ export default function AnnualPlanningPage() {
 
     setIsAddingRow(true);
     try {
-      await addDocumentNonBlocking(collection(firestore, 'projects', selectedProjectId, 'annual_planning'), {
+      await addDocumentNonBlocking(collection(firestore, 'annual_planning'), {
+        projectId: selectedProjectId,
         resourceName: name,
         color: color,
         year: selectedYear,
@@ -126,7 +130,8 @@ export default function AnnualPlanningPage() {
 
     setIsAddingMilestone(true);
     try {
-      await addDocumentNonBlocking(collection(firestore, 'projects', selectedProjectId, 'annual_milestones'), {
+      await addDocumentNonBlocking(collection(firestore, 'annual_milestones'), {
+        projectId: selectedProjectId,
         label,
         weekNumber: week,
         year: selectedYear
@@ -139,12 +144,12 @@ export default function AnnualPlanningPage() {
   };
 
   const handleDeleteRow = async (id: string) => {
-    if (!selectedProjectId || !firestore) return;
-    await deleteDocumentNonBlocking(doc(firestore, 'projects', selectedProjectId, 'annual_planning', id));
+    if (!firestore) return;
+    await deleteDocumentNonBlocking(doc(firestore, 'annual_planning', id));
   };
 
   const calculateRowTotal = (weeks: Record<string, string>) => {
-    return Object.values(weeks).reduce((acc, val) => acc + (parseFloat(val) || 0), 0);
+    return Object.values(weeks || {}).reduce((acc, val) => acc + (parseFloat(val) || 0), 0);
   };
 
   const calculateWeekTotal = (week: number) => {
@@ -178,11 +183,11 @@ export default function AnnualPlanningPage() {
       >
         <div className="flex items-center gap-2">
           <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="font-bold">
+            <Button asChild variant="outline" size="sm" className="font-bold cursor-pointer">
+              <span className="flex items-center">
                 <Settings2 className="mr-2 h-4 w-4" /> Milestone
-              </Button>
-            </DialogTrigger>
+              </span>
+            </Button>
             <DialogContent>
               <form onSubmit={handleAddMilestone}>
                 <DialogHeader>
@@ -209,11 +214,11 @@ export default function AnnualPlanningPage() {
           </Dialog>
 
           <Dialog>
-            <DialogTrigger asChild>
-              <Button size="sm" className="font-black uppercase tracking-tight">
+            <Button asChild size="sm" className="font-black uppercase tracking-tight cursor-pointer">
+              <span className="flex items-center">
                 <Plus className="mr-2 h-4 w-4" /> Regel toevoegen
-              </Button>
-            </DialogTrigger>
+              </span>
+            </Button>
             <DialogContent>
               <form onSubmit={handleAddRow}>
                 <DialogHeader>
