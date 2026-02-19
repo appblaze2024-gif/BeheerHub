@@ -28,12 +28,13 @@ service cloud.firestore {
       return isSignedIn() && userExists() && (getUserData().role == 'Super admin' || getUserData().role == 'toezichthouder');
     }
 
-    // --- JAARPLANNING & MILESTONES ---
-    // Volledig open voor alle ingelogde gebruikers om blokkades bij het laden te voorkomen
-    match /projects/{projectId}/annual_planning/{allPaths=**} {
+    // --- JAARPLANNING & MILESTONES: DIRECTE TOEGANG VOOR ALLE INGELOGDE GEBRUIKERS ---
+    // We plaatsen deze regels bovenaan om shadowing door algemene projectregels te voorkomen.
+    // Dit staat expliciet 'list' en 'get' toe op de collecties en documenten.
+    match /projects/{projectId}/annual_planning/{document=**} {
       allow read, write: if isSignedIn();
     }
-    match /projects/{projectId}/annual_milestones/{allPaths=**} {
+    match /projects/{projectId}/annual_milestones/{document=**} {
       allow read, write: if isSignedIn();
     }
 
