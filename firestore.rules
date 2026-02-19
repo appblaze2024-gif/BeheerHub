@@ -51,24 +51,19 @@ service cloud.firestore {
       }
     }
 
-    // Projecten Basis
+    // JAARPLANNING: Volledig open voor alle ingelogde gebruikers (zonder rol-restricties)
+    match /projects/{projectId}/annual_planning/{itemId} {
+      allow read, write: if isSignedIn();
+    }
+    match /projects/{projectId}/annual_milestones/{milestoneId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Projecten en bijbehorende data
     match /projects/{projectId} {
       allow read: if isSignedIn();
       allow write: if isPrivileged() || hasRole('ondersteuner');
 
-      // Jaarplanning Items
-      match /annual_planning/{itemId} {
-        allow read: if isSignedIn();
-        allow write: if isPrivileged() || hasRole('ondersteuner');
-      }
-
-      // Jaarplanning Milestones
-      match /annual_milestones/{milestoneId} {
-        allow read: if isSignedIn();
-        allow write: if isPrivileged() || hasRole('ondersteuner');
-      }
-
-      // Overige subcollecties (Documenten, etc.)
       match /{allSubcollections=**} {
         allow read: if isSignedIn();
         allow write: if isPrivileged() || hasRole('ondersteuner');
