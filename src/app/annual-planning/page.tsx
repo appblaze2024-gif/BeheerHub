@@ -1,11 +1,10 @@
-
 'use client';
 
 import * as React from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, Loader2, Calendar, Settings2, Info } from 'lucide-react';
+import { Plus, Trash2, Loader2, Calendar, Settings2, Info, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, where } from 'firebase/firestore';
 import { useProject } from '@/context/project-context';
@@ -50,18 +49,21 @@ const CATEGORY_COLORS: Record<string, string> = {
   'Header': 'bg-[#8e24aa] text-white', 
 };
 
+// Bereken beschikbare jaren (vorig jaar t/m 7 jaar in de toekomst)
+const CURRENT_YEAR = new Date().getFullYear();
+const YEARS = Array.from({ length: 10 }, (_, i) => CURRENT_YEAR - 1 + i);
+
 export default function AnnualPlanningPage() {
   const { selectedProjectId } = useProject();
   const firestore = useFirestore();
   const { toast } = useToast();
-  const [selectedYear, setSelectedYear] = React.useState(2026);
+  const [selectedYear, setSelectedYear] = React.useState(CURRENT_YEAR);
   const [isAddingRow, setIsAddingRow] = React.useState(false);
   const [isAddingMilestone, setIsAddingMilestone] = React.useState(false);
 
   // Firestore Queries (Top-level collections filtered by projectId)
   const planningItemsQuery = useMemoFirebase(() => {
     if (!firestore || !selectedProjectId) return null;
-    // Sorteren gebeurt in-memory om index-permissiefouten te voorkomen
     return query(
       collection(firestore, 'annual_planning'),
       where('projectId', '==', selectedProjectId),
@@ -188,8 +190,22 @@ export default function AnnualPlanningPage() {
         className="border-b"
       >
         <div className="flex items-center gap-2">
+          <Select 
+            value={selectedYear.toString()} 
+            onValueChange={(v) => setSelectedYear(parseInt(v))}
+          >
+            <SelectTrigger className="w-[120px] h-9 font-bold bg-white border-2">
+              <SelectValue placeholder="Kies jaar" />
+            </SelectTrigger>
+            <SelectContent>
+              {YEARS.map(y => (
+                <SelectItem key={y} value={y.toString()}>Jaar {y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Dialog>
-            <Button asChild variant="outline" size="sm" className="font-bold cursor-pointer">
+            <Button asChild variant="outline" size="sm" className="font-bold cursor-pointer h-9 border-2">
               <span className="flex items-center">
                 <Settings2 className="mr-2 h-4 w-4" /> Milestone
               </span>
@@ -197,7 +213,7 @@ export default function AnnualPlanningPage() {
             <DialogContent>
               <form onSubmit={handleAddMilestone}>
                 <DialogHeader>
-                  <DialogTitle>Nieuwe Milestone</DialogTitle>
+                  <DialogTitle>Nieuwe Milestone ({selectedYear})</DialogTitle>
                 </DialogHeader>
                 <div className="py-4 space-y-4">
                   <div className="space-y-2">
@@ -220,7 +236,7 @@ export default function AnnualPlanningPage() {
           </Dialog>
 
           <Dialog>
-            <Button asChild size="sm" className="font-black uppercase tracking-tight cursor-pointer">
+            <Button asChild size="sm" className="font-black uppercase tracking-tight cursor-pointer h-9 shadow-md">
               <span className="flex items-center">
                 <Plus className="mr-2 h-4 w-4" /> Regel toevoegen
               </span>
@@ -228,7 +244,7 @@ export default function AnnualPlanningPage() {
             <DialogContent>
               <form onSubmit={handleAddRow}>
                 <DialogHeader>
-                  <DialogTitle>Nieuwe Inzet Toevoegen</DialogTitle>
+                  <DialogTitle>Nieuwe Inzet Toevoegen ({selectedYear})</DialogTitle>
                 </DialogHeader>
                 <div className="py-4 space-y-4">
                   <div className="space-y-2">
@@ -306,7 +322,7 @@ export default function AnnualPlanningPage() {
               </thead>
 
               <tbody>
-                {items?.map((item) => (
+                {items.length > 0 ? items.map((item) => (
                   <tr key={item.id} className={cn("border-b border-slate-200 group transition-colors", CATEGORY_COLORS[item.color] || 'bg-white')}>
                     <td className={cn(
                       "sticky left-0 z-10 border-r-2 border-slate-200 p-2 truncate flex items-center justify-between",
@@ -339,7 +355,13 @@ export default function AnnualPlanningPage() {
                       {calculateRowTotal(item.weeks || {}).toLocaleString()}
                     </td>
                   </tr>
-                ))}
+                )) : (
+                  <tr>
+                    <td colSpan={54} className="h-32 text-center text-slate-400 font-bold uppercase italic">
+                      Geen regels gevonden voor {selectedYear}. Voeg een regel toe om te beginnen.
+                    </td>
+                  </tr>
+                )}
               </tbody>
 
               <tfoot className="bg-slate-100 border-t-2 border-slate-300">
@@ -363,14 +385,14 @@ export default function AnnualPlanningPage() {
             </table>
           </div>
 
-          <div className="mt-6 flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-slate-400 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <div className="mt-6 flex flex-wrap items-center gap-4 text-[10px] font-black uppercase tracking-widest text-slate-400 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
             <div className="flex items-center gap-2">
               <div className="h-3 w-3 bg-red-500" />
               <span>Kwartaal / Periode Scheiding</span>
             </div>
-            <div className="flex items-center gap-2 ml-4">
+            <div className="flex items-center gap-2 ml-0 sm:ml-4">
               <Info className="h-3 w-3" />
-              <span>Klik in een cel om uren aan te passen. Gegevens worden automatisch opgeslagen.</span>
+              <span>Klik in een cel om uren aan te passen. Gegevens worden per jaar opgeslagen.</span>
             </div>
           </div>
         </div>
