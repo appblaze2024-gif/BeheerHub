@@ -29,8 +29,8 @@ service cloud.firestore {
     }
 
     // --- JAARPLANNING & MILESTONES: DIRECTE TOEGANG OP HOOGSTE NIVEAU ---
-    // We plaatsen deze regels bovenaan en buiten andere match-blokken om conflicten te voorkomen.
-    // Dit verleent toegang aan de collectie zelf (voor 'list') en alle documenten (voor 'get'/'write').
+    // Deze regels staan bovenaan om prioriteit te krijgen en list/get/write operaties 
+    // te garanderen voor alle ingelogde gebruikers, inclusief Super Admins.
     
     match /projects/{projectId}/annual_planning {
       allow read, write: if request.auth != null;
@@ -54,11 +54,11 @@ service cloud.firestore {
     // Gebruikersprofielen
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow write: if request.auth.uid == userId || hasRole('Super admin');
+      allow write: if request.auth.uid == userId || (userExists() && getUserData().role == 'Super admin');
 
       // Berichten / Notificaties
       match /messages/{messageId} {
-        allow read, list, update, delete: if request.auth.uid == userId || hasRole('Super admin');
+        allow read, list, update, delete: if request.auth.uid == userId || (userExists() && getUserData().role == 'Super admin');
         allow create: if isSignedIn(); 
       }
 
@@ -124,7 +124,7 @@ service cloud.firestore {
 
     // GLOBALE REGEL: Super admin mag alles
     match /{document=**} {
-      allow read, write: if hasRole('Super admin');
+      allow read, write: if userExists() && getUserData().role == 'Super admin';
     }
   }
 }
