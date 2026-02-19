@@ -326,7 +326,7 @@ export default function AnnualPlanningPage() {
                       )}
                     </th>
                   ))}
-                  <th className="min-w-[60px] bg-[#388e3c]"></th>
+                  <th className="min-w-[40px] bg-[#388e3c]"></th>
                 </tr>
 
                 <tr className="bg-[#8e24aa] text-white h-8">
