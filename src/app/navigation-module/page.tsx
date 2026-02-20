@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -123,6 +124,9 @@ function NavigatingView({
 
   const lastUpdateDistRef = React.useRef(0);
 
+  // Check if this is a Work Order navigation (single destination 'Bestemming')
+  const isWorkOrder = objectsOnRoute.length === 1 && objectsOnRoute[0].id === 'Bestemming';
+
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY;
   };
@@ -145,7 +149,7 @@ function NavigatingView({
   const { toast } = useToast();
   
   const [viewState, setViewState] = React.useState({
-    pitch: 65,
+    pitch: isWorkOrder ? 0 : 65,
     bearing: 0,
     zoom: 18.5,
     latitude: initialUserLocation?.latitude || 52.1326,
@@ -223,9 +227,10 @@ function NavigatingView({
                     ...prevView,
                     latitude: newLat,
                     longitude: newLng,
-                    bearing: newHeading,
+                    // For work orders, we keep bearing 0 and pitch 0 (fixed 2D view)
+                    bearing: isWorkOrder ? 0 : newHeading,
                     zoom: prevView.zoom + (targetZoom - prevView.zoom) * 0.05,
-                    pitch: 65,
+                    pitch: isWorkOrder ? 0 : 65,
                 }));
             }
 
@@ -239,7 +244,7 @@ function NavigatingView({
     return () => {
         if (smoothingAnimationRef.current) cancelAnimationFrame(smoothingAnimationRef.current);
     };
-  }, [targetLocation?.latitude, targetLocation?.longitude, isFollowing, isPaused, arrivedObject, isSimulating]);
+  }, [targetLocation?.latitude, targetLocation?.longitude, isFollowing, isPaused, arrivedObject, isSimulating, isWorkOrder]);
 
   const snappedLocation = React.useMemo(() => {
     if (!smoothLocation || !currentRouteGeometry) return smoothLocation;
@@ -279,9 +284,14 @@ function NavigatingView({
           setDistanceRemainingToDestination(roundedRemaining);
           lastUpdateDistRef.current = roundedRemaining;
           setHasReachedCurrentTarget(roundedRemaining < 80);
+
+          // For Work Orders: Auto-return if within 25 meters
+          if (isWorkOrder && roundedRemaining < 25) {
+              onExit();
+          }
       }
     } catch (e) {}
-  }, [snappedLocation?.latitude, snappedLocation?.longitude, currentRouteGeometry, isCalculatingRoute]);
+  }, [snappedLocation?.latitude, snappedLocation?.longitude, currentRouteGeometry, isCalculatingRoute, isWorkOrder, onExit]);
 
   React.useEffect(() => {
     if (!targetLocation || !currentRouteGeometry || isCalculatingRoute || isSimulating) return;
@@ -578,7 +588,7 @@ function NavigatingView({
             anchor="center"
             rotationAlignment="map"
             pitchAlignment="map"
-            rotation={snappedLocation.heading || 0} 
+            rotation={isWorkOrder ? 0 : (snappedLocation.heading || 0)} 
           >
             <div className="relative flex items-center justify-center w-12 h-12">
                 <div className="absolute h-12 w-12 bg-blue-50/20 rounded-full animate-pulse" />
@@ -607,14 +617,26 @@ function NavigatingView({
                         else toast({ title: "Buiten bereik", description: `Rijd eerst dichterbij (${Math.round(dist)}m).` });
                     }}
                 >
-                    <div className={cn(
-                        "w-8 h-8 rounded-full border-4 border-white shadow-lg flex items-center justify-center text-[10px] font-black text-white transition-all cursor-pointer hover:scale-110",
-                        isTarget ? "bg-blue-600 scale-125 ring-4 ring-blue-500/30" : "bg-slate-400",
-                        inRange && "bg-green-600 ring-green-500/50"
-                    )}>
-                        {inRange && <div className="absolute inset-0 rounded-full animate-ping bg-green-400 opacity-75" />}
-                        {idx + 1}
-                    </div>
+                    {isWorkOrder ? (
+                        <div className="relative flex flex-col items-center">
+                            <div className={cn("absolute h-12 w-12 rounded-full bg-blue-500/20", inRange && "animate-pulse")} />
+                            <div className={cn(
+                                "relative h-10 w-10 rounded-full bg-blue-600 border-4 border-white shadow-2xl flex items-center justify-center transition-all",
+                                inRange && "scale-125 bg-green-600"
+                            )}>
+                                <Flag className="h-5 w-5 text-white fill-current" />
+                            </div>
+                        </div>
+                    ) : (
+                        <div className={cn(
+                            "w-8 h-8 rounded-full border-4 border-white shadow-lg flex items-center justify-center text-[10px] font-black text-white transition-all cursor-pointer hover:scale-110",
+                            isTarget ? "bg-blue-600 scale-125 ring-4 ring-blue-500/30" : "bg-slate-400",
+                            inRange && "bg-green-600 ring-green-500/50"
+                        )}>
+                            {inRange && <div className="absolute inset-0 rounded-full animate-ping bg-green-400 opacity-75" />}
+                            {idx + 1}
+                        </div>
+                    )}
                 </Marker>
             );
         })}
