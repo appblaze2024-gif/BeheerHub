@@ -124,6 +124,7 @@ export default function AnnualPlanningPage() {
   const [isRowDialogOpen, setIsRowDialogOpen] = React.useState(false);
   const [editingItem, setEditingItem] = React.useState<AnnualPlanningItem | null>(null);
   const [activeSectionForNewRow, setActiveSectionForNewRow] = React.useState<string | null>(null);
+  const [insertAtOrder, setInsertAtOrder] = React.useState<number | null>(null);
   const [dialogUnit, setDialogUnit] = React.useState('uur');
   
   // Header title editing state
@@ -480,26 +481,59 @@ export default function AnnualPlanningPage() {
         });
         toast({ title: 'Regel bijgewerkt' });
       } else if (activeSectionForNewRow) {
-        addDocumentNonBlocking(collection(firestore, 'annual_planning'), {
-          projectId: selectedProjectId,
-          sectionId: activeSectionForNewRow,
-          resourceName: data.name,
-          color: data.color,
-          hourlyRate: data.hourlyRate,
-          unit: data.unit,
-          year: selectedYear,
-          order: (itemsRaw?.filter(i => i.sectionId === activeSectionForNewRow).length || 0) + 1,
-          weeks: {},
-          cellColors: {},
-          cellNotes: {}
-        });
-        toast({ title: 'Rij toegevoegd' });
+        if (insertAtOrder !== null) {
+          const batch = writeBatch(firestore);
+          const sectionItems = itemsRaw?.filter(i => i.sectionId === activeSectionForNewRow || (activeSectionForNewRow === 'default' && !i.sectionId)) || [];
+          
+          // Shift items below down
+          sectionItems.filter(i => (i.order || 0) >= insertAtOrder).forEach(i => {
+            batch.update(doc(firestore, 'annual_planning', i.id), { order: (i.order || 0) + 1 });
+          });
+
+          // Create new inserted item
+          const newDocRef = doc(collection(firestore, 'annual_planning'));
+          batch.set(newDocRef, {
+            id: newDocRef.id,
+            projectId: selectedProjectId,
+            sectionId: activeSectionForNewRow === 'default' ? null : activeSectionForNewRow,
+            resourceName: data.name,
+            color: data.color,
+            hourlyRate: data.hourlyRate,
+            unit: data.unit,
+            year: selectedYear,
+            order: insertAtOrder,
+            weeks: {},
+            cellColors: {},
+            cellNotes: {}
+          });
+          
+          await batch.commit();
+          toast({ title: 'Rij ingevoegd' });
+        } else {
+          // Standard append at end
+          addDocumentNonBlocking(collection(firestore, 'annual_planning'), {
+            projectId: selectedProjectId,
+            sectionId: activeSectionForNewRow === 'default' ? null : activeSectionForNewRow,
+            resourceName: data.name,
+            color: data.color,
+            hourlyRate: data.hourlyRate,
+            unit: data.unit,
+            year: selectedYear,
+            order: (itemsRaw?.filter(i => i.sectionId === activeSectionForNewRow || (activeSectionForNewRow === 'default' && !i.sectionId)).length || 0) + 1,
+            weeks: {},
+            cellColors: {},
+            cellNotes: {}
+          });
+          toast({ title: 'Rij toegevoegd' });
+        }
       }
       setIsAddingRow(false);
       setIsRowDialogOpen(false);
       setEditingItem(null);
+      setInsertAtOrder(null);
     } catch (e) {
       setIsAddingRow(false);
+      console.error("Row submit error:", e);
     }
   };
 
@@ -796,8 +830,8 @@ export default function AnnualPlanningPage() {
                           );
                         })}
                         <th className="w-8 bg-[#388e3c] border-r border-white/20">aantal</th>
-                        <th className="w-12 bg-[#388e3c] border-r border-white/20">prijs</th>
-                        <th className="w-16 bg-[#388e3c]">totaal</th>
+                        <th className="w-12 bg-[#388e3c] border-r border-white/20">tarief</th>
+                        <th className="w-16 bg-[#388e3c]">bedrag</th>
                       </tr>
 
                       <tr className="bg-[#8e24aa] text-white h-8">
@@ -825,8 +859,8 @@ export default function AnnualPlanningPage() {
                           );
                         })}
                         <th className="bg-[#6a1b9a] text-center uppercase tracking-tighter w-8 border-r border-white/20">tot</th>
-                        <th className="bg-[#6a1b9a] text-center uppercase tracking-tighter w-12 border-r border-white/20">tarief</th>
-                        <th className="bg-[#6a1b9a] text-center uppercase tracking-tighter w-16">bedrag</th>
+                        <th className="bg-[#6a1b9a] text-center uppercase tracking-tighter w-12 border-r border-white/20">prijs</th>
+                        <th className="bg-[#6a1b9a] text-center uppercase tracking-tighter w-16">totaal</th>
                       </tr>
                     </thead>
 
@@ -849,7 +883,25 @@ export default function AnnualPlanningPage() {
                                 >
                                   {item.resourceName}
                                 </button>
-                                <div className="flex items-center opacity-0 group-hover/row:opacity-100 transition-opacity">
+                                <div className="flex items-center opacity-0 group-hover/row:opacity-100 transition-opacity gap-0.5">
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-5 w-5 text-blue-400 hover:text-blue-600 hover:bg-blue-50 shrink-0"
+                                        onClick={() => {
+                                          setActiveSectionForNewRow(section.id);
+                                          setEditingItem(null);
+                                          setInsertAtOrder(item.order);
+                                          setIsRowDialogOpen(true);
+                                        }}
+                                      >
+                                        <Plus className="h-3 w-3" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Rij boven invoegen</TooltipContent>
+                                  </Tooltip>
                                   <Button 
                                     variant="ghost" 
                                     size="icon" 
@@ -928,7 +980,12 @@ export default function AnnualPlanningPage() {
                             variant="ghost" 
                             size="sm" 
                             className="w-full h-6 font-black uppercase text-[9px] gap-1 hover:bg-slate-100" 
-                            onClick={() => { setActiveSectionForNewRow(section.id); setEditingItem(null); setIsRowDialogOpen(true); }}
+                            onClick={() => { 
+                              setActiveSectionForNewRow(section.id); 
+                              setEditingItem(null); 
+                              setInsertAtOrder(null);
+                              setIsRowDialogOpen(true); 
+                            }}
                           >
                             <Plus className="h-3.5 w-3.5 text-primary" />
                           </Button>
@@ -1013,7 +1070,7 @@ export default function AnnualPlanningPage() {
           </div>
         </div>
 
-        <Dialog open={isRowDialogOpen} onOpenChange={setIsRowDialogOpen}>
+        <Dialog open={isRowDialogOpen} onOpenChange={(open) => { setIsRowDialogOpen(open); if(!open) { setEditingItem(null); setInsertAtOrder(null); } }}>
           <DialogContent>
             <form onSubmit={(e) => {
               e.preventDefault();
@@ -1026,7 +1083,7 @@ export default function AnnualPlanningPage() {
               });
             }}>
               <DialogHeader>
-                <DialogTitle>{editingItem ? 'Regel Bewerken' : 'Nieuwe Inzet Toevoegen'}</DialogTitle>
+                <DialogTitle>{editingItem ? 'Regel Bewerken' : (insertAtOrder !== null ? 'Regel Tussenvoegen' : 'Nieuwe Inzet Toevoegen')}</DialogTitle>
                 <DialogDescription>
                   {editingItem 
                     ? `Bewerken van: ${editingItem.resourceName}`
@@ -1053,7 +1110,7 @@ export default function AnnualPlanningPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Prijs per eenheid (€)</Label>
+                    <Label>Tarief per eenheid (€)</Label>
                     <input name="hourlyRate" type="number" step="0.01" defaultValue={editingItem?.hourlyRate || 0} placeholder="0.00" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" />
                   </div>
                 </div>
