@@ -349,18 +349,20 @@ export default function AnnualPlanningPage() {
                 {items.map((item) => (
                   <tr key={item.id} className={cn("border-b border-slate-100 group transition-colors", CATEGORY_COLORS[item.color] || 'bg-white')}>
                     <td className={cn(
-                      "sticky left-0 z-10 border-r border-slate-200 p-1.5 flex items-center justify-between h-8 whitespace-nowrap w-px",
+                      "sticky left-0 z-10 border-r border-slate-200 p-0 whitespace-nowrap w-px",
                       CATEGORY_COLORS[item.color] || 'bg-white'
                     )}>
-                      <span className="pr-4 text-[11px] font-black uppercase tracking-tight whitespace-nowrap">{item.resourceName}</span>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-5 w-5 opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 hover:bg-red-50 shrink-0"
-                        onClick={() => handleDeleteRow(item.id)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
+                      <div className="flex items-center justify-between h-8 px-1.5 w-full">
+                        <span className="pr-4 text-[11px] font-black uppercase tracking-tight whitespace-nowrap">{item.resourceName}</span>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-5 w-5 opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 hover:bg-red-50 shrink-0"
+                          onClick={() => handleDeleteRow(item.id)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </td>
                     {WEEKS.map(week => (
                       <td key={week} className={cn(
