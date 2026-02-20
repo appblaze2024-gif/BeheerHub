@@ -60,6 +60,7 @@ interface AnnualPlanningItem {
   color: string;
   order: number;
   hourlyRate?: number;
+  unit?: string;
 }
 
 interface AnnualMilestone {
@@ -123,6 +124,7 @@ export default function AnnualPlanningPage() {
   const [isRowDialogOpen, setIsRowDialogOpen] = React.useState(false);
   const [editingItem, setEditingItem] = React.useState<AnnualPlanningItem | null>(null);
   const [activeSectionForNewRow, setActiveSectionForNewRow] = React.useState<string | null>(null);
+  const [dialogUnit, setDialogUnit] = React.useState('uur');
   
   // Header title editing state
   const [isEditingTitle, setIsEditingTitle] = React.useState(false);
@@ -464,7 +466,7 @@ export default function AnnualPlanningPage() {
     });
   };
 
-  const handleRowSubmit = async (data: { name: string, color: string, hourlyRate: number }) => {
+  const handleRowSubmit = async (data: { name: string, color: string, hourlyRate: number, unit: string }) => {
     if (!selectedProjectId || !firestore) return;
 
     setIsAddingRow(true);
@@ -473,7 +475,8 @@ export default function AnnualPlanningPage() {
         updateDocumentNonBlocking(doc(firestore, 'annual_planning', editingItem.id), {
           resourceName: data.name,
           color: data.color,
-          hourlyRate: data.hourlyRate
+          hourlyRate: data.hourlyRate,
+          unit: data.unit
         });
         toast({ title: 'Regel bijgewerkt' });
       } else if (activeSectionForNewRow) {
@@ -483,6 +486,7 @@ export default function AnnualPlanningPage() {
           resourceName: data.name,
           color: data.color,
           hourlyRate: data.hourlyRate,
+          unit: data.unit,
           year: selectedYear,
           order: (itemsRaw?.filter(i => i.sectionId === activeSectionForNewRow).length || 0) + 1,
           weeks: {},
@@ -605,6 +609,16 @@ export default function AnnualPlanningPage() {
     setCellContextMenu(null);
   };
 
+  React.useEffect(() => {
+    if (isRowDialogOpen) {
+      if (editingItem) {
+        setDialogUnit(editingItem.unit || 'uur');
+      } else {
+        setDialogUnit('uur');
+      }
+    }
+  }, [isRowDialogOpen, editingItem]);
+
   if (!selectedProjectId) {
     return (
       <div className="p-12 flex flex-col items-center justify-center text-center bg-slate-50 h-full">
@@ -686,7 +700,7 @@ export default function AnnualPlanningPage() {
                 return sectionItems.reduce((acc, item) => acc + (parseFloat((item.weeks?.[week.toString()] || '0').replace(',', '.')) || 0), 0) || 0;
               };
 
-              const sectionGrandTotalHours = sectionItems.reduce((acc, item) => acc + calculateRowTotal(item.weeks || {}), 0) || 0;
+              const sectionGrandTotalQuantity = sectionItems.reduce((acc, item) => acc + calculateRowTotal(item.weeks || {}), 0) || 0;
               const sectionGrandTotalCost = sectionItems.reduce((acc, item) => {
                 const rowTotal = calculateRowTotal(item.weeks || {});
                 return acc + (rowTotal * (item.hourlyRate || 0));
@@ -781,7 +795,7 @@ export default function AnnualPlanningPage() {
                             </th>
                           );
                         })}
-                        <th className="w-8 bg-[#388e3c] border-r border-white/20">uren</th>
+                        <th className="w-8 bg-[#388e3c] border-r border-white/20">aantal</th>
                         <th className="w-12 bg-[#388e3c] border-r border-white/20">prijs</th>
                         <th className="w-16 bg-[#388e3c]">totaal</th>
                       </tr>
@@ -811,7 +825,7 @@ export default function AnnualPlanningPage() {
                           );
                         })}
                         <th className="bg-[#6a1b9a] text-center uppercase tracking-tighter w-8 border-r border-white/20">tot</th>
-                        <th className="bg-[#6a1b9a] text-center uppercase tracking-tighter w-12 border-r border-white/20">€/h</th>
+                        <th className="bg-[#6a1b9a] text-center uppercase tracking-tighter w-12 border-r border-white/20">tarief</th>
                         <th className="bg-[#6a1b9a] text-center uppercase tracking-tighter w-16">bedrag</th>
                       </tr>
                     </thead>
@@ -820,8 +834,8 @@ export default function AnnualPlanningPage() {
                       {sectionItems.map((item) => {
                         const isHexColor = item.color?.startsWith('#');
                         const rowStyle = isHexColor ? { backgroundColor: item.color } : {};
-                        const rowTotalHours = calculateRowTotal(item.weeks || {});
-                        const rowTotalCost = rowTotalHours * (item.hourlyRate || 0);
+                        const rowTotalQuantity = calculateRowTotal(item.weeks || {});
+                        const rowTotalCost = rowTotalQuantity * (item.hourlyRate || 0);
                         
                         return (
                           <tr key={item.id} className={cn("border-b border-slate-100 group transition-colors")} style={rowStyle}>
@@ -890,7 +904,7 @@ export default function AnnualPlanningPage() {
                               );
                             })}
                             <td className="bg-slate-50/50 text-center font-black text-[10px] tabular-nums border-l border-slate-200 h-8 w-8 border-r">
-                              {rowTotalHours.toLocaleString('nl-NL')}
+                              {rowTotalQuantity.toLocaleString('nl-NL')}
                             </td>
                             <td className="bg-white p-0 text-center h-8 w-12 border-r border-slate-200">
                               <input
@@ -953,7 +967,7 @@ export default function AnnualPlanningPage() {
                           );
                         })}
                         <td className="text-center text-[10px] text-primary bg-slate-200 h-8 w-8 border-r border-slate-300">
-                          {sectionGrandTotalHours.toLocaleString('nl-NL')}
+                          {sectionGrandTotalQuantity.toLocaleString('nl-NL')}
                         </td>
                         <td className="bg-slate-200 border-r border-slate-300" />
                         <td className="text-right pr-1 text-[10px] text-primary bg-slate-200 h-8 w-16">
@@ -1007,7 +1021,8 @@ export default function AnnualPlanningPage() {
               handleRowSubmit({
                 name: formData.get('name') as string,
                 color: formData.get('color') as string,
-                hourlyRate: parseFloat(formData.get('hourlyRate') as string) || 0
+                hourlyRate: parseFloat(formData.get('hourlyRate') as string) || 0,
+                unit: dialogUnit
               });
             }}>
               <DialogHeader>
@@ -1023,9 +1038,24 @@ export default function AnnualPlanningPage() {
                   <Label>Naam middel / medewerker</Label>
                   <input name="name" defaultValue={editingItem?.resourceName || ''} placeholder="Bijv. Veegmachine 569" required className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" />
                 </div>
-                <div className="space-y-2">
-                  <Label>Uurprijs (€)</Label>
-                  <input name="hourlyRate" type="number" step="0.01" defaultValue={editingItem?.hourlyRate || 0} placeholder="0.00" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Eenheid</Label>
+                    <Select value={dialogUnit} onValueChange={setDialogUnit}>
+                      <SelectTrigger className="h-10">
+                        <SelectValue placeholder="Kies eenheid" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="uur">Uren (h)</SelectItem>
+                        <SelectItem value="dag">Dagen (d)</SelectItem>
+                        <SelectItem value="stuk">Stuks (st)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Prijs per eenheid (€)</Label>
+                    <input name="hourlyRate" type="number" step="0.01" defaultValue={editingItem?.hourlyRate || 0} placeholder="0.00" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Kleur / Categorie</Label>
