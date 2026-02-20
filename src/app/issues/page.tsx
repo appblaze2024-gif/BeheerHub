@@ -81,6 +81,7 @@ const werkbonNavItems = [
     { label: "Foto's", icon: Camera },
     { label: 'Hoeveelheid', icon: Package },
     { label: 'Uren', icon: Clock },
+    { label: 'Info', icon: Info },
 ]
 
 interface Suggestion {
@@ -724,15 +725,18 @@ export default function IssuesPage() {
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
                 <div className="px-4 md:px-6 pt-4 overflow-x-auto no-scrollbar">
                     <TabsList className="w-max inline-flex">
-                        {werkbonNavItems.map(item => (
-                            <TabsTrigger key={item.label} value={item.label} className="gap-2 shrink-0">
-                                <item.icon className="h-4 w-4 shrink-0" />
-                                <span>{item.label}</span>
-                                {item.label === 'Documenten' && uploadedFiles.length > 0 && <Badge variant="secondary" className="ml-1 h-4 px-1 text-[9px]">{uploadedFiles.length}</Badge>}
-                                {item.label === "Foto's" && (uploadedPhotos.length + afhandelingFotos.length) > 0 && <Badge variant="secondary" className="ml-1 h-4 px-1 text-[9px]">{uploadedPhotos.length + afhandelingFotos.length}</Badge>}
-                                {item.label === 'Werkzaamheden' && tasks.length > 0 && tasks.filter(t => !t.completed).length > 0 && <Badge variant="secondary" className="ml-1 h-4 px-1 text-[9px]">{tasks.filter(t => !t.completed).length}</Badge>}
-                            </TabsTrigger>
-                        ))}
+                        {werkbonNavItems.map(item => {
+                            if (item.label === 'Info' && selectedMelding?.status !== 'Afgerond' && !selectedMelding?.workStartedAt) return null;
+                            return (
+                                <TabsTrigger key={item.label} value={item.label} className="gap-2 shrink-0">
+                                    <item.icon className="h-4 w-4 shrink-0" />
+                                    <span>{item.label}</span>
+                                    {item.label === 'Documenten' && uploadedFiles.length > 0 && <Badge variant="secondary" className="ml-1 h-4 px-1 text-[9px]">{uploadedFiles.length}</Badge>}
+                                    {item.label === "Foto's" && (uploadedPhotos.length + afhandelingFotos.length) > 0 && <Badge variant="secondary" className="ml-1 h-4 px-1 text-[9px]">{uploadedPhotos.length + afhandelingFotos.length}</Badge>}
+                                    {item.label === 'Werkzaamheden' && tasks.length > 0 && tasks.filter(t => !t.completed).length > 0 && <Badge variant="secondary" className="ml-1 h-4 px-1 text-[9px]">{tasks.filter(t => !t.completed).length}</Badge>}
+                                </TabsTrigger>
+                            );
+                        })}
                     </TabsList>
                 </div>
                 
@@ -1180,6 +1184,73 @@ export default function IssuesPage() {
                                 </div>
                             </CardContent>
                         </Card>
+                    </TabsContent>
+                    <TabsContent value="Info" className="mt-0">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <Card className="rounded-2xl border-slate-100 shadow-sm overflow-hidden bg-white">
+                                <CardHeader className="bg-slate-50/50 border-b p-4">
+                                    <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tijdsregistratie & Details</CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4 space-y-4">
+                                    <div className="flex justify-between items-center border-b border-slate-50 pb-2">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Status</span>
+                                        <Badge variant={selectedMelding?.status === 'Afgerond' ? 'default' : 'secondary'} className={cn("font-black text-[9px] uppercase", selectedMelding?.workStartedAt && "bg-green-500 text-white")}>
+                                            {selectedMelding?.status === 'Afgerond' ? 'Afgerond' : (selectedMelding?.workStartedAt ? 'In uitvoering' : selectedMelding?.status)}
+                                        </Badge>
+                                    </div>
+                                    <div className="flex justify-between items-center border-b border-slate-50 pb-2">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Geregistreerde tijd</span>
+                                        <span className="text-xs font-black text-primary">{elapsedTime}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center border-b border-slate-50 pb-2">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Starttijd</span>
+                                        <span className="text-xs font-bold text-slate-700">
+                                            {selectedMelding?.workStartedAt 
+                                                ? format(new Date(selectedMelding.workStartedAt), 'HH:mm') 
+                                                : (selectedMelding?.datum ? `${selectedMelding.datum} ${selectedMelding.tijdstip}` : '-')}
+                                        </span>
+                                    </div>
+                                    {selectedMelding?.status === 'Afgerond' && (
+                                        <>
+                                            <div className="flex justify-between items-center border-b border-slate-50 pb-2">
+                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Afmeldtijd</span>
+                                                <span className="text-xs font-bold text-slate-700">{selectedMelding?.afhandeling_datum} om {selectedMelding?.afhandeling_tijdstip}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Uitgevoerd door</span>
+                                                <span className="text-xs font-black text-slate-900">{selectedMelding?.afgehandeld_door || '-'}</span>
+                                            </div>
+                                        </>
+                                    )}
+                                </CardContent>
+                            </Card>
+
+                            <Card className="rounded-2xl border-slate-100 shadow-sm overflow-hidden bg-white">
+                                <CardHeader className="bg-slate-50/50 border-b p-4">
+                                    <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Gebruikte Materialen</CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4">
+                                    {selectedMelding?.hoeveelheden && selectedMelding.hoeveelheden.length > 0 ? (
+                                        <div className="space-y-2">
+                                            {selectedMelding.hoeveelheden.map((h, i) => (
+                                                <div key={i} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100 shadow-sm">
+                                                    <span className="text-xs font-black uppercase tracking-tight text-slate-900">{h.type}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-black text-primary">{h.aantal}</span>
+                                                        <span className="text-[10px] font-bold text-slate-400 uppercase">{h.eenheid}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center py-12 text-slate-300">
+                                            <Package className="h-10 w-10 mb-2 opacity-10" />
+                                            <p className="text-[10px] font-black uppercase tracking-widest">Geen materiaalverbruik</p>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </div>
                     </TabsContent>
                 </div>
             </Tabs>
