@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
-import { Search, ListFilter, ArrowLeft, Info } from 'lucide-react';
+import { Search, ListFilter, ArrowLeft, Info, Clock, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { Melding, UserProfile } from '@/lib/types';
@@ -129,6 +129,14 @@ export default function ArchiveIssuesPage() {
     return nameOrEmail.charAt(0).toUpperCase() + nameOrEmail.slice(1);
   };
 
+  const formatDuration = (minutes?: number) => {
+    if (minutes === undefined || minutes === null) return '-';
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours === 0) return `${mins}m`;
+    return `${hours}u ${mins}m`;
+  };
+
   return (
     <div className="flex flex-col h-screen bg-background">
       <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border-b shrink-0 gap-4 bg-slate-50/50">
@@ -172,10 +180,11 @@ export default function ArchiveIssuesPage() {
                         <TableRow className="hover:bg-transparent border-b-2 border-slate-200">
                             <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Intakenr.</TableHead>
                             <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Adres</TableHead>
-                            <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200 hidden md:table-cell">Omschrijving</TableHead>
                             <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Meld Datum</TableHead>
-                            <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Afgehandeld</TableHead>
-                            <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 hidden lg:table-cell">Door</TableHead>
+                            <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Afgehandeld op</TableHead>
+                            <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Duur</TableHead>
+                            <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Door</TableHead>
+                            <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500">Opmerkingen</TableHead>
                         </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -183,10 +192,34 @@ export default function ArchiveIssuesPage() {
                                 <TableRow key={melding.id} onClick={() => router.push(`/issues/new?id=${melding.id}`)} className="cursor-pointer h-12 hover:bg-slate-50 transition-colors border-b border-slate-100">
                                     <TableCell className="font-black py-2 px-4 border-r border-slate-100">{melding.intakenummer || '-'}</TableCell>
                                     <TableCell className="truncate py-2 px-4 border-r border-slate-100 max-w-[200px] text-xs font-bold text-slate-900">{[melding.straatnaam, melding.plaats].filter(Boolean).join(', ') || '-'}</TableCell>
-                                    <TableCell className="max-w-xs truncate py-2 px-4 border-r border-slate-100 hidden md:table-cell text-xs italic text-slate-500">{melding.extra_informatie || '-'}</TableCell>
                                     <TableCell className="py-2 px-4 border-r border-slate-100 text-[11px] font-bold text-slate-600">{melding.datum ? format(new Date(melding.datum), 'dd-MM-yy') : '-'}</TableCell>
-                                    <TableCell className="py-2 px-4 border-r border-slate-100 text-[11px] font-black text-primary">{melding.afhandeling_datum ? format(new Date(melding.afhandeling_datum), 'dd-MM-yy') : '-'}</TableCell>
-                                    <TableCell className='truncate py-2 px-4 border-r border-slate-100 hidden lg:table-cell text-xs font-bold'>{formatDisplayName(melding.afgehandeld_door)}</TableCell>
+                                    <TableCell className="py-2 px-4 border-r border-slate-100">
+                                        <div className="flex flex-col">
+                                            <span className="text-[11px] font-black text-primary">{melding.afhandeling_datum ? format(new Date(melding.afhandeling_datum), 'dd-MM-yy') : '-'}</span>
+                                            <span className="text-[9px] font-bold text-slate-400">{melding.afhandeling_tijdstip || '--:--'}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="py-2 px-4 border-r border-slate-100">
+                                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700">
+                                            <Clock className="h-3 w-3 text-slate-400" />
+                                            {formatDuration(melding.gewerkteMinuten)}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className='truncate py-2 px-4 border-r border-slate-100 text-xs font-black text-slate-900'>{formatDisplayName(melding.afgehandeld_door)}</TableCell>
+                                    <TableCell className="py-2 px-4 max-w-xs">
+                                        <div className="flex items-start gap-2">
+                                            {melding.afhandeling_bijzonderheden ? (
+                                                <>
+                                                    <MessageSquare className="h-3 w-3 mt-0.5 text-blue-500 shrink-0" />
+                                                    <p className="text-[11px] font-medium text-slate-500 italic truncate" title={melding.afhandeling_bijzonderheden}>
+                                                        {melding.afhandeling_bijzonderheden}
+                                                    </p>
+                                                </>
+                                            ) : (
+                                                <span className="text-[10px] text-slate-300 font-medium">Geen bijzonderheden</span>
+                                            )}
+                                        </div>
+                                    </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
