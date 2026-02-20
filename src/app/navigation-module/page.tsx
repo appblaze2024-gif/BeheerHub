@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -149,7 +148,7 @@ function NavigatingView({
   const { toast } = useToast();
   
   const [viewState, setViewState] = React.useState({
-    pitch: isWorkOrder ? 0 : 65,
+    pitch: 65,
     bearing: 0,
     zoom: 18.5,
     latitude: initialUserLocation?.latitude || 52.1326,
@@ -227,10 +226,9 @@ function NavigatingView({
                     ...prevView,
                     latitude: newLat,
                     longitude: newLng,
-                    // For work orders, we keep bearing 0 and pitch 0 (fixed 2D view)
-                    bearing: isWorkOrder ? 0 : newHeading,
+                    bearing: newHeading,
                     zoom: prevView.zoom + (targetZoom - prevView.zoom) * 0.05,
-                    pitch: isWorkOrder ? 0 : 65,
+                    pitch: 65,
                 }));
             }
 
@@ -588,7 +586,7 @@ function NavigatingView({
             anchor="center"
             rotationAlignment="map"
             pitchAlignment="map"
-            rotation={isWorkOrder ? 0 : (snappedLocation.heading || 0)} 
+            rotation={snappedLocation.heading || 0} 
           >
             <div className="relative flex items-center justify-center w-12 h-12">
                 <div className="absolute h-12 w-12 bg-blue-50/20 rounded-full animate-pulse" />
