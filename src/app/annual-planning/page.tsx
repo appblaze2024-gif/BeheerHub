@@ -483,9 +483,21 @@ export default function AnnualPlanningPage() {
     try {
       if (existing) {
         const field = side === 'left' ? 'borderLeft' : 'borderRight';
-        updateDocumentNonBlocking(doc(firestore, 'annual_milestones', existing.id), {
-          [field]: !existing[field]
-        });
+        const newValue = !existing[field];
+        
+        // Check if it will be empty after this update
+        const willBeEmpty = !newValue && 
+                           (side === 'left' ? !existing.borderRight : !existing.borderLeft) && 
+                           !existing.label && 
+                           !existing.color;
+
+        if (willBeEmpty) {
+          deleteDocumentNonBlocking(doc(firestore, 'annual_milestones', existing.id));
+        } else {
+          updateDocumentNonBlocking(doc(firestore, 'annual_milestones', existing.id), {
+            [field]: newValue
+          });
+        }
       } else {
         await addDocumentNonBlocking(collection(firestore, 'annual_milestones'), {
           projectId: selectedProjectId,
@@ -1431,7 +1443,7 @@ export default function AnnualPlanningPage() {
                     onClick={() => handleHeaderBorderToggle(headerContextMenu.sectionId, headerContextMenu.week, 'left')}
                 >
                     <div className="w-1.5 h-4 bg-red-600 rounded-full" />
-                    Rode lijn links
+                    {milestonesRaw?.find(m => m.weekNumber === headerContextMenu.week && (m.sectionId === headerContextMenu.sectionId || (headerContextMenu.sectionId === 'default' && !m.sectionId)))?.borderLeft ? 'Lijn links wissen' : 'Rode lijn links'}
                 </Button>
                 <Button 
                     variant="ghost" 
@@ -1440,7 +1452,7 @@ export default function AnnualPlanningPage() {
                     onClick={() => handleHeaderBorderToggle(headerContextMenu.sectionId, headerContextMenu.week, 'right')}
                 >
                     <div className="w-1.5 h-4 bg-red-600 rounded-full ml-auto" />
-                    Rode lijn rechts
+                    {milestonesRaw?.find(m => m.weekNumber === headerContextMenu.week && (m.sectionId === headerContextMenu.sectionId || (headerContextMenu.sectionId === 'default' && !m.sectionId)))?.borderRight ? 'Lijn rechts wissen' : 'Rode lijn rechts'}
                 </Button>
             </div>
 
