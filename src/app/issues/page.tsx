@@ -654,7 +654,7 @@ export default function IssuesPage() {
   }
   
   return (
-    <div className="flex flex-col flex-1 h-full min-h-0">
+    <div className="flex flex-col flex-1 h-full min-h-0 overflow-hidden text-sm bg-gray-100 dark:bg-gray-900">
         <header className="p-4 border-b bg-gray-50 dark:bg-gray-900/50 flex flex-col sm:flex-row items-start sm:items-center justify-between shrink-0 gap-4">
             <div className="flex items-center gap-4 w-full sm:w-auto">
                  <Button variant="outline" size="icon" onClick={() => router.push('/')} className="shrink-0">
@@ -757,6 +757,10 @@ export default function IssuesPage() {
                                 <div className="space-y-1">
                                 <p className="text-muted-foreground font-bold uppercase text-[9px] tracking-widest">Melder:</p>
                                 <p className="font-black text-sm">{selectedMelding.melder}</p>
+                                </div>
+                                <div className="space-y-1">
+                                <p className="text-muted-foreground font-bold uppercase text-[9px] tracking-widest">Containernr:</p>
+                                <p className="font-black text-sm">{selectedMelding.containernummer || '-'}</p>
                                 </div>
                             </div>
                             <div className="space-y-4 pt-2">
