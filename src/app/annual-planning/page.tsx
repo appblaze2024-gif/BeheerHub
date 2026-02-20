@@ -973,22 +973,26 @@ export default function AnnualPlanningPage() {
                               let background = 'transparent';
                               let backgroundColor = cellColor || 'transparent';
 
-                              if (hasValue && quantity === 0) {
-                                // Totaal 0 ingevuld -> Oranje
-                                backgroundColor = '#fff7ed';
-                              } else if (details) {
-                                // Segmenteer maandag t/m vrijdag (20% per segment)
-                                const workDays = ['ma', 'di', 'wo', 'do', 'vr'];
-                                const segments = workDays.map((day, index) => {
-                                  const val = parseFloat(details[day]?.replace(',', '.') || '0') || 0;
-                                  // Rood voor 0 inzet (geen inzet), Groen voor inzet (>0)
-                                  const color = val > 0 ? '#4caf5044' : '#ef444444';
-                                  return `${color} ${index * 20}%, ${color} ${(index + 1) * 20}%`;
-                                });
-                                background = `linear-gradient(90deg, ${segments.join(', ')})`;
-                              } else if (quantity > 0) {
-                                // Standaard groene progressiebalk bij handmatige invoer
-                                background = `linear-gradient(90deg, #4caf5044 ${progress}%, transparent ${progress}%)`;
+                              if (hasValue) {
+                                if (details) {
+                                  // Segmenteer maandag t/m vrijdag (20% per segment)
+                                  const workDays = ['ma', 'di', 'wo', 'do', 'vr'];
+                                  const segments = workDays.map((day, index) => {
+                                    const val = parseFloat(details[day]?.replace(',', '.') || '0') || 0;
+                                    // Groen als weektotaal >= 100%. Oranje voor gewerkte dag bij < 100%. Rood voor 0u.
+                                    const segmentColor = progress >= 100 ? '#4caf5044' : (val > 0 ? '#f9731644' : '#ef444444');
+                                    return `${segmentColor} ${index * 20}%, ${segmentColor} ${(index + 1) * 20}%`;
+                                  });
+                                  background = `linear-gradient(90deg, ${segments.join(', ')})`;
+                                } else {
+                                  // Handmatige invoer zonder details
+                                  if (progress >= 100) {
+                                    backgroundColor = '#4caf5044'; // Geheel groen bij 100%
+                                  } else {
+                                    // Progressie in oranje, rest in rood
+                                    background = `linear-gradient(90deg, #f9731644 ${progress}%, #ef444444 ${progress}%)`;
+                                  }
+                                }
                               }
                               
                               const cellStyle: React.CSSProperties = {
@@ -1148,15 +1152,15 @@ export default function AnnualPlanningPage() {
               </div>
               <div className="flex items-center gap-2">
                 <div className="h-3 w-3 bg-green-500/30 border border-green-500/20 rounded-sm" />
-                <span>Groen = Wel inzet op die dag</span>
+                <span>Groen = Volledig gepland (100%)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 bg-orange-500/30 border border-orange-500/20 rounded-sm" />
+                <span>Oranje = Gedeeltelijk gepland</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="h-3 w-3 bg-red-500/30 border border-red-500/20 rounded-sm" />
-                <span>Rood = Geen inzet op die dag (0u)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 bg-orange-50 border border-orange-200 rounded-sm" />
-                <span>Oranje = Totaal week op 0</span>
+                <span>Rood = Geen inzet / Leeg deel</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="h-3 w-3 ring-1 ring-black rounded-sm" />
@@ -1174,7 +1178,7 @@ export default function AnnualPlanningPage() {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Weekplanning Detail (Week {activeWeekDetailCell?.week})</DialogTitle>
-              <DialogDescription>Voer de aantallen/uren in per dag van de week. 0 wordt rood getoond.</DialogDescription>
+              <DialogDescription>Voer de aantallen/uren in per dag van de week. Een dag met 0 wordt rood gemarkeerd.</DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-1 gap-4 py-4">
               {DAYS.map(day => (
