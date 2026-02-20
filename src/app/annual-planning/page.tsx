@@ -794,7 +794,7 @@ export default function AnnualPlanningPage() {
                   <table className="w-full border-collapse text-[10px] font-bold">
                     <thead>
                       <tr className="bg-[#4caf50] text-white h-32">
-                        <th className="sticky left-0 z-20 bg-[#4caf50] border-r border-white p-2 text-left align-top whitespace-nowrap w-px">
+                        <th className="sticky left-0 z-20 bg-[#4caf50] border-r border-white p-2 text-left align-top whitespace-nowrap w-[300px] min-w-[300px]">
                           <div className="flex flex-col h-full justify-between">
                             {editingSectionTitleId === section.id ? (
                               <div className="flex items-center gap-1">
@@ -884,7 +884,7 @@ export default function AnnualPlanningPage() {
                       </tr>
 
                       <tr className="bg-[#8e24aa] text-white h-8">
-                        <th className="sticky left-0 z-20 bg-[#8e24aa] border-r border-white p-1 text-left uppercase tracking-tighter whitespace-nowrap w-px">
+                        <th className="sticky left-0 z-20 bg-[#8e24aa] border-r border-white p-1 text-left uppercase tracking-tighter whitespace-nowrap w-[300px] min-w-[300px]">
                           week
                         </th>
                         {WEEKS.map(week => {
@@ -923,12 +923,13 @@ export default function AnnualPlanningPage() {
                         return (
                           <tr key={item.id} className={cn("border-b border-slate-100 group transition-colors")} style={rowStyle}>
                             <td className={cn(
-                              "sticky left-0 z-10 border-r border-slate-200 p-0 whitespace-nowrap w-px shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"
+                              "sticky left-0 z-10 border-r border-slate-200 p-0 whitespace-nowrap w-[300px] min-w-[300px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"
                             )} style={rowStyle}>
                               <div className="flex items-center justify-between h-8 px-1.5 w-full group/row">
                                 <button 
-                                  className="pr-4 text-[11px] font-black uppercase tracking-tight whitespace-nowrap hover:text-primary transition-colors text-left"
+                                  className="pr-4 text-[11px] font-black uppercase tracking-tight whitespace-nowrap hover:text-primary transition-colors text-left truncate flex-1"
                                   onClick={() => { setEditingItem(item); setIsRowDialogOpen(true); }}
+                                  title={item.resourceName}
                                 >
                                   {item.resourceName}
                                 </button>
@@ -1048,7 +1049,7 @@ export default function AnnualPlanningPage() {
                       })}
                       
                       <tr className="bg-slate-50/30 h-8">
-                        <td className="sticky left-0 z-10 border-r border-slate-200 p-1 bg-white h-8 w-px">
+                        <td className="sticky left-0 z-10 border-r border-slate-200 p-1 bg-white h-8 w-[300px] min-w-[300px]">
                           <Button 
                             variant="ghost" 
                             size="sm" 
@@ -1081,7 +1082,7 @@ export default function AnnualPlanningPage() {
 
                     <tfoot className="bg-slate-100 border-t border-slate-300">
                       <tr className="h-10 font-black">
-                        <td className="sticky left-0 z-10 bg-slate-100 border-r border-slate-300 p-2 uppercase tracking-tighter text-[9px] text-slate-500 h-8 w-px whitespace-nowrap">
+                        <td className="sticky left-0 z-10 bg-slate-100 border-r border-slate-300 p-2 uppercase tracking-tighter text-[9px] text-slate-500 h-8 w-[300px] min-w-[300px] whitespace-nowrap">
                           Totaal {section.title}
                         </td>
                         {WEEKS.map(week => {
