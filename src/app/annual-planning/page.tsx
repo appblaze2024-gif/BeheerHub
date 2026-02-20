@@ -4,7 +4,7 @@ import * as React from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, Loader2, Calendar, Pencil, Check, Info, Palette, MessageSquare, X } from 'lucide-react';
+import { Plus, Trash2, Loader2, Calendar, Pencil, Check, Info, Palette, MessageSquare, X, Clock } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking, useDoc, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, where, writeBatch } from 'firebase/firestore';
 import { useProject } from '@/context/project-context';
@@ -55,6 +55,7 @@ interface AnnualPlanningItem {
   category: string;
   year: number;
   weeks: Record<string, string>;
+  weeklyDetails?: Record<string, Record<string, string>>;
   cellColors?: Record<string, string>;
   cellNotes?: Record<string, string>;
   color: string;
@@ -83,6 +84,16 @@ interface AnnualPlanningConfig {
 }
 
 const WEEKS = Array.from({ length: 52 }, (_, i) => i + 1);
+const DAYS = ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'] as const;
+const DAY_LABELS: Record<string, string> = {
+  ma: 'Maandag',
+  di: 'Dinsdag',
+  wo: 'Woensdag',
+  do: 'Donderdag',
+  vr: 'Vrijdag',
+  za: 'Zaterdag',
+  zo: 'Zondag'
+};
 
 const PRESET_COLORS = [
   { name: 'Wit', value: '#ffffff' },
@@ -145,6 +156,13 @@ export default function AnnualPlanningPage() {
   const [isNoteDialogOpen, setIsNoteDialogOpen] = React.useState(false);
   const [noteInput, setNoteInput] = React.useState('');
   const [activeCellForNote, setActiveCellForNote] = React.useState<{ itemId: string, week: number } | null>(null);
+
+  // Weekly details dialog state
+  const [isWeekDetailDialogOpen, setIsWeekDetailDialogOpen] = React.useState(false);
+  const [activeWeekDetailCell, setActiveWeekDetailCell] = React.useState<{ itemId: string, week: number } | null>(null);
+  const [weekDetailValues, setWeekDetailValues] = React.useState<Record<string, string>>({
+    ma: '', di: '', wo: '', do: '', vr: '', za: '', zo: ''
+  });
 
   // Section management
   const [isAddingSection, setIsAddingSection] = React.useState(false);
@@ -402,6 +420,31 @@ export default function AnnualPlanningPage() {
     });
   };
 
+  const handleWeekDetailOpen = (itemId: string, week: number) => {
+    const item = itemsRaw?.find(i => i.id === itemId);
+    const details = item?.weeklyDetails?.[week.toString()] || { ma: '', di: '', wo: '', do: '', vr: '', za: '', zo: '' };
+    setWeekDetailValues(details);
+    setActiveWeekDetailCell({ itemId, week });
+    setIsWeekDetailDialogOpen(true);
+  };
+
+  const handleSaveWeekDetails = () => {
+    if (!firestore || !activeWeekDetailCell) return;
+    const { itemId, week } = activeWeekDetailCell;
+    const itemRef = doc(firestore, 'annual_planning', itemId);
+    
+    const total = Object.values(weekDetailValues).reduce((acc, val) => acc + (parseFloat(val.replace(',', '.')) || 0), 0);
+    
+    const updates: Record<string, any> = {
+      [`weeklyDetails.${week}`]: weekDetailValues,
+      [`weeks.${week}`]: total.toString()
+    };
+
+    updateDocumentNonBlocking(itemRef, updates);
+    setIsWeekDetailDialogOpen(false);
+    toast({ title: 'Weekoverzicht opgeslagen' });
+  };
+
   const handleHeaderColorChange = async (sectionId: string, week: number, color: string) => {
     if (!firestore || !selectedProjectId) return;
     
@@ -504,7 +547,8 @@ export default function AnnualPlanningPage() {
             order: insertAtOrder,
             weeks: {},
             cellColors: {},
-            cellNotes: {}
+            cellNotes: {},
+            weeklyDetails: {}
           });
           
           await batch.commit();
@@ -522,7 +566,8 @@ export default function AnnualPlanningPage() {
             order: (itemsRaw?.filter(i => i.sectionId === activeSectionForNewRow || (activeSectionForNewRow === 'default' && !i.sectionId)).length || 0) + 1,
             weeks: {},
             cellColors: {},
-            cellNotes: {}
+            cellNotes: {},
+            weeklyDetails: {}
           });
           toast({ title: 'Rij toegevoegd' });
         }
@@ -918,8 +963,20 @@ export default function AnnualPlanningPage() {
                               const cellNote = item.cellNotes?.[week.toString()];
                               const isSelected = selectedCells.has(`${item.id}_${week}`);
                               const m = sectionMilestoneMap[week];
+                              const details = item.weeklyDetails?.[week.toString()];
                               
-                              const cellStyle: React.CSSProperties = cellColor ? { backgroundColor: cellColor } : {};
+                              // Check if ma-vr are filled if details exist
+                              const isIncomplete = details && ['ma', 'di', 'wo', 'do', 'vr'].some(d => !details[d] || details[d].trim() === '');
+                              
+                              const quantity = parseFloat((item.weeks?.[week.toString()] || '0').replace(',', '.')) || 0;
+                              // Progress fill based on 40 hours or 5 days
+                              const target = item.unit === 'dag' ? 5 : 40;
+                              const progress = Math.min((quantity / target) * 100, 100);
+                              
+                              const cellStyle: React.CSSProperties = {
+                                backgroundColor: cellColor || 'transparent',
+                                background: `linear-gradient(90deg, #4caf5022 ${progress}%, transparent ${progress}%)`
+                              };
                               
                               return (
                                 <td 
@@ -927,10 +984,12 @@ export default function AnnualPlanningPage() {
                                   onMouseDown={(e) => handleCellMouseDown(item.id, week, e)}
                                   onMouseEnter={() => handleCellMouseEnter(item.id, week)}
                                   onContextMenu={(e) => handleCellContextMenu(e, item.id, week)}
+                                  onDoubleClick={() => handleWeekDetailOpen(item.id, week)}
                                   className={cn(
                                     "border-r border-slate-100 p-0 text-center h-8 w-6 min-w-[24px] transition-all relative",
                                     isSelected && "bg-primary/20 scale-[1.02] z-10",
                                     cellNote && "ring-1 ring-inset ring-black shadow-[inset_0_0_0_1px_black]",
+                                    isIncomplete && "bg-red-50",
                                     m?.borderLeft && "border-l-[3px] border-l-red-600 z-30",
                                     m?.borderRight && "border-r-[3px] border-r-red-600 z-30"
                                   )}
@@ -938,17 +997,35 @@ export default function AnnualPlanningPage() {
                                 >
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <input
-                                        type="text"
-                                        defaultValue={item.weeks?.[week.toString()] || ''}
-                                        onBlur={(e) => handleCellChange(item.id, week, e.target.value)}
-                                        onPaste={(e) => handlePaste(item.id, week, e)}
-                                        className="w-full h-full bg-transparent text-center focus:bg-white/50 focus:outline-none focus:ring-inset focus:ring-1 focus:ring-primary tabular-nums"
-                                      />
+                                      <div className="w-full h-full relative">
+                                        <input
+                                          type="text"
+                                          value={item.weeks?.[week.toString()] || ''}
+                                          onChange={(e) => handleCellChange(item.id, week, e.target.value)}
+                                          onPaste={(e) => handlePaste(item.id, week, e)}
+                                          className="w-full h-full bg-transparent text-center focus:bg-white/50 focus:outline-none focus:ring-inset focus:ring-1 focus:ring-primary tabular-nums text-[9px]"
+                                        />
+                                        {progress > 0 && (
+                                          <div 
+                                            className="absolute bottom-0 left-0 h-0.5 bg-green-500 transition-all" 
+                                            style={{ width: `${progress}%` }} 
+                                          />
+                                        )}
+                                      </div>
                                     </TooltipTrigger>
-                                    {cellNote && (
-                                      <TooltipContent className="bg-black text-white font-bold text-xs p-2">
-                                        {cellNote}
+                                    {(cellNote || details) && (
+                                      <TooltipContent className="bg-black text-white font-bold text-[10px] p-2 max-w-[200px] space-y-1">
+                                        {cellNote && <div>Opmerking: {cellNote}</div>}
+                                        {details && (
+                                          <div className="grid grid-cols-4 gap-x-2 gap-y-0.5">
+                                            {Object.entries(details).map(([day, val]) => val ? (
+                                              <React.Fragment key={day}>
+                                                <span className="uppercase opacity-60">{day}:</span>
+                                                <span className="text-right">{val}</span>
+                                              </React.Fragment>
+                                            ) : null)}
+                                          </div>
+                                        )}
                                       </TooltipContent>
                                     )}
                                   </Tooltip>
@@ -1059,8 +1136,12 @@ export default function AnnualPlanningPage() {
                 <span>Rode lijn = Scheiding</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="h-3 w-3 bg-slate-200 border border-slate-300 rounded-sm" />
-                <span>Compacte cellen (24px breed)</span>
+                <div className="h-3 w-3 bg-green-500 rounded-sm" />
+                <span>Groene vulling = Ingepland</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 bg-red-50 border border-red-200 rounded-sm" />
+                <span>Rode cel = Dag(en) leeg</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="h-3 w-3 ring-1 ring-black rounded-sm" />
@@ -1068,11 +1149,45 @@ export default function AnnualPlanningPage() {
               </div>
               <div className="flex items-center gap-2">
                 <Info className="h-3 w-3" />
-                <span>Slepen om meerdere cellen te selecteren. Rechtsklik op header voor rode lijn of kleur.</span>
+                <span>Dubbelklik op een cel voor dagelijkse uren.</span>
               </div>
             </div>
           </div>
         </div>
+
+        <Dialog open={isWeekDetailDialogOpen} onOpenChange={setIsWeekDetailDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Weekplanning Detail (Week {activeWeekDetailCell?.week})</DialogTitle>
+              <DialogDescription>Voer de aantallen/uren in per dag van de week.</DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-1 gap-4 py-4">
+              {DAYS.map(day => (
+                <div key={day} className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor={`day-${day}`} className="text-right font-bold uppercase text-[10px] tracking-widest">{DAY_LABELS[day]}</Label>
+                  <Input 
+                    id={`day-${day}`} 
+                    value={weekDetailValues[day]} 
+                    onChange={(e) => setWeekDetailValues(prev => ({ ...prev, [day]: e.target.value }))}
+                    className="col-span-3 h-9 font-bold"
+                    placeholder="0"
+                  />
+                </div>
+              ))}
+              <Separator className="my-2" />
+              <div className="grid grid-cols-4 items-center gap-4">
+                <span className="text-right font-black uppercase text-[10px] tracking-widest text-primary">Totaal</span>
+                <span className="col-span-3 pl-3 font-black text-lg">
+                  {Object.values(weekDetailValues).reduce((acc, val) => acc + (parseFloat(val.replace(',', '.')) || 0), 0)}
+                </span>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setIsWeekDetailDialogOpen(false)}>Annuleren</Button>
+              <Button onClick={handleSaveWeekDetails} className="font-black uppercase tracking-tight">Opslaan</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <Dialog open={isRowDialogOpen} onOpenChange={(open) => { setIsRowDialogOpen(open); if(!open) { setEditingItem(null); setInsertAtOrder(null); } }}>
           <DialogContent>
@@ -1262,6 +1377,19 @@ export default function AnnualPlanningPage() {
             >
               <MessageSquare className="h-3.5 w-3.5 text-primary" />
               Opmerking toevoegen
+            </Button>
+
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="w-full justify-start h-8 text-[10px] font-bold gap-2 px-2 hover:bg-slate-100"
+              onClick={() => {
+                handleWeekDetailOpen(cellContextMenu.itemId, cellContextMenu.week);
+                setCellContextMenu(null);
+              }}
+            >
+              <Clock className="h-3.5 w-3.5 text-primary" />
+              Dagelijkse uren
             </Button>
 
             <Button 
