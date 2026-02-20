@@ -348,7 +348,7 @@ export default function AnnualPlanningPage() {
       });
 
       batch.commit().then(() => {
-        toast({ title: `Gekopieerd in ${selectedCells.size} cellen` });
+        toast({ title: `Geplakt in ${selectedCells.size} cellen` });
       }).catch(e => console.error("Bulk paste error:", e));
     }
   };
@@ -1011,6 +1011,7 @@ export default function AnnualPlanningPage() {
                                           value={cellValueStr}
                                           onChange={(e) => handleCellChange(item.id, week, e.target.value)}
                                           onPaste={(e) => handlePaste(item.id, week, e)}
+                                          onFocus={(e) => e.target.select()}
                                           className={cn(
                                             "w-full h-full bg-transparent text-center focus:bg-white/50 focus:outline-none focus:ring-inset focus:ring-1 focus:ring-primary tabular-nums text-[9px] text-slate-900",
                                             isDragging ? "pointer-events-none" : "pointer-events-auto"
