@@ -302,27 +302,23 @@ export default function AnnualPlanningPage() {
     }
   };
 
-  const handleRowSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleRowSubmit = async (data: { name: string, color: string }) => {
     if (!selectedProjectId || !firestore) return;
-    const formData = new FormData(e.currentTarget);
-    const name = formData.get('name') as string;
-    const color = formData.get('color') as string;
 
     setIsAddingRow(true);
     try {
       if (editingItem) {
         updateDocumentNonBlocking(doc(firestore, 'annual_planning', editingItem.id), {
-          resourceName: name,
-          color: color
+          resourceName: data.name,
+          color: data.color
         });
         toast({ title: 'Regel bijgewerkt' });
       } else if (activeSectionForNewRow) {
         addDocumentNonBlocking(collection(firestore, 'annual_planning'), {
           projectId: selectedProjectId,
           sectionId: activeSectionForNewRow,
-          resourceName: name,
-          color: color,
+          resourceName: data.name,
+          color: data.color,
           year: selectedYear,
           order: (itemsRaw?.filter(i => i.sectionId === activeSectionForNewRow).length || 0) + 1,
           weeks: {},
@@ -730,7 +726,14 @@ export default function AnnualPlanningPage() {
 
       <Dialog open={isRowDialogOpen} onOpenChange={setIsRowDialogOpen}>
         <DialogContent>
-          <form onSubmit={handleRowSubmit}>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            handleRowSubmit({
+              name: formData.get('name') as string,
+              color: formData.get('color') as string
+            });
+          }}>
             <DialogHeader>
               <DialogTitle>{editingItem ? 'Regel Bewerken' : 'Nieuwe Inzet Toevoegen'}</DialogTitle>
               <DialogDescription>
@@ -819,6 +822,7 @@ export default function AnnualPlanningPage() {
         <div 
           className="fixed z-[100] bg-white rounded-lg shadow-2xl border border-slate-200 p-2 min-w-[120px] animate-in fade-in zoom-in duration-100"
           style={{ left: cellContextMenu.x, top: cellContextMenu.y }}
+          onClick={(e) => e.stopPropagation()}
         >
           <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Kleur markering</p>
           <div className="grid grid-cols-4 gap-1">
@@ -831,6 +835,14 @@ export default function AnnualPlanningPage() {
                 title={c.name}
               />
             ))}
+            <div className="relative h-6 w-6 rounded-md border border-slate-200 overflow-hidden shadow-sm group">
+                <input 
+                    type="color" 
+                    className="absolute inset-0 w-[200%] h-[200%] -translate-x-1/4 -translate-y-1/4 cursor-pointer"
+                    onChange={(e) => handleCellColorChange(cellContextMenu.itemId, cellContextMenu.week, e.target.value)}
+                />
+                <Palette className="absolute inset-0 m-auto h-3 w-3 pointer-events-none mix-blend-difference text-white opacity-50" />
+            </div>
           </div>
           <Button 
             variant="ghost" 
@@ -847,6 +859,7 @@ export default function AnnualPlanningPage() {
         <div 
           className="fixed z-[100] bg-white rounded-lg shadow-2xl border border-slate-200 p-2 min-w-[120px] animate-in fade-in zoom-in duration-100"
           style={{ left: headerContextMenu.x, top: headerContextMenu.y }}
+          onClick={(e) => e.stopPropagation()}
         >
           <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Header kleur</p>
           <div className="grid grid-cols-4 gap-1">
@@ -859,6 +872,14 @@ export default function AnnualPlanningPage() {
                 title={c.name}
               />
             ))}
+            <div className="relative h-6 w-6 rounded-md border border-slate-200 overflow-hidden shadow-sm group">
+                <input 
+                    type="color" 
+                    className="absolute inset-0 w-[200%] h-[200%] -translate-x-1/4 -translate-y-1/4 cursor-pointer"
+                    onChange={(e) => handleHeaderColorChange(headerContextMenu.sectionId, headerContextMenu.week, e.target.value)}
+                />
+                <Palette className="absolute inset-0 m-auto h-3 w-3 pointer-events-none mix-blend-difference text-white opacity-50" />
+            </div>
           </div>
           <Button 
             variant="ghost" 
