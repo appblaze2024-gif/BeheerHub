@@ -7,11 +7,22 @@ html, body, #__next__ {
   max-height: 100svh;
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
+  /* Voorkomt pull-to-refresh en bounce-effecten op mobiel */
+  overscroll-behavior-y: none;
 }
 
 body {
   font-family: 'PT Sans', sans-serif;
   touch-action: manipulation;
+  /* Voorkomt ongewenste tekstselectie voor een app-gevoel */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Sta selectie toe in invoervelden */
+input, textarea {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 @layer base {

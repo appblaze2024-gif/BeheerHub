@@ -192,8 +192,11 @@ function NavigatingView({
     return limit;
   }, [currentLeg, distanceRemainingToDestination]);
 
+  // Optimalisatie: Alleen animeren als er daadwerkelijk een beweging nodig is
   React.useEffect(() => {
     let lastTime = performance.now();
+    let lastSetLat = 0;
+    let lastSetLng = 0;
     
     const animateSmoothly = (time: number) => {
         const deltaTime = (time - lastTime) / 1000;
@@ -201,6 +204,10 @@ function NavigatingView({
 
         setSmoothLocation(prevSmooth => {
             if (!targetLocation || !prevSmooth || isPaused) return prevSmooth;
+
+            // Alleen updaten bij relevante verplaatsing om CPU te sparen
+            const dist = Math.sqrt(Math.pow(targetLocation.latitude - prevSmooth.latitude, 2) + Math.pow(targetLocation.longitude - prevSmooth.longitude, 2));
+            if (dist < 0.000001 && !isSimulating) return prevSmooth;
 
             const lerpFactor = isSimulating ? 1 : 0.15; 
             
@@ -220,17 +227,24 @@ function NavigatingView({
             };
 
             if (isFollowing && !arrivedObject) {
-                const currentSpeedKmh = (targetLocation.speed || 0) * 3.6;
-                const targetZoom = Math.max(15, 18.5 - (Math.min(currentSpeedKmh, 80) / 30));
-                
-                setViewState(prevView => ({
-                    ...prevView,
-                    latitude: newLat,
-                    longitude: newLng,
-                    bearing: newHeading,
-                    zoom: prevView.zoom + (targetZoom - prevView.zoom) * 0.05,
-                    pitch: 65,
-                }));
+                // Optimalisatie: Alleen Mapbox state updaten bij voldoende verandering
+                const changeThreshold = 0.000005;
+                if (Math.abs(newLat - lastSetLat) > changeThreshold || Math.abs(newLng - lastSetLng) > changeThreshold) {
+                    lastSetLat = newLat;
+                    lastSetLng = newLng;
+                    
+                    const currentSpeedKmh = (targetLocation.speed || 0) * 3.6;
+                    const targetZoom = Math.max(15, 18.5 - (Math.min(currentSpeedKmh, 80) / 30));
+                    
+                    setViewState(prevView => ({
+                        ...prevView,
+                        latitude: newLat,
+                        longitude: newLng,
+                        bearing: newHeading,
+                        zoom: prevView.zoom + (targetZoom - prevView.zoom) * 0.05,
+                        pitch: 65,
+                    }));
+                }
             }
 
             return newSmooth;
@@ -279,6 +293,7 @@ function NavigatingView({
       const remaining = turf.length(sliced, { units: 'meters' });
       
       const roundedRemaining = Math.round(remaining);
+      // Optimalisatie: Alleen updaten bij significante afstandswijziging
       if (Math.abs(lastUpdateDistRef.current - roundedRemaining) >= 1) {
           setDistanceRemainingToDestination(roundedRemaining);
           lastUpdateDistRef.current = roundedRemaining;
@@ -342,34 +357,39 @@ function NavigatingView({
     return null;
   }, [currentLeg, distanceRemainingToDestination]);
 
+  // Throttled Geometry updates om CPU te sparen
   React.useEffect(() => {
     if (!currentRouteGeometry || isCalculatingRoute || !snappedLocation) {
         setThrottledGeometry(null);
         return;
     }
 
-    try {
-        const coords = currentRouteGeometry.coordinates;
-        if (!Array.isArray(coords) || coords.length < 2) return;
-        
-        const line = turf.lineString(coords);
-        const startPoint = turf.point([snappedLocation.longitude, snappedLocation.latitude]);
-        const endPoint = turf.point(coords[coords.length - 1]);
-        
-        const sliced = turf.lineSlice(startPoint, endPoint, line);
-        
-        setThrottledGeometry({
-            type: 'Feature' as const,
-            properties: {},
-            geometry: sliced.geometry
-        });
-    } catch (e) {
-        setThrottledGeometry({
-            type: 'Feature' as const,
-            properties: {},
-            geometry: currentRouteGeometry
-        });
-    }
+    const timer = setTimeout(() => {
+        try {
+            const coords = currentRouteGeometry.coordinates;
+            if (!Array.isArray(coords) || coords.length < 2) return;
+            
+            const line = turf.lineString(coords);
+            const startPoint = turf.point([snappedLocation.longitude, snappedLocation.latitude]);
+            const endPoint = turf.point(coords[coords.length - 1]);
+            
+            const sliced = turf.lineSlice(startPoint, endPoint, line);
+            
+            setThrottledGeometry({
+                type: 'Feature' as const,
+                properties: {},
+                geometry: sliced.geometry
+            });
+        } catch (e) {
+            setThrottledGeometry({
+                type: 'Feature' as const,
+                properties: {},
+                geometry: currentRouteGeometry
+            });
+        }
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, [currentRouteGeometry, isCalculatingRoute, snappedLocation?.longitude, snappedLocation?.latitude]);
 
   React.useEffect(() => {
