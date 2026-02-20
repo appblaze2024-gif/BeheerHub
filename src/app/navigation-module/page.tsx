@@ -35,7 +35,8 @@ import {
   SignalLow,
   Navigation,
   AlertTriangle,
-  RotateCcw
+  RotateCcw,
+  Flag
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -810,6 +811,8 @@ export default function StartNavigationPage() {
   const [isSimulationMode, setIsSimulationMode] = React.useState(false);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = React.useState(false);
   
+  const [urlMeldingLocatie, setUrlMeldingLocatie] = React.useState<{ latitude: number; longitude: number; straat?: string } | null>(null);
+  
   const mapRef = React.useRef<MapRef>(null);
 
   React.useEffect(() => {
@@ -842,24 +845,21 @@ export default function StartNavigationPage() {
   React.useEffect(() => {
     const lat = searchParams.get('lat');
     const lng = searchParams.get('lng');
+    const straat = searchParams.get('straat');
     const projectIdFromUrl = searchParams.get('projectId');
     
     if (projectIdFromUrl && selectedProjectId !== projectIdFromUrl) {
         setSelectedProjectId(projectIdFromUrl);
     }
 
-    if (lat && lng && navigationState !== 'navigating' && userLocation) {
-      const meldingObject: MapObject = { 
-          id: `Bestemming`, 
+    if (lat && lng) {
+      setUrlMeldingLocatie({ 
           latitude: parseFloat(lat), 
           longitude: parseFloat(lng),
-          name: searchParams.get('straat') || 'Bestemming'
-      };
-      setObjectsOnRoute([meldingObject]);
-      setTripStartLocation(userLocation);
-      setNavigationState('navigating');
+          straat: straat || 'Melding'
+      });
     }
-  }, [searchParams, selectedProjectId, setSelectedProjectId, navigationState, userLocation]);
+  }, [searchParams, selectedProjectId, setSelectedProjectId]);
 
   const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
   const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
@@ -898,11 +898,12 @@ export default function StartNavigationPage() {
 
   React.useEffect(() => {
       const map = mapRef.current?.getMap();
-      if (!map || !selectedRouteDef) return;
+      if (!map) return;
       const fit = () => {
           let features: any[] = [];
           if (routeGeoJSONFeatures?.features) features = [...features, ...routeGeoJSONFeatures.features];
           if (objectsOnMap && objectsOnMap.length > 0) features = [...features, ...objectsOnMap.map(obj => turf.point([obj.longitude, obj.latitude]))];
+          if (urlMeldingLocatie) features.push(turf.point([urlMeldingLocatie.longitude, urlMeldingLocatie.latitude]));
           if (selectedRouteDef && 'startLatitude' in selectedRouteDef && (selectedRouteDef as any).startLatitude && (selectedRouteDef as any).startLongitude) {
               features.push(turf.point([(selectedRouteDef as any).startLongitude, (selectedRouteDef as any).startLatitude]));
           }
@@ -916,7 +917,7 @@ export default function StartNavigationPage() {
       };
       if (map.isStyleLoaded()) fit();
       else map.once('style.load', fit);
-  }, [selectedRouteId, routeGeoJSONFeatures, objectsOnMap, selectedRouteDef]);
+  }, [selectedRouteId, routeGeoJSONFeatures, objectsOnMap, selectedRouteDef, urlMeldingLocatie]);
 
   const handleStartRoute = async (simulate = false) => {
     setIsSimulationMode(simulate);
@@ -928,39 +929,45 @@ export default function StartNavigationPage() {
     else if (!startLoc && predefinedStart) startLoc = predefinedStart;
     else if (simulate && !startLoc && objectsOnMap && objectsOnMap.length > 0) startLoc = { latitude: objectsOnMap[0].latitude, longitude: objectsOnMap[0].longitude };
     
-    if (!startLoc && !simulate) { toast({ title: "Locatie vereist", description: "GPS vereist voor Live Rit.", variant: "destructive" }); return; }
-    if (!selectedProjectId || !selectedRouteDef || !objectsOnMap || !user) return;
+    if (!startLoc && !simulate) { 
+        toast({ title: "Locatie vereist", description: "GPS vereist voor Live Rit. Klik op de kaart voor een handmatige start.", variant: "destructive" }); 
+        return; 
+    }
+    if (!selectedProjectId || (!selectedRouteDef && !urlMeldingLocatie) || !user) return;
     
     setIsStarting(true);
-    if (objectsOnMap.length === 0) { toast({ title: "Geen objecten", description: "Deze route is leeg." }); setIsStarting(false); return; }
     
-    const startCoords = startLoc || { latitude: objectsOnMap[0].latitude, longitude: objectsOnMap[0].longitude };
-
-    const unvisited = [...objectsOnMap];
-    const sortedObjects: MapObject[] = [];
-    let currentPos = startCoords;
-    while (unvisited.length > 0) {
-      let nearestIdx = 0; let minD = Infinity;
-      unvisited.forEach((u, i) => {
-        const d = turf.distance(turf.point([currentPos.longitude, currentPos.latitude]), turf.point([u.longitude, u.latitude]));
-        if (d < minD) { minD = d; nearestIdx = i; }
-      });
-      const next = unvisited.splice(nearestIdx, 1)[0];
-      sortedObjects.push(next);
-      currentPos = { latitude: next.latitude, longitude: next.longitude };
+    let sortedObjects: MapObject[] = [];
+    if (selectedRouteDef && objectsOnMap) {
+        if (objectsOnMap.length === 0) { toast({ title: "Geen objecten", description: "Deze route is leeg." }); setIsStarting(false); return; }
+        const startCoords = startLoc || { latitude: objectsOnMap[0].latitude, longitude: objectsOnMap[0].longitude };
+        const unvisited = [...objectsOnMap];
+        let currentPos = startCoords;
+        while (unvisited.length > 0) {
+          let nearestIdx = 0; let minD = Infinity;
+          unvisited.forEach((u, i) => {
+            const d = turf.distance(turf.point([currentPos.longitude, currentPos.latitude]), turf.point([u.longitude, u.latitude]));
+            if (d < minD) { minD = d; nearestIdx = i; }
+          });
+          const next = unvisited.splice(nearestIdx, 1)[0];
+          sortedObjects.push(next);
+          currentPos = { latitude: next.latitude, longitude: next.longitude };
+        }
+        setTripStartLocation(startCoords);
+    } else if (urlMeldingLocatie) {
+        sortedObjects = [{
+            id: 'Bestemming',
+            latitude: urlMeldingLocatie.latitude,
+            longitude: urlMeldingLocatie.longitude,
+            name: urlMeldingLocatie.straat || 'Melding Bestemming'
+        }];
+        setTripStartLocation(startLoc || { latitude: urlMeldingLocatie.latitude - 0.005, longitude: urlMeldingLocatie.longitude });
     }
     
     setObjectsOnRoute(sortedObjects);
-    setTripStartLocation(startCoords);
     setNavigationState('navigating');
     setIsStarting(false);
   };
-
-  const isNavigatingByUrl = searchParams.has('lat') && searchParams.has('lng');
-
-  if (isNavigatingByUrl && !userLocation && navigationState !== 'navigating') {
-      return <LoadingScreen message="Wachten op GPS signaal..." />;
-  }
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
@@ -976,8 +983,20 @@ export default function StartNavigationPage() {
                   <div className="relative h-8 w-8 rounded-full bg-green-600 border-4 border-white shadow-xl flex items-center justify-center">
                       <MapPin className="h-4 w-4 text-white fill-current" />
                   </div>
+                  <div className="mt-1 bg-green-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow uppercase">Startpunt</div>
                 </div>
               </Marker>
+            )}
+            {urlMeldingLocatie && (
+                <Marker longitude={urlMeldingLocatie.longitude} latitude={urlMeldingLocatie.latitude} anchor="center">
+                    <div className="relative flex flex-col items-center">
+                        <div className="absolute h-12 w-12 rounded-full bg-blue-500/20 animate-pulse" />
+                        <div className="relative h-10 w-10 rounded-full bg-blue-600 border-4 border-white shadow-2xl flex items-center justify-center">
+                            <Flag className="h-5 w-5 text-white fill-current" />
+                        </div>
+                        <div className="mt-1 bg-blue-600 text-white text-[9px] font-black px-2 py-0.5 rounded shadow-lg uppercase tracking-tighter">Vlag Bestemming</div>
+                    </div>
+                </Marker>
             )}
             {selectedRouteDef && 'startLatitude' in selectedRouteDef && (selectedRouteDef as any).startLatitude && (selectedRouteDef as any).startLongitude && (
                 <Marker longitude={(selectedRouteDef as any).startLongitude} latitude={(selectedRouteDef as any).startLatitude} anchor="center">
@@ -986,7 +1005,7 @@ export default function StartNavigationPage() {
                         <div className="relative h-10 w-10 rounded-full bg-blue-600 border-4 border-white shadow-2xl flex items-center justify-center">
                             <Home className="h-5 w-5 text-white fill-current" />
                         </div>
-                        <div className="mt-1 bg-blue-600 text-white text-[10px] font-black px-2 py-0.5 rounded shadow-lg uppercase tracking-tighter">Startpunt</div>
+                        <div className="mt-1 bg-blue-600 text-white text-[10px] font-black px-2 py-0.5 rounded shadow-lg uppercase tracking-tighter">Depot</div>
                     </div>
                 </Marker>
             )}
@@ -1017,28 +1036,45 @@ export default function StartNavigationPage() {
                   <SelectContent>{projects?.map(p => <SelectItem key={p.id} value={p.id!}>{p.projectnaam}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1">
-                <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Type Inzet</Label>
-                <div className="grid grid-cols-2 gap-1.5">
-                  <Button variant={routeType === 'veeg' ? 'default' : 'outline'} onClick={() => setRouteType('veeg')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[10px]", routeType === 'veeg' ? "bg-blue-600 border-blue-600 shadow-md text-white" : "border-slate-200")}>Veegwagen</Button>
-                  <Button variant={routeType === 'prullenbak' ? 'default' : 'outline'} onClick={() => setRouteType('prullenbak')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[10px]", routeType === 'prullenbak' ? "bg-blue-600 border-blue-600 shadow-md text-white" : "border-slate-200")}>Prullenbakken</Button>
-                </div>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Route Keuze</Label>
-                <Select onValueChange={setSelectedRouteId} value={selectedRouteId} disabled={!routeType}>
-                    <SelectTrigger className="h-8 border font-bold text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="--nieuwe-route--">-- Kies een route --</SelectItem>
-                        {availableRoutes.map((r: any) => (
-                            <SelectItem key={r.id} value={r.id}>{r.naam}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-              </div>
+              
+              {!urlMeldingLocatie && (
+                <>
+                  <div className="space-y-1">
+                    <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Type Inzet</Label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <Button variant={routeType === 'veeg' ? 'default' : 'outline'} onClick={() => setRouteType('veeg')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[10px]", routeType === 'veeg' ? "bg-blue-600 border-blue-600 shadow-md text-white" : "border-slate-200")}>Veegwagen</Button>
+                      <Button variant={routeType === 'prullenbak' ? 'default' : 'outline'} onClick={() => setRouteType('prullenbak')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[10px]", routeType === 'prullenbak' ? "bg-blue-600 border-blue-600 shadow-md text-white" : "border-slate-200")}>Prullenbakken</Button>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Route Keuze</Label>
+                    <Select onValueChange={setSelectedRouteId} value={selectedRouteId} disabled={!routeType}>
+                        <SelectTrigger className="h-8 border font-bold text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="--nieuwe-route--">-- Kies een route --</SelectItem>
+                            {availableRoutes.map((r: any) => (
+                                <SelectItem key={r.id} value={r.id}>{r.naam}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
+
+              {urlMeldingLocatie && (
+                <Alert className="bg-blue-50 border-blue-200 py-2">
+                    <Navigation className="h-3 w-3 text-blue-600" />
+                    <AlertTitle className="text-[10px] font-black uppercase text-blue-700">Bestemming geladen</AlertTitle>
+                    <AlertDescription className="text-[9px] font-bold text-blue-600 truncate">
+                        {urlMeldingLocatie.straat}
+                    </AlertDescription>
+                </Alert>
+              )}
+
               <div className="flex flex-col gap-1.5 pt-1">
-                <Button className="w-full h-9 text-xs font-black bg-blue-600 hover:bg-blue-700 shadow-lg rounded-lg uppercase tracking-tighter flex items-center justify-center text-white" onClick={() => handleStartRoute(false)} disabled={!selectedRouteId || selectedRouteId === '--nieuwe-route--' || isStarting}>
-                    {isStarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4 fill-current" />} START LIVE RIT
+                <Button className="w-full h-9 text-xs font-black bg-blue-600 hover:bg-blue-700 shadow-lg rounded-lg uppercase tracking-tighter flex items-center justify-center text-white" onClick={() => handleStartRoute(false)} disabled={(urlMeldingLocatie ? false : (selectedRouteId === '--nieuwe-route--')) || isStarting}>
+                    {isStarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4 fill-current" />} 
+                    {urlMeldingLocatie ? 'LAAD ROUTE NAAR MELDING' : 'START LIVE RIT'}
                 </Button>
                 <div className="grid grid-cols-2 gap-1.5">
                     {isPrivileged && (
@@ -1047,12 +1083,13 @@ export default function StartNavigationPage() {
                         </Button>
                     )}
                     {isSuperUser && (
-                        <Button variant="outline" className="h-8 border-dashed border-blue-200 text-blue-600 hover:bg-blue-50/50 font-black uppercase tracking-tighter rounded-lg flex items-center justify-center text-[9px]" onClick={() => handleStartRoute(true)} disabled={!selectedRouteId || selectedRouteId === '--nieuwe-route--' || isStarting}>
+                        <Button variant="outline" className="h-8 border-dashed border-blue-200 text-blue-600 hover:bg-blue-50/50 font-black uppercase tracking-tighter rounded-lg flex items-center justify-center text-[9px]" onClick={() => handleStartRoute(true)} disabled={(urlMeldingLocatie ? false : (selectedRouteId === '--nieuwe-route--')) || isStarting}>
                             <Gauge className="mr-1.5 h-3 w-3" /> SIMULATOR
                         </Button>
                     )}
                 </div>
               </div>
+              <p className="text-[8px] text-slate-400 font-bold uppercase text-center mt-2">Pc-gebruiker: klik op de kaart voor startlocatie.</p>
             </CardContent>
           </Card>
         </div>
