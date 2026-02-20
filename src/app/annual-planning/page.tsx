@@ -968,14 +968,20 @@ export default function AnnualPlanningPage() {
                               const quantity = parseFloat((item.weeks?.[week.toString()] || '0').replace(',', '.')) || 0;
                               const target = item.unit === 'dag' ? 5 : 40;
                               const progress = Math.min((quantity / target) * 100, 100);
+                              const hasValue = item.weeks?.[week.toString()] !== undefined && item.weeks?.[week.toString()] !== '';
                               
                               let background = 'transparent';
-                              if (details) {
+                              let backgroundColor = cellColor || 'transparent';
+
+                              if (hasValue && quantity === 0) {
+                                // Totaal 0 ingevuld -> Oranje
+                                backgroundColor = '#fff7ed';
+                              } else if (details) {
                                 // Segmenteer maandag t/m vrijdag (20% per segment)
                                 const workDays = ['ma', 'di', 'wo', 'do', 'vr'];
                                 const segments = workDays.map((day, index) => {
                                   const val = parseFloat(details[day]?.replace(',', '.') || '0') || 0;
-                                  // Rood voor 0 inzet, Groen voor inzet (>0)
+                                  // Rood voor 0 inzet (geen inzet), Groen voor inzet (>0)
                                   const color = val > 0 ? '#4caf5044' : '#ef444444';
                                   return `${color} ${index * 20}%, ${color} ${(index + 1) * 20}%`;
                                 });
@@ -983,13 +989,10 @@ export default function AnnualPlanningPage() {
                               } else if (quantity > 0) {
                                 // Standaard groene progressiebalk bij handmatige invoer
                                 background = `linear-gradient(90deg, #4caf5044 ${progress}%, transparent ${progress}%)`;
-                              } else if (item.weeks?.[week.toString()] === '0') {
-                                // Specifiek oranje voor nul-uren
-                                background = '#fff7ed'; // bg-orange-50
                               }
                               
                               const cellStyle: React.CSSProperties = {
-                                backgroundColor: cellColor || (quantity === 0 && item.weeks?.[week.toString()] ? '#fff7ed' : 'transparent'),
+                                backgroundColor: backgroundColor,
                                 background: background
                               };
                               
@@ -1145,15 +1148,15 @@ export default function AnnualPlanningPage() {
               </div>
               <div className="flex items-center gap-2">
                 <div className="h-3 w-3 bg-green-500/30 border border-green-500/20 rounded-sm" />
-                <span>Groen = Inzet op dagniveau</span>
+                <span>Groen = Wel inzet op die dag</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="h-3 w-3 bg-red-500/30 border border-red-500/20 rounded-sm" />
-                <span>Rood = Geen inzet op dagniveau (0u)</span>
+                <span>Rood = Geen inzet op die dag (0u)</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="h-3 w-3 bg-orange-50 border border-orange-200 rounded-sm" />
-                <span>Oranje = Weektotaal 0</span>
+                <span>Oranje = Totaal week op 0</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="h-3 w-3 ring-1 ring-black rounded-sm" />
@@ -1171,7 +1174,7 @@ export default function AnnualPlanningPage() {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Weekplanning Detail (Week {activeWeekDetailCell?.week})</DialogTitle>
-              <DialogDescription>Voer de aantallen/uren in per dag van de week. 0 of leeg wordt rood getoond.</DialogDescription>
+              <DialogDescription>Voer de aantallen/uren in per dag van de week. 0 wordt rood getoond.</DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-1 gap-4 py-4">
               {DAYS.map(day => (
