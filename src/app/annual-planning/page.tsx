@@ -33,7 +33,7 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/Tooltip";
+} from "@/components/ui/tooltip";
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LoadingScreen } from '@/components/loading-screen';
