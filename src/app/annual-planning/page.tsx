@@ -827,8 +827,7 @@ export default function AnnualPlanningPage() {
 
               return (
                 <div key={section.id} className={cn(
-                  "group/section relative bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden transition-opacity duration-300",
-                  section.hidden && "opacity-50 grayscale-[0.5]"
+                  "group/section relative bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden transition-opacity duration-300"
                 )}>
                   <table className="w-full border-collapse text-[10px] font-bold">
                     <thead>
@@ -974,7 +973,7 @@ export default function AnnualPlanningPage() {
                                 >
                                   {item.resourceName}
                                 </button>
-                                <div className="flex items-center opacity-0 group-hover/row:opacity-100 transition-opacity gap-0.5">
+                                <div className="flex items-center gap-0.5 opacity-0 group-hover/row:opacity-100 transition-opacity">
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <Button 
@@ -1322,8 +1321,7 @@ export default function AnnualPlanningPage() {
                   {isSavingMilestone && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Opslaan
                 </Button>
-              </DialogFooter>
-            </form>
+              </form>
           </DialogContent>
         </Dialog>
 
