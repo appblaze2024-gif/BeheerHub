@@ -164,21 +164,18 @@ function NavigatingView({
 
   const nextObject = objectsOnRoute[currentObjectIndex];
 
-  // Dynamische snelheidslimiet berekening
   const currentSpeedLimit = React.useMemo(() => {
     if (!currentLeg?.annotation?.maxspeed) return 50;
     
     const maxspeeds = currentLeg.annotation.maxspeed;
     const totalLegDist = currentLeg.distance;
-    // Bereken hoe ver we zijn op de huidige leg
     const distTravelled = Math.max(0, totalLegDist - distanceRemainingToDestination);
     const ratio = distTravelled / (totalLegDist || 1);
     
-    // Pak de limiet die hoort bij ons huidige segment van de route
     const index = Math.floor(ratio * maxspeeds.length);
     const speedVal = maxspeeds[Math.min(index, maxspeeds.length - 1)];
     
-    let limit = 50; // Fallback
+    let limit = 50;
     if (typeof speedVal === 'number') limit = speedVal;
     else if (typeof speedVal === 'string') {
         const parsed = parseInt(speedVal);
@@ -187,7 +184,6 @@ function NavigatingView({
         limit = parseInt(speedVal.speed) || 50;
     }
 
-    // Mapbox geeft soms 'unknown' of 'none'
     if (limit <= 0) return 50;
     return limit;
   }, [currentLeg, distanceRemainingToDestination]);
@@ -265,6 +261,27 @@ function NavigatingView({
     } catch (e) {}
     return smoothLocation;
   }, [smoothLocation, currentRouteGeometry]);
+
+  React.useEffect(() => {
+    if (!currentRouteGeometry || !snappedLocation || isCalculatingRoute) return;
+
+    try {
+      const coords = currentRouteGeometry.coordinates;
+      const line = turf.lineString(coords);
+      const pt = turf.point([snappedLocation.longitude, snappedLocation.latitude]);
+      
+      const endPt = turf.point(coords[coords.length - 1]);
+      const sliced = turf.lineSlice(pt, endPt, line);
+      const remaining = turf.length(sliced, { units: 'meters' });
+      
+      const roundedRemaining = Math.round(remaining);
+      if (Math.abs(lastUpdateDistRef.current - roundedRemaining) >= 1) {
+          setDistanceRemainingToDestination(roundedRemaining);
+          lastUpdateDistRef.current = roundedRemaining;
+          setHasReachedCurrentTarget(roundedRemaining < 80);
+      }
+    } catch (e) {}
+  }, [snappedLocation?.latitude, snappedLocation?.longitude, currentRouteGeometry, isCalculatingRoute]);
 
   React.useEffect(() => {
     if (!targetLocation || !currentRouteGeometry || isCalculatingRoute || isSimulating) return;
@@ -404,7 +421,6 @@ function NavigatingView({
 
         const distanceToDestination = totalDistance - simStateRef.current.distanceTravelled;
         
-        // Simulator volgt de geldende snelheidslimiet (min een beetje marge)
         const currentLimitMs = currentSpeedLimit / 3.6;
         simStateRef.current.targetSpeedMs = distanceToDestination < 40 ? 3 : currentLimitMs - 0.5; 
 
@@ -412,27 +428,12 @@ function NavigatingView({
         simStateRef.current.currentSpeedMs += (simStateRef.current.targetSpeedMs - simStateRef.current.currentSpeedMs) * deltaTime * accel;
         simStateRef.current.distanceTravelled += simStateRef.current.currentSpeedMs * deltaTime;
         
-        const remaining = Math.max(0, totalDistance - simStateRef.current.distanceTravelled);
-        
-        const roundedRemaining = Math.round(remaining);
-        if (Math.abs(lastUpdateDistRef.current - roundedRemaining) >= 2) {
-            setDistanceRemainingToDestination(prev => prev !== roundedRemaining ? roundedRemaining : prev);
-            lastUpdateDistRef.current = roundedRemaining;
-        }
-
-        const reached = remaining < 80;
-        setHasReachedCurrentTarget(prev => {
-            if (prev !== reached) return reached;
-            return prev;
-        });
-
         if (simStateRef.current.distanceTravelled >= totalDistance - 0.2) {
             const finalCoord = coords[coords.length - 1];
             setTargetLocation(prev => {
                 if (prev && Math.abs(prev.latitude - finalCoord[1]) < 0.00001) return prev;
                 return { latitude: finalCoord[1], longitude: finalCoord[0], speed: 0, heading: 0 };
             });
-            setHasReachedCurrentTarget(true);
             return;
         } 
 
@@ -480,7 +481,7 @@ function NavigatingView({
           setCurrentRouteGeometry(route.geometry);
           setCurrentLeg(route.legs[0]);
           const remaining = Math.round(route.legs[0].distance);
-          setDistanceRemainingToDestination(prev => Math.abs(prev - remaining) > 1 ? remaining : prev);
+          setDistanceRemainingToDestination(remaining);
           lastUpdateDistRef.current = remaining;
           setHasReachedCurrentTarget(remaining < 80);
         }
