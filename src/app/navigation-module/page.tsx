@@ -37,7 +37,9 @@ import {
   AlertTriangle,
   RotateCcw,
   Flag,
-  MousePointer2
+  MousePointer2,
+  Maximize,
+  Minimize
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -68,7 +70,7 @@ const routeLayer: Layer = {
     'line-cap': 'round',
   },
   paint: {
-    'line-color': '#3b82f6',
+    'line-color': '#32ADE6',
     'line-width': 10,
     'line-opacity': 0.9,
   },
@@ -192,7 +194,6 @@ function NavigatingView({
     return limit;
   }, [currentLeg, distanceRemainingToDestination]);
 
-  // Optimalisatie: Alleen animeren als er daadwerkelijk een beweging nodig is
   React.useEffect(() => {
     let lastTime = performance.now();
     let lastSetLat = 0;
@@ -205,7 +206,7 @@ function NavigatingView({
         setSmoothLocation(prevSmooth => {
             if (!targetLocation || !prevSmooth || isPaused) return prevSmooth;
 
-            // Alleen updaten bij relevante verplaatsing om CPU te sparen
+            // Only update if moved more than 10cm to save CPU/Battery
             const dist = Math.sqrt(Math.pow(targetLocation.latitude - prevSmooth.latitude, 2) + Math.pow(targetLocation.longitude - prevSmooth.longitude, 2));
             if (dist < 0.000001 && !isSimulating) return prevSmooth;
 
@@ -227,7 +228,7 @@ function NavigatingView({
             };
 
             if (isFollowing && !arrivedObject) {
-                // Optimalisatie: Alleen Mapbox state updaten bij voldoende verandering
+                // Throttle map state updates to save GPU
                 const changeThreshold = 0.000005;
                 if (Math.abs(newLat - lastSetLat) > changeThreshold || Math.abs(newLng - lastSetLng) > changeThreshold) {
                     lastSetLat = newLat;
@@ -293,7 +294,7 @@ function NavigatingView({
       const remaining = turf.length(sliced, { units: 'meters' });
       
       const roundedRemaining = Math.round(remaining);
-      // Optimalisatie: Alleen updaten bij significante afstandswijziging
+      // Only update distance tracking if moved significantly
       if (Math.abs(lastUpdateDistRef.current - roundedRemaining) >= 1) {
           setDistanceRemainingToDestination(roundedRemaining);
           lastUpdateDistRef.current = roundedRemaining;
@@ -357,7 +358,7 @@ function NavigatingView({
     return null;
   }, [currentLeg, distanceRemainingToDestination]);
 
-  // Throttled Geometry updates om CPU te sparen
+  // Performance: Throttled Geometry updates
   React.useEffect(() => {
     if (!currentRouteGeometry || isCalculatingRoute || !snappedLocation) {
         setThrottledGeometry(null);
@@ -576,7 +577,7 @@ function NavigatingView({
             <CheckCircle2 className="h-16 w-16 text-green-500" />
             <h1 className="text-3xl font-black tracking-tight uppercase">Route Voltooid!</h1>
             <p className="text-muted-foreground font-medium">Alle prullenbakken zijn bezocht.</p>
-            <Button onClick={onExit} size="lg" className="px-10 h-14 text-lg font-bold uppercase tracking-tighter mt-4">Terug naar Overzicht</Button>
+            <Button onClick={onExit} size="lg" className="px-10 h-14 text-lg font-bold uppercase tracking-tighter mt-4 bg-primary text-white">Terug naar Overzicht</Button>
         </div>
     )
   }
@@ -611,7 +612,7 @@ function NavigatingView({
           >
             <div className="relative flex items-center justify-center w-12 h-12">
                 <div className="absolute h-12 w-12 bg-blue-50/20 rounded-full animate-pulse" />
-                <svg viewBox="0 0 100 100" className="h-10 w-10 text-blue-600 drop-shadow-2xl" style={{ filter: 'drop-shadow(0 4px 3px rgba(0,0,0,0.3))' }}>
+                <svg viewBox="0 0 100 100" className="h-10 w-10 text-primary drop-shadow-2xl" style={{ filter: 'drop-shadow(0 4px 3px rgba(0,0,0,0.3))' }}>
                     <path d="M50 5 L90 95 L50 75 L10 95 Z" fill="currentColor" stroke="white" strokeWidth="4" />
                 </svg>
             </div>
@@ -640,7 +641,7 @@ function NavigatingView({
                         <div className="relative flex flex-col items-center">
                             <div className={cn("absolute h-12 w-12 rounded-full bg-blue-500/20", inRange && "animate-pulse")} />
                             <div className={cn(
-                                "relative h-10 w-10 rounded-full bg-blue-600 border-4 border-white shadow-2xl flex items-center justify-center transition-all",
+                                "relative h-10 w-10 rounded-full bg-primary border-4 border-white shadow-2xl flex items-center justify-center transition-all",
                                 inRange && "scale-125 bg-green-600"
                             )}>
                                 <Flag className="h-5 w-5 text-white fill-current" />
@@ -649,7 +650,7 @@ function NavigatingView({
                     ) : (
                         <div className={cn(
                             "w-8 h-8 rounded-full border-4 border-white shadow-lg flex items-center justify-center text-[10px] font-black text-white transition-all cursor-pointer hover:scale-110",
-                            isTarget ? "bg-blue-600 scale-125 ring-4 ring-blue-500/30" : "bg-slate-400",
+                            isTarget ? "bg-primary scale-125 ring-4 ring-primary/30" : "bg-slate-400",
                             inRange && "bg-green-600 ring-green-500/50"
                         )}>
                             {inRange && <div className="absolute inset-0 rounded-full animate-ping bg-green-400 opacity-75" />}
@@ -740,7 +741,7 @@ function NavigatingView({
                     strokeDashoffset={2 * Math.PI * 44 * (1 - Math.min(speedKmh, currentSpeedLimit) / currentSpeedLimit)}
                     className={cn(
                         "transition-all duration-500",
-                        isSpeeding ? "text-red-600" : "text-blue-600"
+                        isSpeeding ? "text-red-600" : "text-primary"
                     )}
                     strokeLinecap="round"
                   />
@@ -818,7 +819,7 @@ function NavigatingView({
                             className="h-14 w-14 rounded-full bg-blue-50 border-none shrink-0" 
                             onClick={(e) => { e.stopPropagation(); setIsPaused(!isPaused); }}
                         >
-                            {isPaused ? <Play className="h-6 w-6 fill-current text-blue-600" /> : <Pause className="h-6 w-6 fill-current text-blue-600" />}
+                            {isPaused ? <Play className="h-6 w-6 fill-current text-primary" /> : <Pause className="h-6 w-6 fill-current text-primary" />}
                         </Button>
                         <Button 
                             variant="destructive" 
@@ -835,7 +836,7 @@ function NavigatingView({
             <div className="w-full max-w-4xl flex items-end justify-between gap-4">
                 <div className="flex gap-2 p-1.5 bg-white/95 backdrop-blur-xl rounded-full shadow-2xl border border-slate-100">
                     <Button variant="ghost" size="lg" className="h-14 w-14 rounded-full hover:bg-slate-50 transition-all flex items-center justify-center p-0" onClick={() => setIsPaused(!isPaused)}>
-                        {isPaused ? <Play className="h-7 w-7 fill-current text-blue-600" /> : <Pause className="h-7 w-7 fill-current text-blue-600" />}
+                        {isPaused ? <Play className="h-7 w-7 fill-current text-primary" /> : <Pause className="h-7 w-7 fill-current text-primary" />}
                     </Button>
                     <Button variant="destructive" size="lg" className="h-14 w-14 rounded-full shadow-xl border-none hover:scale-105 active:scale-95 transition-all flex items-center justify-center p-0" onClick={onExit}>
                         <XIcon className="h-7 w-7" />
@@ -851,7 +852,7 @@ function NavigatingView({
                             </div>
                             <div className="text-right">
                                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Voortgang</p>
-                                <p className="text-xs font-black text-blue-600">{completedObjects.length}/{objectsOnRoute.length}</p>
+                                <p className="text-xs font-black text-primary">{completedObjects.length}/{objectsOnRoute.length}</p>
                             </div>
                         </div>
                         <Progress value={(completedObjects.length / (objectsOnRoute.length || 1)) * 100} className="h-1.5 bg-slate-100" />
@@ -1040,8 +1041,7 @@ export default function StartNavigationPage() {
     setIsStarting(false);
   }, [userLocation, selectedRouteDef, urlMeldingLocatie, selectedProjectId, user, objectsOnMap, toast]);
 
-  // AUTO-START LOGIC: If GPS is detected and we have a work order, start immediately.
-  // Otherwise, set a timeout to show the setup card after 5 seconds.
+  // AUTO-START LOGIC
   React.useEffect(() => {
     if (urlMeldingLocatie && navigationState === 'setup') {
       if (userLocation && !autoStartAttempted.current) {
@@ -1061,11 +1061,8 @@ export default function StartNavigationPage() {
   }, [userLocation, urlMeldingLocatie, navigationState, handleStartRoute, toast]);
 
   const showSetupCard = React.useMemo(() => {
-    // Show if not coming from a melding
     if (!urlMeldingLocatie) return true;
-    // Or if we have a location (to make adjustments)
     if (userLocation) return true;
-    // Or if the 5s timeout reached
     if (autoStartTimeoutReached) return true;
     return false;
   }, [urlMeldingLocatie, userLocation, autoStartTimeoutReached]);
@@ -1092,10 +1089,10 @@ export default function StartNavigationPage() {
                 <Marker longitude={urlMeldingLocatie.longitude} latitude={urlMeldingLocatie.latitude} anchor="center">
                     <div className="relative flex flex-col items-center">
                         <div className="absolute h-12 w-12 rounded-full bg-blue-500/20 animate-pulse" />
-                        <div className="relative h-10 w-10 rounded-full bg-blue-600 border-4 border-white shadow-2xl flex items-center justify-center">
+                        <div className="relative h-10 w-10 rounded-full bg-primary border-4 border-white shadow-2xl flex items-center justify-center">
                             <Flag className="h-5 w-5 text-white fill-current" />
                         </div>
-                        <div className="mt-1 bg-blue-600 text-white text-[9px] font-black px-2 py-0.5 rounded shadow-lg uppercase tracking-tighter">Vlag Bestemming</div>
+                        <div className="mt-1 bg-primary text-white text-[9px] font-black px-2 py-0.5 rounded shadow-lg uppercase tracking-tighter">Vlag Bestemming</div>
                     </div>
                 </Marker>
             )}
@@ -1103,22 +1100,22 @@ export default function StartNavigationPage() {
                 <Marker longitude={(selectedRouteDef as any).startLongitude} latitude={(selectedRouteDef as any).startLatitude} anchor="center">
                     <div className="relative flex flex-col items-center">
                         <div className="absolute h-12 w-12 rounded-full bg-blue-50/20 animate-pulse" />
-                        <div className="relative h-10 w-10 rounded-full bg-blue-600 border-4 border-white shadow-2xl flex items-center justify-center">
+                        <div className="relative h-10 w-10 rounded-full bg-primary border-4 border-white shadow-2xl flex items-center justify-center">
                             <Home className="h-5 w-5 text-white fill-current" />
                         </div>
-                        <div className="mt-1 bg-blue-600 text-white text-[10px] font-black px-2 py-0.5 rounded shadow-lg uppercase tracking-tighter">Depot</div>
+                        <div className="mt-1 bg-primary text-white text-[10px] font-black px-2 py-0.5 rounded shadow-lg uppercase tracking-tighter">Depot</div>
                     </div>
                 </Marker>
             )}
             {routeGeoJSONFeatures && (
-                <Source id="route-area" type="geojson" data={routeGeoJSONFeatures}>
-                    <Layer id="route-area-fill" type="fill" paint={{ 'fill-color': '#3b82f6', 'fill-opacity': 0.05 }} />
-                    <Layer id="route-area-outline" type="line" paint={{ 'line-color': '#3b82f6', 'line-width': 1, 'line-dasharray': [2, 2] }} />
+                <Source id="route-area" type="geojson" data={{ type: 'FeatureCollection', features: routeGeoJSONFeatures.map((f: any) => ({ type: 'Feature', properties: {}, geometry: f.geometry })) }}>
+                    <Layer id="route-area-fill" type="fill" paint={{ 'fill-color': '#32ADE6', 'fill-opacity': 0.05 }} />
+                    <Layer id="route-area-outline" type="line" paint={{ 'line-color': '#32ADE6', 'line-width': 1, 'line-dasharray': [2, 2] }} />
                 </Source>
             )}
             {objectsOnMap?.map(obj => (
                 <Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude}>
-                    <div className="w-4 h-4 bg-blue-600 rounded-full border-2 border-white shadow-lg" />
+                    <div className="w-4 h-4 bg-primary rounded-full border-2 border-white shadow-lg" />
                 </Marker>
             ))}
           </MapGL>
@@ -1175,8 +1172,8 @@ export default function StartNavigationPage() {
                     <div className="space-y-1">
                         <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Type Inzet</Label>
                         <div className="grid grid-cols-2 gap-1.5">
-                        <Button variant={routeType === 'veeg' ? 'default' : 'outline'} onClick={() => setRouteType('veeg')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[10px]", routeType === 'veeg' ? "bg-blue-600 border-blue-600 shadow-md text-white" : "border-slate-200")}>Veegwagen</Button>
-                        <Button variant={routeType === 'prullenbak' ? 'default' : 'outline'} onClick={() => setRouteType('prullenbak')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[10px]", routeType === 'prullenbak' ? "bg-blue-600 border-blue-600 shadow-md text-white" : "border-slate-200")}>Prullenbakken</Button>
+                        <Button variant={routeType === 'veeg' ? 'default' : 'outline'} onClick={() => setRouteType('veeg')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[10px]", routeType === 'veeg' ? "bg-primary border-primary shadow-md text-white" : "border-slate-200")}>Veegwagen</Button>
+                        <Button variant={routeType === 'prullenbak' ? 'default' : 'outline'} onClick={() => setRouteType('prullenbak')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[10px]", routeType === 'prullenbak' ? "bg-primary border-primary shadow-md text-white" : "border-slate-200")}>Prullenbakken</Button>
                         </div>
                     </div>
                     <div className="space-y-1">
@@ -1196,7 +1193,7 @@ export default function StartNavigationPage() {
 
                 {urlMeldingLocatie && (
                     <Alert className="bg-blue-50 border-blue-200 py-2">
-                        <Navigation className="h-3 w-3 text-blue-600" />
+                        <Navigation className="h-3 w-3 text-primary" />
                         <AlertTitle className="text-[10px] font-black uppercase text-blue-700">Bestemming geladen</AlertTitle>
                         <AlertDescription className="text-[9px] font-bold text-blue-600 truncate">
                             {urlMeldingLocatie.straat}
@@ -1205,7 +1202,7 @@ export default function StartNavigationPage() {
                 )}
 
                 <div className="flex flex-col gap-1.5 pt-1">
-                    <Button className="w-full h-9 text-xs font-black bg-blue-600 hover:bg-blue-700 shadow-lg rounded-lg uppercase tracking-tighter flex items-center justify-center text-white" onClick={() => handleStartRoute(false)} disabled={(urlMeldingLocatie ? !userLocation : (selectedRouteId === '--nieuwe-route--')) || isStarting}>
+                    <Button className="w-full h-9 text-xs font-black bg-primary hover:bg-primary/90 shadow-lg rounded-lg uppercase tracking-tighter flex items-center justify-center text-white" onClick={() => handleStartRoute(false)} disabled={(urlMeldingLocatie ? !userLocation : (selectedRouteId === '--nieuwe-route--')) || isStarting}>
                         {isStarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4 fill-current" />} 
                         {urlMeldingLocatie ? 'START RIT NAAR MELDING' : 'START LIVE RIT'}
                     </Button>
@@ -1216,7 +1213,7 @@ export default function StartNavigationPage() {
                             </Button>
                         )}
                         {isSuperUser && (
-                            <Button variant="outline" className="h-8 border-dashed border-blue-200 text-blue-600 hover:bg-blue-50/50 font-black uppercase tracking-tighter rounded-lg flex items-center justify-center text-[9px]" onClick={() => handleStartRoute(true)} disabled={(urlMeldingLocatie ? false : (selectedRouteId === '--nieuwe-route--')) || isStarting}>
+                            <Button variant="outline" className="h-8 border-dashed border-primary/30 text-primary hover:bg-primary/5 font-black uppercase tracking-tighter rounded-lg flex items-center justify-center text-[9px]" onClick={() => handleStartRoute(true)} disabled={(urlMeldingLocatie ? false : (selectedRouteId === '--nieuwe-route--')) || isStarting}>
                                 <Gauge className="mr-1.5 h-3 w-3" /> SIMULATOR
                             </Button>
                         )}

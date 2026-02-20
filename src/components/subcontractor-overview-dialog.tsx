@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -88,7 +87,7 @@ export function SubcontractorOverviewDialog({
   const groupedData = React.useMemo(() => {
     if (!items) return [];
     
-    // We get all sections to allow toggling them back on
+    // Get all sections to allow toggling them back on
     const sections = sectionsRaw ? [...sectionsRaw].sort((a, b) => (a.order || 0) - (b.order || 0)) : [];
     
     // If no sections in DB, create default
@@ -108,7 +107,7 @@ export function SubcontractorOverviewDialog({
         ...section,
         items: sectionItems
       };
-    }).filter(group => group.items.length > 0 || !group.hidden); // Show if items exist OR if it's not hidden
+    }).filter(group => group.items.length > 0 || !group.hidden); 
   }, [items, sectionsRaw, weekNumber, year, projectId]);
 
   const isLoading = isLoadingSections || isLoadingItems;
@@ -126,7 +125,7 @@ export function SubcontractorOverviewDialog({
                 Inzet Overzicht Week {weekNumber}
               </DialogTitle>
               <DialogDescription className="font-bold text-slate-500">
-                Geplande middelen en onderaannemers uit de jaarplanning {year}.
+                Beheer zichtbaarheid van planningen in het dagrapport.
               </DialogDescription>
             </div>
           </div>
@@ -216,7 +215,7 @@ export function SubcontractorOverviewDialog({
                         })}
                       </div>
                     ) : (
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic ml-7">Blok is uitgeschakeld voor rapportage.</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic ml-7">Blok is uitgeschakeld.</p>
                     )}
                   </div>
                 ))}
@@ -227,9 +226,9 @@ export function SubcontractorOverviewDialog({
               <div className="bg-slate-50 p-8 rounded-full mb-4">
                 <Users className="h-16 w-16 opacity-10" />
               </div>
-              <h3 className="text-lg font-black uppercase tracking-tight text-slate-400">Geen actieve inzet gevonden</h3>
+              <h3 className="text-lg font-black uppercase tracking-tight text-slate-400">Geen actieve inzet</h3>
               <p className="text-sm font-medium text-slate-400 max-w-[250px] mx-auto leading-relaxed">
-                Er zijn voor week {weekNumber} geen middelen of onderaannemers met een geplande waarde groter dan 0 gevonden.
+                Er zijn voor week {weekNumber} geen geplande middelen gevonden.
               </p>
             </div>
           )}
