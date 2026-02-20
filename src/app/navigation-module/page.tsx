@@ -288,6 +288,25 @@ function NavigatingView({
     return null;
   }, [currentLeg, distanceRemainingToDestination]);
 
+  const currentSpeedLimit = React.useMemo(() => {
+    if (!currentLeg?.annotation?.maxspeed) return 50;
+    
+    const maxspeeds = currentLeg.annotation.maxspeed;
+    const totalLegDist = currentLeg.distance;
+    const distTravelled = Math.max(0, totalLegDist - distanceRemainingToDestination);
+    const ratio = distTravelled / (totalLegDist || 1);
+    const index = Math.floor(ratio * maxspeeds.length);
+    const speedVal = maxspeeds[Math.min(index, maxspeeds.length - 1)];
+    
+    if (typeof speedVal === 'number') return speedVal;
+    if (typeof speedVal === 'string') {
+        const parsed = parseInt(speedVal);
+        return isNaN(parsed) ? 50 : parsed;
+    }
+    if (speedVal?.speed) return parseInt(speedVal.speed) || 50;
+    return 50;
+  }, [currentLeg, distanceRemainingToDestination]);
+
   React.useEffect(() => {
     if (!currentRouteGeometry || isCalculatingRoute || !snappedLocation) {
         setThrottledGeometry(null);
@@ -440,7 +459,7 @@ function NavigatingView({
       setIsCalculatingRoute(true);
       lastFetchedTargetId.current = nextObject.id;
       const { longitude, latitude } = targetLocation;
-      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${longitude},${latitude};${nextObject.longitude},${nextObject.latitude}?steps=true&geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}&language=nl`;
+      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${longitude},${latitude};${nextObject.longitude},${nextObject.latitude}?steps=true&geometries=geojson&overview=full&annotations=maxspeed&access_token=${MAPBOX_TOKEN}&language=nl`;
       try {
         const response = await fetch(url);
         const data = await response.json();
@@ -491,8 +510,7 @@ function NavigatingView({
   };
 
   const speedKmh = targetLocation?.speed ? Math.round(targetLocation.speed * 3.6) : 0;
-  const speedLimit = 50;
-  const isSpeeding = speedKmh > speedLimit;
+  const isSpeeding = speedKmh > currentSpeedLimit;
   
   const arrivalTime = React.useMemo(() => {
     if (!currentLeg?.duration) return formatDate(new Date(), 'HH:mm');
@@ -633,9 +651,13 @@ function NavigatingView({
       </div>
 
       <div className={cn(
-          "absolute right-4 z-[70] transition-all duration-300",
+          "absolute right-4 z-[70] transition-all duration-300 flex items-center gap-3",
           isDrawerExpanded ? "bottom-[320px]" : "bottom-[160px]"
       )}>
+          <div className="h-14 w-14 rounded-full bg-white border-[6px] border-red-600 flex items-center justify-center shadow-xl animate-in fade-in zoom-in duration-500">
+              <span className="text-xl font-black text-slate-900 tabular-nums">{currentSpeedLimit}</span>
+          </div>
+
           <div className={cn(
               "h-20 w-20 rounded-full backdrop-blur shadow-2xl border-4 flex flex-col items-center justify-center overflow-hidden transition-colors duration-500",
               isSpeeding ? "bg-red-50/95 border-red-200" : "bg-white/95 border-slate-100"
@@ -661,7 +683,7 @@ function NavigatingView({
                     fill="none" stroke="currentColor" 
                     strokeWidth="6" 
                     strokeDasharray={2 * Math.PI * 44}
-                    strokeDashoffset={2 * Math.PI * 44 * (1 - Math.min(speedKmh, speedLimit) / speedLimit)}
+                    strokeDashoffset={2 * Math.PI * 44 * (1 - Math.min(speedKmh, currentSpeedLimit) / currentSpeedLimit)}
                     className={cn(
                         "transition-all duration-500",
                         isSpeeding ? "text-red-600" : "text-blue-600"
