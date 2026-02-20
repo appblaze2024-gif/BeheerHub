@@ -4,9 +4,9 @@ import * as React from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, Loader2, Calendar, Settings2, Info, Pencil, Check, X, Layers } from 'lucide-react';
+import { Plus, Trash2, Loader2, Calendar, Pencil, Check, Info, Palette, MoreHorizontal } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking, useDoc, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, where, writeBatch, getDocs } from 'firebase/firestore';
+import { collection, doc, query, where, writeBatch } from 'firebase/firestore';
 import { useProject } from '@/context/project-context';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
@@ -29,6 +29,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LoadingScreen } from '@/components/loading-screen';
@@ -49,6 +57,7 @@ interface AnnualPlanningItem {
   category: string;
   year: number;
   weeks: Record<string, string>;
+  cellColors?: Record<string, string>;
   color: string;
   order: number;
 }
@@ -71,12 +80,27 @@ interface AnnualPlanningConfig {
 
 const WEEKS = Array.from({ length: 52 }, (_, i) => i + 1);
 
-const CATEGORY_COLORS: Record<string, string> = {
-  'Standaard': 'bg-white',
-  'Yellow': 'bg-[#fff9c4]', 
-  'Orange': 'bg-[#ffe0b2]', 
-  'Header': 'bg-[#8e24aa] text-white', 
-};
+const PRESET_COLORS = [
+  { name: 'Wit', value: '#ffffff' },
+  { name: 'Geel', value: '#fff9c4' },
+  { name: 'Oranje', value: '#ffe0b2' },
+  { name: 'Rood', value: '#ffcdd2' },
+  { name: 'Blauw', value: '#e3f2fd' },
+  { name: 'Groen', value: '#e8f5e9' },
+  { name: 'Paars', value: '#f3e5f5' },
+  { name: 'Grijs', value: '#f5f5f5' },
+  { name: 'Donker Paars', value: '#8e24aa' },
+];
+
+const CELL_PRESET_COLORS = [
+  { name: 'Geen', value: 'transparent' },
+  { name: 'Rood', value: '#ef4444' },
+  { name: 'Oranje', value: '#f97316' },
+  { name: 'Geel', value: '#eab308' },
+  { name: 'Groen', value: '#22c55e' },
+  { name: 'Blauw', value: '#3b82f6' },
+  { name: 'Paars', value: '#a855f7' },
+];
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: 10 }, (_, i) => CURRENT_YEAR - 1 + i);
@@ -87,9 +111,10 @@ export default function AnnualPlanningPage() {
   const { toast } = useToast();
   const [selectedYear, setSelectedYear] = React.useState(CURRENT_YEAR);
   
-  // Row creation state
+  // Row creation/edit state
   const [isAddingRow, setIsAddingRow] = React.useState(false);
-  const [isNewRowDialogOpen, setIsNewRowDialogOpen] = React.useState(false);
+  const [isRowDialogOpen, setIsRowDialogOpen] = React.useState(false);
+  const [editingItem, setEditingItem] = React.useState<AnnualPlanningItem | null>(null);
   const [activeSectionForNewRow, setActiveSectionForNewRow] = React.useState<string | null>(null);
   
   // Header title editing state
@@ -108,6 +133,9 @@ export default function AnnualPlanningPage() {
 
   // Section management
   const [isAddingSection, setIsAddingSection] = React.useState(false);
+
+  // Cell color context menu
+  const [cellContextMenu, setCellContextMenu] = React.useState<{ x: number, y: number, itemId: string, week: number } | null>(null);
 
   const configId = `${selectedProjectId}_${selectedYear}`;
   const configRef = useMemoFirebase(() => {
@@ -150,7 +178,6 @@ export default function AnnualPlanningPage() {
 
   const sections = React.useMemo(() => {
     const list = sectionsRaw ? [...sectionsRaw].sort((a, b) => (a.order || 0) - (b.order || 0)) : [];
-    // If no sections exist but we have project/year, provide a default virtual section for legacy data
     if (list.length === 0) {
       return [{ id: 'default', title: `planning ${selectedYear}`, order: 0, projectId: selectedProjectId!, year: selectedYear }];
     }
@@ -193,16 +220,12 @@ export default function AnnualPlanningPage() {
 
   const handleDeleteSection = async (sectionId: string) => {
     if (!firestore || sectionId === 'default') return;
-    
-    // Also cleanup items and milestones in this section
     const itemsToDelete = (itemsRaw || []).filter(i => i.sectionId === sectionId);
     const milestonesToDelete = (milestonesRaw || []).filter(m => m.sectionId === sectionId);
-    
     const batch = writeBatch(firestore);
     batch.delete(doc(firestore, 'annual_planning_sections', sectionId));
     itemsToDelete.forEach(i => batch.delete(doc(firestore, 'annual_planning', i.id)));
     milestonesToDelete.forEach(m => batch.delete(doc(firestore, 'annual_milestones', m.id)));
-    
     try {
       await batch.commit();
       toast({ title: 'Sectie verwijderd' });
@@ -216,9 +239,7 @@ export default function AnnualPlanningPage() {
       setEditingSectionTitleId(null);
       return;
     }
-    
     if (sectionId === 'default') {
-      // For legacy/default, we create a real section if user edits the title
       addDocumentNonBlocking(collection(firestore, 'annual_planning_sections'), {
         projectId: selectedProjectId!,
         year: selectedYear,
@@ -242,27 +263,46 @@ export default function AnnualPlanningPage() {
     });
   };
 
-  const handleAddRow = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleCellColorChange = (itemId: string, week: number, color: string) => {
+    if (!firestore) return;
+    const itemRef = doc(firestore, 'annual_planning', itemId);
+    updateDocumentNonBlocking(itemRef, {
+      [`cellColors.${week}`]: color === 'transparent' ? null : color
+    });
+    setCellContextMenu(null);
+  };
+
+  const handleRowSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedProjectId || !firestore || !activeSectionForNewRow) return;
+    if (!selectedProjectId || !firestore) return;
     const formData = new FormData(e.currentTarget);
     const name = formData.get('name') as string;
     const color = formData.get('color') as string;
 
     setIsAddingRow(true);
     try {
-      addDocumentNonBlocking(collection(firestore, 'annual_planning'), {
-        projectId: selectedProjectId,
-        sectionId: activeSectionForNewRow,
-        resourceName: name,
-        color: color,
-        year: selectedYear,
-        order: (itemsRaw?.filter(i => i.sectionId === activeSectionForNewRow).length || 0) + 1,
-        weeks: {}
-      });
-      toast({ title: 'Rij toegevoegd' });
+      if (editingItem) {
+        updateDocumentNonBlocking(doc(firestore, 'annual_planning', editingItem.id), {
+          resourceName: name,
+          color: color
+        });
+        toast({ title: 'Regel bijgewerkt' });
+      } else if (activeSectionForNewRow) {
+        addDocumentNonBlocking(collection(firestore, 'annual_planning'), {
+          projectId: selectedProjectId,
+          sectionId: activeSectionForNewRow,
+          resourceName: name,
+          color: color,
+          year: selectedYear,
+          order: (itemsRaw?.filter(i => i.sectionId === activeSectionForNewRow).length || 0) + 1,
+          weeks: {},
+          cellColors: {}
+        });
+        toast({ title: 'Rij toegevoegd' });
+      }
       setIsAddingRow(false);
-      setIsNewRowDialogOpen(false);
+      setIsRowDialogOpen(false);
+      setEditingItem(null);
     } catch (e) {
       setIsAddingRow(false);
     }
@@ -323,6 +363,11 @@ export default function AnnualPlanningPage() {
     return Object.values(weeks || {}).reduce((acc, val) => acc + (parseFloat(val) || 0), 0);
   };
 
+  const handleCellContextMenu = (e: React.MouseEvent, itemId: string, week: number) => {
+    e.preventDefault();
+    setCellContextMenu({ x: e.clientX, y: e.clientY, itemId, week });
+  };
+
   if (!selectedProjectId) {
     return (
       <div className="p-12 flex flex-col items-center justify-center text-center bg-slate-50 h-full">
@@ -338,7 +383,7 @@ export default function AnnualPlanningPage() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-white overflow-hidden">
+    <div className="flex flex-col h-full bg-white overflow-hidden" onClick={() => cellContextMenu && setCellContextMenu(null)}>
       <PageHeader 
         title={""} 
         description="Overzicht van inzet en uren voor het gehele jaar."
@@ -494,42 +539,63 @@ export default function AnnualPlanningPage() {
                   </thead>
 
                   <tbody>
-                    {sectionItems.map((item) => (
-                      <tr key={item.id} className={cn("border-b border-slate-100 group transition-colors", CATEGORY_COLORS[item.color] || 'bg-white')}>
-                        <td className={cn(
-                          "sticky left-0 z-10 border-r border-slate-200 p-0 whitespace-nowrap w-px shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]",
-                          CATEGORY_COLORS[item.color] || 'bg-white'
-                        )}>
-                          <div className="flex items-center justify-between h-8 px-1.5 w-full">
-                            <span className="pr-4 text-[11px] font-black uppercase tracking-tight whitespace-nowrap">{item.resourceName}</span>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-5 w-5 opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 hover:bg-red-50 shrink-0"
-                              onClick={() => handleDeleteRow(item.id)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </td>
-                        {WEEKS.map(week => (
-                          <td key={week} className={cn(
-                            "border-r border-slate-100 p-0 text-center h-8 w-6 min-w-[24px]",
-                            week % 13 === 0 && "border-r-2 border-red-500"
-                          )}>
-                            <input
-                              type="text"
-                              defaultValue={item.weeks?.[week.toString()] || ''}
-                              onBlur={(e) => handleCellChange(item.id, week, e.target.value)}
-                              className="w-full h-full bg-transparent text-center focus:bg-white focus:outline-none focus:ring-inset focus:ring-1 focus:ring-primary tabular-nums"
-                            />
+                    {sectionItems.map((item) => {
+                      const isHexColor = item.color?.startsWith('#');
+                      const rowStyle = isHexColor ? { backgroundColor: item.color } : {};
+                      
+                      return (
+                        <tr key={item.id} className={cn("border-b border-slate-100 group transition-colors")} style={rowStyle}>
+                          <td className={cn(
+                            "sticky left-0 z-10 border-r border-slate-200 p-0 whitespace-nowrap w-px shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"
+                          )} style={rowStyle}>
+                            <div className="flex items-center justify-between h-8 px-1.5 w-full group/row">
+                              <button 
+                                className="pr-4 text-[11px] font-black uppercase tracking-tight whitespace-nowrap hover:text-primary transition-colors text-left"
+                                onClick={() => { setEditingItem(item); setIsRowDialogOpen(true); }}
+                              >
+                                {item.resourceName}
+                              </button>
+                              <div className="flex items-center opacity-0 group-hover/row:opacity-100 transition-opacity">
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-5 w-5 text-red-400 hover:text-red-600 hover:bg-red-50 shrink-0"
+                                  onClick={() => handleDeleteRow(item.id)}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
                           </td>
-                        ))}
-                        <td className="bg-slate-50/50 text-center font-black text-[10px] tabular-nums border-l border-slate-200 h-8 w-8">
-                          {calculateRowTotal(item.weeks || {}).toLocaleString()}
-                        </td>
-                      </tr>
-                    ))}
+                          {WEEKS.map(week => {
+                            const cellColor = item.cellColors?.[week.toString()];
+                            const cellStyle = cellColor ? { backgroundColor: cellColor } : {};
+                            
+                            return (
+                              <td 
+                                key={week} 
+                                onContextMenu={(e) => handleCellContextMenu(e, item.id, week)}
+                                className={cn(
+                                  "border-r border-slate-100 p-0 text-center h-8 w-6 min-w-[24px]",
+                                  week % 13 === 0 && "border-r-2 border-red-500"
+                                )}
+                                style={cellStyle}
+                              >
+                                <input
+                                  type="text"
+                                  defaultValue={item.weeks?.[week.toString()] || ''}
+                                  onBlur={(e) => handleCellChange(item.id, week, e.target.value)}
+                                  className="w-full h-full bg-transparent text-center focus:bg-white/50 focus:outline-none focus:ring-inset focus:ring-1 focus:ring-primary tabular-nums"
+                                />
+                              </td>
+                            );
+                          })}
+                          <td className="bg-slate-50/50 text-center font-black text-[10px] tabular-nums border-l border-slate-200 h-8 w-8">
+                            {calculateRowTotal(item.weeks || {}).toLocaleString()}
+                          </td>
+                        </tr>
+                      );
+                    })}
                     
                     <tr className="bg-slate-50/30 h-8">
                       <td className="sticky left-0 z-10 border-r border-slate-200 p-1 bg-white h-8 w-px">
@@ -537,7 +603,7 @@ export default function AnnualPlanningPage() {
                           variant="ghost" 
                           size="sm" 
                           className="w-full h-6 font-black uppercase text-[9px] gap-1 hover:bg-slate-100" 
-                          onClick={() => { setActiveSectionForNewRow(section.id); setIsNewRowDialogOpen(true); }}
+                          onClick={() => { setActiveSectionForNewRow(section.id); setEditingItem(null); setIsRowDialogOpen(true); }}
                         >
                           <Plus className="h-3.5 w-3.5 text-primary" />
                         </Button>
@@ -598,43 +664,65 @@ export default function AnnualPlanningPage() {
             </div>
             <div className="flex items-center gap-2">
               <Info className="h-3 w-3" />
-              <span>Direct bewerkbaar. Klik op de titel of de week-headers om tekst toe te voegen.</span>
+              <span>Direct bewerkbaar. Rechtsklik op cel voor kleur. Klik op regelnaam om te bewerken.</span>
             </div>
           </div>
         </div>
       </div>
 
-      <Dialog open={isNewRowDialogOpen} onOpenChange={setIsNewRowDialogOpen}>
+      <Dialog open={isRowDialogOpen} onOpenChange={setIsRowDialogOpen}>
         <DialogContent>
-          <form onSubmit={handleAddRow}>
+          <form onSubmit={handleRowSubmit}>
             <DialogHeader>
-              <DialogTitle>Nieuwe Inzet Toevoegen ({selectedYear})</DialogTitle>
-              <DialogDescription>De rij wordt toegevoegd aan het blok: {sections.find(s => s.id === activeSectionForNewRow)?.title}</DialogDescription>
+              <DialogTitle>{editingItem ? 'Regel Bewerken' : 'Nieuwe Inzet Toevoegen'}</DialogTitle>
+              <DialogDescription>
+                {editingItem 
+                  ? `Bewerken van: ${editingItem.resourceName}`
+                  : `De rij wordt toegevoegd aan het blok: ${sections.find(s => s.id === activeSectionForNewRow)?.title}`}
+              </DialogDescription>
             </DialogHeader>
             <div className="py-4 space-y-4">
               <div className="space-y-2">
                 <Label>Naam middel / medewerker</Label>
-                <Input name="name" placeholder="Bijv. Veegmachine 569" required />
+                <Input name="name" defaultValue={editingItem?.resourceName || ''} placeholder="Bijv. Veegmachine 569" required />
               </div>
               <div className="space-y-2">
                 <Label>Kleur / Categorie</Label>
-                <Select name="color" defaultValue="Standaard">
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.keys(CATEGORY_COLORS).map(c => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="grid grid-cols-5 gap-2">
+                  {PRESET_COLORS.map(c => (
+                    <button
+                      key={c.value}
+                      type="button"
+                      className={cn(
+                        "h-8 w-full rounded-md border-2 transition-all",
+                        editingItem?.color === c.value ? "border-primary scale-110 shadow-sm" : "border-slate-200"
+                      )}
+                      style={{ backgroundColor: c.value }}
+                      onClick={() => {
+                        const input = document.getElementById('custom-color-input') as HTMLInputElement;
+                        if (input) input.value = c.value;
+                      }}
+                      title={c.name}
+                    />
+                  ))}
+                  <div className="relative group">
+                    <Input 
+                      id="custom-color-input"
+                      name="color" 
+                      type="color" 
+                      defaultValue={editingItem?.color || '#ffffff'} 
+                      className="h-8 w-full p-0 border-none cursor-pointer"
+                    />
+                    <Palette className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none mix-blend-difference text-white opacity-50" />
+                  </div>
+                </div>
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setIsNewRowDialogOpen(false)}>Annuleren</Button>
+              <Button type="button" variant="ghost" onClick={() => setIsRowDialogOpen(false)}>Annuleren</Button>
               <Button type="submit" disabled={isAddingRow}>
                 {isAddingRow && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Toevoegen
+                {editingItem ? 'Opslaan' : 'Toevoegen'}
               </Button>
             </DialogFooter>
           </form>
@@ -668,6 +756,34 @@ export default function AnnualPlanningPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {cellContextMenu && (
+        <div 
+          className="fixed z-[100] bg-white rounded-lg shadow-2xl border border-slate-200 p-2 min-w-[120px] animate-in fade-in zoom-in duration-100"
+          style={{ left: cellContextMenu.x, top: cellContextMenu.y }}
+        >
+          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Kleur markering</p>
+          <div className="grid grid-cols-4 gap-1">
+            {CELL_PRESET_COLORS.map(c => (
+              <button
+                key={c.value}
+                className="h-6 w-6 rounded-md border border-slate-200 hover:scale-110 transition-transform shadow-sm"
+                style={{ backgroundColor: c.value }}
+                onClick={() => handleCellColorChange(cellContextMenu.itemId, cellContextMenu.week, c.value)}
+                title={c.name}
+              />
+            ))}
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="w-full mt-2 h-7 text-[10px] font-bold"
+            onClick={() => setCellContextMenu(null)}
+          >
+            Sluiten
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
