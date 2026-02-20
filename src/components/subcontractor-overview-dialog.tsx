@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -43,6 +44,7 @@ interface AnnualPlanningSection {
   year: number;
   title: string;
   order: number;
+  hidden?: boolean;
 }
 
 export function SubcontractorOverviewDialog({
@@ -78,8 +80,11 @@ export function SubcontractorOverviewDialog({
   const groupedData = React.useMemo(() => {
     if (!items) return [];
     
-    const sections = sectionsRaw ? [...sectionsRaw].sort((a, b) => (a.order || 0) - (b.order || 0)) : [];
-    if (sections.length === 0) {
+    // Filter out hidden sections
+    const sections = sectionsRaw ? [...sectionsRaw].filter(s => !s.hidden).sort((a, b) => (a.order || 0) - (b.order || 0)) : [];
+    
+    // If no sections in DB, create default (visible by default)
+    if (sections.length === 0 && (!sectionsRaw || !sectionsRaw.find(s => s.id === 'default' && s.hidden))) {
       sections.push({ id: 'default', title: `Planning ${year}`, order: 0, projectId: projectId!, year });
     }
 

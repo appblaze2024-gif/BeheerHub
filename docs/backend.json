@@ -64,6 +64,20 @@
       },
       "required": ["projectnummer", "projectnaam"]
     },
+    "AnnualPlanningSection": {
+      "title": "AnnualPlanningSection",
+      "description": "Een blok of sectie binnen de jaarplanning.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "projectId": { "type": "string" },
+        "year": { "type": "number" },
+        "title": { "type": "string" },
+        "order": { "type": "number" },
+        "hidden": { "type": "boolean" }
+      },
+      "required": ["projectId", "year", "title"]
+    },
     "AnnualPlanningItem": {
       "title": "AnnualPlanningItem",
       "description": "Planning van inzet (uren) per machine of medewerker voor een heel jaar.",
@@ -71,10 +85,11 @@
       "properties": {
         "id": { "type": "string" },
         "projectId": { "type": "string" },
+        "sectionId": { "type": "string" },
         "resourceName": { "type": "string" },
         "category": { "type": "string" },
         "year": { "type": "number" },
-        "weeks": { "type": "object", "description": "Mapping van weeknummer (1-52) naar uren of waardes." },
+        "weeks": { "type": "object" },
         "color": { "type": "string" },
         "order": { "type": "number" }
       },
@@ -104,8 +119,7 @@
         "id": { "type": "string" },
         "projectId": { "type": "string" },
         "year": { "type": "number" },
-        "title": { "type": "string" },
-        "tableTitle": { "type": "string" }
+        "title": { "type": "string" }
       },
       "required": ["projectId", "year", "title"]
     }
@@ -129,6 +143,10 @@
     "/annual_planning/{itemId}": {
       "schema": { "$ref": "#/entities/AnnualPlanningItem" },
       "description": "Jaarplanning items."
+    },
+    "/annual_planning_sections/{sectionId}": {
+      "schema": { "$ref": "#/entities/AnnualPlanningSection" },
+      "description": "Jaarplanning secties/blokken."
     },
     "/annual_milestones/{milestoneId}": {
       "schema": { "$ref": "#/entities/AnnualMilestone" },

@@ -1,10 +1,11 @@
+
 'use client';
 
 import * as React from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, Loader2, Calendar, Pencil, Check, Info, Palette, MessageSquare, X, Clock, Search } from 'lucide-react';
+import { Plus, Trash2, Loader2, Calendar, Pencil, Check, Info, Palette, MessageSquare, X, Clock, Search, Eye, EyeOff } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking, useDoc, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, where, writeBatch } from 'firebase/firestore';
 import { useProject } from '@/context/project-context';
@@ -45,6 +46,7 @@ interface AnnualPlanningSection {
   year: number;
   title: string;
   order: number;
+  hidden?: boolean;
 }
 
 interface AnnualPlanningItem {
@@ -217,7 +219,7 @@ export default function AnnualPlanningPage() {
   const sections = React.useMemo(() => {
     const list = sectionsRaw ? [...sectionsRaw].sort((a, b) => (a.order || 0) - (b.order || 0)) : [];
     if (list.length === 0) {
-      return [{ id: 'default', title: `planning ${selectedYear}`, order: 0, projectId: selectedProjectId!, year: selectedYear }];
+      return [{ id: 'default', title: `planning ${selectedYear}`, order: 0, projectId: selectedProjectId!, year: selectedYear, hidden: false }];
     }
     return list;
   }, [sectionsRaw, selectedYear, selectedProjectId]);
@@ -246,7 +248,8 @@ export default function AnnualPlanningPage() {
         projectId: selectedProjectId,
         year: selectedYear,
         title: `Nieuw Blok`,
-        order: sections.length
+        order: sections.length,
+        hidden: false
       });
       toast({ title: 'Nieuwe sectie toegevoegd' });
     } catch (e) {
@@ -282,7 +285,8 @@ export default function AnnualPlanningPage() {
         projectId: selectedProjectId!,
         year: selectedYear,
         title: tempSectionTitle.trim(),
-        order: 0
+        order: 0,
+        hidden: false
       });
     } else {
       updateDocumentNonBlocking(doc(firestore, 'annual_planning_sections', sectionId), {
@@ -291,6 +295,17 @@ export default function AnnualPlanningPage() {
     }
     setEditingSectionTitleId(null);
     toast({ title: 'Sectietitel bijgewerkt' });
+  };
+
+  const handleToggleSectionVisibility = (sectionId: string, currentHidden: boolean) => {
+    if (!firestore || sectionId === 'default') return;
+    updateDocumentNonBlocking(doc(firestore, 'annual_planning_sections', sectionId), {
+      hidden: !currentHidden
+    });
+    toast({ 
+      title: !currentHidden ? 'Blok verborgen voor overzichten' : 'Blok weer zichtbaar gemaakt',
+      description: 'Dit heeft direct invloed op de knop Onderaannemers.'
+    });
   };
 
   const handleCellChange = (itemId: string, week: number, value: string) => {
@@ -822,7 +837,10 @@ export default function AnnualPlanningPage() {
               if (searchTerm && sectionItems.length === 0) return null;
 
               return (
-                <div key={section.id} className="group/section relative bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden">
+                <div key={section.id} className={cn(
+                  "group/section relative bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden transition-opacity duration-300",
+                  section.hidden && "opacity-50 grayscale-[0.5]"
+                )}>
                   <table className="w-full border-collapse text-[10px] font-bold">
                     <thead>
                       <tr className="bg-[#4caf50] text-white h-32">
@@ -841,12 +859,31 @@ export default function AnnualPlanningPage() {
                               </div>
                             ) : (
                               <div className="flex items-center justify-between gap-2">
-                                <div 
-                                  className="group/corner cursor-pointer flex items-center gap-2"
-                                  onClick={() => { setTempSectionTitle(section.title); setEditingSectionTitleId(section.id); }}
-                                >
-                                  <span className="text-[11px] font-black uppercase tracking-tighter">{section.title}</span>
-                                  <Pencil className="h-3 w-3 text-white/40 opacity-0 group-hover/corner:opacity-100 transition-opacity" />
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <div 
+                                    className="group/corner cursor-pointer flex items-center gap-2 truncate"
+                                    onClick={() => { setTempSectionTitle(section.title); setEditingSectionTitleId(section.id); }}
+                                  >
+                                    <span className="text-[11px] font-black uppercase tracking-tighter truncate">{section.title}</span>
+                                    <Pencil className="h-3 w-3 text-white/40 opacity-0 group-hover/corner:opacity-100 transition-opacity shrink-0" />
+                                  </div>
+                                  {section.id !== 'default' && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button 
+                                          variant="ghost" 
+                                          size="icon" 
+                                          className="h-6 w-6 text-white/40 hover:text-white shrink-0"
+                                          onClick={() => handleToggleSectionVisibility(section.id, !!section.hidden)}
+                                        >
+                                          {section.hidden ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        {section.hidden ? 'Blok is verborgen voor Onderaannemers-overzicht' : 'Blok is zichtbaar in overzichten'}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  )}
                                 </div>
                                 {section.id !== 'default' && (
                                   <AlertDialog>
