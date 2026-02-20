@@ -33,11 +33,12 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@/Tooltip";
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LoadingScreen } from '@/components/loading-screen';
 import { Separator } from '@/components/ui/separator';
+import { getISOWeek, getYear } from 'date-fns';
 
 interface AnnualPlanningSection {
   id: string;
@@ -127,6 +128,11 @@ export default function AnnualPlanningPage() {
   const { toast } = useToast();
   const [selectedYear, setSelectedYear] = React.useState(CURRENT_YEAR);
   
+  // Get current date context for conditional formatting
+  const now = new Date();
+  const currentWeekNum = getISOWeek(now);
+  const currentYearNum = getYear(now);
+
   // Selection state
   const [selectedCells, setSelectedCells] = React.useState<Set<string>>(new Set());
   const [isDragging, setIsDragging] = React.useState(false);
@@ -922,6 +928,7 @@ export default function AnnualPlanningPage() {
                         const rowStyle = isHexColor ? { backgroundColor: item.color } : {};
                         const rowTotalQuantity = calculateRowTotal(item.weeks || {});
                         const rowTotalCost = rowTotalQuantity * (item.hourlyRate || 0);
+                        const rowTarget = item.targetQuantity || (item.unit === 'dag' ? 5 : 40);
                         
                         return (
                           <tr key={item.id} className={cn("border-b border-slate-100 group transition-colors")} style={rowStyle}>
@@ -972,6 +979,19 @@ export default function AnnualPlanningPage() {
                               const m = sectionMilestoneMap[week];
                               const details = item.weeklyDetails?.[week.toString()];
                               
+                              const isPast = (selectedYear < currentYearNum) || (selectedYear === currentYearNum && week < currentWeekNum);
+                              const cellValueStr = item.weeks?.[week.toString()] || '';
+                              const cellValue = parseFloat(cellValueStr.replace(',', '.')) || 0;
+                              
+                              let textColorClass = "text-slate-900";
+                              if (cellValue >= rowTarget) {
+                                textColorClass = "text-green-600 font-black";
+                              } else if (cellValue > 0 && !isPast) {
+                                textColorClass = "text-orange-500 font-black";
+                              } else if (isPast && cellValue < rowTarget) {
+                                textColorClass = "text-red-600 font-black";
+                              }
+
                               const cellStyle: React.CSSProperties = {
                                 backgroundColor: cellColor || 'transparent',
                               };
@@ -997,10 +1017,13 @@ export default function AnnualPlanningPage() {
                                       <div className="w-full h-full relative">
                                         <input
                                           type="text"
-                                          value={item.weeks?.[week.toString()] || ''}
+                                          value={cellValueStr}
                                           onChange={(e) => handleCellChange(item.id, week, e.target.value)}
                                           onPaste={(e) => handlePaste(item.id, week, e)}
-                                          className="w-full h-full bg-transparent text-center focus:bg-white/50 focus:outline-none focus:ring-inset focus:ring-1 focus:ring-primary tabular-nums text-[9px]"
+                                          className={cn(
+                                            "w-full h-full bg-transparent text-center focus:bg-white/50 focus:outline-none focus:ring-inset focus:ring-1 focus:ring-primary tabular-nums text-[9px]",
+                                            textColorClass
+                                          )}
                                         />
                                       </div>
                                     </TooltipTrigger>
@@ -1129,6 +1152,18 @@ export default function AnnualPlanningPage() {
               <div className="flex items-center gap-2">
                 <div className="h-3 w-3 ring-1 ring-black rounded-sm" />
                 <span>Zwarte ring = Opmerking</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-green-600" />
+                <span>Groen getal = Target behaald</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-orange-500" />
+                <span>Oranje getal = Deels gevuld</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-red-600" />
+                <span>Rood getal = Target gemist (verleden)</span>
               </div>
               <div className="flex items-center gap-2">
                 <Info className="h-3 w-3" />
