@@ -972,28 +972,8 @@ export default function AnnualPlanningPage() {
                               const m = sectionMilestoneMap[week];
                               const details = item.weeklyDetails?.[week.toString()];
                               
-                              const quantity = parseFloat((item.weeks?.[week.toString()] || '0').replace(',', '.')) || 0;
-                              const target = item.targetQuantity || (item.unit === 'dag' ? 5 : 40);
-                              const progress = Math.min((quantity / target) * 100, 100);
-                              const hasValue = item.weeks?.[week.toString()] !== undefined && item.weeks?.[week.toString()] !== '';
-                              
-                              let background = 'transparent';
-                              let backgroundColor = cellColor || 'transparent';
-
-                              if (hasValue) {
-                                if (quantity === 0) {
-                                  backgroundColor = '#f9731644'; // Orange when 0
-                                } else if (progress >= 100) {
-                                  backgroundColor = '#4caf5044'; // Full Green when 100%
-                                } else {
-                                  // Progress in Green, Rest in Red
-                                  background = `linear-gradient(90deg, #4caf5044 ${progress}%, #ef444444 ${progress}%)`;
-                                }
-                              }
-                              
                               const cellStyle: React.CSSProperties = {
-                                backgroundColor: backgroundColor,
-                                background: background
+                                backgroundColor: cellColor || 'transparent',
                               };
                               
                               return (
@@ -1147,18 +1127,6 @@ export default function AnnualPlanningPage() {
                 <span>Rode lijn = Scheiding</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="h-3 w-3 bg-orange-500/30 border border-orange-500/20 rounded-sm" />
-                <span>Oranje = 0 inzet</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 bg-green-500/30 border border-green-500/20 rounded-sm" />
-                <span>Groen = Volledig gepland</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 bg-gradient-to-r from-green-500/30 to-red-500/30 border border-slate-300 rounded-sm" />
-                <span>Groen/Rood = Deels gepland</span>
-              </div>
-              <div className="flex items-center gap-2">
                 <div className="h-3 w-3 ring-1 ring-black rounded-sm" />
                 <span>Zwarte ring = Opmerking</span>
               </div>
@@ -1174,7 +1142,7 @@ export default function AnnualPlanningPage() {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Weekplanning Detail (Week {activeWeekDetailCell?.week})</DialogTitle>
-              <DialogDescription>Voer de aantallen/uren in per dag van de week. Een dag met 0 wordt rood gemarkeerd.</DialogDescription>
+              <DialogDescription>Voer de aantallen/uren in per dag van de week.</DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-1 gap-4 py-4">
               {DAYS.map(day => (
@@ -1250,7 +1218,7 @@ export default function AnnualPlanningPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Streefgetal per week (100% score)</Label>
+                  <Label>Streefgetal per week</Label>
                   <Input 
                     type="number" 
                     value={dialogTarget} 
@@ -1258,7 +1226,6 @@ export default function AnnualPlanningPage() {
                     placeholder={dialogUnit === 'dag' ? '5' : '40'}
                     className="h-10"
                   />
-                  <p className="text-[10px] text-muted-foreground italic">Dit getal bepaalt wanneer de cel volledig groen wordt.</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Kleur / Categorie</Label>
@@ -1280,7 +1247,7 @@ export default function AnnualPlanningPage() {
                       />
                     ))}
                     <div className="relative group">
-                      <Input 
+                      <input 
                         id="custom-color-input"
                         name="color" 
                         type="color" 
