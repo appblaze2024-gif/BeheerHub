@@ -61,6 +61,7 @@ interface AnnualPlanningItem {
   color: string;
   order: number;
   hourlyRate?: number;
+  targetQuantity?: number;
   unit?: string;
 }
 
@@ -137,6 +138,7 @@ export default function AnnualPlanningPage() {
   const [activeSectionForNewRow, setActiveSectionForNewRow] = React.useState<string | null>(null);
   const [insertAtOrder, setInsertAtOrder] = React.useState<number | null>(null);
   const [dialogUnit, setDialogUnit] = React.useState('uur');
+  const [dialogTarget, setDialogTarget] = React.useState<string>('40');
   
   // Header title editing state
   const [isEditingTitle, setIsEditingTitle] = React.useState(false);
@@ -510,7 +512,7 @@ export default function AnnualPlanningPage() {
     });
   };
 
-  const handleRowSubmit = async (data: { name: string, color: string, hourlyRate: number, unit: string }) => {
+  const handleRowSubmit = async (data: { name: string, color: string, hourlyRate: number, unit: string, targetQuantity: number }) => {
     if (!selectedProjectId || !firestore) return;
 
     setIsAddingRow(true);
@@ -520,7 +522,8 @@ export default function AnnualPlanningPage() {
           resourceName: data.name,
           color: data.color,
           hourlyRate: data.hourlyRate,
-          unit: data.unit
+          unit: data.unit,
+          targetQuantity: data.targetQuantity
         });
         toast({ title: 'Regel bijgewerkt' });
       } else if (activeSectionForNewRow) {
@@ -543,6 +546,7 @@ export default function AnnualPlanningPage() {
             color: data.color,
             hourlyRate: data.hourlyRate,
             unit: data.unit,
+            targetQuantity: data.targetQuantity,
             year: selectedYear,
             order: insertAtOrder,
             weeks: {},
@@ -562,6 +566,7 @@ export default function AnnualPlanningPage() {
             color: data.color,
             hourlyRate: data.hourlyRate,
             unit: data.unit,
+            targetQuantity: data.targetQuantity,
             year: selectedYear,
             order: (itemsRaw?.filter(i => i.sectionId === activeSectionForNewRow || (activeSectionForNewRow === 'default' && !i.sectionId)).length || 0) + 1,
             weeks: {},
@@ -692,8 +697,10 @@ export default function AnnualPlanningPage() {
     if (isRowDialogOpen) {
       if (editingItem) {
         setDialogUnit(editingItem.unit || 'uur');
+        setDialogTarget(editingItem.targetQuantity?.toString() || (editingItem.unit === 'dag' ? '5' : '40'));
       } else {
         setDialogUnit('uur');
+        setDialogTarget('40');
       }
     }
   }, [isRowDialogOpen, editingItem]);
@@ -966,7 +973,7 @@ export default function AnnualPlanningPage() {
                               const details = item.weeklyDetails?.[week.toString()];
                               
                               const quantity = parseFloat((item.weeks?.[week.toString()] || '0').replace(',', '.')) || 0;
-                              const target = item.unit === 'dag' ? 5 : 40;
+                              const target = item.targetQuantity || (item.unit === 'dag' ? 5 : 40);
                               const progress = Math.min((quantity / target) * 100, 100);
                               const hasValue = item.weeks?.[week.toString()] !== undefined && item.weeks?.[week.toString()] !== '';
                               
@@ -974,24 +981,13 @@ export default function AnnualPlanningPage() {
                               let backgroundColor = cellColor || 'transparent';
 
                               if (hasValue) {
-                                if (details) {
-                                  // Segmenteer maandag t/m vrijdag (20% per segment)
-                                  const workDays = ['ma', 'di', 'wo', 'do', 'vr'];
-                                  const segments = workDays.map((day, index) => {
-                                    const val = parseFloat(details[day]?.replace(',', '.') || '0') || 0;
-                                    // Groen als weektotaal >= 100%. Oranje voor gewerkte dag bij < 100%. Rood voor 0u.
-                                    const segmentColor = progress >= 100 ? '#4caf5044' : (val > 0 ? '#f9731644' : '#ef444444');
-                                    return `${segmentColor} ${index * 20}%, ${segmentColor} ${(index + 1) * 20}%`;
-                                  });
-                                  background = `linear-gradient(90deg, ${segments.join(', ')})`;
+                                if (quantity === 0) {
+                                  backgroundColor = '#f9731644'; // Orange when 0
+                                } else if (progress >= 100) {
+                                  backgroundColor = '#4caf5044'; // Full Green when 100%
                                 } else {
-                                  // Handmatige invoer zonder details
-                                  if (progress >= 100) {
-                                    backgroundColor = '#4caf5044'; // Geheel groen bij 100%
-                                  } else {
-                                    // Progressie in oranje, rest in rood
-                                    background = `linear-gradient(90deg, #f9731644 ${progress}%, #ef444444 ${progress}%)`;
-                                  }
+                                  // Progress in Green, Rest in Red
+                                  background = `linear-gradient(90deg, #4caf5044 ${progress}%, #ef444444 ${progress}%)`;
                                 }
                               }
                               
@@ -1151,16 +1147,16 @@ export default function AnnualPlanningPage() {
                 <span>Rode lijn = Scheiding</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="h-3 w-3 bg-green-500/30 border border-green-500/20 rounded-sm" />
-                <span>Groen = Volledig gepland (100%)</span>
-              </div>
-              <div className="flex items-center gap-2">
                 <div className="h-3 w-3 bg-orange-500/30 border border-orange-500/20 rounded-sm" />
-                <span>Oranje = Gedeeltelijk gepland</span>
+                <span>Oranje = 0 inzet</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="h-3 w-3 bg-red-500/30 border border-red-500/20 rounded-sm" />
-                <span>Rood = Geen inzet / Leeg deel</span>
+                <div className="h-3 w-3 bg-green-500/30 border border-green-500/20 rounded-sm" />
+                <span>Groen = Volledig gepland</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 bg-gradient-to-r from-green-500/30 to-red-500/30 border border-slate-300 rounded-sm" />
+                <span>Groen/Rood = Deels gepland</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="h-3 w-3 ring-1 ring-black rounded-sm" />
@@ -1217,7 +1213,8 @@ export default function AnnualPlanningPage() {
                 name: formData.get('name') as string,
                 color: formData.get('color') as string,
                 hourlyRate: parseFloat(formData.get('hourlyRate') as string) || 0,
-                unit: dialogUnit
+                unit: dialogUnit,
+                targetQuantity: parseFloat(dialogTarget) || 40
               });
             }}>
               <DialogHeader>
@@ -1236,7 +1233,7 @@ export default function AnnualPlanningPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Eenheid</Label>
-                    <Select value={dialogUnit} onValueChange={setDialogUnit}>
+                    <Select value={dialogUnit} onValueChange={(v) => { setDialogUnit(v); if(v === 'dag') setDialogTarget('5'); else if(v === 'uur') setDialogTarget('40'); }}>
                       <SelectTrigger className="h-10">
                         <SelectValue placeholder="Kies eenheid" />
                       </SelectTrigger>
@@ -1251,6 +1248,17 @@ export default function AnnualPlanningPage() {
                     <Label>Tarief per eenheid (€)</Label>
                     <input name="hourlyRate" type="number" step="0.01" defaultValue={editingItem?.hourlyRate || 0} placeholder="0.00" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" />
                   </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Streefgetal per week (100% score)</Label>
+                  <Input 
+                    type="number" 
+                    value={dialogTarget} 
+                    onChange={(e) => setDialogTarget(e.target.value)} 
+                    placeholder={dialogUnit === 'dag' ? '5' : '40'}
+                    className="h-10"
+                  />
+                  <p className="text-[10px] text-muted-foreground italic">Dit getal bepaalt wanneer de cel volledig groen wordt.</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Kleur / Categorie</Label>
