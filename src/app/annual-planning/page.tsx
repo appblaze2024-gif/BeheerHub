@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -1050,7 +1049,7 @@ export default function AnnualPlanningPage() {
                   {isSavingMilestone && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Opslaan
                 </Button>
-              </form>
+              </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
