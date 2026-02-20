@@ -989,7 +989,7 @@ export default function AnnualPlanningPage() {
                                     "border-r border-slate-100 p-0 text-center h-8 w-6 min-w-[24px] transition-all relative",
                                     isSelected && "bg-primary/20 scale-[1.02] z-10",
                                     cellNote && "ring-1 ring-inset ring-black shadow-[inset_0_0_0_1px_black]",
-                                    isIncomplete && "bg-red-50",
+                                    isIncomplete && "bg-orange-100/50",
                                     m?.borderLeft && "border-l-[3px] border-l-red-600 z-30",
                                     m?.borderRight && "border-r-[3px] border-r-red-600 z-30"
                                   )}
@@ -1140,8 +1140,8 @@ export default function AnnualPlanningPage() {
                 <span>Groene vulling = Ingepland</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="h-3 w-3 bg-red-50 border border-red-200 rounded-sm" />
-                <span>Rode cel = Dag(en) leeg</span>
+                <div className="h-3 w-3 bg-orange-100 border border-orange-200 rounded-sm" />
+                <span>Oranje cel = Dag(en) leeg</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="h-3 w-3 ring-1 ring-black rounded-sm" />
