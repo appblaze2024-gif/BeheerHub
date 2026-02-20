@@ -128,7 +128,7 @@ export default function AnnualPlanningPage() {
   const { toast } = useToast();
   const [selectedYear, setSelectedYear] = React.useState(CURRENT_YEAR);
   
-  // Get current date context for conditional formatting
+  // Get current date context
   const now = new Date();
   const currentWeekNum = getISOWeek(now);
   const currentYearNum = getYear(now);
@@ -928,7 +928,6 @@ export default function AnnualPlanningPage() {
                         const rowStyle = isHexColor ? { backgroundColor: item.color } : {};
                         const rowTotalQuantity = calculateRowTotal(item.weeks || {});
                         const rowTotalCost = rowTotalQuantity * (item.hourlyRate || 0);
-                        const rowTarget = item.targetQuantity || (item.unit === 'dag' ? 5 : 40);
                         
                         return (
                           <tr key={item.id} className={cn("border-b border-slate-100 group transition-colors")} style={rowStyle}>
@@ -978,19 +977,7 @@ export default function AnnualPlanningPage() {
                               const isSelected = selectedCells.has(`${item.id}_${week}`);
                               const m = sectionMilestoneMap[week];
                               const details = item.weeklyDetails?.[week.toString()];
-                              
-                              const isPast = (selectedYear < currentYearNum) || (selectedYear === currentYearNum && week < currentWeekNum);
                               const cellValueStr = item.weeks?.[week.toString()] || '';
-                              const cellValue = parseFloat(cellValueStr.replace(',', '.')) || 0;
-                              
-                              let textColorClass = "text-slate-900";
-                              if (cellValue >= rowTarget) {
-                                textColorClass = "text-green-600 font-black";
-                              } else if (cellValue > 0 && !isPast) {
-                                textColorClass = "text-orange-500 font-black";
-                              } else if (isPast && cellValue < rowTarget) {
-                                textColorClass = "text-red-600 font-black";
-                              }
 
                               const cellStyle: React.CSSProperties = {
                                 backgroundColor: cellColor || 'transparent',
@@ -1021,8 +1008,7 @@ export default function AnnualPlanningPage() {
                                           onChange={(e) => handleCellChange(item.id, week, e.target.value)}
                                           onPaste={(e) => handlePaste(item.id, week, e)}
                                           className={cn(
-                                            "w-full h-full bg-transparent text-center focus:bg-white/50 focus:outline-none focus:ring-inset focus:ring-1 focus:ring-primary tabular-nums text-[9px]",
-                                            textColorClass
+                                            "w-full h-full bg-transparent text-center focus:bg-white/50 focus:outline-none focus:ring-inset focus:ring-1 focus:ring-primary tabular-nums text-[9px] text-slate-900"
                                           )}
                                         />
                                       </div>
@@ -1152,18 +1138,6 @@ export default function AnnualPlanningPage() {
               <div className="flex items-center gap-2">
                 <div className="h-3 w-3 ring-1 ring-black rounded-sm" />
                 <span>Zwarte ring = Opmerking</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-green-600" />
-                <span>Groen getal = Target behaald</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-orange-500" />
-                <span>Oranje getal = Deels gevuld</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-red-600" />
-                <span>Rood getal = Target gemist (verleden)</span>
               </div>
               <div className="flex items-center gap-2">
                 <Info className="h-3 w-3" />
