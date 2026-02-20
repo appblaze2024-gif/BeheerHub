@@ -128,11 +128,6 @@ export default function AnnualPlanningPage() {
   const { toast } = useToast();
   const [selectedYear, setSelectedYear] = React.useState(CURRENT_YEAR);
   
-  // Get current date context
-  const now = new Date();
-  const currentWeekNum = getISOWeek(now);
-  const currentYearNum = getYear(now);
-
   // Selection state
   const [selectedCells, setSelectedCells] = React.useState<Set<string>>(new Set());
   const [isDragging, setIsDragging] = React.useState(false);
@@ -537,12 +532,10 @@ export default function AnnualPlanningPage() {
           const batch = writeBatch(firestore);
           const sectionItems = itemsRaw?.filter(i => i.sectionId === activeSectionForNewRow || (activeSectionForNewRow === 'default' && !i.sectionId)) || [];
           
-          // Shift items below down
           sectionItems.filter(i => (i.order || 0) >= insertAtOrder).forEach(i => {
             batch.update(doc(firestore, 'annual_planning', i.id), { order: (i.order || 0) + 1 });
           });
 
-          // Create new inserted item
           const newDocRef = doc(collection(firestore, 'annual_planning'));
           batch.set(newDocRef, {
             id: newDocRef.id,
@@ -564,7 +557,6 @@ export default function AnnualPlanningPage() {
           await batch.commit();
           toast({ title: 'Rij ingevoegd' });
         } else {
-          // Standard append at end
           addDocumentNonBlocking(collection(firestore, 'annual_planning'), {
             projectId: selectedProjectId,
             sectionId: activeSectionForNewRow === 'default' ? null : activeSectionForNewRow,
@@ -992,7 +984,7 @@ export default function AnnualPlanningPage() {
                                   onDoubleClick={() => handleWeekDetailOpen(item.id, week)}
                                   className={cn(
                                     "border-r border-slate-100 p-0 text-center h-8 w-6 min-w-[24px] transition-all relative",
-                                    isSelected && "bg-primary/20 scale-[1.02] z-10",
+                                    isSelected && "bg-primary/10 ring-1 ring-inset ring-primary/30 z-10",
                                     cellNote && "ring-1 ring-inset ring-black shadow-[inset_0_0_0_1px_black]",
                                     m?.borderLeft && "border-l-[3px] border-l-red-600 z-30",
                                     m?.borderRight && "border-r-[3px] border-r-red-600 z-30"
@@ -1001,14 +993,14 @@ export default function AnnualPlanningPage() {
                                 >
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <div className="w-full h-full relative">
+                                      <div className="w-full h-full relative pointer-events-none">
                                         <input
                                           type="text"
                                           value={cellValueStr}
                                           onChange={(e) => handleCellChange(item.id, week, e.target.value)}
                                           onPaste={(e) => handlePaste(item.id, week, e)}
                                           className={cn(
-                                            "w-full h-full bg-transparent text-center focus:bg-white/50 focus:outline-none focus:ring-inset focus:ring-1 focus:ring-primary tabular-nums text-[9px] text-slate-900"
+                                            "w-full h-full bg-transparent text-center focus:bg-white/50 focus:outline-none focus:ring-inset focus:ring-1 focus:ring-primary tabular-nums text-[9px] text-slate-900 pointer-events-auto"
                                           )}
                                         />
                                       </div>
@@ -1302,7 +1294,7 @@ export default function AnnualPlanningPage() {
                   {isSavingMilestone && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Opslaan
                 </Button>
-              </DialogFooter>
+              </form>
             </form>
           </DialogContent>
         </Dialog>
