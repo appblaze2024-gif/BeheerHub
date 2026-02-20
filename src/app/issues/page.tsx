@@ -27,7 +27,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { useProfile } from '@/firebase/profile-provider';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useProject } from '@/context/project-context';
-import Link from 'next/link';
+import Link from 'link';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -188,6 +188,9 @@ export default function IssuesPage() {
   const [isDraggingAfhandelingPhoto, setIsDraggingAfhandelingPhoto] = React.useState(false);
   const [fullScreenPhoto, setFullScreenPhoto] = React.useState<UploadedFile | null>(null);
 
+  // New: State for current user location to sort by proximity
+  const [userLocation, setUserLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
+
   const meldingenQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
@@ -252,6 +255,24 @@ export default function IssuesPage() {
     }
   }, [profile, sortedWijken]);
 
+  // Track user location for proximity sorting
+  React.useEffect(() => {
+    if (typeof window === 'undefined' || !navigator.geolocation) return;
+    
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        setUserLocation({
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        });
+      },
+      (err) => console.warn("GPS tracking disabled for proximity sorting:", err.message),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+    
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
+
   const filteredMeldingen = React.useMemo(() => {
     if (!meldingen) return [];
     
@@ -268,19 +289,32 @@ export default function IssuesPage() {
       return ['intakenummer', 'extern_meldingsnummer', 'straatnaam', 'plaats', 'postcode', 'subcategorie', 'hoofdcategorie', 'melder', 'extra_informatie', 'wijk', 'status', 'aangenomen_door', 'afgehandeld_door'].some(field => (m as any)[field]?.toLowerCase().includes(query));
     }) : timeFilteredMeldingen;
 
-    searchedMeldingen.sort((a, b) => {
-        try {
-            const dateA = new Date(`${a.datum}T${a.tijdstip || '00:00'}`).getTime();
-            const dateB = new Date(`${b.datum}T${b.tijdstip || '00:00'}`).getTime();
-            if (isNaN(dateA) || isNaN(dateB)) return 0;
-            return dateA - dateB;
-        } catch (e) {
-            return 0;
-        }
-    });
+    const finalResult = [...searchedMeldingen];
 
-    return searchedMeldingen;
-  }, [meldingen, selectedDate, debouncedSearchQuery]);
+    // Priority Sort: Proximity to user if GPS is available
+    if (userLocation) {
+        const userPt = turf.point([userLocation.longitude, userLocation.latitude]);
+        finalResult.sort((a, b) => {
+            const distA = turf.distance(userPt, turf.point([a.longitude, a.latitude]));
+            const distB = turf.distance(userPt, turf.point([b.longitude, b.latitude]));
+            return distA - distB;
+        });
+    } else {
+        // Fallback: Default sorting (time-based)
+        finalResult.sort((a, b) => {
+            try {
+                const dateA = new Date(`${a.datum}T${a.tijdstip || '00:00'}`).getTime();
+                const dateB = new Date(`${b.datum}T${b.tijdstip || '00:00'}`).getTime();
+                if (isNaN(dateA) || isNaN(dateB)) return 0;
+                return dateA - dateB;
+            } catch (e) {
+                return 0;
+            }
+        });
+    }
+
+    return finalResult;
+  }, [meldingen, selectedDate, debouncedSearchQuery, userLocation]);
 
   React.useEffect(() => {
     if (filteredMeldingen.length > 0 && !selectedMeldingId) {
