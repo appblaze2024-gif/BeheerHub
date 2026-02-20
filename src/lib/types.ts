@@ -1,4 +1,3 @@
-
 export type UserPermissions = {
   [module: string]: {
     view?: boolean;
@@ -275,6 +274,7 @@ export interface Hoeveelheid {
 export type Melding = {
   id: string;
   intakenummer: string;
+  containernummer?: string;
   extern_meldingsnummer?: string;
   latitude: number;
   longitude: number;

@@ -9,6 +9,7 @@ import { z } from 'genkit';
 
 const IssueSchema = z.object({
   intakenummer: z.string().optional(),
+  containernummer: z.string().optional().describe('Uniek nummer van de container of afvalbak indien vermeld.'),
   datum: z.string().optional().describe('Datum in YYYY-MM-DD formaat'),
   tijdstip: z.string().optional().describe('Tijd in HH:mm formaat'),
   melder: z.string().optional(),
@@ -63,6 +64,7 @@ MAPPING BASISREGELS PER BON:
    - "Tijdstip" -> tijdstip (HH:mm).
    - "Intakenummer" -> intakenummer.
    - "Aangenomen door" -> behandelaar.
+   - Eventueel "Containernummer" of "Baknummer" -> containernummer.
 
 2. CATEGORIE (Midden):
    - De waarde linksboven in het witte categorievlak is label_1 (Hoofdindeling).

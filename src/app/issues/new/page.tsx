@@ -45,6 +45,7 @@ import { LoadingScreen } from '@/components/loading-screen';
 
 const newMeldingSchema = z.object({
   intakenummer: z.string().min(1, 'Meldingsnummer is verplicht'),
+  containernummer: z.string().optional(),
   soort_melder: z.string().optional(),
   hoofdcategorie: z.string().optional(),
   subcategorie: z.string().optional(),
@@ -101,6 +102,7 @@ const DEFAULT_REPORTER_TYPES = ["Burger", "Bedrijf", "Medewerker", "Overheid"];
 
 const MAPPING_FIELDS = [
     { id: 'intakenummer', label: 'Intakenummer' },
+    { id: 'containernummer', label: 'Containernummer' },
     { id: 'datum', label: 'Datum (YYYY-MM-DD)' },
     { id: 'tijdstip', label: 'Tijdstip (HH:mm)' },
     { id: 'melder', label: 'Naam melder' },
@@ -390,6 +392,7 @@ export default function NewIssuePage() {
     resolver: zodResolver(newMeldingSchema),
     defaultValues: {
       intakenummer: '',
+      containernummer: '',
       status: 'Nieuw',
       meldingsdatum: now,
       meldingsuur: format(now, 'HH:mm'),
@@ -476,6 +479,7 @@ export default function NewIssuePage() {
       setIsReadOnly(true);
       form.reset({
         intakenummer: viewedMeldingFromDb.intakenummer || '',
+        containernummer: viewedMeldingFromDb.containernummer || '',
         soort_melder: viewedMeldingFromDb.soort_melder || '',
         hoofdcategorie: viewedMeldingFromDb.hoofdcategorie,
         subcategorie: viewedMeldingFromDb.subcategorie,
@@ -518,6 +522,7 @@ export default function NewIssuePage() {
         
         const resetData: Partial<NewMeldingFormValues> = {
             intakenummer: parsed.intakenummer || '',
+            containernummer: parsed.containernummer || '',
             melder: parsed.melder || '',
             ext_referentie: parsed.extern_meldingsnummer || '',
             hoofdcategorie: parsed.label_1 || '',
@@ -703,6 +708,7 @@ export default function NewIssuePage() {
                 // Automatically create new melding
                 const mData: any = {
                     intakenummer: parsed.intakenummer || `M-${Date.now()}`,
+                    containernummer: parsed.containernummer || '',
                     soort_melder: 'Medewerker',
                     hoofdcategorie: parsed.label_1 || 'Overig',
                     subcategorie: parsed.label_2 || 'Overige meldingen',
@@ -819,6 +825,7 @@ export default function NewIssuePage() {
     try {
        const mData: any = {
         intakenummer: data.intakenummer,
+        containernummer: data.containernummer,
         soort_melder: data.soort_melder, hoofdcategorie: data.hoofdcategorie, subcategorie: data.subcategorie,
         behandelende_afdeling: data.behandelaar, behandelaar: data.behandelaar, status: data.status,
         extern_meldingsnummer: data.ext_referentie, straatnaam: data.straatnaam, huisnummer: data.nummer,
@@ -890,6 +897,11 @@ export default function NewIssuePage() {
                         <div className="space-y-0.5 p-1">
                             <FormRow label="Meldingsnummer">
                                 <FormField control={form.control} name="intakenummer" render={({ field }) => (
+                                    <FormControl><Input {...field} className="h-7 text-xs font-bold" disabled={isReadOnly}/></FormControl>
+                                )} />
+                            </FormRow>
+                            <FormRow label="Containernummer">
+                                <FormField control={form.control} name="containernummer" render={({ field }) => (
                                     <FormControl><Input {...field} className="h-7 text-xs font-bold" disabled={isReadOnly}/></FormControl>
                                 )} />
                             </FormRow>
