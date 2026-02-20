@@ -387,7 +387,7 @@ export default function IssuesPage() {
             status: 'Afgerond',
             afhandeling_datum: format(new Date(), 'yyyy-MM-dd'),
             afhandeling_tijdstip: format(new Date(), 'HH:mm'),
-            afgehandeld_door: user.displayName || user.email || 'Onbekend',
+            afgehandeld_door: profile?.displayName || user.displayName || user.email || 'Onbekend',
             afhandeling_bijzonderheden: afhandeling_bijzonderheden_value || null,
             files: uploadedFiles,
             afhandeling_fotos: afhandelingFotos,

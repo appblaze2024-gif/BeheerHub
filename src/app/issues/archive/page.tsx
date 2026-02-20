@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -84,6 +83,19 @@ export default function ArchiveIssuesPage() {
     return result;
   }, [archivedMeldingen, debouncedSearchTerm]);
 
+  const formatDisplayName = (nameOrEmail?: string) => {
+    if (!nameOrEmail) return '-';
+    if (nameOrEmail.includes('@')) {
+      // Try to format email like firstname.lastname@...
+      const part = nameOrEmail.split('@')[0];
+      return part
+        .split('.')
+        .map(p => p.charAt(0).toUpperCase() + p.slice(1))
+        .join(' ');
+    }
+    return nameOrEmail;
+  };
+
   return (
     <div className="flex flex-col h-screen bg-background">
       <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border-b shrink-0 gap-4 bg-slate-50/50">
@@ -141,7 +153,7 @@ export default function ArchiveIssuesPage() {
                                     <TableCell className="max-w-xs truncate py-2 px-4 border-r border-slate-100 hidden md:table-cell text-xs italic text-slate-500">{melding.extra_informatie || '-'}</TableCell>
                                     <TableCell className="py-2 px-4 border-r border-slate-100 text-[11px] font-bold text-slate-600">{melding.datum ? format(new Date(melding.datum), 'dd-MM-yy') : '-'}</TableCell>
                                     <TableCell className="py-2 px-4 border-r border-slate-100 text-[11px] font-black text-primary">{melding.afhandeling_datum ? format(new Date(melding.afhandeling_datum), 'dd-MM-yy') : '-'}</TableCell>
-                                    <TableCell className='truncate py-2 px-4 border-r border-slate-100 hidden lg:table-cell text-xs font-bold'>{melding.afgehandeld_door || '-'}</TableCell>
+                                    <TableCell className='truncate py-2 px-4 border-r border-slate-100 hidden lg:table-cell text-xs font-bold'>{formatDisplayName(melding.afgehandeld_door)}</TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
