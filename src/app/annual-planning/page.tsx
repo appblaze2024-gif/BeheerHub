@@ -297,17 +297,6 @@ export default function AnnualPlanningPage() {
     toast({ title: 'Sectietitel bijgewerkt' });
   };
 
-  const handleToggleSectionVisibility = (sectionId: string, currentHidden: boolean) => {
-    if (!firestore || sectionId === 'default') return;
-    updateDocumentNonBlocking(doc(firestore, 'annual_planning_sections', sectionId), {
-      hidden: !currentHidden
-    });
-    toast({ 
-      title: !currentHidden ? 'Blok verborgen voor overzichten' : 'Blok weer zichtbaar gemaakt',
-      description: 'Dit heeft direct invloed op de knop Onderaannemers.'
-    });
-  };
-
   const handleCellChange = (itemId: string, week: number, value: string) => {
     if (!firestore) return;
     
@@ -867,23 +856,6 @@ export default function AnnualPlanningPage() {
                                     <span className="text-[11px] font-black uppercase tracking-tighter truncate">{section.title}</span>
                                     <Pencil className="h-3 w-3 text-white/40 opacity-0 group-hover/corner:opacity-100 transition-opacity shrink-0" />
                                   </div>
-                                  {section.id !== 'default' && (
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button 
-                                          variant="ghost" 
-                                          size="icon" 
-                                          className="h-6 w-6 text-white/40 hover:text-white shrink-0"
-                                          onClick={() => handleToggleSectionVisibility(section.id, !!section.hidden)}
-                                        >
-                                          {section.hidden ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        {section.hidden ? 'Blok is verborgen voor Onderaannemers-overzicht' : 'Blok is zichtbaar in overzichten'}
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  )}
                                 </div>
                                 {section.id !== 'default' && (
                                   <AlertDialog>

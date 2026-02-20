@@ -12,11 +12,12 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Users, Info, Loader2, Calendar, LayoutGrid } from 'lucide-react';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { Users, Info, Loader2, Calendar, LayoutGrid, Eye, EyeOff } from 'lucide-react';
+import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { collection, query, where, doc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface SubcontractorOverviewDialogProps {
   open: boolean;
@@ -77,15 +78,22 @@ export function SubcontractorOverviewDialog({
   const { data: sectionsRaw, isLoading: isLoadingSections } = useCollection<AnnualPlanningSection>(sectionsQuery);
   const { data: items, isLoading: isLoadingItems } = useCollection<AnnualPlanningItem>(planningQuery);
 
+  const handleToggleVisibility = (sectionId: string, currentHidden: boolean) => {
+    if (!firestore || sectionId === 'default') return;
+    updateDocumentNonBlocking(doc(firestore, 'annual_planning_sections', sectionId), {
+      hidden: !currentHidden
+    });
+  };
+
   const groupedData = React.useMemo(() => {
     if (!items) return [];
     
-    // Filter out hidden sections
-    const sections = sectionsRaw ? [...sectionsRaw].filter(s => !s.hidden).sort((a, b) => (a.order || 0) - (b.order || 0)) : [];
+    // We get all sections to allow toggling them back on
+    const sections = sectionsRaw ? [...sectionsRaw].sort((a, b) => (a.order || 0) - (b.order || 0)) : [];
     
-    // If no sections in DB, create default (visible by default)
-    if (sections.length === 0 && (!sectionsRaw || !sectionsRaw.find(s => s.id === 'default' && s.hidden))) {
-      sections.push({ id: 'default', title: `Planning ${year}`, order: 0, projectId: projectId!, year });
+    // If no sections in DB, create default
+    if (sections.length === 0 && (!sectionsRaw || sectionsRaw.length === 0)) {
+      sections.push({ id: 'default', title: `Planning ${year}`, order: 0, projectId: projectId!, year, hidden: false });
     }
 
     return sections.map(section => {
@@ -100,7 +108,7 @@ export function SubcontractorOverviewDialog({
         ...section,
         items: sectionItems
       };
-    }).filter(group => group.items.length > 0);
+    }).filter(group => group.items.length > 0 || !group.hidden); // Show if items exist OR if it's not hidden
   }, [items, sectionsRaw, weekNumber, year, projectId]);
 
   const isLoading = isLoadingSections || isLoadingItems;
@@ -134,53 +142,82 @@ export function SubcontractorOverviewDialog({
             <ScrollArea className="h-full">
               <div className="p-6 space-y-8">
                 {groupedData.map((group) => (
-                  <div key={group.id} className="space-y-4">
+                  <div key={group.id} className={cn("space-y-4 transition-opacity", group.hidden && "opacity-40 grayscale-[0.5]")}>
                     <div className="flex items-center gap-3 border-b-2 border-slate-100 pb-2">
                       <LayoutGrid className="h-4 w-4 text-primary" />
                       <h3 className="font-black uppercase tracking-tighter text-slate-900">{group.title}</h3>
-                      <Badge variant="secondary" className="ml-auto bg-slate-100 text-slate-500 font-bold h-5">{group.items.length}</Badge>
+                      {group.hidden && (
+                        <Badge variant="secondary" className="text-[8px] font-black uppercase bg-slate-200">Verborgen</Badge>
+                      )}
+                      
+                      <div className="ml-auto flex items-center gap-2">
+                        {group.id !== 'default' && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-8 w-8 rounded-full hover:bg-slate-100"
+                                  onClick={() => handleToggleVisibility(group.id, !!group.hidden)}
+                                >
+                                  {group.hidden ? <EyeOff className="h-4 w-4 text-slate-400" /> : <Eye className="h-4 w-4 text-primary" />}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {group.hidden ? 'Zet dit blok weer aan' : 'Verberg dit blok in het overzicht'}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                        <Badge variant="secondary" className="bg-slate-100 text-slate-500 font-bold h-5">{group.items.length}</Badge>
+                      </div>
                     </div>
                     
-                    <div className="grid gap-3">
-                      {group.items.map((item) => {
-                        const note = item.cellNotes?.[weekNumber.toString()];
-                        const value = item.weeks?.[weekNumber.toString()];
-                        
-                        return (
-                          <div 
-                            key={item.id} 
-                            className="p-4 rounded-2xl border-2 border-slate-50 bg-slate-50/30 hover:bg-white hover:border-primary/20 transition-all flex flex-col gap-3 group"
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <h4 className="font-black text-sm uppercase tracking-tight text-slate-900 truncate">{item.resourceName}</h4>
-                                  <Badge variant="outline" className="text-[8px] h-4 uppercase font-black tracking-widest border-2 bg-white">
-                                    {item.category || 'Middel'}
-                                  </Badge>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
-                                    <Calendar className="h-3 w-3" />
-                                    <span>Week {weekNumber}</span>
+                    {!group.hidden ? (
+                      <div className="grid gap-3">
+                        {group.items.map((item) => {
+                          const note = item.cellNotes?.[weekNumber.toString()];
+                          const value = item.weeks?.[weekNumber.toString()];
+                          
+                          return (
+                            <div 
+                              key={item.id} 
+                              className="p-4 rounded-2xl border-2 border-slate-50 bg-slate-50/30 hover:bg-white hover:border-primary/20 transition-all flex flex-col gap-3 group"
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <h4 className="font-black text-sm uppercase tracking-tight text-slate-900 truncate">{item.resourceName}</h4>
+                                    <Badge variant="outline" className="text-[8px] h-4 uppercase font-black tracking-widest border-2 bg-white">
+                                      {item.category || 'Middel'}
+                                    </Badge>
                                   </div>
-                                  <div className="flex items-center gap-1.5 text-[10px] font-black text-primary uppercase">
-                                    <span>Gepland: {value}</span>
+                                  <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
+                                      <Calendar className="h-3 w-3" />
+                                      <span>Week {weekNumber}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-[10px] font-black text-primary uppercase">
+                                      <span>Gepland: {value}</span>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
+                              
+                              {note && (
+                                <div className="bg-white p-2.5 rounded-xl border border-slate-100 shadow-sm flex items-start gap-2 animate-in fade-in slide-in-from-top-1">
+                                  <Info className="h-3.5 w-3.5 text-blue-500 shrink-0 mt-0.5" />
+                                  <p className="text-[11px] font-medium text-slate-600 leading-relaxed italic">{note}</p>
+                                </div>
+                              )}
                             </div>
-                            
-                            {note && (
-                              <div className="bg-white p-2.5 rounded-xl border border-slate-100 shadow-sm flex items-start gap-2 animate-in fade-in slide-in-from-top-1">
-                                <Info className="h-3.5 w-3.5 text-blue-500 shrink-0 mt-0.5" />
-                                <p className="text-[11px] font-medium text-slate-600 leading-relaxed italic">{note}</p>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic ml-7">Blok is uitgeschakeld voor rapportage.</p>
+                    )}
                   </div>
                 ))}
               </div>
