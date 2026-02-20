@@ -830,8 +830,8 @@ export default function AnnualPlanningPage() {
                           );
                         })}
                         <th className="w-8 bg-[#388e3c] border-r border-white/20">aantal</th>
-                        <th className="w-12 bg-[#388e3c] border-r border-white/20">tarief</th>
-                        <th className="w-16 bg-[#388e3c]">bedrag</th>
+                        <th className="w-20 bg-[#388e3c] border-r border-white/20">tarief</th>
+                        <th className="w-24 bg-[#388e3c]">bedrag</th>
                       </tr>
 
                       <tr className="bg-[#8e24aa] text-white h-8">
@@ -859,8 +859,8 @@ export default function AnnualPlanningPage() {
                           );
                         })}
                         <th className="bg-[#6a1b9a] text-center uppercase tracking-tighter w-8 border-r border-white/20">tot</th>
-                        <th className="bg-[#6a1b9a] text-center uppercase tracking-tighter w-12 border-r border-white/20">prijs</th>
-                        <th className="bg-[#6a1b9a] text-center uppercase tracking-tighter w-16">totaal</th>
+                        <th className="bg-[#6a1b9a] text-center uppercase tracking-tighter w-20 border-r border-white/20">prijs</th>
+                        <th className="bg-[#6a1b9a] text-center uppercase tracking-tighter w-24">totaal</th>
                       </tr>
                     </thead>
 
@@ -958,16 +958,20 @@ export default function AnnualPlanningPage() {
                             <td className="bg-slate-50/50 text-center font-black text-[10px] tabular-nums border-l border-slate-200 h-8 w-8 border-r">
                               {rowTotalQuantity.toLocaleString('nl-NL')}
                             </td>
-                            <td className="bg-white p-0 text-center h-8 w-12 border-r border-slate-200">
-                              <input
-                                type="text"
-                                defaultValue={item.hourlyRate?.toString() || ''}
-                                onBlur={(e) => handleHourlyRateChange(item.id, e.target.value)}
-                                className="w-full h-full bg-transparent text-center focus:bg-slate-50 focus:outline-none tabular-nums font-bold text-[10px]"
-                                placeholder="0"
-                              />
+                            <td className="bg-white p-0 px-1 border-r border-slate-200 h-8 min-w-[80px]">
+                              <div className="flex items-center justify-center gap-0.5 text-[10px] font-bold">
+                                <span className="text-slate-400">€</span>
+                                <input
+                                  type="text"
+                                  defaultValue={item.hourlyRate?.toString() || ''}
+                                  onBlur={(e) => handleHourlyRateChange(item.id, e.target.value)}
+                                  className="w-10 bg-transparent text-center focus:outline-none tabular-nums"
+                                  placeholder="0"
+                                />
+                                <span className="text-slate-400">/ {item.unit || 'uur'}</span>
+                              </div>
                             </td>
-                            <td className="bg-slate-50/50 text-right pr-1 font-black text-[10px] tabular-nums h-8 w-16">
+                            <td className="bg-slate-50/50 text-right pr-1 font-black text-[10px] tabular-nums h-8 w-24">
                               {rowTotalCost > 0 ? `€ ${rowTotalCost.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
                             </td>
                           </tr>
@@ -1001,8 +1005,8 @@ export default function AnnualPlanningPage() {
                           );
                         })}
                         <td className="border-l border-slate-200 h-8 w-8 border-r" />
-                        <td className="border-r border-slate-200 h-8 w-12" />
-                        <td className="h-8 w-16" />
+                        <td className="border-r border-slate-200 h-8 w-20" />
+                        <td className="h-8 w-24" />
                       </tr>
                     </tbody>
 
@@ -1027,7 +1031,7 @@ export default function AnnualPlanningPage() {
                           {sectionGrandTotalQuantity.toLocaleString('nl-NL')}
                         </td>
                         <td className="bg-slate-200 border-r border-slate-300" />
-                        <td className="text-right pr-1 text-[10px] text-primary bg-slate-200 h-8 w-16">
+                        <td className="text-right pr-1 text-[10px] text-primary bg-slate-200 h-8 w-24">
                           € {sectionGrandTotalCost.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                       </tr>
