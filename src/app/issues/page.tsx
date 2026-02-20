@@ -19,7 +19,7 @@ import type { Wijk, Melding, UploadedFile, MeldingTask, Hoeveelheid, Object as M
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { format, isSameDay, startOfDay } from 'date-fns';
+import { format, isToday, startOfDay } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -717,7 +717,7 @@ export default function IssuesPage() {
             {selectedMelding ? (
               <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                   {selectedProjectId && (
-                  <Link href={`/navigation-module?projectId=${selectedProjectId}&lat=${selectedMelding.latitude}&lng=${selectedMelding.longitude}&straat=${encodeURIComponent(selectedMelding.straatnaam || '')}`} passHref legacyBehavior>
+                  <Link href={`/navigation-module?projectId=${selectedProjectId}&lat=${selectedMelding.latitude}&lng=${selectedMelding.longitude}&straat=${encodeURIComponent(selectedMelding.straatnaam || '')}`}>
                       <Button variant="outline" size="icon" className="h-9 w-9 bg-primary text-white hover:bg-primary/90 shadow-lg shadow-black/20">
                           <Navigation className="h-4 w-4" />
                       </Button>
@@ -1124,7 +1124,7 @@ export default function IssuesPage() {
                                                     </AlertDialogHeader>
                                                     <AlertDialogFooter>
                                                         <AlertDialogCancel>Annuleren</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleAfhandelingPhotoDelete(photo)} className="bg-red-600">Verwijderen</AlertDialogAction>
+                                                        <AlertDialogAction onClick={handleAfhandelingPhotoDelete(photo)} className="bg-red-600">Verwijderen</AlertDialogAction>
                                                     </AlertDialogFooter>
                                                 </AlertDialogContent>
                                             </AlertDialog>
