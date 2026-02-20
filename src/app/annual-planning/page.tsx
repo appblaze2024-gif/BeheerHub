@@ -938,7 +938,7 @@ export default function AnnualPlanningPage() {
               <div className="py-4 space-y-4">
                 <div className="space-y-2">
                   <Label>Naam middel / medewerker</Label>
-                  <Input name="name" defaultValue={editingItem?.resourceName || ''} placeholder="Bijv. Veegmachine 569" required />
+                  <input name="name" defaultValue={editingItem?.resourceName || ''} placeholder="Bijv. Veegmachine 569" required className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" />
                 </div>
                 <div className="space-y-2">
                   <Label>Kleur / Categorie</Label>
@@ -1040,7 +1040,11 @@ export default function AnnualPlanningPage() {
         {cellContextMenu && (
           <div 
             className="fixed z-[100] bg-white rounded-lg shadow-2xl border border-slate-200 p-2 min-w-[160px] animate-in fade-in zoom-in duration-100"
-            style={{ left: cellContextMenu.x, top: cellContextMenu.y }}
+            style={{ 
+              left: cellContextMenu.x, 
+              top: cellContextMenu.y,
+              transform: `translate(${cellContextMenu.x + 200 > (typeof window !== 'undefined' ? window.innerWidth : 1000) ? '-100%' : '0'}, ${cellContextMenu.y + 300 > (typeof window !== 'undefined' ? window.innerHeight : 1000) ? '-100%' : '0'})`
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Markering ({selectedCells.size || 1})</p>
@@ -1110,7 +1114,11 @@ export default function AnnualPlanningPage() {
         {headerContextMenu && (
           <div 
             className="fixed z-[100] bg-white rounded-lg shadow-2xl border border-slate-200 p-2 min-w-[120px] animate-in fade-in zoom-in duration-100"
-            style={{ left: headerContextMenu.x, top: headerContextMenu.y }}
+            style={{ 
+              left: headerContextMenu.x, 
+              top: headerContextMenu.y,
+              transform: `translate(${headerContextMenu.x + 150 > (typeof window !== 'undefined' ? window.innerWidth : 1000) ? '-100%' : '0'}, ${headerContextMenu.y + 200 > (typeof window !== 'undefined' ? window.innerHeight : 1000) ? '-100%' : '0'})`
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Header kleur</p>
