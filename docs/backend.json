@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -88,7 +89,10 @@
         "projectId": { "type": "string" },
         "weekNumber": { "type": "number" },
         "label": { "type": "string" },
-        "year": { "type": "number" }
+        "year": { "type": "number" },
+        "color": { "type": "string" },
+        "borderLeft": { "type": "boolean" },
+        "borderRight": { "type": "boolean" }
       },
       "required": ["weekNumber", "label", "year", "projectId"]
     },

@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -69,6 +70,8 @@ interface AnnualMilestone {
   label: string;
   year: number;
   color?: string;
+  borderLeft?: boolean;
+  borderRight?: boolean;
 }
 
 interface AnnualPlanningConfig {
@@ -301,7 +304,6 @@ export default function AnnualPlanningPage() {
     const pasteData = e.clipboardData.getData('text');
     const cellKey = `${itemId}_${week}`;
     
-    // If current cell is part of selection, apply paste to all selected cells
     if (selectedCells.has(cellKey) && selectedCells.size > 1) {
       e.preventDefault();
       const updateTasks: { itemId: string, week: number }[] = [];
@@ -425,6 +427,35 @@ export default function AnnualPlanningPage() {
     }
   };
 
+  const handleHeaderBorderToggle = async (sectionId: string, week: number, side: 'left' | 'right') => {
+    if (!firestore || !selectedProjectId) return;
+    
+    const existing = milestonesRaw?.find(m => m.weekNumber === week && (m.sectionId === sectionId || (sectionId === 'default' && !m.sectionId)));
+    
+    try {
+      if (existing) {
+        const field = side === 'left' ? 'borderLeft' : 'borderRight';
+        updateDocumentNonBlocking(doc(firestore, 'annual_milestones', existing.id), {
+          [field]: !existing[field]
+        });
+      } else {
+        await addDocumentNonBlocking(collection(firestore, 'annual_milestones'), {
+          projectId: selectedProjectId,
+          sectionId: sectionId === 'default' ? null : sectionId,
+          label: '',
+          weekNumber: week,
+          year: selectedYear,
+          [side === 'left' ? 'borderLeft' : 'borderRight']: true
+        });
+      }
+      toast({ title: `Rode lijn ${side === 'left' ? 'links' : 'rechts'} bijgewerkt` });
+    } catch (e) {
+      console.error("Header border error:", e);
+    } finally {
+      setHeaderContextMenu(null);
+    }
+  };
+
   const handleRowSubmit = async (data: { name: string, color: string }) => {
     if (!selectedProjectId || !firestore) return;
 
@@ -474,7 +505,7 @@ export default function AnnualPlanningPage() {
     const existing = milestonesRaw?.find(m => m.weekNumber === week && (m.sectionId === sectionId || (sectionId === 'default' && !m.sectionId)));
     
     try {
-      if (milestoneInput.trim() === '' && (!existing || !existing.color)) {
+      if (milestoneInput.trim() === '' && (!existing || (!existing.color && !existing.borderLeft && !existing.borderRight))) {
         if (existing) {
           deleteDocumentNonBlocking(doc(firestore, 'annual_milestones', existing.id));
           toast({ title: 'Milestone verwijderd' });
@@ -514,7 +545,7 @@ export default function AnnualPlanningPage() {
   };
 
   const handleCellMouseDown = (itemId: string, week: number, e: React.MouseEvent) => {
-    if (e.button !== 0) return; // Only left click
+    if (e.button !== 0) return;
     
     const key = `${itemId}_${week}`;
     setIsDragging(true);
@@ -712,7 +743,9 @@ export default function AnnualPlanningPage() {
                               style={headerStyle}
                               className={cn(
                                 "border-r border-white/20 relative p-0 w-6 min-w-[24px] overflow-visible h-32 group/header-cell cursor-pointer transition-colors",
-                                !m?.color && "hover:bg-white/10"
+                                !m?.color && "hover:bg-white/10",
+                                m?.borderLeft && "border-l-2 border-l-red-500",
+                                m?.borderRight && "border-r-2 border-r-red-500"
                               )}
                               onClick={() => handleQuickMilestone(week, section.id)}
                               onContextMenu={(e) => handleHeaderContextMenu(e, section.id, week)}
@@ -753,7 +786,8 @@ export default function AnnualPlanningPage() {
                               className={cn(
                                 "border-r border-white/20 text-center font-black w-6 min-w-[24px] h-8 cursor-context-menu transition-colors",
                                 !m?.color && "hover:bg-white/10",
-                                week % 13 === 0 && "border-r-2 border-red-500"
+                                m?.borderLeft && "border-l-2 border-l-red-500",
+                                m?.borderRight && "border-r-2 border-r-red-500"
                               )}
                             >
                               {week}
@@ -797,6 +831,7 @@ export default function AnnualPlanningPage() {
                               const cellColor = item.cellColors?.[week.toString()];
                               const cellNote = item.cellNotes?.[week.toString()];
                               const isSelected = selectedCells.has(`${item.id}_${week}`);
+                              const m = sectionMilestoneMap[week];
                               
                               const cellStyle: React.CSSProperties = cellColor ? { backgroundColor: cellColor } : {};
                               
@@ -808,9 +843,10 @@ export default function AnnualPlanningPage() {
                                   onContextMenu={(e) => handleCellContextMenu(e, item.id, week)}
                                   className={cn(
                                     "border-r border-slate-100 p-0 text-center h-8 w-6 min-w-[24px] transition-all",
-                                    week % 13 === 0 && "border-r-2 border-red-500",
                                     isSelected && "bg-primary/20 scale-[1.02] z-10",
-                                    cellNote && "ring-1 ring-inset ring-black shadow-[inset_0_0_0_1px_black]"
+                                    cellNote && "ring-1 ring-inset ring-black shadow-[inset_0_0_0_1px_black]",
+                                    m?.borderLeft && "border-l-2 border-l-red-500",
+                                    m?.borderRight && "border-r-2 border-r-red-500"
                                   )}
                                   style={cellStyle}
                                 >
@@ -851,12 +887,16 @@ export default function AnnualPlanningPage() {
                             <Plus className="h-3.5 w-3.5 text-primary" />
                           </Button>
                         </td>
-                        {WEEKS.map(week => (
-                          <td key={week} className={cn(
-                            "border-r border-slate-100 w-6 min-w-[24px] h-8",
-                            week % 13 === 0 && "border-r-2 border-red-500"
-                          )} />
-                        ))}
+                        {WEEKS.map(week => {
+                          const m = sectionMilestoneMap[week];
+                          return (
+                            <td key={week} className={cn(
+                              "border-r border-slate-100 w-6 min-w-[24px] h-8",
+                              m?.borderLeft && "border-l-2 border-l-red-500",
+                              m?.borderRight && "border-r-2 border-r-red-500"
+                            )} />
+                          );
+                        })}
                         <td className="border-l border-slate-200 h-8 w-8" />
                       </tr>
                     </tbody>
@@ -866,14 +906,18 @@ export default function AnnualPlanningPage() {
                         <td className="sticky left-0 z-10 bg-slate-100 border-r border-slate-300 p-2 uppercase tracking-tighter text-[9px] text-slate-500 h-8 w-px whitespace-nowrap">
                           Totaal {section.title}
                         </td>
-                        {WEEKS.map(week => (
-                          <td key={week} className={cn(
-                            "text-center tabular-nums border-r border-slate-300 w-6 min-w-[24px] h-8",
-                            week % 13 === 0 && "border-r-2 border-red-500"
-                          )}>
-                            {calculateWeekTotal(week) || ''}
-                          </td>
-                        ))}
+                        {WEEKS.map(week => {
+                          const m = sectionMilestoneMap[week];
+                          return (
+                            <td key={week} className={cn(
+                              "text-center tabular-nums border-r border-slate-300 w-6 min-w-[24px] h-8",
+                              m?.borderLeft && "border-l-2 border-l-red-500",
+                              m?.borderRight && "border-r-2 border-r-red-500"
+                            )}>
+                              {calculateWeekTotal(week) || ''}
+                            </td>
+                          );
+                        })}
                         <td className="text-center text-[10px] text-primary bg-slate-200 h-8 w-8">
                           {sectionGrandTotal.toLocaleString()}
                         </td>
@@ -899,7 +943,7 @@ export default function AnnualPlanningPage() {
             <div className="mt-4 flex flex-wrap items-center gap-4 text-[9px] font-black uppercase tracking-widest text-slate-400">
               <div className="flex items-center gap-2">
                 <div className="h-2.5 w-2.5 bg-red-500 rounded-sm" />
-                <span>Kwartaal scheiding</span>
+                <span>Rode lijn = Scheiding</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="h-3 w-3 bg-slate-200 border border-slate-300 rounded-sm" />
@@ -911,7 +955,7 @@ export default function AnnualPlanningPage() {
               </div>
               <div className="flex items-center gap-2">
                 <Info className="h-3 w-3" />
-                <span>Slepen om meerdere cellen te selecteren. Rechtsklik voor kleur of opmerking. Ctrl+V in selectie om te plannen.</span>
+                <span>Slepen om meerdere cellen te selecteren. Rechtsklik op header voor rode lijn of kleur.</span>
               </div>
             </div>
           </div>
@@ -1092,7 +1136,6 @@ export default function AnnualPlanningPage() {
               className="w-full justify-start h-8 text-[10px] font-bold gap-2 px-2 hover:bg-slate-100 text-red-600"
               onClick={() => {
                 handleCellColorChange(cellContextMenu.itemId, cellContextMenu.week, 'transparent');
-                // Clear note too?
                 setCellContextMenu(null);
               }}
             >
@@ -1113,16 +1156,40 @@ export default function AnnualPlanningPage() {
 
         {headerContextMenu && (
           <div 
-            className="fixed z-[100] bg-white rounded-lg shadow-2xl border border-slate-200 p-2 min-w-[120px] animate-in fade-in zoom-in duration-100"
+            className="fixed z-[100] bg-white rounded-lg shadow-2xl border border-slate-200 p-2 min-w-[160px] animate-in fade-in zoom-in duration-100"
             style={{ 
               left: headerContextMenu.x, 
               top: headerContextMenu.y,
-              transform: `translate(${headerContextMenu.x + 150 > (typeof window !== 'undefined' ? window.innerWidth : 1000) ? '-100%' : '0'}, ${headerContextMenu.y + 200 > (typeof window !== 'undefined' ? window.innerHeight : 1000) ? '-100%' : '0'})`
+              transform: `translate(${headerContextMenu.x + 150 > (typeof window !== 'undefined' ? window.innerWidth : 1000) ? '-100%' : '0'}, ${headerContextMenu.y + 250 > (typeof window !== 'undefined' ? window.innerHeight : 1000) ? '-100%' : '0'})`
             }}
             onClick={(e) => e.stopPropagation()}
           >
+            <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Lijn marker</p>
+            <div className="flex flex-col gap-1 mb-2">
+                <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="justify-start h-8 text-[10px] font-bold gap-2"
+                    onClick={() => handleHeaderBorderToggle(headerContextMenu.sectionId, headerContextMenu.week, 'left')}
+                >
+                    <div className="w-1.5 h-4 bg-red-500 rounded-full" />
+                    Rode lijn links
+                </Button>
+                <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="justify-start h-8 text-[10px] font-bold gap-2"
+                    onClick={() => handleHeaderBorderToggle(headerContextMenu.sectionId, headerContextMenu.week, 'right')}
+                >
+                    <div className="w-1.5 h-4 bg-red-500 rounded-full ml-auto" />
+                    Rode lijn rechts
+                </Button>
+            </div>
+
+            <Separator className="my-2" />
+
             <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Header kleur</p>
-            <div className="grid grid-cols-4 gap-1">
+            <div className="grid grid-cols-4 gap-1 mb-2">
               {CELL_PRESET_COLORS.map(c => (
                 <button
                   key={c.value}
