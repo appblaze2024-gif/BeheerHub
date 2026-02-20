@@ -4,7 +4,7 @@ import * as React from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, Loader2, Calendar, Pencil, Check, Info, Palette, MessageSquare, X, Clock } from 'lucide-react';
+import { Plus, Trash2, Loader2, Calendar, Pencil, Check, Info, Palette, MessageSquare, X, Clock, Search } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking, useDoc, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, where, writeBatch } from 'firebase/firestore';
 import { useProject } from '@/context/project-context';
@@ -126,6 +126,7 @@ export default function AnnualPlanningPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [selectedYear, setSelectedYear] = React.useState(CURRENT_YEAR);
+  const [searchTerm, setSearchTerm] = React.useState('');
   
   // Selection state
   const [selectedCells, setSelectedCells] = React.useState<Set<string>>(new Set());
@@ -761,12 +762,23 @@ export default function AnnualPlanningPage() {
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {selectedCells.size > 0 && (
               <Button variant="ghost" size="sm" className="h-8 text-[10px] font-black uppercase tracking-widest text-slate-400" onClick={() => setSelectedCells(new Set())}>
                 Selectie wissen ({selectedCells.size})
               </Button>
             )}
+            
+            <div className="relative w-64">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Zoek in planningen..."
+                className="h-8 pl-9 font-bold bg-white border-2"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+
             <Select 
               value={selectedYear.toString()} 
               onValueChange={(v) => setSelectedYear(parseInt(v))}
@@ -786,7 +798,12 @@ export default function AnnualPlanningPage() {
         <div className="flex-1 overflow-auto bg-slate-50 relative no-scrollbar pb-20 select-none">
           <div className="flex flex-col gap-8 p-2 lg:p-4">
             {sections.map((section) => {
-              const sectionItems = itemsRaw ? itemsRaw.filter(i => i.sectionId === section.id || (section.id === 'default' && !i.sectionId)).sort((a, b) => (a.order || 0) - (b.order || 0)) : [];
+              const sectionItems = itemsRaw ? itemsRaw.filter(i => {
+                const isInSection = i.sectionId === section.id || (section.id === 'default' && !i.sectionId);
+                const matchesSearch = i.resourceName.toLowerCase().includes(searchTerm.toLowerCase());
+                return isInSection && matchesSearch;
+              }).sort((a, b) => (a.order || 0) - (b.order || 0)) : [];
+
               const sectionMilestones = milestonesRaw ? milestonesRaw.filter(m => m.sectionId === section.id || (section.id === 'default' && !m.sectionId)) : [];
               const sectionMilestoneMap: Record<number, AnnualMilestone> = {};
               sectionMilestones.forEach(m => { sectionMilestoneMap[m.weekNumber] = m; });
@@ -800,6 +817,9 @@ export default function AnnualPlanningPage() {
                 const rowTotal = calculateRowTotal(item.weeks || {});
                 return acc + (rowTotal * (item.hourlyRate || 0));
               }, 0);
+
+              // Hide section if searching and no items found
+              if (searchTerm && sectionItems.length === 0) return null;
 
               return (
                 <div key={section.id} className="group/section relative bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden">
@@ -1005,7 +1025,7 @@ export default function AnnualPlanningPage() {
                                 >
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <div className="w-full h-full relative pointer-events-none">
+                                      <div className="w-full h-full relative">
                                         <input
                                           type="text"
                                           value={cellValueStr}
