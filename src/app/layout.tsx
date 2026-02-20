@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { Metadata } from 'next';
@@ -66,6 +65,7 @@ function Header() {
     
     const translations: Record<string, string> = {
       'projects': 'Projecten',
+      'annual-planning': 'Jaarplanning',
       'bestanden': 'Documenten',
       'employees': 'Personeel',
       'work-planning': 'Werkplanning',
