@@ -134,7 +134,7 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
     const [previewUrl, setPreviewUrl] = React.useState<string | undefined>(samplePdfUrl || "https://i.ibb.co/nNFZcctf/Schermafbeelding-2026-02-18-104605.png");
     const [isUploadingSample, setIsUploadingSample] = React.useState(false);
     const [zoom, setZoom] = React.useState(1);
-    const [activeFieldId, setActiveFieldId] = React.useState<string | null>(null);
+    const [activeFieldId, setactiveFieldId] = React.useState<string | null>(null);
     const [markers, setMarkers] = React.useState<Record<string, { x: number, y: number }>>({});
     const fileInputRef = React.useRef<HTMLInputElement>(null);
     const app = useFirebaseApp();
@@ -287,7 +287,7 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
                                                 "space-y-1.5 p-2 rounded-xl transition-all border-2",
                                                 activeFieldId === field.id ? "border-primary bg-primary/5" : "border-transparent"
                                             )}
-                                            onFocus={() => setActiveFieldId(field.id)}
+                                            onFocus={() => setactiveFieldId(field.id)}
                                         >
                                             <Label className="text-[9px] font-black uppercase text-slate-400 ml-1 flex justify-between items-center">
                                                 {field.label}
@@ -296,7 +296,7 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
                                             <Input 
                                                 value={fieldInstructions[field.id.toLowerCase()] || ''} 
                                                 onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                                                onFocus={() => setActiveFieldId(field.id)}
+                                                onFocus={() => setactiveFieldId(field.id)}
                                                 placeholder={`Klik op afbeelding voor locatie...`}
                                                 className="h-9 text-xs font-bold border-slate-200 focus:ring-primary/20 shadow-sm"
                                             />
@@ -641,7 +641,7 @@ export default function NewIssuePage() {
                 try {
                     const features = JSON.parse(wijk.subGebieden);
                     if (Array.isArray(features)) {
-                        for (const feature of featureCollection.features) {
+                        for (const feature of features) {
                             if (feature && turf.booleanPointInPolygon(point, feature)) { foundWijk = wijk.naam; break; }
                         }
                     }
@@ -871,19 +871,21 @@ export default function NewIssuePage() {
                 <Button variant="ghost" size="icon" onClick={() => router.back()}><ArrowLeft className="h-4 w-4" /></Button>
                 <h1 className="font-semibold text-xs">{viewedMelding ? `Melding: ${viewedMelding.intakenummer}` : (watchedIntakenummer ? `Melding: ${watchedIntakenummer}` : 'Nieuwe Melding')}</h1>
             </div>
-            <div className="flex justify-end gap-2">
-                {profile?.role === 'Super admin' && (
-                    <AIConfigDialog instructions={pdfInstructions} onSave={handleSaveAIInstructions} isSaving={isSavingConfig} samplePdfUrl={samplePdfUrl} />
-                )}
-                <input type="file" ref={pdfInputRef} onChange={handlePdfUpload} className="hidden" accept="application/pdf" multiple />
-                <Button type="button" variant="outline" onClick={() => pdfInputRef.current?.click()} className="h-8 bg-white border-blue-600 text-blue-600 hover:bg-blue-50" disabled={isParsingPdf}>
-                    {isParsingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />} PDF-scan
-                </Button>
-                <Button type="button" variant="ghost" onClick={() => router.back()} className="h-8">Annuleren</Button>
-                <Button type="submit" form="new-melding-form" disabled={isSubmitting} className="h-8">
-                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Melding Opslaan
-                </Button>
-            </div>
+            {viewedMelding?.status !== 'Afgerond' && (
+                <div className="flex justify-end gap-2">
+                    {profile?.role === 'Super admin' && (
+                        <AIConfigDialog instructions={pdfInstructions} onSave={handleSaveAIInstructions} isSaving={isSavingConfig} samplePdfUrl={samplePdfUrl} />
+                    )}
+                    <input type="file" ref={pdfInputRef} onChange={handlePdfUpload} className="hidden" accept="application/pdf" multiple />
+                    <Button type="button" variant="outline" onClick={() => pdfInputRef.current?.click()} className="h-8 bg-white border-blue-600 text-blue-600 hover:bg-blue-50" disabled={isParsingPdf}>
+                        {isParsingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />} PDF-scan
+                    </Button>
+                    <Button type="button" variant="ghost" onClick={() => router.back()} className="h-8">Annuleren</Button>
+                    <Button type="submit" form="new-melding-form" disabled={isSubmitting} className="h-8">
+                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Melding Opslaan
+                    </Button>
+                </div>
+            )}
         </div>
         <Form {...form}>
           <form id="new-melding-form" onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
@@ -1062,9 +1064,9 @@ export default function NewIssuePage() {
                                             <FileIcon className="h-4 w-4 text-primary shrink-0" />
                                             <span className="text-[11px] font-bold truncate">{f.name}</span>
                                         </div>
-                                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-slate-300 hover:text-red-600 opacity-0 group-hover:opacity-100" onClick={() => setUploadedFiles(prev => prev.filter(x => x.storagePath !== f.storagePath))}>
+                                        {!isReadOnly && <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-slate-300 hover:text-red-600 opacity-0 group-hover:opacity-100" onClick={() => setUploadedFiles(prev => prev.filter(x => x.storagePath !== f.storagePath))}>
                                             <Trash2 className="h-3.5 w-3.5" />
-                                        </Button>
+                                        </Button>}
                                     </div>
                                 ))}
                             </div>
@@ -1080,7 +1082,7 @@ export default function NewIssuePage() {
                                 {uploadedPhotos.map(p => (
                                     <div key={p.storagePath} className="relative aspect-square rounded-xl overflow-hidden border shadow-sm group">
                                         <Image src={p.url} alt={p.name} fill className="object-cover" />
-                                        <Button type="button" variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setUploadedPhotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}><Trash2 className="h-3 w-3" /></Button>
+                                        {!isReadOnly && <Button type="button" variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setUploadedPhotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}><Trash2 className="h-3 w-3" /></Button>}
                                     </div>
                                 ))}
                             </div>
