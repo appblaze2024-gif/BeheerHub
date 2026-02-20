@@ -27,7 +27,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { useProfile } from '@/firebase/profile-provider';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useProject } from '@/context/project-context';
-import Link from 'link';
+import Link from 'next/link';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -717,7 +717,7 @@ export default function IssuesPage() {
             {selectedMelding ? (
               <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                   {selectedProjectId && (
-                  <Link href={`/navigation-module?projectId=${selectedProjectId}&lat=${selectedMelding.latitude}&lng=${selectedMelding.longitude}&straat=${encodeURIComponent(selectedMelding.straatnaam || '')}`} passHref>
+                  <Link href={`/navigation-module?projectId=${selectedProjectId}&lat=${selectedMelding.latitude}&lng=${selectedMelding.longitude}&straat=${encodeURIComponent(selectedMelding.straatnaam || '')}`} passHref legacyBehavior>
                       <Button variant="outline" size="icon" className="h-9 w-9 bg-primary text-white hover:bg-primary/90 shadow-lg shadow-black/20">
                           <Navigation className="h-4 w-4" />
                       </Button>
@@ -1140,7 +1140,7 @@ export default function IssuesPage() {
                     <TabsContent value="Hoeveelheid" className="mt-0">
                         <Card>
                             <CardHeader>
-                                <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Geregistreerd Materiaal</CardTitle>
+                                <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Geregistreerde Materialen</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-6">
                                 <div className="space-y-2">
