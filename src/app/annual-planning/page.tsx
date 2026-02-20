@@ -37,6 +37,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LoadingScreen } from '@/components/loading-screen';
+import { Separator } from '@/components/ui/separator';
 
 interface AnnualPlanningSection {
   id: string;
@@ -172,6 +173,8 @@ export default function AnnualPlanningPage() {
     );
   }, [firestore, selectedProjectId, selectedYear]);
 
+  const { data: itemsRaw, isLoading: isLoadingItems } = useCollection<AnnualPlanningItem>(planningItemsQuery);
+
   const milestonesQuery = useMemoFirebase(() => {
     if (!firestore || !selectedProjectId) return null;
     return query(
@@ -182,7 +185,6 @@ export default function AnnualPlanningPage() {
   }, [firestore, selectedProjectId, selectedYear]);
 
   const { data: sectionsRaw, isLoading: isLoadingSections } = useCollection<AnnualPlanningSection>(sectionsQuery);
-  const { data: itemsRaw, isLoading: isLoadingItems } = useCollection<AnnualPlanningItem>(planningItemsQuery);
   const { data: milestonesRaw, isLoading: isLoadingMilestones } = useCollection<AnnualMilestone>(milestonesQuery);
 
   const sections = React.useMemo(() => {
@@ -689,7 +691,7 @@ export default function AnnualPlanningPage() {
                               <div className="absolute inset-0 flex items-center justify-center py-2">
                                 <span 
                                   className="whitespace-nowrap uppercase tracking-widest text-[10px] font-black text-white drop-shadow-sm"
-                                  style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+                                  style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: '0.1em' }}
                                 >
                                   {m.label}
                                 </span>
