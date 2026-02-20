@@ -1155,21 +1155,6 @@ export default function AnnualPlanningPage() {
                 Nieuw Blok Toevoegen
               </Button>
             </div>
-
-            <div className="mt-4 flex flex-wrap items-center gap-4 text-[9px] font-black uppercase tracking-widest text-slate-400">
-              <div className="flex items-center gap-2">
-                <div className="h-2.5 w-2.5 bg-red-600 rounded-sm" />
-                <span>Rode lijn = Scheiding</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 ring-1 ring-black rounded-sm" />
-                <span>Zwarte ring = Opmerking</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Info className="h-3 w-3" />
-                <span>Dubbelklik op een cel voor dagelijkse uren.</span>
-              </div>
-            </div>
           </div>
         </div>
 
