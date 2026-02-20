@@ -61,13 +61,18 @@ export function SubcontractorOverviewDialog({
     
     return items.filter(item => {
       const weekValue = item.weeks?.[weekNumber.toString()];
-      return weekValue && (parseFloat(weekValue.replace(',', '.')) > 0);
+      const isPlanned = weekValue && (parseFloat(weekValue.replace(',', '.')) > 0);
+      
+      // Filter out 'vaste inhuur' as requested
+      const isVasteInhuur = item.resourceName.toLowerCase().includes('vaste inhuur');
+      
+      return isPlanned && !isVasteInhuur;
     }).sort((a, b) => a.resourceName.localeCompare(b.resourceName));
   }, [items, weekNumber]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
+      <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
         <DialogHeader className="p-6 border-b bg-slate-50/80 backdrop-blur-md shrink-0">
           <div className="flex items-center gap-4">
             <div className="bg-primary h-12 w-12 rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20">
@@ -84,17 +89,16 @@ export function SubcontractorOverviewDialog({
           </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden flex flex-col bg-white">
+        <div className="flex-1 overflow-hidden flex flex-col bg-white min-h-0">
           {isLoading ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-4">
               <Loader2 className="h-10 w-10 animate-spin text-primary opacity-20" />
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Jaarplanning analyseren...</p>
             </div>
           ) : activeSubcontractors.length > 0 ? (
-            <ScrollArea className="flex-1">
+            <ScrollArea className="h-full">
               <div className="p-6 space-y-3">
                 {activeSubcontractors.map((sub) => {
-                  const hours = sub.weeks[weekNumber.toString()];
                   const note = sub.cellNotes?.[weekNumber.toString()];
                   
                   return (
@@ -106,16 +110,12 @@ export function SubcontractorOverviewDialog({
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <h4 className="font-black text-sm uppercase tracking-tight text-slate-900 truncate">{sub.resourceName}</h4>
-                            <Badge variant="outline" className="text-[8px] h-4 uppercase font-black tracking-widest border-2 bg-white">{sub.category || 'Middel'}</Badge>
+                            <Badge variant="outline" className="text-[8px] h-4 uppercase font-black tracking-widest border-2 bg-white">{sub.category || 'Onderaannemer'}</Badge>
                           </div>
                           <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400">
                             <Calendar className="h-3 w-3" />
-                            <span>Gepland voor week {weekNumber}</span>
+                            <span>Ingepland voor week {weekNumber}</span>
                           </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-2xl font-black text-primary leading-none">{hours}</p>
-                          <p className="text-[8px] font-black uppercase tracking-widest text-slate-400 mt-1">Inzetwaarde</p>
                         </div>
                       </div>
                       
@@ -135,15 +135,15 @@ export function SubcontractorOverviewDialog({
               <div className="bg-slate-50 p-8 rounded-full mb-4">
                 <Users className="h-16 w-16 opacity-10" />
               </div>
-              <h3 className="text-lg font-black uppercase tracking-tight text-slate-400">Geen inzet gevonden</h3>
+              <h3 className="text-lg font-black uppercase tracking-tight text-slate-400">Geen onderaannemers gevonden</h3>
               <p className="text-sm font-medium text-slate-400 max-w-[250px] mx-auto leading-relaxed">
-                Er zijn voor week {weekNumber} geen onderaannemers of middelen met een waarde groter dan 0 gevonden in de jaarplanning.
+                Er zijn voor week {weekNumber} geen externe onderaannemers gevonden in de jaarplanning (vaste inhuur is uitgesloten).
               </p>
             </div>
           )}
         </div>
 
-        <DialogFooter className="p-6 border-t bg-slate-50/80 backdrop-blur-md">
+        <DialogFooter className="p-6 border-t bg-slate-50/80 backdrop-blur-md shrink-0">
           <Button variant="ghost" onClick={() => onOpenChange(false)} className="w-full sm:w-auto font-black uppercase tracking-tight">
             Sluiten
           </Button>
