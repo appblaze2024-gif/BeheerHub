@@ -38,7 +38,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LoadingScreen } from '@/components/loading-screen';
 import { Separator } from '@/components/ui/separator';
-import { getISOWeek, getYear } from 'date-fns';
 
 interface AnnualPlanningSection {
   id: string;
@@ -1000,7 +999,8 @@ export default function AnnualPlanningPage() {
                                           onChange={(e) => handleCellChange(item.id, week, e.target.value)}
                                           onPaste={(e) => handlePaste(item.id, week, e)}
                                           className={cn(
-                                            "w-full h-full bg-transparent text-center focus:bg-white/50 focus:outline-none focus:ring-inset focus:ring-1 focus:ring-primary tabular-nums text-[9px] text-slate-900 pointer-events-auto"
+                                            "w-full h-full bg-transparent text-center focus:bg-white/50 focus:outline-none focus:ring-inset focus:ring-1 focus:ring-primary tabular-nums text-[9px] text-slate-900",
+                                            isDragging ? "pointer-events-none" : "pointer-events-auto"
                                           )}
                                         />
                                       </div>
@@ -1294,7 +1294,7 @@ export default function AnnualPlanningPage() {
                   {isSavingMilestone && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Opslaan
                 </Button>
-              </form>
+              </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
