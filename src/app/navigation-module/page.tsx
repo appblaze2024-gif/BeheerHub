@@ -164,6 +164,34 @@ function NavigatingView({
 
   const nextObject = objectsOnRoute[currentObjectIndex];
 
+  // Dynamische snelheidslimiet berekening
+  const currentSpeedLimit = React.useMemo(() => {
+    if (!currentLeg?.annotation?.maxspeed) return 50;
+    
+    const maxspeeds = currentLeg.annotation.maxspeed;
+    const totalLegDist = currentLeg.distance;
+    // Bereken hoe ver we zijn op de huidige leg
+    const distTravelled = Math.max(0, totalLegDist - distanceRemainingToDestination);
+    const ratio = distTravelled / (totalLegDist || 1);
+    
+    // Pak de limiet die hoort bij ons huidige segment van de route
+    const index = Math.floor(ratio * maxspeeds.length);
+    const speedVal = maxspeeds[Math.min(index, maxspeeds.length - 1)];
+    
+    let limit = 50; // Fallback
+    if (typeof speedVal === 'number') limit = speedVal;
+    else if (typeof speedVal === 'string') {
+        const parsed = parseInt(speedVal);
+        limit = isNaN(parsed) ? 50 : parsed;
+    } else if (speedVal?.speed) {
+        limit = parseInt(speedVal.speed) || 50;
+    }
+
+    // Mapbox geeft soms 'unknown' of 'none'
+    if (limit <= 0) return 50;
+    return limit;
+  }, [currentLeg, distanceRemainingToDestination]);
+
   React.useEffect(() => {
     let lastTime = performance.now();
     
@@ -288,25 +316,6 @@ function NavigatingView({
     return null;
   }, [currentLeg, distanceRemainingToDestination]);
 
-  const currentSpeedLimit = React.useMemo(() => {
-    if (!currentLeg?.annotation?.maxspeed) return 50;
-    
-    const maxspeeds = currentLeg.annotation.maxspeed;
-    const totalLegDist = currentLeg.distance;
-    const distTravelled = Math.max(0, totalLegDist - distanceRemainingToDestination);
-    const ratio = distTravelled / (totalLegDist || 1);
-    const index = Math.floor(ratio * maxspeeds.length);
-    const speedVal = maxspeeds[Math.min(index, maxspeeds.length - 1)];
-    
-    if (typeof speedVal === 'number') return speedVal;
-    if (typeof speedVal === 'string') {
-        const parsed = parseInt(speedVal);
-        return isNaN(parsed) ? 50 : parsed;
-    }
-    if (speedVal?.speed) return parseInt(speedVal.speed) || 50;
-    return 50;
-  }, [currentLeg, distanceRemainingToDestination]);
-
   React.useEffect(() => {
     if (!currentRouteGeometry || isCalculatingRoute || !snappedLocation) {
         setThrottledGeometry(null);
@@ -394,7 +403,10 @@ function NavigatingView({
         simStateRef.current.lastTimestamp = timestamp;
 
         const distanceToDestination = totalDistance - simStateRef.current.distanceTravelled;
-        simStateRef.current.targetSpeedMs = distanceToDestination < 40 ? 3 : 13.8; 
+        
+        // Simulator volgt de geldende snelheidslimiet (min een beetje marge)
+        const currentLimitMs = currentSpeedLimit / 3.6;
+        simStateRef.current.targetSpeedMs = distanceToDestination < 40 ? 3 : currentLimitMs - 0.5; 
 
         const accel = simStateRef.current.targetSpeedMs > simStateRef.current.currentSpeedMs ? 4 : 8;
         simStateRef.current.currentSpeedMs += (simStateRef.current.targetSpeedMs - simStateRef.current.currentSpeedMs) * deltaTime * accel;
@@ -447,7 +459,7 @@ function NavigatingView({
     return () => {
         if (simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current);
     };
-  }, [isSimulating, isPaused, arrivedObject, currentRouteGeometry, nextObject?.id, isCalculatingRoute]);
+  }, [isSimulating, isPaused, arrivedObject, currentRouteGeometry, nextObject?.id, isCalculatingRoute, currentSpeedLimit]);
 
 
   React.useEffect(() => {
