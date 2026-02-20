@@ -281,7 +281,6 @@ export default function AnnualPlanningPage() {
       updateTasks.push({ itemId, week });
     }
 
-    // Process updates
     const batch = writeBatch(firestore);
     const itemsToUpdate = Array.from(new Set(updateTasks.map(t => t.itemId)));
     
@@ -295,6 +294,38 @@ export default function AnnualPlanningPage() {
     });
 
     batch.commit().catch(e => console.error("Bulk cell change error:", e));
+  };
+
+  const handlePaste = (itemId: string, week: number, e: React.ClipboardEvent) => {
+    if (!firestore) return;
+    const pasteData = e.clipboardData.getData('text');
+    const cellKey = `${itemId}_${week}`;
+    
+    // If current cell is part of selection, apply paste to all selected cells
+    if (selectedCells.has(cellKey) && selectedCells.size > 1) {
+      e.preventDefault();
+      const updateTasks: { itemId: string, week: number }[] = [];
+      selectedCells.forEach(key => {
+        const [id, w] = key.split('_');
+        updateTasks.push({ itemId: id, week: parseInt(w) });
+      });
+
+      const batch = writeBatch(firestore);
+      const itemsToUpdate = Array.from(new Set(updateTasks.map(t => t.itemId)));
+      
+      itemsToUpdate.forEach(id => {
+        const itemRef = doc(firestore, 'annual_planning', id);
+        const updates: Record<string, string> = {};
+        updateTasks.filter(t => t.itemId === id).forEach(t => {
+          updates[`weeks.${t.week}`] = pasteData;
+        });
+        batch.update(itemRef, updates);
+      });
+
+      batch.commit().then(() => {
+        toast({ title: `Gekopieerd in ${selectedCells.size} cellen` });
+      }).catch(e => console.error("Bulk paste error:", e));
+    }
   };
 
   const handleCellColorChange = (itemId: string, week: number, color: string) => {
@@ -790,6 +821,7 @@ export default function AnnualPlanningPage() {
                                         type="text"
                                         defaultValue={item.weeks?.[week.toString()] || ''}
                                         onBlur={(e) => handleCellChange(item.id, week, e.target.value)}
+                                        onPaste={(e) => handlePaste(item.id, week, e)}
                                         className="w-full h-full bg-transparent text-center focus:bg-white/50 focus:outline-none focus:ring-inset focus:ring-1 focus:ring-primary tabular-nums"
                                       />
                                     </td>
@@ -881,7 +913,7 @@ export default function AnnualPlanningPage() {
             </div>
             <div className="flex items-center gap-2">
               <Info className="h-3 w-3" />
-              <span>Slepen om meerdere cellen te selecteren. Rechtsklik voor kleur of opmerking.</span>
+              <span>Slepen om meerdere cellen te selecteren. Rechtsklik voor kleur of opmerking. Ctrl+V in selectie om te plannen.</span>
             </div>
           </div>
         </div>
