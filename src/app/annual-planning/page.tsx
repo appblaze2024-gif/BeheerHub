@@ -59,6 +59,7 @@ interface AnnualPlanningItem {
   cellNotes?: Record<string, string>;
   color: string;
   order: number;
+  hourlyRate?: number;
 }
 
 interface AnnualMilestone {
@@ -455,7 +456,15 @@ export default function AnnualPlanningPage() {
     }
   };
 
-  const handleRowSubmit = async (data: { name: string, color: string }) => {
+  const handleHourlyRateChange = (itemId: string, value: string) => {
+    if (!firestore) return;
+    const rate = parseFloat(value.replace(',', '.')) || 0;
+    updateDocumentNonBlocking(doc(firestore, 'annual_planning', itemId), {
+      hourlyRate: rate
+    });
+  };
+
+  const handleRowSubmit = async (data: { name: string, color: string, hourlyRate: number }) => {
     if (!selectedProjectId || !firestore) return;
 
     setIsAddingRow(true);
@@ -463,7 +472,8 @@ export default function AnnualPlanningPage() {
       if (editingItem) {
         updateDocumentNonBlocking(doc(firestore, 'annual_planning', editingItem.id), {
           resourceName: data.name,
-          color: data.color
+          color: data.color,
+          hourlyRate: data.hourlyRate
         });
         toast({ title: 'Regel bijgewerkt' });
       } else if (activeSectionForNewRow) {
@@ -472,6 +482,7 @@ export default function AnnualPlanningPage() {
           sectionId: activeSectionForNewRow,
           resourceName: data.name,
           color: data.color,
+          hourlyRate: data.hourlyRate,
           year: selectedYear,
           order: (itemsRaw?.filter(i => i.sectionId === activeSectionForNewRow).length || 0) + 1,
           weeks: {},
@@ -540,7 +551,7 @@ export default function AnnualPlanningPage() {
   };
 
   const calculateRowTotal = (weeks: Record<string, string>) => {
-    return Object.values(weeks || {}).reduce((acc, val) => acc + (parseFloat(val) || 0), 0);
+    return Object.values(weeks || {}).reduce((acc, val) => acc + (parseFloat(val.replace(',', '.')) || 0), 0);
   };
 
   const handleCellMouseDown = (itemId: string, week: number, e: React.MouseEvent) => {
@@ -672,10 +683,14 @@ export default function AnnualPlanningPage() {
               sectionMilestones.forEach(m => { sectionMilestoneMap[m.weekNumber] = m; });
 
               const calculateWeekTotal = (week: number) => {
-                return sectionItems.reduce((acc, item) => acc + (parseFloat(item.weeks?.[week.toString()]) || 0), 0) || 0;
+                return sectionItems.reduce((acc, item) => acc + (parseFloat((item.weeks?.[week.toString()] || '0').replace(',', '.')) || 0), 0) || 0;
               };
 
-              const sectionGrandTotal = sectionItems.reduce((acc, item) => acc + calculateRowTotal(item.weeks || {}), 0) || 0;
+              const sectionGrandTotalHours = sectionItems.reduce((acc, item) => acc + calculateRowTotal(item.weeks || {}), 0) || 0;
+              const sectionGrandTotalCost = sectionItems.reduce((acc, item) => {
+                const rowTotal = calculateRowTotal(item.weeks || {});
+                return acc + (rowTotal * (item.hourlyRate || 0));
+              }, 0);
 
               return (
                 <div key={section.id} className="group/section relative bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden">
@@ -766,7 +781,9 @@ export default function AnnualPlanningPage() {
                             </th>
                           );
                         })}
-                        <th className="w-8 bg-[#388e3c]"></th>
+                        <th className="w-8 bg-[#388e3c] border-r border-white/20">uren</th>
+                        <th className="w-12 bg-[#388e3c] border-r border-white/20">prijs</th>
+                        <th className="w-16 bg-[#388e3c]">totaal</th>
                       </tr>
 
                       <tr className="bg-[#8e24aa] text-white h-8">
@@ -793,7 +810,9 @@ export default function AnnualPlanningPage() {
                             </th>
                           );
                         })}
-                        <th className="bg-[#6a1b9a] text-center uppercase tracking-tighter w-8">tot</th>
+                        <th className="bg-[#6a1b9a] text-center uppercase tracking-tighter w-8 border-r border-white/20">tot</th>
+                        <th className="bg-[#6a1b9a] text-center uppercase tracking-tighter w-12 border-r border-white/20">€/h</th>
+                        <th className="bg-[#6a1b9a] text-center uppercase tracking-tighter w-16">bedrag</th>
                       </tr>
                     </thead>
 
@@ -801,6 +820,8 @@ export default function AnnualPlanningPage() {
                       {sectionItems.map((item) => {
                         const isHexColor = item.color?.startsWith('#');
                         const rowStyle = isHexColor ? { backgroundColor: item.color } : {};
+                        const rowTotalHours = calculateRowTotal(item.weeks || {});
+                        const rowTotalCost = rowTotalHours * (item.hourlyRate || 0);
                         
                         return (
                           <tr key={item.id} className={cn("border-b border-slate-100 group transition-colors")} style={rowStyle}>
@@ -868,8 +889,20 @@ export default function AnnualPlanningPage() {
                                 </td>
                               );
                             })}
-                            <td className="bg-slate-50/50 text-center font-black text-[10px] tabular-nums border-l border-slate-200 h-8 w-8">
-                              {calculateRowTotal(item.weeks || {}).toLocaleString()}
+                            <td className="bg-slate-50/50 text-center font-black text-[10px] tabular-nums border-l border-slate-200 h-8 w-8 border-r">
+                              {rowTotalHours.toLocaleString('nl-NL')}
+                            </td>
+                            <td className="bg-white p-0 text-center h-8 w-12 border-r border-slate-200">
+                              <input
+                                type="text"
+                                defaultValue={item.hourlyRate?.toString() || ''}
+                                onBlur={(e) => handleHourlyRateChange(item.id, e.target.value)}
+                                className="w-full h-full bg-transparent text-center focus:bg-slate-50 focus:outline-none tabular-nums font-bold text-[10px]"
+                                placeholder="0"
+                              />
+                            </td>
+                            <td className="bg-slate-50/50 text-right pr-1 font-black text-[10px] tabular-nums h-8 w-16">
+                              {rowTotalCost > 0 ? `€ ${rowTotalCost.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
                             </td>
                           </tr>
                         );
@@ -896,7 +929,9 @@ export default function AnnualPlanningPage() {
                             )} />
                           );
                         })}
-                        <td className="border-l border-slate-200 h-8 w-8" />
+                        <td className="border-l border-slate-200 h-8 w-8 border-r" />
+                        <td className="border-r border-slate-200 h-8 w-12" />
+                        <td className="h-8 w-16" />
                       </tr>
                     </tbody>
 
@@ -917,8 +952,12 @@ export default function AnnualPlanningPage() {
                             </td>
                           );
                         })}
-                        <td className="text-center text-[10px] text-primary bg-slate-200 h-8 w-8">
-                          {sectionGrandTotal.toLocaleString()}
+                        <td className="text-center text-[10px] text-primary bg-slate-200 h-8 w-8 border-r border-slate-300">
+                          {sectionGrandTotalHours.toLocaleString('nl-NL')}
+                        </td>
+                        <td className="bg-slate-200 border-r border-slate-300" />
+                        <td className="text-right pr-1 text-[10px] text-primary bg-slate-200 h-8 w-16">
+                          € {sectionGrandTotalCost.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                       </tr>
                     </tfoot>
@@ -967,7 +1006,8 @@ export default function AnnualPlanningPage() {
               const formData = new FormData(e.currentTarget);
               handleRowSubmit({
                 name: formData.get('name') as string,
-                color: formData.get('color') as string
+                color: formData.get('color') as string,
+                hourlyRate: parseFloat(formData.get('hourlyRate') as string) || 0
               });
             }}>
               <DialogHeader>
@@ -982,6 +1022,10 @@ export default function AnnualPlanningPage() {
                 <div className="space-y-2">
                   <Label>Naam middel / medewerker</Label>
                   <input name="name" defaultValue={editingItem?.resourceName || ''} placeholder="Bijv. Veegmachine 569" required className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Uurprijs (€)</Label>
+                  <input name="hourlyRate" type="number" step="0.01" defaultValue={editingItem?.hourlyRate || 0} placeholder="0.00" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" />
                 </div>
                 <div className="space-y-2">
                   <Label>Kleur / Categorie</Label>
