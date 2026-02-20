@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -6,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { format, addDays, isWeekend } from 'date-fns';
-import { ArrowLeft, Loader2, Search, UploadCloud, FileIcon, Trash2, Camera, MapPin, Sparkles, Settings2, FileText, Eye, X, ZoomIn, ZoomOut, Target, Upload, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Loader2, Search, UploadCloud, FileIcon, Trash2, Camera, MapPin, Sparkles, Settings2, FileText, Eye, X, ZoomIn, ZoomOut, Target, Upload, ChevronDown, Package, Clock } from 'lucide-react';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useFirebaseApp, useCollection, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { collection, doc, arrayUnion, serverTimestamp, addDoc, updateDoc } from 'firebase/firestore';
@@ -859,6 +860,14 @@ export default function NewIssuePage() {
     } catch (error) { toast({ variant: 'destructive', title: 'Fout opgetreden' }); } finally { setIsSubmitting(false); }
   };
 
+  const formatDuration = (minutes?: number) => {
+    if (minutes === undefined || minutes === null) return '-';
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours === 0) return `${mins}m`;
+    return `${hours}u ${mins}m`;
+  };
+
   return (
     <div className="flex flex-col h-screen overflow-hidden text-sm bg-gray-100 dark:bg-gray-900">
         {isParsingPdf && (
@@ -1049,6 +1058,9 @@ export default function NewIssuePage() {
                             <TabsTrigger value="documenten" className="text-[10px] font-black uppercase">Documenten</TabsTrigger>
                             <TabsTrigger value="fotos" className="text-[10px] font-black uppercase">Foto's</TabsTrigger>
                             <TabsTrigger value="locatie" className="text-[10px] font-black uppercase">Locatie</TabsTrigger>
+                            {viewedMelding?.status === 'Afgerond' && (
+                                <TabsTrigger value="info" className="text-[10px] font-black uppercase">Info</TabsTrigger>
+                            )}
                         </TabsList>
                     </div>
                     <TabsContent value="documenten" className="m-0 p-4 bg-slate-50/30 overflow-visible">
@@ -1112,6 +1124,61 @@ export default function NewIssuePage() {
                         </div>
                       </div>
                     </TabsContent>
+                    {viewedMelding?.status === 'Afgerond' && (
+                        <TabsContent value="info" className="m-0 p-4 bg-slate-50/30 overflow-visible">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <Card className="rounded-2xl border-slate-100 shadow-sm overflow-hidden bg-white">
+                                    <CardHeader className="bg-slate-50/50 border-b p-4">
+                                        <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Afhandelingsdetails</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-4 space-y-4">
+                                        <div className="flex justify-between items-center border-b border-slate-50 pb-2">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Totale Werktijd</span>
+                                            <Badge variant="secondary" className="font-black text-xs bg-blue-50 text-blue-600 border-none">{formatDuration(viewedMelding?.gewerkteMinuten)}</Badge>
+                                        </div>
+                                        <div className="flex justify-between items-center border-b border-slate-50 pb-2">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Meldtijd</span>
+                                            <span className="text-xs font-bold text-slate-700">{viewedMelding?.datum} om {viewedMelding?.tijdstip}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center border-b border-slate-50 pb-2">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Afmeldtijd</span>
+                                            <span className="text-xs font-bold text-slate-700">{viewedMelding?.afhandeling_datum} om {viewedMelding?.afhandeling_tijdstip}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Uitgevoerd door</span>
+                                            <span className="text-xs font-black text-slate-900">{viewedMelding?.afgehandeld_door || '-'}</span>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="rounded-2xl border-slate-100 shadow-sm overflow-hidden bg-white">
+                                    <CardHeader className="bg-slate-50/50 border-b p-4">
+                                        <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Gebruikte Materialen</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-4">
+                                        {viewedMelding?.hoeveelheden && viewedMelding.hoeveelheden.length > 0 ? (
+                                            <div className="space-y-2">
+                                                {viewedMelding.hoeveelheden.map((h, i) => (
+                                                    <div key={i} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100 shadow-sm">
+                                                        <span className="text-xs font-black uppercase tracking-tight text-slate-900">{h.type}</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-sm font-black text-primary">{h.aantal}</span>
+                                                            <span className="text-[10px] font-bold text-slate-400 uppercase">{h.eenheid}</span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col items-center justify-center py-12 text-slate-300">
+                                                <Package className="h-10 w-10 mb-2 opacity-10" />
+                                                <p className="text-[10px] font-black uppercase tracking-widest">Geen materiaalverbruik geregistreerd</p>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </TabsContent>
+                    )}
                 </Tabs>
             </div>
           </form>
