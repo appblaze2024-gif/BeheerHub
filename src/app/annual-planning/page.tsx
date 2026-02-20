@@ -4,7 +4,7 @@ import * as React from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash2, Loader2, Calendar, Pencil, Check, Info, Palette, MoreHorizontal } from 'lucide-react';
+import { Plus, Trash2, Loader2, Calendar, Pencil, Check, Info, Palette, MessageSquare, X } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking, useDoc, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, where, writeBatch } from 'firebase/firestore';
 import { useProject } from '@/context/project-context';
@@ -27,16 +27,13 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LoadingScreen } from '@/components/loading-screen';
@@ -58,6 +55,7 @@ interface AnnualPlanningItem {
   year: number;
   weeks: Record<string, string>;
   cellColors?: Record<string, string>;
+  cellNotes?: Record<string, string>;
   color: string;
   order: number;
 }
@@ -112,6 +110,10 @@ export default function AnnualPlanningPage() {
   const { toast } = useToast();
   const [selectedYear, setSelectedYear] = React.useState(CURRENT_YEAR);
   
+  // Selection state
+  const [selectedCells, setSelectedCells] = React.useState<Set<string>>(new Set());
+  const [isDragging, setIsDragging] = React.useState(false);
+
   // Row creation/edit state
   const [isAddingRow, setIsAddingRow] = React.useState(false);
   const [isRowDialogOpen, setIsRowDialogOpen] = React.useState(false);
@@ -131,6 +133,11 @@ export default function AnnualPlanningPage() {
   const [selectedWeekForMilestone, setSelectedWeekForMilestone] = React.useState<{ week: number, sectionId: string } | null>(null);
   const [milestoneInput, setMilestoneInput] = React.useState('');
   const [isSavingMilestone, setIsSavingMilestone] = React.useState(false);
+
+  // Note editing state
+  const [isNoteDialogOpen, setIsNoteDialogOpen] = React.useState(false);
+  const [noteInput, setNoteInput] = React.useState('');
+  const [activeCellForNote, setActiveCellForNote] = React.useState<{ itemId: string, week: number } | null>(null);
 
   // Section management
   const [isAddingSection, setIsAddingSection] = React.useState(false);
@@ -259,19 +266,102 @@ export default function AnnualPlanningPage() {
 
   const handleCellChange = (itemId: string, week: number, value: string) => {
     if (!firestore) return;
-    const itemRef = doc(firestore, 'annual_planning', itemId);
-    updateDocumentNonBlocking(itemRef, {
-      [`weeks.${week}`]: value
+    
+    const cellKey = `${itemId}_${week}`;
+    const updateTasks: { itemId: string, week: number }[] = [];
+
+    if (selectedCells.has(cellKey)) {
+      selectedCells.forEach(key => {
+        const [id, w] = key.split('_');
+        updateTasks.push({ itemId: id, week: parseInt(w) });
+      });
+    } else {
+      updateTasks.push({ itemId, week });
+    }
+
+    // Process updates
+    const batch = writeBatch(firestore);
+    const itemsToUpdate = Array.from(new Set(updateTasks.map(t => t.itemId)));
+    
+    itemsToUpdate.forEach(id => {
+      const itemRef = doc(firestore, 'annual_planning', id);
+      const updates: Record<string, string> = {};
+      updateTasks.filter(t => t.itemId === id).forEach(t => {
+        updates[`weeks.${t.week}`] = value;
+      });
+      batch.update(itemRef, updates);
     });
+
+    batch.commit().catch(e => console.error("Bulk cell change error:", e));
   };
 
   const handleCellColorChange = (itemId: string, week: number, color: string) => {
     if (!firestore) return;
-    const itemRef = doc(firestore, 'annual_planning', itemId);
-    updateDocumentNonBlocking(itemRef, {
-      [`cellColors.${week}`]: color === 'transparent' ? null : color
+    
+    const cellKey = `${itemId}_${week}`;
+    const updateTasks: { itemId: string, week: number }[] = [];
+
+    if (selectedCells.has(cellKey)) {
+      selectedCells.forEach(key => {
+        const [id, w] = key.split('_');
+        updateTasks.push({ itemId: id, week: parseInt(w) });
+      });
+    } else {
+      updateTasks.push({ itemId, week });
+    }
+
+    const batch = writeBatch(firestore);
+    const itemsToUpdate = Array.from(new Set(updateTasks.map(t => t.itemId)));
+    
+    itemsToUpdate.forEach(id => {
+      const itemRef = doc(firestore, 'annual_planning', id);
+      const updates: Record<string, any> = {};
+      updateTasks.filter(t => t.itemId === id).forEach(t => {
+        updates[`cellColors.${t.week}`] = color === 'transparent' ? null : color;
+      });
+      batch.update(itemRef, updates);
     });
-    setCellContextMenu(null);
+
+    batch.commit().then(() => {
+      setCellContextMenu(null);
+      toast({ title: 'Kleur toegepast op selectie' });
+    }).catch(e => console.error("Bulk color change error:", e));
+  };
+
+  const handleCellNoteSave = () => {
+    if (!firestore || !activeCellForNote) return;
+    
+    const { itemId, week } = activeCellForNote;
+    const cellKey = `${itemId}_${week}`;
+    const updateTasks: { itemId: string, week: number }[] = [];
+
+    if (selectedCells.has(cellKey)) {
+      selectedCells.forEach(key => {
+        const [id, w] = key.split('_');
+        updateTasks.push({ itemId: id, week: parseInt(w) });
+      });
+    } else {
+      updateTasks.push({ itemId, week });
+    }
+
+    const batch = writeBatch(firestore);
+    const itemsToUpdate = Array.from(new Set(updateTasks.map(t => t.itemId)));
+    
+    itemsToUpdate.forEach(id => {
+      const itemRef = doc(firestore, 'annual_planning', id);
+      const updates: Record<string, any> = {};
+      updateTasks.filter(t => t.itemId === id).forEach(t => {
+        updates[`cellNotes.${t.week}`] = noteInput.trim() === '' ? null : noteInput.trim();
+      });
+      batch.update(itemRef, updates);
+    });
+
+    batch.commit().then(() => {
+      setIsNoteDialogOpen(false);
+      setNoteInput('');
+      setActiveCellForNote(null);
+      toast({ title: 'Opmerking opgeslagen' });
+    });
   };
 
   const handleHeaderColorChange = async (sectionId: string, week: number, color: string) => {
@@ -322,7 +412,8 @@ export default function AnnualPlanningPage() {
           year: selectedYear,
           order: (itemsRaw?.filter(i => i.sectionId === activeSectionForNewRow).length || 0) + 1,
           weeks: {},
-          cellColors: {}
+          cellColors: {},
+          cellNotes: {}
         });
         toast({ title: 'Rij toegevoegd' });
       }
@@ -389,10 +480,49 @@ export default function AnnualPlanningPage() {
     return Object.values(weeks || {}).reduce((acc, val) => acc + (parseFloat(val) || 0), 0);
   };
 
+  const handleCellMouseDown = (itemId: string, week: number, e: React.MouseEvent) => {
+    if (e.button !== 0) return; // Only left click
+    
+    const key = `${itemId}_${week}`;
+    setIsDragging(true);
+    
+    if (e.ctrlKey || e.metaKey) {
+      setSelectedCells(prev => {
+        const next = new Set(prev);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
+        return next;
+      });
+    } else {
+      setSelectedCells(new Set([key]));
+    }
+  };
+
+  const handleCellMouseEnter = (itemId: string, week: number) => {
+    if (!isDragging) return;
+    const key = `${itemId}_${week}`;
+    setSelectedCells(prev => {
+      const next = new Set(prev);
+      next.add(key);
+      return next;
+    });
+  };
+
+  React.useEffect(() => {
+    const handleGlobalMouseUp = () => setIsDragging(false);
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, []);
+
   const handleCellContextMenu = (e: React.MouseEvent, itemId: string, week: number) => {
     e.preventDefault();
     setCellContextMenu({ x: e.clientX, y: e.clientY, itemId, week });
     setHeaderContextMenu(null);
+    
+    const key = `${itemId}_${week}`;
+    if (!selectedCells.has(key)) {
+      setSelectedCells(new Set([key]));
+    }
   };
 
   const handleHeaderContextMenu = (e: React.MouseEvent, sectionId: string, week: number) => {
@@ -448,6 +578,11 @@ export default function AnnualPlanningPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {selectedCells.size > 0 && (
+            <Button variant="ghost" size="sm" className="h-8 text-[10px] font-black uppercase tracking-widest text-slate-400" onClick={() => setSelectedCells(new Set())}>
+              Selectie wissen ({selectedCells.size})
+            </Button>
+          )}
           <Select 
             value={selectedYear.toString()} 
             onValueChange={(v) => setSelectedYear(parseInt(v))}
@@ -464,7 +599,7 @@ export default function AnnualPlanningPage() {
         </div>
       </PageHeader>
 
-      <div className="flex-1 overflow-auto bg-slate-50 relative no-scrollbar pb-20">
+      <div className="flex-1 overflow-auto bg-slate-50 relative no-scrollbar pb-20 select-none">
         <div className="flex flex-col gap-8 p-2 lg:p-4">
           {sections.map((section) => {
             const sectionItems = itemsRaw ? itemsRaw.filter(i => i.sectionId === section.id || (section.id === 'default' && !i.sectionId)).sort((a, b) => (a.order || 0) - (b.order || 0)) : [];
@@ -507,22 +642,27 @@ export default function AnnualPlanningPage() {
                               </div>
                               {section.id !== 'default' && (
                                 <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-white/40 hover:text-white hover:bg-red-600/20 opacity-0 group-hover/section:opacity-100 transition-opacity">
-                                      <Trash2 className="h-3 w-3" />
-                                    </Button>
-                                  </AlertDialogTrigger>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-white/40 hover:text-white hover:bg-red-600/20 opacity-0 group-hover/section:opacity-100 transition-opacity" asChild>
+                                          <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Verwijder blok</TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
                                   <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>Blok Verwijderen?</AlertDialogTitle>
+                                    <DialogHeader>
+                                      <DialogTitle>Blok Verwijderen?</DialogTitle>
                                       <AlertDialogDescription>
                                         Weet u zeker dat u het blok "{section.title}" en alle bijbehorende rijen en milestones wilt verwijderen?
                                       </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
+                                    </DialogHeader>
+                                    <DialogFooter>
                                       <AlertDialogCancel>Annuleren</AlertDialogCancel>
                                       <AlertDialogAction onClick={() => handleDeleteSection(section.id)} className="bg-red-600">Verwijderen</AlertDialogAction>
-                                    </AlertDialogFooter>
+                                    </DialogFooter>
                                   </AlertDialogContent>
                                 </AlertDialog>
                               )}
@@ -623,25 +763,42 @@ export default function AnnualPlanningPage() {
                           </td>
                           {WEEKS.map(week => {
                             const cellColor = item.cellColors?.[week.toString()];
-                            const cellStyle = cellColor ? { backgroundColor: cellColor } : {};
+                            const cellNote = item.cellNotes?.[week.toString()];
+                            const isSelected = selectedCells.has(`${item.id}_${week}`);
+                            
+                            const cellStyle: React.CSSProperties = cellColor ? { backgroundColor: cellColor } : {};
                             
                             return (
-                              <td 
-                                key={week} 
-                                onContextMenu={(e) => handleCellContextMenu(e, item.id, week)}
-                                className={cn(
-                                  "border-r border-slate-100 p-0 text-center h-8 w-6 min-w-[24px]",
-                                  week % 13 === 0 && "border-r-2 border-red-500"
-                                )}
-                                style={cellStyle}
-                              >
-                                <input
-                                  type="text"
-                                  defaultValue={item.weeks?.[week.toString()] || ''}
-                                  onBlur={(e) => handleCellChange(item.id, week, e.target.value)}
-                                  className="w-full h-full bg-transparent text-center focus:bg-white/50 focus:outline-none focus:ring-inset focus:ring-1 focus:ring-primary tabular-nums"
-                                />
-                              </td>
+                              <TooltipProvider key={week}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <td 
+                                      onMouseDown={(e) => handleCellMouseDown(item.id, week, e)}
+                                      onMouseEnter={() => handleCellMouseEnter(item.id, week)}
+                                      onContextMenu={(e) => handleCellContextMenu(e, item.id, week)}
+                                      className={cn(
+                                        "border-r border-slate-100 p-0 text-center h-8 w-6 min-w-[24px] transition-all",
+                                        week % 13 === 0 && "border-r-2 border-red-500",
+                                        isSelected && "bg-primary/20 scale-[1.02] z-10",
+                                        cellNote && "ring-1 ring-inset ring-black shadow-[inset_0_0_0_1px_black]"
+                                      )}
+                                      style={cellStyle}
+                                    >
+                                      <input
+                                        type="text"
+                                        defaultValue={item.weeks?.[week.toString()] || ''}
+                                        onBlur={(e) => handleCellChange(item.id, week, e.target.value)}
+                                        className="w-full h-full bg-transparent text-center focus:bg-white/50 focus:outline-none focus:ring-inset focus:ring-1 focus:ring-primary tabular-nums"
+                                      />
+                                    </td>
+                                  </TooltipTrigger>
+                                  {cellNote && (
+                                    <TooltipContent className="bg-black text-white font-bold text-xs p-2">
+                                      {cellNote}
+                                    </TooltipContent>
+                                  )}
+                                </Tooltip>
+                              </TooltipProvider>
                             );
                           })}
                           <td className="bg-slate-50/50 text-center font-black text-[10px] tabular-nums border-l border-slate-200 h-8 w-8">
@@ -717,8 +874,12 @@ export default function AnnualPlanningPage() {
               <span>Compacte cellen (24px breed)</span>
             </div>
             <div className="flex items-center gap-2">
+              <div className="h-3 w-3 ring-1 ring-black rounded-sm" />
+              <span>Zwarte ring = Opmerking</span>
+            </div>
+            <div className="flex items-center gap-2">
               <Info className="h-3 w-3" />
-              <span>Direct bewerkbaar. Rechtsklik op cel of header voor kleur. Klik op regelnaam om te bewerken.</span>
+              <span>Slepen om meerdere cellen te selecteren. Rechtsklik voor kleur of opmerking.</span>
             </div>
           </div>
         </div>
@@ -818,14 +979,40 @@ export default function AnnualPlanningPage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Opmerking toevoegen</DialogTitle>
+            <DialogDescription>
+              {selectedCells.size > 1 
+                ? `Voeg een opmerking toe aan de ${selectedCells.size} geselecteerde cellen.` 
+                : `Opmerking voor week ${activeCellForNote?.week}.`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input 
+              value={noteInput} 
+              onChange={(e) => setNoteInput(e.target.value)} 
+              placeholder="Typ uw opmerking..." 
+              autoFocus
+              onKeyDown={(e) => e.key === 'Enter' && handleCellNoteSave()}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsNoteDialogOpen(false)}>Annuleren</Button>
+            <Button onClick={handleCellNoteSave}>Opslaan</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {cellContextMenu && (
         <div 
-          className="fixed z-[100] bg-white rounded-lg shadow-2xl border border-slate-200 p-2 min-w-[120px] animate-in fade-in zoom-in duration-100"
+          className="fixed z-[100] bg-white rounded-lg shadow-2xl border border-slate-200 p-2 min-w-[160px] animate-in fade-in zoom-in duration-100"
           style={{ left: cellContextMenu.x, top: cellContextMenu.y }}
           onClick={(e) => e.stopPropagation()}
         >
-          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Kleur markering</p>
-          <div className="grid grid-cols-4 gap-1">
+          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Markering ({selectedCells.size || 1})</p>
+          <div className="grid grid-cols-4 gap-1 mb-2">
             {CELL_PRESET_COLORS.map(c => (
               <button
                 key={c.value}
@@ -844,10 +1031,43 @@ export default function AnnualPlanningPage() {
                 <Palette className="absolute inset-0 m-auto h-3 w-3 pointer-events-none mix-blend-difference text-white opacity-50" />
             </div>
           </div>
+          
+          <Separator className="my-2" />
+          
           <Button 
             variant="ghost" 
             size="sm" 
-            className="w-full mt-2 h-7 text-[10px] font-bold"
+            className="w-full justify-start h-8 text-[10px] font-bold gap-2 px-2 hover:bg-slate-100"
+            onClick={() => {
+              const item = itemsRaw?.find(i => i.id === cellContextMenu.itemId);
+              setNoteInput(item?.cellNotes?.[cellContextMenu.week.toString()] || '');
+              setActiveCellForNote({ itemId: cellContextMenu.itemId, week: cellContextMenu.week });
+              setIsNoteDialogOpen(true);
+              setCellContextMenu(null);
+            }}
+          >
+            <MessageSquare className="h-3.5 w-3.5 text-primary" />
+            Opmerking toevoegen
+          </Button>
+
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="w-full justify-start h-8 text-[10px] font-bold gap-2 px-2 hover:bg-slate-100 text-red-600"
+            onClick={() => {
+              handleCellColorChange(cellContextMenu.itemId, cellContextMenu.week, 'transparent');
+              // Clear note too?
+              setCellContextMenu(null);
+            }}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Reset cel
+          </Button>
+
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="w-full mt-2 h-7 text-[10px] font-bold bg-slate-50"
             onClick={() => setCellContextMenu(null)}
           >
             Sluiten
