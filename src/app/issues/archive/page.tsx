@@ -6,7 +6,7 @@ import { collection, query, where } from 'firebase/firestore';
 import { Search, ListFilter, ArrowLeft, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import type { Melding } from '@/lib/types';
+import type { Melding, UserProfile } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -49,6 +49,23 @@ export default function ArchiveIssuesPage() {
 
   const { data: archivedMeldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(archiveQuery);
 
+  // Fetch users to map email to display name for older records
+  const usersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'users');
+  }, [firestore]);
+  const { data: users } = useCollection<UserProfile>(usersQuery);
+
+  const userMap = React.useMemo(() => {
+    const map: Record<string, string> = {};
+    users?.forEach(u => {
+      if (u.email) {
+        map[u.email.toLowerCase()] = u.displayName || `${u.firstName || ''} ${u.lastName || ''}`.trim();
+      }
+    });
+    return map;
+  }, [users]);
+
   React.useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
@@ -85,15 +102,31 @@ export default function ArchiveIssuesPage() {
 
   const formatDisplayName = (nameOrEmail?: string) => {
     if (!nameOrEmail) return '-';
+    
+    const normalized = nameOrEmail.toLowerCase();
+    
+    // Check if it's an email we can map to a full name using our userMap
+    if (userMap[normalized]) {
+      return userMap[normalized];
+    }
+
     if (nameOrEmail.includes('@')) {
       // Try to format email like firstname.lastname@...
       const part = nameOrEmail.split('@')[0];
-      return part
-        .split('.')
-        .map(p => p.charAt(0).toUpperCase() + p.slice(1))
-        .join(' ');
+      if (part.includes('.')) {
+        return part
+          .split('.')
+          .map(p => p.charAt(0).toUpperCase() + p.slice(1))
+          .join(' ');
+      }
+      return part.charAt(0).toUpperCase() + part.slice(1);
     }
-    return nameOrEmail;
+    
+    // If it already looks like a full name (has space), return it
+    if (nameOrEmail.includes(' ')) return nameOrEmail;
+
+    // Capitalize if it's a single word/username
+    return nameOrEmail.charAt(0).toUpperCase() + nameOrEmail.slice(1);
   };
 
   return (

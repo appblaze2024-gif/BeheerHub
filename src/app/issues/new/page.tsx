@@ -835,18 +835,20 @@ export default function NewIssuePage() {
         files: uploadedFiles, fotos: uploadedPhotos,
       };
 
+      const finisherName = profile?.displayName || `${profile?.firstName || ''} ${profile?.lastName || ''}`.trim() || profile?.email || 'Onbekend';
+
       if (viewedMelding) {
           if (data.status === 'Afgerond' && viewedMelding.status !== 'Afgerond') {
               mData.afhandeling_datum = format(new Date(), 'yyyy-MM-dd');
               mData.afhandeling_tijdstip = format(new Date(), 'HH:mm');
-              mData.afgehandeld_door = profile?.displayName || profile?.email || 'Onbekend';
+              mData.afgehandeld_door = finisherName;
           }
           await updateDocumentNonBlocking(doc(firestore, 'meldingen', viewedMelding.id), mData);
           router.push('/issues/open');
       } else {
           mData.datum = format(data.meldingsdatum || now, 'yyyy-MM-dd');
           mData.tijdstip = data.meldingsuur || format(now, 'HH:mm');
-          mData.aangenomen_door = profile?.displayName || profile?.email || 'Onbekend';
+          mData.aangenomen_door = finisherName;
           if (data.voorvaldatum) {
             mData.voorvaldatum = format(new Date(data.voorvaldatum), 'yyyy-MM-dd');
             mData.voorvaltijd = data.voorvaltijd;
@@ -990,7 +992,7 @@ export default function NewIssuePage() {
                                 {isSearching && <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-primary" />}
                             </div></FormItem>
                             {addressSuggestions.length > 0 && (
-                                <div className="absolute z-[100] w-full mt-1 bg-white border rounded-xl shadow-2xl max-h-48 overflow-y-auto">
+                                <div className="absolute z-100 w-full mt-1 bg-white border rounded-xl shadow-2xl max-h-48 overflow-y-auto">
                                     {addressSuggestions.map((s) => (
                                         <div 
                                             key={s.id} 

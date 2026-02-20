@@ -118,7 +118,8 @@ const statusOptions = [
     "Gepland op langere termijn",
     "Dubbel gemeld",
     "Afgerond",
-    "Niet in beheer"
+    "Niet in beheer",
+    "Extern doorgezet"
 ];
 const hoofdcategorieOptions = ["Afval", "Weg en straatmeubilair", "Groen", "Water", "Overig"];
 const subcategorieOptions: Record<string, string[]> = {
@@ -382,12 +383,14 @@ export default function IssuesPage() {
       minutesWorked += Math.round((endTime - startTime) / (1000 * 60));
     }
 
+    const finisherDisplayName = profile?.displayName || `${profile?.firstName || ''} ${profile?.lastName || ''}`.trim() || user.displayName || user.email || 'Onbekend';
+
     try {
         await updateDocumentNonBlocking(meldingRef, {
             status: 'Afgerond',
             afhandeling_datum: format(new Date(), 'yyyy-MM-dd'),
             afhandeling_tijdstip: format(new Date(), 'HH:mm'),
-            afgehandeld_door: profile?.displayName || user.displayName || user.email || 'Onbekend',
+            afgehandeld_door: finisherDisplayName,
             afhandeling_bijzonderheden: afhandeling_bijzonderheden_value || null,
             files: uploadedFiles,
             afhandeling_fotos: afhandelingFotos,
