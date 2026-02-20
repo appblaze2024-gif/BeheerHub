@@ -579,103 +579,103 @@ export default function AnnualPlanningPage() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-white overflow-hidden" onClick={() => { if(cellContextMenu) setCellContextMenu(null); if(headerContextMenu) setHeaderContextMenu(null); }}>
-      <PageHeader 
-        title={""} 
-        description="Overzicht van inzet en uren voor het gehele jaar."
-        className="border-b shrink-0 py-3"
-      >
-        <div className="flex-1 flex items-center gap-4">
-          {isEditingTitle ? (
-            <div className="flex items-center gap-2">
-              <Input 
-                value={tempTitle} 
-                onChange={(e) => setTempTitle(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle()}
-                className="h-8 font-black uppercase tracking-tight text-lg min-w-[300px]"
-                autoFocus
-              />
-              <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={handleSaveTitle}>
-                <Check className="h-4 w-4" />
+    <TooltipProvider>
+      <div className="flex flex-col h-full bg-white overflow-hidden" onClick={() => { if(cellContextMenu) setCellContextMenu(null); if(headerContextMenu) setHeaderContextMenu(null); }}>
+        <PageHeader 
+          title={""} 
+          description="Overzicht van inzet en uren voor het gehele jaar."
+          className="border-b shrink-0 py-3"
+        >
+          <div className="flex-1 flex items-center gap-4">
+            {isEditingTitle ? (
+              <div className="flex items-center gap-2">
+                <Input 
+                  value={tempTitle} 
+                  onChange={(e) => setTempTitle(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle()}
+                  className="h-8 font-black uppercase tracking-tight text-lg min-w-[300px]"
+                  autoFocus
+                />
+                <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={handleSaveTitle}>
+                  <Check className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div 
+                className="flex items-center gap-2 group cursor-pointer" 
+                onClick={() => { setTempTitle(displayTitle); setIsEditingTitle(true); }}
+              >
+                <h1 className="text-2xl font-black uppercase tracking-tighter text-slate-900 leading-none">{displayTitle}</h1>
+                <Pencil className="h-4 w-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {selectedCells.size > 0 && (
+              <Button variant="ghost" size="sm" className="h-8 text-[10px] font-black uppercase tracking-widest text-slate-400" onClick={() => setSelectedCells(new Set())}>
+                Selectie wissen ({selectedCells.size})
               </Button>
-            </div>
-          ) : (
-            <div 
-              className="flex items-center gap-2 group cursor-pointer" 
-              onClick={() => { setTempTitle(displayTitle); setIsEditingTitle(true); }}
+            )}
+            <Select 
+              value={selectedYear.toString()} 
+              onValueChange={(v) => setSelectedYear(parseInt(v))}
             >
-              <h1 className="text-2xl font-black uppercase tracking-tighter text-slate-900 leading-none">{displayTitle}</h1>
-              <Pencil className="h-4 w-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
-            </div>
-          )}
-        </div>
+              <SelectTrigger className="w-[120px] h-8 font-bold bg-white border-2">
+                <SelectValue placeholder="Kies jaar" />
+              </SelectTrigger>
+              <SelectContent>
+                {YEARS.map(y => (
+                  <SelectItem key={y} value={y.toString()}>Jaar {y}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </PageHeader>
 
-        <div className="flex items-center gap-2">
-          {selectedCells.size > 0 && (
-            <Button variant="ghost" size="sm" className="h-8 text-[10px] font-black uppercase tracking-widest text-slate-400" onClick={() => setSelectedCells(new Set())}>
-              Selectie wissen ({selectedCells.size})
-            </Button>
-          )}
-          <Select 
-            value={selectedYear.toString()} 
-            onValueChange={(v) => setSelectedYear(parseInt(v))}
-          >
-            <SelectTrigger className="w-[120px] h-8 font-bold bg-white border-2">
-              <SelectValue placeholder="Kies jaar" />
-            </SelectTrigger>
-            <SelectContent>
-              {YEARS.map(y => (
-                <SelectItem key={y} value={y.toString()}>Jaar {y}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </PageHeader>
+        <div className="flex-1 overflow-auto bg-slate-50 relative no-scrollbar pb-20 select-none">
+          <div className="flex flex-col gap-8 p-2 lg:p-4">
+            {sections.map((section) => {
+              const sectionItems = itemsRaw ? itemsRaw.filter(i => i.sectionId === section.id || (section.id === 'default' && !i.sectionId)).sort((a, b) => (a.order || 0) - (b.order || 0)) : [];
+              const sectionMilestones = milestonesRaw ? milestonesRaw.filter(m => m.sectionId === section.id || (section.id === 'default' && !m.sectionId)) : [];
+              const sectionMilestoneMap: Record<number, AnnualMilestone> = {};
+              sectionMilestones.forEach(m => { sectionMilestoneMap[m.weekNumber] = m; });
 
-      <div className="flex-1 overflow-auto bg-slate-50 relative no-scrollbar pb-20 select-none">
-        <div className="flex flex-col gap-8 p-2 lg:p-4">
-          {sections.map((section) => {
-            const sectionItems = itemsRaw ? itemsRaw.filter(i => i.sectionId === section.id || (section.id === 'default' && !i.sectionId)).sort((a, b) => (a.order || 0) - (b.order || 0)) : [];
-            const sectionMilestones = milestonesRaw ? milestonesRaw.filter(m => m.sectionId === section.id || (section.id === 'default' && !m.sectionId)) : [];
-            const sectionMilestoneMap: Record<number, AnnualMilestone> = {};
-            sectionMilestones.forEach(m => { sectionMilestoneMap[m.weekNumber] = m; });
+              const calculateWeekTotal = (week: number) => {
+                return sectionItems.reduce((acc, item) => acc + (parseFloat(item.weeks?.[week.toString()]) || 0), 0) || 0;
+              };
 
-            const calculateWeekTotal = (week: number) => {
-              return sectionItems.reduce((acc, item) => acc + (parseFloat(item.weeks?.[week.toString()]) || 0), 0) || 0;
-            };
+              const sectionGrandTotal = sectionItems.reduce((acc, item) => acc + calculateRowTotal(item.weeks || {}), 0) || 0;
 
-            const sectionGrandTotal = sectionItems.reduce((acc, item) => acc + calculateRowTotal(item.weeks || {}), 0) || 0;
-
-            return (
-              <div key={section.id} className="group/section relative bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden">
-                <table className="w-full border-collapse text-[10px] font-bold">
-                  <thead>
-                    <tr className="bg-[#4caf50] text-white h-32">
-                      <th className="sticky left-0 z-20 bg-[#4caf50] border-r border-white p-2 text-left align-top whitespace-nowrap w-px">
-                        <div className="flex flex-col h-full justify-between">
-                          {editingSectionTitleId === section.id ? (
-                            <div className="flex items-center gap-1">
-                              <Input 
-                                value={tempSectionTitle} 
-                                onChange={(e) => setTempSectionTitle(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleSaveSectionTitle(section.id)}
-                                onBlur={() => handleSaveSectionTitle(section.id)}
-                                className="h-6 font-black uppercase text-[10px] bg-white text-black min-w-[120px] p-1"
-                                autoFocus
-                              />
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-between gap-2">
-                              <div 
-                                className="group/corner cursor-pointer flex items-center gap-2"
-                                onClick={() => { setTempSectionTitle(section.title); setEditingSectionTitleId(section.id); }}
-                              >
-                                <span className="text-[11px] font-black uppercase tracking-tighter">{section.title}</span>
-                                <Pencil className="h-3 w-3 text-white/40 opacity-0 group-hover/corner:opacity-100 transition-opacity" />
+              return (
+                <div key={section.id} className="group/section relative bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden">
+                  <table className="w-full border-collapse text-[10px] font-bold">
+                    <thead>
+                      <tr className="bg-[#4caf50] text-white h-32">
+                        <th className="sticky left-0 z-20 bg-[#4caf50] border-r border-white p-2 text-left align-top whitespace-nowrap w-px">
+                          <div className="flex flex-col h-full justify-between">
+                            {editingSectionTitleId === section.id ? (
+                              <div className="flex items-center gap-1">
+                                <Input 
+                                  value={tempSectionTitle} 
+                                  onChange={(e) => setTempSectionTitle(e.target.value)}
+                                  onKeyDown={(e) => e.key === 'Enter' && handleSaveSectionTitle(section.id)}
+                                  onBlur={() => handleSaveSectionTitle(section.id)}
+                                  className="h-6 font-black uppercase text-[10px] bg-white text-black min-w-[120px] p-1"
+                                  autoFocus
+                                />
                               </div>
-                              {section.id !== 'default' && (
-                                <AlertDialog>
-                                  <TooltipProvider>
+                            ) : (
+                              <div className="flex items-center justify-between gap-2">
+                                <div 
+                                  className="group/corner cursor-pointer flex items-center gap-2"
+                                  onClick={() => { setTempSectionTitle(section.title); setEditingSectionTitleId(section.id); }}
+                                >
+                                  <span className="text-[11px] font-black uppercase tracking-tighter">{section.title}</span>
+                                  <Pencil className="h-3 w-3 text-white/40 opacity-0 group-hover/corner:opacity-100 transition-opacity" />
+                                </div>
+                                {section.id !== 'default' && (
+                                  <AlertDialog>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
                                         <Button variant="ghost" size="icon" className="h-6 w-6 text-white/40 hover:text-white hover:bg-red-600/20 opacity-0 group-hover/section:opacity-100 transition-opacity" asChild>
@@ -684,139 +684,138 @@ export default function AnnualPlanningPage() {
                                       </TooltipTrigger>
                                       <TooltipContent>Verwijder blok</TooltipContent>
                                     </Tooltip>
-                                  </TooltipProvider>
-                                  <AlertDialogContent>
-                                    <DialogHeader>
-                                      <DialogTitle>Blok Verwijderen?</DialogTitle>
-                                      <AlertDialogDescription>
-                                        Weet u zeker dat u het blok "{section.title}" en alle bijbehorende rijen en milestones wilt verwijderen?
-                                      </AlertDialogDescription>
-                                    </DialogHeader>
-                                    <DialogFooter>
-                                      <AlertDialogCancel>Annuleren</AlertDialogCancel>
-                                      <AlertDialogAction onClick={() => handleDeleteSection(section.id)} className="bg-red-600">Verwijderen</AlertDialogAction>
-                                    </DialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
+                                    <AlertDialogContent>
+                                      <DialogHeader>
+                                        <DialogTitle>Blok Verwijderen?</DialogTitle>
+                                        <AlertDialogDescription>
+                                          Weet u zeker dat u het blok "{section.title}" en alle bijbehorende rijen en milestones wilt verwijderen?
+                                        </AlertDialogDescription>
+                                      </DialogHeader>
+                                      <DialogFooter>
+                                        <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDeleteSection(section.id)} className="bg-red-600">Verwijderen</AlertDialogAction>
+                                      </DialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </th>
+                        {WEEKS.map(week => {
+                          const m = sectionMilestoneMap[week];
+                          const headerStyle = m?.color ? { backgroundColor: m.color } : {};
+                          
+                          return (
+                            <th 
+                              key={week} 
+                              style={headerStyle}
+                              className={cn(
+                                "border-r border-white/20 relative p-0 w-6 min-w-[24px] overflow-visible h-32 group/header-cell cursor-pointer transition-colors",
+                                !m?.color && "hover:bg-white/10"
                               )}
-                            </div>
-                          )}
-                        </div>
-                      </th>
-                      {WEEKS.map(week => {
-                        const m = sectionMilestoneMap[week];
-                        const headerStyle = m?.color ? { backgroundColor: m.color } : {};
+                              onClick={() => handleQuickMilestone(week, section.id)}
+                              onContextMenu={(e) => handleHeaderContextMenu(e, section.id, week)}
+                            >
+                              {m?.label ? (
+                                <div className="absolute inset-0 flex items-center justify-center py-2">
+                                  <span 
+                                    className="whitespace-nowrap uppercase tracking-widest text-[10px] font-black text-white drop-shadow-sm"
+                                    style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: '0.1em' }}
+                                  >
+                                    {m.label}
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/header-cell:opacity-100 transition-opacity">
+                                  <Plus className="h-3.5 w-3.5 text-white/60" />
+                                </div>
+                              )}
+                            </th>
+                          );
+                        })}
+                        <th className="w-8 bg-[#388e3c]"></th>
+                      </tr>
+
+                      <tr className="bg-[#8e24aa] text-white h-8">
+                        <th className="sticky left-0 z-20 bg-[#8e24aa] border-r border-white p-1 text-left uppercase tracking-tighter whitespace-nowrap w-px">
+                          week
+                        </th>
+                        {WEEKS.map(week => {
+                          const m = sectionMilestoneMap[week];
+                          const headerStyle = m?.color ? { backgroundColor: m.color } : {};
+                          
+                          return (
+                            <th 
+                              key={week} 
+                              style={headerStyle}
+                              onContextMenu={(e) => handleHeaderContextMenu(e, section.id, week)}
+                              className={cn(
+                                "border-r border-white/20 text-center font-black w-6 min-w-[24px] h-8 cursor-context-menu transition-colors",
+                                !m?.color && "hover:bg-white/10",
+                                week % 13 === 0 && "border-r-2 border-red-500"
+                              )}
+                            >
+                              {week}
+                            </th>
+                          );
+                        })}
+                        <th className="bg-[#6a1b9a] text-center uppercase tracking-tighter w-8">tot</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {sectionItems.map((item) => {
+                        const isHexColor = item.color?.startsWith('#');
+                        const rowStyle = isHexColor ? { backgroundColor: item.color } : {};
                         
                         return (
-                          <th 
-                            key={week} 
-                            style={headerStyle}
-                            className={cn(
-                              "border-r border-white/20 relative p-0 w-6 min-w-[24px] overflow-visible h-32 group/header-cell cursor-pointer transition-colors",
-                              !m?.color && "hover:bg-white/10"
-                            )}
-                            onClick={() => handleQuickMilestone(week, section.id)}
-                            onContextMenu={(e) => handleHeaderContextMenu(e, section.id, week)}
-                          >
-                            {m?.label ? (
-                              <div className="absolute inset-0 flex items-center justify-center py-2">
-                                <span 
-                                  className="whitespace-nowrap uppercase tracking-widest text-[10px] font-black text-white drop-shadow-sm"
-                                  style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: '0.1em' }}
+                          <tr key={item.id} className={cn("border-b border-slate-100 group transition-colors")} style={rowStyle}>
+                            <td className={cn(
+                              "sticky left-0 z-10 border-r border-slate-200 p-0 whitespace-nowrap w-px shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"
+                            )} style={rowStyle}>
+                              <div className="flex items-center justify-between h-8 px-1.5 w-full group/row">
+                                <button 
+                                  className="pr-4 text-[11px] font-black uppercase tracking-tight whitespace-nowrap hover:text-primary transition-colors text-left"
+                                  onClick={() => { setEditingItem(item); setIsRowDialogOpen(true); }}
                                 >
-                                  {m.label}
-                                </span>
+                                  {item.resourceName}
+                                </button>
+                                <div className="flex items-center opacity-0 group-hover/row:opacity-100 transition-opacity">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-5 w-5 text-red-400 hover:text-red-600 hover:bg-red-50 shrink-0"
+                                    onClick={() => handleDeleteRow(item.id)}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
                               </div>
-                            ) : (
-                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/header-cell:opacity-100 transition-opacity">
-                                <Plus className="h-3.5 w-3.5 text-white/60" />
-                              </div>
-                            )}
-                          </th>
-                        );
-                      })}
-                      <th className="w-8 bg-[#388e3c]"></th>
-                    </tr>
-
-                    <tr className="bg-[#8e24aa] text-white h-8">
-                      <th className="sticky left-0 z-20 bg-[#8e24aa] border-r border-white p-1 text-left uppercase tracking-tighter whitespace-nowrap w-px">
-                        week
-                      </th>
-                      {WEEKS.map(week => {
-                        const m = sectionMilestoneMap[week];
-                        const headerStyle = m?.color ? { backgroundColor: m.color } : {};
-                        
-                        return (
-                          <th 
-                            key={week} 
-                            style={headerStyle}
-                            onContextMenu={(e) => handleHeaderContextMenu(e, section.id, week)}
-                            className={cn(
-                              "border-r border-white/20 text-center font-black w-6 min-w-[24px] h-8 cursor-context-menu transition-colors",
-                              !m?.color && "hover:bg-white/10",
-                              week % 13 === 0 && "border-r-2 border-red-500"
-                            )}
-                          >
-                            {week}
-                          </th>
-                        );
-                      })}
-                      <th className="bg-[#6a1b9a] text-center uppercase tracking-tighter w-8">tot</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {sectionItems.map((item) => {
-                      const isHexColor = item.color?.startsWith('#');
-                      const rowStyle = isHexColor ? { backgroundColor: item.color } : {};
-                      
-                      return (
-                        <tr key={item.id} className={cn("border-b border-slate-100 group transition-colors")} style={rowStyle}>
-                          <td className={cn(
-                            "sticky left-0 z-10 border-r border-slate-200 p-0 whitespace-nowrap w-px shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"
-                          )} style={rowStyle}>
-                            <div className="flex items-center justify-between h-8 px-1.5 w-full group/row">
-                              <button 
-                                className="pr-4 text-[11px] font-black uppercase tracking-tight whitespace-nowrap hover:text-primary transition-colors text-left"
-                                onClick={() => { setEditingItem(item); setIsRowDialogOpen(true); }}
-                              >
-                                {item.resourceName}
-                              </button>
-                              <div className="flex items-center opacity-0 group-hover/row:opacity-100 transition-opacity">
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-5 w-5 text-red-400 hover:text-red-600 hover:bg-red-50 shrink-0"
-                                  onClick={() => handleDeleteRow(item.id)}
+                            </td>
+                            {WEEKS.map(week => {
+                              const cellColor = item.cellColors?.[week.toString()];
+                              const cellNote = item.cellNotes?.[week.toString()];
+                              const isSelected = selectedCells.has(`${item.id}_${week}`);
+                              
+                              const cellStyle: React.CSSProperties = cellColor ? { backgroundColor: cellColor } : {};
+                              
+                              return (
+                                <td 
+                                  key={week}
+                                  onMouseDown={(e) => handleCellMouseDown(item.id, week, e)}
+                                  onMouseEnter={() => handleCellMouseEnter(item.id, week)}
+                                  onContextMenu={(e) => handleCellContextMenu(e, item.id, week)}
+                                  className={cn(
+                                    "border-r border-slate-100 p-0 text-center h-8 w-6 min-w-[24px] transition-all",
+                                    week % 13 === 0 && "border-r-2 border-red-500",
+                                    isSelected && "bg-primary/20 scale-[1.02] z-10",
+                                    cellNote && "ring-1 ring-inset ring-black shadow-[inset_0_0_0_1px_black]"
+                                  )}
+                                  style={cellStyle}
                                 >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            </div>
-                          </td>
-                          {WEEKS.map(week => {
-                            const cellColor = item.cellColors?.[week.toString()];
-                            const cellNote = item.cellNotes?.[week.toString()];
-                            const isSelected = selectedCells.has(`${item.id}_${week}`);
-                            
-                            const cellStyle: React.CSSProperties = cellColor ? { backgroundColor: cellColor } : {};
-                            
-                            return (
-                              <TooltipProvider key={week}>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <td 
-                                      onMouseDown={(e) => handleCellMouseDown(item.id, week, e)}
-                                      onMouseEnter={() => handleCellMouseEnter(item.id, week)}
-                                      onContextMenu={(e) => handleCellContextMenu(e, item.id, week)}
-                                      className={cn(
-                                        "border-r border-slate-100 p-0 text-center h-8 w-6 min-w-[24px] transition-all",
-                                        week % 13 === 0 && "border-r-2 border-red-500",
-                                        isSelected && "bg-primary/20 scale-[1.02] z-10",
-                                        cellNote && "ring-1 ring-inset ring-black shadow-[inset_0_0_0_1px_black]"
-                                      )}
-                                      style={cellStyle}
-                                    >
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
                                       <input
                                         type="text"
                                         defaultValue={item.weeks?.[week.toString()] || ''}
@@ -824,327 +823,327 @@ export default function AnnualPlanningPage() {
                                         onPaste={(e) => handlePaste(item.id, week, e)}
                                         className="w-full h-full bg-transparent text-center focus:bg-white/50 focus:outline-none focus:ring-inset focus:ring-1 focus:ring-primary tabular-nums"
                                       />
-                                    </td>
-                                  </TooltipTrigger>
-                                  {cellNote && (
-                                    <TooltipContent className="bg-black text-white font-bold text-xs p-2">
-                                      {cellNote}
-                                    </TooltipContent>
-                                  )}
-                                </Tooltip>
-                              </TooltipProvider>
-                            );
-                          })}
-                          <td className="bg-slate-50/50 text-center font-black text-[10px] tabular-nums border-l border-slate-200 h-8 w-8">
-                            {calculateRowTotal(item.weeks || {}).toLocaleString()}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                    
-                    <tr className="bg-slate-50/30 h-8">
-                      <td className="sticky left-0 z-10 border-r border-slate-200 p-1 bg-white h-8 w-px">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="w-full h-6 font-black uppercase text-[9px] gap-1 hover:bg-slate-100" 
-                          onClick={() => { setActiveSectionForNewRow(section.id); setEditingItem(null); setIsRowDialogOpen(true); }}
-                        >
-                          <Plus className="h-3.5 w-3.5 text-primary" />
-                        </Button>
-                      </td>
-                      {WEEKS.map(week => (
-                        <td key={week} className={cn(
-                          "border-r border-slate-100 w-6 min-w-[24px] h-8",
-                          week % 13 === 0 && "border-r-2 border-red-500"
-                        )} />
-                      ))}
-                      <td className="border-l border-slate-200 h-8 w-8" />
-                    </tr>
-                  </tbody>
-
-                  <tfoot className="bg-slate-100 border-t border-slate-300">
-                    <tr className="h-10 font-black">
-                      <td className="sticky left-0 z-10 bg-slate-100 border-r border-slate-300 p-2 uppercase tracking-tighter text-[9px] text-slate-500 h-8 w-px whitespace-nowrap">
-                        Totaal {section.title}
-                      </td>
-                      {WEEKS.map(week => (
-                        <td key={week} className={cn(
-                          "text-center tabular-nums border-r border-slate-300 w-6 min-w-[24px] h-8",
-                          week % 13 === 0 && "border-r-2 border-red-500"
-                        )}>
-                          {calculateWeekTotal(week) || ''}
+                                    </TooltipTrigger>
+                                    {cellNote && (
+                                      <TooltipContent className="bg-black text-white font-bold text-xs p-2">
+                                        {cellNote}
+                                      </TooltipContent>
+                                    )}
+                                  </Tooltip>
+                                </td>
+                              );
+                            })}
+                            <td className="bg-slate-50/50 text-center font-black text-[10px] tabular-nums border-l border-slate-200 h-8 w-8">
+                              {calculateRowTotal(item.weeks || {}).toLocaleString()}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      
+                      <tr className="bg-slate-50/30 h-8">
+                        <td className="sticky left-0 z-10 border-r border-slate-200 p-1 bg-white h-8 w-px">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="w-full h-6 font-black uppercase text-[9px] gap-1 hover:bg-slate-100" 
+                            onClick={() => { setActiveSectionForNewRow(section.id); setEditingItem(null); setIsRowDialogOpen(true); }}
+                          >
+                            <Plus className="h-3.5 w-3.5 text-primary" />
+                          </Button>
                         </td>
-                      ))}
-                      <td className="text-center text-[10px] text-primary bg-slate-200 h-8 w-8">
-                        {sectionGrandTotal.toLocaleString()}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
+                        {WEEKS.map(week => (
+                          <td key={week} className={cn(
+                            "border-r border-slate-100 w-6 min-w-[24px] h-8",
+                            week % 13 === 0 && "border-r-2 border-red-500"
+                          )} />
+                        ))}
+                        <td className="border-l border-slate-200 h-8 w-8" />
+                      </tr>
+                    </tbody>
+
+                    <tfoot className="bg-slate-100 border-t border-slate-300">
+                      <tr className="h-10 font-black">
+                        <td className="sticky left-0 z-10 bg-slate-100 border-r border-slate-300 p-2 uppercase tracking-tighter text-[9px] text-slate-500 h-8 w-px whitespace-nowrap">
+                          Totaal {section.title}
+                        </td>
+                        {WEEKS.map(week => (
+                          <td key={week} className={cn(
+                            "text-center tabular-nums border-r border-slate-300 w-6 min-w-[24px] h-8",
+                            week % 13 === 0 && "border-r-2 border-red-500"
+                          )}>
+                            {calculateWeekTotal(week) || ''}
+                          </td>
+                        ))}
+                        <td className="text-center text-[10px] text-primary bg-slate-200 h-8 w-8">
+                          {sectionGrandTotal.toLocaleString()}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              );
+            })}
+
+            <div className="flex justify-center pt-4">
+              <Button 
+                variant="outline" 
+                className="h-16 w-full max-w-md border-2 border-dashed border-slate-300 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all rounded-xl gap-3 font-black uppercase tracking-widest text-xs"
+                onClick={handleAddSection}
+                disabled={isAddingSection}
+              >
+                {isAddingSection ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-6 w-6" />}
+                Nieuw Blok Toevoegen
+              </Button>
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center gap-4 text-[9px] font-black uppercase tracking-widest text-slate-400">
+              <div className="flex items-center gap-2">
+                <div className="h-2.5 w-2.5 bg-red-500 rounded-sm" />
+                <span>Kwartaal scheiding</span>
               </div>
-            );
-          })}
-
-          <div className="flex justify-center pt-4">
-            <Button 
-              variant="outline" 
-              className="h-16 w-full max-w-md border-2 border-dashed border-slate-300 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all rounded-xl gap-3 font-black uppercase tracking-widest text-xs"
-              onClick={handleAddSection}
-              disabled={isAddingSection}
-            >
-              {isAddingSection ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-6 w-6" />}
-              Nieuw Blok Toevoegen
-            </Button>
-          </div>
-
-          <div className="mt-4 flex flex-wrap items-center gap-4 text-[9px] font-black uppercase tracking-widest text-slate-400">
-            <div className="flex items-center gap-2">
-              <div className="h-2.5 w-2.5 bg-red-500 rounded-sm" />
-              <span>Kwartaal scheiding</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="h-3 w-3 bg-slate-200 border border-slate-300 rounded-sm" />
-              <span>Compacte cellen (24px breed)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="h-3 w-3 ring-1 ring-black rounded-sm" />
-              <span>Zwarte ring = Opmerking</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Info className="h-3 w-3" />
-              <span>Slepen om meerdere cellen te selecteren. Rechtsklik voor kleur of opmerking. Ctrl+V in selectie om te plannen.</span>
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 bg-slate-200 border border-slate-300 rounded-sm" />
+                <span>Compacte cellen (24px breed)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 ring-1 ring-black rounded-sm" />
+                <span>Zwarte ring = Opmerking</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Info className="h-3 w-3" />
+                <span>Slepen om meerdere cellen te selecteren. Rechtsklik voor kleur of opmerking. Ctrl+V in selectie om te plannen.</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <Dialog open={isRowDialogOpen} onOpenChange={setIsRowDialogOpen}>
-        <DialogContent>
-          <form onSubmit={(e) => {
-            e.preventDefault();
-            const formData = new FormData(e.currentTarget);
-            handleRowSubmit({
-              name: formData.get('name') as string,
-              color: formData.get('color') as string
-            });
-          }}>
-            <DialogHeader>
-              <DialogTitle>{editingItem ? 'Regel Bewerken' : 'Nieuwe Inzet Toevoegen'}</DialogTitle>
-              <DialogDescription>
-                {editingItem 
-                  ? `Bewerken van: ${editingItem.resourceName}`
-                  : `De rij wordt toegevoegd aan het blok: ${sections.find(s => s.id === activeSectionForNewRow)?.title}`}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-4 space-y-4">
-              <div className="space-y-2">
-                <Label>Naam middel / medewerker</Label>
-                <Input name="name" defaultValue={editingItem?.resourceName || ''} placeholder="Bijv. Veegmachine 569" required />
-              </div>
-              <div className="space-y-2">
-                <Label>Kleur / Categorie</Label>
-                <div className="grid grid-cols-5 gap-2">
-                  {PRESET_COLORS.map(c => (
-                    <button
-                      key={c.value}
-                      type="button"
-                      className={cn(
-                        "h-8 w-full rounded-md border-2 transition-all",
-                        editingItem?.color === c.value ? "border-primary scale-110 shadow-sm" : "border-slate-200"
-                      )}
-                      style={{ backgroundColor: c.value }}
-                      onClick={() => {
-                        const input = document.getElementById('custom-color-input') as HTMLInputElement;
-                        if (input) input.value = c.value;
-                      }}
-                      title={c.name}
-                    />
-                  ))}
-                  <div className="relative group">
-                    <Input 
-                      id="custom-color-input"
-                      name="color" 
-                      type="color" 
-                      defaultValue={editingItem?.color || '#ffffff'} 
-                      className="h-8 w-full p-0 border-none cursor-pointer"
-                    />
-                    <Palette className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none mix-blend-difference text-white opacity-50" />
+        <Dialog open={isRowDialogOpen} onOpenChange={setIsRowDialogOpen}>
+          <DialogContent>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              handleRowSubmit({
+                name: formData.get('name') as string,
+                color: formData.get('color') as string
+              });
+            }}>
+              <DialogHeader>
+                <DialogTitle>{editingItem ? 'Regel Bewerken' : 'Nieuwe Inzet Toevoegen'}</DialogTitle>
+                <DialogDescription>
+                  {editingItem 
+                    ? `Bewerken van: ${editingItem.resourceName}`
+                    : `De rij wordt toegevoegd aan het blok: ${sections.find(s => s.id === activeSectionForNewRow)?.title}`}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4 space-y-4">
+                <div className="space-y-2">
+                  <Label>Naam middel / medewerker</Label>
+                  <Input name="name" defaultValue={editingItem?.resourceName || ''} placeholder="Bijv. Veegmachine 569" required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Kleur / Categorie</Label>
+                  <div className="grid grid-cols-5 gap-2">
+                    {PRESET_COLORS.map(c => (
+                      <button
+                        key={c.value}
+                        type="button"
+                        className={cn(
+                          "h-8 w-full rounded-md border-2 transition-all",
+                          editingItem?.color === c.value ? "border-primary scale-110 shadow-sm" : "border-slate-200"
+                        )}
+                        style={{ backgroundColor: c.value }}
+                        onClick={() => {
+                          const input = document.getElementById('custom-color-input') as HTMLInputElement;
+                          if (input) input.value = c.value;
+                        }}
+                        title={c.name}
+                      />
+                    ))}
+                    <div className="relative group">
+                      <Input 
+                        id="custom-color-input"
+                        name="color" 
+                        type="color" 
+                        defaultValue={editingItem?.color || '#ffffff'} 
+                        className="h-8 w-full p-0 border-none cursor-pointer"
+                      />
+                      <Palette className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none mix-blend-difference text-white opacity-50" />
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setIsRowDialogOpen(false)}>Annuleren</Button>
-              <Button type="submit" disabled={isAddingRow}>
-                {isAddingRow && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {editingItem ? 'Opslaan' : 'Toevoegen'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+              <DialogFooter>
+                <Button type="button" variant="ghost" onClick={() => setIsRowDialogOpen(false)}>Annuleren</Button>
+                <Button type="submit" disabled={isAddingRow}>
+                  {isAddingRow && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {editingItem ? 'Opslaan' : 'Toevoegen'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
 
-      <Dialog open={isMilestoneDialogOpen} onOpenChange={setIsMilestoneDialogOpen}>
-        <DialogContent>
-          <form onSubmit={handleSaveQuickMilestone}>
+        <Dialog open={isMilestoneDialogOpen} onOpenChange={setIsMilestoneDialogOpen}>
+          <DialogContent>
+            <form onSubmit={handleSaveQuickMilestone}>
+              <DialogHeader>
+                <DialogTitle>Milestone Week {selectedWeekForMilestone?.week}</DialogTitle>
+                <DialogDescription>
+                  Voer tekst in die verticaal in de header wordt getoond. Laat leeg om te verwijderen.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <Input 
+                  value={milestoneInput} 
+                  onChange={(e) => setMilestoneInput(e.target.value)} 
+                  placeholder="Bijv. monumenten"
+                  autoFocus
+                />
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="ghost" onClick={() => setIsMilestoneDialogOpen(false)}>Annuleren</Button>
+                <Button type="submit" disabled={isSavingMilestone}>
+                  {isSavingMilestone && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Opslaan
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle>Milestone Week {selectedWeekForMilestone?.week}</DialogTitle>
+              <DialogTitle>Opmerking toevoegen</DialogTitle>
               <DialogDescription>
-                Voer tekst in die verticaal in de header wordt getoond. Laat leeg om te verwijderen.
+                {selectedCells.size > 1 
+                  ? `Voeg een opmerking toe aan de ${selectedCells.size} geselecteerde cellen.` 
+                  : `Opmerking voor week ${activeCellForNote?.week}.`}
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
               <Input 
-                value={milestoneInput} 
-                onChange={(e) => setMilestoneInput(e.target.value)} 
-                placeholder="Bijv. monumenten"
+                value={noteInput} 
+                onChange={(e) => setNoteInput(e.target.value)} 
+                placeholder="Typ uw opmerking..." 
                 autoFocus
+                onKeyDown={(e) => e.key === 'Enter' && handleCellNoteSave()}
               />
             </div>
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setIsMilestoneDialogOpen(false)}>Annuleren</Button>
-              <Button type="submit" disabled={isSavingMilestone}>
-                {isSavingMilestone && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Opslaan
-              </Button>
+              <Button variant="ghost" onClick={() => setIsNoteDialogOpen(false)}>Annuleren</Button>
+              <Button onClick={handleCellNoteSave}>Opslaan</Button>
             </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
 
-      <Dialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Opmerking toevoegen</DialogTitle>
-            <DialogDescription>
-              {selectedCells.size > 1 
-                ? `Voeg een opmerking toe aan de ${selectedCells.size} geselecteerde cellen.` 
-                : `Opmerking voor week ${activeCellForNote?.week}.`}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Input 
-              value={noteInput} 
-              onChange={(e) => setNoteInput(e.target.value)} 
-              placeholder="Typ uw opmerking..." 
-              autoFocus
-              onKeyDown={(e) => e.key === 'Enter' && handleCellNoteSave()}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setIsNoteDialogOpen(false)}>Annuleren</Button>
-            <Button onClick={handleCellNoteSave}>Opslaan</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {cellContextMenu && (
-        <div 
-          className="fixed z-[100] bg-white rounded-lg shadow-2xl border border-slate-200 p-2 min-w-[160px] animate-in fade-in zoom-in duration-100"
-          style={{ left: cellContextMenu.x, top: cellContextMenu.y }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Markering ({selectedCells.size || 1})</p>
-          <div className="grid grid-cols-4 gap-1 mb-2">
-            {CELL_PRESET_COLORS.map(c => (
-              <button
-                key={c.value}
-                className="h-6 w-6 rounded-md border border-slate-200 hover:scale-110 transition-transform shadow-sm"
-                style={{ backgroundColor: c.value }}
-                onClick={() => handleCellColorChange(cellContextMenu.itemId, cellContextMenu.week, c.value)}
-                title={c.name}
-              />
-            ))}
-            <div className="relative h-6 w-6 rounded-md border border-slate-200 overflow-hidden shadow-sm group">
-                <input 
-                    type="color" 
-                    className="absolute inset-0 w-[200%] h-[200%] -translate-x-1/4 -translate-y-1/4 cursor-pointer"
-                    onChange={(e) => handleCellColorChange(cellContextMenu.itemId, cellContextMenu.week, e.target.value)}
+        {cellContextMenu && (
+          <div 
+            className="fixed z-[100] bg-white rounded-lg shadow-2xl border border-slate-200 p-2 min-w-[160px] animate-in fade-in zoom-in duration-100"
+            style={{ left: cellContextMenu.x, top: cellContextMenu.y }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Markering ({selectedCells.size || 1})</p>
+            <div className="grid grid-cols-4 gap-1 mb-2">
+              {CELL_PRESET_COLORS.map(c => (
+                <button
+                  key={c.value}
+                  className="h-6 w-6 rounded-md border border-slate-200 hover:scale-110 transition-transform shadow-sm"
+                  style={{ backgroundColor: c.value }}
+                  onClick={() => handleCellColorChange(cellContextMenu.itemId, cellContextMenu.week, c.value)}
+                  title={c.name}
                 />
-                <Palette className="absolute inset-0 m-auto h-3 w-3 pointer-events-none mix-blend-difference text-white opacity-50" />
+              ))}
+              <div className="relative h-6 w-6 rounded-md border border-slate-200 overflow-hidden shadow-sm group">
+                  <input 
+                      type="color" 
+                      className="absolute inset-0 w-[200%] h-[200%] -translate-x-1/4 -translate-y-1/4 cursor-pointer"
+                      onChange={(e) => handleCellColorChange(cellContextMenu.itemId, cellContextMenu.week, e.target.value)}
+                  />
+                  <Palette className="absolute inset-0 m-auto h-3 w-3 pointer-events-none mix-blend-difference text-white opacity-50" />
+              </div>
             </div>
+            
+            <Separator className="my-2" />
+            
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="w-full justify-start h-8 text-[10px] font-bold gap-2 px-2 hover:bg-slate-100"
+              onClick={() => {
+                const item = itemsRaw?.find(i => i.id === cellContextMenu.itemId);
+                setNoteInput(item?.cellNotes?.[cellContextMenu.week.toString()] || '');
+                setActiveCellForNote({ itemId: cellContextMenu.itemId, week: cellContextMenu.week });
+                setIsNoteDialogOpen(true);
+                setCellContextMenu(null);
+              }}
+            >
+              <MessageSquare className="h-3.5 w-3.5 text-primary" />
+              Opmerking toevoegen
+            </Button>
+
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="w-full justify-start h-8 text-[10px] font-bold gap-2 px-2 hover:bg-slate-100 text-red-600"
+              onClick={() => {
+                handleCellColorChange(cellContextMenu.itemId, cellContextMenu.week, 'transparent');
+                // Clear note too?
+                setCellContextMenu(null);
+              }}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Reset cel
+            </Button>
+
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="w-full mt-2 h-7 text-[10px] font-bold bg-slate-50"
+              onClick={() => setCellContextMenu(null)}
+            >
+              Sluiten
+            </Button>
           </div>
-          
-          <Separator className="my-2" />
-          
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="w-full justify-start h-8 text-[10px] font-bold gap-2 px-2 hover:bg-slate-100"
-            onClick={() => {
-              const item = itemsRaw?.find(i => i.id === cellContextMenu.itemId);
-              setNoteInput(item?.cellNotes?.[cellContextMenu.week.toString()] || '');
-              setActiveCellForNote({ itemId: cellContextMenu.itemId, week: cellContextMenu.week });
-              setIsNoteDialogOpen(true);
-              setCellContextMenu(null);
-            }}
-          >
-            <MessageSquare className="h-3.5 w-3.5 text-primary" />
-            Opmerking toevoegen
-          </Button>
+        )}
 
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="w-full justify-start h-8 text-[10px] font-bold gap-2 px-2 hover:bg-slate-100 text-red-600"
-            onClick={() => {
-              handleCellColorChange(cellContextMenu.itemId, cellContextMenu.week, 'transparent');
-              // Clear note too?
-              setCellContextMenu(null);
-            }}
+        {headerContextMenu && (
+          <div 
+            className="fixed z-[100] bg-white rounded-lg shadow-2xl border border-slate-200 p-2 min-w-[120px] animate-in fade-in zoom-in duration-100"
+            style={{ left: headerContextMenu.x, top: headerContextMenu.y }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <Trash2 className="h-3.5 w-3.5" />
-            Reset cel
-          </Button>
-
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="w-full mt-2 h-7 text-[10px] font-bold bg-slate-50"
-            onClick={() => setCellContextMenu(null)}
-          >
-            Sluiten
-          </Button>
-        </div>
-      )}
-
-      {headerContextMenu && (
-        <div 
-          className="fixed z-[100] bg-white rounded-lg shadow-2xl border border-slate-200 p-2 min-w-[120px] animate-in fade-in zoom-in duration-100"
-          style={{ left: headerContextMenu.x, top: headerContextMenu.y }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Header kleur</p>
-          <div className="grid grid-cols-4 gap-1">
-            {CELL_PRESET_COLORS.map(c => (
-              <button
-                key={c.value}
-                className="h-6 w-6 rounded-md border border-slate-200 hover:scale-110 transition-transform shadow-sm"
-                style={{ backgroundColor: c.value }}
-                onClick={() => handleHeaderColorChange(headerContextMenu.sectionId, headerContextMenu.week, c.value)}
-                title={c.name}
-              />
-            ))}
-            <div className="relative h-6 w-6 rounded-md border border-slate-200 overflow-hidden shadow-sm group">
-                <input 
-                    type="color" 
-                    className="absolute inset-0 w-[200%] h-[200%] -translate-x-1/4 -translate-y-1/4 cursor-pointer"
-                    onChange={(e) => handleHeaderColorChange(headerContextMenu.sectionId, headerContextMenu.week, e.target.value)}
+            <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Header kleur</p>
+            <div className="grid grid-cols-4 gap-1">
+              {CELL_PRESET_COLORS.map(c => (
+                <button
+                  key={c.value}
+                  className="h-6 w-6 rounded-md border border-slate-200 hover:scale-110 transition-transform shadow-sm"
+                  style={{ backgroundColor: c.value }}
+                  onClick={() => handleHeaderColorChange(headerContextMenu.sectionId, headerContextMenu.week, c.value)}
+                  title={c.name}
                 />
-                <Palette className="absolute inset-0 m-auto h-3 w-3 pointer-events-none mix-blend-difference text-white opacity-50" />
+              ))}
+              <div className="relative h-6 w-6 rounded-md border border-slate-200 overflow-hidden shadow-sm group">
+                  <input 
+                      type="color" 
+                      className="absolute inset-0 w-[200%] h-[200%] -translate-x-1/4 -translate-y-1/4 cursor-pointer"
+                      onChange={(e) => handleHeaderColorChange(headerContextMenu.sectionId, headerContextMenu.week, e.target.value)}
+                  />
+                  <Palette className="absolute inset-0 m-auto h-3 w-3 pointer-events-none mix-blend-difference text-white opacity-50" />
+              </div>
             </div>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="w-full mt-2 h-7 text-[10px] font-bold"
+              onClick={() => setHeaderContextMenu(null)}
+            >
+              Sluiten
+            </Button>
           </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="w-full mt-2 h-7 text-[10px] font-bold"
-            onClick={() => setHeaderContextMenu(null)}
-          >
-            Sluiten
-          </Button>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </TooltipProvider>
   );
 }
