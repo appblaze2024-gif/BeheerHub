@@ -36,7 +36,8 @@ import {
   Navigation,
   AlertTriangle,
   RotateCcw,
-  Flag
+  Flag,
+  MousePointer2
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -865,10 +866,12 @@ export default function StartNavigationPage() {
   const [isStarting, setIsStarting] = React.useState(false);
   const [isSimulationMode, setIsSimulationMode] = React.useState(false);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = React.useState(false);
+  const [showManualHint, setShowManualHint] = React.useState(false);
   
   const [urlMeldingLocatie, setUrlMeldingLocatie] = React.useState<{ latitude: number; longitude: number; straat?: string } | null>(null);
   
   const mapRef = React.useRef<MapRef>(null);
+  const autoStartAttempted = React.useRef(false);
 
   React.useEffect(() => {
     if (navigationState === 'navigating') setIsHeaderVisible(false);
@@ -878,14 +881,6 @@ export default function StartNavigationPage() {
 
   React.useEffect(() => {
     if (!navigator.geolocation) return;
-
-    navigator.geolocation.getCurrentPosition(
-        (pos) => {
-            setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
-        },
-        null,
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
 
     const watchId = navigator.geolocation.watchPosition(
         (pos) => {
@@ -974,7 +969,7 @@ export default function StartNavigationPage() {
       else map.once('style.load', fit);
   }, [selectedRouteId, routeGeoJSONFeatures, objectsOnMap, selectedRouteDef, urlMeldingLocatie]);
 
-  const handleStartRoute = async (simulate = false) => {
+  const handleStartRoute = React.useCallback(async (simulate = false) => {
     setIsSimulationMode(simulate);
     const predefinedStart = selectedRouteDef && 'startLatitude' in selectedRouteDef && (selectedRouteDef as any).startLatitude && (selectedRouteDef as any).startLongitude
         ? { latitude: (selectedRouteDef as any).startLatitude, longitude: (selectedRouteDef as any).startLongitude } : null;
@@ -1022,7 +1017,26 @@ export default function StartNavigationPage() {
     setObjectsOnRoute(sortedObjects);
     setNavigationState('navigating');
     setIsStarting(false);
-  };
+  }, [userLocation, selectedRouteDef, urlMeldingLocatie, selectedProjectId, user, objectsOnMap, toast]);
+
+  // AUTO-START LOGIC: If GPS is detected and we have a work order, start immediately
+  React.useEffect(() => {
+    if (urlMeldingLocatie && userLocation && !autoStartAttempted.current && navigationState === 'setup') {
+      autoStartAttempted.current = true;
+      handleStartRoute(false);
+      toast({ title: "GPS Gevonden", description: "Route naar melding wordt direct gestart." });
+    }
+  }, [userLocation, urlMeldingLocatie, navigationState, handleStartRoute, toast]);
+
+  // FALLBACK LOGIC: After 5 seconds, if no GPS, show a hint for manual location
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!userLocation && navigationState === 'setup') {
+        setShowManualHint(true);
+      }
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [userLocation, navigationState]);
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
@@ -1030,7 +1044,7 @@ export default function StartNavigationPage() {
         <NavigatingView objectsOnRoute={objectsOnRoute} onExit={() => { setNavigationState('setup'); setObjectsOnRoute([]); if (searchParams.has('lat')) router.back(); }} initialUserLocation={tripStartLocation} isSimulating={isSimulationMode} />
       ) : (
         <div className="w-full h-full relative">
-          <MapGL ref={mapRef} initialViewState={{ longitude: userLocation?.longitude || 5.2913, latitude: userLocation?.latitude || 52.1326, zoom: userLocation ? 14 : 7 }} style={{ width: '100%', height: '100%' }} mapStyle={mapStyle} mapboxAccessToken={MAPBOX_TOKEN} onClick={e => setUserLocation({ latitude: e.lngLat.lat, longitude: e.lngLat.lng })} interactive={true}>
+          <MapGL ref={mapRef} initialViewState={{ longitude: userLocation?.longitude || 5.2913, latitude: userLocation?.latitude || 52.1326, zoom: userLocation ? 14 : 7 }} style={{ width: '100%', height: '100%' }} mapStyle={mapStyle} mapboxAccessToken={MAPBOX_TOKEN} onClick={e => { setUserLocation({ latitude: e.lngLat.lat, longitude: e.lngLat.lng }); setShowManualHint(false); }} interactive={true}>
             {userLocation && (
               <Marker longitude={userLocation.longitude} latitude={userLocation.latitude} anchor="center">
                 <div className="relative flex flex-col items-center">
@@ -1076,6 +1090,25 @@ export default function StartNavigationPage() {
                 </Marker>
             ))}
           </MapGL>
+
+          {showManualHint && !userLocation && (
+            <div className="absolute top-24 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-sm animate-in fade-in slide-in-from-top-4 duration-500">
+                <Alert className="bg-primary border-none text-white shadow-2xl rounded-2xl p-4">
+                    <div className="flex items-start gap-4">
+                        <div className="bg-white/20 p-2 rounded-xl shrink-0">
+                            <MousePointer2 className="h-6 w-6 text-white animate-bounce" />
+                        </div>
+                        <div>
+                            <AlertTitle className="font-black uppercase tracking-tight text-xs mb-1">Geen GPS signaal gevonden</AlertTitle>
+                            <AlertDescription className="text-[11px] opacity-90 font-medium leading-relaxed">
+                                Klik op de kaart om uw huidige positie handmatig te bepalen en de route te starten.
+                            </AlertDescription>
+                        </div>
+                    </div>
+                </Alert>
+            </div>
+          )}
+
           <Card className="absolute top-4 left-4 z-10 w-full max-w-[280px] shadow-2xl bg-white/95 backdrop-blur border-2 border-slate-100">
             <CardHeader className="p-3 border-b bg-slate-50/50">
               <div className="flex items-center gap-3">
@@ -1127,7 +1160,7 @@ export default function StartNavigationPage() {
               )}
 
               <div className="flex flex-col gap-1.5 pt-1">
-                <Button className="w-full h-9 text-xs font-black bg-blue-600 hover:bg-blue-700 shadow-lg rounded-lg uppercase tracking-tighter flex items-center justify-center text-white" onClick={() => handleStartRoute(false)} disabled={(urlMeldingLocatie ? false : (selectedRouteId === '--nieuwe-route--')) || isStarting}>
+                <Button className="w-full h-9 text-xs font-black bg-blue-600 hover:bg-blue-700 shadow-lg rounded-lg uppercase tracking-tighter flex items-center justify-center text-white" onClick={() => handleStartRoute(false)} disabled={(urlMeldingLocatie ? !userLocation : (selectedRouteId === '--nieuwe-route--')) || isStarting}>
                     {isStarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4 fill-current" />} 
                     {urlMeldingLocatie ? 'LAAD ROUTE NAAR MELDING' : 'START LIVE RIT'}
                 </Button>
