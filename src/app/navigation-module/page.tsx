@@ -867,6 +867,7 @@ export default function StartNavigationPage() {
   const [isSimulationMode, setIsSimulationMode] = React.useState(false);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = React.useState(false);
   const [showManualHint, setShowManualHint] = React.useState(false);
+  const [autoStartTimeoutReached, setAutoStartTimeoutReached] = React.useState(false);
   
   const [urlMeldingLocatie, setUrlMeldingLocatie] = React.useState<{ latitude: number; longitude: number; straat?: string } | null>(null);
   
@@ -1019,24 +1020,35 @@ export default function StartNavigationPage() {
     setIsStarting(false);
   }, [userLocation, selectedRouteDef, urlMeldingLocatie, selectedProjectId, user, objectsOnMap, toast]);
 
-  // AUTO-START LOGIC: If GPS is detected and we have a work order, start immediately
+  // AUTO-START LOGIC: If GPS is detected and we have a work order, start immediately.
+  // Otherwise, set a timeout to show the setup card after 5 seconds.
   React.useEffect(() => {
-    if (urlMeldingLocatie && userLocation && !autoStartAttempted.current && navigationState === 'setup') {
-      autoStartAttempted.current = true;
-      handleStartRoute(false);
-      toast({ title: "GPS Gevonden", description: "Route naar melding wordt direct gestart." });
+    if (urlMeldingLocatie && navigationState === 'setup') {
+      if (userLocation && !autoStartAttempted.current) {
+        autoStartAttempted.current = true;
+        handleStartRoute(false);
+        toast({ title: "GPS Gevonden", description: "Route naar melding wordt direct gestart." });
+      } else {
+        const timer = setTimeout(() => {
+          if (!userLocation) {
+            setAutoStartTimeoutReached(true);
+            setShowManualHint(true);
+          }
+        }, 5000);
+        return () => clearTimeout(timer);
+      }
     }
   }, [userLocation, urlMeldingLocatie, navigationState, handleStartRoute, toast]);
 
-  // FALLBACK LOGIC: After 5 seconds, if no GPS, show a hint for manual location
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!userLocation && navigationState === 'setup') {
-        setShowManualHint(true);
-      }
-    }, 5000);
-    return () => clearTimeout(timer);
-  }, [userLocation, navigationState]);
+  const showSetupCard = React.useMemo(() => {
+    // Show if not coming from a melding
+    if (!urlMeldingLocatie) return true;
+    // Or if we have a location (to make adjustments)
+    if (userLocation) return true;
+    // Or if the 5s timeout reached
+    if (autoStartTimeoutReached) return true;
+    return false;
+  }, [urlMeldingLocatie, userLocation, autoStartTimeoutReached]);
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
@@ -1091,6 +1103,18 @@ export default function StartNavigationPage() {
             ))}
           </MapGL>
 
+          {urlMeldingLocatie && !userLocation && !autoStartTimeoutReached && (
+            <div className="absolute inset-0 z-[100] bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center text-white">
+                <div className="bg-white/10 p-8 rounded-3xl border border-white/20 flex flex-col items-center gap-6 animate-in zoom-in-95 duration-300 shadow-2xl">
+                    <div className="h-16 w-16 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+                    <div className="text-center space-y-2">
+                        <p className="text-xl font-black uppercase tracking-tight">GPS Signaal zoeken...</p>
+                        <p className="text-sm font-medium opacity-70">De route start automatisch bij signaal.</p>
+                    </div>
+                </div>
+            </div>
+          )}
+
           {showManualHint && !userLocation && (
             <div className="absolute top-24 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-sm animate-in fade-in slide-in-from-top-4 duration-500">
                 <Alert className="bg-primary border-none text-white shadow-2xl rounded-2xl p-4">
@@ -1099,7 +1123,7 @@ export default function StartNavigationPage() {
                             <MousePointer2 className="h-6 w-6 text-white animate-bounce" />
                         </div>
                         <div>
-                            <AlertTitle className="font-black uppercase tracking-tight text-xs mb-1">Geen GPS signaal gevonden</AlertTitle>
+                            <AlertTitle className="font-black uppercase tracking-tight text-xs mb-1">Geen GPS gevonden</AlertTitle>
                             <AlertDescription className="text-[11px] opacity-90 font-medium leading-relaxed">
                                 Klik op de kaart om uw huidige positie handmatig te bepalen en de route te starten.
                             </AlertDescription>
@@ -1109,77 +1133,79 @@ export default function StartNavigationPage() {
             </div>
           )}
 
-          <Card className="absolute top-4 left-4 z-10 w-full max-w-[280px] shadow-2xl bg-white/95 backdrop-blur border-2 border-slate-100">
-            <CardHeader className="p-3 border-b bg-slate-50/50">
-              <div className="flex items-center gap-3">
-                <Button variant="ghost" size="icon" onClick={() => router.push('/')} className="h-7 w-7 hover:bg-white rounded-full flex items-center justify-center"><ArrowLeft className="h-3.5 w-3.5" /></Button>
-                <CardTitle className="text-sm font-black uppercase tracking-tighter">Navigatie Setup</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="p-3 space-y-3">
-              <div className="space-y-1">
-                <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Project</Label>
-                <Select value={selectedProjectId || ''} onValueChange={v => setSelectedProjectId(v || null)} disabled={isLoadingProjects}>
-                  <SelectTrigger className="h-8 border font-bold text-xs"><SelectValue placeholder="Selecteer project" /></SelectTrigger>
-                  <SelectContent>{projects?.map(p => <SelectItem key={p.id} value={p.id!}>{p.projectnaam}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              
-              {!urlMeldingLocatie && (
-                <>
-                  <div className="space-y-1">
-                    <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Type Inzet</Label>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      <Button variant={routeType === 'veeg' ? 'default' : 'outline'} onClick={() => setRouteType('veeg')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[10px]", routeType === 'veeg' ? "bg-blue-600 border-blue-600 shadow-md text-white" : "border-slate-200")}>Veegwagen</Button>
-                      <Button variant={routeType === 'prullenbak' ? 'default' : 'outline'} onClick={() => setRouteType('prullenbak')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[10px]", routeType === 'prullenbak' ? "bg-blue-600 border-blue-600 shadow-md text-white" : "border-slate-200")}>Prullenbakken</Button>
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Route Keuze</Label>
-                    <Select onValueChange={setSelectedRouteId} value={selectedRouteId} disabled={!routeType}>
-                        <SelectTrigger className="h-8 border font-bold text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="--nieuwe-route--">-- Kies een route --</SelectItem>
-                            {availableRoutes.map((r: any) => (
-                                <SelectItem key={r.id} value={r.id}>{r.naam}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                  </div>
-                </>
-              )}
-
-              {urlMeldingLocatie && (
-                <Alert className="bg-blue-50 border-blue-200 py-2">
-                    <Navigation className="h-3 w-3 text-blue-600" />
-                    <AlertTitle className="text-[10px] font-black uppercase text-blue-700">Bestemming geladen</AlertTitle>
-                    <AlertDescription className="text-[9px] font-bold text-blue-600 truncate">
-                        {urlMeldingLocatie.straat}
-                    </AlertDescription>
-                </Alert>
-              )}
-
-              <div className="flex flex-col gap-1.5 pt-1">
-                <Button className="w-full h-9 text-xs font-black bg-blue-600 hover:bg-blue-700 shadow-lg rounded-lg uppercase tracking-tighter flex items-center justify-center text-white" onClick={() => handleStartRoute(false)} disabled={(urlMeldingLocatie ? !userLocation : (selectedRouteId === '--nieuwe-route--')) || isStarting}>
-                    {isStarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4 fill-current" />} 
-                    {urlMeldingLocatie ? 'LAAD ROUTE NAAR MELDING' : 'START LIVE RIT'}
-                </Button>
-                <div className="grid grid-cols-2 gap-1.5">
-                    {isPrivileged && (
-                        <Button variant="outline" className="h-8 border-slate-200 text-slate-600 hover:bg-slate-50 font-black uppercase tracking-tighter rounded-lg flex items-center justify-center text-[9px]" onClick={() => setIsHistoryDialogOpen(true)}>
-                            <History className="mr-1.5 h-3 w-3" /> GESCHIEDENIS
-                        </Button>
-                    )}
-                    {isSuperUser && (
-                        <Button variant="outline" className="h-8 border-dashed border-blue-200 text-blue-600 hover:bg-blue-50/50 font-black uppercase tracking-tighter rounded-lg flex items-center justify-center text-[9px]" onClick={() => handleStartRoute(true)} disabled={(urlMeldingLocatie ? false : (selectedRouteId === '--nieuwe-route--')) || isStarting}>
-                            <Gauge className="mr-1.5 h-3 w-3" /> SIMULATOR
-                        </Button>
-                    )}
+          {showSetupCard && (
+            <Card className="absolute top-4 left-4 z-10 w-full max-w-[280px] shadow-2xl bg-white/95 backdrop-blur border-2 border-slate-100 animate-in slide-in-from-left-4 duration-300">
+                <CardHeader className="p-3 border-b bg-slate-50/50">
+                <div className="flex items-center gap-3">
+                    <Button variant="ghost" size="icon" onClick={() => router.push('/')} className="h-7 w-7 hover:bg-white rounded-full flex items-center justify-center"><ArrowLeft className="h-3.5 w-3.5" /></Button>
+                    <CardTitle className="text-sm font-black uppercase tracking-tighter">Navigatie Setup</CardTitle>
                 </div>
-              </div>
-              <p className="text-[8px] text-slate-400 font-bold uppercase text-center mt-2">Pc-gebruiker: klik op de kaart voor startlocatie.</p>
-            </CardContent>
-          </Card>
+                </CardHeader>
+                <CardContent className="p-3 space-y-3">
+                <div className="space-y-1">
+                    <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Project</Label>
+                    <Select value={selectedProjectId || ''} onValueChange={v => setSelectedProjectId(v || null)} disabled={isLoadingProjects}>
+                    <SelectTrigger className="h-8 border font-bold text-xs"><SelectValue placeholder="Selecteer project" /></SelectTrigger>
+                    <SelectContent>{projects?.map(p => <SelectItem key={p.id} value={p.id!}>{p.projectnaam}</SelectItem>)}</SelectContent>
+                    </Select>
+                </div>
+                
+                {!urlMeldingLocatie && (
+                    <>
+                    <div className="space-y-1">
+                        <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Type Inzet</Label>
+                        <div className="grid grid-cols-2 gap-1.5">
+                        <Button variant={routeType === 'veeg' ? 'default' : 'outline'} onClick={() => setRouteType('veeg')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[10px]", routeType === 'veeg' ? "bg-blue-600 border-blue-600 shadow-md text-white" : "border-slate-200")}>Veegwagen</Button>
+                        <Button variant={routeType === 'prullenbak' ? 'default' : 'outline'} onClick={() => setRouteType('prullenbak')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[10px]", routeType === 'prullenbak' ? "bg-blue-600 border-blue-600 shadow-md text-white" : "border-slate-200")}>Prullenbakken</Button>
+                        </div>
+                    </div>
+                    <div className="space-y-1">
+                        <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Route Keuze</Label>
+                        <Select onValueChange={setSelectedRouteId} value={selectedRouteId} disabled={!routeType}>
+                            <SelectTrigger className="h-8 border font-bold text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="--nieuwe-route--">-- Kies een route --</SelectItem>
+                                {availableRoutes.map((r: any) => (
+                                    <SelectItem key={r.id} value={r.id}>{r.naam}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    </>
+                )}
+
+                {urlMeldingLocatie && (
+                    <Alert className="bg-blue-50 border-blue-200 py-2">
+                        <Navigation className="h-3 w-3 text-blue-600" />
+                        <AlertTitle className="text-[10px] font-black uppercase text-blue-700">Bestemming geladen</AlertTitle>
+                        <AlertDescription className="text-[9px] font-bold text-blue-600 truncate">
+                            {urlMeldingLocatie.straat}
+                        </AlertDescription>
+                    </Alert>
+                )}
+
+                <div className="flex flex-col gap-1.5 pt-1">
+                    <Button className="w-full h-9 text-xs font-black bg-blue-600 hover:bg-blue-700 shadow-lg rounded-lg uppercase tracking-tighter flex items-center justify-center text-white" onClick={() => handleStartRoute(false)} disabled={(urlMeldingLocatie ? !userLocation : (selectedRouteId === '--nieuwe-route--')) || isStarting}>
+                        {isStarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4 fill-current" />} 
+                        {urlMeldingLocatie ? 'START RIT NAAR MELDING' : 'START LIVE RIT'}
+                    </Button>
+                    <div className="grid grid-cols-2 gap-1.5">
+                        {isPrivileged && (
+                            <Button variant="outline" className="h-8 border-slate-200 text-slate-600 hover:bg-slate-50 font-black uppercase tracking-tighter rounded-lg flex items-center justify-center text-[9px]" onClick={() => setIsHistoryDialogOpen(true)}>
+                                <History className="mr-1.5 h-3 w-3" /> GESCHIEDENIS
+                            </Button>
+                        )}
+                        {isSuperUser && (
+                            <Button variant="outline" className="h-8 border-dashed border-blue-200 text-blue-600 hover:bg-blue-50/50 font-black uppercase tracking-tighter rounded-lg flex items-center justify-center text-[9px]" onClick={() => handleStartRoute(true)} disabled={(urlMeldingLocatie ? false : (selectedRouteId === '--nieuwe-route--')) || isStarting}>
+                                <Gauge className="mr-1.5 h-3 w-3" /> SIMULATOR
+                            </Button>
+                        )}
+                    </div>
+                </div>
+                <p className="text-[8px] text-slate-400 font-bold uppercase text-center mt-2">Pc-gebruiker: klik op de kaart voor startlocatie.</p>
+                </CardContent>
+            </Card>
+          )}
         </div>
       )}
       {isPrivileged && (
