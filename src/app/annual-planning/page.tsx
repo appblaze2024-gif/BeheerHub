@@ -69,6 +69,7 @@ interface AnnualMilestone {
   weekNumber: number;
   label: string;
   year: number;
+  color?: string;
 }
 
 interface AnnualPlanningConfig {
@@ -134,8 +135,9 @@ export default function AnnualPlanningPage() {
   // Section management
   const [isAddingSection, setIsAddingSection] = React.useState(false);
 
-  // Cell color context menu
+  // Context menus
   const [cellContextMenu, setCellContextMenu] = React.useState<{ x: number, y: number, itemId: string, week: number } | null>(null);
+  const [headerContextMenu, setHeaderContextMenu] = React.useState<{ x: number, y: number, sectionId: string, week: number } | null>(null);
 
   const configId = `${selectedProjectId}_${selectedYear}`;
   const configRef = useMemoFirebase(() => {
@@ -272,6 +274,34 @@ export default function AnnualPlanningPage() {
     setCellContextMenu(null);
   };
 
+  const handleHeaderColorChange = async (sectionId: string, week: number, color: string) => {
+    if (!firestore || !selectedProjectId) return;
+    
+    const existing = milestonesRaw?.find(m => m.weekNumber === week && (m.sectionId === sectionId || (sectionId === 'default' && !m.sectionId)));
+    
+    try {
+      if (existing) {
+        updateDocumentNonBlocking(doc(firestore, 'annual_milestones', existing.id), {
+          color: color === 'transparent' ? null : color
+        });
+      } else {
+        await addDocumentNonBlocking(collection(firestore, 'annual_milestones'), {
+          projectId: selectedProjectId,
+          sectionId: sectionId === 'default' ? null : sectionId,
+          label: '',
+          weekNumber: week,
+          year: selectedYear,
+          color: color === 'transparent' ? null : color
+        });
+      }
+      toast({ title: 'Header kleur bijgewerkt' });
+    } catch (e) {
+      console.error("Header color error:", e);
+    } finally {
+      setHeaderContextMenu(null);
+    }
+  };
+
   const handleRowSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedProjectId || !firestore) return;
@@ -324,7 +354,7 @@ export default function AnnualPlanningPage() {
     const existing = milestonesRaw?.find(m => m.weekNumber === week && (m.sectionId === sectionId || (sectionId === 'default' && !m.sectionId)));
     
     try {
-      if (milestoneInput.trim() === '') {
+      if (milestoneInput.trim() === '' && (!existing || !existing.color)) {
         if (existing) {
           deleteDocumentNonBlocking(doc(firestore, 'annual_milestones', existing.id));
           toast({ title: 'Milestone verwijderd' });
@@ -366,6 +396,13 @@ export default function AnnualPlanningPage() {
   const handleCellContextMenu = (e: React.MouseEvent, itemId: string, week: number) => {
     e.preventDefault();
     setCellContextMenu({ x: e.clientX, y: e.clientY, itemId, week });
+    setHeaderContextMenu(null);
+  };
+
+  const handleHeaderContextMenu = (e: React.MouseEvent, sectionId: string, week: number) => {
+    e.preventDefault();
+    setHeaderContextMenu({ x: e.clientX, y: e.clientY, sectionId, week });
+    setCellContextMenu(null);
   };
 
   if (!selectedProjectId) {
@@ -383,7 +420,7 @@ export default function AnnualPlanningPage() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-white overflow-hidden" onClick={() => cellContextMenu && setCellContextMenu(null)}>
+    <div className="flex flex-col h-full bg-white overflow-hidden" onClick={() => { if(cellContextMenu) setCellContextMenu(null); if(headerContextMenu) setHeaderContextMenu(null); }}>
       <PageHeader 
         title={""} 
         description="Overzicht van inzet en uren voor het gehele jaar."
@@ -436,8 +473,8 @@ export default function AnnualPlanningPage() {
           {sections.map((section) => {
             const sectionItems = itemsRaw ? itemsRaw.filter(i => i.sectionId === section.id || (section.id === 'default' && !i.sectionId)).sort((a, b) => (a.order || 0) - (b.order || 0)) : [];
             const sectionMilestones = milestonesRaw ? milestonesRaw.filter(m => m.sectionId === section.id || (section.id === 'default' && !m.sectionId)) : [];
-            const sectionMilestoneMap: Record<number, string> = {};
-            sectionMilestones.forEach(m => { sectionMilestoneMap[m.weekNumber] = m.label; });
+            const sectionMilestoneMap: Record<number, AnnualMilestone> = {};
+            sectionMilestones.forEach(m => { sectionMilestoneMap[m.weekNumber] = m; });
 
             const calculateWeekTotal = (week: number) => {
               return sectionItems.reduce((acc, item) => acc + (parseFloat(item.weeks?.[week.toString()]) || 0), 0) || 0;
@@ -497,28 +534,38 @@ export default function AnnualPlanningPage() {
                           )}
                         </div>
                       </th>
-                      {WEEKS.map(week => (
-                        <th 
-                          key={week} 
-                          className="border-r border-white/20 relative p-0 w-6 min-w-[24px] overflow-visible h-32 group/header-cell cursor-pointer hover:bg-white/10 transition-colors"
-                          onClick={() => handleQuickMilestone(week, section.id)}
-                        >
-                          {sectionMilestoneMap[week] ? (
-                            <div className="absolute inset-0 flex items-center justify-center py-2">
-                              <span 
-                                className="whitespace-nowrap uppercase tracking-widest text-[10px] font-black text-white drop-shadow-sm"
-                                style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
-                              >
-                                {sectionMilestoneMap[week]}
-                              </span>
-                            </div>
-                          ) : (
-                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/header-cell:opacity-100 transition-opacity">
-                              <Plus className="h-3.5 w-3.5 text-white/60" />
-                            </div>
-                          )}
-                        </th>
-                      ))}
+                      {WEEKS.map(week => {
+                        const m = sectionMilestoneMap[week];
+                        const headerStyle = m?.color ? { backgroundColor: m.color } : {};
+                        
+                        return (
+                          <th 
+                            key={week} 
+                            style={headerStyle}
+                            className={cn(
+                              "border-r border-white/20 relative p-0 w-6 min-w-[24px] overflow-visible h-32 group/header-cell cursor-pointer transition-colors",
+                              !m?.color && "hover:bg-white/10"
+                            )}
+                            onClick={() => handleQuickMilestone(week, section.id)}
+                            onContextMenu={(e) => handleHeaderContextMenu(e, section.id, week)}
+                          >
+                            {m?.label ? (
+                              <div className="absolute inset-0 flex items-center justify-center py-2">
+                                <span 
+                                  className="whitespace-nowrap uppercase tracking-widest text-[10px] font-black text-white drop-shadow-sm"
+                                  style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+                                >
+                                  {m.label}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/header-cell:opacity-100 transition-opacity">
+                                <Plus className="h-3.5 w-3.5 text-white/60" />
+                              </div>
+                            )}
+                          </th>
+                        );
+                      })}
                       <th className="w-8 bg-[#388e3c]"></th>
                     </tr>
 
@@ -526,14 +573,25 @@ export default function AnnualPlanningPage() {
                       <th className="sticky left-0 z-20 bg-[#8e24aa] border-r border-white p-1 text-left uppercase tracking-tighter whitespace-nowrap w-px">
                         week
                       </th>
-                      {WEEKS.map(week => (
-                        <th key={week} className={cn(
-                          "border-r border-white/20 text-center font-black w-6 min-w-[24px] h-8",
-                          week % 13 === 0 && "border-r-2 border-red-500"
-                        )}>
-                          {week}
-                        </th>
-                      ))}
+                      {WEEKS.map(week => {
+                        const m = sectionMilestoneMap[week];
+                        const headerStyle = m?.color ? { backgroundColor: m.color } : {};
+                        
+                        return (
+                          <th 
+                            key={week} 
+                            style={headerStyle}
+                            onContextMenu={(e) => handleHeaderContextMenu(e, section.id, week)}
+                            className={cn(
+                              "border-r border-white/20 text-center font-black w-6 min-w-[24px] h-8 cursor-context-menu transition-colors",
+                              !m?.color && "hover:bg-white/10",
+                              week % 13 === 0 && "border-r-2 border-red-500"
+                            )}
+                          >
+                            {week}
+                          </th>
+                        );
+                      })}
                       <th className="bg-[#6a1b9a] text-center uppercase tracking-tighter w-8">tot</th>
                     </tr>
                   </thead>
@@ -664,7 +722,7 @@ export default function AnnualPlanningPage() {
             </div>
             <div className="flex items-center gap-2">
               <Info className="h-3 w-3" />
-              <span>Direct bewerkbaar. Rechtsklik op cel voor kleur. Klik op regelnaam om te bewerken.</span>
+              <span>Direct bewerkbaar. Rechtsklik op cel of header voor kleur. Klik op regelnaam om te bewerken.</span>
             </div>
           </div>
         </div>
@@ -779,6 +837,34 @@ export default function AnnualPlanningPage() {
             size="sm" 
             className="w-full mt-2 h-7 text-[10px] font-bold"
             onClick={() => setCellContextMenu(null)}
+          >
+            Sluiten
+          </Button>
+        </div>
+      )}
+
+      {headerContextMenu && (
+        <div 
+          className="fixed z-[100] bg-white rounded-lg shadow-2xl border border-slate-200 p-2 min-w-[120px] animate-in fade-in zoom-in duration-100"
+          style={{ left: headerContextMenu.x, top: headerContextMenu.y }}
+        >
+          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2 px-1">Header kleur</p>
+          <div className="grid grid-cols-4 gap-1">
+            {CELL_PRESET_COLORS.map(c => (
+              <button
+                key={c.value}
+                className="h-6 w-6 rounded-md border border-slate-200 hover:scale-110 transition-transform shadow-sm"
+                style={{ backgroundColor: c.value }}
+                onClick={() => handleHeaderColorChange(headerContextMenu.sectionId, headerContextMenu.week, c.value)}
+                title={c.name}
+              />
+            ))}
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="w-full mt-2 h-7 text-[10px] font-bold"
+            onClick={() => setHeaderContextMenu(null)}
           >
             Sluiten
           </Button>
