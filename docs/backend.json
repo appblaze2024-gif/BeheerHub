@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "UserProfile": {
@@ -101,7 +100,8 @@
         "id": { "type": "string" },
         "projectId": { "type": "string" },
         "year": { "type": "number" },
-        "title": { "type": "string" }
+        "title": { "type": "string" },
+        "tableTitle": { "type": "string" }
       },
       "required": ["projectId", "year", "title"]
     }

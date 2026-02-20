@@ -46,6 +46,7 @@ interface AnnualPlanningConfig {
   projectId: string;
   year: number;
   title: string;
+  tableTitle?: string;
 }
 
 const WEEKS = Array.from({ length: 52 }, (_, i) => i + 1);
@@ -68,9 +69,13 @@ export default function AnnualPlanningPage() {
   const [isAddingRow, setIsAddingRow] = React.useState(false);
   const [isNewRowDialogOpen, setIsNewRowDialogOpen] = React.useState(false);
   
-  // Title editing state
+  // Header title editing state
   const [isEditingTitle, setIsEditingTitle] = React.useState(false);
   const [tempTitle, setTempTitle] = React.useState('');
+
+  // Table corner title editing state
+  const [isEditingTableTitle, setIsEditingTableTitle] = React.useState(false);
+  const [tempTableTitle, setTempTableTitle] = React.useState('');
 
   // Milestone editing state
   const [isMilestoneDialogOpen, setIsMilestoneDialogOpen] = React.useState(false);
@@ -121,6 +126,7 @@ export default function AnnualPlanningPage() {
   }, [milestones]);
 
   const displayTitle = config?.title || `Jaarplanning ${selectedYear}`;
+  const displayTableTitle = config?.tableTitle || `planning ${selectedYear}`;
 
   const handleSaveTitle = () => {
     if (!configRef || !tempTitle.trim()) {
@@ -134,6 +140,20 @@ export default function AnnualPlanningPage() {
     }, { merge: true });
     setIsEditingTitle(false);
     toast({ title: 'Titel bijgewerkt' });
+  };
+
+  const handleSaveTableTitle = () => {
+    if (!configRef || !tempTableTitle.trim()) {
+      setIsEditingTableTitle(false);
+      return;
+    }
+    setDocumentNonBlocking(configRef, {
+      projectId: selectedProjectId,
+      year: selectedYear,
+      tableTitle: tempTableTitle.trim()
+    }, { merge: true });
+    setIsEditingTableTitle(false);
+    toast({ title: 'Planning tekst bijgewerkt' });
   };
 
   const handleCellChange = (itemId: string, week: number, value: string) => {
@@ -301,7 +321,26 @@ export default function AnnualPlanningPage() {
                 <tr className="bg-[#4caf50] text-white h-32">
                   <th className="sticky left-0 z-20 bg-[#4caf50] border-r border-white p-2 text-left align-top whitespace-nowrap w-px">
                     <div className="flex flex-col h-full justify-between">
-                      <span className="text-[11px] font-black uppercase tracking-tighter">{displayTitle}</span>
+                      {isEditingTableTitle ? (
+                        <div className="flex items-center gap-1">
+                          <Input 
+                            value={tempTableTitle} 
+                            onChange={(e) => setTempTableTitle(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSaveTableTitle()}
+                            onBlur={handleSaveTableTitle}
+                            className="h-6 font-black uppercase text-[10px] bg-white text-black min-w-[120px] p-1"
+                            autoFocus
+                          />
+                        </div>
+                      ) : (
+                        <div 
+                          className="group/corner cursor-pointer flex items-center gap-2"
+                          onClick={() => { setTempTableTitle(displayTableTitle); setIsEditingTableTitle(true); }}
+                        >
+                          <span className="text-[11px] font-black uppercase tracking-tighter">{displayTableTitle}</span>
+                          <Pencil className="h-3 w-3 text-white/40 opacity-0 group-hover/corner:opacity-100 transition-opacity" />
+                        </div>
+                      )}
                     </div>
                   </th>
                   {WEEKS.map(week => (
