@@ -1,7 +1,8 @@
+
 'use client';
 
 import * as React from 'react';
-import { ChevronLeft, ChevronRight, Clock, MoreHorizontal, Plus, Printer, Trash2, Copy, ClipboardCopy, FileText, Save, ListOrdered, Eye, EyeOff, Loader2, Truck, Filter } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, MoreHorizontal, Plus, Printer, Trash2, Copy, ClipboardCopy, FileText, Save, ListOrdered, Eye, EyeOff, Loader2, Truck, Filter, Users } from 'lucide-react';
 import {
   startOfWeek,
   endOfWeek,
@@ -68,6 +69,7 @@ import { MedewerkerVolgordeDialog } from '@/components/medewerker-volgorde-dialo
 import { Checkbox } from '@/components/ui/checkbox';
 import { VehicleDeploymentDialog } from '@/components/vehicle-deployment-dialog';
 import { LoadingScreen } from '@/components/loading-screen';
+import { SubcontractorOverviewDialog } from '@/components/subcontractor-overview-dialog';
 
 
 const getInitials = (firstName?: string, lastName?: string) => {
@@ -232,6 +234,7 @@ export default function WorkPlanningPage() {
   const [isSaveWeekDialogOpen, setIsSaveWeekDialogOpen] = React.useState(false);
   const [isVolgordeDialogOpen, setIsVolgordeDialogOpen] = React.useState(false);
   const [isVehicleDeploymentOpen, setIsVehicleDeploymentOpen] = React.useState(false);
+  const [isSubcontractorDialogOpen, setIsSubcontractorDialogOpen] = React.useState(false);
   const { selectedProjectId, setSelectedProjectId } = useProject();
   
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
@@ -845,6 +848,7 @@ export default function WorkPlanningPage() {
           </Button>
       ] : []),
       <Button key="vehicle-deployment" variant="outline" size="sm" onClick={() => setIsVehicleDeploymentOpen(true)}><Truck className="mr-2 h-4 w-4" /> Voertuigeninzet</Button>,
+      <Button key="subcontractors" variant="outline" size="sm" onClick={() => setIsSubcontractorDialogOpen(true)} disabled={!selectedProjectId}><Users className="mr-2 h-4 w-4" /> Onderaannemers</Button>,
       <Button key="print-day" variant="outline" size="sm" onClick={() => setIsPrintDayDialogOpen(true)}><Printer className="mr-2 h-4 w-4" /> Print Dag</Button>,
       <Button key="print-week" variant="outline" size="sm" onClick={handlePrintWeek}><Printer className="mr-2 h-4 w-4" /> Print Week</Button>,
       <Button key="save-pdf" variant="outline" size="sm" onClick={() => setIsSaveWeekDialogOpen(true)} disabled={!selectedProjectId}><Save className="mr-2 h-4 w-4" /> Opslaan als PDF</Button>,
@@ -1343,6 +1347,13 @@ export default function WorkPlanningPage() {
             medewerkers={medewerkers}
             canEdit={canEdit}
             projectMaterieelIds={selectedProject?.materieelIds}
+        />
+        <SubcontractorOverviewDialog
+            open={isSubcontractorDialogOpen}
+            onOpenChange={setIsSubcontractorDialogOpen}
+            projectId={selectedProjectId}
+            weekNumber={getISOWeek(currentDate)}
+            year={getYear(currentDate)}
         />
     </div>
   );
