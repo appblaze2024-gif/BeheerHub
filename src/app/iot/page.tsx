@@ -122,7 +122,7 @@ export default function IoTPage() {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    toast({ title: 'Gekopieerd', description: 'Informatie naar klembord gekopieerd.' });
+    toast({ title: 'Gekopieerd', description: 'Code naar klembord gekopieerd.' });
   };
 
   const handleGenerateCode = async () => {
@@ -217,14 +217,15 @@ void loop() {
 }` : '';
 
   const defaultHeltecCode = selectedSensor ? `/*
- * Heltec CubeCell HTCC-AB01 (HTTC-001) - TOF10120 Sensor
- * Gebruik de CubeCell Framework in Arduino IDE.
+ * BEHEERHUB IOT ENGINE - Heltec CubeCell HTCC-AB01
+ * Hardware: HTCC-AB01 (HTTC-001)
+ * Sensor: TOF10120 (Time-of-Flight Laser Sensor)
+ * Transport: LoRaWAN (KPN Things)
  * 
- * SETUP IN KPN THINGS:
- * 1. Maak een Device aan in KPN Things met onderstaande keys.
- * 2. Voeg een 'Webhook' destination toe in het KPN portaal.
- * 3. Gebruik de REST API Endpoint URL van het dashboard.
- * 4. Stel de Webhook in op 'PATCH' met 'Content-Type: application/json'.
+ * INSTRUCTIES:
+ * 1. Installeer 'CubeCell' via Board Manager in Arduino IDE.
+ * 2. Gebruik de 'LoRaWAN' library (ingebouwd in framework).
+ * 3. Vul de Keys hieronder in vanuit het KPN Things portaal.
  */
 
 #include "LoRaWan_APP.h"
@@ -234,13 +235,13 @@ void loop() {
 // TOF10120 I2C Adres
 #define TOF10120_ADDR 0x52
 
-/* LoraWAN Keys (Van KPN Things Portaal) */
-/* DevEUI is uw unieke Chip ID (zie seriele monitor bij boot) */
+/* --- LoraWAN Configuratie --- */
+/* DevEUI: Gebruik uw unieke Chip ID (zie seriele monitor bij boot) */
 uint8_t devEui[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 uint8_t appEui[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 uint8_t appKey[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
-/* LoraWAN regio EU868 */
+/* LoRaWAN Regio: EU868 */
 LoRaMacRegion_t loraWanRegion = ACTIVE_REGION;
 DeviceClass_t  loraWanClass = CLASS_A;
 
@@ -253,6 +254,7 @@ bool loraWanAdr = true;
 bool isTxConfirmed = true;
 uint8_t appPort = 2;
 
+/* --- Sensor Logica --- */
 uint16_t readTOF10120() {
     Wire.beginTransmission(TOF10120_ADDR);
     Wire.write(0x00);
@@ -262,7 +264,7 @@ uint16_t readTOF10120() {
     if (Wire.available() >= 2) {
         uint8_t hi = Wire.read();
         uint8_t lo = Wire.read();
-        return (hi << 8) | lo;
+        return (hi << 8) | lo; // Afstand in mm
     }
     return 0;
 }
@@ -272,19 +274,20 @@ static void prepareTxFrame( uint8_t port )
     uint16_t distanceMm = readTOF10120();
     uint16_t distanceCm = distanceMm / 10;
     
-    // Bak diepte: ${binDepth}cm
+    // Bak configuratie: ${binDepth}cm diepte
     int vulgraad = map(distanceCm, 0, ${binDepth}, 100, 0);
     if (vulgraad < 0) vulgraad = 0;
     if (vulgraad > 100) vulgraad = 100;
     
+    // Payload opbouw voor KPN Things Webhook
     appDataSize = 3;
     appData[0] = (uint8_t)(distanceCm >> 8);
     appData[1] = (uint8_t)distanceCm;
     appData[2] = (uint8_t)vulgraad;
     
-    Serial.print("Meting: ");
+    Serial.print("Sensor meting: ");
     Serial.print(distanceCm);
-    Serial.print("cm | Vulgraad: ");
+    Serial.print("cm | Berekende vulgraad: ");
     Serial.print(vulgraad);
     Serial.println("%");
 }
@@ -293,6 +296,7 @@ void setup() {
     boardInitMcu();
     Serial.begin(115200);
     Wire.begin();
+    Serial.println("BeheerHub IoT Client Start...");
 }
 
 void loop() {
@@ -579,8 +583,8 @@ void loop() {
                             <Copy className="h-4 w-4" /> Kopieer Code
                         </Button>
                     </div>
-                    <div className="flex-1 bg-black/40 rounded-2xl border border-zinc-800 p-6 overflow-auto custom-scrollbar">
-                        <pre className="text-[11px] font-mono text-blue-300/90 leading-relaxed">
+                    <div className="flex-1 bg-black/40 rounded-2xl border border-zinc-800 p-6 overflow-auto custom-scrollbar shadow-inner">
+                        <pre className="text-[13px] font-mono text-blue-300 leading-relaxed whitespace-pre font-medium">
                             {activeCode}
                         </pre>
                     </div>
