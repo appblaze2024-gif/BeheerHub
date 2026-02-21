@@ -30,6 +30,8 @@ import {
   ChevronLeft,
   ArrowLeft,
   Radio,
+  ExternalLink,
+  Code,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFirestore, useCollection, deleteDocumentNonBlocking, useMemoFirebase } from '@/firebase';
@@ -80,7 +82,8 @@ export default function IoTPage() {
   const isTablet = useIsMobile(1024);
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
   const [selectedSensorId, setSelectedSensorId] = React.useState<string | null>(null);
-  const [copied = false, setCopied] = React.useState(false);
+  const [copiedUrl, setCopiedUrl] = React.useState(false);
+  const [copiedCode, setCopiedCode] = React.useState(false);
 
   // AI State
   const [aiPrompt, setAiPrompt] = React.useState('');
@@ -118,11 +121,18 @@ export default function IoTPage() {
     }
   };
 
-  const copyToClipboard = (text: string) => {
+  const copyUrlToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    toast({ title: 'Gekopieerd', description: 'Code naar klembord gekopieerd.' });
+    setCopiedUrl(true);
+    setTimeout(() => setCopiedUrl(false), 2000);
+    toast({ title: 'Gekopieerd', description: 'Webhook URL naar klembord gekopieerd.' });
+  };
+
+  const copyCodeToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
+    toast({ title: 'Gekopieerd', description: 'Arduino code naar klembord gekopieerd.' });
   };
 
   const handleGenerateCode = async () => {
@@ -469,6 +479,9 @@ void loop() {
                     <TabsTrigger value="code" className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 h-full rounded-lg text-[10px] font-black uppercase tracking-widest gap-2">
                         <Code2 className="h-3.5 w-3.5" /> Hardware Code
                     </TabsTrigger>
+                    <TabsTrigger value="kpn" className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 h-full rounded-lg text-[10px] font-black uppercase tracking-widest gap-2">
+                        <Radio className="h-3.5 w-3.5" /> KPN Koppeling
+                    </TabsTrigger>
                     </TabsList>
                 </div>
                 <div className="hidden sm:flex items-center gap-3">
@@ -529,36 +542,6 @@ void loop() {
                       </CardContent>
                     </Card>
                   </div>
-
-                  <div className="absolute bottom-4 left-4 right-4 z-10 space-y-2">
-                      <Card className="bg-slate-900/95 backdrop-blur-xl text-white border-none shadow-2xl rounded-2xl overflow-hidden">
-                          <div className="bg-white/5 px-4 py-2 flex items-center justify-between border-b border-white/5">
-                              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                                  <Radio className="h-3.5 w-3.5" /> KPN Things Koppeling (REST API)
-                              </p>
-                              <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  className="h-7 text-[9px] font-black uppercase tracking-widest hover:bg-white/10"
-                                  onClick={() => copyToClipboard(apiEndpoint)}
-                              >
-                                  {copied ? <Check className="h-3.5 w-3.5 mr-1.5 text-green-400" /> : <Copy className="h-3.5 w-3.5 mr-1.5" />}
-                                  Kopieer URL
-                              </Button>
-                          </div>
-                          <CardContent className="p-4 space-y-3">
-                              <div className="bg-black/40 p-3 rounded-xl font-mono text-[9px] break-all border border-white/5 text-blue-400 shadow-inner">
-                                  <span className="text-purple-400 mr-2">PATCH</span> {apiEndpoint}
-                              </div>
-                              <div className="flex items-start gap-2 p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                                <Info className="h-3.5 w-3.5 text-blue-400 shrink-0 mt-0.5" />
-                                <p className="text-[9px] text-blue-200 leading-relaxed font-medium">
-                                    Stel in KPN Things een <strong>Webhook Destination</strong> in met bovenstaande URL. Gebruik de <strong>PATCH</strong> methode en zorg dat de payload JSON-velden (vulgraad, currentDistanceCm) overeenkomen met de Firestore structuur.
-                                </p>
-                              </div>
-                          </CardContent>
-                      </Card>
-                  </div>
                 </div>
               </TabsContent>
 
@@ -578,9 +561,10 @@ void loop() {
                             variant="secondary" 
                             size="sm" 
                             className="h-9 px-5 font-black uppercase tracking-tight gap-2 bg-zinc-800 text-zinc-100 hover:bg-zinc-700"
-                            onClick={() => copyToClipboard(activeCode)}
+                            onClick={() => copyCodeToClipboard(activeCode)}
                         >
-                            <Copy className="h-4 w-4" /> Kopieer Code
+                            {copiedCode ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
+                            {copiedCode ? 'Gekopieerd' : 'Kopieer Code'}
                         </Button>
                     </div>
                     <div className="flex-1 bg-black/40 rounded-2xl border border-zinc-800 p-6 overflow-auto custom-scrollbar shadow-inner">
@@ -671,6 +655,83 @@ void loop() {
                             </Button>
                         </div>
                         <p className="text-[8px] text-zinc-600 mt-3 text-center font-black uppercase tracking-widest">Gegenereerd met BeheerHub AI Engine</p>
+                    </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="kpn" className="flex-1 m-0 p-6 bg-slate-50 dark:bg-zinc-950 overflow-y-auto">
+                <div className="max-w-3xl mx-auto space-y-8">
+                    <div className="space-y-2">
+                        <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">KPN Things Koppeling</h3>
+                        <p className="text-sm text-slate-500 font-medium">Gebruik de onderstaande gegevens om uw CubeCell hardware via LoRaWAN te verbinden met de BeheerHub cloud.</p>
+                    </div>
+
+                    <Card className="bg-slate-900 text-white border-none shadow-xl rounded-2xl overflow-hidden">
+                        <div className="bg-white/5 px-6 py-4 flex items-center justify-between border-b border-white/5">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-blue-500/20 rounded-xl">
+                                    <Radio className="h-5 w-5 text-blue-400" />
+                                </div>
+                                <span className="text-xs font-black uppercase tracking-widest">Webhook Destination URL</span>
+                            </div>
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-9 px-4 font-black uppercase text-[10px] bg-white/10 hover:bg-white/20"
+                                onClick={() => copyUrlToClipboard(apiEndpoint)}
+                            >
+                                {copiedUrl ? <Check className="h-3.5 w-3.5 mr-2 text-green-400" /> : <Copy className="h-3.5 w-3.5 mr-2" />}
+                                {copiedUrl ? 'Gekopieerd' : 'Kopieer URL'}
+                            </Button>
+                        </div>
+                        <CardContent className="p-6 space-y-6">
+                            <div className="bg-black/40 p-4 rounded-xl font-mono text-sm break-all border border-white/5 text-blue-400 shadow-inner flex items-center gap-4">
+                                <Badge className="bg-purple-600/20 text-purple-400 border-purple-600/30 uppercase font-black text-[10px]">PATCH</Badge>
+                                <span>{apiEndpoint}</span>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-3 p-4 bg-white/5 rounded-2xl border border-white/5">
+                                    <div className="flex items-center gap-2 text-blue-400">
+                                        <Settings className="h-4 w-4" />
+                                        <h4 className="text-[10px] font-black uppercase tracking-widest">KPN Things Setup</h4>
+                                    </div>
+                                    <ul className="text-[11px] space-y-2 text-slate-300 font-medium leading-relaxed">
+                                        <li className="flex gap-2">1. Ga naar <strong>Destinations</strong> in KPN Things.</li>
+                                        <li className="flex gap-2">2. Maak een nieuwe <strong>HTTP Webhook</strong> aan.</li>
+                                        <li className="flex gap-2">3. Plak bovenstaande URL in het veld.</li>
+                                        <li className="flex gap-2">4. Selecteer de methode <strong>PATCH</strong>.</li>
+                                    </ul>
+                                </div>
+                                <div className="space-y-3 p-4 bg-white/5 rounded-2xl border border-white/5">
+                                    <div className="flex items-center gap-2 text-purple-400">
+                                        <Code className="h-4 w-4" />
+                                        <h4 className="text-[10px] font-black uppercase tracking-widest">Payload Structuur</h4>
+                                    </div>
+                                    <pre className="text-[10px] font-mono text-purple-300 p-2 bg-black/30 rounded-lg">
+{`{
+  "fields": {
+    "vulgraad": {
+      "integerValue": "..."
+    }
+  }
+}`}
+                                    </pre>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <div className="bg-blue-50 p-6 rounded-2xl border-2 border-blue-100 flex gap-4 items-start shadow-sm">
+                        <div className="bg-blue-100 p-3 rounded-2xl shrink-0">
+                            <Info className="h-6 w-6 text-blue-600" />
+                        </div>
+                        <div className="space-y-1">
+                            <h4 className="text-xs font-black uppercase text-blue-900 tracking-tight">Belangrijk bij LoRaWAN</h4>
+                            <p className="text-xs text-blue-700 leading-relaxed font-medium">
+                                Zorg ervoor dat uw CubeCell hardware is geconfigureerd met de juiste <strong>AppEUI</strong> en <strong>AppKey</strong> uit het KPN Things portaal. Gebruik het <strong>Chip ID</strong> als <strong>DevEUI</strong> voor een unieke identificatie per bak.
+                            </p>
+                        </div>
                     </div>
                 </div>
               </TabsContent>
