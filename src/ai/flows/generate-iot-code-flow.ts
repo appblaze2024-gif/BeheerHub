@@ -2,7 +2,7 @@
 
 /**
  * @fileOverview AI flow voor het genereren van IoT-code met chat-historie en board-selectie.
- * Ondersteunt nu ook Heltec CubeCell v2 (LoRaWAN) en KPN Things integratie.
+ * Ondersteunt nu specifiek de Heltec CubeCell HTCC-AB01 (HTTC-001) en KPN Things integratie.
  */
 
 import { ai } from '@/ai/genkit';
@@ -15,7 +15,7 @@ const MessageSchema = z.object({
 
 const GenerateIoTCodeInputSchema = z.object({
   prompt: z.string().describe('De nieuwe vraag of aanpassing van de gebruiker.'),
-  board: z.string().describe('Het geselecteerde hardware board (bijv. ESP32 of Heltec CubeCell).'),
+  board: z.string().describe('Het geselecteerde hardware board (bijv. ESP32 of Heltec CubeCell HTCC-AB01).'),
   history: z.array(MessageSchema).optional().describe('De eerdere berichten in het gesprek voor context.'),
   projectId: z.string().describe('Het Firebase Project ID.'),
   apiKey: z.string().describe('De Firebase API Key.'),
@@ -36,7 +36,7 @@ const prompt = ai.definePrompt({
   name: 'generateIoTCodePrompt',
   input: { schema: GenerateIoTCodeInputSchema },
   output: { schema: GenerateIoTCodeOutputSchema },
-  prompt: `Je bent een expert in IoT-ontwikkeling voor de boards: ESP32, ESP8266 en specifiek de Heltec CubeCell v2 (LoRaWAN). 
+  prompt: `Je bent een expert in IoT-ontwikkeling voor de boards: ESP32, ESP8266 en specifiek de Heltec CubeCell HTCC-AB01 (ook bekend als HTTC-001 / CubeCell Dev-Board). 
 Je bent gespecialiseerd in integratie met Google Firebase via de REST API en transport via LoRaWAN netwerken zoals KPN Things.
 
 Huidig geselecteerd board/setup: {{{board}}}
@@ -51,10 +51,11 @@ NIEUWE VRAAG/AANPASSING:
 
 INSTRUCTIES VOOR GENERATIE:
 1. Genereer volledige, compileerbare Arduino C++ code voor de geselecteerde setup ({{{board}}}).
-2. Voor Heltec CubeCell v2 (LoRaWAN):
+2. Voor Heltec CubeCell HTCC-AB01 (LoRaWAN):
    - Gebruik de officiële "LoRaWan_APP.h" bibliotheek.
+   - Gebruik AT-commando compatibele structuren of de specifieke HTCC-AB01 definities.
    - Zorg voor placeholders voor DevEUI, AppEUI en AppKey (OTAA).
-   - Implementeer deep-sleep logica om de batterij te sparen.
+   - Implementeer deep-sleep logica (CySysTick of LowPower functies) om de batterij te sparen.
    - Leg uit dat de data via KPN Things moet worden doorgestuurd naar de Firebase REST API via een Webhook destination.
 3. Voor WiFi/GSM setups:
    - Gebruik HTTPClient of TinyGSM.

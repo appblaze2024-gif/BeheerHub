@@ -87,7 +87,7 @@ export default function IoTPage() {
   const [isGenerating, setIsGenerating] = React.useState(false);
   const [chatHistory, setChatHistory] = React.useState<{ role: 'user' | 'model', content: string }[]>([]);
   const [customCode, setCustomCode] = React.useState<string | null>(null);
-  const [selectedBoard, setSelectedBoard] = React.useState('ESP32');
+  const [selectedBoard, setSelectedBoard] = React.useState('Heltec CubeCell HTCC-AB01');
   const [requestCount, setRequestCount] = React.useState(0);
 
   const sensorsQuery = useMemoFirebase(() => {
@@ -217,7 +217,7 @@ void loop() {
 }` : '';
 
   const defaultHeltecCode = selectedSensor ? `/*
- * Heltec CubeCell v2 (LoRaWAN) - TOF Sensor
+ * Heltec CubeCell HTCC-AB01 (HTTC-001) - TOF Sensor
  * Gebruik de CubeCell Framework in Arduino IDE.
  * 
  * SETUP IN KPN THINGS:
@@ -294,7 +294,7 @@ void loop() {
     }
 }` : '';
 
-  const activeCode = customCode || (selectedBoard === 'Heltec CubeCell v2 (LoRaWAN)' ? defaultHeltecCode : defaultEsp32Code);
+  const activeCode = customCode || (selectedBoard === 'Heltec CubeCell HTCC-AB01' ? defaultHeltecCode : defaultEsp32Code);
 
   if (isLoading) {
     return <LoadingScreen message="Internet of Things Dashboard laden..." />;
@@ -583,8 +583,8 @@ void loop() {
                                 <SelectValue placeholder="Kies hardware setup" />
                             </SelectTrigger>
                             <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
+                                <SelectItem value="Heltec CubeCell HTCC-AB01">HTCC-AB01 (HTTC-001)</SelectItem>
                                 <SelectItem value="ESP32">ESP32 (WiFi)</SelectItem>
-                                <SelectItem value="Heltec CubeCell v2 (LoRaWAN)">Heltec CubeCell v2 (LoRaWAN)</SelectItem>
                                 <SelectItem value="ESP32 + SIM800L (GSM)">ESP32 + SIM800L (GSM)</SelectItem>
                                 <SelectItem value="ESP8266">ESP8266 (WiFi)</SelectItem>
                             </SelectContent>
@@ -604,7 +604,7 @@ void loop() {
                                 {chatHistory.map((msg, i) => (
                                     <div key={i} className={cn(
                                         "p-3 rounded-2xl text-[11px] leading-relaxed font-medium transition-all",
-                                        msg.role === 'user' ? "bg-purple-500/10 text-purple-200 border border-purple-500/20 ml-4" : "bg-zinc-800 text-zinc-300 border border-zinc-700 mr-4"
+                                        msg.role === 'user' ? "bg-purple-50/10 text-purple-900 border border-purple-100 ml-4" : "bg-zinc-800 text-zinc-300 border border-zinc-700 mr-4"
                                     )}>
                                         <p className="font-black uppercase text-[8px] mb-1.5 opacity-40 tracking-widest">{msg.role === 'user' ? 'Gebruiker' : 'Assistent'}</p>
                                         {msg.content}
@@ -666,7 +666,7 @@ void loop() {
                     </div>
                     <div className="p-5 rounded-2xl border-2 border-slate-50 bg-slate-50/30">
                         <h4 className="text-[10px] font-black uppercase mb-2 text-primary tracking-widest flex items-center gap-2"><Smartphone className="h-3 w-3" /> Stap 3</h4>
-                        <p className="text-[11px] text-slate-500 font-bold leading-relaxed uppercase tracking-tighter">Kies Heltec CubeCell en stel KPN Things in.</p>
+                        <p className="text-[11px] text-slate-500 font-bold leading-relaxed uppercase tracking-tighter">Kies Heltec HTCC-AB01 en stel KPN Things in.</p>
                     </div>
                 </div>
             </div>
