@@ -41,6 +41,8 @@ Je bent gespecialiseerd in integratie met Google Firebase via de REST API en tra
 
 Huidig geselecteerd board/setup: {{{board}}}
 
+BELANGRIJK: De Heltec CubeCell HTCC-AB01 heeft GEEN MAC-adres (geen WiFi). Het gebruikt een uniek Chip ID voor de DevEUI in LoRaWAN configuraties.
+
 CONTEXT VAN HET GESPREK:
 {{#each history}}
 - {{role}}: {{{content}}}
@@ -54,7 +56,8 @@ INSTRUCTIES VOOR GENERATIE:
 2. Voor Heltec CubeCell HTCC-AB01 (LoRaWAN):
    - Gebruik de officiële "LoRaWan_APP.h" bibliotheek.
    - Gebruik AT-commando compatibele structuren of de specifieke HTCC-AB01 definities.
-   - Zorg voor placeholders voor DevEUI, AppEUI en AppKey (OTAA).
+   - Zorg voor placeholders voor DevEUI (Chip ID), AppEUI en AppKey (OTAA).
+   - Leg uit hoe de gebruiker het Chip ID kan achterhalen via de seriële monitor.
    - Implementeer deep-sleep logica (CySysTick of LowPower functies) om de batterij te sparen.
    - Leg uit dat de data via KPN Things moet worden doorgestuurd naar de Firebase REST API via een Webhook destination.
 3. Voor WiFi/GSM setups:

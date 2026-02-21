@@ -37,7 +37,7 @@ import { MapboxView } from './mapbox-view';
 import type { Object as MapObject } from '@/lib/types';
 
 const sensorSchema = z.object({
-  id: z.string().min(1, 'Serienummer is verplicht (bv. MAC-adres of Chip ID)').toUpperCase(),
+  id: z.string().min(1, 'Serienummer is verplicht (bv. Chip ID of DevEUI)').toUpperCase(),
   name: z.string().min(1, 'Naam is verplicht'),
   type: z.enum(["TOF200C", "Temperatuur", "Luchtkwaliteit", "GPS Tracker", "Waterpeil"]),
   binDepthCm: z.coerce.number().min(1, 'Voer een diepte in groter dan 0'),
@@ -108,10 +108,9 @@ export function AddSensorDialog({
   };
 
   const selectObject = (obj: MapObject) => {
-    // We vullen het ID niet meer in zodat de gebruiker het eigen serienummer kan invoeren
     form.setValue('name', `Sensor ${obj.id}`);
     setLocation({ latitude: obj.latitude, longitude: obj.longitude });
-    setObjectSearchQuery(''); // Maak de zoekopdracht leeg zodat de dropdown verdwijnt
+    setObjectSearchQuery(''); 
     setAddressSearchQuery(obj.straatnaam ? `${obj.straatnaam} ${obj.huisnummer || ''}` : '');
   };
 
@@ -195,9 +194,9 @@ export function AddSensorDialog({
                     name="id"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Sensor ID (Serienummer)</FormLabel>
-                        <FormControl><Input placeholder="Bv. MAC-ADRES" {...field} className="font-mono h-10" /></FormControl>
-                        <FormDescription className="text-[10px]">De unieke sleutel van uw Heltec board.</FormDescription>
+                        <FormLabel>Chip ID / DevEUI (Uniek)</FormLabel>
+                        <FormControl><Input placeholder="Bv. ABC123DEF456" {...field} className="font-mono h-10" /></FormControl>
+                        <FormDescription className="text-[10px]">De unieke code van uw Heltec board (zie seriële monitor).</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}

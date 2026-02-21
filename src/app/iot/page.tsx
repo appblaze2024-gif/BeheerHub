@@ -231,7 +231,7 @@ void loop() {
 #include "Arduino.h"
 
 // --- LoraWAN Keys (Van KPN Things Portaal) ---
-/* OTAA keys, MSB format */
+/* OTAA keys, MSB format - Gebruik uw unieke Chip ID als DevEUI */
 uint8_t devEui[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 uint8_t appEui[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 uint8_t appKey[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
@@ -304,7 +304,7 @@ void loop() {
     <div className="flex flex-col flex-1 p-4 md:p-6 min-h-0 bg-slate-50 dark:bg-zinc-950 overflow-hidden">
       <PageHeader 
         title="Internet of Things" 
-        description="Beheer hardware-koppelingen via unieke serienummers."
+        description="Beheer hardware-koppelingen via unieke Chip ID / DevEUI."
         className="p-0 mb-6"
       >
         <Button onClick={() => setIsAddDialogOpen(true)} className="font-black h-10 uppercase tracking-tight">
@@ -440,7 +440,7 @@ void loop() {
                     </TabsList>
                 </div>
                 <div className="hidden sm:flex items-center gap-3">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Unit ID:</p>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Chip ID / DevEUI:</p>
                     <span className="text-[10px] font-mono font-bold bg-white border border-slate-200 px-2 py-0.5 rounded shadow-sm uppercase">{selectedSensor.id}</span>
                 </div>
               </div>
@@ -618,7 +618,7 @@ void loop() {
                         <div className="relative">
                             <Textarea 
                                 placeholder="Typ uw vraag..."
-                                className="min-h-[100px] bg-zinc-950 border-zinc-800 text-zinc-100 text-[11px] font-medium resize-none pr-12 rounded-2xl shadow-inner focus:ring-purple-500/20"
+                                className="min-h-[100px] bg-zinc-950 border-zinc-800 text-zinc-100 text-[11px] font-medium resize-none pr-12 rounded-2xl shadow-inner focus:ring-purple-50/20"
                                 value={aiPrompt}
                                 onChange={(e) => setAiPrompt(e.target.value)}
                                 onKeyDown={(e) => {
