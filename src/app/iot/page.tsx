@@ -465,8 +465,8 @@ void loop() {
             !selectedSensor && "hidden lg:flex"
         )}>
           {selectedSensor ? (
-            <Tabs defaultValue="map" className="flex-1 flex flex-col">
-              <div className="px-4 py-2 border-b bg-slate-50/50 flex items-center justify-between">
+            <Tabs defaultValue="map" className="flex-1 flex flex-col h-full overflow-hidden">
+              <div className="px-4 py-2 border-b bg-slate-50/50 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2">
                     {isTablet && (
                         <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-white shadow-sm border border-slate-200 mr-2" onClick={() => setSelectedSensorId(null)}>
@@ -491,8 +491,8 @@ void loop() {
                 </div>
               </div>
 
-              <TabsContent value="map" className="flex-1 m-0 relative flex flex-col">
-                <div className="flex-1 relative">
+              <TabsContent value="map" className="flex-1 m-0 relative flex flex-col data-[state=active]:flex overflow-hidden">
+                <div className="flex-1 relative w-full h-full min-h-0">
                   <MapboxView 
                     objects={sensors?.map(s => ({
                       id: s.id,
@@ -546,9 +546,9 @@ void loop() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="code" className="flex-1 m-0 flex flex-col xl:flex-row overflow-hidden bg-zinc-950">
+              <TabsContent value="code" className="flex-1 m-0 flex flex-col xl:flex-row overflow-hidden bg-zinc-950 data-[state=active]:flex">
                 <div className="flex-1 flex flex-col p-4 md:p-6 min-h-0 border-r border-zinc-800">
-                    <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center justify-between mb-6 shrink-0">
                         <div className="flex items-center gap-4">
                             <div className="bg-blue-500/10 p-2.5 rounded-xl border border-blue-500/20">
                                 <BookOpen className="h-5 w-5 text-blue-400" />
@@ -568,15 +568,15 @@ void loop() {
                             {copiedCode ? 'Gekopieerd' : 'Kopieer Code'}
                         </Button>
                     </div>
-                    <div className="flex-1 bg-black/40 rounded-2xl border border-zinc-800 p-6 overflow-auto custom-scrollbar shadow-inner">
+                    <div className="flex-1 bg-black/40 rounded-2xl border border-zinc-800 p-6 overflow-auto custom-scrollbar shadow-inner min-h-0">
                         <pre className="text-[13px] font-mono text-blue-300 leading-relaxed whitespace-pre font-medium">
                             {activeCode}
                         </pre>
                     </div>
                 </div>
 
-                <div className="w-full xl:w-80 flex flex-col bg-zinc-900 border-l border-zinc-800">
-                    <div className="p-4 md:p-6 border-b border-zinc-800 flex flex-col gap-4 bg-zinc-900/50">
+                <div className="w-full xl:w-80 flex flex-col bg-zinc-900 border-l border-zinc-800 shrink-0">
+                    <div className="p-4 md:p-6 border-b border-zinc-800 flex flex-col gap-4 bg-zinc-900/50 shrink-0">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <Sparkles className="h-4 w-4 text-purple-400 animate-pulse" />
@@ -608,7 +608,7 @@ void loop() {
                         </Select>
                     </div>
                     
-                    <ScrollArea className="flex-1 p-4 md:p-6">
+                    <ScrollArea className="flex-1 p-4 md:p-6 min-h-0">
                         {chatHistory.length === 0 ? (
                             <div className="text-center py-12 flex flex-col items-center">
                                 <div className="bg-zinc-800/50 p-4 rounded-full mb-4">
@@ -631,7 +631,7 @@ void loop() {
                         )}
                     </ScrollArea>
 
-                    <div className="p-4 md:p-6 border-t border-zinc-800 bg-zinc-950/30">
+                    <div className="p-4 md:p-6 border-t border-zinc-800 bg-zinc-950/30 shrink-0">
                         <div className="relative">
                             <Textarea 
                                 placeholder="Typ uw vraag..."
@@ -660,8 +660,8 @@ void loop() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="kpn" className="flex-1 m-0 p-6 bg-slate-50 dark:bg-zinc-950 overflow-y-auto">
-                <div className="max-w-3xl mx-auto space-y-8">
+              <TabsContent value="kpn" className="flex-1 m-0 p-6 bg-slate-50 dark:bg-zinc-950 overflow-y-auto data-[state=active]:flex flex-col">
+                <div className="max-w-3xl mx-auto w-full space-y-8">
                     <div className="space-y-2">
                         <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">KPN Things Koppeling</h3>
                         <p className="text-sm text-slate-500 font-medium">Gebruik de onderstaande gegevens om uw CubeCell hardware via LoRaWAN te verbinden met de BeheerHub cloud.</p>
@@ -688,7 +688,7 @@ void loop() {
                         <CardContent className="p-6 space-y-6">
                             <div className="bg-black/40 p-4 rounded-xl font-mono text-sm break-all border border-white/5 text-blue-400 shadow-inner flex items-center gap-4">
                                 <Badge className="bg-purple-600/20 text-purple-400 border-purple-600/30 uppercase font-black text-[10px]">PATCH</Badge>
-                                <span>{apiEndpoint}</span>
+                                <span className="select-all">{apiEndpoint}</span>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
