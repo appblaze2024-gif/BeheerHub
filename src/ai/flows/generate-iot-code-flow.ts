@@ -2,7 +2,7 @@
 
 /**
  * @fileOverview AI flow voor het genereren van IoT-code met chat-historie en board-selectie.
- * Ondersteunt nu specifiek de Heltec CubeCell HTCC-AB01 (HTTC-001) en KPN Things integratie.
+ * Ondersteunt nu specifiek de Heltec CubeCell HTCC-AB01 (HTTC-001) en de TOF10120 sensor.
  */
 
 import { ai } from '@/ai/genkit';
@@ -36,12 +36,13 @@ const prompt = ai.definePrompt({
   name: 'generateIoTCodePrompt',
   input: { schema: GenerateIoTCodeInputSchema },
   output: { schema: GenerateIoTCodeOutputSchema },
-  prompt: `Je bent een expert in IoT-ontwikkeling voor de boards: ESP32, ESP8266 en specifiek de Heltec CubeCell HTCC-AB01 (ook bekend als HTTC-001 / CubeCell Dev-Board). 
-Je bent gespecialiseerd in integratie met Google Firebase via de REST API en transport via LoRaWAN netwerken zoals KPN Things.
+  prompt: `Je bent een expert in IoT-ontwikkeling voor de boards: ESP32, ESP8266 en specifiek de Heltec CubeCell HTCC-AB01 (HTTC-001). 
+Je bent gespecialiseerd in integratie met Google Firebase via de REST API en transport via LoRaWAN (KPN Things).
 
 Huidig geselecteerd board/setup: {{{board}}}
+Standaard sensor: TOF10120 (I2C adres 0x52).
 
-BELANGRIJK: De Heltec CubeCell HTCC-AB01 heeft GEEN MAC-adres (geen WiFi). Het gebruikt een uniek Chip ID voor de DevEUI in LoRaWAN configuraties.
+BELANGRIJK: De Heltec CubeCell HTCC-AB01 heeft GEEN MAC-adres. Het gebruikt een uniek Chip ID voor de DevEUI.
 
 CONTEXT VAN HET GESPREK:
 {{#each history}}
@@ -55,20 +56,18 @@ INSTRUCTIES VOOR GENERATIE:
 1. Genereer volledige, compileerbare Arduino C++ code voor de geselecteerde setup ({{{board}}}).
 2. Voor Heltec CubeCell HTCC-AB01 (LoRaWAN):
    - Gebruik de officiële "LoRaWan_APP.h" bibliotheek.
-   - Gebruik AT-commando compatibele structuren of de specifieke HTCC-AB01 definities.
+   - Implementeer I2C communicatie voor de TOF10120 sensor (lezen van 2 bytes vanaf register 0x00 op adres 0x52).
    - Zorg voor placeholders voor DevEUI (Chip ID), AppEUI en AppKey (OTAA).
-   - Leg uit hoe de gebruiker het Chip ID kan achterhalen via de seriële monitor.
-   - Implementeer deep-sleep logica (CySysTick of LowPower functies) om de batterij te sparen.
-   - Leg uit dat de data via KPN Things moet worden doorgestuurd naar de Firebase REST API via een Webhook destination.
-3. Voor WiFi/GSM setups:
-   - Gebruik HTTPClient of TinyGSM.
+   - Implementeer deep-sleep logica om de batterij te sparen tussen metingen door.
+   - Leg uit dat de data via KPN Things moet worden doorgestuurd naar de Firebase REST API via een Webhook.
+3. Voor WiFi setups:
+   - Gebruik HTTPClient.
    - Gebruik de PATCH methode met 'X-HTTP-Method-Override: PATCH' header voor Firestore updates.
 4. Firebase Integratie Details:
    - Project ID: {{{projectId}}}
    - API Key: {{{apiKey}}}
-   - Base URL: https://firestore.googleapis.com/v1/projects/{{{projectId}}}/databases/(default)/documents/sensors/[SENSOR_ID]?key={{{apiKey}}}
 
-Antwoord in JSON formaat met de velden 'code' en 'explanation'. Zorg dat de explanation ook uitlegt hoe KPN Things moet worden ingesteld als er LoRaWAN wordt gebruikt.`,
+Antwoord in JSON formaat met de velden 'code' en 'explanation'.`,
 });
 
 export const generateIoTCodeFlow = ai.defineFlow(

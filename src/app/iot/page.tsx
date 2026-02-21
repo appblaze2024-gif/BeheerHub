@@ -217,26 +217,30 @@ void loop() {
 }` : '';
 
   const defaultHeltecCode = selectedSensor ? `/*
- * Heltec CubeCell HTCC-AB01 (HTTC-001) - TOF Sensor
+ * Heltec CubeCell HTCC-AB01 (HTTC-001) - TOF10120 Sensor
  * Gebruik de CubeCell Framework in Arduino IDE.
  * 
  * SETUP IN KPN THINGS:
  * 1. Maak een Device aan in KPN Things met onderstaande keys.
  * 2. Voeg een 'Webhook' destination toe in het KPN portaal.
- * 3. Gebruik de REST API Endpoint URL onder de 'Dashboard' tab.
+ * 3. Gebruik de REST API Endpoint URL van het dashboard.
  * 4. Stel de Webhook in op 'PATCH' met 'Content-Type: application/json'.
  */
 
 #include "LoRaWan_APP.h"
 #include "Arduino.h"
+#include <Wire.h>
 
-// --- LoraWAN Keys (Van KPN Things Portaal) ---
-/* OTAA keys, MSB format - Gebruik uw unieke Chip ID als DevEUI */
+// TOF10120 I2C Adres
+#define TOF10120_ADDR 0x52
+
+/* LoraWAN Keys (Van KPN Things Portaal) */
+/* DevEUI is uw unieke Chip ID (zie seriele monitor bij boot) */
 uint8_t devEui[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 uint8_t appEui[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 uint8_t appKey[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
-/* LoraWAN region EU868 */
+/* LoraWAN regio EU868 */
 LoRaMacRegion_t loraWanRegion = ACTIVE_REGION;
 DeviceClass_t  loraWanClass = CLASS_A;
 
@@ -249,22 +253,46 @@ bool loraWanAdr = true;
 bool isTxConfirmed = true;
 uint8_t appPort = 2;
 
+uint16_t readTOF10120() {
+    Wire.beginTransmission(TOF10120_ADDR);
+    Wire.write(0x00);
+    Wire.endTransmission();
+    delay(30);
+    Wire.requestFrom(TOF10120_ADDR, 2);
+    if (Wire.available() >= 2) {
+        uint8_t hi = Wire.read();
+        uint8_t lo = Wire.read();
+        return (hi << 8) | lo;
+    }
+    return 0;
+}
+
 static void prepareTxFrame( uint8_t port )
 {
-    // --- Meting TOF Sensor ---
-    // Placeholder voor VL53L0X of vergelijkbare sensor
-    uint16_t distanceCm = 45; 
-    uint8_t vulgraad = 60; // Berekend o.b.v. bakdiepte ${binDepth}cm
+    uint16_t distanceMm = readTOF10120();
+    uint16_t distanceCm = distanceMm / 10;
+    
+    // Bak diepte: ${binDepth}cm
+    int vulgraad = map(distanceCm, 0, ${binDepth}, 100, 0);
+    if (vulgraad < 0) vulgraad = 0;
+    if (vulgraad > 100) vulgraad = 100;
     
     appDataSize = 3;
     appData[0] = (uint8_t)(distanceCm >> 8);
     appData[1] = (uint8_t)distanceCm;
-    appData[2] = vulgraad;
+    appData[2] = (uint8_t)vulgraad;
+    
+    Serial.print("Meting: ");
+    Serial.print(distanceCm);
+    Serial.print("cm | Vulgraad: ");
+    Serial.print(vulgraad);
+    Serial.println("%");
 }
 
 void setup() {
     boardInitMcu();
     Serial.begin(115200);
+    Wire.begin();
 }
 
 void loop() {
@@ -539,7 +567,7 @@ void loop() {
                             </div>
                             <div>
                                 <h3 className="text-zinc-100 text-sm font-black uppercase tracking-tight">Arduino Sketch</h3>
-                                <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">{selectedBoard} | TOF Sensor</p>
+                                <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">{selectedBoard} | TOF10120 Sensor</p>
                             </div>
                         </div>
                         <Button 
@@ -597,7 +625,7 @@ void loop() {
                                 <div className="bg-zinc-800/50 p-4 rounded-full mb-4">
                                     <Radio className="h-8 w-8 text-zinc-600" />
                                 </div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 max-w-[160px] leading-relaxed">Vraag om aanpassingen, bijv: "Voeg VL53L0X TOF sensor toe"</p>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500 max-w-[160px] leading-relaxed">Vraag om aanpassingen, bijv: "Voeg een extra controle toe"</p>
                             </div>
                         ) : (
                             <div className="space-y-4">
