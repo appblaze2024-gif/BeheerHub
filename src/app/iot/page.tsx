@@ -32,6 +32,7 @@ import {
   Radio,
   ExternalLink,
   Code,
+  Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFirestore, useCollection, deleteDocumentNonBlocking, useMemoFirebase } from '@/firebase';
