@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import { Search, ListFilter, ArrowLeft, Info, Clock, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,7 @@ const closedStatus = "Afgerond";
 
 export default function ArchiveIssuesPage() {
   const firestore = useFirestore();
+  const { user } = useUser();
   const router = useRouter();
   const [searchTerm, setSearchTerm] = React.useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = React.useState('');
@@ -51,9 +52,9 @@ export default function ArchiveIssuesPage() {
 
   // Fetch users to map email to display name for older records
   const usersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return collection(firestore, 'users');
-  }, [firestore]);
+  }, [firestore, user]);
   const { data: users } = useCollection<UserProfile>(usersQuery);
 
   const userMap = React.useMemo(() => {

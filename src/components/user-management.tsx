@@ -17,6 +17,7 @@ import {
   setDocumentNonBlocking,
   updateDocumentNonBlocking,
   useMemoFirebase,
+  useUser,
 } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import type { UserProfile } from '@/lib/types';
@@ -506,6 +507,7 @@ function UserDialog({
 export function UserManagement() {
   const firestore = useFirestore();
   const auth = getAuth(useFirebaseApp());
+  const { user: currentUser } = useUser();
   const { profile: currentAdminProfile, isLoading: isAdminLoading } = useProfile();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedUser, setSelectedUser] = React.useState<UserProfile | null>(null);
@@ -515,9 +517,9 @@ export function UserManagement() {
   const canManageUsers = isSuperUser || !!currentAdminProfile?.permissions?.users?.view;
 
   const usersCollection = useMemoFirebase(() => {
-    if (!firestore || !canManageUsers) return null;
+    if (!firestore || !canManageUsers || !currentUser) return null;
     return collection(firestore, 'users');
-  }, [firestore, canManageUsers]);
+  }, [firestore, canManageUsers, currentUser]);
 
   const projectsCollection = useMemoFirebase(() => {
     if (!firestore) return null;

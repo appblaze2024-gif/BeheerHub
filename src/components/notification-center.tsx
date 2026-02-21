@@ -88,9 +88,9 @@ export function NotificationCenter() {
 
   // Active Issues Query for the "Meldingen" tab
   const meldingenQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return query(collection(firestore, 'meldingen'), where('status', '==', 'Nieuw'));
-  }, [firestore]);
+  }, [firestore, user]);
 
   const { data: activeMeldingenFromDb } = useCollection<Melding>(meldingenQuery);
 
@@ -103,9 +103,9 @@ export function NotificationCenter() {
 
   // Users Query for starting new chats
   const usersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return collection(firestore, 'users');
-  }, [firestore]);
+  }, [firestore, user]);
 
   const { data: users } = useCollection<UserProfile>(usersQuery);
 
@@ -134,7 +134,7 @@ export function NotificationCenter() {
         (m.fromUserId === selectedChatUser.id && m.toUserId === user.uid) ||
         (m.fromUserId === user.uid && m.toUserId === selectedChatUser.id)
       )
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(b.createdAt).getTime());
   }, [allMessages, selectedChatUser, user]);
 
   const handleOpenChat = (contactId: string) => {

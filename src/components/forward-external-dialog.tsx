@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { Loader2, Send, X, FileIcon, MapPin, Search } from 'lucide-react';
 import { sendEmail } from '@/app/mail/actions';
 import { useToast } from '@/components/ui/use-toast';
-import { useFirestore, updateDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, updateDocumentNonBlocking, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 
 import {
@@ -57,6 +57,7 @@ interface ForwardExternalDialogProps {
 export function ForwardExternalDialog({ open, onOpenChange, melding, onSuccess }: ForwardExternalDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const { user } = useUser();
   const [isSending, setIsSending] = React.useState(false);
   const [selectedAttachments, setSelectedAttachments] = React.useState<string[]>([]);
   const [userSearchTerm, setUserSearchTerm] = React.useState('');
@@ -67,9 +68,9 @@ export function ForwardExternalDialog({ open, onOpenChange, melding, onSuccess }
   });
 
   const usersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return collection(firestore, 'users');
-  }, [firestore]);
+  }, [firestore, user]);
 
   const { data: users } = useCollection<UserProfile>(usersQuery);
 
