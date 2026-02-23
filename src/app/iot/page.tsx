@@ -25,7 +25,6 @@ import {
   Target,
   FileCode,
   Globe,
-  HelpCircle,
   Battery,
   Layers,
   Zap,
@@ -56,6 +55,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import {
   Dialog,
@@ -152,10 +152,10 @@ function decode(payload) {
 }`;
 
   const arduinoCode = selectedSensor ? `/*
- * BEHEERHUB IOT ENGINE - Heltec CubeCell HTCC-AB01 (HTCC-001)
- * Hardware: HTCC-AB01
+ * BEHEERHUB IOT ENGINE - Heltec CubeCell HTCC-AB01
+ * Hardware: HTCC-AB01 (HTTC-001)
  * Sensor: TOF10120 (I2C)
- * Pinout: SDA (Blauw) -> SDA Pin, SCL (Groen) -> SCL Pin
+ * Pinout: Blauw (SDA) -> SDA Pin, Groen (SCL) -> SCL Pin
  * Power: 3.3V (VExt) & Lipo 2500mAh
  */
 
@@ -584,8 +584,8 @@ void loop() {
                                     <ul className="text-xs space-y-2 font-bold text-slate-700">
                                         <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-red-500"/> Rood &rarr; 3V3 (VExt)</li>
                                         <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-black"/> Zwart &rarr; GND</li>
-                                        <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-blue-500"/> Blauw (SDA) &rarr; SDA (Board Pinnen)</li>
-                                        <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-green-500"/> Groen (SCL) &rarr; SCL (Board Pinnen)</li>
+                                        <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-blue-500"/> Blauw (SDA) &rarr; SDA Pin</li>
+                                        <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-green-500"/> Groen (SCL) &rarr; SCL Pin</li>
                                     </ul>
                                 </div>
                                 <div className="space-y-3">
@@ -593,7 +593,7 @@ void loop() {
                                     <div className="flex items-start gap-3">
                                         <Zap className="h-5 w-5 text-orange-500 shrink-0" />
                                         <p className="text-xs font-medium text-slate-600 leading-relaxed">
-                                            Sluit de <strong>2500mAh LiPo</strong> aan op de witte JST connector. Let op de polariteit! De CubeCell laadt de batterij automatisch op via USB.
+                                            Sluit de <strong>2500mAh LiPo</strong> aan op de witte JST connector. De CubeCell laadt de batterij automatisch op via USB.
                                         </p>
                                     </div>
                                 </div>
