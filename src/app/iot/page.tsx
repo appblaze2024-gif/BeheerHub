@@ -245,7 +245,8 @@ void loop() {
     switch( deviceState ) {
         case DEVICE_STATE_INIT: 
             Serial.println("Init LoRaWAN...");
-            LoRaWAN.init(loraWanRegion,loraWanClass); 
+            // GECORRIGEERD: DeviceClass eerst, daarna Region
+            LoRaWAN.init(loraWanClass, loraWanRegion); 
             break;
         case DEVICE_STATE_JOIN: 
             Serial.println("Joining KPN Things...");
