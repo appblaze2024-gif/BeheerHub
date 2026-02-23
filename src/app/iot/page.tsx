@@ -23,7 +23,6 @@ import {
   Code,
   ArrowRight,
   Target,
-  ShieldAlert,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFirestore, useCollection, deleteDocumentNonBlocking, useMemoFirebase } from '@/firebase';
@@ -49,7 +48,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { firebaseConfig } from '@/firebase/config';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -413,9 +411,9 @@ void loop() {
                 <div className="max-w-3xl mx-auto w-full space-y-8">
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">LoRa configuration</h3>
+                            <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">LoRa-configuratie</h3>
                             <Button variant="ghost" size="sm" className="text-red-500 font-bold uppercase text-[10px] tracking-widest gap-2">
-                                <Trash2 className="h-3.5 w-3.5" /> Reset LoRa configuration
+                                <Trash2 className="h-3.5 w-3.5" /> Reset LoRa-gegevens
                             </Button>
                         </div>
                         <Card className="bg-white dark:bg-zinc-900 border-2 border-slate-100 shadow-sm rounded-2xl overflow-hidden">
