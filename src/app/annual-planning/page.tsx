@@ -830,8 +830,8 @@ export default function AnnualPlanningPage() {
                 )}>
                   <table className="w-full border-collapse text-[10px] font-bold">
                     <thead>
-                      <tr className="bg-primary text-white h-32">
-                        <th className="sticky left-0 z-20 bg-primary border-r border-white p-2 text-left align-top whitespace-nowrap w-[300px] min-w-[300px]">
+                      <tr className="bg-[#008751] text-white h-32">
+                        <th className="sticky left-0 z-20 bg-[#008751] border-r border-white p-2 text-left align-top whitespace-nowrap w-[300px] min-w-[300px]">
                           <div className="flex flex-col h-full justify-between">
                             {editingSectionTitleId === section.id ? (
                               <div className="flex items-center gap-1">
@@ -917,9 +917,9 @@ export default function AnnualPlanningPage() {
                             </th>
                           );
                         })}
-                        <th className="w-8 bg-primary/90 border-r border-white/20">aantal</th>
-                        <th className="w-20 bg-primary/90 border-r border-white/20">tarief</th>
-                        <th className="w-24 bg-primary/90">bedrag</th>
+                        <th className="w-8 bg-black/20 border-r border-white/20">aantal</th>
+                        <th className="w-20 bg-black/20 border-r border-white/20">tarief</th>
+                        <th className="w-24 bg-black/20">bedrag</th>
                       </tr>
 
                       <tr className="bg-[#8e24aa] text-white h-8">
@@ -966,7 +966,7 @@ export default function AnnualPlanningPage() {
                             )} style={rowStyle}>
                               <div className="flex items-center justify-between h-8 px-1.5 w-full group/row">
                                 <button 
-                                  className="pr-4 text-[11px] font-black uppercase tracking-tight whitespace-nowrap hover:text-primary transition-colors text-left truncate flex-1"
+                                  className="pr-4 text-[11px] font-black uppercase tracking-tight whitespace-nowrap hover:text-[#008751] transition-colors text-left truncate flex-1"
                                   onClick={() => { setEditingItem(item); setIsRowDialogOpen(true); }}
                                   title={item.resourceName}
                                 >
@@ -1023,7 +1023,7 @@ export default function AnnualPlanningPage() {
                                   onDoubleClick={() => handleWeekDetailOpen(item.id, week)}
                                   className={cn(
                                     "border-r border-slate-100 p-0 text-center h-8 w-6 min-w-[24px] transition-all relative",
-                                    isSelected && "bg-primary/10 ring-1 ring-inset ring-primary/30 z-10",
+                                    isSelected && "bg-green-500/10 ring-1 ring-inset ring-green-500/30 z-10",
                                     cellNote && "ring-1 ring-inset ring-black shadow-[inset_0_0_0_1px_black]",
                                     m?.borderLeft && "border-l-[3px] border-l-red-600 z-30",
                                     m?.borderRight && "border-r-[3px] border-r-red-600 z-30"
@@ -1040,7 +1040,7 @@ export default function AnnualPlanningPage() {
                                           onPaste={(e) => handlePaste(item.id, week, e)}
                                           onFocus={(e) => e.target.select()}
                                           className={cn(
-                                            "w-full h-full bg-transparent text-center focus:bg-white/50 focus:outline-none focus:ring-inset focus:ring-1 focus:ring-primary tabular-nums text-[9px] text-slate-900",
+                                            "w-full h-full bg-transparent text-center focus:bg-white/50 focus:outline-none focus:ring-inset focus:ring-1 focus:ring-[#008751] tabular-nums text-[9px] text-slate-900",
                                             isDragging ? "pointer-events-none" : "pointer-events-auto"
                                           )}
                                         />
@@ -1101,7 +1101,7 @@ export default function AnnualPlanningPage() {
                               setIsRowDialogOpen(true); 
                             }}
                           >
-                            <Plus className="h-3.5 w-3.5 text-primary" />
+                            <Plus className="h-3.5 w-3.5 text-[#008751]" />
                           </Button>
                         </td>
                         {WEEKS.map(week => {
@@ -1137,11 +1137,11 @@ export default function AnnualPlanningPage() {
                             </td>
                           );
                         })}
-                        <td className="text-center text-[10px] text-primary bg-slate-200 h-8 w-8 border-r border-slate-300">
+                        <td className="text-center text-[10px] text-[#008751] bg-slate-200 h-8 w-8 border-r border-slate-300">
                           {sectionGrandTotalQuantity.toLocaleString('nl-NL')}
                         </td>
                         <td className="bg-slate-200 border-r border-slate-300" />
-                        <td className="text-right pr-1 text-[10px] text-primary bg-slate-200 h-8 w-24">
+                        <td className="text-right pr-1 text-[10px] text-[#008751] bg-slate-200 h-8 w-24">
                           € {sectionGrandTotalCost.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                       </tr>
@@ -1154,7 +1154,7 @@ export default function AnnualPlanningPage() {
             <div className="flex justify-center pt-4">
               <Button 
                 variant="outline" 
-                className="h-16 w-full max-w-md border-2 border-dashed border-slate-300 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all rounded-xl gap-3 font-black uppercase tracking-widest text-xs"
+                className="h-16 w-full max-w-md border-2 border-dashed border-slate-300 hover:border-[#008751] hover:text-[#008751] hover:bg-[#008751]/5 transition-all rounded-xl gap-3 font-black uppercase tracking-widest text-xs"
                 onClick={handleAddSection}
                 disabled={isAddingSection}
               >
@@ -1186,7 +1186,7 @@ export default function AnnualPlanningPage() {
               ))}
               <Separator className="my-2" />
               <div className="grid grid-cols-4 items-center gap-4">
-                <span className="text-right font-black uppercase text-[10px] tracking-widest text-primary">Totaal</span>
+                <span className="text-right font-black uppercase text-[10px] tracking-widest text-[#008751]">Totaal</span>
                 <span className="col-span-3 pl-3 font-black text-lg">
                   {Object.values(weekDetailValues).reduce((acc, val) => acc + (parseFloat(val.replace(',', '.')) || 0), 0)}
                 </span>
@@ -1320,7 +1320,7 @@ export default function AnnualPlanningPage() {
                   {isSavingMilestone && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Opslaan
                 </Button>
-              </DialogFooter>
+              </form>
             </form>
           </DialogContent>
         </Dialog>
