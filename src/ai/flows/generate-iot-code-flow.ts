@@ -3,7 +3,7 @@
 /**
  * @fileOverview Geoptimaliseerde AI flow voor IoT-code generatie.
  * Specifiek getraind op Heltec CubeCell HTCC-AB01 (Library v1.4.0) en de TOF10120 laser sensor.
- * Verwerkt direct KPN LoRaWAN sleutels in de code en volgt het verplichte state-machine patroon.
+ * Gebruikt het officiële Heltec Framework patroon voor maximale compabiliteit.
  */
 
 import { ai } from '@/ai/genkit';
@@ -39,16 +39,15 @@ const prompt = ai.definePrompt({
   output: { schema: GenerateIoTCodeOutputSchema },
   prompt: `Je bent een expert in LoRaWAN ontwikkeling voor de Heltec CubeCell HTCC-AB01 met Board Library v1.4.0.
 Hardware: CubeCell HTCC-AB01.
-Sensor: TOF10120 (Blauw op SDA, Groen op SCL).
+Sensor: TOF10120 Laser (Blauw op SDA, Groen op SCL).
 
-STRIKTE REGELS VOOR CODE GENERATIE (v1.4.0 Framework):
+STRIKTE REGELS VOOR CODE GENERATIE (V1.4.0 Framework):
 1. Gebruik ALTIJD "LoRaWan_APP.h" en <Wire.h>.
-2. Gebruik EXACT deze volgorde: LoRaWAN.init(loraWanClass, loraWanRegion); (Eerst Class, dan Region).
-3. Gebruik de volgende KPN credentials DIRECT in de arrays:
+2. Gebruik EXACT dit sjabloon voor de credentials:
    - uint8_t devEui[] = { {{{devEui}}} };
    - uint8_t appEui[] = { {{{appEui}}} };
    - uint8_t appKey[] = { {{{appKey}}} };
-4. Definieer ALTIJD deze globale variabelen (verplicht in v1.4.0 framework):
+3. Definieer ALTIJD deze verplichte globale variabelen:
    - uint16_t userChannelsMask[6] = { 0x00FF, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 };
    - uint32_t appTxDutyCycle = 15000;
    - bool overTheAirActivation = true;
@@ -59,20 +58,20 @@ STRIKTE REGELS VOOR CODE GENERATIE (v1.4.0 Framework):
    - bool isTxConfirmed = true;
    - uint8_t appPort = 2;
    - uint8_t confirmedNbTrials = 4;
-5. Implementeer de TOF10120 uitlezing in een aparte functie readTOF().
-6. De loop() MOET het switch(deviceState) patroon gebruiken.
-7. Gebruik NOOIT BoardGetUniqueId voor de devEui, gebruik de hardcoded array met de waarde hierboven.
-8. Genereer een VOLLEDIGE sketch met witregels en inspringingen die direct ge-copy-pasted kan worden.
+4. Implementeer readTOF() voor de TOF10120 (I2C adres 0x52).
+5. Gebruik de functie 'prepareTxFrame(uint8_t port)' om appData en appDataSize te vullen.
+6. De loop() MOET de verplichte 'switch(deviceState)' state machine gebruiken.
+7. setup() MOET 'boardInitMcu()', 'Serial.begin(115200)', 'Wire.begin()' en 'LoRaWAN.init(loraWanClass, loraWanRegion)' bevatten.
+
+VRAAG/FOUT:
+"{{{prompt}}}"
 
 HISTORIE:
 {{#each history}}
 - {{role}}: {{{content}}}
 {{/each}}
 
-VRAAG/FOUT:
-"{{{prompt}}}"
-
-Antwoord in JSON met 'code' (volledige sketch met enters) en 'explanation' (max 2 zinnen).`,
+Antwoord in JSON met 'code' (volledige sketch met enters en inspringingen) en 'explanation' (max 2 zinnen).`,
 });
 
 export const generateIoTCodeFlow = ai.defineFlow(
@@ -88,9 +87,6 @@ export const generateIoTCodeFlow = ai.defineFlow(
   }
 );
 
-/**
- * Wrapper functie voor de IoT code generatie flow.
- */
 export async function generateIoTCode(input: GenerateIoTCodeInput): Promise<GenerateIoTCodeOutput> {
   return generateIoTCodeFlow(input);
 }

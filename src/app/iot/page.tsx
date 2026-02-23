@@ -204,7 +204,7 @@ uint8_t devEui[] = { ${devEui} };
 uint8_t appEui[] = { ${appEui} };
 uint8_t appKey[] = { ${appKey} };
 
-/* Mandatory CubeCell v1.4.0 Variables */
+/* Verplichte v1.4.0 Framework Variabelen */
 uint16_t userChannelsMask[6] = { 0x00FF, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 };
 uint32_t appTxDutyCycle = 15000;
 bool overTheAirActivation = true;
@@ -231,7 +231,7 @@ uint16_t readTOF() {
 }
 
 void prepareTxFrame(uint8_t port) {
-  uint16_t d = readTOF() / 10; // Distance in cm
+  uint16_t d = readTOF() / 10; // Afstand in cm
   int v = map(d, 0, ${selectedSensor.binDepthCm || 100}, 100, 0);
   uint16_t b = getBatteryVoltage();
   
@@ -248,7 +248,7 @@ void setup() {
   Serial.begin(115200);
   Wire.begin();
   LoRaWAN.init(loraWanClass, loraWanRegion);
-  Serial.println("CubeCell HTCC-AB01 Init Done.");
+  Serial.println("CubeCell v1.4.0 Framework Init Done.");
 }
 
 void loop() {
