@@ -155,8 +155,8 @@ function decode(payload) {
  * BEHEERHUB IOT ENGINE - Heltec CubeCell HTCC-AB01
  * Hardware: HTCC-AB01 (HTTC-001)
  * Sensor: TOF10120 (I2C)
- * Pinout: Blauw (SDA) -> SDA Pin, Groen (SCL) -> SCL Pin
- * Power: 3.3V (VExt) & Lipo 2500mAh
+ * Bedrading: Blauw -> SDA, Groen -> SCL, Rood -> 3V3, Zwart -> GND
+ * Accu: LiPo 2500mAh
  */
 
 #include "LoRaWan_APP.h"
@@ -209,22 +209,45 @@ static void prepareTxFrame( uint8_t port ) {
     appData[2] = (uint8_t)vulgraad;
     appData[3] = (uint8_t)(batteryVoltage >> 8);
     appData[4] = (uint8_t)batteryVoltage;
+
+    Serial.print("Meting: "); Serial.print(distCm); Serial.println("cm");
 }
 
 void setup() {
     boardInitMcu();
     Serial.begin(115200);
     Wire.begin();
+    Serial.println("BeheerHub IoT Client Start...");
+    Serial.println("Wachten op LoRaWAN Join...");
 }
 
 void loop() {
     switch( deviceState ) {
-        case DEVICE_STATE_INIT: LoRaWAN.init(loraWanRegion,loraWanClass); break;
-        case DEVICE_STATE_JOIN: LoRaWAN.join(); break;
-        case DEVICE_STATE_SEND: prepareTxFrame( 2 ); LoRaWAN.send(); deviceState = DEVICE_STATE_CYCLE; break;
-        case DEVICE_STATE_CYCLE: txDutyCycleTime = appTxDutyCycle + randr( 0, 1000 ); LoRaWAN.cycle(txDutyCycleTime); deviceState = DEVICE_STATE_SLEEP; break;
-        case DEVICE_STATE_SLEEP: LoRaWAN.sleep(); break;
-        default: deviceState = DEVICE_STATE_INIT; break;
+        case DEVICE_STATE_INIT: 
+            Serial.println("Init LoRaWAN...");
+            LoRaWAN.init(loraWanRegion,loraWanClass); 
+            break;
+        case DEVICE_STATE_JOIN: 
+            Serial.println("Joining KPN Things...");
+            LoRaWAN.join(); 
+            break;
+        case DEVICE_STATE_SEND: 
+            Serial.println("Joined! Versturen data...");
+            prepareTxFrame( 2 ); 
+            LoRaWAN.send(); 
+            deviceState = DEVICE_STATE_CYCLE; 
+            break;
+        case DEVICE_STATE_CYCLE: 
+            txDutyCycleTime = appTxDutyCycle + randr( 0, 1000 ); 
+            LoRaWAN.cycle(txDutyCycleTime); 
+            deviceState = DEVICE_STATE_SLEEP; 
+            break;
+        case DEVICE_STATE_SLEEP: 
+            LoRaWAN.sleep(); 
+            break;
+        default: 
+            deviceState = DEVICE_STATE_INIT; 
+            break;
     }
 }` : '';
 
@@ -244,7 +267,7 @@ void loop() {
         </Button>
       </PageHeader>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 shrink-0">
         <Card className="shadow-sm border-slate-100 rounded-2xl overflow-hidden">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
@@ -376,7 +399,7 @@ void loop() {
                 </div>
               </div>
 
-              <TabsContent value="map" className="flex-1 m-0 relative flex flex-col data-[state=active]:flex overflow-hidden">
+              <TabsContent value="map" className="flex-1 m-0 relative flex flex-col data-[state=active]:flex min-h-0 overflow-hidden">
                 <div className="flex-1 relative w-full h-full min-h-0">
                   <MapboxView 
                     objects={sensors?.map(s => ({
@@ -431,12 +454,12 @@ void loop() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="code" className="flex-1 m-0 p-6 bg-slate-50 dark:bg-zinc-950 overflow-y-auto data-[state=active]:flex flex-col">
+              <TabsContent value="code" className="flex-1 m-0 p-6 bg-slate-50 dark:bg-zinc-950 overflow-y-auto data-[state=active]:flex flex-col min-h-0">
                 <div className="max-w-4xl mx-auto w-full space-y-6">
                     <div className="flex items-center justify-between">
                         <div className="space-y-1">
                             <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">Arduino C++ Sketch</h3>
-                            <p className="text-sm text-slate-500 font-medium">Inclusief batterijmeting en TOF10120 I2C logica voor HTCC-AB01.</p>
+                            <p className="text-sm text-slate-500 font-medium">Inclusief LoRaWAN Join-debug en batterijmeting voor HTCC-AB01.</p>
                         </div>
                         <Button 
                             className="h-10 px-6 font-black uppercase tracking-tight"
@@ -455,7 +478,7 @@ void loop() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="kpn" className="flex-1 m-0 p-6 bg-slate-50 dark:bg-zinc-950 overflow-y-auto data-[state=active]:flex flex-col">
+              <TabsContent value="kpn" className="flex-1 m-0 p-6 bg-slate-50 dark:bg-zinc-950 overflow-y-auto data-[state=active]:flex flex-col min-h-0">
                 <div className="max-w-4xl mx-auto w-full space-y-8 pb-12">
                     <div className="flex items-center justify-between">
                         <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900">Koppeling KPN Things</h3>
@@ -604,17 +627,23 @@ void loop() {
                     <div className="space-y-4">
                         <div className="flex items-center gap-3">
                             <Badge className="bg-primary h-8 w-8 rounded-full flex items-center justify-center p-0 text-lg font-black">2</Badge>
-                            <h4 className="font-black uppercase tracking-tight text-slate-900">Arduino IDE Instellingen</h4>
+                            <h4 className="font-black uppercase tracking-tight text-slate-900">Arduino IDE & Join Proces</h4>
                         </div>
-                        <Card className="bg-slate-50 border-2 border-slate-100 p-5 rounded-2xl">
-                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4">Board Manager Config</p>
-                            <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-xs font-bold text-slate-700">
-                                <div className="flex justify-between border-b pb-1"><span>Board:</span> <span className="text-primary">CubeCell-Board (HTCC-AB01)</span></div>
-                                <div className="flex justify-between border-b pb-1"><span>Region:</span> <span className="text-primary">REGION_EU868</span></div>
-                                <div className="flex justify-between border-b pb-1"><span>Class:</span> <span className="text-primary">CLASS_A</span></div>
-                                <div className="flex justify-between border-b pb-1"><span>ADR:</span> <span className="text-primary">ON</span></div>
-                                <div className="flex justify-between border-b pb-1"><span>Uplink Mode:</span> <span className="text-primary">Unconfirmed</span></div>
-                                <div className="flex justify-between border-b pb-1"><span>Net Reservation:</span> <span className="text-primary">ON</span></div>
+                        <Card className="bg-slate-50 border-2 border-slate-100 p-5 rounded-2xl space-y-4">
+                            <div className="space-y-2">
+                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Board Manager Config</p>
+                                <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-xs font-bold text-slate-700">
+                                    <div className="flex justify-between border-b pb-1"><span>Board:</span> <span className="text-primary">CubeCell-Board (HTCC-AB01)</span></div>
+                                    <div className="flex justify-between border-b pb-1"><span>Region:</span> <span className="text-primary">REGION_EU868</span></div>
+                                    <div className="flex justify-between border-b pb-1"><span>Class:</span> <span className="text-primary">CLASS_A</span></div>
+                                </div>
+                            </div>
+                            <Separator />
+                            <div className="space-y-2">
+                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Het Join Proces</p>
+                                <p className="text-xs text-slate-600 leading-relaxed">
+                                    Zodra u de code flasht, zal het board proberen een verbinding (Join) te maken met KPN. Dit kan bij de eerste keer enkele minuten duren. Houd de <strong>Serial Monitor (115200 baud)</strong> open om de status te volgen. Pas na een succesvolle Join wordt de eerste meting verstuurd.
+                                </p>
                             </div>
                         </Card>
                     </div>
