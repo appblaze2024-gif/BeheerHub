@@ -22,6 +22,7 @@ import {
   Settings,
   Code,
   ArrowRight,
+  Target,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFirestore, useCollection, deleteDocumentNonBlocking, useMemoFirebase } from '@/firebase';
@@ -62,6 +63,7 @@ export default function IoTPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
   const [selectedSensorId, setSelectedSensorId] = React.useState<string | null>(null);
   const [copiedUrl, setCopiedUrl] = React.useState(false);
+  const [copiedCode, setCopiedCode] = React.useState(false);
 
   const sensorsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -91,16 +93,90 @@ export default function IoTPage() {
     }
   };
 
-  const copyUrlToClipboard = (text: string) => {
+  const copyToClipboard = (text: string, type: 'url' | 'code') => {
     navigator.clipboard.writeText(text);
-    setCopiedUrl(true);
-    setTimeout(() => setCopiedUrl(false), 2000);
-    toast({ title: 'Gekopieerd', description: 'Webhook URL naar klembord gekopieerd.' });
+    if (type === 'url') {
+        setCopiedUrl(true);
+        setTimeout(() => setCopiedUrl(false), 2000);
+    } else {
+        setCopiedCode(true);
+        setTimeout(() => setCopiedCode(false), 2000);
+    }
+    toast({ title: 'Gekopieerd', description: 'Inhoud naar klembord gekopieerd.' });
   };
 
   const apiEndpoint = selectedSensor 
-    ? `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/sensors/${selectedSensor.id}?key=${firebaseConfig.apiKey}`
+    ? `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/sensors/${selectedSensor.id}?key=${firebaseConfig.apiKey}&updateMask.fieldPaths=vulgraad&updateMask.fieldPaths=currentDistanceCm`
     : '';
+
+  const arduinoCode = selectedSensor ? `/*
+ * BEHEERHUB IOT ENGINE - Heltec CubeCell HTCC-AB01
+ * Hardware: HTCC-AB01 (HTTC-001)
+ * Sensor: TOF10120 (Time-of-Flight Laser Sensor)
+ * Transport: LoRaWAN (KPN Things)
+ */
+
+#include "LoRaWan_APP.h"
+#include "Arduino.h"
+#include <Wire.h>
+
+#define TOF10120_ADDR 0x52
+
+/* --- LoraWAN Keys --- */
+uint8_t devEui[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+uint8_t appEui[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+uint8_t appKey[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+
+uint32_t appTxDutyCycle = 43200000; // 2x per dag
+bool overTheAirActivation = true;
+LoRaMacRegion_t loraWanRegion = ACTIVE_REGION;
+DeviceClass_t  loraWanClass = CLASS_A;
+
+uint16_t readTOF10120() {
+    Wire.beginTransmission(TOF10120_ADDR);
+    Wire.write(0x00);
+    Wire.endTransmission();
+    delay(30);
+    Wire.requestFrom(TOF10120_ADDR, 2);
+    if (Wire.available() >= 2) {
+        uint8_t hi = Wire.read();
+        uint8_t lo = Wire.read();
+        return (hi << 8) | lo;
+    }
+    return 0;
+}
+
+static void prepareTxFrame( uint8_t port ) {
+    uint16_t distMm = readTOF10120();
+    uint16_t distCm = distMm / 10;
+    
+    // Bak diepte: ${selectedSensor.binDepthCm || 100}cm
+    int vulgraad = map(distCm, 0, ${selectedSensor.binDepthCm || 100}, 100, 0);
+    if (vulgraad < 0) vulgraad = 0;
+    if (vulgraad > 100) vulgraad = 100;
+    
+    appDataSize = 3;
+    appData[0] = (uint8_t)(distCm >> 8);
+    appData[1] = (uint8_t)distCm;
+    appData[2] = (uint8_t)vulgraad;
+}
+
+void setup() {
+    boardInitMcu();
+    Serial.begin(115200);
+    Wire.begin();
+}
+
+void loop() {
+    switch( deviceState ) {
+        case DEVICE_STATE_INIT: LoRaWAN.init(loraWanRegion,loraWanClass); break;
+        case DEVICE_STATE_JOIN: LoRaWAN.join(); break;
+        case DEVICE_STATE_SEND: prepareTxFrame( 2 ); LoRaWAN.send(); deviceState = DEVICE_STATE_CYCLE; break;
+        case DEVICE_STATE_CYCLE: txDutyCycleTime = appTxDutyCycle + randr( 0, 1000 ); LoRaWAN.cycle(txDutyCycleTime); deviceState = DEVICE_STATE_SLEEP; break;
+        case DEVICE_STATE_SLEEP: LoRaWAN.sleep(); break;
+        default: deviceState = DEVICE_STATE_INIT; break;
+    }
+}` : '';
 
   if (isLoading) {
     return <LoadingScreen message="Internet of Things Dashboard laden..." />;
@@ -110,7 +186,7 @@ export default function IoTPage() {
     <div className="flex flex-col flex-1 p-4 md:p-6 min-h-0 bg-slate-50 dark:bg-zinc-950 overflow-hidden">
       <PageHeader 
         title="Internet of Things" 
-        description="Koppel uw hardware met KPN Things en bekijk live sensordata."
+        description="Beheer hardware-koppelingen via unieke Chip ID / DevEUI."
         className="p-0 mb-6"
       >
         <Button onClick={() => setIsAddDialogOpen(true)} className="font-black h-10 uppercase tracking-tight">
@@ -238,6 +314,9 @@ export default function IoTPage() {
                     <TabsTrigger value="map" className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 h-full rounded-lg text-[10px] font-black uppercase tracking-widest gap-2">
                         <MapPin className="h-3.5 w-3.5" /> Dashboard
                     </TabsTrigger>
+                    <TabsTrigger value="code" className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 h-full rounded-lg text-[10px] font-black uppercase tracking-widest gap-2">
+                        <Code className="h-3.5 w-3.5" /> Hardware Code
+                    </TabsTrigger>
                     <TabsTrigger value="kpn" className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 h-full rounded-lg text-[10px] font-black uppercase tracking-widest gap-2">
                         <Radio className="h-3.5 w-3.5" /> KPN Koppeling
                     </TabsTrigger>
@@ -304,11 +383,35 @@ export default function IoTPage() {
                 </div>
               </TabsContent>
 
+              <TabsContent value="code" className="flex-1 m-0 p-6 bg-slate-50 dark:bg-zinc-950 overflow-y-auto data-[state=active]:flex flex-col">
+                <div className="max-w-4xl mx-auto w-full space-y-6">
+                    <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                            <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">Arduino C++ Sketch</h3>
+                            <p className="text-sm text-slate-500 font-medium">Kopieer deze code naar uw Arduino IDE (Heltec CubeCell Framework).</p>
+                        </div>
+                        <Button 
+                            className="h-10 px-6 font-black uppercase tracking-tight"
+                            onClick={() => copyToClipboard(arduinoCode, 'code')}
+                        >
+                            {copiedCode ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
+                            {copiedCode ? 'Gekopieerd' : 'Kopieer Code'}
+                        </Button>
+                    </div>
+
+                    <div className="bg-slate-900 rounded-2xl p-6 shadow-2xl border-none overflow-hidden relative group">
+                        <pre className="text-blue-400 font-mono text-[11px] leading-relaxed overflow-x-auto selection:bg-blue-500/30">
+                            {arduinoCode}
+                        </pre>
+                    </div>
+                </div>
+              </TabsContent>
+
               <TabsContent value="kpn" className="flex-1 m-0 p-6 bg-slate-50 dark:bg-zinc-950 overflow-y-auto data-[state=active]:flex flex-col">
                 <div className="max-w-3xl mx-auto w-full space-y-8">
                     <div className="space-y-2">
-                        <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">KPN Things Data-Koppeling</h3>
-                        <p className="text-sm text-slate-500 font-medium">Stel een Webhook Destination in om sensordata direct door te sturen naar BeheerHub.</p>
+                        <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">KPN Things Koppeling</h3>
+                        <p className="text-sm text-slate-500 font-medium">Stel een Webhook Destination in om sensordata direct door te sturen.</p>
                     </div>
 
                     <Card className="bg-slate-900 text-white border-none shadow-xl rounded-2xl overflow-hidden">
@@ -317,21 +420,20 @@ export default function IoTPage() {
                                 <div className="p-2 bg-blue-500/20 rounded-xl">
                                     <Radio className="h-5 w-5 text-blue-400" />
                                 </div>
-                                <span className="text-xs font-black uppercase tracking-widest">Webhook Destination URL</span>
+                                <span className="text-xs font-black uppercase tracking-widest">Connection URL</span>
                             </div>
                             <Button 
                                 variant="ghost" 
                                 size="sm" 
                                 className="h-9 px-4 font-black uppercase text-[10px] bg-white/10 hover:bg-white/20"
-                                onClick={() => copyUrlToClipboard(apiEndpoint)}
+                                onClick={() => copyToClipboard(apiEndpoint, 'url')}
                             >
                                 {copiedUrl ? <Check className="h-3.5 w-3.5 mr-2 text-green-400" /> : <Copy className="h-3.5 w-3.5 mr-2" />}
                                 {copiedUrl ? 'Gekopieerd' : 'Kopieer URL'}
                             </Button>
                         </div>
                         <CardContent className="p-6 space-y-6">
-                            <div className="bg-black/40 p-4 rounded-xl font-mono text-sm break-all border border-white/5 text-blue-400 shadow-inner flex items-center gap-4">
-                                <Badge className="bg-purple-600/20 text-purple-400 border-purple-600/30 uppercase font-black text-[10px]">PATCH</Badge>
+                            <div className="bg-black/40 p-4 rounded-xl font-mono text-[11px] break-all border border-white/5 text-blue-400 shadow-inner">
                                 <span className="select-all">{apiEndpoint}</span>
                             </div>
 
@@ -339,28 +441,33 @@ export default function IoTPage() {
                                 <div className="space-y-3 p-4 bg-white/5 rounded-2xl border border-white/5">
                                     <div className="flex items-center gap-2 text-blue-400">
                                         <Settings className="h-4 w-4" />
-                                        <h4 className="text-[10px] font-black uppercase tracking-widest">Configuratie Stappen</h4>
+                                        <h4 className="text-[10px] font-black uppercase tracking-widest">Webhook Config (KPN)</h4>
                                     </div>
                                     <ul className="text-[11px] space-y-2 text-slate-300 font-medium leading-relaxed">
-                                        <li className="flex gap-2">1. Ga naar <strong>Destinations</strong> in KPN Things.</li>
-                                        <li className="flex gap-2">2. Maak een nieuwe <strong>HTTP Webhook</strong> aan.</li>
-                                        <li className="flex gap-2">3. Plak de URL en gebruik methode <strong>PATCH</strong>.</li>
-                                        <li className="flex gap-2">4. Gebruik de <strong>Chip ID</strong> als DevEUI.</li>
+                                        <li className="flex gap-2">1. Kies <strong>HTTP POST</strong> als methode.</li>
+                                        <li className="flex gap-2">2. Voeg Custom Header toe:</li>
+                                        <li className="bg-black/30 p-2 rounded border border-white/5 font-mono text-[10px] text-white">
+                                            X-HTTP-Method-Override: PATCH
+                                        </li>
+                                        <li className="flex gap-2">3. Gebruik de <strong>Chip ID</strong> als DevEUI.</li>
                                     </ul>
                                 </div>
                                 <div className="space-y-3 p-4 bg-white/5 rounded-2xl border border-white/5">
                                     <div className="flex items-center gap-2 text-purple-400">
                                         <Code className="h-4 w-4" />
-                                        <h4 className="text-[10px] font-black uppercase tracking-widest">Verwachte Payload</h4>
+                                        <h4 className="text-[10px] font-black uppercase tracking-widest">Gekoppelde Velden</h4>
                                     </div>
-                                    <pre className="text-[10px] font-mono text-purple-300 p-2 bg-black/30 rounded-lg">
+                                    <div className="space-y-2">
+                                        <p className="text-[10px] text-slate-400">Uw Payload Decoder in KPN Things moet deze JSON-velden versturen:</p>
+                                        <pre className="text-[10px] font-mono text-purple-300 p-2 bg-black/30 rounded-lg">
 {`{
   "fields": {
     "vulgraad": { "integerValue": "..." },
     "currentDistanceCm": { "integerValue": "..." }
   }
 }`}
-                                    </pre>
+                                        </pre>
+                                    </div>
                                 </div>
                             </div>
                         </CardContent>
@@ -371,9 +478,9 @@ export default function IoTPage() {
                             <Info className="h-6 w-6 text-blue-600" />
                         </div>
                         <div className="space-y-1">
-                            <h4 className="text-xs font-black uppercase text-blue-900 tracking-tight">KPN Things Payload Decoder</h4>
+                            <h4 className="text-xs font-black uppercase text-blue-900 tracking-tight">KPN Things Method Override</h4>
                             <p className="text-xs text-blue-700 leading-relaxed font-medium">
-                                Zorg dat uw <strong>Payload Decoder</strong> in KPN Things de ruwe bytes van uw TOF10120 omzet naar de velden <code>vulgraad</code> en <code>currentDistanceCm</code>. BeheerHub werkt deze velden dan automatisch bij via de bovenstaande Webhook.
+                                Omdat KPN Things destinations standaard <strong>POST</strong> gebruiken, maar Firestore een <strong>PATCH</strong> vereist voor updates, moet u de <code>X-HTTP-Method-Override</code> header gebruiken zoals hierboven beschreven. BeheerHub herkent dit en verwerkt de data als een update.
                             </p>
                         </div>
                     </div>
