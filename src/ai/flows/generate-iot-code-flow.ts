@@ -44,7 +44,7 @@ Sensor: TOF10120 (Blauw op SDA, Groen op SCL).
 STRIKTE REGELS VOOR CODE GENERATIE (v1.4.0):
 1. Gebruik ALTIJD "LoRaWan_APP.h" en <Wire.h>.
 2. Gebruik ALTIJD exact deze volgorde: LoRaWAN.init(loraWanClass, loraWanRegion).
-3. Gebruik de volgende KPN credentials DIRECT in de arrays:
+3. Gebruik de volgende KPN credentials DIRECT in de arrays (geen BoardGetUniqueId gebruiken):
    - uint8_t devEui[] = { {{{devEui}}} };
    - uint8_t appEui[] = { {{{appEui}}} };
    - uint8_t appKey[] = { {{{appKey}}} };
@@ -53,7 +53,8 @@ STRIKTE REGELS VOOR CODE GENERATIE (v1.4.0):
    - delay(30); Wire.requestFrom(0x52, 2);
 5. Gebruik de bakdiepte van {{{binDepthCm}}} cm voor de percentageberekening.
 6. De code moet EXTREEM COMPACT zijn. Geen lange comments.
-7. Genereer een VOLLEDIGE nieuwe sketch die direct ge-copy-pasted kan worden.
+7. Gebruik ALTIJD standaard C++ opmaak met NIEUWE REGELS (enters) na elke instructie en puntkomma. 
+8. Genereer een VOLLEDIGE nieuwe sketch die direct ge-copy-pasted kan worden.
 
 HISTORIE:
 {{#each history}}
@@ -63,7 +64,7 @@ HISTORIE:
 VRAAG/FOUT:
 "{{{prompt}}}"
 
-Antwoord in JSON met 'code' (volledige sketch) en 'explanation' (max 2 zinnen).`,
+Antwoord in JSON met 'code' (volledige sketch metenters) en 'explanation' (max 2 zinnen).`,
 });
 
 export const generateIoTCodeFlow = ai.defineFlow(

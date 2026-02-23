@@ -229,6 +229,7 @@ void setup() {
   boardInitMcu();
   Serial.begin(115200);
   Wire.begin();
+  LoRaWAN.init(loraWanClass, loraWanRegion);
 }
 
 void loop() {
@@ -349,17 +350,19 @@ void loop() {
               </TabsContent>
 
               <TabsContent value="code" className="flex-1 m-0 flex flex-col lg:grid lg:grid-cols-12 overflow-hidden">
-                <div className="lg:col-span-8 flex flex-col p-6 overflow-hidden">
+                <div className="lg:col-span-8 flex flex-col p-6 overflow-hidden bg-slate-100/50">
                   <div className="flex justify-between items-center mb-4 shrink-0">
                     <h3 className="font-black uppercase tracking-tight flex items-center gap-2"><FileCode className="h-5 w-5 text-primary" /> Arduino Sketch</h3>
-                    <Button onClick={() => copyToClipboard(selectedSensor.iotCode || defaultCode, setCopiedCode)} className="h-8 px-4 text-[10px] font-black uppercase">
+                    <Button onClick={() => copyToClipboard(selectedSensor.iotCode || defaultCode, setCopiedCode)} className="h-8 px-4 text-[10px] font-black uppercase shadow-sm">
                       {copiedCode ? <Check className="h-3 w-3 mr-2" /> : <Copy className="h-3 w-3 mr-2" />}
                       Kopieer Code
                     </Button>
                   </div>
-                  <div className="flex-1 bg-slate-900 rounded-2xl p-6 shadow-xl overflow-hidden relative">
-                    <ScrollArea className="h-full">
-                      <pre className="text-blue-400 font-mono text-[11px] leading-relaxed">{selectedSensor.iotCode || defaultCode}</pre>
+                  <div className="flex-1 bg-slate-900 rounded-2xl p-1 shadow-2xl overflow-hidden relative border-[6px] border-slate-800">
+                    <ScrollArea className="h-full" scrollbars="both">
+                      <pre className="text-blue-400 font-mono text-[11px] leading-relaxed p-6 whitespace-pre min-w-max">
+                        {selectedSensor.iotCode || defaultCode}
+                      </pre>
                     </ScrollArea>
                   </div>
                 </div>
@@ -405,7 +408,7 @@ void loop() {
                   </div>
                   <div className="space-y-4">
                     <div className="flex justify-between items-center"><h4 className="text-sm font-black uppercase">1. Payload Decoder</h4><Button variant="outline" size="sm" onClick={() => copyToClipboard(decoderCode, setCopiedDecoder)} className="h-7 text-[9px] font-black uppercase">Kopieer</Button></div>
-                    <Card className="bg-slate-900 text-blue-400 p-6 rounded-2xl font-mono text-[11px]"><pre>{decoderCode}</pre></Card>
+                    <Card className="bg-slate-900 text-blue-400 p-6 rounded-2xl font-mono text-[11px]"><pre className="whitespace-pre-wrap">{decoderCode}</pre></Card>
                   </div>
                   <div className="space-y-4">
                     <h4 className="text-sm font-black uppercase">2. Webhook Target URL</h4>
