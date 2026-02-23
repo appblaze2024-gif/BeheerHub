@@ -1,8 +1,8 @@
 'use server';
 
 /**
- * @fileOverview AI flow voor het genereren van IoT-code met chat-historie en board-selectie.
- * Ondersteunt nu specifiek de Heltec CubeCell HTCC-AB01 (HTTC-001) en de TOF10120 sensor.
+ * @fileOverview Geoptimaliseerde AI flow voor IoT-code generatie.
+ * Specifiek getraind op Heltec CubeCell HTCC-AB01 en de TOF10120 laser sensor.
  */
 
 import { ai } from '@/ai/genkit';
@@ -14,62 +14,49 @@ const MessageSchema = z.object({
 });
 
 const GenerateIoTCodeInputSchema = z.object({
-  prompt: z.string().describe('De nieuwe vraag of aanpassing van de gebruiker.'),
-  board: z.string().describe('Het geselecteerde hardware board (bijv. ESP32 of Heltec CubeCell HTCC-AB01).'),
-  history: z.array(MessageSchema).optional().describe('De eerdere berichten in het gesprek voor context.'),
-  projectId: z.string().describe('Het Firebase Project ID.'),
-  apiKey: z.string().describe('De Firebase API Key.'),
+  prompt: z.string().describe('De foutmelding of gewenste aanpassing.'),
+  board: z.string().describe('Hardware setup details.'),
+  history: z.array(MessageSchema).optional().describe('Gesprekshistorie.'),
+  projectId: z.string().describe('Firebase Project ID.'),
+  apiKey: z.string().describe('Firebase API Key.'),
 });
 export type GenerateIoTCodeInput = z.infer<typeof GenerateIoTCodeInputSchema>;
 
 const GenerateIoTCodeOutputSchema = z.object({
-  code: z.string().describe('De volledige, aangepaste C++ code.'),
-  explanation: z.string().describe('Uitleg over de gemaakte wijzigingen en setup-instructies.'),
+  code: z.string().describe('De gecorrigeerde C++ code.'),
+  explanation: z.string().describe('Korte uitleg van de fix.'),
 });
 export type GenerateIoTCodeOutput = z.infer<typeof GenerateIoTCodeOutputSchema>;
-
-export async function generateIoTCode(input: GenerateIoTCodeInput): Promise<GenerateIoTCodeOutput> {
-  return generateIoTCodeFlow(input);
-}
 
 const prompt = ai.definePrompt({
   name: 'generateIoTCodePrompt',
   input: { schema: GenerateIoTCodeInputSchema },
   output: { schema: GenerateIoTCodeOutputSchema },
-  prompt: `Je bent een expert in IoT-ontwikkeling voor de boards: ESP32, ESP8266 en specifiek de Heltec CubeCell HTCC-AB01 (HTTC-001). 
-Je bent gespecialiseerd in integratie met Google Firebase via de REST API en transport via LoRaWAN (KPN Things).
+  prompt: `Je bent een expert in LoRaWAN ontwikkeling voor de Heltec CubeCell HTCC-AB01.
+Hardware: CubeCell HTCC-AB01 (HTTC-001).
+Sensor: TOF10120 (I2C adres 0x52, SDA/SCL pinnen).
 
-Huidig geselecteerd board/setup: {{{board}}}
-Standaard sensor: TOF10120 (I2C adres 0x52).
+STRIKTE REGELS VOOR CODE GENERATIE:
+1. Gebruik ALTIJD "LoRaWan_APP.h".
+2. Gebruik ALTIJD LoRaWAN.init(loraWanClass, loraWanRegion) - NOOIT andersom!
+3. DevEUI is het unieke Chip ID (8 bytes).
+4. Implementeer een compacte readTOF10120() functie:
+   - Wire.beginTransmission(0x52); Wire.write(0x00); Wire.endTransmission();
+   - Wacht 30ms; Wire.requestFrom(0x52, 2);
+5. Zorg dat de code COMPACT is. Verwijder uitgebreide comments.
+6. Gebruik de volgende credentials als placeholders indien niet aanwezig in de context:
+   - Project ID: {{{projectId}}}
+   - API Key: {{{apiKey}}}
 
-BELANGRIJK: De Heltec CubeCell HTCC-AB01 heeft GEEN MAC-adres. Het gebruikt een uniek Chip ID voor de DevEUI.
-I2C PINS: Voor de HTCC-AB01, gebruik de fysiek gemarkeerde SDA en SCL pinnen op het board. Initialiseer met Wire.begin() zonder parameters.
-
-CONTEXT VAN HET GESPREK:
+HISTORIE:
 {{#each history}}
 - {{role}}: {{{content}}}
 {{/each}}
 
-NIEUWE VRAAG/AANPASSING:
+VRAAG/FOUT:
 "{{{prompt}}}"
 
-INSTRUCTIES VOOR GENERATIE:
-1. Genereer volledige, compileerbare Arduino C++ code voor de geselecteerde setup ({{{board}}}).
-2. Voor Heltec CubeCell HTCC-AB01 (LoRaWAN):
-   - Gebruik de officiële "LoRaWan_APP.h" bibliotheek.
-   - Implementeer I2C communicatie voor de TOF10120 sensor (lezen van 2 bytes vanaf register 0x00 op adres 0x52).
-   - Gebruik Wire.begin() voor de gemarkeerde SDA/SCL pinnen.
-   - Zorg voor placeholders voor DevEUI (Chip ID), AppEUI en AppKey (OTAA).
-   - Implementeer deep-sleep logica om de batterij te sparen tussen metingen door.
-   - Leg uit dat de data via KPN Things moet worden doorgestuurd naar de Firebase REST API via een Webhook.
-3. Voor WiFi setups:
-   - Gebruik HTTPClient.
-   - Gebruik de PATCH methode met 'X-HTTP-Method-Override: PATCH' header voor Firestore updates.
-4. Firebase Integratie Details:
-   - Project ID: {{{projectId}}}
-   - API Key: {{{apiKey}}}
-
-Antwoord in JSON formaat met de velden 'code' en 'explanation'.`,
+Antwoord in JSON met 'code' (volledige sketch) en 'explanation' (max 2 zinnen).`,
 });
 
 export const generateIoTCodeFlow = ai.defineFlow(

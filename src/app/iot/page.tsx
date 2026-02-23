@@ -116,23 +116,14 @@ export default function IoTPage() {
     if (!firestore) return;
     await deleteDocumentNonBlocking(doc(firestore, 'sensors', id));
     if (selectedSensorId === id) setSelectedSensorId(null);
-    toast({ title: 'Sensor verwijderd', description: 'De koppeling is succesvol verbroken.' });
-  };
-
-  const getStatusBadge = (status: Sensor['status']) => {
-    switch (status) {
-      case 'Online': return <Badge variant="outline" className="text-green-600 border-green-600 bg-green-50 text-[9px] h-4">Live</Badge>;
-      case 'Offline': return <Badge variant="destructive" className="text-[9px] h-4">Offline</Badge>;
-      case 'Batterij laag': return <Badge variant="outline" className="text-orange-600 border-orange-600 bg-orange-50 text-[9px] h-4">Accu</Badge>;
-      default: return <Badge variant="secondary" className="text-[9px] h-4">{status}</Badge>;
-    }
+    toast({ title: 'Sensor verwijderd' });
   };
 
   const copyToClipboard = (text: string, stateSetter: (v: boolean) => void) => {
     navigator.clipboard.writeText(text);
     stateSetter(true);
     setTimeout(() => stateSetter(false), 2000);
-    toast({ title: 'Gekopieerd', description: 'Inhoud naar klembord gekopieerd.' });
+    toast({ title: 'Gekopieerd' });
   };
 
   const handleFixWithAI = async () => {
@@ -142,7 +133,7 @@ export default function IoTPage() {
       const history = selectedSensor.iotHistory || [];
       const result = await generateIoTCode({
         prompt: aiPrompt,
-        board: 'Heltec CubeCell HTCC-AB01 (LoRaWAN)',
+        board: 'Heltec CubeCell HTCC-AB01',
         history: history,
         projectId: firebaseConfig.projectId,
         apiKey: firebaseConfig.apiKey
@@ -157,14 +148,13 @@ export default function IoTPage() {
       await updateDocumentNonBlocking(doc(firestore!, 'sensors', selectedSensor.id), {
         iotCode: result.code,
         iotExplanation: result.explanation,
-        iotHistory: updatedHistory.slice(-10) // Keep last 10 messages
+        iotHistory: updatedHistory.slice(-8)
       });
 
       setAiPrompt('');
-      toast({ title: "Code bijgewerkt", description: "De AI heeft de code succesvol aangepast." });
+      toast({ title: "Code bijgewerkt door AI" });
     } catch (err) {
-      console.error("AI fix error:", err);
-      toast({ variant: 'destructive', title: "Fout bij genereren", description: "De AI kon de code niet herstellen." });
+      toast({ variant: 'destructive', title: "Fout bij genereren" });
     } finally {
       setIsFixing(false);
     }
@@ -174,545 +164,217 @@ export default function IoTPage() {
     ? `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/sensors/${selectedSensor.id}?key=${firebaseConfig.apiKey}&updateMask.fieldPaths=vulgraad&updateMask.fieldPaths=currentDistanceCm&updateMask.fieldPaths=batteryLevel&updateMask.fieldPaths=lastSeen`
     : '';
 
-  const decoderCode = `/**
- * KPN Things Payload Decoder voor BeheerHub
- * Zet 5 bytes om naar Firestore REST API formaat
- */
-function decode(payload) {
-    var bytes = payload.data; // Array van bytes
-    
-    // Byte 0-1: Afstand in CM (MSB)
-    var distance = (bytes[0] << 8) | bytes[1];
-    
-    // Byte 2: Vulgraad percentage
-    var vulgraad = bytes[2];
-    
-    // Byte 3-4: Batterij Voltage in mV
-    var batteryMv = (bytes[3] << 8) | bytes[4];
-    var batteryPct = Math.min(100, Math.max(0, (batteryMv - 3300) / (4200 - 3300) * 100));
-
-    // Retourneer in Firestore REST API structuur
+  const decoderCode = `function decode(payload) {
+    var bytes = payload.data;
+    var dist = (bytes[0] << 8) | bytes[1];
+    var bat = (bytes[3] << 8) | bytes[4];
+    var batPct = Math.min(100, Math.max(0, (bat - 3300) / 9));
     return {
         "fields": {
-            "currentDistanceCm": { "integerValue": distance },
-            "vulgraad": { "integerValue": vulgraad },
-            "batteryLevel": { "integerValue": Math.round(batteryPct) },
+            "currentDistanceCm": { "integerValue": dist },
+            "vulgraad": { "integerValue": bytes[2] },
+            "batteryLevel": { "integerValue": Math.round(batPct) },
             "lastSeen": { "stringValue": new Date().toISOString() }
         }
     };
 }`;
 
-  // Helper to format hex strings into Arduino byte arrays
-  const formatHexToBytes = (hex: string | undefined, length: number) => {
-    if (!hex) return Array(length).fill('0x00').join(', ');
-    const cleanHex = hex.replace(/[^0-9A-Fa-f]/g, '');
-    const matches = cleanHex.match(/.{1,2}/g);
-    if (!matches) return Array(length).fill('0x00').join(', ');
-    const bytes = matches.map(x => `0x${x.padStart(2, '0').toUpperCase()}`);
-    while (bytes.length < length) bytes.push('0x00');
-    return bytes.slice(0, length).join(', ');
+  const formatHex = (hex: string | undefined, len: number) => {
+    if (!hex) return Array(len).fill('0x00').join(', ');
+    const m = hex.replace(/[^0-9A-F]/gi, '').match(/.{1,2}/g);
+    const bytes = (m || []).map(x => `0x${x.padStart(2, '0').toUpperCase()}`);
+    while (bytes.length < len) bytes.push('0x00');
+    return bytes.slice(0, len).join(', ');
   };
 
-  const devEuiStr = formatHexToBytes(selectedSensor?.devEui || selectedSensor?.id, 8);
-  const appEuiStr = formatHexToBytes(selectedSensor?.appEui, 8);
-  const appKeyStr = formatHexToBytes(selectedSensor?.appKey, 16);
+  const devEui = formatHex(selectedSensor?.devEui || selectedSensor?.id, 8);
+  const appEui = formatHex(selectedSensor?.appEui, 8);
+  const appKey = formatHex(selectedSensor?.appKey, 16);
 
-  const defaultArduinoCode = selectedSensor ? `/*
- * BEHEERHUB IOT ENGINE - Heltec CubeCell HTCC-AB01
- * Hardware: HTCC-AB01 (HTTC-001)
- * Sensor: TOF10120 (I2C)
- * Bedrading: Blauw -> SDA, Groen -> SCL, Rood -> 3V3, Zwart -> GND
- * Accu: LiPo 2500mAh
- */
-
-#include "LoRaWan_APP.h"
-#include "Arduino.h"
+  const defaultCode = selectedSensor ? `#include "LoRaWan_APP.h"
 #include <Wire.h>
 
-#define TOF10120_ADDR 0x52
+uint8_t devEui[] = { ${devEui} };
+uint8_t appEui[] = { ${appEui} };
+uint8_t appKey[] = { ${appKey} };
 
-/* --- LoraWAN Keys --- */
-/* DevEUI is het unieke Chip ID van dit board */
-uint8_t devEui[] = { ${devEuiStr} };
-uint8_t appEui[] = { ${appEuiStr} };
-uint8_t appKey[] = { ${appKeyStr} };
-
-/* Region: EU868 */
+uint32_t appTxDutyCycle = 43200000;
 LoRaMacRegion_t loraWanRegion = ACTIVE_REGION;
-DeviceClass_t  loraWanClass = CLASS_A;
+DeviceClass_t loraWanClass = CLASS_A;
 
-/* Meetinterval: 12 uur */
-uint32_t appTxDutyCycle = 43200000; 
-bool overTheAirActivation = true;
-
-uint16_t readTOF10120() {
-    Wire.beginTransmission(TOF10120_ADDR);
-    Wire.write(0x00);
-    Wire.endTransmission();
-    delay(35);
-    Wire.requestFrom(TOF10120_ADDR, 2);
-    if (Wire.available() >= 2) {
-        uint8_t hi = Wire.read();
-        uint8_t lo = Wire.read();
-        return (hi << 8) | lo;
-    }
-    return 0;
+uint16_t readTOF() {
+  Wire.beginTransmission(0x52);
+  Wire.write(0x00);
+  Wire.endTransmission();
+  delay(30);
+  Wire.requestFrom(0x52, 2);
+  return Wire.available() >= 2 ? (Wire.read() << 8) | Wire.read() : 0;
 }
 
-static void prepareTxFrame( uint8_t port ) {
-    uint16_t distMm = readTOF10120();
-    uint16_t distCm = distMm / 10;
-    
-    // Bak diepte configuratie: ${selectedSensor.binDepthCm || 100}cm
-    int vulgraad = map(distCm, 0, ${selectedSensor.binDepthCm || 100}, 100, 0);
-    if (vulgraad < 0) vulgraad = 0;
-    if (vulgraad > 100) vulgraad = 100;
-    
-    uint16_t batteryVoltage = getBatteryVoltage();
-    
-    appDataSize = 5;
-    appData[0] = (uint8_t)(distCm >> 8);
-    appData[1] = (uint8_t)distCm;
-    appData[2] = (uint8_t)vulgraad;
-    appData[3] = (uint8_t)(batteryVoltage >> 8);
-    appData[4] = (uint8_t)batteryVoltage;
-
-    Serial.print("Meting: "); Serial.print(distCm); Serial.println("cm");
+void prepareTxFrame(uint8_t port) {
+  uint16_t d = readTOF() / 10;
+  int v = map(d, 0, ${selectedSensor.binDepthCm || 100}, 100, 0);
+  uint16_t b = getBatteryVoltage();
+  appDataSize = 5;
+  appData[0] = d >> 8; appData[1] = d; appData[2] = constrain(v, 0, 100);
+  appData[3] = b >> 8; appData[4] = b;
 }
 
 void setup() {
-    boardInitMcu();
-    Serial.begin(115200);
-    Wire.begin();
-    Serial.println("BeheerHub IoT Client Start...");
-    Serial.println("Wachten op LoRaWAN Join...");
+  boardInitMcu();
+  Serial.begin(115200);
+  Wire.begin();
 }
 
 void loop() {
-    switch( deviceState ) {
-        case DEVICE_STATE_INIT: 
-            Serial.println("Init LoRaWAN...");
-            LoRaWAN.init(loraWanClass, loraWanRegion); 
-            break;
-        case DEVICE_STATE_JOIN: 
-            Serial.println("Joining KPN Things...");
-            LoRaWAN.join(); 
-            break;
-        case DEVICE_STATE_SEND: 
-            Serial.println("Joined! Versturen data...");
-            prepareTxFrame( 2 ); 
-            LoRaWAN.send(); 
-            deviceState = DEVICE_STATE_CYCLE; 
-            break;
-        case DEVICE_STATE_CYCLE: 
-            txDutyCycleTime = appTxDutyCycle + randr( 0, 1000 ); 
-            LoRaWAN.cycle(txDutyCycleTime); 
-            deviceState = DEVICE_STATE_SLEEP; 
-            break;
-        case DEVICE_STATE_SLEEP: 
-            LoRaWAN.sleep(); 
-            break;
-        default: 
-            deviceState = DEVICE_STATE_INIT; 
-            break;
-    }
+  switch(deviceState) {
+    case DEVICE_STATE_INIT: LoRaWAN.init(loraWanClass, loraWanRegion); break;
+    case DEVICE_STATE_JOIN: LoRaWAN.join(); break;
+    case DEVICE_STATE_SEND: prepareTxFrame(2); LoRaWAN.send(); deviceState = DEVICE_STATE_CYCLE; break;
+    case DEVICE_STATE_CYCLE: txDutyCycleTime = appTxDutyCycle + randr(0, 1000); LoRaWAN.cycle(txDutyCycleTime); deviceState = DEVICE_STATE_SLEEP; break;
+    case DEVICE_STATE_SLEEP: LoRaWAN.sleep(); break;
+    default: deviceState = DEVICE_STATE_INIT; break;
+  }
 }` : '';
 
-  const activeArduinoCode = selectedSensor?.iotCode || defaultArduinoCode;
-
-  if (isLoading) {
-    return <LoadingScreen message="Internet of Things Dashboard laden..." />;
-  }
+  if (isLoading) return <LoadingScreen />;
 
   return (
-    <div className="flex flex-col flex-1 p-4 md:p-6 min-h-0 bg-slate-50 dark:bg-zinc-950 overflow-hidden">
-      <PageHeader 
-        title="Internet of Things" 
-        description="Beheer hardware-koppelingen via unieke Chip ID / DevEUI."
-        className="p-0 mb-6"
-      >
-        <Button onClick={() => setIsAddDialogOpen(true)} className="font-black h-10 uppercase tracking-tight">
+    <div className="flex flex-col flex-1 p-4 md:p-6 min-h-0 bg-slate-50 overflow-hidden">
+      <PageHeader title="Internet of Things" description="Beheer hardware en KPN koppelingen.">
+        <Button onClick={() => setIsAddDialogOpen(true)} className="font-black h-10 uppercase">
           <Plus className="mr-2 h-4 w-4" /> Nieuwe Sensor
         </Button>
       </PageHeader>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 shrink-0">
-        <Card className="shadow-sm border-slate-100 rounded-2xl overflow-hidden">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Apparaten</p>
-              <p className="text-3xl font-black text-slate-900 leading-none">{sensors?.length || 0}</p>
-            </div>
-            <div className="bg-blue-50 p-3 rounded-2xl"><Cpu className="h-6 w-6 text-blue-500" /></div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm border-slate-100 rounded-2xl overflow-hidden">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Verbinding</p>
-              <p className="text-3xl font-black text-slate-900 leading-none">LoRaWAN</p>
-            </div>
-            <div className="bg-purple-50 p-3 rounded-2xl"><Radio className="h-6 w-6 text-purple-500" /></div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm border-slate-100 rounded-2xl overflow-hidden hidden lg:flex">
-          <CardContent className="p-4 flex items-center justify-between w-full">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Gem. Vulgraad</p>
-              <p className="text-3xl font-black text-green-600 leading-none">
-                {sensors?.length ? Math.round(sensors.reduce((acc, s) => acc + (s.vulgraad || 0), 0) / sensors.length) : 0}%
-              </p>
-            </div>
-            <div className="bg-green-50 p-3 rounded-2xl"><Wifi className="h-6 w-6 text-green-500" /></div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0 overflow-hidden">
-        <Card className={cn(
-            "lg:col-span-3 flex flex-col shadow-sm rounded-2xl overflow-hidden border-slate-100",
-            isTablet && selectedSensorId ? "hidden" : "flex"
-        )}>
-          <CardHeader className="p-4 border-b bg-slate-50/50">
-            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Gekoppelde Units</CardTitle>
-          </CardHeader>
-          <div className="flex-1 overflow-y-auto no-scrollbar">
-            {sensors && sensors.length > 0 ? (
-              <div className="divide-y divide-slate-50">
-                {sensors.map(sensor => (
-                  <div 
-                    key={sensor.id} 
-                    className={cn(
-                      "p-4 flex items-start gap-4 cursor-pointer transition-all hover:bg-slate-50/50",
-                      selectedSensorId === sensor.id && !isTablet && "bg-blue-50 border-l-4 border-l-primary"
-                    )}
-                    onClick={() => setSelectedSensorId(sensor.id)}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start mb-1.5">
-                        <p className="font-black text-xs uppercase tracking-tight text-slate-900 truncate pr-2">{sensor.name}</p>
-                        {getStatusBadge(sensor.status)}
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center justify-between">
-                          <code className="text-[9px] bg-white border border-slate-200 px-1.5 py-0.5 rounded font-mono font-bold text-slate-500 uppercase">{sensor.id}</code>
-                          <span className="text-[10px] font-black text-slate-900">{sensor.vulgraad || 0}%</span>
-                        </div>
-                        <Progress value={sensor.vulgraad || 0} variant="gauge" className="h-1" />
-                      </div>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-slate-600"><MoreVertical className="h-4 w-4" /></Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-600 font-bold">
-                              <Trash2 className="mr-2 h-4 w-4" /> Verwijderen
-                            </DropdownMenuItem>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Verbinding verbreken?</AlertDialogTitle>
-                              <AlertDialogDescription>De sensor met ID '{sensor.id}' wordt uit het systeem verwijderd.</AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Annuleren</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(sensor.id)} className="bg-red-600">Verwijderen</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                ))}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0 mt-6 overflow-hidden">
+        <Card className={cn("lg:col-span-3 flex flex-col rounded-2xl overflow-hidden", isTablet && selectedSensorId ? "hidden" : "flex")}>
+          <CardHeader className="p-4 border-b bg-slate-50/50"><CardTitle className="text-[10px] font-black uppercase text-slate-400">Apparaten</CardTitle></CardHeader>
+          <ScrollArea className="flex-1">
+            {sensors?.map(s => (
+              <div key={s.id} onClick={() => setSelectedSensorId(s.id)} className={cn("p-4 border-b cursor-pointer transition-all hover:bg-slate-50", selectedSensorId === s.id && "bg-blue-50 border-l-4 border-l-primary")}>
+                <div className="flex justify-between items-start mb-2">
+                  <p className="font-black text-xs uppercase truncate">{s.name}</p>
+                  <Badge variant="outline" className="text-[8px] h-4">{s.status}</Badge>
+                </div>
+                <div className="flex justify-between text-[10px] font-bold text-slate-400 mb-2">
+                  <code className="uppercase">{s.id}</code>
+                  <span>{s.vulgraad}%</span>
+                </div>
+                <Progress value={s.vulgraad} variant="gauge" className="h-1" />
               </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full p-12 text-center text-slate-300">
-                <List className="h-12 w-12 mb-4 opacity-10" />
-                <p className="text-[10px] font-black uppercase tracking-widest">Geen apparaten</p>
-              </div>
-            )}
-          </div>
+            ))}
+          </ScrollArea>
         </Card>
 
-        <Card className={cn(
-            "lg:col-span-9 flex flex-col shadow-sm rounded-2xl border-slate-100 overflow-hidden",
-            !selectedSensor && "hidden lg:flex"
-        )}>
+        <Card className={cn("lg:col-span-9 flex flex-col rounded-2xl overflow-hidden", !selectedSensor && "hidden lg:flex")}>
           {selectedSensor ? (
             <Tabs defaultValue="map" className="flex-1 flex flex-col h-full overflow-hidden">
-              <div className="px-4 py-2 border-b bg-slate-50/50 flex items-center justify-between shrink-0">
+              <div className="px-4 py-2 border-b bg-slate-50/50 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    {isTablet && (
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-white shadow-sm border border-slate-200 mr-2" onClick={() => setSelectedSensorId(null)}>
-                            <ArrowLeft className="h-4 w-4 text-slate-600" />
-                        </Button>
-                    )}
-                    <TabsList className="h-9 bg-transparent gap-2 p-0">
-                    <TabsTrigger value="map" className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 h-full rounded-lg text-[10px] font-black uppercase tracking-widest gap-2">
-                        <MapPin className="h-3.5 w-3.5" /> Dashboard
-                    </TabsTrigger>
-                    <TabsTrigger value="code" className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 h-full rounded-lg text-[10px] font-black uppercase tracking-widest gap-2">
-                        <FileCode className="h-3.5 w-3.5" /> Hardware Code
-                    </TabsTrigger>
-                    <TabsTrigger value="kpn" className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 h-full rounded-lg text-[10px] font-black uppercase tracking-widest gap-2">
-                        <Radio className="h-3.5 w-3.5" /> KPN Koppeling
-                    </TabsTrigger>
-                    </TabsList>
+                  {isTablet && <Button variant="ghost" size="icon" onClick={() => setSelectedSensorId(null)} className="h-8 w-8 bg-white border"><ArrowLeft className="h-4 w-4" /></Button>}
+                  <TabsList className="bg-transparent h-9 p-0 gap-2">
+                    <TabsTrigger value="map" className="px-4 text-[10px] font-black uppercase tracking-widest rounded-lg">Dashboard</TabsTrigger>
+                    <TabsTrigger value="code" className="px-4 text-[10px] font-black uppercase tracking-widest rounded-lg">Arduino Code</TabsTrigger>
+                    <TabsTrigger value="kpn" className="px-4 text-[10px] font-black uppercase tracking-widest rounded-lg">KPN Setup</TabsTrigger>
+                  </TabsList>
                 </div>
-                <div className="hidden sm:flex items-center gap-3">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Chip ID / DevEUI:</p>
-                    <span className="text-[10px] font-mono font-bold bg-white border border-slate-200 px-2 py-0.5 rounded shadow-sm uppercase">{selectedSensor.id}</span>
-                </div>
+                <Badge variant="secondary" className="font-mono text-[10px] bg-white border uppercase">{selectedSensor.id}</Badge>
               </div>
 
-              <TabsContent value="map" className="flex-1 m-0 relative flex flex-col data-[state=active]:flex min-h-0 overflow-hidden">
-                <div className="flex-1 relative w-full h-full min-h-0">
-                  <MapboxView 
-                    objects={sensors?.map(s => ({
-                      id: s.id,
-                      latitude: s.latitude,
-                      longitude: s.longitude,
-                      name: s.name,
-                      type: s.type,
-                      vulgraad: s.vulgraad
-                    }))}
-                    highlightedObject={selectedSensor ? { id: selectedSensor.id, latitude: selectedSensor.latitude, longitude: selectedSensor.longitude } : null}
-                  />
-                  
-                  <div className="absolute top-4 right-4 z-10 w-full max-w-[240px] space-y-3">
-                    <Card className="bg-white/95 backdrop-blur shadow-2xl border-none rounded-2xl overflow-hidden">
-                      <div className="bg-slate-900 px-4 py-2 flex items-center justify-between">
-                        <p className="text-[9px] font-black text-white uppercase tracking-widest">Live Sensor Status</p>
-                        <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
+              <TabsContent value="map" className="flex-1 m-0 relative overflow-hidden">
+                <MapboxView 
+                  objects={sensors?.map(s => ({ ...s }))} 
+                  highlightedObject={selectedSensor}
+                />
+                <div className="absolute top-4 right-4 w-56 space-y-2">
+                  <Card className="bg-white/95 backdrop-blur shadow-2xl border-none rounded-2xl overflow-hidden">
+                    <div className="bg-slate-900 px-4 py-2 flex items-center justify-between text-white text-[9px] font-black uppercase">
+                      <span>Status</span>
+                      <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
+                    </div>
+                    <CardContent className="p-4 space-y-4">
+                      <div className="flex justify-between items-end">
+                        <p className="text-3xl font-black text-slate-900 leading-none">{selectedSensor.vulgraad}%</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">{selectedSensor.currentDistanceCm}cm</p>
                       </div>
-                      <CardContent className="p-5 space-y-5">
-                        <div className="flex justify-between items-end">
-                          <div>
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Vulgraad</p>
-                            <p className="text-4xl font-black text-slate-900 leading-none">{selectedSensor.vulgraad || 0}%</p>
+                      <Progress value={selectedSensor.vulgraad} variant="gauge" className="h-1.5 bg-slate-100" />
+                      <div className="flex justify-between items-center text-[10px] font-black uppercase text-slate-400 pt-2 border-t">
+                        <div className="flex items-center gap-1"><Battery className="h-3 w-3" /> {selectedSensor.batteryLevel}%</div>
+                        <div className="flex items-center gap-1"><Clock className="h-3 w-3" /> {selectedSensor.lastSeen ? format(new Date(selectedSensor.lastSeen), 'HH:mm') : '--'}</div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="code" className="flex-1 m-0 flex flex-col lg:grid lg:grid-cols-12 overflow-hidden">
+                <div className="lg:col-span-8 flex flex-col p-6 overflow-hidden">
+                  <div className="flex justify-between items-center mb-4 shrink-0">
+                    <h3 className="font-black uppercase tracking-tight flex items-center gap-2"><FileCode className="h-5 w-5 text-primary" /> Arduino Sketch</h3>
+                    <Button onClick={() => copyToClipboard(selectedSensor.iotCode || defaultCode, setCopiedCode)} className="h-8 px-4 text-[10px] font-black uppercase">
+                      {copiedCode ? <Check className="h-3 w-3 mr-2" /> : <Copy className="h-3 w-3 mr-2" />}
+                      Kopieer Code
+                    </Button>
+                  </div>
+                  <div className="flex-1 bg-slate-900 rounded-2xl p-6 shadow-xl overflow-hidden relative">
+                    <ScrollArea className="h-full">
+                      <pre className="text-blue-400 font-mono text-[11px] leading-relaxed">{selectedSensor.iotCode || defaultCode}</pre>
+                    </ScrollArea>
+                  </div>
+                </div>
+                <div className="lg:col-span-4 bg-white border-l flex flex-col overflow-hidden">
+                  <div className="p-4 border-b bg-slate-50/50"><h3 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2"><Sparkles className="h-3.5 w-3.5 text-primary" /> AI Code Assistent</h3></div>
+                  <div className="flex-1 flex flex-col p-6 gap-6 overflow-hidden">
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black uppercase text-slate-400">Foutcode of Aanpassing</Label>
+                      <Textarea placeholder="Plak hier je foutmelding..." className="min-h-[120px] text-xs font-medium rounded-xl" value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} />
+                      <Button className="w-full h-10 font-black uppercase" disabled={!aiPrompt.trim() || isFixing} onClick={handleFixWithAI}>
+                        {isFixing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCcw className="h-4 w-4 mr-2" />}
+                        Herstel met AI
+                      </Button>
+                    </div>
+                    <Separator />
+                    <div className="flex-1 flex flex-col min-h-0">
+                      <h4 className="text-[10px] font-black uppercase text-slate-400 mb-3 flex items-center gap-2"><History className="h-3.5 w-3.5" /> Historie</h4>
+                      <ScrollArea className="flex-1 pr-2">
+                        {selectedSensor.iotHistory?.map((m, i) => (
+                          <div key={i} className={cn("p-3 rounded-2xl text-[11px] mb-3", m.role === 'user' ? "bg-slate-100 text-slate-700 ml-4" : "bg-blue-50 text-blue-700 mr-4 border border-blue-100")}>
+                            <p className="font-medium">{m.content}</p>
                           </div>
-                          <div className="text-right">
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Afstand</p>
-                            <p className="text-sm font-black text-slate-600">{selectedSensor.currentDistanceCm || 0} cm</p>
-                          </div>
-                        </div>
-                        <Progress value={selectedSensor.vulgraad || 0} variant="gauge" className="h-2 bg-slate-100" />
-                        
-                        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50">
-                          <div className="flex items-center gap-2">
-                            <div className="bg-slate-100 p-1.5 rounded-lg"><Battery className="h-3.5 w-3.5 text-slate-500" /></div>
-                            <div>
-                              <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Accu Niveau</p>
-                              <p className="text-[10px] font-black text-slate-900">{selectedSensor.batteryLevel || 100}%</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="bg-slate-100 p-1.5 rounded-lg"><Clock className="h-3.5 w-3.5 text-slate-500" /></div>
-                            <div>
-                              <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Laatste Meting</p>
-                              <p className="text-[10px] font-black text-slate-900">{selectedSensor.lastSeen ? format(new Date(selectedSensor.lastSeen), 'HH:mm') : '--:--'}</p>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
+                        ))}
+                      </ScrollArea>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="kpn" className="flex-1 m-0 p-6 bg-slate-50 overflow-y-auto">
+                <div className="max-w-3xl mx-auto space-y-8">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-xl font-black uppercase tracking-tight">KPN Things Koppeling</h3>
+                    <Button variant="outline" onClick={() => setIsStepsDialogOpen(true)} className="h-9 font-black uppercase text-[10px] gap-2"><ClipboardList className="h-4 w-4" /> Stappenplan</Button>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center"><h4 className="text-sm font-black uppercase">1. Payload Decoder</h4><Button variant="outline" size="sm" onClick={() => copyToClipboard(decoderCode, setCopiedDecoder)} className="h-7 text-[9px] font-black uppercase">Kopieer</Button></div>
+                    <Card className="bg-slate-900 text-blue-400 p-6 rounded-2xl font-mono text-[11px]"><pre>{decoderCode}</pre></Card>
+                  </div>
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-black uppercase">2. Webhook Target URL</h4>
+                    <Card className="bg-slate-900 text-white p-6 rounded-2xl overflow-hidden relative">
+                      <div className="flex justify-between items-center mb-4"><span className="text-[10px] font-black uppercase tracking-widest opacity-50">HTTP POST URL</span><Button size="sm" variant="ghost" onClick={() => copyToClipboard(apiEndpoint, setCopiedUrl)} className="h-7 text-[9px] bg-white/10 hover:bg-white/20 text-white uppercase">Kopieer</Button></div>
+                      <div className="bg-black/40 p-4 rounded-xl font-mono text-[10px] break-all text-blue-400 border border-white/5">{apiEndpoint}</div>
+                      <div className="mt-4 p-4 bg-white/5 rounded-xl border border-white/5"><p className="text-[10px] text-slate-400 italic">Voeg in KPN Things een custom header toe: <strong>X-HTTP-Method-Override: PATCH</strong></p></div>
                     </Card>
                   </div>
                 </div>
               </TabsContent>
-
-              <TabsContent value="code" className="flex-1 m-0 bg-slate-50 dark:bg-zinc-950 overflow-hidden data-[state=active]:flex flex-col min-h-0">
-                <div className="flex-1 flex flex-col md:grid md:grid-cols-12 gap-0 overflow-hidden">
-                    <div className="md:col-span-8 flex flex-col min-h-0 p-6 overflow-hidden">
-                        <div className="flex items-center justify-between mb-4 shrink-0">
-                            <div className="space-y-1">
-                                <h3 className="text-xl font-black uppercase tracking-tight text-slate-900 flex items-center gap-2">
-                                    <FileCode className="h-5 w-5 text-primary" />
-                                    Arduino C++ Sketch
-                                </h3>
-                                <p className="text-xs text-slate-500 font-medium">Flash deze code naar uw Heltec CubeCell HTCC-AB01.</p>
-                            </div>
-                            <Button 
-                                className="h-9 px-6 font-black uppercase tracking-tight shadow-lg shadow-primary/20"
-                                onClick={() => copyToClipboard(activeArduinoCode, setCopiedCode)}
-                            >
-                                {copiedCode ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
-                                {copiedCode ? 'Gekopieerd' : 'Kopieer Code'}
-                            </Button>
-                        </div>
-
-                        <div className="flex-1 bg-slate-900 rounded-2xl p-6 shadow-2xl border-none overflow-hidden relative group">
-                            <ScrollArea className="h-full">
-                                <pre className="text-blue-400 font-mono text-[11px] leading-relaxed selection:bg-blue-500/30">
-                                    {activeArduinoCode}
-                                </pre>
-                            </ScrollArea>
-                        </div>
-                    </div>
-
-                    <div className="md:col-span-4 bg-white border-l flex flex-col min-h-0">
-                        <div className="p-6 border-b bg-slate-50/50 shrink-0">
-                            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                                <Sparkles className="h-3.5 w-3.5 text-primary" />
-                                AI Code Assistent
-                            </h3>
-                        </div>
-                        
-                        <div className="flex-1 flex flex-col p-6 gap-6 min-h-0">
-                            <div className="space-y-3">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Foutcode of Aanpassing</Label>
-                                <Textarea 
-                                    placeholder="Plak hier uw Arduino IDE foutmelding of vraag om een wijziging..."
-                                    className="min-h-[120px] text-xs font-medium bg-slate-50 border-slate-200 focus:ring-primary/20 rounded-xl resize-none"
-                                    value={aiPrompt}
-                                    onChange={(e) => setAiPrompt(e.target.value)}
-                                />
-                                <Button 
-                                    className="w-full h-11 font-black uppercase tracking-tight gap-2 shadow-xl shadow-primary/10"
-                                    disabled={!aiPrompt.trim() || isFixing}
-                                    onClick={handleFixWithAI}
-                                >
-                                    {isFixing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
-                                    {isFixing ? 'AI Analyseert...' : 'Herstel Code met AI'}
-                                </Button>
-                            </div>
-
-                            <Separator />
-
-                            <div className="flex-1 flex flex-col min-h-0">
-                                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2">
-                                    <History className="h-3.5 w-3.5" />
-                                    Conversatie Historie
-                                </h4>
-                                <ScrollArea className="flex-1 -mx-2 px-2">
-                                    <div className="space-y-4">
-                                        {selectedSensor.iotHistory && selectedSensor.iotHistory.length > 0 ? (
-                                            selectedSensor.iotHistory.map((msg, idx) => (
-                                                <div key={idx} className={cn(
-                                                    "p-3 rounded-2xl text-xs",
-                                                    msg.role === 'user' ? "bg-slate-100 text-slate-700 ml-4 rounded-tr-none" : "bg-blue-50 text-blue-700 mr-4 rounded-tl-none border border-blue-100"
-                                                )}>
-                                                    <p className="font-medium leading-relaxed">{msg.content}</p>
-                                                </div>
-                                            ))
-                                        ) : (
-                                            <div className="py-12 text-center text-slate-300">
-                                                <MessageSquare className="h-10 w-10 mx-auto mb-2 opacity-10" />
-                                                <p className="text-[10px] font-black uppercase tracking-widest">Nog geen historie</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </ScrollArea>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="kpn" className="flex-1 m-0 p-6 bg-slate-50 dark:bg-zinc-950 overflow-y-auto data-[state=active]:flex flex-col min-h-0">
-                <div className="max-w-4xl mx-auto w-full space-y-8 pb-12">
-                    <div className="flex items-center justify-between">
-                        <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900">Koppeling KPN Things</h3>
-                        <Button 
-                            variant="outline" 
-                            className="h-10 border-blue-600 text-blue-600 hover:bg-blue-50 font-black uppercase tracking-tight gap-2"
-                            onClick={() => setIsStepsDialogOpen(true)}
-                        >
-                            <ClipboardList className="h-4 w-4" />
-                            Technisch Stappenplan
-                        </Button>
-                    </div>
-
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">1. Payload Decoder (JavaScript)</h3>
-                            <Button variant="outline" size="sm" onClick={() => copyToClipboard(decoderCode, setCopiedDecoder)} className="h-8 font-black uppercase text-[10px]">
-                                {copiedDecoder ? <Check className="h-3 w-3 mr-2" /> : <Copy className="h-3 w-3 mr-2" />}
-                                Kopieer Decoder
-                            </Button>
-                        </div>
-                        <Card className="bg-slate-900 text-blue-400 p-6 rounded-2xl border-none font-mono text-[11px] shadow-lg">
-                            <pre className="overflow-x-auto">{decoderCode}</pre>
-                        </Card>
-                    </div>
-
-                    <div className="space-y-4">
-                        <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">2. Webhook Target URL</h3>
-                        <Card className="bg-slate-900 text-white border-none shadow-xl rounded-2xl overflow-hidden">
-                            <div className="bg-white/5 px-6 py-4 flex items-center justify-between border-b border-white/5">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-blue-500/20 rounded-xl"><Globe className="h-5 w-5 text-blue-400" /></div>
-                                    <span className="text-xs font-black uppercase tracking-widest">HTTP Destination URL</span>
-                                </div>
-                                <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="h-9 px-4 font-black uppercase text-[10px] bg-white/10 hover:bg-white/20"
-                                    onClick={() => copyToClipboard(apiEndpoint, setCopiedUrl)}
-                                >
-                                    {copiedUrl ? <Check className="h-3.5 w-3.5 mr-2 text-green-400" /> : <Copy className="h-3.5 w-3.5 mr-2" />}
-                                    {copiedUrl ? 'Gekopieerd' : 'Kopieer URL'}
-                                </Button>
-                            </div>
-                            <CardContent className="p-6 space-y-6">
-                                <div className="bg-black/40 p-4 rounded-xl font-mono text-[11px] break-all border border-white/5 text-blue-400 shadow-inner">
-                                    <span>{apiEndpoint}</span>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-3 p-4 bg-white/5 rounded-2xl border border-white/5">
-                                        <div className="flex items-center gap-2 text-blue-400">
-                                            <Settings className="h-4 w-4" />
-                                            <h4 className="text-[10px] font-black uppercase tracking-widest">KPN Things Setup</h4>
-                                        </div>
-                                        <ul className="text-[11px] space-y-2 text-slate-300 font-medium leading-relaxed">
-                                            <li className="flex gap-2">Method: <strong>HTTP POST</strong></li>
-                                            <li className="flex flex-col gap-1">
-                                                <span>Custom Header toevoegen:</span>
-                                                <code className="bg-black/30 p-2 rounded border border-white/5 text-white font-bold">X-HTTP-Method-Override: PATCH</code>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                    <div className="space-y-3 p-4 bg-white/5 rounded-2xl border border-white/5">
-                                        <div className="flex items-center gap-2 text-purple-400">
-                                            <Code className="h-4 w-4" />
-                                            <h4 className="text-[10px] font-black uppercase tracking-widest">Wat gebeurt er?</h4>
-                                        </div>
-                                        <p className="text-[11px] text-slate-400 leading-relaxed italic">
-                                            De decoder vertaalt de LoRa-bytes naar JSON. De Webhook stuurt dit naar BeheerHub. De 'PATCH' override zorgt ervoor dat alleen de vulgraad en accu worden bijgewerkt.
-                                        </p>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-                </div>
-              </TabsContent>
             </Tabs>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-center p-12 bg-white dark:bg-zinc-950">
-                <div className="bg-slate-50 dark:bg-zinc-900 p-12 rounded-full mb-8 relative">
-                    <Radio className="h-20 w-20 text-slate-200 dark:text-zinc-800" />
-                    <div className="absolute top-2 right-2 h-8 w-8 bg-primary rounded-full flex items-center justify-center text-white animate-bounce shadow-lg">
-                        <ArrowRight className="h-5 w-5" />
-                    </div>
-                </div>
-                <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900 mb-2">Configureer Koppeling</h3>
-                <p className="text-sm text-slate-400 font-medium max-w-sm mx-auto mb-10">
-                    Selecteer een apparaat in de lijst om de <strong>KPN Things koppeling</strong> en de <strong>live data-feed</strong> te beheren.
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left max-w-lg w-full">
-                    <div className="p-5 rounded-2xl border-2 border-slate-50 bg-slate-50/30">
-                        <h4 className="text-[10px] font-black uppercase mb-2 text-primary tracking-widest flex items-center gap-2"><Plus className="h-3 w-3" /> Stap 1</h4>
-                        <p className="text-[11px] text-slate-500 font-bold leading-relaxed uppercase tracking-tighter">Registreer uw Heltec board via de 'Nieuwe Sensor' knop.</p>
-                    </div>
-                    <div className="p-5 rounded-2xl border-2 border-slate-50 bg-slate-50/30">
-                        <h4 className="text-[10px] font-black uppercase mb-2 text-primary tracking-widest flex items-center gap-2"><Radio className="h-3 w-3" /> Stap 2</h4>
-                        <p className="text-[11px] text-slate-500 font-bold leading-relaxed uppercase tracking-tighter">Koppel de Webhook URL aan uw KPN Things Destination.</p>
-                    </div>
-                </div>
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-12">
+              <Radio className="h-16 w-16 text-slate-200 mb-6" />
+              <h3 className="text-xl font-black uppercase tracking-tight mb-2">Selecteer een Apparaat</h3>
+              <p className="text-sm text-slate-400 font-medium max-w-xs mx-auto">Kies een sensor in de lijst om de live data, code en KPN-instellingen te beheren.</p>
             </div>
           )}
         </Card>
@@ -721,100 +383,45 @@ void loop() {
       <AddSensorDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} />
 
       <Dialog open={isStepsDialogOpen} onOpenChange={setIsStepsDialogOpen}>
-        <DialogContent className="sm:max-w-3xl h-[90vh] flex flex-col p-0 overflow-hidden">
-            <DialogHeader className="p-6 border-b bg-slate-50 shrink-0">
-                <DialogTitle className="text-xl font-black uppercase tracking-tight">Technisch Stappenplan: CubeCell + TOF10120</DialogTitle>
-                <DialogDescription className="font-bold text-slate-500">Volg deze stappen voor een correcte installatie en verbinding.</DialogDescription>
-            </DialogHeader>
-            <ScrollArea className="flex-1">
-                <div className="p-6 space-y-10 pb-12">
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                            <Badge className="bg-primary h-8 w-8 rounded-full flex items-center justify-center p-0 text-lg font-black">1</Badge>
-                            <h4 className="font-black uppercase tracking-tight text-slate-900">Hardware Aansluiten</h4>
-                        </div>
-                        <Card className="bg-slate-50 border-2 border-slate-100 p-5 rounded-2xl">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                <div className="space-y-3">
-                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Bedrading Sensor</p>
-                                    <ul className="text-xs space-y-2 font-bold text-slate-700">
-                                        <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-red-500"/> Rood &rarr; 3V3 (VExt)</li>
-                                        <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-black"/> Zwart &rarr; GND</li>
-                                        <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-blue-500"/> Blauw (SDA) &rarr; SDA Pin</li>
-                                        <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-green-500"/> Groen (SCL) &rarr; SCL Pin</li>
-                                    </ul>
-                                </div>
-                                <div className="space-y-3">
-                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Voeding</p>
-                                    <div className="flex items-start gap-3">
-                                        <Zap className="h-5 w-5 text-orange-500 shrink-0" />
-                                        <p className="text-xs font-medium text-slate-600 leading-relaxed">
-                                            Sluit de <strong>2500mAh LiPo</strong> aan op de witte JST connector. De CubeCell laadt de batterij automatisch op via USB.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </Card>
-                    </div>
-
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                            <Badge className="bg-primary h-8 w-8 rounded-full flex items-center justify-center p-0 text-lg font-black">2</Badge>
-                            <h4 className="font-black uppercase tracking-tight text-slate-900">Arduino IDE & Join Proces</h4>
-                        </div>
-                        <Card className="bg-slate-50 border-2 border-slate-100 p-5 rounded-2xl space-y-4">
-                            <div className="space-y-2">
-                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Board Manager Config</p>
-                                <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-xs font-bold text-slate-700">
-                                    <div className="flex justify-between border-b pb-1"><span>Board:</span> <span className="text-primary">CubeCell-Board (HTCC-AB01)</span></div>
-                                    <div className="flex justify-between border-b pb-1"><span>Region:</span> <span className="text-primary">REGION_EU868</span></div>
-                                    <div className="flex justify-between border-b pb-1"><span>Class:</span> <span className="text-primary">CLASS_A</span></div>
-                                </div>
-                            </div>
-                            <Separator />
-                            <div className="space-y-2">
-                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Het Join Proces</p>
-                                <p className="text-xs text-slate-600 leading-relaxed">
-                                    Zodra u de code flasht, zal het board proberen een verbinding (Join) te maken met KPN. Dit kan bij de eerste keer enkele minuten duren. Houd de <strong>Serial Monitor (115200 baud)</strong> open om de status te volgen. Pas na een succesvolle Join wordt de eerste meting verstuurd.
-                                </p>
-                            </div>
-                        </Card>
-                    </div>
-
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                            <Badge className="bg-primary h-8 w-8 rounded-full flex items-center justify-center p-0 text-lg font-black">3</Badge>
-                            <h4 className="font-black uppercase tracking-tight text-slate-900">KPN Things Configuratie</h4>
-                        </div>
-                        <Card className="bg-slate-50 border-2 border-slate-100 p-5 rounded-2xl space-y-4">
-                            <div className="flex items-start gap-3">
-                                <div className="bg-blue-100 p-2 rounded-xl"><Layers className="h-4 w-4 text-blue-600" /></div>
-                                <div className="space-y-1">
-                                    <p className="text-xs font-black">1. Device Registratie</p>
-                                    <p className="text-[11px] text-slate-500 font-medium">Gebruik het Chip ID van uw CubeCell als <strong>DevEUI</strong> in het KPN portaal.</p>
-                                </div>
-                            </div>
-                            <div className="flex items-start gap-3">
-                                <div className="bg-purple-100 p-2 rounded-xl"><FileCode className="h-4 w-4 text-purple-600" /></div>
-                                <div className="space-y-1">
-                                    <p className="text-xs font-black">2. Payload Decoder</p>
-                                    <p className="text-[11px] text-slate-500 font-medium">Kopieer de JavaScript code uit de "KPN Koppeling" tab en plak deze bij de <strong>Payload Decoder</strong> instellingen in KPN.</p>
-                                </div>
-                            </div>
-                            <div className="flex items-start gap-3">
-                                <div className="bg-green-100 p-2 rounded-xl"><Globe className="h-4 w-4 text-green-600" /></div>
-                                <div className="space-y-1">
-                                    <p className="text-xs font-black">3. Destination Webhook</p>
-                                    <p className="text-[11px] text-slate-500 font-medium">Maak een nieuwe <strong>HTTP Destination</strong>. Gebruik de URL uit dit dashboard. Stel de methode in op <strong>POST</strong> en voeg de header toe.</p>
-                                </div>
-                            </div>
-                        </Card>
-                    </div>
-                </div>
-            </ScrollArea>
-            <DialogFooter className="p-6 border-t bg-slate-50 shrink-0">
-                <Button onClick={() => setIsStepsDialogOpen(false)} className="w-full sm:w-auto font-black uppercase tracking-tight px-12">Ik begrijp het</Button>
-            </DialogFooter>
+        <DialogContent className="sm:max-w-3xl h-[90vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
+          <DialogHeader className="p-6 border-b bg-slate-50 shrink-0">
+            <DialogTitle className="text-xl font-black uppercase tracking-tight">Technisch Stappenplan</DialogTitle>
+            <DialogDescription className="font-bold text-slate-500">Volg deze stappen voor een succesvolle LoRaWAN koppeling.</DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="flex-1">
+            <div className="p-6 space-y-10 pb-12">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3"><Badge className="h-8 w-8 rounded-full flex items-center justify-center p-0 text-lg font-black">1</Badge><h4 className="font-black uppercase tracking-tight">Hardware</h4></div>
+                <Card className="bg-slate-50 border-2 p-5 rounded-2xl grid sm:grid-cols-2 gap-6">
+                  <ul className="text-xs space-y-2 font-bold text-slate-700">
+                    <li className="flex items-center gap-2"><div className="h-2 w-2 rounded-full bg-red-500" /> Rood &rarr; 3V3 (VExt)</li>
+                    <li className="flex items-center gap-2"><div className="h-2 w-2 rounded-full bg-black" /> Zwart &rarr; GND</li>
+                    <li className="flex items-center gap-2"><div className="h-2 w-2 rounded-full bg-blue-500" /> Blauw &rarr; SDA Pin</li>
+                    <li className="flex items-center gap-2"><div className="h-2 w-2 rounded-full bg-green-500" /> Groen &rarr; SCL Pin</li>
+                  </ul>
+                  <p className="text-xs font-medium text-slate-600 leading-relaxed"><Zap className="h-4 w-4 text-orange-500 inline mr-1" /> Gebruik de 2500mAh LiPo via de JST connector. De CubeCell regelt het laden via USB automatisch.</p>
+                </Card>
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3"><Badge className="h-8 w-8 rounded-full flex items-center justify-center p-0 text-lg font-black">2</Badge><h4 className="font-black uppercase tracking-tight">IDE & Join</h4></div>
+                <Card className="bg-slate-50 border-2 p-5 rounded-2xl space-y-4">
+                  <div className="grid grid-cols-2 gap-3 text-[11px] font-bold text-slate-700">
+                    <div className="border-b pb-1">Board: <span className="text-primary">CubeCell-Board</span></div>
+                    <div className="border-b pb-1">Region: <span className="text-primary">REGION_EU868</span></div>
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed">Na het flashen start de <strong>Join-fase</strong>. Dit duurt 1 tot 5 minuten. Open de Serial Monitor (115200) om de voortgang te bewaken. Zodra "Joined!" verschijnt, wordt de eerste meting verstuurd.</p>
+                </Card>
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3"><Badge className="h-8 w-8 rounded-full flex items-center justify-center p-0 text-lg font-black">3</Badge><h4 className="font-black uppercase tracking-tight">KPN Things</h4></div>
+                <Card className="bg-slate-50 border-2 p-5 rounded-2xl space-y-4">
+                  <div className="flex items-start gap-3"><Layers className="h-4 w-4 text-blue-600 mt-1" /><p className="text-xs font-medium">Gebruik de <strong>Chip ID</strong> als DevEUI. Voer de AppEUI en AppKey in die KPN voor je genereert.</p></div>
+                  <div className="flex items-start gap-3"><Globe className="h-4 w-4 text-green-600 mt-1" /><p className="text-xs font-medium">Maak een HTTP Destination met de URL uit dit dashboard. Methode: <strong>POST</strong>. Header: <strong>X-HTTP-Method-Override: PATCH</strong>.</p></div>
+                </Card>
+              </div>
+            </div>
+          </ScrollArea>
+          <DialogFooter className="p-6 border-t bg-slate-50 shrink-0"><Button onClick={() => setIsStepsDialogOpen(false)} className="w-full sm:w-auto font-black uppercase tracking-tight px-12">Duidelijk</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
