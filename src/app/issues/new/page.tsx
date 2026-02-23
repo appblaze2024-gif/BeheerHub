@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -15,6 +14,7 @@ import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import Image from 'next/image';
+import { PDFDocument } from 'pdf-lib';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -680,6 +680,7 @@ export default function NewIssuePage() {
 
     try {
         for (const file of fileArray) {
+            const pdfArrayBuffer = await file.arrayBuffer();
             const base64 = await new Promise<string>((resolve) => {
                 const reader = new FileReader();
                 reader.onload = (e) => resolve(e.target?.result as string);
@@ -690,6 +691,9 @@ export default function NewIssuePage() {
                 pdfDataUri: base64,
                 instructions: pdfInstructions
             });
+
+            // Load original PDF for splitting
+            const pdfDoc = await PDFDocument.load(pdfArrayBuffer);
 
             for (const parsed of result.meldingen) {
                 // Geocoding the address from PDF
@@ -734,18 +738,31 @@ export default function NewIssuePage() {
                 const docRef = await addDoc(collection(firestore, 'meldingen'), mData);
                 const meldingId = docRef.id;
 
-                // Upload PDF to Storage
+                // Extract specific page if paginanummer is known
+                let fileToUpload: Blob = file;
+                let fileNameToUpload = file.name;
+
+                if (parsed.paginanummer && parsed.paginanummer > 0 && parsed.paginanummer <= pdfDoc.getPageCount()) {
+                    const newDoc = await PDFDocument.create();
+                    const [copiedPage] = await newDoc.copyPages(pdfDoc, [parsed.paginanummer - 1]);
+                    newDoc.addPage(copiedPage);
+                    const pdfBytes = await newDoc.save();
+                    fileToUpload = new Blob([pdfBytes], { type: 'application/pdf' });
+                    fileNameToUpload = `bon_${parsed.intakenummer || Date.now()}.pdf`;
+                }
+
+                // Upload split PDF page to Storage
                 const storage = getStorage(app);
-                const storagePath = `meldingen/${meldingId}/documents/${Date.now()}-${file.name}`;
-                const uploadTask = uploadBytesResumable(ref(storage, storagePath), file);
+                const storagePath = `meldingen/${meldingId}/documents/${Date.now()}-${fileNameToUpload}`;
+                const uploadTask = uploadBytesResumable(ref(storage, storagePath), fileToUpload);
                 await uploadTask;
                 const url = await getDownloadURL(uploadTask.snapshot.ref);
 
                 const fileObj: UploadedFile = {
-                    name: file.name,
+                    name: fileNameToUpload,
                     url,
-                    size: file.size,
-                    type: file.type,
+                    size: fileToUpload.size,
+                    type: 'application/pdf',
                     uploadedAt: new Date().toISOString(),
                     storagePath
                 };
@@ -770,7 +787,7 @@ export default function NewIssuePage() {
             }
         }
 
-        toast({ title: "Scans voltooid", description: `${fileArray.length} document(en) verwerkt.` });
+        toast({ title: "Scans voltooid", description: `${fileArray.length} document(en) verwerkt en opgesplitst.` });
         router.push('/issues/portal');
     } catch (err) {
         console.error("Batch PDF error:", err);
@@ -781,20 +798,20 @@ export default function NewIssuePage() {
     }
   };
 
-  const uploadFileLocal = React.useCallback((file: File, mNum: string, type: 'documents' | 'photos'): Promise<UploadedFile> => {
+  const uploadFileLocal = React.useCallback((file: File | Blob, fileName: string, mNum: string, type: 'documents' | 'photos'): Promise<UploadedFile> => {
     return new Promise((resolve, reject) => {
         if (!app) return reject(new Error("Firebase app niet beschikbaar"));
         const storage = getStorage(app);
         const folder = mNum || 'temp';
-        const storagePath = `meldingen/${folder}/${type}/${Date.now()}-${file.name}`;
+        const storagePath = `meldingen/${folder}/${type}/${Date.now()}-${fileName}`;
         const uploadTask = uploadBytesResumable(ref(storage, storagePath), file);
         uploadTask.on('state_changed',
-            (snap) => setUploadProgress(prev => ({ ...prev, [file.name]: (snap.bytesTransferred / snap.totalBytes) * 100 })),
-            (err) => { setUploadProgress(prev => { const n = { ...prev }; delete n[file.name]; return n; }); reject(err); },
+            (snap) => setUploadProgress(prev => ({ ...prev, [fileName]: (snap.bytesTransferred / snap.totalBytes) * 100 })),
+            (err) => { setUploadProgress(prev => { const n = { ...prev }; delete n[fileName]; return n; }); reject(err); },
             () => getDownloadURL(uploadTask.snapshot.ref).then(url => {
-                const nFile = { name: file.name, url, size: file.size, type: file.type, uploadedAt: new Date().toISOString(), storagePath };
+                const nFile = { name: fileName, url, size: file.size, type: (file as any).type || 'application/octet-stream', uploadedAt: new Date().toISOString(), storagePath };
                 resolve(nFile);
-                setUploadProgress(prev => { const n = { ...prev }; delete n[file.name]; return prev; });
+                setUploadProgress(prev => { const n = { ...prev }; delete n[fileName]; return prev; });
             })
         );
     });
@@ -804,7 +821,7 @@ export default function NewIssuePage() {
     const mNum = form.getValues('intakenummer');
     for (const file of Array.from(files)) {
       try {
-        const res = await uploadFileLocal(file, mNum, 'documents');
+        const res = await uploadFileLocal(file, file.name, mNum, 'documents');
         setUploadedFiles(prev => [...prev, res]);
       } catch (error) { toast({ variant: "destructive", title: "Upload mislukt" }); }
     }
@@ -814,7 +831,7 @@ export default function NewIssuePage() {
     const mNum = form.getValues('intakenummer');
     for (const file of Array.from(files)) {
       try {
-        const res = await uploadFileLocal(file, mNum, 'photos');
+        const res = await uploadFileLocal(file, file.name, mNum, 'photos');
         setUploadedPhotos(prev => [...prev, res]);
       } catch (error) { toast({ variant: "destructive", title: "Upload mislukt" }); }
     }
@@ -1094,7 +1111,9 @@ export default function NewIssuePage() {
                                 {uploadedPhotos.map(p => (
                                     <div key={p.storagePath} className="relative aspect-square rounded-xl overflow-hidden border shadow-sm group">
                                         <Image src={p.url} alt={p.name} fill className="object-cover" />
-                                        {!isReadOnly && <Button type="button" variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setUploadedPhotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}><Trash2 className="h-3 w-3" /></Button>}
+                                        {!isReadOnly && <Button type="button" variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setUploadedPhotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}>
+                                            <Trash2 className="h-3 w-3" />
+                                        </Button>}
                                     </div>
                                 ))}
                             </div>

@@ -1,7 +1,7 @@
 'use server';
 /**
  * @fileOverview AI flow voor het uitlezen van "Formulier melding / Klacht" PDF's.
- * Ondersteunt nu het extraheren van meerdere bonnen uit één enkel document.
+ * Ondersteunt nu het extraheren van meerdere bonnen uit één enkel document en geeft paginanummers terug voor automatische opsplitsing.
  */
 
 import { ai } from '@/ai/genkit';
@@ -22,6 +22,7 @@ const IssueSchema = z.object({
   postcode: z.string().optional(),
   plaats: z.string().optional(),
   extra_informatie: z.string().optional(),
+  paginanummer: z.number().optional().describe('Het exacte paginanummer in het brondocument waar deze specifieke bon is gevonden (startend bij 1).'),
 });
 
 const ParseIssuePdfInputSchema = z.object({
@@ -52,6 +53,7 @@ Een enkel document kan MEERDERE afzonderlijke meldingen of bonnen bevatten (vaak
 
 INSTRUCTIE:
 Scan het volledige document en identificeer ELKE unieke melding. Retourneer een lijst van alle gevonden meldingen.
+BELANGRIJK: Geef voor elke gevonden melding het exacte paginanummer op in het veld 'paginanummer'. Dit is cruciaal voor het automatisch splitsen van de PDF.
 
 {{#if instructions}}
 STRIKTE VELD-SPECIFIEKE INSTRUCTIES VOOR DE LAYOUT:

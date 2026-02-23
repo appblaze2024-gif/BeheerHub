@@ -55,6 +55,7 @@
     "next": "15.5.9",
     "nodemailer": "^6.9.14",
     "patch-package": "^8.0.0",
+    "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^4.4.168",
     "react": "^19.2.1",
     "react-day-picker": "^9.11.3",
