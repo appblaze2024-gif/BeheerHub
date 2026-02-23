@@ -1,9 +1,8 @@
 'use server';
 
 /**
- * @fileOverview Geoptimaliseerde AI flow voor IoT-code generatie.
- * Specifiek getraind op Heltec CubeCell HTCC-AB01 (Library v1.4.0) en de TOF10120 laser sensor.
- * Gebruikt het officiële Heltec Framework patroon voor maximale compabiliteit.
+ * @fileOverview Strikte AI flow voor Heltec CubeCell HTCC-AB01 (Library v1.4.0).
+ * Genereert code volgens het officiële Heltec Framework patroon.
  */
 
 import { ai } from '@/ai/genkit';
@@ -37,33 +36,31 @@ const prompt = ai.definePrompt({
   name: 'generateIoTCodePrompt',
   input: { schema: GenerateIoTCodeInputSchema },
   output: { schema: GenerateIoTCodeOutputSchema },
-  prompt: `Je bent een expert in LoRaWAN ontwikkeling voor de Heltec CubeCell HTCC-AB01 met Board Library v1.4.0.
-Hardware: CubeCell HTCC-AB01.
-Sensor: TOF10120 Laser (Blauw op SDA, Groen op SCL).
+  prompt: `Je bent een expert in LoRaWAN ontwikkeling voor de Heltec CubeCell HTCC-AB01 met Library v1.4.0.
 
 STRIKTE REGELS VOOR CODE GENERATIE (V1.4.0 Framework):
-1. Gebruik ALTIJD "LoRaWan_APP.h" en <Wire.h>.
-2. Gebruik EXACT dit sjabloon voor de credentials:
-   - uint8_t devEui[] = { {{{devEui}}} };
-   - uint8_t appEui[] = { {{{appEui}}} };
-   - uint8_t appKey[] = { {{{appKey}}} };
-3. Definieer ALTIJD deze verplichte globale variabelen:
-   - uint16_t userChannelsMask[6] = { 0x00FF, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 };
-   - uint32_t appTxDutyCycle = 15000;
-   - bool overTheAirActivation = true;
-   - LoRaMacRegion_t loraWanRegion = ACTIVE_REGION;
-   - DeviceClass_t loraWanClass = CLASS_A;
-   - bool loraWanAdr = true;
-   - bool keepNet = false;
-   - bool isTxConfirmed = true;
-   - uint8_t appPort = 2;
-   - uint8_t confirmedNbTrials = 4;
-4. Implementeer readTOF() voor de TOF10120 (I2C adres 0x52).
-5. Gebruik de functie 'prepareTxFrame(uint8_t port)' om appData en appDataSize te vullen.
-6. De loop() MOET de verplichte 'switch(deviceState)' state machine gebruiken.
-7. setup() MOET 'boardInitMcu()', 'Serial.begin(115200)', 'Wire.begin()' en 'LoRaWAN.init(loraWanClass, loraWanRegion)' bevatten.
+1. Gebruik ALTIJD #include "LoRaWan_APP.h" en <Wire.h>.
+2. De LoRaWAN credentials MOETEN exact zo in de code staan (gebruik de waarden uit de variabelen):
+   uint8_t devEui[] = { {{{devEui}}} };
+   uint8_t appEui[] = { {{{appEui}}} };
+   uint8_t appKey[] = { {{{appKey}}} };
+3. Definieer ALTIJD deze verplichte globale variabelen voor de LoRa-stack:
+   uint16_t userChannelsMask[6] = { 0x00FF, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 };
+   uint32_t appTxDutyCycle = 15000;
+   bool overTheAirActivation = true;
+   LoRaMacRegion_t loraWanRegion = ACTIVE_REGION;
+   DeviceClass_t loraWanClass = CLASS_A;
+   bool loraWanAdr = true;
+   bool keepNet = false;
+   bool isTxConfirmed = true;
+   uint8_t appPort = 2;
+   uint8_t confirmedNbTrials = 4;
+4. Implementeer de sensor-uitlezing in een aparte functie readTOF() (I2C adres 0x52).
+5. Gebruik de verplichte functie 'void prepareTxFrame(uint8_t port)' om appData en appDataSize te vullen. Hier bereken je ook de vulgraad op basis van de diepte: {{{binDepthCm}}} cm.
+6. De setup() MOET exact deze volgorde hebben: boardInitMcu(); Serial.begin(115200); Wire.begin(); LoRaWAN.init(loraWanClass, loraWanRegion);
+7. De loop() MOET de verplichte 'switch(deviceState)' state machine gebruiken. Gebruik GEEN eigen timers of vertragingen in de loop.
 
-VRAAG/FOUT:
+VRAAG OF FOUTMELDING VAN GEBRUIKER:
 "{{{prompt}}}"
 
 HISTORIE:
@@ -71,7 +68,7 @@ HISTORIE:
 - {{role}}: {{{content}}}
 {{/each}}
 
-Antwoord in JSON met 'code' (volledige sketch met enters en inspringingen) en 'explanation' (max 2 zinnen).`,
+Antwoord ALTIJD met de VOLLEDIGE sketch inclusief enters en inspringingen in het 'code' veld van de JSON.`,
 });
 
 export const generateIoTCodeFlow = ai.defineFlow(
