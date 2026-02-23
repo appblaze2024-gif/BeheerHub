@@ -56,7 +56,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import {
   Dialog,
@@ -156,7 +155,7 @@ function decode(payload) {
  * BEHEERHUB IOT ENGINE - Heltec CubeCell HTCC-AB01 (HTCC-001)
  * Hardware: HTCC-AB01
  * Sensor: TOF10120 (I2C)
- * Pinout: SDA -> SDA (Board Marking), SCL -> SCL (Board Marking)
+ * Pinout: SDA (Blauw) -> SDA Pin, SCL (Groen) -> SCL Pin
  * Power: 3.3V (VExt) & Lipo 2500mAh
  */
 
@@ -364,7 +363,7 @@ void loop() {
                         <MapPin className="h-3.5 w-3.5" /> Dashboard
                     </TabsTrigger>
                     <TabsTrigger value="code" className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 h-full rounded-lg text-[10px] font-black uppercase tracking-widest gap-2">
-                        <FileCode className="h-3.5 w-3.5" /> Arduino Code
+                        <FileCode className="h-3.5 w-3.5" /> Hardware Code
                     </TabsTrigger>
                     <TabsTrigger value="kpn" className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 h-full rounded-lg text-[10px] font-black uppercase tracking-widest gap-2">
                         <Radio className="h-3.5 w-3.5" /> KPN Koppeling
@@ -586,7 +585,7 @@ void loop() {
                                         <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-red-500"/> Rood &rarr; 3V3 (VExt)</li>
                                         <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-black"/> Zwart &rarr; GND</li>
                                         <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-blue-500"/> Blauw (SDA) &rarr; SDA (Board Pinnen)</li>
-                                        <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-yellow-500"/> Geel (SCL) &rarr; SCL (Board Pinnen)</li>
+                                        <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-green-500"/> Groen (SCL) &rarr; SCL (Board Pinnen)</li>
                                     </ul>
                                 </div>
                                 <div className="space-y-3">
