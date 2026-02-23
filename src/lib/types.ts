@@ -57,6 +57,9 @@ export interface Sensor {
   devEui?: string;
   appEui?: string;
   appKey?: string;
+  iotCode?: string;
+  iotExplanation?: string;
+  iotHistory?: { role: 'user' | 'model'; content: string }[];
 }
 
 export interface Medewerker {

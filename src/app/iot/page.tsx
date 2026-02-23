@@ -32,10 +32,14 @@ import {
   ClipboardList,
   Maximize,
   Minimize,
-  X as XIcon
+  X as XIcon,
+  Sparkles,
+  MessageSquare,
+  RefreshCcw,
+  AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useFirestore, useCollection, deleteDocumentNonBlocking, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, deleteDocumentNonBlocking, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { MapboxView } from '@/components/mapbox-view';
 import { Badge } from '@/components/ui/badge';
@@ -76,6 +80,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
+import { Textarea } from '@/components/ui/textarea';
+import { generateIoTCode } from '@/ai/flows/generate-iot-code-flow';
 
 export default function IoTPage() {
   const firestore = useFirestore();
@@ -87,6 +93,10 @@ export default function IoTPage() {
   const [copiedUrl, setCopiedUrl] = React.useState(false);
   const [copiedCode, setCopiedCode] = React.useState(false);
   const [copiedDecoder, setCopiedDecoder] = React.useState(false);
+
+  // AI Code Logic
+  const [aiPrompt, setAiPrompt] = React.useState('');
+  const [isFixing, setIsFixing] = React.useState(false);
 
   const sensorsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -121,6 +131,41 @@ export default function IoTPage() {
     stateSetter(true);
     setTimeout(() => stateSetter(false), 2000);
     toast({ title: 'Gekopieerd', description: 'Inhoud naar klembord gekopieerd.' });
+  };
+
+  const handleFixWithAI = async () => {
+    if (!selectedSensor || !aiPrompt.trim() || isFixing) return;
+    setIsFixing(true);
+    try {
+      const history = selectedSensor.iotHistory || [];
+      const result = await generateIoTCode({
+        prompt: aiPrompt,
+        board: 'Heltec CubeCell HTCC-AB01 (LoRaWAN)',
+        history: history,
+        projectId: firebaseConfig.projectId,
+        apiKey: firebaseConfig.apiKey
+      });
+
+      const updatedHistory = [
+        ...history,
+        { role: 'user' as const, content: aiPrompt },
+        { role: 'model' as const, content: result.explanation }
+      ];
+
+      await updateDocumentNonBlocking(doc(firestore!, 'sensors', selectedSensor.id), {
+        iotCode: result.code,
+        iotExplanation: result.explanation,
+        iotHistory: updatedHistory.slice(-10) // Keep last 10 messages
+      });
+
+      setAiPrompt('');
+      toast({ title: "Code bijgewerkt", description: "De AI heeft de code succesvol aangepast." });
+    } catch (err) {
+      console.error("AI fix error:", err);
+      toast({ variant: 'destructive', title: "Fout bij genereren", description: "De AI kon de code niet herstellen." });
+    } finally {
+      setIsFixing(false);
+    }
   };
 
   const apiEndpoint = selectedSensor 
@@ -170,7 +215,7 @@ function decode(payload) {
   const appEuiStr = formatHexToBytes(selectedSensor?.appEui, 8);
   const appKeyStr = formatHexToBytes(selectedSensor?.appKey, 16);
 
-  const arduinoCode = selectedSensor ? `/*
+  const defaultArduinoCode = selectedSensor ? `/*
  * BEHEERHUB IOT ENGINE - Heltec CubeCell HTCC-AB01
  * Hardware: HTCC-AB01 (HTTC-001)
  * Sensor: TOF10120 (I2C)
@@ -245,7 +290,6 @@ void loop() {
     switch( deviceState ) {
         case DEVICE_STATE_INIT: 
             Serial.println("Init LoRaWAN...");
-            // GECORRIGEERD: DeviceClass eerst, daarna Region
             LoRaWAN.init(loraWanClass, loraWanRegion); 
             break;
         case DEVICE_STATE_JOIN: 
@@ -271,6 +315,8 @@ void loop() {
             break;
     }
 }` : '';
+
+  const activeArduinoCode = selectedSensor?.iotCode || defaultArduinoCode;
 
   if (isLoading) {
     return <LoadingScreen message="Internet of Things Dashboard laden..." />;
@@ -475,26 +521,90 @@ void loop() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="code" className="flex-1 m-0 p-6 bg-slate-50 dark:bg-zinc-950 overflow-y-auto data-[state=active]:flex flex-col min-h-0">
-                <div className="max-w-4xl mx-auto w-full space-y-6">
-                    <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                            <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">Arduino C++ Sketch</h3>
-                            <p className="text-sm text-slate-500 font-medium">Inclusief LoRaWAN Join-debug en batterijmeting voor HTCC-AB01.</p>
+              <TabsContent value="code" className="flex-1 m-0 bg-slate-50 dark:bg-zinc-950 overflow-hidden data-[state=active]:flex flex-col min-h-0">
+                <div className="flex-1 flex flex-col md:grid md:grid-cols-12 gap-0 overflow-hidden">
+                    <div className="md:col-span-8 flex flex-col min-h-0 p-6 overflow-hidden">
+                        <div className="flex items-center justify-between mb-4 shrink-0">
+                            <div className="space-y-1">
+                                <h3 className="text-xl font-black uppercase tracking-tight text-slate-900 flex items-center gap-2">
+                                    <FileCode className="h-5 w-5 text-primary" />
+                                    Arduino C++ Sketch
+                                </h3>
+                                <p className="text-xs text-slate-500 font-medium">Flash deze code naar uw Heltec CubeCell HTCC-AB01.</p>
+                            </div>
+                            <Button 
+                                className="h-9 px-6 font-black uppercase tracking-tight shadow-lg shadow-primary/20"
+                                onClick={() => copyToClipboard(activeArduinoCode, setCopiedCode)}
+                            >
+                                {copiedCode ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
+                                {copiedCode ? 'Gekopieerd' : 'Kopieer Code'}
+                            </Button>
                         </div>
-                        <Button 
-                            className="h-10 px-6 font-black uppercase tracking-tight"
-                            onClick={() => copyToClipboard(arduinoCode, setCopiedCode)}
-                        >
-                            {copiedCode ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
-                            {copiedCode ? 'Gekopieerd' : 'Kopieer Code'}
-                        </Button>
+
+                        <div className="flex-1 bg-slate-900 rounded-2xl p-6 shadow-2xl border-none overflow-hidden relative group">
+                            <ScrollArea className="h-full">
+                                <pre className="text-blue-400 font-mono text-[11px] leading-relaxed selection:bg-blue-500/30">
+                                    {activeArduinoCode}
+                                </pre>
+                            </ScrollArea>
+                        </div>
                     </div>
 
-                    <div className="bg-slate-900 rounded-2xl p-6 shadow-2xl border-none overflow-hidden relative group">
-                        <pre className="text-blue-400 font-mono text-[11px] thickness-thin leading-relaxed overflow-x-auto selection:bg-blue-500/30">
-                            {arduinoCode}
-                        </pre>
+                    <div className="md:col-span-4 bg-white border-l flex flex-col min-h-0">
+                        <div className="p-6 border-b bg-slate-50/50 shrink-0">
+                            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                                AI Code Assistent
+                            </h3>
+                        </div>
+                        
+                        <div className="flex-1 flex flex-col p-6 gap-6 min-h-0">
+                            <div className="space-y-3">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Foutcode of Aanpassing</Label>
+                                <Textarea 
+                                    placeholder="Plak hier uw Arduino IDE foutmelding of vraag om een wijziging..."
+                                    className="min-h-[120px] text-xs font-medium bg-slate-50 border-slate-200 focus:ring-primary/20 rounded-xl resize-none"
+                                    value={aiPrompt}
+                                    onChange={(e) => setAiPrompt(e.target.value)}
+                                />
+                                <Button 
+                                    className="w-full h-11 font-black uppercase tracking-tight gap-2 shadow-xl shadow-primary/10"
+                                    disabled={!aiPrompt.trim() || isFixing}
+                                    onClick={handleFixWithAI}
+                                >
+                                    {isFixing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
+                                    {isFixing ? 'AI Analyseert...' : 'Herstel Code met AI'}
+                                </Button>
+                            </div>
+
+                            <Separator />
+
+                            <div className="flex-1 flex flex-col min-h-0">
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2">
+                                    <History className="h-3.5 w-3.5" />
+                                    Conversatie Historie
+                                </h4>
+                                <ScrollArea className="flex-1 -mx-2 px-2">
+                                    <div className="space-y-4">
+                                        {selectedSensor.iotHistory && selectedSensor.iotHistory.length > 0 ? (
+                                            selectedSensor.iotHistory.map((msg, idx) => (
+                                                <div key={idx} className={cn(
+                                                    "p-3 rounded-2xl text-xs",
+                                                    msg.role === 'user' ? "bg-slate-100 text-slate-700 ml-4 rounded-tr-none" : "bg-blue-50 text-blue-700 mr-4 rounded-tl-none border border-blue-100"
+                                                )}>
+                                                    <p className="font-medium leading-relaxed">{msg.content}</p>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="py-12 text-center text-slate-300">
+                                                <MessageSquare className="h-10 w-10 mx-auto mb-2 opacity-10" />
+                                                <p className="text-[10px] font-black uppercase tracking-widest">Nog geen historie</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </ScrollArea>
+                            </div>
+                        </div>
                     </div>
                 </div>
               </TabsContent>
