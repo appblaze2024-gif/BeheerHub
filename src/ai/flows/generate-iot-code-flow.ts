@@ -20,7 +20,7 @@ const GenerateIoTCodeInputSchema = z.object({
   history: z.array(MessageSchema).optional().describe('Gesprekshistorie.'),
   projectId: z.string().describe('Firebase Project ID.'),
   apiKey: z.string().describe('Firebase API Key.'),
-  devEui: z.string().describe('De Device EUI in hex format.'),
+  devEui: z.string().describe('De Device EUI in hex format (0x00, 0x01...).'),
   appEui: z.string().describe('De App EUI in hex format.'),
   appKey: z.string().describe('De App Key in hex format.'),
   binDepthCm: z.number().optional().describe('De diepte van de prullenbak in cm.'),
@@ -43,7 +43,7 @@ Sensor: TOF10120 (Blauw op SDA, Groen op SCL).
 
 STRIKTE REGELS VOOR CODE GENERATIE (v1.4.0):
 1. Gebruik ALTIJD "LoRaWan_APP.h" en <Wire.h>.
-2. Gebruik EXACT deze volgorde: LoRaWAN.init(loraWanClass, loraWanRegion).
+2. Gebruik EXACT deze volgorde: LoRaWAN.init(loraWanClass, loraWanRegion); (Eerst Class, dan Region).
 3. Gebruik de volgende KPN credentials DIRECT in de arrays:
    - uint8_t devEui[] = { {{{devEui}}} };
    - uint8_t appEui[] = { {{{appEui}}} };
@@ -51,16 +51,17 @@ STRIKTE REGELS VOOR CODE GENERATIE (v1.4.0):
 4. Definieer ALTIJD deze globale variabelen (verplicht in v1.4.0):
    - uint32_t appTxDutyCycle = 15000;
    - bool overTheAirActivation = true;
+   - LoRaMacRegion_t loraWanRegion = ACTIVE_REGION;
+   - DeviceClass_t loraWanClass = CLASS_A;
    - bool loraWanAdr = true;
    - bool keepNet = false;
    - bool isTxConfirmed = true;
    - uint8_t appPort = 2;
    - uint8_t confirmedNbTrials = 4;
-5. Implementeer de TOF10120 uitlezing:
-   - Wire.beginTransmission(0x52); Wire.write(0x00); Wire.endTransmission();
-   - delay(30); Wire.requestFrom(0x52, 2);
-6. De code moet EXTREEM COMPACT zijn maar wel met enters en inspringingen.
-7. Genereer een VOLLEDIGE sketch die direct ge-copy-pasted kan worden.
+5. Implementeer de TOF10120 uitlezing in een aparte functie readTOF().
+6. De loop() MOET het switch(deviceState) patroon gebruiken van de officiële v1.4.0 voorbeelden.
+7. Gebruik NOOIT BoardGetUniqueId voor de devEui, gebruik de hardcoded array.
+8. Genereer een VOLLEDIGE sketch met witregels en inspringingen die direct ge-copy-pasted kan worden.
 
 HISTORIE:
 {{#each history}}

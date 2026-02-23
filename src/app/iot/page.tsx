@@ -221,7 +221,12 @@ uint16_t readTOF() {
   Wire.endTransmission();
   delay(30);
   Wire.requestFrom(0x52, 2);
-  return Wire.available() >= 2 ? (Wire.read() << 8) | Wire.read() : 0;
+  if (Wire.available() >= 2) {
+    uint8_t h = Wire.read();
+    uint8_t l = Wire.read();
+    return (h << 8) | l;
+  }
+  return 0;
 }
 
 void prepareTxFrame(uint8_t port) {
