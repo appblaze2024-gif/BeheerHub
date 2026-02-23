@@ -154,15 +154,17 @@ export default function IoTPage() {
     setIsFixing(true);
     try {
       const history = selectedSensor.iotHistory || [];
+      const devEuiHex = formatHex(selectedSensor.devEui || selectedSensor.id, 8);
+      const appEuiHex = formatHex(selectedSensor.appEui || '0000000000000000', 8);
+      const appKeyHex = formatHex(selectedSensor.appKey || '00000000000000000000000000000000', 16);
+
       const result = await generateIoTCode({
         prompt: aiPrompt,
-        board: 'Heltec CubeCell HTCC-AB01',
+        currentCode: selectedSensor.iotCode || getDefaultCode(devEuiHex, appEuiHex, appKeyHex, selectedSensor.binDepthCm || 100),
         history: history,
-        projectId: firebaseConfig.projectId,
-        apiKey: firebaseConfig.apiKey,
-        devEui: formatHex(selectedSensor.devEui || selectedSensor.id, 8),
-        appEui: formatHex(selectedSensor.appEui || '0000000000000000', 8),
-        appKey: formatHex(selectedSensor.appKey || '00000000000000000000000000000000', 16),
+        devEui: devEuiHex,
+        appEui: appEuiHex,
+        appKey: appKeyHex,
         binDepthCm: selectedSensor.binDepthCm || 100
       });
 
@@ -179,9 +181,9 @@ export default function IoTPage() {
       });
 
       setAiPrompt('');
-      toast({ title: "Nieuwe code gegenereerd door AI" });
+      toast({ title: "Code hersteld door AI" });
     } catch (err) {
-      toast({ variant: 'destructive', title: "Fout bij genereren", description: "Probeer het later nog eens." });
+      toast({ variant: 'destructive', title: "Fout bij herstellen", description: "Probeer het later nog eens." });
     } finally {
       setIsFixing(false);
     }
@@ -206,11 +208,8 @@ export default function IoTPage() {
     };
 }`;
 
-  const devEui = formatHex(selectedSensor?.devEui || selectedSensor?.id, 8);
-  const appEui = formatHex(selectedSensor?.appEui, 8);
-  const appKey = formatHex(selectedSensor?.appKey, 16);
-
-  const defaultCode = selectedSensor ? `#include "LoRaWan_APP.h"
+  const getDefaultCode = (devEui: string, appEui: string, appKey: string, depth: number) => {
+    return `#include "LoRaWan_APP.h"
 #include <Wire.h>
 
 /* KPN LoRaWAN Credentials */
@@ -218,14 +217,13 @@ uint8_t devEui[] = { ${devEui} };
 uint8_t appEui[] = { ${appEui} };
 uint8_t appKey[] = { ${appKey} };
 
-/* Verplichte v1.4.0 Framework Variabelen */
+/* v1.4.0 Framework Variabelen */
 uint16_t userChannelsMask[6] = { 0x00FF, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 };
 uint32_t appTxDutyCycle = 15000;
 bool overTheAirActivation = true;
 LoRaMacRegion_t loraWanRegion = ACTIVE_REGION;
 DeviceClass_t loraWanClass = CLASS_A;
 bool loraWanAdr = true;
-bool keepNet = false;
 bool isTxConfirmed = true;
 uint8_t appPort = 2;
 uint8_t confirmedNbTrials = 4;
@@ -246,17 +244,14 @@ uint16_t readTOF() {
 }
 
 void prepareTxFrame(uint8_t port) {
-  uint16_t d = readTOF() / 10; // Afstand in cm
-  int v = map(d, 0, ${selectedSensor.binDepthCm || 100}, 100, 0);
+  uint16_t d = readTOF() / 10;
+  int v = map(d, 0, ${depth}, 100, 0);
   v = constrain(v, 0, 100);
   uint16_t b = getBatteryVoltage();
-  
   appDataSize = 5;
-  appData[0] = (uint8_t)(d >> 8); 
-  appData[1] = (uint8_t)d; 
+  appData[0] = (uint8_t)(d >> 8); appData[1] = (uint8_t)d; 
   appData[2] = (uint8_t)v;
-  appData[3] = (uint8_t)(b >> 8); 
-  appData[4] = (uint8_t)b;
+  appData[3] = (uint8_t)(b >> 8); appData[4] = (uint8_t)b;
 }
 
 void setup() {
@@ -264,35 +259,24 @@ void setup() {
   Serial.begin(115200);
   Wire.begin();
   LoRaWAN.init(loraWanClass, loraWanRegion);
-  Serial.println("CubeCell v1.4.0 Framework Ready.");
 }
 
 void loop() {
   switch(deviceState) {
-    case DEVICE_STATE_INIT:
-      LoRaWAN.init(loraWanClass, loraWanRegion);
-      break;
-    case DEVICE_STATE_JOIN:
-      LoRaWAN.join();
-      break;
-    case DEVICE_STATE_SEND:
-      prepareTxFrame(appPort);
-      LoRaWAN.send();
-      deviceState = DEVICE_STATE_CYCLE;
-      break;
-    case DEVICE_STATE_CYCLE:
-      txDutyCycleTime = appTxDutyCycle + randr(0, 1000);
-      LoRaWAN.cycle(txDutyCycleTime);
-      deviceState = DEVICE_STATE_SLEEP;
-      break;
-    case DEVICE_STATE_SLEEP:
-      LoRaWAN.sleep();
-      break;
-    default:
-      deviceState = DEVICE_STATE_INIT;
-      break;
+    case DEVICE_STATE_INIT: LoRaWAN.init(loraWanClass, loraWanRegion); break;
+    case DEVICE_STATE_JOIN: LoRaWAN.join(); break;
+    case DEVICE_STATE_SEND: prepareTxFrame(appPort); LoRaWAN.send(); deviceState = DEVICE_STATE_CYCLE; break;
+    case DEVICE_STATE_CYCLE: txDutyCycleTime = appTxDutyCycle + randr(0, 1000); LoRaWAN.cycle(txDutyCycleTime); deviceState = DEVICE_STATE_SLEEP; break;
+    case DEVICE_STATE_SLEEP: LoRaWAN.sleep(); break;
+    default: deviceState = DEVICE_STATE_INIT; break;
   }
-}` : '';
+}`;
+  };
+
+  const devEui = formatHex(selectedSensor?.devEui || selectedSensor?.id, 8);
+  const appEui = formatHex(selectedSensor?.appEui, 8);
+  const appKey = formatHex(selectedSensor?.appKey, 16);
+  const defaultCode = selectedSensor ? getDefaultCode(devEui, appEui, appKey, selectedSensor.binDepthCm || 100) : '';
 
   if (isLoading) return <LoadingScreen />;
 
@@ -415,13 +399,13 @@ void loop() {
                 </div>
                 <div className="lg:col-span-4 bg-white border-l flex flex-col overflow-hidden">
                   <div className="p-4 border-b bg-slate-50/50">
-                    <h3 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2"><Sparkles className="h-3.5 w-3.5 text-primary" /> AI Fout-Hersteller</h3>
+                    <h3 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2"><Sparkles className="h-3.5 w-3.5 text-primary" /> AI Code Assistent</h3>
                   </div>
                   <div className="flex-1 flex flex-col p-6 gap-6 overflow-hidden">
                     <div className="space-y-3">
-                      <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Arduino IDE Foutcode</Label>
+                      <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Arduino Foutcode of Vraag</Label>
                       <Textarea 
-                        placeholder="Plak hier uw foutmelding of vraag om een aanpassing..." 
+                        placeholder="Plak hier uw foutmelding..." 
                         className="min-h-[150px] text-xs font-medium rounded-xl bg-slate-50 border-slate-200 focus:ring-primary/20 resize-none" 
                         value={aiPrompt} 
                         onChange={e => setAiPrompt(e.target.value)} 
