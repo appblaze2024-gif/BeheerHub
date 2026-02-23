@@ -2,12 +2,8 @@
 
 /**
  * @fileOverview Geoptimaliseerde AI flow voor IoT-code generatie.
- * Specifiek getraind op Heltec CubeCell HTCC-AB01 en de TOF10120 laser sensor.
- * Gebruikt CubeCell Board Library v1.4.0.
- *
- * - generateIoTCode - De hoofdfunctie voor het genereren van gecorrigeerde code.
- * - GenerateIoTCodeInput - Input type definitie.
- * - GenerateIoTCodeOutput - Output type definitie.
+ * Specifiek getraind op Heltec CubeCell HTCC-AB01 (Library v1.4.0) en de TOF10120 laser sensor.
+ * Verwerkt direct KPN LoRaWAN sleutels in de code.
  */
 
 import { ai } from '@/ai/genkit';
@@ -24,11 +20,15 @@ const GenerateIoTCodeInputSchema = z.object({
   history: z.array(MessageSchema).optional().describe('Gesprekshistorie.'),
   projectId: z.string().describe('Firebase Project ID.'),
   apiKey: z.string().describe('Firebase API Key.'),
+  devEui: z.string().describe('De Device EUI in hex format.'),
+  appEui: z.string().describe('De App EUI in hex format.'),
+  appKey: z.string().describe('De App Key in hex format.'),
+  binDepthCm: z.number().optional().describe('De diepte van de prullenbak in cm.'),
 });
 export type GenerateIoTCodeInput = z.infer<typeof GenerateIoTCodeInputSchema>;
 
 const GenerateIoTCodeOutputSchema = z.object({
-  code: z.string().describe('De gecorrigeerde C++ code.'),
+  code: z.string().describe('De volledige, gecorrigeerde C++ code.'),
   explanation: z.string().describe('Korte uitleg van de fix.'),
 });
 export type GenerateIoTCodeOutput = z.infer<typeof GenerateIoTCodeOutputSchema>;
@@ -38,20 +38,22 @@ const prompt = ai.definePrompt({
   input: { schema: GenerateIoTCodeInputSchema },
   output: { schema: GenerateIoTCodeOutputSchema },
   prompt: `Je bent een expert in LoRaWAN ontwikkeling voor de Heltec CubeCell HTCC-AB01 met Board Library v1.4.0.
-Hardware: CubeCell HTCC-AB01 (HTTC-001).
-Sensor: TOF10120 (I2C adres 0x52, Blauwe draad op SDA, Groene draad op SCL).
+Hardware: CubeCell HTCC-AB01.
+Sensor: TOF10120 (Blauw op SDA, Groen op SCL).
 
 STRIKTE REGELS VOOR CODE GENERATIE (v1.4.0):
 1. Gebruik ALTIJD "LoRaWan_APP.h" en <Wire.h>.
-2. Gebruik ALTIJD LoRaWAN.init(loraWanClass, loraWanRegion). (Belangrijk: De bibliotheek v1.4.0 vereist deze specifieke volgorde!).
-3. DevEUI is het unieke Chip ID (8 bytes).
-4. Implementeer een compacte readTOF10120() functie:
+2. Gebruik ALTIJD exact deze volgorde: LoRaWAN.init(loraWanClass, loraWanRegion).
+3. Gebruik de volgende KPN credentials DIRECT in de arrays:
+   - uint8_t devEui[] = { {{{devEui}}} };
+   - uint8_t appEui[] = { {{{appEui}}} };
+   - uint8_t appKey[] = { {{{appKey}}} };
+4. Implementeer de TOF10120 uitlezing:
    - Wire.beginTransmission(0x52); Wire.write(0x00); Wire.endTransmission();
-   - Wacht 30ms; Wire.requestFrom(0x52, 2);
-5. Zorg dat de code EXTREEM COMPACT is. Verwijder alle uitgebreide comments en onnodige witregels.
-6. Gebruik de volgende credentials als placeholders:
-   - Project ID: {{{projectId}}}
-   - API Key: {{{apiKey}}}
+   - delay(30); Wire.requestFrom(0x52, 2);
+5. Gebruik de bakdiepte van {{{binDepthCm}}} cm voor de percentageberekening.
+6. De code moet EXTREEM COMPACT zijn. Geen lange comments.
+7. Genereer een VOLLEDIGE nieuwe sketch die direct ge-copy-pasted kan worden.
 
 HISTORIE:
 {{#each history}}
@@ -61,7 +63,7 @@ HISTORIE:
 VRAAG/FOUT:
 "{{{prompt}}}"
 
-Antwoord in JSON met 'code' (volledige compacte sketch) en 'explanation' (max 2 zinnen).`,
+Antwoord in JSON met 'code' (volledige sketch) en 'explanation' (max 2 zinnen).`,
 });
 
 export const generateIoTCodeFlow = ai.defineFlow(
@@ -78,7 +80,7 @@ export const generateIoTCodeFlow = ai.defineFlow(
 );
 
 /**
- * Genereert gecorrigeerde IoT code op basis van een foutmelding of instructie.
+ * Wrapper functie voor de IoT code generatie flow.
  */
 export async function generateIoTCode(input: GenerateIoTCodeInput): Promise<GenerateIoTCodeOutput> {
   return generateIoTCodeFlow(input);
