@@ -37,7 +37,8 @@ import {
   MessageSquare,
   RefreshCcw,
   AlertTriangle,
-  History
+  History,
+  RotateCcw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -133,6 +134,19 @@ export default function IoTPage() {
     stateSetter(true);
     setTimeout(() => stateSetter(false), 2000);
     toast({ title: 'Gekopieerd naar klembord' });
+  };
+
+  const handleResetCode = async () => {
+    if (!selectedSensor || !firestore) return;
+    try {
+      await updateDocumentNonBlocking(doc(firestore, 'sensors', selectedSensor.id), {
+        iotCode: null,
+        iotExplanation: null
+      });
+      toast({ title: 'Standaard code hersteld' });
+    } catch (err) {
+      toast({ variant: 'destructive', title: 'Fout bij herstellen code' });
+    }
   };
 
   const handleFixWithAI = async () => {
@@ -376,14 +390,24 @@ void loop() {
                 <div className="lg:col-span-8 flex flex-col p-6 overflow-hidden">
                   <div className="flex justify-between items-center mb-4 shrink-0">
                     <h3 className="font-black uppercase tracking-tight flex items-center gap-2"><FileCode className="h-5 w-5 text-primary" /> Arduino IDE Sketch</h3>
-                    <Button onClick={() => copyToClipboard(selectedSensor.iotCode || defaultCode, setCopiedCode)} className="h-8 px-4 text-[10px] font-black uppercase shadow-lg bg-primary hover:bg-primary/90">
-                      {copiedCode ? <Check className="h-3.5 w-3.5 mr-2" /> : <Copy className="h-3.5 w-3.5 mr-2" />}
-                      Kopieer Code
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant="outline"
+                        onClick={handleResetCode}
+                        className="h-8 px-3 text-[10px] font-black uppercase border-slate-200 hover:bg-slate-100 bg-white"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5 mr-2" />
+                        Herstellen
+                      </Button>
+                      <Button onClick={() => copyToClipboard(selectedSensor.iotCode || defaultCode, setCopiedCode)} className="h-8 px-4 text-[10px] font-black uppercase shadow-lg bg-primary hover:bg-primary/90">
+                        {copiedCode ? <Check className="h-3.5 w-3.5 mr-2" /> : <Copy className="h-3.5 w-3.5 mr-2" />}
+                        Kopieer Code
+                      </Button>
+                    </div>
                   </div>
                   <div className="flex-1 bg-slate-900 rounded-2xl shadow-2xl overflow-hidden relative border-[6px] border-slate-800">
                     <div className="h-full overflow-auto p-6 custom-scrollbar">
-                      <pre className="text-blue-400 font-mono text-[11px] leading-relaxed whitespace-pre font-bold">
+                      <pre className="text-blue-400 font-mono text-[11px] leading-relaxed whitespace-pre font-bold overflow-x-auto">
                         {selectedSensor.iotCode || defaultCode}
                       </pre>
                     </div>
@@ -496,13 +520,15 @@ void loop() {
                     <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">Class: <span className="text-primary">Class A</span></div>
                     <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">Baudrate: <span className="text-primary">115200</span></div>
                   </div>
-                  <Alert className="bg-blue-50 border-blue-100 rounded-2xl">
-                    <Info className="h-4 w-4 text-blue-600" />
-                    <AlertTitle className="text-[10px] font-black uppercase text-blue-700">De Join-Cyclus</AlertTitle>
-                    <AlertDescription className="text-xs font-medium text-blue-600">
-                      Na het flashen probeert de unit te 'joinen'. Dit kan enkele minuten duren. Gebruik de Seriële Monitor om de voortgang te zien.
-                    </AlertDescription>
-                  </Alert>
+                  <div className="bg-blue-50 p-4 border border-blue-100 rounded-2xl flex gap-3">
+                    <Info className="h-4 w-4 text-blue-600 shrink-0" />
+                    <div>
+                      <p className="text-[10px] font-black uppercase text-blue-700">De Join-Cyclus</p>
+                      <p className="text-xs font-medium text-blue-600">
+                        Na het flashen probeert de unit te 'joinen'. Dit kan enkele minuten duren. Gebruik de Seriële Monitor om de voortgang te zien.
+                      </p>
+                    </div>
+                  </div>
                 </Card>
               </div>
 
