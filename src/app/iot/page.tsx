@@ -36,9 +36,11 @@ import {
   Sparkles,
   MessageSquare,
   RefreshCcw,
-  AlertTriangle
+  AlertTriangle,
+  History
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { useFirestore, useCollection, deleteDocumentNonBlocking, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { MapboxView } from '@/components/mapbox-view';
