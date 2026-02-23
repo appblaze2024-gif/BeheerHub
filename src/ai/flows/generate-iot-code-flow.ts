@@ -43,18 +43,24 @@ Sensor: TOF10120 (Blauw op SDA, Groen op SCL).
 
 STRIKTE REGELS VOOR CODE GENERATIE (v1.4.0):
 1. Gebruik ALTIJD "LoRaWan_APP.h" en <Wire.h>.
-2. Gebruik ALTIJD exact deze volgorde: LoRaWAN.init(loraWanClass, loraWanRegion).
-3. Gebruik de volgende KPN credentials DIRECT in de arrays (geen BoardGetUniqueId gebruiken):
+2. Gebruik EXACT deze volgorde: LoRaWAN.init(loraWanClass, loraWanRegion).
+3. Gebruik de volgende KPN credentials DIRECT in de arrays:
    - uint8_t devEui[] = { {{{devEui}}} };
    - uint8_t appEui[] = { {{{appEui}}} };
    - uint8_t appKey[] = { {{{appKey}}} };
-4. Implementeer de TOF10120 uitlezing:
+4. Definieer ALTIJD deze globale variabelen (verplicht in v1.4.0):
+   - uint32_t appTxDutyCycle = 15000;
+   - bool overTheAirActivation = true;
+   - bool loraWanAdr = true;
+   - bool keepNet = false;
+   - bool isTxConfirmed = true;
+   - uint8_t appPort = 2;
+   - uint8_t confirmedNbTrials = 4;
+5. Implementeer de TOF10120 uitlezing:
    - Wire.beginTransmission(0x52); Wire.write(0x00); Wire.endTransmission();
    - delay(30); Wire.requestFrom(0x52, 2);
-5. Gebruik de bakdiepte van {{{binDepthCm}}} cm voor de percentageberekening.
-6. De code moet EXTREEM COMPACT zijn. Geen lange comments.
-7. Gebruik ALTIJD standaard C++ opmaak met NIEUWE REGELS (enters) na elke instructie en puntkomma. 
-8. Genereer een VOLLEDIGE nieuwe sketch die direct ge-copy-pasted kan worden.
+6. De code moet EXTREEM COMPACT zijn maar wel met enters en inspringingen.
+7. Genereer een VOLLEDIGE sketch die direct ge-copy-pasted kan worden.
 
 HISTORIE:
 {{#each history}}
@@ -64,7 +70,7 @@ HISTORIE:
 VRAAG/FOUT:
 "{{{prompt}}}"
 
-Antwoord in JSON met 'code' (volledige sketch metenters) en 'explanation' (max 2 zinnen).`,
+Antwoord in JSON met 'code' (volledige sketch) en 'explanation' (max 2 zinnen).`,
 });
 
 export const generateIoTCodeFlow = ai.defineFlow(

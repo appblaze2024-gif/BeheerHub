@@ -114,7 +114,8 @@ export default function IoTPage() {
 
   const formatHex = (hex: string | undefined, len: number) => {
     if (!hex) return Array(len).fill('0x00').join(', ');
-    const m = hex.replace(/[^0-9A-F]/gi, '').match(/.{1,2}/g);
+    const cleanHex = hex.replace(/[^0-9A-F]/gi, '');
+    const m = cleanHex.match(/.{1,2}/g);
     const bytes = (m || []).map(x => `0x${x.padStart(2, '0').toUpperCase()}`);
     while (bytes.length < len) bytes.push('0x00');
     return bytes.slice(0, len).join(', ');
@@ -198,14 +199,21 @@ export default function IoTPage() {
   const defaultCode = selectedSensor ? `#include "LoRaWan_APP.h"
 #include <Wire.h>
 
-/* KPN LoRaWAN Keys */
+/* KPN LoRaWAN Credentials */
 uint8_t devEui[] = { ${devEui} };
 uint8_t appEui[] = { ${appEui} };
 uint8_t appKey[] = { ${appKey} };
 
-uint32_t appTxDutyCycle = 43200000;
+/* Mandatory CubeCell v1.4.0 Variables */
+uint32_t appTxDutyCycle = 15000;
+bool overTheAirActivation = true;
 LoRaMacRegion_t loraWanRegion = ACTIVE_REGION;
 DeviceClass_t loraWanClass = CLASS_A;
+bool loraWanAdr = true;
+bool keepNet = false;
+bool isTxConfirmed = true;
+uint8_t appPort = 2;
+uint8_t confirmedNbTrials = 4;
 
 uint16_t readTOF() {
   Wire.beginTransmission(0x52);
@@ -234,27 +242,27 @@ void setup() {
 
 void loop() {
   switch(deviceState) {
-    case DEVICE_STATE_INIT: 
-      LoRaWAN.init(loraWanClass, loraWanRegion); 
+    case DEVICE_STATE_INIT:
+      LoRaWAN.init(loraWanClass, loraWanRegion);
       break;
-    case DEVICE_STATE_JOIN: 
-      LoRaWAN.join(); 
+    case DEVICE_STATE_JOIN:
+      LoRaWAN.join();
       break;
-    case DEVICE_STATE_SEND: 
-      prepareTxFrame(2); 
-      LoRaWAN.send(); 
-      deviceState = DEVICE_STATE_CYCLE; 
+    case DEVICE_STATE_SEND:
+      prepareTxFrame(appPort);
+      LoRaWAN.send();
+      deviceState = DEVICE_STATE_CYCLE;
       break;
-    case DEVICE_STATE_CYCLE: 
-      txDutyCycleTime = appTxDutyCycle + randr(0, 1000); 
-      LoRaWAN.cycle(txDutyCycleTime); 
-      deviceState = DEVICE_STATE_SLEEP; 
+    case DEVICE_STATE_CYCLE:
+      txDutyCycleTime = appTxDutyCycle + randr(0, 1000);
+      LoRaWAN.cycle(txDutyCycleTime);
+      deviceState = DEVICE_STATE_SLEEP;
       break;
-    case DEVICE_STATE_SLEEP: 
-      LoRaWAN.sleep(); 
+    case DEVICE_STATE_SLEEP:
+      LoRaWAN.sleep();
       break;
-    default: 
-      deviceState = DEVICE_STATE_INIT; 
+    default:
+      deviceState = DEVICE_STATE_INIT;
       break;
   }
 }` : '';
@@ -324,12 +332,14 @@ void loop() {
               </div>
 
               <TabsContent value="map" className="flex-1 m-0 relative overflow-hidden">
-                <MapboxView 
-                  objects={sensors?.map(s => ({ ...s }))} 
-                  highlightedObject={selectedSensor}
-                />
-                <div className="absolute top-4 right-4 w-56 space-y-2">
-                  <Card className="bg-white/95 backdrop-blur shadow-2xl border-none rounded-2xl overflow-hidden">
+                <div className="absolute inset-0">
+                  <MapboxView 
+                    objects={sensors?.map(s => ({ ...s }))} 
+                    highlightedObject={selectedSensor}
+                  />
+                </div>
+                <div className="absolute top-4 right-4 w-56 space-y-2 pointer-events-none">
+                  <Card className="bg-white/95 backdrop-blur shadow-2xl border-none rounded-2xl overflow-hidden pointer-events-auto">
                     <div className="bg-slate-900 px-4 py-2 flex items-center justify-between text-white text-[9px] font-black uppercase">
                       <span>Status</span>
                       <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
@@ -352,7 +362,7 @@ void loop() {
               <TabsContent value="code" className="flex-1 m-0 flex flex-col lg:grid lg:grid-cols-12 overflow-hidden">
                 <div className="lg:col-span-8 flex flex-col p-6 overflow-hidden bg-slate-100/50">
                   <div className="flex justify-between items-center mb-4 shrink-0">
-                    <h3 className="font-black uppercase tracking-tight flex items-center gap-2"><FileCode className="h-5 w-5 text-primary" /> Arduino Sketch</h3>
+                    <h3 className="font-black uppercase tracking-tight flex items-center gap-2"><FileCode className="h-5 w-5 text-primary" /> Arduino Sketch (v1.4.0)</h3>
                     <Button onClick={() => copyToClipboard(selectedSensor.iotCode || defaultCode, setCopiedCode)} className="h-8 px-4 text-[10px] font-black uppercase shadow-sm">
                       {copiedCode ? <Check className="h-3 w-3 mr-2" /> : <Copy className="h-3 w-3 mr-2" />}
                       Kopieer Code
