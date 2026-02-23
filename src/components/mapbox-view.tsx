@@ -50,12 +50,14 @@ const polygonOutlineLayer: LineLayer = {
 };
 
 const getHeatmapColor = (vulgraad: number | undefined): string => {
-    if (vulgraad === undefined || vulgraad === null || vulgraad <= 0) {
-      return 'hsl(221, 83%, 53%)'; // Default to blue if no vulgraad
+    if (vulgraad === undefined || vulgraad === null) {
+      return 'hsl(221, 83%, 53%)'; // Blauw als er geen data is
     }
-    // Hue: 120 is green (0%), 0 is red (100%).
-    const hue = 120 * (1 - vulgraad / 100);
-    return `hsl(${hue}, 80%, 50%)`;
+    
+    if (vulgraad < 25) return '#22c55e'; // Groen (0% - 24%)
+    if (vulgraad < 50) return '#eab308'; // Geel (25% - 49%)
+    if (vulgraad < 75) return '#f97316'; // Oranje (50% - 74%)
+    return '#ef4444'; // Rood (75% - 100%)
 };
 
 export function MapboxView({ longitude, latitude, objects, selectedObjects = [], onObjectSelect, wijkPolygons = [], showHeatmap = true, interactive = true, highlightedObject = null }: MapboxViewProps) {

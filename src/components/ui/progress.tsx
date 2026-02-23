@@ -18,9 +18,10 @@ const Progress = React.forwardRef<
   let backgroundColor;
 
   if (variant === 'gauge') {
-    // Hue: 120 is green (0%), 0 is red (100%).
-    const hue = 120 * (1 - colorValue / 100);
-    backgroundColor = `hsl(${hue}, 80%, 50%)`;
+    if (colorValue < 25) backgroundColor = '#22c55e'; // Green
+    else if (colorValue < 50) backgroundColor = '#eab308'; // Yellow
+    else if (colorValue < 75) backgroundColor = '#f97316'; // Orange
+    else backgroundColor = '#ef4444'; // Red
   } else {
     // Default to a green theme color for loading/default progress
     backgroundColor = 'hsl(var(--chart-2))';
