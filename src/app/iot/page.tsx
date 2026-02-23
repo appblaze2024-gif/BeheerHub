@@ -31,7 +31,8 @@ import {
   ChevronRight,
   ClipboardList,
   Maximize,
-  Minimize
+  Minimize,
+  X as XIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFirestore, useCollection, deleteDocumentNonBlocking, useMemoFirebase } from '@/firebase';
@@ -123,7 +124,7 @@ export default function IoTPage() {
   };
 
   const apiEndpoint = selectedSensor 
-    ? `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/sensors/${selectedSensor.id}?key=${firebaseConfig.apiKey}&updateMask.fieldPaths=vulgraad&updateMask.fieldPaths=currentDistanceCm&updateMask.fieldPaths=batteryLevel`
+    ? `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/sensors/${selectedSensor.id}?key=${firebaseConfig.apiKey}&updateMask.fieldPaths=vulgraad&updateMask.fieldPaths=currentDistanceCm&updateMask.fieldPaths=batteryLevel&updateMask.fieldPaths=lastSeen`
     : '';
 
   const decoderCode = `/**
@@ -148,10 +149,26 @@ function decode(payload) {
         "fields": {
             "currentDistanceCm": { "integerValue": distance },
             "vulgraad": { "integerValue": vulgraad },
-            "batteryLevel": { "integerValue": Math.round(batteryPct) }
+            "batteryLevel": { "integerValue": Math.round(batteryPct) },
+            "lastSeen": { "stringValue": new Date().toISOString() }
         }
     };
 }`;
+
+  // Helper to format hex strings into Arduino byte arrays
+  const formatHexToBytes = (hex: string | undefined, length: number) => {
+    if (!hex) return Array(length).fill('0x00').join(', ');
+    const cleanHex = hex.replace(/[^0-9A-Fa-f]/g, '');
+    const matches = cleanHex.match(/.{1,2}/g);
+    if (!matches) return Array(length).fill('0x00').join(', ');
+    const bytes = matches.map(x => `0x${x.padStart(2, '0').toUpperCase()}`);
+    while (bytes.length < length) bytes.push('0x00');
+    return bytes.slice(0, length).join(', ');
+  };
+
+  const devEuiStr = formatHexToBytes(selectedSensor?.devEui || selectedSensor?.id, 8);
+  const appEuiStr = formatHexToBytes(selectedSensor?.appEui, 8);
+  const appKeyStr = formatHexToBytes(selectedSensor?.appKey, 16);
 
   const arduinoCode = selectedSensor ? `/*
  * BEHEERHUB IOT ENGINE - Heltec CubeCell HTCC-AB01
@@ -168,9 +185,10 @@ function decode(payload) {
 #define TOF10120_ADDR 0x52
 
 /* --- LoraWAN Keys --- */
-uint8_t devEui[] = { ${selectedSensor.devEui ? selectedSensor.devEui.match(/.{1,2}/g)?.map(x => `0x${x}`).join(', ') : '0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00'} };
-uint8_t appEui[] = { ${selectedSensor.appEui ? selectedSensor.appEui.match(/.{1,2}/g)?.map(x => `0x${x}`).join(', ') : '0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00'} };
-uint8_t appKey[] = { ${selectedSensor.appKey ? selectedSensor.appKey.match(/.{1,2}/g)?.map(x => `0x${x}`).join(', ') : '0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00'} };
+/* DevEUI is het unieke Chip ID van dit board */
+uint8_t devEui[] = { ${devEuiStr} };
+uint8_t appEui[] = { ${appEuiStr} };
+uint8_t appKey[] = { ${appKeyStr} };
 
 /* Region: EU868 */
 LoRaMacRegion_t loraWanRegion = ACTIVE_REGION;
@@ -590,13 +608,13 @@ void loop() {
       <AddSensorDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} />
 
       <Dialog open={isStepsDialogOpen} onOpenChange={setIsStepsDialogOpen}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden flex flex-col p-0">
-            <DialogHeader className="p-6 border-b bg-slate-50">
+        <DialogContent className="sm:max-w-3xl h-[90vh] flex flex-col p-0 overflow-hidden">
+            <DialogHeader className="p-6 border-b bg-slate-50 shrink-0">
                 <DialogTitle className="text-xl font-black uppercase tracking-tight">Technisch Stappenplan: CubeCell + TOF10120</DialogTitle>
                 <DialogDescription className="font-bold text-slate-500">Volg deze stappen voor een correcte installatie en verbinding.</DialogDescription>
             </DialogHeader>
-            <ScrollArea className="flex-1 p-6">
-                <div className="space-y-10 pb-8">
+            <ScrollArea className="flex-1">
+                <div className="p-6 space-y-10 pb-12">
                     <div className="space-y-4">
                         <div className="flex items-center gap-3">
                             <Badge className="bg-primary h-8 w-8 rounded-full flex items-center justify-center p-0 text-lg font-black">1</Badge>
@@ -681,7 +699,7 @@ void loop() {
                     </div>
                 </div>
             </ScrollArea>
-            <DialogFooter className="p-6 border-t bg-slate-50">
+            <DialogFooter className="p-6 border-t bg-slate-50 shrink-0">
                 <Button onClick={() => setIsStepsDialogOpen(false)} className="w-full sm:w-auto font-black uppercase tracking-tight px-12">Ik begrijp het</Button>
             </DialogFooter>
         </DialogContent>
