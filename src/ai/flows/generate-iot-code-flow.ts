@@ -49,6 +49,7 @@ STRIKTE REGELS VOOR CODE GENERATIE (v1.4.0 Framework):
    - uint8_t appEui[] = { {{{appEui}}} };
    - uint8_t appKey[] = { {{{appKey}}} };
 4. Definieer ALTIJD deze globale variabelen (verplicht in v1.4.0 framework):
+   - uint16_t userChannelsMask[6] = { 0x00FF, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 };
    - uint32_t appTxDutyCycle = 15000;
    - bool overTheAirActivation = true;
    - LoRaMacRegion_t loraWanRegion = ACTIVE_REGION;

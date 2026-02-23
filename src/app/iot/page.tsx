@@ -205,6 +205,7 @@ uint8_t appEui[] = { ${appEui} };
 uint8_t appKey[] = { ${appKey} };
 
 /* Mandatory CubeCell v1.4.0 Variables */
+uint16_t userChannelsMask[6] = { 0x00FF, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 };
 uint32_t appTxDutyCycle = 15000;
 bool overTheAirActivation = true;
 LoRaMacRegion_t loraWanRegion = ACTIVE_REGION;
@@ -230,12 +231,16 @@ uint16_t readTOF() {
 }
 
 void prepareTxFrame(uint8_t port) {
-  uint16_t d = readTOF() / 10;
+  uint16_t d = readTOF() / 10; // Distance in cm
   int v = map(d, 0, ${selectedSensor.binDepthCm || 100}, 100, 0);
   uint16_t b = getBatteryVoltage();
+  
   appDataSize = 5;
-  appData[0] = d >> 8; appData[1] = d; appData[2] = constrain(v, 0, 100);
-  appData[3] = b >> 8; appData[4] = b;
+  appData[0] = d >> 8; 
+  appData[1] = d; 
+  appData[2] = constrain(v, 0, 100);
+  appData[3] = b >> 8; 
+  appData[4] = b;
 }
 
 void setup() {
@@ -243,6 +248,7 @@ void setup() {
   Serial.begin(115200);
   Wire.begin();
   LoRaWAN.init(loraWanClass, loraWanRegion);
+  Serial.println("CubeCell HTCC-AB01 Init Done.");
 }
 
 void loop() {
@@ -310,10 +316,10 @@ void loop() {
               <div className="px-4 py-2 border-b bg-slate-50/50 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {isTablet && <Button variant="ghost" size="icon" onClick={() => setSelectedSensorId(null)} className="h-8 w-8 bg-white border"><ArrowLeft className="h-4 w-4" /></Button>}
-                  <TabsList className="bg-transparent h-9 p-0 gap-2">
-                    <TabsTrigger value="map" className="px-4 text-[10px] font-black uppercase tracking-widest rounded-lg">Dashboard</TabsTrigger>
-                    <TabsTrigger value="code" className="px-4 text-[10px] font-black uppercase tracking-widest rounded-lg">Hardware Code</TabsTrigger>
-                    <TabsTrigger value="kpn" className="px-4 text-[10px] font-black uppercase tracking-widest rounded-lg">KPN Setup</TabsTrigger>
+                  <TabsList className="bg-transparent h-9 p-0 gap-2 border-none">
+                    <TabsTrigger value="map" className="px-4 text-[10px] font-black uppercase tracking-widest rounded-lg border-none data-[state=active]:bg-white shadow-none">Dashboard</TabsTrigger>
+                    <TabsTrigger value="code" className="px-4 text-[10px] font-black uppercase tracking-widest rounded-lg border-none data-[state=active]:bg-white shadow-none">Hardware Code</TabsTrigger>
+                    <TabsTrigger value="kpn" className="px-4 text-[10px] font-black uppercase tracking-widest rounded-lg border-none data-[state=active]:bg-white shadow-none">KPN Setup</TabsTrigger>
                   </TabsList>
                 </div>
                 <div className="flex items-center gap-2">
