@@ -382,7 +382,9 @@ void loop() {
                   </div>
                 </div>
                 <div className="lg:col-span-4 bg-white border-l flex flex-col overflow-hidden">
-                  <div className="p-4 border-b bg-slate-50/50"><h3 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2"><Sparkles className="h-3.5 w-3.5 text-primary" /> AI Code Assistent</h3></div>
+                  <div className="p-4 border-b bg-slate-50/50">
+                    <h3 className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-2"><Sparkles className="h-3.5 w-3.5 text-primary" /> AI Code Assistent</h3>
+                  </div>
                   <div className="flex-1 flex flex-col p-6 gap-6 overflow-hidden">
                     <div className="space-y-3">
                       <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Foutcode of Aanpassing</Label>

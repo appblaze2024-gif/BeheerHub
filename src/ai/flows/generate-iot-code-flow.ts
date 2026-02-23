@@ -3,7 +3,7 @@
 /**
  * @fileOverview Geoptimaliseerde AI flow voor IoT-code generatie.
  * Specifiek getraind op Heltec CubeCell HTCC-AB01 (Library v1.4.0) en de TOF10120 laser sensor.
- * Verwerkt direct KPN LoRaWAN sleutels in de code.
+ * Verwerkt direct KPN LoRaWAN sleutels in de code en volgt het verplichte state-machine patroon.
  */
 
 import { ai } from '@/ai/genkit';
@@ -41,14 +41,14 @@ const prompt = ai.definePrompt({
 Hardware: CubeCell HTCC-AB01.
 Sensor: TOF10120 (Blauw op SDA, Groen op SCL).
 
-STRIKTE REGELS VOOR CODE GENERATIE (v1.4.0):
+STRIKTE REGELS VOOR CODE GENERATIE (v1.4.0 Framework):
 1. Gebruik ALTIJD "LoRaWan_APP.h" en <Wire.h>.
 2. Gebruik EXACT deze volgorde: LoRaWAN.init(loraWanClass, loraWanRegion); (Eerst Class, dan Region).
 3. Gebruik de volgende KPN credentials DIRECT in de arrays:
    - uint8_t devEui[] = { {{{devEui}}} };
    - uint8_t appEui[] = { {{{appEui}}} };
    - uint8_t appKey[] = { {{{appKey}}} };
-4. Definieer ALTIJD deze globale variabelen (verplicht in v1.4.0):
+4. Definieer ALTIJD deze globale variabelen (verplicht in v1.4.0 framework):
    - uint32_t appTxDutyCycle = 15000;
    - bool overTheAirActivation = true;
    - LoRaMacRegion_t loraWanRegion = ACTIVE_REGION;
@@ -59,8 +59,8 @@ STRIKTE REGELS VOOR CODE GENERATIE (v1.4.0):
    - uint8_t appPort = 2;
    - uint8_t confirmedNbTrials = 4;
 5. Implementeer de TOF10120 uitlezing in een aparte functie readTOF().
-6. De loop() MOET het switch(deviceState) patroon gebruiken van de officiële v1.4.0 voorbeelden.
-7. Gebruik NOOIT BoardGetUniqueId voor de devEui, gebruik de hardcoded array.
+6. De loop() MOET het switch(deviceState) patroon gebruiken.
+7. Gebruik NOOIT BoardGetUniqueId voor de devEui, gebruik de hardcoded array met de waarde hierboven.
 8. Genereer een VOLLEDIGE sketch met witregels en inspringingen die direct ge-copy-pasted kan worden.
 
 HISTORIE:
@@ -71,7 +71,7 @@ HISTORIE:
 VRAAG/FOUT:
 "{{{prompt}}}"
 
-Antwoord in JSON met 'code' (volledige sketch) en 'explanation' (max 2 zinnen).`,
+Antwoord in JSON met 'code' (volledige sketch met enters) en 'explanation' (max 2 zinnen).`,
 });
 
 export const generateIoTCodeFlow = ai.defineFlow(
