@@ -29,7 +29,9 @@ import {
   Layers,
   Zap,
   ChevronRight,
-  ClipboardList
+  ClipboardList,
+  Maximize,
+  Minimize
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFirestore, useCollection, deleteDocumentNonBlocking, useMemoFirebase } from '@/firebase';

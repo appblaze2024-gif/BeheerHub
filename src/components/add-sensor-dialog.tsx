@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/select';
 import { useFirestore, setDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
-import { Loader2, MapPin, Search, Info, Ruler, Cpu, Radio, ChevronRight, ChevronLeft, CheckCircle2, Zap } from 'lucide-react';
+import { Loader2, MapPin, Search, Info, Ruler, Cpu, Radio, ChevronRight, ChevronLeft, CheckCircle2, Zap, Globe, FileCode } from 'lucide-react';
 import { MapboxView } from './mapbox-view';
 import type { Object as MapObject } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -54,9 +54,9 @@ type SensorFormValues = z.infer<typeof sensorSchema>;
 const STEPS = [
   { id: 'object', title: 'Unit Selectie', icon: MapPin },
   { id: 'hardware', title: 'Identiteit', icon: Cpu },
-  { id: 'network', title: 'Netwerk', icon: Radio },
+  { id: 'network', title: 'KPN Setup', icon: Radio },
   { id: 'config', title: 'Configuratie', icon: Ruler },
-  { id: 'location', title: 'Locatie & Bevestig', icon: CheckCircle2 },
+  { id: 'instructions', title: 'Koppeling', icon: Globe },
 ];
 
 export function AddSensorDialog({
@@ -166,21 +166,20 @@ export function AddSensorDialog({
 
   React.useEffect(() => {
     if (!open) {
-      // Delay reset to allow closing animation
       setTimeout(resetWizard, 300);
     }
   }, [open]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden border-none shadow-2xl">
-        <div className="flex flex-col h-[650px]">
+      <DialogContent className="sm:max-w-[750px] p-0 overflow-hidden border-none shadow-2xl">
+        <div className="flex flex-col h-[700px]">
           {/* Header & Progress */}
           <div className="bg-slate-900 text-white p-6 shrink-0">
             <DialogHeader className="mb-6">
-              <DialogTitle className="text-white text-xl font-black uppercase tracking-tight">Sensor Koppelen</DialogTitle>
+              <DialogTitle className="text-white text-xl font-black uppercase tracking-tight">Sensor Wizard</DialogTitle>
               <DialogDescription className="text-slate-400 font-bold">
-                Volg de stappen om uw Heltec CubeCell te verbinden met BeheerHub.
+                Koppel hardware aan platform en configureer KPN Things.
               </DialogDescription>
             </DialogHeader>
             
@@ -216,9 +215,9 @@ export function AddSensorDialog({
                 {currentStep === 0 && (
                   <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                     <div className="space-y-2">
-                      <h3 className="text-lg font-black uppercase tracking-tight text-slate-900">1. Kies de prullenbak</h3>
+                      <h3 className="text-lg font-black uppercase tracking-tight text-slate-900">1. Selecteer Prullenbak</h3>
                       <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                        Zoek de unit waar u de sensor in gaat plaatsen. Dit zorgt voor de juiste GIS-koppeling.
+                        Kies de unit waarin de hardware wordt gemonteerd. De data wordt hierdoor direct gekoppeld aan de GIS-locatie.
                       </p>
                     </div>
                     
@@ -257,7 +256,7 @@ export function AddSensorDialog({
                       <div className="bg-blue-50 border-2 border-primary/20 p-4 rounded-2xl flex items-center gap-4 animate-in zoom-in-95">
                         <div className="bg-primary/10 p-3 rounded-xl"><MapPin className="h-6 w-6 text-primary" /></div>
                         <div className="flex-1">
-                          <p className="text-[10px] font-black uppercase text-primary tracking-widest">Geselecteerd</p>
+                          <p className="text-[10px] font-black uppercase text-primary tracking-widest">Unit Gekoppeld</p>
                           <p className="text-sm font-black text-slate-900 uppercase tracking-tight">{selectedObject.id}</p>
                           <p className="text-xs font-bold text-slate-500">{selectedObject.straatnaam} {selectedObject.huisnummer}</p>
                         </div>
@@ -266,19 +265,19 @@ export function AddSensorDialog({
                     ) : (
                       <div className="p-12 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center text-slate-300">
                         <MapPin className="h-12 w-12 mb-4 opacity-10" />
-                        <p className="text-[10px] font-black uppercase tracking-widest">Geen selectie</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-center">Zoek en selecteer een prullenbak om te beginnen</p>
                       </div>
                     )}
                   </div>
                 )}
 
-                {/* STEP 2: Hardware IDs */}
+                {/* STEP 2: Hardware Identiteit */}
                 {currentStep === 1 && (
                   <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                     <div className="space-y-2">
-                      <h3 className="text-lg font-black uppercase tracking-tight text-slate-900">2. Hardware Identiteit</h3>
+                      <h3 className="text-lg font-black uppercase tracking-tight text-slate-900">2. Identiteit Hardware</h3>
                       <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                        Voer de unieke Chip ID in van uw CubeCell board.
+                        Gebruik de unieke Chip ID (DevEUI) van uw board om het apparaat te registreren in BeheerHub.
                       </p>
                     </div>
 
@@ -288,9 +287,9 @@ export function AddSensorDialog({
                         name="id"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Chip ID / DevEUI*</FormLabel>
+                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Chip ID / DevEUI*</FormLabel>
                             <FormControl><Input placeholder="Bv. 0000B3A5..." {...field} className="font-mono h-11 border-2 font-bold" /></FormControl>
-                            <FormDescription className="text-[10px]">Zichtbaar in de Seriële Monitor bij het opstarten van het board.</FormDescription>
+                            <FormDescription className="text-[10px]">Deze code ziet u in de Seriële Monitor bij het opstarten van de CubeCell.</FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -300,7 +299,7 @@ export function AddSensorDialog({
                         name="name"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Naam / Label</FormLabel>
+                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Naam in Systeem</FormLabel>
                             <FormControl><Input placeholder="Bv. Sensor Bak Marktplein" {...field} className="h-11 border-2 font-bold" /></FormControl>
                             <FormMessage />
                           </FormItem>
@@ -310,13 +309,13 @@ export function AddSensorDialog({
                   </div>
                 )}
 
-                {/* STEP 3: LoRa Network */}
+                {/* STEP 3: Network / KPN Keys */}
                 {currentStep === 2 && (
                   <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                     <div className="space-y-2">
-                      <h3 className="text-lg font-black uppercase tracking-tight text-slate-900">3. Netwerk Koppeling</h3>
+                      <h3 className="text-lg font-black uppercase tracking-tight text-slate-900">3. LoRaWAN Configuratie</h3>
                       <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                        Kopieer de OTAA-sleutels uit uw KPN Things portaal.
+                        Kopieer de OTAA-sleutels uit KPN Things. Deze worden in de Arduino code verwerkt.
                       </p>
                     </div>
 
@@ -326,7 +325,7 @@ export function AddSensorDialog({
                         name="appEui"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">AppEUI / JoinEUI*</FormLabel>
+                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">AppEUI / JoinEUI*</FormLabel>
                             <FormControl><Input placeholder="0059AC..." {...field} className="font-mono h-11 border-2 font-bold" /></FormControl>
                             <FormMessage />
                           </FormItem>
@@ -337,7 +336,7 @@ export function AddSensorDialog({
                         name="appKey"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">AppKey*</FormLabel>
+                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">AppKey*</FormLabel>
                             <FormControl><Input placeholder="••••••••••••••••" {...field} className="font-mono h-11 border-2 font-bold" /></FormControl>
                             <FormMessage />
                           </FormItem>
@@ -351,7 +350,7 @@ export function AddSensorDialog({
                 {currentStep === 3 && (
                   <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                     <div className="space-y-2">
-                      <h3 className="text-lg font-black uppercase tracking-tight text-slate-900">4. Kalibratie & Meetfrequentie</h3>
+                      <h3 className="text-lg font-black uppercase tracking-tight text-slate-900">4. Kalibratie & Frequentie</h3>
                       <p className="text-sm text-slate-500 font-medium leading-relaxed">
                         Stel de fysieke parameters in voor een correcte meting.
                       </p>
@@ -363,7 +362,7 @@ export function AddSensorDialog({
                         name="binDepthCm"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Bak Diepte (cm)*</FormLabel>
+                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Bak Diepte (cm)*</FormLabel>
                             <FormControl><Input type="number" {...field} className="h-11 border-2 font-bold" /></FormControl>
                             <FormDescription className="text-[10px]">Afstand van sensor tot bodem.</FormDescription>
                             <FormMessage />
@@ -375,9 +374,9 @@ export function AddSensorDialog({
                         name="measurementFrequency"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Metingen per dag*</FormLabel>
+                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Metingen per dag*</FormLabel>
                             <FormControl><Input type="number" {...field} className="h-11 border-2 font-bold" /></FormControl>
-                            <FormDescription className="text-[10px]">Standaard: 24 (elk uur).</FormDescription>
+                            <FormDescription className="text-[10px]">Standaard: 2 (elke 12 uur).</FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -386,38 +385,48 @@ export function AddSensorDialog({
 
                     <div className="bg-orange-50 border-2 border-orange-100 p-5 rounded-2xl space-y-3">
                         <h4 className="text-[10px] font-black uppercase text-orange-700 tracking-widest flex items-center gap-2">
-                            <Zap className="h-3 w-3" /> Bedrading Check
+                            <Zap className="h-3 w-3" /> Hardware Check
                         </h4>
                         <ul className="text-xs space-y-2 font-bold text-orange-800">
-                            <li className="flex items-center gap-2"><div className="h-2 w-2 rounded-full bg-blue-500" /> Blauwe kabel &rarr; SDA Pin</li>
-                            <li className="flex items-center gap-2"><div className="h-2 w-2 rounded-full bg-green-500" /> Groene kabel &rarr; SCL Pin</li>
+                            <li className="flex items-center gap-2"><div className="h-2 w-2 rounded-full bg-blue-500" /> Blauw (Sensor) &rarr; SDA Pin</li>
+                            <li className="flex items-center gap-2"><div className="h-2 w-2 rounded-full bg-green-500" /> Groen (Sensor) &rarr; SCL Pin</li>
                         </ul>
                     </div>
                   </div>
                 )}
 
-                {/* STEP 5: Final Review */}
+                {/* STEP 5: Final Review & KPN Instructions */}
                 {currentStep === 4 && (
                   <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                    <div className="space-y-2">
-                      <h3 className="text-lg font-black uppercase tracking-tight text-slate-900">5. Bevestig Locatie & Activatie</h3>
-                      <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                        De sensor wordt gekoppeld op onderstaande locatie.
-                      </p>
+                    <div className="space-y-2 text-center pb-2">
+                      <div className="bg-green-100 h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <CheckCircle2 className="h-10 w-10 text-green-600" />
+                      </div>
+                      <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">Klaar om te koppelen!</h3>
+                      <p className="text-sm text-slate-500 font-medium">BeheerHub is voorbereid. Doe na activatie het volgende in KPN Things:</p>
                     </div>
 
-                    <div className="aspect-video w-full rounded-2xl border-2 border-slate-100 overflow-hidden shadow-inner bg-slate-50">
-                      <MapboxView longitude={location?.longitude} latitude={location?.latitude} interactive={false} />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="p-4 rounded-xl border bg-slate-50">
-                            <p className="text-[9px] font-black uppercase text-slate-400 mb-1">Apparaat</p>
-                            <p className="text-xs font-black truncate">{form.getValues('name')}</p>
+                    <div className="grid gap-3">
+                        <div className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                            <div className="bg-blue-100 p-2 rounded-xl shrink-0"><Globe className="h-4 w-4 text-blue-600" /></div>
+                            <div className="min-w-0">
+                                <p className="text-xs font-black uppercase">1. Maak HTTP Destination</p>
+                                <p className="text-[10px] text-slate-500 font-bold leading-relaxed">Maak een nieuwe Destination aan in KPN Things. De unieke URL vind je straks in de 'KPN Koppeling' tab.</p>
+                            </div>
                         </div>
-                        <div className="p-4 rounded-xl border bg-slate-50">
-                            <p className="text-[9px] font-black uppercase text-slate-400 mb-1">Serienummer</p>
-                            <p className="text-xs font-mono font-bold truncate">{form.getValues('id')}</p>
+                        <div className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                            <div className="bg-purple-100 p-2 rounded-xl shrink-0"><FileCode className="h-4 w-4 text-purple-600" /></div>
+                            <div className="min-w-0">
+                                <p className="text-xs font-black uppercase">2. Plak Payload Decoder</p>
+                                <p className="text-[10px] text-slate-500 font-bold leading-relaxed">Kopieer de JavaScript decoder uit BeheerHub en plak deze bij de Payload settings in KPN.</p>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                            <div className="bg-orange-100 p-2 rounded-xl shrink-0"><Cpu className="h-4 w-4 text-orange-600" /></div>
+                            <div className="min-w-0">
+                                <p className="text-xs font-black uppercase">3. Flash Hardware</p>
+                                <p className="text-[10px] text-slate-500 font-bold leading-relaxed">Upload de Arduino sketch naar de CubeCell. De unit zal automatisch 'joinen'.</p>
+                            </div>
                         </div>
                     </div>
                   </div>
@@ -448,7 +457,7 @@ export function AddSensorDialog({
                       className="font-black uppercase tracking-tight px-12 h-11 bg-green-600 hover:bg-green-700 shadow-lg shadow-green-600/20"
                     >
                       {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
-                      Koppeling Voltooien
+                      Sensor Activeren
                     </Button>
                   )}
                 </div>
