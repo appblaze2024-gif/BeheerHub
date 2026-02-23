@@ -70,7 +70,7 @@ const routeLayer: Layer = {
     'line-cap': 'round',
   },
   paint: {
-    'line-color': '#32ADE6',
+    'line-color': '#1d4ed8', // Changed from #32ADE6 to dark blue
     'line-width': 10,
     'line-opacity': 0.9,
   },
@@ -85,7 +85,7 @@ const routeLayerCasing: Layer = {
     'line-cap': 'round',
   },
   paint: {
-    'line-color': '#1d4ed8',
+    'line-color': '#1e3a8a', // Slightly darker blue casing
     'line-width': 14,
     'line-opacity': 0.3,
   },
