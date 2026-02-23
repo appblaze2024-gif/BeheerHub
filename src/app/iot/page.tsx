@@ -73,6 +73,7 @@ import { LoadingScreen } from '@/components/loading-screen';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { format } from 'date-fns';
 
 export default function IoTPage() {
   const firestore = useFirestore();
@@ -155,7 +156,7 @@ function decode(payload) {
  * BEHEERHUB IOT ENGINE - Heltec CubeCell HTCC-AB01 (HTCC-001)
  * Hardware: HTCC-AB01
  * Sensor: TOF10120 (I2C)
- * Pinout: SDA -> SDA (Pin Marking), SCL -> SCL (Pin Marking)
+ * Pinout: SDA -> SDA (Board Marking), SCL -> SCL (Board Marking)
  * Power: 3.3V (VExt) & Lipo 2500mAh
  */
 
@@ -509,7 +510,7 @@ void loop() {
                                     <div className="space-y-3 p-4 bg-white/5 rounded-2xl border border-white/5">
                                         <div className="flex items-center gap-2 text-blue-400">
                                             <Settings className="h-4 w-4" />
-                                            <h4 className="text-[10px] font-black uppercase tracking-widest">KPN Portaal Instellingen</h4>
+                                            <h4 className="text-[10px] font-black uppercase tracking-widest">KPN Things Setup</h4>
                                         </div>
                                         <ul className="text-[11px] space-y-2 text-slate-300 font-medium leading-relaxed">
                                             <li className="flex gap-2">Method: <strong>HTTP POST</strong></li>
@@ -582,10 +583,10 @@ void loop() {
                                 <div className="space-y-3">
                                     <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Bedrading Sensor</p>
                                     <ul className="text-xs space-y-2 font-bold text-slate-700">
-                                        <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-red-500"/> Rood -> 3V3 (VExt)</li>
-                                        <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-black"/> Zwart -> GND</li>
-                                        <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-blue-500"/> Blauw (SDA) -> SDA (Pinnen)</li>
-                                        <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-yellow-500"/> Geel (SCL) -> SCL (Pinnen)</li>
+                                        <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-red-500"/> Rood &rarr; 3V3 (VExt)</li>
+                                        <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-black"/> Zwart &rarr; GND</li>
+                                        <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-blue-500"/> Blauw (SDA) &rarr; SDA (Board Pinnen)</li>
+                                        <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-yellow-500"/> Geel (SCL) &rarr; SCL (Board Pinnen)</li>
                                     </ul>
                                 </div>
                                 <div className="space-y-3">
