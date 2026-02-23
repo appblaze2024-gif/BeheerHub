@@ -40,7 +40,7 @@ input, textarea {
     --secondary-foreground: 222 47% 11.2%;
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 174 63% 39%; /* #26A69A - Teal */
+    --accent: 221 83% 45%; /* Changed from Teal to a lighter primary blue */
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
@@ -49,7 +49,7 @@ input, textarea {
     --ring: 221 83% 28%;
     --radius: 0.75rem;
     --chart-1: 221 83% 28%;
-    --chart-2: 174 63% 39%;
+    --chart-2: 221 83% 45%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
@@ -75,7 +75,7 @@ input, textarea {
     --secondary-foreground: 210 40% 98%;
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
-    --accent: 174 63% 45%;
+    --accent: 217 81% 45%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;

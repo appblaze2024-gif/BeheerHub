@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -831,8 +830,8 @@ export default function AnnualPlanningPage() {
                 )}>
                   <table className="w-full border-collapse text-[10px] font-bold">
                     <thead>
-                      <tr className="bg-[#4caf50] text-white h-32">
-                        <th className="sticky left-0 z-20 bg-[#4caf50] border-r border-white p-2 text-left align-top whitespace-nowrap w-[300px] min-w-[300px]">
+                      <tr className="bg-primary text-white h-32">
+                        <th className="sticky left-0 z-20 bg-primary border-r border-white p-2 text-left align-top whitespace-nowrap w-[300px] min-w-[300px]">
                           <div className="flex flex-col h-full justify-between">
                             {editingSectionTitleId === section.id ? (
                               <div className="flex items-center gap-1">
@@ -918,9 +917,9 @@ export default function AnnualPlanningPage() {
                             </th>
                           );
                         })}
-                        <th className="w-8 bg-[#388e3c] border-r border-white/20">aantal</th>
-                        <th className="w-20 bg-[#388e3c] border-r border-white/20">tarief</th>
-                        <th className="w-24 bg-[#388e3c]">bedrag</th>
+                        <th className="w-8 bg-primary/90 border-r border-white/20">aantal</th>
+                        <th className="w-20 bg-primary/90 border-r border-white/20">tarief</th>
+                        <th className="w-24 bg-primary/90">bedrag</th>
                       </tr>
 
                       <tr className="bg-[#8e24aa] text-white h-8">
