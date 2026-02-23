@@ -23,6 +23,7 @@ import {
   Code,
   ArrowRight,
   Target,
+  ShieldAlert,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFirestore, useCollection, deleteDocumentNonBlocking, useMemoFirebase } from '@/firebase';
@@ -55,6 +56,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { LoadingScreen } from '@/components/loading-screen';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Separator } from '@/components/ui/separator';
 
 export default function IoTPage() {
   const firestore = useFirestore();
@@ -122,10 +124,10 @@ export default function IoTPage() {
 
 #define TOF10120_ADDR 0x52
 
-/* --- LoraWAN Keys --- */
-uint8_t devEui[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-uint8_t appEui[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-uint8_t appKey[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+/* --- LoraWAN Keys (Sync from BeheerHub) --- */
+uint8_t devEui[] = { ${selectedSensor.devEui ? selectedSensor.devEui.match(/.{1,2}/g)?.map(x => `0x${x}`).join(', ') : '0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00'} };
+uint8_t appEui[] = { ${selectedSensor.appEui ? selectedSensor.appEui.match(/.{1,2}/g)?.map(x => `0x${x}`).join(', ') : '0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00'} };
+uint8_t appKey[] = { ${selectedSensor.appKey ? selectedSensor.appKey.match(/.{1,2}/g)?.map(x => `0x${x}`).join(', ') : '0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00'} };
 
 uint32_t appTxDutyCycle = 43200000; // 2x per dag
 bool overTheAirActivation = true;
@@ -409,6 +411,37 @@ void loop() {
 
               <TabsContent value="kpn" className="flex-1 m-0 p-6 bg-slate-50 dark:bg-zinc-950 overflow-y-auto data-[state=active]:flex flex-col">
                 <div className="max-w-3xl mx-auto w-full space-y-8">
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">LoRa configuration</h3>
+                            <Button variant="ghost" size="sm" className="text-red-500 font-bold uppercase text-[10px] tracking-widest gap-2">
+                                <Trash2 className="h-3.5 w-3.5" /> Reset LoRa configuration
+                            </Button>
+                        </div>
+                        <Card className="bg-white dark:bg-zinc-900 border-2 border-slate-100 shadow-sm rounded-2xl overflow-hidden">
+                            <CardContent className="p-6 space-y-6">
+                                <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+                                    <span className="text-sm font-black text-slate-900 uppercase tracking-tight">DevEUI</span>
+                                    <code className="text-sm font-mono text-slate-600 bg-slate-50 p-2 rounded-lg border uppercase">{selectedSensor.devEui || 'Niet ingesteld'}</code>
+                                </div>
+                                <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+                                    <span className="text-sm font-black text-slate-900 uppercase tracking-tight">AppEUI</span>
+                                    <code className="text-sm font-mono text-slate-600 bg-slate-50 p-2 rounded-lg border uppercase">{selectedSensor.appEui || 'Niet ingesteld'}</code>
+                                </div>
+                                <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+                                    <span className="text-sm font-black text-slate-900 uppercase tracking-tight">AppKey</span>
+                                    <div className="flex items-center gap-2">
+                                        <code className="text-sm font-mono text-slate-600 bg-slate-50 p-2 rounded-lg border flex-1">
+                                            {selectedSensor.appKey ? '••••••••••••••••••••••••••••••••' : 'Niet ingesteld'}
+                                        </code>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    <Separator className="bg-slate-200" />
+
                     <div className="space-y-2">
                         <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">KPN Things Koppeling</h3>
                         <p className="text-sm text-slate-500 font-medium">Stel een Webhook Destination in om sensordata direct door te sturen.</p>

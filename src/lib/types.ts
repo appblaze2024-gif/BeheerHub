@@ -54,6 +54,9 @@ export interface Sensor {
   currentDistanceCm?: number;
   binDepthCm?: number;
   measurementFrequency?: number;
+  devEui?: string;
+  appEui?: string;
+  appKey?: string;
 }
 
 export interface Medewerker {

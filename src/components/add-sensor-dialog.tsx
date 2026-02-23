@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/select';
 import { useFirestore, setDocumentNonBlocking, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
-import { Loader2, MapPin, Search, Info, Ruler, Trash2 } from 'lucide-react';
+import { Loader2, MapPin, Search, Info, Ruler, Cpu, Radio } from 'lucide-react';
 import { MapboxView } from './mapbox-view';
 import type { Object as MapObject } from '@/lib/types';
 
@@ -42,6 +42,9 @@ const sensorSchema = z.object({
   type: z.enum(["TOF200C", "Temperatuur", "Luchtkwaliteit", "GPS Tracker", "Waterpeil"]),
   binDepthCm: z.coerce.number().min(1, 'Voer een diepte in groter dan 0'),
   measurementFrequency: z.coerce.number().min(1, 'Voer een frequentie in (minimaal 1)').max(1440, 'Maximaal elke minuut'),
+  devEui: z.string().optional(),
+  appEui: z.string().optional(),
+  appKey: z.string().optional(),
 });
 
 type SensorFormValues = z.infer<typeof sensorSchema>;
@@ -87,7 +90,10 @@ export function AddSensorDialog({
       name: '', 
       type: 'TOF200C',
       binDepthCm: 100,
-      measurementFrequency: 24 
+      measurementFrequency: 24,
+      devEui: '',
+      appEui: '',
+      appKey: '',
     },
   });
 
@@ -238,9 +244,48 @@ export function AddSensorDialog({
                   />
                 </div>
 
+                <div className="bg-purple-50/50 dark:bg-purple-950/10 p-4 rounded-lg border border-purple-100 space-y-4">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-purple-600 flex items-center gap-2">
+                    <Radio className="h-3 w-3" /> Stap 3: LoRa Configuratie
+                  </h3>
+                  <FormField
+                    control={form.control}
+                    name="devEui"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>DevEUI</FormLabel>
+                        <FormControl><Input placeholder="0059AC..." {...field} className="font-mono h-10" /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="appEui"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>AppEUI</FormLabel>
+                        <FormControl><Input placeholder="0059AC..." {...field} className="font-mono h-10" /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="appKey"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>AppKey</FormLabel>
+                        <FormControl><Input placeholder="••••••••••••••••" {...field} className="font-mono h-10" /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
                 <div className="bg-amber-50/50 dark:bg-amber-950/10 p-4 rounded-lg border border-amber-200 dark:border-amber-900/50 space-y-4">
                   <h3 className="text-xs font-black uppercase tracking-widest text-amber-600 flex items-center gap-2">
-                    <Ruler className="h-3 w-3" /> Kalibratie
+                    <Ruler className="h-3 w-3" /> Stap 4: Kalibratie
                   </h3>
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
