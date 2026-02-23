@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { PageHeader } from '@/components/page-header';
 import { 
   Wifi, 
@@ -23,6 +23,9 @@ import {
   Code,
   ArrowRight,
   Target,
+  FileCode,
+  Globe,
+  Settings2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFirestore, useCollection, deleteDocumentNonBlocking, useMemoFirebase } from '@/firebase';
@@ -316,7 +319,7 @@ void loop() {
                         <MapPin className="h-3.5 w-3.5" /> Dashboard
                     </TabsTrigger>
                     <TabsTrigger value="code" className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 h-full rounded-lg text-[10px] font-black uppercase tracking-widest gap-2">
-                        <Code className="h-3.5 w-3.5" /> Hardware Code
+                        <FileCode className="h-3.5 w-3.5" /> Arduino Code
                     </TabsTrigger>
                     <TabsTrigger value="kpn" className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 h-full rounded-lg text-[10px] font-black uppercase tracking-widest gap-2">
                         <Radio className="h-3.5 w-3.5" /> KPN Koppeling
@@ -389,7 +392,7 @@ void loop() {
                     <div className="flex items-center justify-between">
                         <div className="space-y-1">
                             <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">Arduino C++ Sketch</h3>
-                            <p className="text-sm text-slate-500 font-medium">Kopieer deze code naar uw Arduino IDE (Heltec CubeCell Framework).</p>
+                            <p className="text-sm text-slate-500 font-medium">Kopieer deze code naar uw Arduino IDE voor de CubeCell HTCC-AB01.</p>
                         </div>
                         <Button 
                             className="h-10 px-6 font-black uppercase tracking-tight"
@@ -409,112 +412,103 @@ void loop() {
               </TabsContent>
 
               <TabsContent value="kpn" className="flex-1 m-0 p-6 bg-slate-50 dark:bg-zinc-950 overflow-y-auto data-[state=active]:flex flex-col">
-                <div className="max-w-3xl mx-auto w-full space-y-8">
+                <div className="max-w-4xl mx-auto w-full space-y-8">
                     <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">LoRa-configuratie</h3>
-                            <Button variant="ghost" size="sm" className="text-red-500 font-bold uppercase text-[10px] tracking-widest gap-2">
-                                <Trash2 className="h-3.5 w-3.5" /> Reset LoRa-gegevens
-                            </Button>
+                        <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900">Koppeling Stap-voor-Stap</h3>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <Card className="bg-white border-2 border-slate-100 rounded-2xl p-5 shadow-sm">
+                                <Badge className="mb-3 bg-primary">Stap 1</Badge>
+                                <h4 className="font-black text-sm uppercase mb-2">BeheerHub Registratie</h4>
+                                <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                                    Voeg een nieuwe sensor toe via de knop bovenaan. Gebruik de <strong>Chip ID</strong> die je ziet in de Arduino seriele monitor als het ID van de sensor.
+                                </p>
+                            </Card>
+                            <Card className="bg-white border-2 border-slate-100 rounded-2xl p-5 shadow-sm">
+                                <Badge className="mb-3 bg-primary">Stap 2</Badge>
+                                <h4 className="font-black text-sm uppercase mb-2">KPN Things Registratie</h4>
+                                <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                                    Voeg je device toe in KPN Things. Gebruik hier ook de <strong>Chip ID</strong> als de DevEUI. Kopieer de AppEUI en AppKey van KPN naar BeheerHub.
+                                </p>
+                            </Card>
+                            <Card className="bg-white border-2 border-slate-100 rounded-2xl p-5 shadow-sm">
+                                <Badge className="mb-3 bg-primary">Stap 3</Badge>
+                                <h4 className="font-black text-sm uppercase mb-2">KPN Destination Instellen</h4>
+                                <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                                    Maak een <strong>HTTP Destination</strong> aan. Plak de URL hieronder. Kies <strong>POST</strong> en voeg de custom header toe (zie onder).
+                                </p>
+                            </Card>
+                            <Card className="bg-white border-2 border-slate-100 rounded-2xl p-5 shadow-sm">
+                                <Badge className="mb-3 bg-primary">Stap 4</Badge>
+                                <h4 className="font-black text-sm uppercase mb-2">Hardware Flashen</h4>
+                                <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                                    Kopieer de Arduino Code uit de andere tab, plak deze in je IDE en flash je CubeCell. De bak zal nu live data versturen!
+                                </p>
+                            </Card>
                         </div>
-                        <Card className="bg-white dark:bg-zinc-900 border-2 border-slate-100 shadow-sm rounded-2xl overflow-hidden">
-                            <CardContent className="p-6 space-y-6">
-                                <div className="grid grid-cols-[120px_1fr] items-center gap-4">
-                                    <span className="text-sm font-black text-slate-900 uppercase tracking-tight">DevEUI</span>
-                                    <code className="text-sm font-mono text-slate-600 bg-slate-50 p-2 rounded-lg border uppercase">{selectedSensor.devEui || 'Niet ingesteld'}</code>
-                                </div>
-                                <div className="grid grid-cols-[120px_1fr] items-center gap-4">
-                                    <span className="text-sm font-black text-slate-900 uppercase tracking-tight">AppEUI</span>
-                                    <code className="text-sm font-mono text-slate-600 bg-slate-50 p-2 rounded-lg border uppercase">{selectedSensor.appEui || 'Niet ingesteld'}</code>
-                                </div>
-                                <div className="grid grid-cols-[120px_1fr] items-center gap-4">
-                                    <span className="text-sm font-black text-slate-900 uppercase tracking-tight">AppKey</span>
-                                    <div className="flex items-center gap-2">
-                                        <code className="text-sm font-mono text-slate-600 bg-slate-50 p-2 rounded-lg border flex-1">
-                                            {selectedSensor.appKey ? '••••••••••••••••••••••••••••••••' : 'Niet ingesteld'}
-                                        </code>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
                     </div>
 
                     <Separator className="bg-slate-200" />
 
-                    <div className="space-y-2">
-                        <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">KPN Things Koppeling</h3>
-                        <p className="text-sm text-slate-500 font-medium">Stel een Webhook Destination in om sensordata direct door te sturen.</p>
-                    </div>
-
-                    <Card className="bg-slate-900 text-white border-none shadow-xl rounded-2xl overflow-hidden">
-                        <div className="bg-white/5 px-6 py-4 flex items-center justify-between border-b border-white/5">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-blue-500/20 rounded-xl">
-                                    <Radio className="h-5 w-5 text-blue-400" />
-                                </div>
-                                <span className="text-xs font-black uppercase tracking-widest">Connection URL</span>
-                            </div>
-                            <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="h-9 px-4 font-black uppercase text-[10px] bg-white/10 hover:bg-white/20"
-                                onClick={() => copyToClipboard(apiEndpoint, 'url')}
-                            >
-                                {copiedUrl ? <Check className="h-3.5 w-3.5 mr-2 text-green-400" /> : <Copy className="h-3.5 w-3.5 mr-2" />}
-                                {copiedUrl ? 'Gekopieerd' : 'Kopieer URL'}
-                            </Button>
-                        </div>
-                        <CardContent className="p-6 space-y-6">
-                            <div className="bg-black/40 p-4 rounded-xl font-mono text-[11px] break-all border border-white/5 text-blue-400 shadow-inner">
-                                <span className="select-all">{apiEndpoint}</span>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-3 p-4 bg-white/5 rounded-2xl border border-white/5">
-                                    <div className="flex items-center gap-2 text-blue-400">
-                                        <Settings className="h-4 w-4" />
-                                        <h4 className="text-[10px] font-black uppercase tracking-widest">Webhook Config (KPN)</h4>
+                    <div className="space-y-4">
+                        <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">Webhook Configuratie</h3>
+                        <Card className="bg-slate-900 text-white border-none shadow-xl rounded-2xl overflow-hidden">
+                            <div className="bg-white/5 px-6 py-4 flex items-center justify-between border-b border-white/5">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-blue-500/20 rounded-xl">
+                                        <Globe className="h-5 w-5 text-blue-400" />
                                     </div>
-                                    <ul className="text-[11px] space-y-2 text-slate-300 font-medium leading-relaxed">
-                                        <li className="flex gap-2">1. Kies <strong>HTTP POST</strong> als methode.</li>
-                                        <li className="flex gap-2">2. Voeg Custom Header toe:</li>
-                                        <li className="bg-black/30 p-2 rounded border border-white/5 font-mono text-[10px] text-white">
-                                            X-HTTP-Method-Override: PATCH
-                                        </li>
-                                        <li className="flex gap-2">3. Gebruik de <strong>Chip ID</strong> als DevEUI.</li>
-                                    </ul>
+                                    <span className="text-xs font-black uppercase tracking-widest">KPN Things Target URL</span>
                                 </div>
-                                <div className="space-y-3 p-4 bg-white/5 rounded-2xl border border-white/5">
-                                    <div className="flex items-center gap-2 text-purple-400">
-                                        <Code className="h-4 w-4" />
-                                        <h4 className="text-[10px] font-black uppercase tracking-widest">Gekoppelde Velden</h4>
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-9 px-4 font-black uppercase text-[10px] bg-white/10 hover:bg-white/20"
+                                    onClick={() => copyToClipboard(apiEndpoint, 'url')}
+                                >
+                                    {copiedUrl ? <Check className="h-3.5 w-3.5 mr-2 text-green-400" /> : <Copy className="h-3.5 w-3.5 mr-2" />}
+                                    {copiedUrl ? 'Gekopieerd' : 'Kopieer URL'}
+                                </Button>
+                            </div>
+                            <CardContent className="p-6 space-y-6">
+                                <div className="bg-black/40 p-4 rounded-xl font-mono text-[11px] break-all border border-white/5 text-blue-400 shadow-inner">
+                                    <span className="select-all">{apiEndpoint}</span>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-3 p-4 bg-white/5 rounded-2xl border border-white/5">
+                                        <div className="flex items-center gap-2 text-blue-400">
+                                            <Settings className="h-4 w-4" />
+                                            <h4 className="text-[10px] font-black uppercase tracking-widest">KPN Portaal Instellingen</h4>
+                                        </div>
+                                        <ul className="text-[11px] space-y-2 text-slate-300 font-medium leading-relaxed">
+                                            <li className="flex gap-2">Method: <strong>HTTP POST</strong></li>
+                                            <li className="flex flex-col gap-1">
+                                                <span>Custom Header toevoegen:</span>
+                                                <code className="bg-black/30 p-2 rounded border border-white/5 text-white">X-HTTP-Method-Override: PATCH</code>
+                                            </li>
+                                        </ul>
                                     </div>
-                                    <div className="space-y-2">
-                                        <p className="text-[10px] text-slate-400">Uw Payload Decoder in KPN Things moet deze JSON-velden versturen:</p>
-                                        <pre className="text-[10px] font-mono text-purple-300 p-2 bg-black/30 rounded-lg">
+                                    <div className="space-y-3 p-4 bg-white/5 rounded-2xl border border-white/5">
+                                        <div className="flex items-center gap-2 text-purple-400">
+                                            <Code className="h-4 w-4" />
+                                            <h4 className="text-[10px] font-black uppercase tracking-widest">Payload Decoder (JSON)</h4>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <p className="text-[9px] text-slate-400 italic">Uw decoder in KPN Things moet dit formaat uitsturen:</p>
+                                            <pre className="text-[10px] font-mono text-purple-300 p-2 bg-black/30 rounded-lg">
 {`{
   "fields": {
     "vulgraad": { "integerValue": "..." },
     "currentDistanceCm": { "integerValue": "..." }
   }
 }`}
-                                        </pre>
+                                            </pre>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <div className="bg-blue-50 p-6 rounded-2xl border-2 border-blue-100 flex gap-4 items-start shadow-sm">
-                        <div className="bg-blue-100 p-3 rounded-2xl shrink-0">
-                            <Info className="h-6 w-6 text-blue-600" />
-                        </div>
-                        <div className="space-y-1">
-                            <h4 className="text-xs font-black uppercase text-blue-900 tracking-tight">KPN Things Method Override</h4>
-                            <p className="text-xs text-blue-700 leading-relaxed font-medium">
-                                Omdat KPN Things destinations standaard <strong>POST</strong> gebruiken, maar Firestore een <strong>PATCH</strong> vereist voor updates, moet u de <code>X-HTTP-Method-Override</code> header gebruiken zoals hierboven beschreven. BeheerHub herkent dit en verwerkt de data als een update.
-                            </p>
-                        </div>
+                            </CardContent>
+                        </Card>
                     </div>
                 </div>
               </TabsContent>
