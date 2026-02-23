@@ -155,7 +155,7 @@ function decode(payload) {
  * BEHEERHUB IOT ENGINE - Heltec CubeCell HTCC-AB01 (HTCC-001)
  * Hardware: HTCC-AB01
  * Sensor: TOF10120 (I2C)
- * Pinout: SDA -> Pin 1, SCL -> Pin 2
+ * Pinout: SDA -> SDA (Pin Marking), SCL -> SCL (Pin Marking)
  * Power: 3.3V (VExt) & Lipo 2500mAh
  */
 
@@ -448,7 +448,7 @@ void loop() {
                     </div>
 
                     <div className="bg-slate-900 rounded-2xl p-6 shadow-2xl border-none overflow-hidden relative group">
-                        <pre className="text-blue-400 font-mono text-[11px] leading-relaxed overflow-x-auto selection:bg-blue-500/30">
+                        <pre className="text-blue-400 font-mono text-[11px] thickness-thin leading-relaxed overflow-x-auto selection:bg-blue-500/30">
                             {arduinoCode}
                         </pre>
                     </div>
@@ -584,8 +584,8 @@ void loop() {
                                     <ul className="text-xs space-y-2 font-bold text-slate-700">
                                         <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-red-500"/> Rood -> 3V3 (VExt)</li>
                                         <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-black"/> Zwart -> GND</li>
-                                        <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-blue-500"/> Blauw (SDA) -> Pin 1</li>
-                                        <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-yellow-500"/> Geel (SCL) -> Pin 2</li>
+                                        <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-blue-500"/> Blauw (SDA) -> SDA (Pinnen)</li>
+                                        <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-yellow-500"/> Geel (SCL) -> SCL (Pinnen)</li>
                                     </ul>
                                 </div>
                                 <div className="space-y-3">

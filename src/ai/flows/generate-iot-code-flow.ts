@@ -43,6 +43,7 @@ Huidig geselecteerd board/setup: {{{board}}}
 Standaard sensor: TOF10120 (I2C adres 0x52).
 
 BELANGRIJK: De Heltec CubeCell HTCC-AB01 heeft GEEN MAC-adres. Het gebruikt een uniek Chip ID voor de DevEUI.
+I2C PINS: Voor de HTCC-AB01, gebruik de fysiek gemarkeerde SDA en SCL pinnen op het board. Initialiseer met Wire.begin() zonder parameters.
 
 CONTEXT VAN HET GESPREK:
 {{#each history}}
@@ -57,6 +58,7 @@ INSTRUCTIES VOOR GENERATIE:
 2. Voor Heltec CubeCell HTCC-AB01 (LoRaWAN):
    - Gebruik de officiële "LoRaWan_APP.h" bibliotheek.
    - Implementeer I2C communicatie voor de TOF10120 sensor (lezen van 2 bytes vanaf register 0x00 op adres 0x52).
+   - Gebruik Wire.begin() voor de gemarkeerde SDA/SCL pinnen.
    - Zorg voor placeholders voor DevEUI (Chip ID), AppEUI en AppKey (OTAA).
    - Implementeer deep-sleep logica om de batterij te sparen tussen metingen door.
    - Leg uit dat de data via KPN Things moet worden doorgestuurd naar de Firebase REST API via een Webhook.
