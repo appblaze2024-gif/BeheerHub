@@ -35,7 +35,8 @@ import {
   Filter,
   ChevronRight,
   Maximize,
-  Minimize
+  Minimize,
+  Sparkles
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -54,6 +55,9 @@ import { addSeconds, format as formatDate } from 'date-fns';
 import { nl } from 'date-fns/locale';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
+
+// Vaste coördinaten voor de Aarbergerweg in Rijsenhout
+const SIMULATION_START_LOCATION = { latitude: 52.2644, longitude: 4.7242 };
 
 const routeLayer: Layer = {
   id: 'route',
@@ -545,7 +549,6 @@ function NavigatingView({
             </Card>
         )}
         
-        {/* Witte balk met voortgang */}
         {objectsOnRoute.length > 0 && !arrivedObject && (
             <Card className="bg-white text-black shadow-xl border-none overflow-hidden animate-in slide-in-from-top duration-500 rounded-full py-1">
                 <CardContent className="p-3 flex items-center justify-between gap-4">
@@ -655,7 +658,6 @@ export default function StartNavigationPage() {
   const [userLocation, setUserLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
   const [tripStartLocation, setTripStartLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
   
-  // Initialize from search params
   const initialType = searchParams.get('type') as 'veeg' | 'prullenbak' | 'meldingen' | null;
   const [routeType, setRouteType] = React.useState<'veeg' | 'prullenbak' | 'meldingen' | null>(initialType);
   
@@ -736,11 +738,26 @@ export default function StartNavigationPage() {
     return null;
   }, [selectedRouteDef]);
 
-  const handleStartRoute = React.useCallback(async (simulate = false) => {
+  const handleStartRoute = React.useCallback(async (simulate = false, useFixedStart = false) => {
     setIsSimulationMode(simulate);
     const predefinedStart = selectedRouteDef && 'startLatitude' in selectedRouteDef && (selectedRouteDef as any).startLatitude ? { latitude: (selectedRouteDef as any).startLatitude, longitude: (selectedRouteDef as any).startLongitude } : null;
-    let startLoc = userLocation; if (simulate && predefinedStart) startLoc = predefinedStart; else if (!startLoc && predefinedStart) startLoc = predefinedStart; else if (simulate && !startLoc && objectsOnMap && objectsOnMap.length > 0) startLoc = { latitude: objectsOnMap[0].latitude, longitude: objectsOnMap[0].longitude };
-    if (!startLoc && !simulate) { toast({ title: "Locatie vereist", description: "GPS vereist voor Live Rit.", variant: "destructive" }); return; }
+    
+    let startLoc = userLocation;
+    if (useFixedStart) {
+        startLoc = SIMULATION_START_LOCATION;
+    } else if (simulate && predefinedStart) {
+        startLoc = predefinedStart;
+    } else if (!startLoc && predefinedStart) {
+        startLoc = predefinedStart;
+    } else if (simulate && !startLoc && objectsOnMap && objectsOnMap.length > 0) {
+        startLoc = { latitude: objectsOnMap[0].latitude, longitude: objectsOnMap[0].longitude };
+    }
+
+    if (!startLoc && !simulate) {
+        toast({ title: "Locatie vereist", description: "GPS vereist voor Live Rit.", variant: "destructive" });
+        return;
+    }
+
     setIsStarting(true);
     let sortedObjects: MapObject[] = [];
     if (routeType === 'meldingen' && allMeldingen) {
@@ -814,8 +831,31 @@ export default function StartNavigationPage() {
             {routeType === 'meldingen' && allMeldingen?.map(m => (<Marker key={m.id} longitude={m.longitude} latitude={m.latitude}><div className="w-5 h-5 bg-red-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-[8px] font-black text-white">!</div></Marker>))}
           </MapGL>
           
+          {(autoStartTimeoutReached && !userLocation && isAutoMeldingen) && (
+            <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-6">
+                <Card className="w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-300 border-none rounded-3xl overflow-hidden">
+                    <CardHeader className="text-center pb-2 bg-slate-900 text-white">
+                        <div className="mx-auto bg-white/10 p-4 rounded-full w-20 h-20 flex items-center justify-center mb-4"><SignalLow className="h-10 w-10 text-white animate-pulse" /></div>
+                        <CardTitle className="text-xl font-black uppercase tracking-tight">Geen Locatie Gevonden</CardTitle>
+                        <CardDescription className="text-slate-400 font-bold">We kunnen uw GPS-positie momenteel niet vaststellen.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-8 space-y-4 bg-white">
+                        <p className="text-center text-sm font-medium text-slate-500 leading-relaxed">
+                            Wilt u een simulatie starten vanaf de bedrijfslocatie om de werkbonnen te bekijken?
+                        </p>
+                        <Button onClick={() => handleStartRoute(true, true)} className="w-full h-14 bg-primary hover:bg-primary/90 text-sm font-black uppercase tracking-widest gap-2 shadow-xl shadow-primary/20">
+                            <Sparkles className="h-5 w-5" /> Start Simulatie (Aarbergerweg)
+                        </Button>
+                        <Button variant="ghost" onClick={() => router.push('/')} className="w-full font-bold text-slate-400">
+                            Terug naar Dashboard
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+          )}
+
           {showSetupCard && (
-            <Card className="absolute top-4 left-4 z-10 w-full max-w-[280px] shadow-2xl bg-white/95 backdrop-blur border-2 border-slate-100 animate-in slide-in-from-left-4 duration-300">
+            <Card className="absolute top-4 left-4 z-10 w-full max-w-[280px] shadow-2xl bg-white/95 backdrop-blur border-2 border-slate-100 rounded-2xl shadow-2xl p-4 hidden sm:block animate-in slide-in-from-left-4 duration-300">
                 <CardHeader className="p-3 border-b bg-slate-50/50">
                   <div className="flex items-center gap-3">
                     <Button variant="ghost" size="icon" onClick={() => router.push('/')} className="h-7 w-7 hover:bg-white rounded-full flex items-center justify-center">
