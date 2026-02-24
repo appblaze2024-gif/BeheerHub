@@ -555,8 +555,8 @@ function NavigatingView({
 
       <div className={cn("absolute right-4 top-20 z-[70] transition-all duration-300 flex items-center gap-3")}>
           <div className="h-14 w-14 rounded-full bg-white border-[6px] border-red-600 flex items-center justify-center shadow-xl animate-in fade-in zoom-in duration-500"><span className="text-xl font-black text-slate-900 tabular-nums">{currentSpeedLimit}</span></div>
-          <div className={cn("h-20 w-20 rounded-full backdrop-blur shadow-2xl border-4 flex flex-col items-center justify-center overflow-hidden transition-colors duration-500", isSpeeding ? "bg-red-50/95 border-red-200" : "bg-white/95 border-slate-100")}>
-              <div className="flex flex-col items-center leading-none z-10"><span className={cn("text-2xl font-black tabular-nums transition-colors", isSpeeding ? "text-red-600" : "text-slate-900")}>{speedKmh}</span><span className={cn("text-[8px] font-black uppercase mt-0.5 tracking-widest", isSpeeding ? "text-red-400" : "text-slate-400")}>km/h</span></div>
+          <div className={cn("h-14 w-14 rounded-full backdrop-blur shadow-2xl border-4 flex flex-col items-center justify-center overflow-hidden transition-colors duration-500", isSpeeding ? "bg-red-50/95 border-red-200" : "bg-white/95 border-slate-100")}>
+              <div className="flex flex-col items-center leading-none z-10"><span className={cn("text-xl font-black tabular-nums transition-colors", isSpeeding ? "text-red-600" : "text-slate-900")}>{speedKmh}</span><span className={cn("text-[6px] font-black uppercase mt-0.5 tracking-widest", isSpeeding ? "text-red-400" : "text-slate-400")}>km/h</span></div>
               <svg className="absolute inset-0 -rotate-90 p-1" viewBox="0 0 100 100">
                   <circle cx="50" cy="50" r="44" fill="none" stroke="currentColor" strokeWidth="6" className={isSpeeding ? "text-red-100" : "text-slate-100"} />
                   <circle cx="50" cy="50" r="44" fill="none" stroke="currentColor" strokeWidth="6" strokeDasharray={2 * Math.PI * 44} strokeDashoffset={2 * Math.PI * 44 * (1 - Math.min(speedKmh, currentSpeedLimit) / currentSpeedLimit)} className={cn("transition-all duration-500", isSpeeding ? "text-red-600" : "text-primary")} strokeLinecap="round" />
@@ -879,7 +879,7 @@ export default function StartNavigationPage() {
                 <Card className="w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-300 border-none rounded-3xl overflow-hidden">
                     <CardHeader className="text-center pb-2 bg-slate-900 text-white">
                         <div className="mx-auto bg-white/10 p-4 rounded-full w-20 h-20 flex items-center justify-center mb-4"><SignalLow className="h-10 w-10 text-white animate-pulse" /></div>
-                        <CardTitle className="text-xl font-black uppercase tracking-tight">Geen Locatie Gevonden</CardTitle>
+                        <CardTitle className="text-xl font-black uppercase tracking-tight text-white">Geen Locatie Gevonden</CardTitle>
                         <CardDescription className="text-slate-400 font-bold">We kunnen uw GPS-positie momenteel niet vaststellen.</CardDescription>
                     </CardHeader>
                     <CardContent className="p-8 space-y-4 bg-white">
