@@ -28,12 +28,14 @@ import {
   Navigation,
   AlertTriangle,
   Flag,
-  MousePointer2,
   X as XIcon,
   Home,
   LocateFixed,
   FileText,
-  Filter
+  Filter,
+  ChevronRight,
+  Maximize,
+  Minimize
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -83,6 +85,20 @@ const routeLayerCasing: Layer = {
   },
 };
 
+/**
+ * Custom hook for mobile detection within this module
+ */
+const useInternalIsMobile = (width: number = 768) => {
+  const [isMobile, setIsMobile] = React.useState(false);
+  React.useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < width);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [width]);
+  return isMobile;
+};
+
 function NavigatingView({ 
     objectsOnRoute, 
     onExit,
@@ -96,7 +112,7 @@ function NavigatingView({
 }) {
   const mapRef = React.useRef<MapRef>(null);
   const router = useRouter();
-  const isMobile = useIsMobile(768);
+  const isMobile = useInternalIsMobile(768);
   const [targetLocation, setTargetLocation] = React.useState<{ latitude: number, longitude: number, speed: number | null, heading: number | null } | null>(initialUserLocation ? { ...initialUserLocation, speed: 0, heading: 0 } : null);
   const [smoothLocation, setSmoothLocation] = React.useState<{ latitude: number, longitude: number, speed: number | null, heading: number | null } | null>(initialUserLocation ? { ...initialUserLocation, speed: 0, heading: 0 } : null);
   
@@ -111,7 +127,6 @@ function NavigatingView({
   const [hasReachedCurrentTarget, setHasReachedCurrentTarget] = React.useState(false);
   const [isFollowing, setIsFollowing] = React.useState(true);
   const [gpsError, setGpsError] = React.useState<'permission' | 'signal' | null>(null);
-  const [offRouteSince, setOffRouteSince] = React.useState<number | null>(null);
   const [throttledGeometry, setThrottledGeometry] = React.useState<any>(null);
   
   const [isDrawerExpanded, setIsDrawerExpanded] = React.useState(false);
@@ -197,6 +212,14 @@ function NavigatingView({
   React.useEffect(() => { isFollowingRef.current = isFollowing; }, [isFollowing]);
   React.useEffect(() => { currentSpeedLimitRef.current = currentSpeedLimit; }, [currentSpeedLimit]);
 
+  const navHudData = React.useMemo(() => {
+    if (!currentLeg?.steps || currentLeg.steps.length === 0) return null;
+    const step = currentLeg.steps[0];
+    return {
+      instruction: step.maneuver?.instruction || 'Rijd naar bestemming'
+    };
+  }, [currentLeg]);
+
   React.useEffect(() => {
     let lastTime = performance.now();
     let lastCameraUpdateLat = 0;
@@ -221,8 +244,6 @@ function NavigatingView({
             
             const newSmooth = { latitude: newLat, longitude: newLng, speed: target.speed, heading: newHeading };
             
-            // Handle camera outside of the positional state update if possible, 
-            // but for now we'll just ensure it doesn't trigger a depth error by checking thresholds
             if (isFollowingRef.current && !arrivedObjectRef.current) {
                 const cameraThreshold = 0.000005;
                 if (Math.abs(newLat - lastCameraUpdateLat) > cameraThreshold || Math.abs(newLng - lastCameraUpdateLng) > cameraThreshold) {
@@ -266,12 +287,11 @@ function NavigatingView({
     return smoothLocation;
   }, [smoothLocation, currentRouteGeometry]);
 
-  // Consolidate high-frequency effect updates with timestamps to prevent depth errors
   React.useEffect(() => {
     if (!currentRouteGeometry || !snappedLocation || isCalculatingRoute) return;
     
     const now = Date.now();
-    if (now - lastDistanceCalcTimeRef.current < 200) return; // Max 5 updates per second
+    if (now - lastDistanceCalcTimeRef.current < 200) return; 
     lastDistanceCalcTimeRef.current = now;
 
     try {
@@ -292,7 +312,6 @@ function NavigatingView({
     } catch (e) {}
   }, [snappedLocation?.latitude, snappedLocation?.longitude, currentRouteGeometry, isCalculatingRoute, isWorkOrder, onExit]);
 
-  // Throttled Geometry update
   React.useEffect(() => {
     if (!currentRouteGeometry || !snappedLocation) { 
       setThrottledGeometry(null); 
@@ -300,7 +319,7 @@ function NavigatingView({
     }
     
     const now = Date.now();
-    if (now - lastGeometryUpdateTimeRef.current < 250) return; // Max 4 updates per second
+    if (now - lastGeometryUpdateTimeRef.current < 250) return; 
     lastGeometryUpdateTimeRef.current = now;
     
     try {
@@ -629,7 +648,6 @@ export default function StartNavigationPage() {
   const [isStarting, setIsStarting] = React.useState(false);
   const [isSimulationMode, setIsSimulationMode] = React.useState(false);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = React.useState(false);
-  const [showManualHint, setShowManualHint] = React.useState(false);
   const [autoStartTimeoutReached, setAutoStartTimeoutReached] = React.useState(false);
   const [urlMeldingLocatie, setUrlMeldingLocatie] = React.useState<{ latitude: number; longitude: number; straat?: string } | null>(null);
   
@@ -771,7 +789,6 @@ export default function StartNavigationPage() {
         const timer = setTimeout(() => {
           if (!userLocation) {
             setAutoStartTimeoutReached(true);
-            setShowManualHint(true);
           }
         }, 5000);
         return () => clearTimeout(timer);
@@ -787,23 +804,120 @@ export default function StartNavigationPage() {
         <NavigatingView objectsOnRoute={objectsOnRoute} onExit={() => { setNavigationState('setup'); setObjectsOnRoute([]); if (searchParams.has('lat')) router.back(); }} initialUserLocation={tripStartLocation} isSimulating={isSimulationMode} />
       ) : (
         <div className="w-full h-full relative">
-          <MapGL ref={mapRef} initialViewState={{ longitude: userLocation?.longitude || 5.2913, latitude: userLocation?.latitude || 52.1326, zoom: userLocation ? 14 : 7 }} style={{ width: '100%', height: '100%' }} mapStyle={mapStyle} mapboxAccessToken={MAPBOX_TOKEN} onClick={e => { setUserLocation({ latitude: e.lngLat.lat, longitude: e.lngLat.lng }); setShowManualHint(false); }}>
+          <MapGL ref={mapRef} initialViewState={{ longitude: userLocation?.longitude || 5.2913, latitude: userLocation?.latitude || 52.1326, zoom: userLocation ? 14 : 7 }} style={{ width: '100%', height: '100%' }} mapStyle={mapStyle} mapboxAccessToken={MAPBOX_TOKEN} onClick={e => { setUserLocation({ latitude: e.lngLat.lat, longitude: e.lngLat.lng }); }}>
             {userLocation && (<Marker longitude={userLocation.longitude} latitude={userLocation.latitude} anchor="center"><div className="relative flex flex-col items-center"><div className="absolute h-10 w-10 rounded-full bg-green-500/30 animate-ping" /><div className="relative h-8 w-8 rounded-full bg-green-600 border-4 border-white shadow-xl flex items-center justify-center"><MapPin className="h-4 w-4 text-white fill-current" /></div></div></Marker>)}
             {urlMeldingLocatie && (<Marker longitude={urlMeldingLocatie.longitude} latitude={urlMeldingLocatie.latitude} anchor="center"><div className="relative flex flex-col items-center"><div className="absolute h-12 w-12 rounded-full bg-blue-500/20 animate-pulse" /><div className="relative h-10 w-10 rounded-full bg-primary border-4 border-white shadow-2xl flex items-center justify-center"><Flag className="h-5 w-5 text-white fill-current" /></div></div></Marker>)}
-            {routeGeoJSONFeatures && (<Source id="route-area" type="geojson" data={{ type: 'FeatureCollection', features: routeGeoJSONFeatures.map((f: any) => ({ type: 'Feature', properties: {}, geometry: f.geometry })) }}><Layer id="route-area-fill" type="fill" paint={{ 'fill-color': '#32ADE6', 'fill-opacity': 0.05 }} /><Layer id="route-area-outline" type="line" paint={{ 'line-color': '#32ADE6', 'line-width': 1, 'line-dasharray': [2, 2] }} /></Source>)}
+            {routeGeoJSONFeatures && (<Source id="route-area" type="geojson" data={{ type: 'FeatureCollection', features: routeGeoJSONFeatures.features }}><Layer id="route-area-fill" type="fill" paint={{ 'fill-color': '#32ADE6', 'fill-opacity': 0.05 }} /><Layer id="route-area-outline" type="line" paint={{ 'line-color': '#32ADE6', 'line-width': 1, 'line-dasharray': [2, 2] }} /></Source>)}
             {objectsOnMap?.map(obj => (<Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude}><div className="w-4 h-4 bg-primary rounded-full border-2 border-white shadow-lg" /></Marker>))}
             {routeType === 'meldingen' && allMeldingen?.map(m => (<Marker key={m.id} longitude={m.longitude} latitude={m.latitude}><div className="w-5 h-5 bg-red-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-[8px] font-black text-white">!</div></Marker>))}
           </MapGL>
+          
           {showSetupCard && (
             <Card className="absolute top-4 left-4 z-10 w-full max-w-[280px] shadow-2xl bg-white/95 backdrop-blur border-2 border-slate-100 animate-in slide-in-from-left-4 duration-300">
-                <CardHeader className="p-3 border-b bg-slate-50/50"><div className="flex items-center gap-3"><Button variant="ghost" size="icon" onClick={() => router.push('/')} className="h-7 w-7 hover:bg-white rounded-full flex items-center justify-center"><ArrowLeft className="h-3.5 w-3.5" /></Button><CardTitle className="text-sm font-black uppercase tracking-tighter">Navigatie Setup</CardTitle></div></CardHeader>
+                <CardHeader className="p-3 border-b bg-slate-50/50">
+                  <div className="flex items-center gap-3">
+                    <Button variant="ghost" size="icon" onClick={() => router.push('/')} className="h-7 w-7 hover:bg-white rounded-full flex items-center justify-center">
+                      <ArrowLeft className="h-3.5 w-3.5" />
+                    </Button>
+                    <CardTitle className="text-sm font-black uppercase tracking-tighter">Navigatie Setup</CardTitle>
+                  </div>
+                </CardHeader>
                 <CardContent className="p-3 space-y-3">
-                <div className="space-y-1"><Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Project</Label><Select value={selectedProjectId || ''} onValueChange={v => setSelectedProjectId(v || null)} disabled={isLoadingProjects}><SelectTrigger className="h-8 border font-bold text-xs"><SelectValue placeholder="Kies project" /></SelectTrigger><SelectContent>{projects?.map(p => <SelectItem key={p.id} value={p.id!}>{p.projectnaam}</SelectItem>)}</Select></div>
-                {!urlMeldingLocatie && (<><div className="space-y-1"><Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Type Inzet</Label><div className="grid grid-cols-3 gap-1"><Button variant={routeType === 'veeg' ? 'default' : 'outline'} onClick={() => setRouteType('veeg')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[9px] p-1", routeType === 'veeg' ? "bg-primary border-primary text-white" : "border-slate-200")}>Veeg</Button><Button variant={routeType === 'prullenbak' ? 'default' : 'outline'} onClick={() => setRouteType('prullenbak')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[9px] p-1", routeType === 'prullenbak' ? "bg-primary border-primary text-white" : "border-slate-200")}>Bakken</Button><Button variant={routeType === 'meldingen' ? 'default' : 'outline'} onClick={() => setRouteType('meldingen')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[9px] p-1", routeType === 'meldingen' ? "bg-primary border-primary text-white" : "border-slate-200")}>Melding</Button></div></div>
-                    {routeType !== 'meldingen' && (<div className="space-y-1"><Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Route Keuze</Label><Select onValueChange={setSelectedRouteId} value={selectedRouteId} disabled={!routeType}><SelectTrigger className="h-8 border font-bold text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="--nieuwe-route--">-- Kies een route --</SelectItem>{availableRoutes.map((r: any) => (<SelectItem key={r.id} value={r.id}>{r.naam}</SelectItem>))}</SelectContent></Select></div>)}</>)}
-                <div className="flex flex-col gap-1.5 pt-1"><Button className="w-full h-9 text-xs font-black bg-primary hover:bg-primary/90 shadow-lg uppercase tracking-tighter" onClick={() => handleStartRoute(false)} disabled={(urlMeldingLocatie ? !userLocation : (routeType === 'meldingen' ? false : selectedRouteId === '--nieuwe-route--')) || isStarting}>{isStarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4 fill-current" />} {urlMeldingLocatie ? 'START RIT' : 'START LIVE RIT'}</Button>
-                    <div className="grid grid-cols-2 gap-1.5">{isPrivileged && (<Button variant="outline" className="h-8 border-slate-200 text-slate-600 font-black uppercase text-[9px]" onClick={() => setIsHistoryDialogOpen(true)}><History className="mr-1.5 h-3 w-3" /> GESCHIEDENIS</Button>)}<Button variant="outline" className="h-8 border-dashed border-primary/30 text-primary font-black uppercase text-[9px]" onClick={() => handleStartRoute(true)} disabled={(urlMeldingLocatie ? false : (routeType === 'meldingen' ? false : selectedRouteId === '--nieuwe-route--')) || isStarting}><Gauge className="mr-1.5 h-3 w-3" /> SIMULATOR</Button></div>
-                </div></CardContent>
+                  <div className="space-y-1">
+                    <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Project</Label>
+                    <Select value={selectedProjectId || ''} onValueChange={v => setSelectedProjectId(v || null)} disabled={isLoadingProjects}>
+                      <SelectTrigger className="h-8 border font-bold text-xs">
+                        <SelectValue placeholder="Kies project" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {projects?.map(p => (
+                          <SelectItem key={p.id} value={p.id!}>{p.projectnaam}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {!urlMeldingLocatie && (
+                    <>
+                      <div className="space-y-1">
+                        <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Type Inzet</Label>
+                        <div className="grid grid-cols-3 gap-1">
+                          <Button 
+                            variant={routeType === 'veeg' ? 'default' : 'outline'} 
+                            onClick={() => setRouteType('veeg')} 
+                            disabled={!selectedProjectId} 
+                            className={cn("font-black h-8 border text-[9px] p-1", routeType === 'veeg' ? "bg-primary border-primary text-white" : "border-slate-200")}
+                          >
+                            Veeg
+                          </Button>
+                          <Button 
+                            variant={routeType === 'prullenbak' ? 'default' : 'outline'} 
+                            onClick={() => setRouteType('prullenbak')} 
+                            disabled={!selectedProjectId} 
+                            className={cn("font-black h-8 border text-[9px] p-1", routeType === 'prullenbak' ? "bg-primary border-primary text-white" : "border-slate-200")}
+                          >
+                            Bakken
+                          </Button>
+                          <Button 
+                            variant={routeType === 'meldingen' ? 'default' : 'outline'} 
+                            onClick={() => setRouteType('meldingen')} 
+                            disabled={!selectedProjectId} 
+                            className={cn("font-black h-8 border text-[9px] p-1", routeType === 'meldingen' ? "bg-primary border-primary text-white" : "border-slate-200")}
+                          >
+                            Melding
+                          </Button>
+                        </div>
+                      </div>
+
+                      {routeType !== 'meldingen' && (
+                        <div className="space-y-1">
+                          <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Route Keuze</Label>
+                          <Select onValueChange={setSelectedRouteId} value={selectedRouteId} disabled={!routeType}>
+                            <SelectTrigger className="h-8 border font-bold text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="--nieuwe-route--">-- Kies een route --</SelectItem>
+                              {availableRoutes.map((r: any) => (
+                                <SelectItem key={r.id} value={r.id}>{r.naam}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  <div className="flex flex-col gap-1.5 pt-1">
+                    <Button 
+                      className="w-full h-9 text-xs font-black bg-primary hover:bg-primary/90 shadow-lg uppercase tracking-tighter" 
+                      onClick={() => handleStartRoute(false)} 
+                      disabled={(urlMeldingLocatie ? !userLocation : (routeType === 'meldingen' ? false : selectedRouteId === '--nieuwe-route--')) || isStarting}
+                    >
+                      {isStarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4 fill-current" />} 
+                      {urlMeldingLocatie ? 'START RIT' : 'START LIVE RIT'}
+                    </Button>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {isPrivileged && (
+                        <Button 
+                          variant="outline" 
+                          className="h-8 border-slate-200 text-slate-600 font-black uppercase text-[9px]" 
+                          onClick={() => setIsHistoryDialogOpen(true)}
+                        >
+                          <History className="mr-1.5 h-3 w-3" /> GESCHIEDENIS
+                        </Button>
+                      )}
+                      <Button 
+                        variant="outline" 
+                        className="h-8 border-dashed border-primary/30 text-primary font-black uppercase text-[9px]" 
+                        onClick={() => handleStartRoute(true)} 
+                        disabled={(urlMeldingLocatie ? false : (routeType === 'meldingen' ? false : selectedRouteId === '--nieuwe-route--')) || isStarting}
+                      >
+                        <Gauge className="mr-1.5 h-3 w-3" /> SIMULATOR
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
             </Card>
           )}
         </div>
@@ -812,12 +926,3 @@ export default function StartNavigationPage() {
     </div>
   );
 }
-
-const useIsMobile = (width: number) => {
-  const [isMobile, setIsMobile] = React.useState(false);
-  React.useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < width);
-    check(); window.addEventListener('resize', check); return () => window.removeEventListener('resize', check);
-  }, [width]);
-  return isMobile;
-};
