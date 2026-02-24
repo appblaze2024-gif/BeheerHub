@@ -944,7 +944,7 @@ export default function StartNavigationPage() {
           )}
         </div>
       )}
-      {isPrivileged && (<HistoryDialog open={isHistoryDialogOpen} onOpenChange={setIsHistoryDialogOpen} projectId={selectedProjectId} />)}
+      {isPrivileged && (<RouteHistoryDialog open={isHistoryDialogOpen} onOpenChange={setIsHistoryDialogOpen} projectId={selectedProjectId} />)}
     </div>
   );
 }
