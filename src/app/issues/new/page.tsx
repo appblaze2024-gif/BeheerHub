@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -1097,8 +1096,8 @@ export default function NewIssuePage() {
                     </div>
                     <div className='p-3 border rounded-xl bg-gray-50 dark:bg-gray-800/30 space-y-1 shadow-sm'>
                         <h3 className="font-black text-[9px] mb-2 uppercase tracking-widest text-slate-400">Medewerker / Melder</h3>
-                        <FormRow label="Naam melder"><FormField control={form.control} name="melder" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs font-bold" disabled={isReadOnly} /></FormControl> )} /></FormRow>
-                        <FormRow label="Telefoon melder"><FormField control={form.control} name="telefoon_melder" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs font-bold" disabled={isReadOnly} /></FormControl> )} /></FormRow>
+                        <FormRow label="Naam melder"><FormField control={form.control} name="melder" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs font-bold" disabled={isReadOnly} /></FormControl> )}/></FormRow>
+                        <FormRow label="Telefoon melder"><FormField control={form.control} name="telefoon_melder" render={({ field }) => ( <FormControl><Input {...field} className="h-7 text-xs font-bold" disabled={isReadOnly} /></FormControl> )}/></FormRow>
                     </div>
                 </div>
             </div>
