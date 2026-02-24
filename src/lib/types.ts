@@ -346,14 +346,21 @@ export interface Contractor {
   createdAt: string;
 }
 
+export interface AgendaItem {
+  id: string;
+  title: string;
+  content: string;
+}
+
 export interface MeetingMinute {
   id: string;
   contractorId: string;
   projectId: string;
   title: string;
   date: string;
+  location?: string;
   attendees?: string;
-  content: string;
+  agendaItems: AgendaItem[];
   actionPoints?: string;
   createdAt: string;
   createdBy: string;
