@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -129,7 +128,6 @@ export function MeetingMinuteDialog({
           actionPoints: minute.actionPoints || '',
         });
       } else {
-        // Create new minute - check for template first
         form.reset({
           title: `Operationeel Startwerkoverleg ${contractor.name}`,
           documentTitle: template?.documentTitle || 'Agenda operationeel Startwerkoverleg',
@@ -208,17 +206,22 @@ export function MeetingMinuteDialog({
           <DialogDescription>Vergaderverslag voor {contractor.name}</DialogDescription>
         </DialogHeader>
 
-        {/* Document Header with Editable parts */}
+        {/* Document Header */}
         <div className="bg-white border-b shrink-0 p-8 space-y-6">
             <div className="flex justify-between items-start gap-8">
-                <div className="flex flex-col gap-2 w-48">
-                    <div className="relative w-full h-12 border-2 border-dashed border-slate-100 rounded-lg overflow-hidden group">
+                <div className="flex flex-col gap-2 w-48 group relative">
+                    <div className="relative w-full h-12 border-2 border-slate-100 rounded-lg overflow-hidden">
                         {form.watch('logoLeftUrl') ? (
                             <Image src={form.watch('logoLeftUrl')!} alt="Logo Links" fill className="object-contain object-left" />
                         ) : (
-                            <div className="flex items-center justify-center h-full bg-slate-50"><ImageIcon className="h-4 w-4 text-slate-300" /></div>
+                            <div className="flex items-center justify-center h-full bg-slate-50 text-[8px] font-black text-slate-300 uppercase">Logo Links</div>
                         )}
                     </div>
+                    <Input 
+                        {...form.register('logoLeftUrl')} 
+                        className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-white/90 text-[10px] h-full transition-opacity border-primary" 
+                        placeholder="Plak URL links..."
+                    />
                     <span className="text-[8px] font-black uppercase text-slate-300 text-center tracking-widest">Logo Links</span>
                 </div>
 
@@ -235,14 +238,19 @@ export function MeetingMinuteDialog({
                     />
                 </div>
 
-                <div className="flex flex-col gap-2 w-48">
-                    <div className="relative w-full h-12 border-2 border-dashed border-slate-100 rounded-lg overflow-hidden group">
+                <div className="flex flex-col gap-2 w-48 group relative">
+                    <div className="relative w-full h-12 border-2 border-slate-100 rounded-lg overflow-hidden">
                         {form.watch('logoRightUrl') ? (
                             <Image src={form.watch('logoRightUrl')!} alt="Logo Rechts" fill className="object-contain object-right" />
                         ) : (
-                            <div className="flex items-center justify-center h-full bg-slate-50"><ImageIcon className="h-4 w-4 text-slate-300" /></div>
+                            <div className="flex items-center justify-center h-full bg-slate-50 text-[8px] font-black text-slate-300 uppercase">Logo Rechts</div>
                         )}
                     </div>
+                    <Input 
+                        {...form.register('logoRightUrl')} 
+                        className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-white/90 text-[10px] h-full transition-opacity border-primary" 
+                        placeholder="Plak URL rechts..."
+                    />
                     <span className="text-[8px] font-black uppercase text-slate-300 text-center tracking-widest">Logo Rechts</span>
                 </div>
             </div>
@@ -261,10 +269,7 @@ export function MeetingMinuteDialog({
                 <Input placeholder="Namen van aanwezigen..." {...form.register('attendees')} className="h-7 py-0 font-bold border-slate-200" />
                 
                 <span>Verslaglegging:</span>
-                <div className="flex items-center gap-2">
-                  <Input placeholder="Naam verslaglegger..." {...form.register('createdBy')} className="h-7 py-0 flex-1 font-bold border-slate-200" />
-                  <span className="text-slate-400 shrink-0">BeheerHub</span>
-                </div>
+                <Input placeholder="Naam verslaglegger..." {...form.register('createdBy')} className="h-7 py-0 flex-1 font-bold border-slate-200" />
             </div>
         </div>
         
