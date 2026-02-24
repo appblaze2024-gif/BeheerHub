@@ -21,7 +21,7 @@ import { Label } from '@/components/ui/label';
 import { useFirestore, setDocumentNonBlocking, useDoc, useMemoFirebase, useFirebaseApp } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { Loader2, Sparkles, X, Plus, Image as ImageIcon, MapPin, Upload } from 'lucide-react';
+import { Loader2, Sparkles, X, Plus, Image as ImageIcon, MapPin, Upload, Settings2 } from 'lucide-react';
 import type { MinuteTemplate, Contractor } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
