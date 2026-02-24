@@ -118,7 +118,7 @@ export default function MinutesPage() {
           <div className="bg-white p-8 rounded-3xl shadow-xl mb-6">
             <Briefcase className="h-16 w-16 text-slate-200" />
           </div>
-          <h3 className="text-xl font-black uppercase tracking-tight mb-2">Geen project geselecteerd</h3>
+          <h3 className="text-xl font-black uppercase tracking-tight mb-2 text-slate-900">Geen project geselecteerd</h3>
           <p className="text-sm text-slate-400 max-w-xs mx-auto font-medium">Selecteer eerst een project in de sidebar om de aannemers en notulen te bekijken.</p>
         </div>
       ) : (
@@ -187,7 +187,7 @@ export default function MinutesPage() {
                   <div className="flex items-center gap-4">
                     {isMobile && <Button variant="ghost" size="icon" onClick={() => setSelectedContractor(null)}><ArrowLeft className="h-5 w-5" /></Button>}
                     <div>
-                      <h2 className="text-xl font-black uppercase tracking-tight leading-none mb-1">{selectedContractor.name}</h2>
+                      <h2 className="text-xl font-black uppercase tracking-tight leading-none mb-1 text-slate-900">{selectedContractor.name}</h2>
                       <div className="flex items-center gap-3 text-[10px] font-black uppercase text-slate-400 tracking-widest">
                         <span className="flex items-center gap-1"><User className="h-3 w-3" /> {selectedContractor.contactPerson}</span>
                         {selectedContractor.email && <span>• {selectedContractor.email}</span>}

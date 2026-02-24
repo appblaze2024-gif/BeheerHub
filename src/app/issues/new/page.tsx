@@ -715,7 +715,7 @@ export default function NewIssuePage() {
 
     try {
         for (const file of fileArray) {
-            // Stap 1: Probeer tekst te extraheren (90% goedkoper)
+            // Stap 1: Probeer tekst te extraheren (90% goedkoper dan visuele scan)
             const extractedText = await extractTextFromPdf(file);
             const isTextAvailable = extractedText.length > 50;
 
@@ -725,7 +725,7 @@ export default function NewIssuePage() {
                 reader.readAsDataURL(file);
             });
 
-            // Stap 2: Roep de AI flow aan met tekst indien beschikbaar
+            // Stap 2: Roep de AI flow aan met tekst indien beschikbaar, anders afbeelding
             const result = await parseIssuePdf({ 
                 pdfDataUri: isTextAvailable ? undefined : base64,
                 textContent: isTextAvailable ? extractedText : undefined,
