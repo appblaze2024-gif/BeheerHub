@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -16,6 +17,39 @@ import { useNavigationUI } from '@/context/navigation-ui-context';
 import Image from 'next/image';
 import { PDFDocument } from 'pdf-lib';
 import * as pdfjs from 'pdfjs-dist';
+import * as turf from '@turf/turf';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { MapboxView } from '@/components/mapbox-view';
+import { parseIssuePdf } from '@/ai/flows/parse-issue-pdf-flow';
+import type { Melding, UploadedFile, Object as MapObject } from '@/lib/types';
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -1123,7 +1157,7 @@ export default function NewIssuePage() {
                     <TabsContent value="locatie" className="flex-1 m-0 flex flex-col min-h-0">
                       <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-0 h-full">
                         <div className="md:col-span-8 border-r overflow-hidden relative shadow-inner">
-                            <MapboxView longitude={location?.longitude} latitude={location?.latitude} objects={nearbyObjects} />
+                            <MapboxView latitude={location?.latitude} longitude={location?.longitude} objects={nearbyObjects} />
                         </div>
                         <div className="md:col-span-4 flex flex-col min-h-0 bg-slate-50/50">
                             <div className="p-3 border-b shrink-0 font-black text-[10px] uppercase tracking-widest text-slate-400 bg-white">Objecten in de buurt (100m)</div>
