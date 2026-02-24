@@ -357,6 +357,10 @@ export interface MeetingMinute {
   contractorId: string;
   projectId: string;
   title: string;
+  documentTitle?: string;
+  documentSubtitle?: string;
+  logoLeftUrl?: string;
+  logoRightUrl?: string;
   date: string;
   location?: string;
   attendees?: string;

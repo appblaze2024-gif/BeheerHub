@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -19,7 +20,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { collection, doc } from 'firebase/firestore';
-import { Loader2, ScrollText, Sparkles, User, MapPin, Calendar, Check, X } from 'lucide-react';
+import { Loader2, ScrollText, Sparkles, User, MapPin, Calendar, Check, X, Image as ImageIcon } from 'lucide-react';
 import type { MeetingMinute, Contractor, AgendaItem } from '@/lib/types';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -47,6 +48,10 @@ const DEFAULT_AGENDA = [
 
 const minuteSchema = z.object({
   title: z.string().min(1, 'Titel is verplicht'),
+  documentTitle: z.string().optional(),
+  documentSubtitle: z.string().optional(),
+  logoLeftUrl: z.string().optional(),
+  logoRightUrl: z.string().optional(),
   date: z.string().min(1, 'Datum is verplicht'),
   location: z.string().optional(),
   attendees: z.string().optional(),
@@ -82,6 +87,10 @@ export function MeetingMinuteDialog({
     resolver: zodResolver(minuteSchema),
     defaultValues: {
       title: '',
+      documentTitle: 'Agenda operationeel Startwerkoverleg',
+      documentSubtitle: 'Meerlanden afdeling Noordwijkerhout en Meerlanden',
+      logoLeftUrl: 'https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png',
+      logoRightUrl: 'https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png',
       date: format(new Date(), 'yyyy-MM-dd'),
       location: 'Aarbergerweg 5-7 Rijsenhout',
       attendees: '',
@@ -101,6 +110,10 @@ export function MeetingMinuteDialog({
       if (minute) {
         form.reset({
           title: minute.title,
+          documentTitle: minute.documentTitle || 'Agenda operationeel Startwerkoverleg',
+          documentSubtitle: minute.documentSubtitle || 'Meerlanden afdeling Noordwijkerhout en Meerlanden',
+          logoLeftUrl: minute.logoLeftUrl || 'https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png',
+          logoRightUrl: minute.logoRightUrl || 'https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png',
           date: minute.date,
           location: minute.location || 'Aarbergerweg 5-7 Rijsenhout',
           attendees: minute.attendees || '',
@@ -111,6 +124,10 @@ export function MeetingMinuteDialog({
       } else {
         form.reset({
           title: `Operationeel Startwerkoverleg ${contractor.name}`,
+          documentTitle: 'Agenda operationeel Startwerkoverleg',
+          documentSubtitle: 'Meerlanden afdeling Noordwijkerhout en Meerlanden',
+          logoLeftUrl: 'https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png',
+          logoRightUrl: 'https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png',
           date: format(new Date(), 'yyyy-MM-dd'),
           location: 'Aarbergerweg 5-7 Rijsenhout',
           attendees: '',
@@ -183,25 +200,54 @@ export function MeetingMinuteDialog({
           <DialogDescription>Vergaderverslag voor {contractor.name}</DialogDescription>
         </DialogHeader>
 
-        {/* Document Header matching the image style */}
-        <div className="bg-white border-b shrink-0 p-8">
-            <div className="flex justify-between items-start mb-8">
-                <div className="relative w-48 h-12">
-                    <Image src="https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png" alt="Heemskerk" fill className="object-contain object-left" />
+        {/* Document Header with Editable parts */}
+        <div className="bg-white border-b shrink-0 p-8 space-y-6">
+            <div className="flex justify-between items-start gap-8">
+                <div className="flex flex-col gap-2 w-48">
+                    <div className="relative w-full h-12 border-2 border-dashed border-slate-100 rounded-lg hover:border-primary/20 transition-all group">
+                        <Image src={form.watch('logoLeftUrl') || 'https://placehold.co/200x50'} alt="Logo Links" fill className="object-contain object-left" />
+                        <div className="absolute inset-0 bg-white/80 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                            <Input 
+                                placeholder="Logo URL..." 
+                                {...form.register('logoLeftUrl')} 
+                                className="h-6 text-[8px] border-none bg-transparent focus:ring-0 text-center font-bold" 
+                            />
+                        </div>
+                    </div>
+                    <span className="text-[8px] font-black uppercase text-slate-300 text-center tracking-widest">Logo Links (URL)</span>
                 </div>
-                <div className="relative w-48 h-12">
-                    <Image src="https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png" alt="Meerlanden" fill className="object-contain object-right" />
+
+                <div className="flex-1 text-center space-y-2">
+                    <Input 
+                        {...form.register('documentTitle')} 
+                        placeholder="Document Titel..."
+                        className="text-2xl font-black uppercase tracking-tight text-slate-700 text-center border-none hover:bg-slate-50 focus:bg-slate-50 h-auto p-1 leading-none shadow-none focus:ring-0"
+                    />
+                    <Input 
+                        {...form.register('documentSubtitle')} 
+                        placeholder="Subtitel..."
+                        className="text-lg font-bold text-slate-500 text-center border-none hover:bg-slate-50 focus:bg-slate-50 h-auto p-1 leading-none shadow-none focus:ring-0"
+                    />
                 </div>
-            </div>
-            
-            <div className="text-center space-y-1 mb-8">
-                <h2 className="text-2xl font-black uppercase tracking-tight text-slate-700">Agenda operationeel Startwerkoverleg</h2>
-                <p className="text-lg font-bold text-slate-500">Meerlanden afdeling Noordwijkerhout en Meerlanden</p>
+
+                <div className="flex flex-col gap-2 w-48">
+                    <div className="relative w-full h-12 border-2 border-dashed border-slate-100 rounded-lg hover:border-primary/20 transition-all group">
+                        <Image src={form.watch('logoRightUrl') || 'https://placehold.co/200x50'} alt="Logo Rechts" fill className="object-contain object-right" />
+                        <div className="absolute inset-0 bg-white/80 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                            <Input 
+                                placeholder="Logo URL..." 
+                                {...form.register('logoRightUrl')} 
+                                className="h-6 text-[8px] border-none bg-transparent focus:ring-0 text-center font-bold" 
+                            />
+                        </div>
+                    </div>
+                    <span className="text-[8px] font-black uppercase text-slate-300 text-center tracking-widest">Logo Rechts (URL)</span>
+                </div>
             </div>
 
-            <div className="grid grid-cols-[140px_1fr] gap-y-2 text-sm font-bold text-slate-600">
+            <div className="grid grid-cols-[140px_1fr] gap-y-2 text-sm font-bold text-slate-600 border-t pt-6">
                 <span>Overleg:</span>
-                <span className="text-slate-900 font-black uppercase">{form.watch('title')}</span>
+                <Input placeholder="Titel van het overleg..." {...form.register('title')} className="h-7 py-0 font-black uppercase border-slate-200" />
                 
                 <span>Vergaderdatum:</span>
                 <div className="flex gap-4">
