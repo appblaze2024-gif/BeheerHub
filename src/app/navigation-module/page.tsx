@@ -32,7 +32,8 @@ import {
   X as XIcon,
   Home,
   LocateFixed,
-  FileText
+  FileText,
+  Filter
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -117,6 +118,8 @@ function NavigatingView({
   const touchStartY = React.useRef<number | null>(null);
 
   const lastUpdateDistRef = React.useRef(0);
+  const lastDistanceCalcTimeRef = React.useRef(0);
+  const lastGeometryUpdateTimeRef = React.useRef(0);
 
   const isWorkOrder = objectsOnRoute.length === 1 && objectsOnRoute[0].id === 'Bestemming';
 
@@ -180,7 +183,6 @@ function NavigatingView({
     return limit <= 0 ? 50 : limit;
   }, [currentLeg, distanceRemainingToDestination]);
 
-  // STABLE REFS FOR LOOPS TO AVOID DEP LOOPS
   const targetLocationRef = React.useRef(targetLocation);
   const isPausedRef = React.useRef(isPaused);
   const arrivedObjectRef = React.useRef(arrivedObject);
@@ -197,47 +199,57 @@ function NavigatingView({
 
   React.useEffect(() => {
     let lastTime = performance.now();
-    let lastSetLat = 0;
-    let lastSetLng = 0;
+    let lastCameraUpdateLat = 0;
+    let lastCameraUpdateLng = 0;
+
     const animateSmoothly = (time: number) => {
         const deltaTime = (time - lastTime) / 1000;
         lastTime = time;
+        
         setSmoothLocation(prevSmooth => {
             const target = targetLocationRef.current;
             if (!target || !prevSmooth || isPausedRef.current) return prevSmooth;
-            const dist = Math.sqrt(Math.pow(target.latitude - prevSmooth.latitude, 2) + Math.pow(target.longitude - prevSmooth.longitude, 2));
-            if (dist < 0.000001 && !isSimulating) return prevSmooth;
+            
             const lerpFactor = isSimulating ? 1 : 0.15; 
             const newLat = prevSmooth.latitude + (target.latitude - prevSmooth.latitude) * lerpFactor;
             const newLng = prevSmooth.longitude + (target.longitude - prevSmooth.longitude) * lerpFactor;
+            
             let diff = (target.heading || 0) - (prevSmooth.heading || 0);
             while (diff < -180) diff += 360;
             while (diff > 180) diff -= 360;
             const newHeading = (prevSmooth.heading || 0) + diff * (lerpFactor * 0.5);
+            
             const newSmooth = { latitude: newLat, longitude: newLng, speed: target.speed, heading: newHeading };
+            
+            // Handle camera outside of the positional state update if possible, 
+            // but for now we'll just ensure it doesn't trigger a depth error by checking thresholds
             if (isFollowingRef.current && !arrivedObjectRef.current) {
-                const changeThreshold = 0.000005;
-                if (Math.abs(newLat - lastSetLat) > changeThreshold || Math.abs(newLng - lastSetLng) > changeThreshold) {
-                    lastSetLat = newLat; lastSetLng = newLng;
+                const cameraThreshold = 0.000005;
+                if (Math.abs(newLat - lastCameraUpdateLat) > cameraThreshold || Math.abs(newLng - lastCameraUpdateLng) > cameraThreshold) {
+                    lastCameraUpdateLat = newLat; 
+                    lastCameraUpdateLng = newLng;
+                    
                     const currentSpeedKmh = (target.speed || 0) * 3.6;
                     const targetZoom = Math.max(15, 18.5 - (Math.min(currentSpeedKmh, 80) / 30));
-                    setViewState(prevView => ({
-                        ...prevView,
+                    
+                    setViewState(prev => ({
+                        ...prev,
                         latitude: newLat,
                         longitude: newLng,
                         bearing: newHeading,
-                        zoom: prevView.zoom + (targetZoom - prevView.zoom) * 0.05,
-                        pitch: 65,
+                        zoom: prev.zoom + (targetZoom - prev.zoom) * 0.05,
                     }));
                 }
             }
+            
             return newSmooth;
         });
         smoothingAnimationRef.current = requestAnimationFrame(animateSmoothly);
     };
+    
     smoothingAnimationRef.current = requestAnimationFrame(animateSmoothly);
     return () => { if (smoothingAnimationRef.current) cancelAnimationFrame(smoothingAnimationRef.current); };
-  }, [isSimulating]); // Removed volatile deps
+  }, [isSimulating]);
 
   const snappedLocation = React.useMemo(() => {
     if (!smoothLocation || !currentRouteGeometry) return smoothLocation;
@@ -254,8 +266,14 @@ function NavigatingView({
     return smoothLocation;
   }, [smoothLocation, currentRouteGeometry]);
 
+  // Consolidate high-frequency effect updates with timestamps to prevent depth errors
   React.useEffect(() => {
     if (!currentRouteGeometry || !snappedLocation || isCalculatingRoute) return;
+    
+    const now = Date.now();
+    if (now - lastDistanceCalcTimeRef.current < 200) return; // Max 5 updates per second
+    lastDistanceCalcTimeRef.current = now;
+
     try {
       const coords = currentRouteGeometry.coordinates;
       const line = turf.lineString(coords);
@@ -264,6 +282,7 @@ function NavigatingView({
       const sliced = turf.lineSlice(pt, endPt, line);
       const remaining = turf.length(sliced, { units: 'meters' });
       const roundedRemaining = Math.round(remaining);
+      
       if (Math.abs(lastUpdateDistRef.current - roundedRemaining) >= 1) {
           setDistanceRemainingToDestination(roundedRemaining);
           lastUpdateDistRef.current = roundedRemaining;
@@ -273,48 +292,16 @@ function NavigatingView({
     } catch (e) {}
   }, [snappedLocation?.latitude, snappedLocation?.longitude, currentRouteGeometry, isCalculatingRoute, isWorkOrder, onExit]);
 
-  React.useEffect(() => {
-    if (!targetLocation || !currentRouteGeometry || isCalculatingRoute || isSimulating) return;
-    try {
-        const coords = currentRouteGeometry.coordinates;
-        const line = turf.lineString(coords);
-        const pt = turf.point([targetLocation.longitude, targetLocation.latitude]);
-        const snapped = turf.nearestPointOnLine(line, pt, { units: 'meters' });
-        const distance = snapped.properties.dist || 0;
-        if (distance > 60) { 
-            if (!offRouteSince) setOffRouteSince(Date.now());
-            else if (Date.now() - offRouteSince > 4000) { 
-                setCurrentRouteGeometry(null);
-                setOffRouteSince(null);
-                lastFetchedTargetId.current = null;
-            }
-        } else setOffRouteSince(null);
-    } catch (e) {}
-  }, [targetLocation?.latitude, targetLocation?.longitude, currentRouteGeometry, isCalculatingRoute, offRouteSince, isSimulating]);
-
-  const navHudData = React.useMemo(() => {
-    if (!currentLeg?.steps) return null;
-    const totalLegDist = currentLeg.distance;
-    const distTravelled = Math.max(0, totalLegDist - distanceRemainingToDestination);
-    let cumulativeDistance = 0;
-    for (let i = 0; i < currentLeg.steps.length; i++) {
-      const step = currentLeg.steps[i];
-      cumulativeDistance += step.distance;
-      if (distTravelled < cumulativeDistance) {
-        const distanceToManeuver = cumulativeDistance - distTravelled;
-        const currentStep = currentLeg.steps[i];
-        const nextStep = currentLeg.steps[i + 1];
-        return { distance: distanceToManeuver, instruction: nextStep ? nextStep.maneuver.instruction : currentStep.maneuver.instruction, step: nextStep || currentStep };
-      }
-    }
-    return null;
-  }, [currentLeg, distanceRemainingToDestination]);
-
+  // Throttled Geometry update
   React.useEffect(() => {
     if (!currentRouteGeometry || !snappedLocation) { 
       setThrottledGeometry(null); 
       return; 
     }
+    
+    const now = Date.now();
+    if (now - lastGeometryUpdateTimeRef.current < 250) return; // Max 4 updates per second
+    lastGeometryUpdateTimeRef.current = now;
     
     try {
       const coords = currentRouteGeometry.coordinates;
@@ -327,7 +314,6 @@ function NavigatingView({
       const distanceTravelled = snapped.properties.location || 0; 
       
       const totalDist = turf.length(line, { units: 'kilometers' });
-      
       const sliced = turf.lineSliceAlong(line, distanceTravelled, totalDist, { units: 'kilometers' });
       
       setThrottledGeometry({
@@ -368,9 +354,11 @@ function NavigatingView({
     let line: any; try { line = turf.lineString(coords); } catch (e) { return; }
     const totalDistance = turf.length(line, { units: 'meters' });
     if (totalDistance <= 0) return;
+    
     simStateRef.current.distanceTravelled = 0;
     simStateRef.current.currentSpeedMs = 0;
     simStateRef.current.lastTimestamp = 0;
+
     const runSimulation = (timestamp: number) => {
         if (isPausedRef.current || arrivedObjectRef.current || isCalculatingRouteRef.current || !currentRouteGeometry) {
             simStateRef.current.lastTimestamp = timestamp;
@@ -380,12 +368,14 @@ function NavigatingView({
         if (!simStateRef.current.lastTimestamp) simStateRef.current.lastTimestamp = timestamp;
         const deltaTime = Math.min((timestamp - simStateRef.current.lastTimestamp) / 1000, 0.1);
         simStateRef.current.lastTimestamp = timestamp;
+        
         const distanceToDestination = totalDistance - simStateRef.current.distanceTravelled;
         const currentLimitMs = currentSpeedLimitRef.current / 3.6;
         simStateRef.current.targetSpeedMs = distanceToDestination < 40 ? 3 : currentLimitMs - 0.5; 
         const accel = simStateRef.current.targetSpeedMs > simStateRef.current.currentSpeedMs ? 4 : 8;
         simStateRef.current.currentSpeedMs += (simStateRef.current.targetSpeedMs - simStateRef.current.currentSpeedMs) * deltaTime * accel;
         simStateRef.current.distanceTravelled += simStateRef.current.currentSpeedMs * deltaTime;
+        
         if (simStateRef.current.distanceTravelled >= totalDistance - 0.2) {
             const finalCoord = coords[coords.length - 1];
             setTargetLocation(prev => ({ latitude: finalCoord[1], longitude: finalCoord[0], speed: 0, heading: 0 }));
@@ -396,6 +386,7 @@ function NavigatingView({
             const lookAheadPoint = turf.along(line, Math.min(simStateRef.current.distanceTravelled + 5, totalDistance), { units: 'meters' });
             const [lng, lat] = currentPoint.geometry.coordinates;
             const heading = (turf.bearing(currentPoint, lookAheadPoint) + 360) % 360;
+            
             setTargetLocation(prev => {
                 const d = prev ? turf.distance(turf.point([prev.longitude, prev.latitude]), currentPoint, { units: 'meters' }) : 1;
                 return d > 0.1 ? { latitude: lat, longitude: lng, speed: simStateRef.current.currentSpeedMs, heading: heading } : prev;
@@ -405,7 +396,7 @@ function NavigatingView({
     };
     simAnimationRef.current = requestAnimationFrame(runSimulation);
     return () => { if (simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); };
-  }, [isSimulating, currentRouteGeometry, nextObject?.id]); // Stabilized dependencies
+  }, [isSimulating, currentRouteGeometry, nextObject?.id]);
 
   React.useEffect(() => {
     if (!targetLocation || !nextObject || arrivedObject || isCalculatingRoute) return;
@@ -807,7 +798,7 @@ export default function StartNavigationPage() {
             <Card className="absolute top-4 left-4 z-10 w-full max-w-[280px] shadow-2xl bg-white/95 backdrop-blur border-2 border-slate-100 animate-in slide-in-from-left-4 duration-300">
                 <CardHeader className="p-3 border-b bg-slate-50/50"><div className="flex items-center gap-3"><Button variant="ghost" size="icon" onClick={() => router.push('/')} className="h-7 w-7 hover:bg-white rounded-full flex items-center justify-center"><ArrowLeft className="h-3.5 w-3.5" /></Button><CardTitle className="text-sm font-black uppercase tracking-tighter">Navigatie Setup</CardTitle></div></CardHeader>
                 <CardContent className="p-3 space-y-3">
-                <div className="space-y-1"><Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Project</Label><Select value={selectedProjectId || ''} onValueChange={v => setSelectedProjectId(v || null)} disabled={isLoadingProjects}><SelectTrigger className="h-8 border font-bold text-xs"><SelectValue placeholder="Kies project" /></SelectTrigger><SelectContent>{projects?.map(p => <SelectItem key={p.id} value={p.id!}>{p.projectnaam}</SelectItem>)}</SelectContent></Select></div>
+                <div className="space-y-1"><Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Project</Label><Select value={selectedProjectId || ''} onValueChange={v => setSelectedProjectId(v || null)} disabled={isLoadingProjects}><SelectTrigger className="h-8 border font-bold text-xs"><SelectValue placeholder="Kies project" /></SelectTrigger><SelectContent>{projects?.map(p => <SelectItem key={p.id} value={p.id!}>{p.projectnaam}</SelectItem>)}</Select></div>
                 {!urlMeldingLocatie && (<><div className="space-y-1"><Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Type Inzet</Label><div className="grid grid-cols-3 gap-1"><Button variant={routeType === 'veeg' ? 'default' : 'outline'} onClick={() => setRouteType('veeg')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[9px] p-1", routeType === 'veeg' ? "bg-primary border-primary text-white" : "border-slate-200")}>Veeg</Button><Button variant={routeType === 'prullenbak' ? 'default' : 'outline'} onClick={() => setRouteType('prullenbak')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[9px] p-1", routeType === 'prullenbak' ? "bg-primary border-primary text-white" : "border-slate-200")}>Bakken</Button><Button variant={routeType === 'meldingen' ? 'default' : 'outline'} onClick={() => setRouteType('meldingen')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[9px] p-1", routeType === 'meldingen' ? "bg-primary border-primary text-white" : "border-slate-200")}>Melding</Button></div></div>
                     {routeType !== 'meldingen' && (<div className="space-y-1"><Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Route Keuze</Label><Select onValueChange={setSelectedRouteId} value={selectedRouteId} disabled={!routeType}><SelectTrigger className="h-8 border font-bold text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="--nieuwe-route--">-- Kies een route --</SelectItem>{availableRoutes.map((r: any) => (<SelectItem key={r.id} value={r.id}>{r.naam}</SelectItem>))}</SelectContent></Select></div>)}</>)}
                 <div className="flex flex-col gap-1.5 pt-1"><Button className="w-full h-9 text-xs font-black bg-primary hover:bg-primary/90 shadow-lg uppercase tracking-tighter" onClick={() => handleStartRoute(false)} disabled={(urlMeldingLocatie ? !userLocation : (routeType === 'meldingen' ? false : selectedRouteId === '--nieuwe-route--')) || isStarting}>{isStarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4 fill-current" />} {urlMeldingLocatie ? 'START RIT' : 'START LIVE RIT'}</Button>
