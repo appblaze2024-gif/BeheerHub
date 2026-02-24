@@ -1146,7 +1146,7 @@ export default function NewIssuePage() {
                             {!isReadOnly && <Button type="button" variant="outline" className="w-full h-12 border-dashed border-2 font-bold uppercase text-[10px] tracking-widest" onClick={() => document.getElementById('photo-input')?.click()}>
                                 <Upload className="mr-2 h-4 w-4" /> Foto uploaden
                             </Button>}
-                            <input type="file" id="photo-input" onChange={(e) => e.target.files && handlePhotoUploads(e.target.files)} className="hidden" multiple accept="image/*" />
+                            <input type="file" id="photo-input" className="hidden" accept="image/*" onChange={(e) => e.target.files && handlePhotoUploads(e.target.files)} className="hidden" multiple accept="image/*" />
                             <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-10 gap-3">
                                 {uploadedPhotos.map(p => (
                                     <div key={p.storagePath} className="relative aspect-square rounded-xl overflow-hidden border shadow-sm group">

@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview AI flow voor het uitlezen van "Formulier melding / Klacht" documenten.
@@ -48,11 +47,9 @@ export type ParseIssuePdfOutput = z.infer<typeof ParseIssuePdfOutputSchema>;
 
 const parsePrompt = ai.definePrompt({
   name: 'parseIssuePdfPrompt',
+  model: 'googleai/gemini-1.5-flash',
   input: { schema: ParseIssuePdfInputSchema },
   output: { schema: ParseIssuePdfOutputSchema },
-  config: {
-    model: 'googleai/gemini-1.5-flash',
-  },
   prompt: `Je bent een expert in het verwerken van "Formulier melding / Klacht" documenten.
 Een document kan MEERDERE afzonderlijke meldingen of bonnen bevatten.
 
