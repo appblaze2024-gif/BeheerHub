@@ -85,9 +85,6 @@ const routeLayerCasing: Layer = {
   },
 };
 
-/**
- * Custom hook for mobile detection within this module
- */
 const useInternalIsMobile = (width: number = 768) => {
   const [isMobile, setIsMobile] = React.useState(false);
   React.useEffect(() => {
@@ -547,6 +544,22 @@ function NavigatingView({
                 </CardContent>
             </Card>
         )}
+        
+        {/* Witte balk met voortgang */}
+        {objectsOnRoute.length > 0 && !arrivedObject && (
+            <Card className="bg-white text-black shadow-xl border-none overflow-hidden animate-in slide-in-from-top duration-500 rounded-full py-1">
+                <CardContent className="p-3 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                        <Badge className="bg-primary text-white font-black text-xs h-6 px-3">{completedObjects.length}/{objectsOnRoute.length}</Badge>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Meldingen gereed</span>
+                    </div>
+                    <div className="flex-1 max-w-[120px]">
+                        <Progress value={(completedObjects.length / objectsOnRoute.length) * 100} className="h-1.5" />
+                    </div>
+                </CardContent>
+            </Card>
+        )}
+
         {gpsError && (
             <Alert variant="destructive" className="bg-red-600 text-white border-none shadow-2xl animate-in slide-in-from-top duration-300">
                 <div className="flex items-center gap-3">{gpsError === 'permission' ? <XIcon className="h-5 w-5" /> : <SignalLow className="h-5 w-5 animate-pulse" />}
@@ -641,7 +654,11 @@ export default function StartNavigationPage() {
   
   const [userLocation, setUserLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
   const [tripStartLocation, setTripStartLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
-  const [routeType, setRouteType] = React.useState<'veeg' | 'prullenbak' | 'meldingen' | null>(null);
+  
+  // Initialize from search params
+  const initialType = searchParams.get('type') as 'veeg' | 'prullenbak' | 'meldingen' | null;
+  const [routeType, setRouteType] = React.useState<'veeg' | 'prullenbak' | 'meldingen' | null>(initialType);
+  
   const [selectedRouteId, setSelectedRouteId] = React.useState<string>('--nieuwe-route--');
   const [navigationState, setNavigationState] = React.useState<'setup' | 'navigating'>('setup');
   const [objectsOnRoute, setObjectsOnRoute] = React.useState<MapObject[]>([]);
@@ -674,8 +691,8 @@ export default function StartNavigationPage() {
     const lat = searchParams.get('lat');
     const lng = searchParams.get('lng');
     const straat = searchParams.get('straat');
-    const typeFromUrl = searchParams.get('type');
-    if (typeFromUrl === 'meldingen') setRouteType('meldingen');
+    const typeFromUrl = searchParams.get('type') as any;
+    if (typeFromUrl) setRouteType(typeFromUrl);
     if (lat && lng) setUrlMeldingLocatie({ latitude: parseFloat(lat), longitude: parseFloat(lng), straat: straat || 'Melding' });
   }, [searchParams]);
 
@@ -718,22 +735,6 @@ export default function StartNavigationPage() {
     } catch (e) {}
     return null;
   }, [selectedRouteDef]);
-
-  React.useEffect(() => {
-      const map = mapRef.current?.getMap(); if (!map) return;
-      const fit = () => {
-          let features: any[] = [];
-          if (routeGeoJSONFeatures?.features) features = [...features, ...routeGeoJSONFeatures.features];
-          if (objectsOnMap && objectsOnMap.length > 0) features = [...features, ...objectsOnMap.map(obj => turf.point([obj.longitude, obj.latitude]))];
-          if (urlMeldingLocatie) features.push(turf.point([urlMeldingLocatie.longitude, urlMeldingLocatie.latitude]));
-          if (routeType === 'meldingen' && allMeldingen) features = [...features, ...allMeldingen.map(m => turf.point([m.longitude, m.latitude]))];
-          if (selectedRouteDef && 'startLatitude' in selectedRouteDef && (selectedRouteDef as any).startLatitude) features.push(turf.point([(selectedRouteDef as any).startLongitude, (selectedRouteDef as any).startLatitude]));
-          if (features.length > 0) {
-              try { const collection = turf.featureCollection(features); const bbox = turf.bbox(collection); if (bbox[0] !== Infinity) map.fitBounds(bbox as [number, number, number, number], { padding: 100, duration: 1000, maxZoom: 16 }); } catch(e) {}
-          }
-      };
-      if (map.isStyleLoaded()) fit(); else map.once('style.load', fit);
-  }, [selectedRouteId, routeGeoJSONFeatures, objectsOnMap, selectedRouteDef, urlMeldingLocatie, routeType, allMeldingen]);
 
   const handleStartRoute = React.useCallback(async (simulate = false) => {
     setIsSimulationMode(simulate);
@@ -796,7 +797,8 @@ export default function StartNavigationPage() {
     }
   }, [userLocation, urlMeldingLocatie, routeType, allMeldingen, navigationState, handleStartRoute]);
 
-  const showSetupCard = React.useMemo(() => !urlMeldingLocatie || userLocation || autoStartTimeoutReached, [urlMeldingLocatie, userLocation, autoStartTimeoutReached]);
+  const isAutoMeldingen = searchParams.get('type') === 'meldingen';
+  const showSetupCard = !isAutoMeldingen && (!urlMeldingLocatie || userLocation || autoStartTimeoutReached);
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
