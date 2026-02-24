@@ -18,6 +18,7 @@ import {
   ScrollText,
   Briefcase,
   MoreVertical,
+  MoreHorizontal,
   ArrowLeft,
   Loader2,
   Settings2
