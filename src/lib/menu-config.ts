@@ -7,8 +7,6 @@ import {
   Users,
   Folder,
   Truck,
-  FileText,
-  Warehouse,
   Bell,
   Navigation,
   Mail,
@@ -16,7 +14,6 @@ import {
   User,
   FileWarning,
   Cpu,
-  Calendar,
 } from 'lucide-react';
 import { ElementType } from 'react';
 
@@ -36,7 +33,7 @@ export interface MenuItem {
 
 /**
  * Centrale configuratie voor de navigatie van BeheerHub.
- * Dit is het 'vaste gegeven' voor de structuur van de software.
+ * De knop "Werkbonnen" is nu direct gekoppeld aan de navigatiemodule voor een snellere workflow.
  */
 export const allMenuItems: MenuItem[] = [
     { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -79,7 +76,7 @@ export const allMenuItems: MenuItem[] = [
       icon: Bell, 
       module: 'issues',
       subItems: [
-        { href: '/issues', label: 'Werkbonnen', id: 'werkbonnen' },
+        { href: '/navigation-module?type=meldingen', label: 'Werkbonnen', id: 'werkbonnen' },
         { href: '/issues/open', label: 'Openstaand', id: 'open' },
         { href: '/issues/new', label: 'Melding maken', id: 'new' },
         { href: '/issues/portal', label: 'Portaal', id: 'portal' },

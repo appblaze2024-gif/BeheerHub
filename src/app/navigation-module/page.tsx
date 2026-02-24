@@ -24,22 +24,14 @@ import {
   Loader2,
   History,
   Navigation2,
-  List,
-  Clock,
-  Zap,
-  Smartphone,
-  X as XIcon,
-  ChevronLeft,
-  Home,
-  LocateFixed,
   SignalLow,
   Navigation,
   AlertTriangle,
-  RotateCcw,
   Flag,
   MousePointer2,
-  Maximize,
-  Minimize,
+  X as XIcon,
+  Home,
+  LocateFixed,
   FileText
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
@@ -55,7 +47,6 @@ import { useToast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { RouteHistoryDialog } from '@/components/route-history-dialog';
 import { LoadingScreen } from '@/components/loading-screen';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { addSeconds, format as formatDate } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -173,15 +164,12 @@ function NavigatingView({
 
   const currentSpeedLimit = React.useMemo(() => {
     if (!currentLeg?.annotation?.maxspeed) return 50;
-    
     const maxspeeds = currentLeg.annotation.maxspeed;
     const totalLegDist = currentLeg.distance;
     const distTravelled = Math.max(0, totalLegDist - distanceRemainingToDestination);
     const ratio = distTravelled / (totalLegDist || 1);
-    
     const index = Math.floor(ratio * maxspeeds.length);
     const speedVal = maxspeeds[Math.min(index, maxspeeds.length - 1)];
-    
     let limit = 50;
     if (typeof speedVal === 'number') limit = speedVal;
     else if (typeof speedVal === 'string') {
@@ -190,52 +178,34 @@ function NavigatingView({
     } else if (speedVal?.speed) {
         limit = parseInt(speedVal.speed) || 50;
     }
-
-    if (limit <= 0) return 50;
-    return limit;
+    return limit <= 0 ? 50 : limit;
   }, [currentLeg, distanceRemainingToDestination]);
 
   React.useEffect(() => {
     let lastTime = performance.now();
     let lastSetLat = 0;
     let lastSetLng = 0;
-    
     const animateSmoothly = (time: number) => {
         const deltaTime = (time - lastTime) / 1000;
         lastTime = time;
-
         setSmoothLocation(prevSmooth => {
             if (!targetLocation || !prevSmooth || isPaused) return prevSmooth;
-
             const dist = Math.sqrt(Math.pow(targetLocation.latitude - prevSmooth.latitude, 2) + Math.pow(targetLocation.longitude - prevSmooth.longitude, 2));
             if (dist < 0.000001 && !isSimulating) return prevSmooth;
-
             const lerpFactor = isSimulating ? 1 : 0.15; 
-            
             const newLat = prevSmooth.latitude + (targetLocation.latitude - prevSmooth.latitude) * lerpFactor;
             const newLng = prevSmooth.longitude + (targetLocation.longitude - prevSmooth.longitude) * lerpFactor;
-            
             let diff = (targetLocation.heading || 0) - (prevSmooth.heading || 0);
             while (diff < -180) diff += 360;
             while (diff > 180) diff -= 360;
             const newHeading = (prevSmooth.heading || 0) + diff * (lerpFactor * 0.5);
-
-            const newSmooth = {
-                latitude: newLat,
-                longitude: newLng,
-                speed: targetLocation.speed,
-                heading: newHeading
-            };
-
+            const newSmooth = { latitude: newLat, longitude: newLng, speed: targetLocation.speed, heading: newHeading };
             if (isFollowing && !arrivedObject) {
                 const changeThreshold = 0.000005;
                 if (Math.abs(newLat - lastSetLat) > changeThreshold || Math.abs(newLng - lastSetLng) > changeThreshold) {
-                    lastSetLat = newLat;
-                    lastSetLng = newLng;
-                    
+                    lastSetLat = newLat; lastSetLng = newLng;
                     const currentSpeedKmh = (targetLocation.speed || 0) * 3.6;
                     const targetZoom = Math.max(15, 18.5 - (Math.min(currentSpeedKmh, 80) / 30));
-                    
                     setViewState(prevView => ({
                         ...prevView,
                         latitude: newLat,
@@ -246,17 +216,12 @@ function NavigatingView({
                     }));
                 }
             }
-
             return newSmooth;
         });
-
         smoothingAnimationRef.current = requestAnimationFrame(animateSmoothly);
     };
-
     smoothingAnimationRef.current = requestAnimationFrame(animateSmoothly);
-    return () => {
-        if (smoothingAnimationRef.current) cancelAnimationFrame(smoothingAnimationRef.current);
-    };
+    return () => { if (smoothingAnimationRef.current) cancelAnimationFrame(smoothingAnimationRef.current); };
   }, [targetLocation?.latitude, targetLocation?.longitude, isFollowing, isPaused, arrivedObject, isSimulating]);
 
   const snappedLocation = React.useMemo(() => {
@@ -264,17 +229,11 @@ function NavigatingView({
     try {
         const coords = currentRouteGeometry.coordinates;
         if (!Array.isArray(coords) || coords.length < 2) return smoothLocation;
-        
         const line = turf.lineString(coords);
         const pt = turf.point([smoothLocation.longitude, smoothLocation.latitude]);
         const snapped = turf.nearestPointOnLine(line, pt, { units: 'meters' });
-        
         if (snapped.properties.dist! < 35) {
-            return {
-                ...smoothLocation,
-                latitude: snapped.geometry.coordinates[1],
-                longitude: snapped.geometry.coordinates[0]
-            };
+            return { ...smoothLocation, latitude: snapped.geometry.coordinates[1], longitude: snapped.geometry.coordinates[0] };
         }
     } catch (e) {}
     return smoothLocation;
@@ -282,133 +241,86 @@ function NavigatingView({
 
   React.useEffect(() => {
     if (!currentRouteGeometry || !snappedLocation || isCalculatingRoute) return;
-
     try {
       const coords = currentRouteGeometry.coordinates;
       const line = turf.lineString(coords);
       const pt = turf.point([snappedLocation.longitude, snappedLocation.latitude]);
-      
       const endPt = turf.point(coords[coords.length - 1]);
       const sliced = turf.lineSlice(pt, endPt, line);
       const remaining = turf.length(sliced, { units: 'meters' });
-      
       const roundedRemaining = Math.round(remaining);
       if (Math.abs(lastUpdateDistRef.current - roundedRemaining) >= 1) {
           setDistanceRemainingToDestination(roundedRemaining);
           lastUpdateDistRef.current = roundedRemaining;
-          setHasReachedCurrentTarget(roundedRemaining < 80);
-
-          if (isWorkOrder && roundedRemaining < 25) {
-              onExit();
-          }
+          setHasReachedCurrentTarget(roundedRemaining < 150);
+          if (isWorkOrder && roundedRemaining < 25) onExit();
       }
     } catch (e) {}
   }, [snappedLocation?.latitude, snappedLocation?.longitude, currentRouteGeometry, isCalculatingRoute, isWorkOrder, onExit]);
 
   React.useEffect(() => {
     if (!targetLocation || !currentRouteGeometry || isCalculatingRoute || isSimulating) return;
-    
     try {
         const coords = currentRouteGeometry.coordinates;
         const line = turf.lineString(coords);
         const pt = turf.point([targetLocation.longitude, targetLocation.latitude]);
         const snapped = turf.nearestPointOnLine(line, pt, { units: 'meters' });
         const distance = snapped.properties.dist || 0;
-
         if (distance > 60) { 
-            if (!offRouteSince) {
-                setOffRouteSince(Date.now());
-            } else if (Date.now() - offRouteSince > 4000) { 
+            if (!offRouteSince) setOffRouteSince(Date.now());
+            else if (Date.now() - offRouteSince > 4000) { 
                 setCurrentRouteGeometry(null);
                 setOffRouteSince(null);
                 lastFetchedTargetId.current = null;
             }
-        } else {
-            setOffRouteSince(null);
-        }
+        } else setOffRouteSince(null);
     } catch (e) {}
   }, [targetLocation?.latitude, targetLocation?.longitude, currentRouteGeometry, isCalculatingRoute, offRouteSince, isSimulating]);
 
   const navHudData = React.useMemo(() => {
     if (!currentLeg?.steps) return null;
-    
     const totalLegDist = currentLeg.distance;
     const distTravelled = Math.max(0, totalLegDist - distanceRemainingToDestination);
-    
     let cumulativeDistance = 0;
     for (let i = 0; i < currentLeg.steps.length; i++) {
       const step = currentLeg.steps[i];
       cumulativeDistance += step.distance;
-      
       if (distTravelled < cumulativeDistance) {
         const distanceToManeuver = cumulativeDistance - distTravelled;
         const currentStep = currentLeg.steps[i];
         const nextStep = currentLeg.steps[i + 1];
-        
-        return {
-          distance: distanceToManeuver,
-          instruction: nextStep ? nextStep.maneuver.instruction : currentStep.maneuver.instruction,
-          step: nextStep || currentStep
-        };
+        return { distance: distanceToManeuver, instruction: nextStep ? nextStep.maneuver.instruction : currentStep.maneuver.instruction, step: nextStep || currentStep };
       }
     }
     return null;
   }, [currentLeg, distanceRemainingToDestination]);
 
   React.useEffect(() => {
-    if (!currentRouteGeometry || isCalculatingRoute || !snappedLocation) {
-        setThrottledGeometry(null);
-        return;
-    }
-
+    if (!currentRouteGeometry || isCalculatingRoute || !snappedLocation) { setThrottledGeometry(null); return; }
     const timer = setTimeout(() => {
         try {
             const coords = currentRouteGeometry.coordinates;
             if (!Array.isArray(coords) || coords.length < 2) return;
-            
             const line = turf.lineString(coords);
             const startPoint = turf.point([snappedLocation.longitude, snappedLocation.latitude]);
             const endPoint = turf.point(coords[coords.length - 1]);
-            
             const sliced = turf.lineSlice(startPoint, endPoint, line);
-            
-            setThrottledGeometry({
-                type: 'Feature' as const,
-                properties: {},
-                geometry: sliced.geometry
-            });
-        } catch (e) {
-            setThrottledGeometry({
-                type: 'Feature' as const,
-                properties: {},
-                geometry: currentRouteGeometry
-            });
-        }
+            setThrottledGeometry({ type: 'Feature' as const, properties: {}, geometry: sliced.geometry });
+        } catch (e) { setThrottledGeometry({ type: 'Feature' as const, properties: {}, geometry: currentRouteGeometry }); }
     }, 100);
-
     return () => clearTimeout(timer);
   }, [currentRouteGeometry, isCalculatingRoute, snappedLocation?.longitude, snappedLocation?.latitude]);
 
   React.useEffect(() => {
     if (isSimulating) return;
-    
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
         setGpsError(null);
         const { latitude, longitude, speed, heading } = position.coords;
         const speedMs = speed || 0;
-        
-        setTargetLocation(prev => ({
-            latitude,
-            longitude,
-            speed: speedMs,
-            heading: heading !== null ? heading : (prev?.heading ?? 0)
-        }));
+        setTargetLocation(prev => ({ latitude, longitude, speed: speedMs, heading: heading !== null ? heading : (prev?.heading ?? 0) }));
       },
-      (error) => {
-        if (error.code === 1) setGpsError('permission');
-        else setGpsError('signal');
-      },
+      (error) => { if (error.code === 1) setGpsError('permission'); else setGpsError('signal'); },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
     return () => navigator.geolocation.clearWatch(watchId);
@@ -418,85 +330,55 @@ function NavigatingView({
 
   React.useEffect(() => {
     if (!isSimulating || !currentRouteGeometry || !nextObject || arrivedObject || isCalculatingRoute) return;
-
     const coords = currentRouteGeometry.coordinates;
     if (!Array.isArray(coords) || coords.length < 2) return;
-
-    let line: any;
-    try {
-        line = turf.lineString(coords);
-    } catch (e) { return; }
-    
+    let line: any; try { line = turf.lineString(coords); } catch (e) { return; }
     const totalDistance = turf.length(line, { units: 'meters' });
     if (totalDistance <= 0) return;
-
     simStateRef.current.distanceTravelled = 0;
     simStateRef.current.currentSpeedMs = 0;
     simStateRef.current.lastTimestamp = 0;
-
     const runSimulation = (timestamp: number) => {
         if (isPaused || arrivedObject || isCalculatingRoute || !currentRouteGeometry) {
             simStateRef.current.lastTimestamp = timestamp;
             simAnimationRef.current = requestAnimationFrame(runSimulation);
             return;
         }
-
         if (!simStateRef.current.lastTimestamp) simStateRef.current.lastTimestamp = timestamp;
         const deltaTime = Math.min((timestamp - simStateRef.current.lastTimestamp) / 1000, 0.1);
         simStateRef.current.lastTimestamp = timestamp;
-
         const distanceToDestination = totalDistance - simStateRef.current.distanceTravelled;
-        
         const currentLimitMs = currentSpeedLimit / 3.6;
         simStateRef.current.targetSpeedMs = distanceToDestination < 40 ? 3 : currentLimitMs - 0.5; 
-
         const accel = simStateRef.current.targetSpeedMs > simStateRef.current.currentSpeedMs ? 4 : 8;
         simStateRef.current.currentSpeedMs += (simStateRef.current.targetSpeedMs - simStateRef.current.currentSpeedMs) * deltaTime * accel;
         simStateRef.current.distanceTravelled += simStateRef.current.currentSpeedMs * deltaTime;
-        
         if (simStateRef.current.distanceTravelled >= totalDistance - 0.2) {
             const finalCoord = coords[coords.length - 1];
-            setTargetLocation(prev => {
-                if (prev && Math.abs(prev.latitude - finalCoord[1]) < 0.00001) return prev;
-                return { latitude: finalCoord[1], longitude: finalCoord[0], speed: 0, heading: 0 };
-            });
+            setTargetLocation(prev => ({ latitude: finalCoord[1], longitude: finalCoord[0], speed: 0, heading: 0 }));
             return;
         } 
-
         try {
             const currentPoint = turf.along(line, simStateRef.current.distanceTravelled, { units: 'meters' });
             const lookAheadPoint = turf.along(line, Math.min(simStateRef.current.distanceTravelled + 5, totalDistance), { units: 'meters' });
-            
             const [lng, lat] = currentPoint.geometry.coordinates;
             const heading = (turf.bearing(currentPoint, lookAheadPoint) + 360) % 360;
-
             setTargetLocation(prev => {
                 const d = prev ? turf.distance(turf.point([prev.longitude, prev.latitude]), currentPoint, { units: 'meters' }) : 1;
-                if (d > 0.1) {
-                    return { latitude: lat, longitude: lng, speed: simStateRef.current.currentSpeedMs, heading: heading };
-                }
-                return prev;
+                return d > 0.1 ? { latitude: lat, longitude: lng, speed: simStateRef.current.currentSpeedMs, heading: heading } : prev;
             });
         } catch (e) {}
-
         simAnimationRef.current = requestAnimationFrame(runSimulation);
     };
-
     simAnimationRef.current = requestAnimationFrame(runSimulation);
-    return () => {
-        if (simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current);
-    };
+    return () => { if (simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); };
   }, [isSimulating, isPaused, arrivedObject, currentRouteGeometry, nextObject?.id, isCalculatingRoute, currentSpeedLimit]);
-
 
   React.useEffect(() => {
     if (!targetLocation || !nextObject || arrivedObject || isCalculatingRoute) return;
-    
     if (lastFetchedTargetId.current === nextObject.id && currentRouteGeometry) return;
-
     const fetchRoute = async () => {
-      setIsCalculatingRoute(true);
-      lastFetchedTargetId.current = nextObject.id;
+      setIsCalculatingRoute(true); lastFetchedTargetId.current = nextObject.id;
       const { longitude, latitude } = targetLocation;
       const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${longitude},${latitude};${nextObject.longitude},${nextObject.latitude}?steps=true&geometries=geojson&overview=full&annotations=maxspeed&access_token=${MAPBOX_TOKEN}&language=nl`;
       try {
@@ -509,13 +391,9 @@ function NavigatingView({
           const remaining = Math.round(route.legs[0].distance);
           setDistanceRemainingToDestination(remaining);
           lastUpdateDistRef.current = remaining;
-          setHasReachedCurrentTarget(remaining < 80);
+          setHasReachedCurrentTarget(remaining < 150);
         }
-      } catch (error) {
-          console.error("Failed to fetch route:", error);
-      } finally {
-          setIsCalculatingRoute(false);
-      }
+      } catch (error) { console.error("Failed to fetch route:", error); } finally { setIsCalculatingRoute(false); }
     };
     fetchRoute();
   }, [nextObject?.id, arrivedObject, isSimulating, isCalculatingRoute, currentRouteGeometry === null]);
@@ -526,12 +404,10 @@ function NavigatingView({
     setCompletedObjects(prev => [...prev, finishedId]);
     setArrivedObject(null);
     setHasReachedCurrentTarget(false);
-    
     const remaining = objectsOnRoute.filter(obj => !completedObjects.includes(obj.id) && obj.id !== finishedId);
     if (remaining.length > 0) {
         const currentPt = turf.point([targetLocation!.longitude, targetLocation!.latitude]);
-        let nextIdx = 0;
-        let minDist = Infinity;
+        let nextIdx = 0; let minDist = Infinity;
         objectsOnRoute.forEach((obj, idx) => {
             if (!completedObjects.includes(obj.id) && obj.id !== finishedId) {
                 const d = turf.distance(currentPt, turf.point([obj.longitude, obj.latitude]));
@@ -539,33 +415,23 @@ function NavigatingView({
             }
         });
         setCurrentObjectIndex(nextIdx);
-    } else {
-        setCurrentObjectIndex(objectsOnRoute.length); 
-    }
-
-    setCurrentRouteGeometry(null);
-    setCurrentLeg(null);
-    lastFetchedTargetId.current = null;
+    } else setCurrentObjectIndex(objectsOnRoute.length); 
+    setCurrentRouteGeometry(null); setCurrentLeg(null); lastFetchedTargetId.current = null;
   };
 
   const speedKmh = targetLocation?.speed ? Math.round(targetLocation.speed * 3.6) : 0;
   const isSpeeding = speedKmh > currentSpeedLimit;
-  
   const arrivalTime = React.useMemo(() => {
     if (!currentLeg?.duration) return formatDate(new Date(), 'HH:mm');
     const durationSeconds = (distanceRemainingToDestination / (currentLeg.distance || 1)) * currentLeg.duration;
     return formatDate(addSeconds(new Date(), durationSeconds), 'HH:mm');
   }, [currentLeg, distanceRemainingToDestination]);
-
   const durationMin = React.useMemo(() => {
     if (!currentLeg?.duration) return '0';
     const durationSeconds = (distanceRemainingToDestination / (currentLeg.distance || 1)) * currentLeg.duration;
     return Math.round(durationSeconds / 60);
   }, [currentLeg, distanceRemainingToDestination]);
-
-  const distanceKm = React.useMemo(() => {
-    return (distanceRemainingToDestination / 1000).toFixed(1);
-  }, [distanceRemainingToDestination]);
+  const distanceKm = React.useMemo(() => (distanceRemainingToDestination / 1000).toFixed(1), [distanceRemainingToDestination]);
 
   if (currentObjectIndex >= objectsOnRoute.length && objectsOnRoute.length > 0 && !arrivedObject && !isCalculatingRoute) {
     return (
@@ -578,34 +444,18 @@ function NavigatingView({
     )
   }
 
-  if (!currentRouteGeometry || isCalculatingRoute) {
-    return <LoadingScreen message="Navigatie voorbereiden..." />;
-  }
-
   return (
     <div className="w-full h-full relative bg-slate-100 overflow-hidden">
       <MapGL
         ref={mapRef}
         {...viewState}
-        onMove={evt => {
-            setViewState(evt.viewState);
-            if (evt.viewState.latitude !== viewState.latitude || evt.viewState.longitude !== viewState.longitude) {
-                if (isFollowing) setIsFollowing(false);
-            }
-        }}
+        onMove={evt => { setViewState(evt.viewState); if (isFollowing) setIsFollowing(false); }}
         style={{ width: '100%', height: '100%' }}
         mapStyle={mapStyle}
         mapboxAccessToken={MAPBOX_TOKEN}
       >
         {snappedLocation && (
-          <Marker 
-            longitude={snappedLocation.longitude} 
-            latitude={snappedLocation.latitude} 
-            anchor="center"
-            rotationAlignment="map"
-            pitchAlignment="map"
-            rotation={snappedLocation.heading || 0} 
-          >
+          <Marker longitude={snappedLocation.longitude} latitude={snappedLocation.latitude} anchor="center" rotationAlignment="map" pitchAlignment="map" rotation={snappedLocation.heading || 0}>
             <div className="relative flex items-center justify-center w-12 h-12">
                 <div className="absolute h-12 w-12 bg-blue-50/20 rounded-full animate-pulse" />
                 <svg viewBox="0 0 100 100" className="h-10 w-10 text-primary drop-shadow-2xl" style={{ filter: 'drop-shadow(0 4px 3px rgba(0,0,0,0.3))' }}>
@@ -614,32 +464,20 @@ function NavigatingView({
             </div>
           </Marker>
         )}
-
         {objectsOnRoute.map((obj, idx) => {
             if (completedObjects.includes(obj.id)) return null;
             const isTarget = idx === currentObjectIndex;
             const inRange = isTarget && hasReachedCurrentTarget;
-
             return (
-                <Marker 
-                    key={obj.id} 
-                    longitude={obj.longitude} 
-                    latitude={obj.latitude} 
-                    anchor="center"
-                    onClick={(e) => {
-                        e.originalEvent.stopPropagation();
-                        const dist = turf.distance(turf.point([targetLocation!.longitude, targetLocation!.latitude]), turf.point([obj.longitude, obj.latitude]), { units: 'meters' });
-                        if (dist <= 150) setArrivedObject(obj);
-                        else toast({ title: "Buiten bereik", description: `Rijd eerst dichterbij (${Math.round(dist)}m).` });
-                    }}
-                >
+                <Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude} anchor="center" onClick={(e) => {
+                    e.originalEvent.stopPropagation();
+                    const dist = turf.distance(turf.point([targetLocation!.longitude, targetLocation!.latitude]), turf.point([obj.longitude, obj.latitude]), { units: 'meters' });
+                    if (dist <= 250) setArrivedObject(obj);
+                    else toast({ title: "Buiten bereik", description: `Rijd eerst dichterbij (${Math.round(dist)}m).` });
+                }}>
                     <div className="relative flex flex-col items-center">
                         <div className={cn("absolute h-12 w-12 rounded-full bg-blue-500/20", inRange && "animate-pulse")} />
-                        <div className={cn(
-                            "relative h-10 w-10 rounded-full border-4 border-white shadow-2xl flex items-center justify-center transition-all",
-                            isTarget ? "bg-primary scale-125 ring-4 ring-primary/30" : "bg-slate-400",
-                            inRange && "scale-125 bg-green-600"
-                        )}>
+                        <div className={cn("relative h-10 w-10 rounded-full border-4 border-white shadow-2xl flex items-center justify-center transition-all", isTarget ? "bg-primary scale-125 ring-4 ring-primary/30" : "bg-slate-400", inRange && "scale-125 bg-green-600")}>
                             <Flag className="h-5 w-5 text-white fill-current" />
                         </div>
                         <div className="mt-1 bg-black/60 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow uppercase">{idx + 1}</div>
@@ -647,11 +485,9 @@ function NavigatingView({
                 </Marker>
             );
         })}
-
         {throttledGeometry && (
           <Source id="route-line" type="geojson" data={throttledGeometry}>
-            <Layer {...routeLayerCasing} />
-            <Layer {...routeLayer} />
+            <Layer {...routeLayerCasing} /><Layer {...routeLayer} />
           </Source>
         )}
       </MapGL>
@@ -660,106 +496,48 @@ function NavigatingView({
         {navHudData && !arrivedObject && !isCalculatingRoute && (
             <Card className="bg-black text-white shadow-2xl border-none overflow-hidden animate-in slide-in-from-top duration-300 rounded-[24px] py-2">
                 <CardContent className="p-3 flex items-center gap-4">
-                    <div className="bg-white/10 p-2 rounded-xl">
-                        <Navigation2 className="h-7 w-7 text-white fill-current" />
-                    </div>
+                    <div className="bg-white/10 p-2 rounded-xl"><Navigation2 className="h-7 w-7 text-white fill-current" /></div>
                     <div className="min-w-0 flex-1">
-                        <p className="text-lg font-black tracking-tight leading-none mb-0.5">
-                            {navHudData.instruction.split(' op ')[0] || 'Navigeer'} op
-                        </p>
-                        <p className="text-xl font-black tracking-tighter leading-tight truncate">
-                            {navHudData.instruction.split(' op ')[1] || 'de weg'}
-                        </p>
+                        <p className="text-lg font-black tracking-tight leading-none mb-0.5">{navHudData.instruction.split(' op ')[0] || 'Navigeer'} op</p>
+                        <p className="text-xl font-black tracking-tighter leading-tight truncate">{navHudData.instruction.split(' op ')[1] || 'de weg'}</p>
                     </div>
                 </CardContent>
             </Card>
         )}
-
         {gpsError && (
             <Alert variant="destructive" className="bg-red-600 text-white border-none shadow-2xl animate-in slide-in-from-top duration-300">
-                <div className="flex items-center gap-3">
-                    {gpsError === 'permission' ? <XIcon className="h-5 w-5" /> : <SignalLow className="h-5 w-5 animate-pulse" />}
-                    <div>
-                        <AlertTitle className="font-black uppercase tracking-tight text-[10px] md:text-xs">
-                            {gpsError === 'permission' ? 'Locatie Toegang Geweigerd' : 'Zwak GPS Signaal'}
-                        </AlertTitle>
-                        <AlertDescription className="text-[9px] md:text-[10px] opacity-90 font-bold">
-                            {gpsError === 'permission' ? 'Schakel locatietoegang in bij instellingen.' : 'Uw locatie wordt gezocht...'}
-                        </AlertDescription>
-                    </div>
+                <div className="flex items-center gap-3">{gpsError === 'permission' ? <XIcon className="h-5 w-5" /> : <SignalLow className="h-5 w-5 animate-pulse" />}
+                    <div><AlertTitle className="font-black uppercase tracking-tight text-[10px] md:text-xs">{gpsError === 'permission' ? 'Locatie Toegang Geweigerd' : 'Zwak GPS Signaal'}</AlertTitle><AlertDescription className="text-[9px] md:text-[10px] opacity-90 font-bold">{gpsError === 'permission' ? 'Schakel locatietoegang in.' : 'Uw locatie wordt gezocht...'}</AlertDescription></div>
                 </div>
             </Alert>
         )}
       </div>
 
-      <div className={cn(
-          "absolute right-4 z-[70] transition-all duration-300 flex items-center gap-3",
-          isDrawerExpanded ? "bottom-[320px]" : "bottom-[160px]"
-      )}>
-          <div className="h-14 w-14 rounded-full bg-white border-[6px] border-red-600 flex items-center justify-center shadow-xl animate-in fade-in zoom-in duration-500">
-              <span className="text-xl font-black text-slate-900 tabular-nums">{currentSpeedLimit}</span>
-          </div>
-
-          <div className={cn(
-              "h-20 w-20 rounded-full backdrop-blur shadow-2xl border-4 flex flex-col items-center justify-center overflow-hidden transition-colors duration-500",
-              isSpeeding ? "bg-red-50/95 border-red-200" : "bg-white/95 border-slate-100"
-          )}>
-              <div className="flex flex-col items-center leading-none z-10">
-                  <span className={cn(
-                      "text-2xl font-black tabular-nums transition-colors",
-                      isSpeeding ? "text-red-600" : "text-slate-900"
-                  )}>{speedKmh}</span>
-                  <span className={cn(
-                      "text-[8px] font-black uppercase mt-0.5 tracking-widest",
-                      isSpeeding ? "text-red-400" : "text-slate-400"
-                  )}>km/h</span>
-              </div>
+      <div className={cn("absolute right-4 z-[70] transition-all duration-300 flex items-center gap-3", isDrawerExpanded ? "bottom-[320px]" : "bottom-[160px]")}>
+          <div className="h-14 w-14 rounded-full bg-white border-[6px] border-red-600 flex items-center justify-center shadow-xl animate-in fade-in zoom-in duration-500"><span className="text-xl font-black text-slate-900 tabular-nums">{currentSpeedLimit}</span></div>
+          <div className={cn("h-20 w-20 rounded-full backdrop-blur shadow-2xl border-4 flex flex-col items-center justify-center overflow-hidden transition-colors duration-500", isSpeeding ? "bg-red-50/95 border-red-200" : "bg-white/95 border-slate-100")}>
+              <div className="flex flex-col items-center leading-none z-10"><span className={cn("text-2xl font-black tabular-nums transition-colors", isSpeeding ? "text-red-600" : "text-slate-900")}>{speedKmh}</span><span className={cn("text-[8px] font-black uppercase mt-0.5 tracking-widest", isSpeeding ? "text-red-400" : "text-slate-400")}>km/h</span></div>
               <svg className="absolute inset-0 -rotate-90 p-1" viewBox="0 0 100 100">
-                  <circle 
-                    cx="50" cy="50" r="44" 
-                    fill="none" stroke="currentColor" 
-                    strokeWidth="6" className={isSpeeding ? "text-red-100" : "text-slate-100"} 
-                  />
-                  <circle 
-                    cx="50" cy="50" r="44" 
-                    fill="none" stroke="currentColor" 
-                    strokeWidth="6" 
-                    strokeDasharray={2 * Math.PI * 44}
-                    strokeDashoffset={2 * Math.PI * 44 * (1 - Math.min(speedKmh, currentSpeedLimit) / currentSpeedLimit)}
-                    className={cn(
-                        "transition-all duration-500",
-                        isSpeeding ? "text-red-600" : "text-primary"
-                    )}
-                    strokeLinecap="round"
-                  />
+                  <circle cx="50" cy="50" r="44" fill="none" stroke="currentColor" strokeWidth="6" className={isSpeeding ? "text-red-100" : "text-slate-100"} />
+                  <circle cx="50" cy="50" r="44" fill="none" stroke="currentColor" strokeWidth="6" strokeDasharray={2 * Math.PI * 44} strokeDashoffset={2 * Math.PI * 44 * (1 - Math.min(speedKmh, currentSpeedLimit) / currentSpeedLimit)} className={cn("transition-all duration-500", isSpeeding ? "text-red-600" : "text-primary")} strokeLinecap="round" />
               </svg>
           </div>
       </div>
 
       {arrivedObject && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6">
+          <div className="absolute inset-0 z-[90] flex items-center justify-center bg-black/40 backdrop-blur-sm p-6">
               <Card className="w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
                   <CardHeader className="text-center pb-2">
-                      <div className="mx-auto bg-green-100 p-3 rounded-full w-16 h-16 flex items-center justify-center mb-4">
-                          <MapPin className="h-8 w-8 text-green-600 fill-current" />
-                      </div>
-                      <CardTitle className="text-2xl font-black uppercase tracking-tight">Bestemming Bereikt</CardTitle>
-                      <CardDescription className="font-bold text-slate-500">ID: <span className="text-slate-900">{arrivedObject.name || arrivedObject.id}</span></CardDescription>
+                      <div className="mx-auto bg-blue-100 p-3 rounded-full w-16 h-16 flex items-center justify-center mb-4"><MapPin className="h-8 w-8 text-blue-600 fill-current" /></div>
+                      <CardTitle className="text-2xl font-black uppercase tracking-tight">Bestemming Selectie</CardTitle>
+                      <CardDescription className="font-bold text-slate-500">Meldingsnummer: <span className="text-slate-900">{arrivedObject.name || arrivedObject.id}</span></CardDescription>
                   </CardHeader>
                   <CardContent className="p-6 pt-2 space-y-3">
-                      <Button onClick={() => handleArrivedAction('finish')} className="w-full h-14 bg-green-600 hover:bg-green-700 text-lg font-black uppercase tracking-tight gap-2">
-                          <CheckCircle2 className="h-5 w-5" /> Afronden & Door
+                      <Button onClick={() => { onExit(); router.push(`/issues?id=${arrivedObject.id}`); }} className="w-full h-14 bg-primary hover:bg-primary/90 text-lg font-black uppercase tracking-tight gap-2">
+                          <FileText className="h-5 w-5" /> Open Werkbon
                       </Button>
-                      
-                      <Button variant="secondary" onClick={() => {
-                          onExit();
-                          router.push(`/issues?id=${arrivedObject.id}`);
-                      }} className="w-full h-12 bg-blue-100 text-blue-700 hover:bg-blue-200 font-black uppercase tracking-tight gap-2 border-none">
-                          <FileText className="h-4 w-4" /> Open Werkbon
-                      </Button>
-
-                      <Button variant="outline" onClick={() => handleArrivedAction('issue')} className="w-full h-12 border-2 border-orange-200 text-orange-600 hover:bg-orange-50 font-black uppercase tracking-tight gap-2">
-                          <AlertTriangle className="h-4 w-4" /> Issue Melden
+                      <Button variant="outline" onClick={() => handleArrivedAction('finish')} className="w-full h-12 border-2 font-black uppercase tracking-tight gap-2">
+                          <CheckCircle2 className="h-4 w-4" /> Marker Verbergen
                       </Button>
                       <Button variant="ghost" onClick={() => setArrivedObject(null)} className="w-full">Sluiten</Button>
                   </CardContent>
@@ -767,88 +545,34 @@ function NavigatingView({
           </div>
       )}
 
-      <div className={cn(
-          "absolute bottom-0 left-0 right-0 z-[80] w-full flex flex-col items-center",
-          isMobile ? "px-3 pb-3" : "px-6 pb-6"
-      )}>
-        {!isFollowing && (
-            <Button onClick={() => setIsFollowing(true)} className="h-12 w-12 md:h-14 md:w-14 rounded-full shadow-2xl bg-primary text-white border-none hover:scale-110 active:scale-95 transition-all flex items-center justify-center mb-4">
-                <LocateFixed className="h-6 w-6" />
-            </Button>
-        )}
-
+      <div className={cn("absolute bottom-0 left-0 right-0 z-[80] w-full flex flex-col items-center", isMobile ? "px-3 pb-3" : "px-6 pb-6")}>
+        {!isFollowing && (<Button onClick={() => setIsFollowing(true)} className="h-12 w-12 md:h-14 md:w-14 rounded-full shadow-2xl bg-primary text-white border-none hover:scale-110 active:scale-95 transition-all flex items-center justify-center mb-4"><LocateFixed className="h-6 w-6" /></Button>)}
         {isMobile ? (
             <div className="w-full flex flex-col items-center gap-3">
-                <Card 
-                    className={cn(
-                        "w-full bg-white shadow-2xl border-none rounded-[32px] pt-2 pb-6 px-8 transition-all duration-300 ease-in-out cursor-pointer",
-                        isDrawerExpanded ? "max-h-[300px]" : "max-h-[140px]"
-                    )}
-                    onTouchStart={handleTouchStart}
-                    onTouchEnd={handleTouchEnd}
-                    onClick={() => setIsDrawerExpanded(!isDrawerExpanded)}
-                >
+                <Card className={cn("w-full bg-white shadow-2xl border-none rounded-[32px] pt-2 pb-6 px-8 transition-all duration-300 ease-in-out cursor-pointer", isDrawerExpanded ? "max-h-[300px]" : "max-h-[140px]")} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onClick={() => setIsDrawerExpanded(!isDrawerExpanded)}>
                     <div className="h-1.5 w-12 bg-slate-200 rounded-full mx-auto mb-6" />
                     <div className="flex items-center justify-between">
-                        <div className="flex flex-col items-center">
-                            <p className="text-2xl font-black text-black leading-none mb-1">{arrivalTime}</p>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">aankomst</p>
-                        </div>
-                        <div className="flex flex-col items-center">
-                            <p className="text-2xl font-black text-black leading-none mb-1">{durationMin}</p>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">min.</p>
-                        </div>
-                        <div className="flex flex-col items-center">
-                            <p className="text-2xl font-black text-black leading-none mb-1">{distanceKm}</p>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">km</p>
-                        </div>
+                        <div className="flex flex-col items-center"><p className="text-2xl font-black text-black leading-none mb-1">{arrivalTime}</p><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">aankomst</p></div>
+                        <div className="flex flex-col items-center"><p className="text-2xl font-black text-black leading-none mb-1">{durationMin}</p><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">min.</p></div>
+                        <div className="flex flex-col items-center"><p className="text-2xl font-black text-black leading-none mb-1">{distanceKm}</p><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">km</p></div>
                     </div>
-                    
-                    <div className={cn(
-                        "mt-8 flex gap-4 transition-all duration-300",
-                        isDrawerExpanded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 pointer-events-none"
-                    )}>
-                        <Button 
-                            variant="ghost" 
-                            size="lg" 
-                            className="h-14 w-14 rounded-full bg-blue-50 border-none shrink-0" 
-                            onClick={(e) => { e.stopPropagation(); setIsPaused(!isPaused); }}
-                        >
-                            {isPaused ? <Play className="h-6 w-6 fill-current text-primary" /> : <Pause className="h-6 w-6 fill-current text-primary" />}
-                        </Button>
-                        <Button 
-                            variant="destructive" 
-                            size="lg" 
-                            className="h-14 flex-1 rounded-full text-lg font-black uppercase tracking-tighter" 
-                            onClick={(e) => { e.stopPropagation(); onExit(); }}
-                        >
-                            STOP RIT
-                        </Button>
+                    <div className={cn("mt-8 flex gap-4 transition-all duration-300", isDrawerExpanded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 pointer-events-none")}>
+                        <Button variant="ghost" size="lg" className="h-14 w-14 rounded-full bg-blue-50 border-none shrink-0" onClick={(e) => { e.stopPropagation(); setIsPaused(!isPaused); }}>{isPaused ? <Play className="h-6 w-6 fill-current text-primary" /> : <Pause className="h-6 w-6 fill-current text-primary" />}</Button>
+                        <Button variant="destructive" size="lg" className="h-14 flex-1 rounded-full text-lg font-black uppercase tracking-tighter" onClick={(e) => { e.stopPropagation(); onExit(); }}>STOP RIT</Button>
                     </div>
                 </Card>
             </div>
         ) : (
             <div className="w-full max-w-4xl flex items-end justify-between gap-4">
                 <div className="flex gap-2 p-1.5 bg-white/95 backdrop-blur-xl rounded-full shadow-2xl border border-slate-100">
-                    <Button variant="ghost" size="lg" className="h-14 w-14 rounded-full hover:bg-slate-50 transition-all flex items-center justify-center p-0" onClick={() => setIsPaused(!isPaused)}>
-                        {isPaused ? <Play className="h-7 w-7 fill-current text-primary" /> : <Pause className="h-7 w-7 fill-current text-primary" />}
-                    </Button>
-                    <Button variant="destructive" size="lg" className="h-14 w-14 rounded-full shadow-xl border-none hover:scale-105 active:scale-95 transition-all flex items-center justify-center p-0" onClick={onExit}>
-                        <XIcon className="h-7 w-7" />
-                    </Button>
+                    <Button variant="ghost" size="lg" className="h-14 w-14 rounded-full hover:bg-slate-50 transition-all flex items-center justify-center p-0" onClick={() => setIsPaused(!isPaused)}>{isPaused ? <Play className="h-7 w-7 fill-current text-primary" /> : <Pause className="h-7 w-7 fill-current text-primary" />}</Button>
+                    <Button variant="destructive" size="lg" className="h-14 w-14 rounded-full shadow-xl border-none hover:scale-105 active:scale-95 transition-all flex items-center justify-center p-0" onClick={onExit}><XIcon className="h-7 w-7" /></Button>
                 </div>
-
                 <Card className="bg-white/95 backdrop-blur-xl border-none shadow-2xl overflow-hidden w-64 hidden md:flex">
                     <CardContent className="p-4 space-y-2">
                         <div className="flex justify-between items-end">
-                            <div>
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Aankomst: {arrivalTime}</p>
-                                <p className="text-lg font-black text-slate-900 leading-none">{durationMin} min <span className="text-slate-300">/ {distanceKm} km</span></p>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Voortgang</p>
-                                <p className="text-xs font-black text-primary">{completedObjects.length}/{objectsOnRoute.length}</p>
-                            </div>
+                            <div><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Aankomst: {arrivalTime}</p><p className="text-lg font-black text-slate-900 leading-none">{durationMin} min <span className="text-slate-300">/ {distanceKm} km</span></p></div>
+                            <div className="text-right"><p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Voortgang</p><p className="text-xs font-black text-primary">{completedObjects.length}/{objectsOnRoute.length}</p></div>
                         </div>
                         <Progress value={(completedObjects.length / (objectsOnRoute.length || 1)) * 100} className="h-1.5 bg-slate-100" />
                     </CardContent>
@@ -870,8 +594,7 @@ export default function StartNavigationPage() {
   const { toast } = useToast();
   const { setIsHeaderVisible } = useNavigationUI();
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
-  const isSuperUser = profile?.role === 'Super admin';
-  const isPrivileged = isSuperUser || profile?.role === 'toezichthouder';
+  const isPrivileged = profile?.role === 'Super admin' || profile?.role === 'toezichthouder';
   
   const [userLocation, setUserLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
   const [tripStartLocation, setTripStartLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
@@ -884,7 +607,6 @@ export default function StartNavigationPage() {
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = React.useState(false);
   const [showManualHint, setShowManualHint] = React.useState(false);
   const [autoStartTimeoutReached, setAutoStartTimeoutReached] = React.useState(false);
-  
   const [urlMeldingLocatie, setUrlMeldingLocatie] = React.useState<{ latitude: number; longitude: number; straat?: string } | null>(null);
   
   const mapRef = React.useRef<MapRef>(null);
@@ -898,11 +620,8 @@ export default function StartNavigationPage() {
 
   React.useEffect(() => {
     if (!navigator.geolocation) return;
-
     const watchId = navigator.geolocation.watchPosition(
-        (pos) => {
-            setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
-        },
+        (pos) => setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
         (err) => console.warn("Location error:", err.message),
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
@@ -913,25 +632,10 @@ export default function StartNavigationPage() {
     const lat = searchParams.get('lat');
     const lng = searchParams.get('lng');
     const straat = searchParams.get('straat');
-    const projectIdFromUrl = searchParams.get('projectId');
     const typeFromUrl = searchParams.get('type');
-    
-    if (projectIdFromUrl && selectedProjectId !== projectIdFromUrl) {
-        setSelectedProjectId(projectIdFromUrl);
-    }
-
-    if (typeFromUrl === 'meldingen') {
-        setRouteType('meldingen');
-    }
-
-    if (lat && lng) {
-      setUrlMeldingLocatie({ 
-          latitude: parseFloat(lat), 
-          longitude: parseFloat(lng),
-          straat: straat || 'Melding'
-      });
-    }
-  }, [searchParams, selectedProjectId, setSelectedProjectId]);
+    if (typeFromUrl === 'meldingen') setRouteType('meldingen');
+    if (lat && lng) setUrlMeldingLocatie({ latitude: parseFloat(lat), longitude: parseFloat(lng), straat: straat || 'Melding' });
+  }, [searchParams]);
 
   const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
   const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
@@ -968,60 +672,38 @@ export default function StartNavigationPage() {
     if (!selectedRouteDef) return null;
     try {
       const features = JSON.parse(selectedRouteDef.subGebieden);
-      if (Array.isArray(features) && features.length > 0) {
-        return { type: 'FeatureCollection' as const, features: features.map((f: any) => ({ type: 'Feature' as const, properties: {}, geometry: f.geometry })) };
-      }
+      if (Array.isArray(features) && features.length > 0) return { type: 'FeatureCollection' as const, features: features.map((f: any) => ({ type: 'Feature' as const, properties: {}, geometry: f.geometry })) };
     } catch (e) {}
     return null;
   }, [selectedRouteDef]);
 
   React.useEffect(() => {
-      const map = mapRef.current?.getMap();
-      if (!map) return;
+      const map = mapRef.current?.getMap(); if (!map) return;
       const fit = () => {
           let features: any[] = [];
           if (routeGeoJSONFeatures?.features) features = [...features, ...routeGeoJSONFeatures.features];
           if (objectsOnMap && objectsOnMap.length > 0) features = [...features, ...objectsOnMap.map(obj => turf.point([obj.longitude, obj.latitude]))];
           if (urlMeldingLocatie) features.push(turf.point([urlMeldingLocatie.longitude, urlMeldingLocatie.latitude]));
           if (routeType === 'meldingen' && allMeldingen) features = [...features, ...allMeldingen.map(m => turf.point([m.longitude, m.latitude]))];
-          if (selectedRouteDef && 'startLatitude' in selectedRouteDef && (selectedRouteDef as any).startLatitude && (selectedRouteDef as any).startLongitude) {
-              features.push(turf.point([(selectedRouteDef as any).startLongitude, (selectedRouteDef as any).startLatitude]));
-          }
+          if (selectedRouteDef && 'startLatitude' in selectedRouteDef && (selectedRouteDef as any).startLatitude) features.push(turf.point([(selectedRouteDef as any).startLongitude, (selectedRouteDef as any).startLatitude]));
           if (features.length > 0) {
-              try {
-                  const collection = turf.featureCollection(features);
-                  const bbox = turf.bbox(collection);
-                  if (bbox[0] !== Infinity) map.fitBounds(bbox as [number, number, number, number], { padding: 100, duration: 1000, maxZoom: 16 });
-              } catch(e) {}
+              try { const collection = turf.featureCollection(features); const bbox = turf.bbox(collection); if (bbox[0] !== Infinity) map.fitBounds(bbox as [number, number, number, number], { padding: 100, duration: 1000, maxZoom: 16 }); } catch(e) {}
           }
       };
-      if (map.isStyleLoaded()) fit();
-      else map.once('style.load', fit);
+      if (map.isStyleLoaded()) fit(); else map.once('style.load', fit);
   }, [selectedRouteId, routeGeoJSONFeatures, objectsOnMap, selectedRouteDef, urlMeldingLocatie, routeType, allMeldingen]);
 
   const handleStartRoute = React.useCallback(async (simulate = false) => {
     setIsSimulationMode(simulate);
-    const predefinedStart = selectedRouteDef && 'startLatitude' in selectedRouteDef && (selectedRouteDef as any).startLatitude && (selectedRouteDef as any).startLongitude
-        ? { latitude: (selectedRouteDef as any).startLatitude, longitude: (selectedRouteDef as any).startLongitude } : null;
-
-    let startLoc = userLocation;
-    if (simulate && predefinedStart) startLoc = predefinedStart;
-    else if (!startLoc && predefinedStart) startLoc = predefinedStart;
-    else if (simulate && !startLoc && objectsOnMap && objectsOnMap.length > 0) startLoc = { latitude: objectsOnMap[0].latitude, longitude: objectsOnMap[0].longitude };
-    
-    if (!startLoc && !simulate) { 
-        toast({ title: "Locatie vereist", description: "GPS vereist voor Live Rit. Klik op de kaart voor een handmatige start.", variant: "destructive" }); 
-        return; 
-    }
-    
+    const predefinedStart = selectedRouteDef && 'startLatitude' in selectedRouteDef && (selectedRouteDef as any).startLatitude ? { latitude: (selectedRouteDef as any).startLatitude, longitude: (selectedRouteDef as any).startLongitude } : null;
+    let startLoc = userLocation; if (simulate && predefinedStart) startLoc = predefinedStart; else if (!startLoc && predefinedStart) startLoc = predefinedStart; else if (simulate && !startLoc && objectsOnMap && objectsOnMap.length > 0) startLoc = { latitude: objectsOnMap[0].latitude, longitude: objectsOnMap[0].longitude };
+    if (!startLoc && !simulate) { toast({ title: "Locatie vereist", description: "GPS vereist voor Live Rit.", variant: "destructive" }); return; }
     setIsStarting(true);
-    
     let sortedObjects: MapObject[] = [];
     if (routeType === 'meldingen' && allMeldingen) {
-        if (allMeldingen.length === 0) { toast({ title: "Geen meldingen", description: "Er zijn geen openstaande meldingen." }); setIsStarting(false); return; }
+        if (allMeldingen.length === 0) { toast({ title: "Geen meldingen", description: "Geen openstaande meldingen." }); setIsStarting(false); return; }
         const startCoords = startLoc || { latitude: allMeldingen[0].latitude, longitude: allMeldingen[0].longitude };
-        const unvisited = [...allMeldingen];
-        let currentPos = startCoords;
+        const unvisited = [...allMeldingen]; let currentPos = startCoords;
         while (unvisited.length > 0) {
           let nearestIdx = 0; let minD = Infinity;
           unvisited.forEach((u, i) => {
@@ -1029,20 +711,13 @@ export default function StartNavigationPage() {
             if (d < minD) { minD = d; nearestIdx = i; }
           });
           const next = unvisited.splice(nearestIdx, 1)[0];
-          sortedObjects.push({
-              id: next.id,
-              latitude: next.latitude,
-              longitude: next.longitude,
-              name: next.intakenummer
-          } as MapObject);
+          sortedObjects.push({ id: next.id, latitude: next.latitude, longitude: next.longitude, name: next.intakenummer } as MapObject);
           currentPos = { latitude: next.latitude, longitude: next.longitude };
         }
         setTripStartLocation(startCoords);
     } else if (selectedRouteDef && objectsOnMap) {
-        if (objectsOnMap.length === 0) { toast({ title: "Geen objecten", description: "Deze route is leeg." }); setIsStarting(false); return; }
         const startCoords = startLoc || { latitude: objectsOnMap[0].latitude, longitude: objectsOnMap[0].longitude };
-        const unvisited = [...objectsOnMap];
-        let currentPos = startCoords;
+        const unvisited = [...objectsOnMap]; let currentPos = startCoords;
         while (unvisited.length > 0) {
           let nearestIdx = 0; let minD = Infinity;
           unvisited.forEach((u, i) => {
@@ -1050,49 +725,24 @@ export default function StartNavigationPage() {
             if (d < minD) { minD = d; nearestIdx = i; }
           });
           const next = unvisited.splice(nearestIdx, 1)[0];
-          sortedObjects.push(next);
-          currentPos = { latitude: next.latitude, longitude: next.longitude };
+          sortedObjects.push(next); currentPos = { latitude: next.latitude, longitude: next.longitude };
         }
         setTripStartLocation(startCoords);
     } else if (urlMeldingLocatie) {
-        sortedObjects = [{
-            id: 'Bestemming',
-            latitude: urlMeldingLocatie.latitude,
-            longitude: urlMeldingLocatie.longitude,
-            name: urlMeldingLocatie.straat || 'Melding Bestemming'
-        }];
+        sortedObjects = [{ id: 'Bestemming', latitude: urlMeldingLocatie.latitude, longitude: urlMeldingLocatie.longitude, name: urlMeldingLocatie.straat || 'Melding' }];
         setTripStartLocation(startLoc || { latitude: urlMeldingLocatie.latitude - 0.005, longitude: urlMeldingLocatie.longitude });
     }
-    
-    setObjectsOnRoute(sortedObjects);
-    setNavigationState('navigating');
-    setIsStarting(false);
+    setObjectsOnRoute(sortedObjects); setNavigationState('navigating'); setIsStarting(false);
   }, [userLocation, selectedRouteDef, urlMeldingLocatie, routeType, allMeldingen, user, objectsOnMap, toast]);
 
   React.useEffect(() => {
     if (urlMeldingLocatie && navigationState === 'setup') {
-      if (userLocation && !autoStartAttempted.current) {
-        autoStartAttempted.current = true;
-        handleStartRoute(false);
-        toast({ title: "GPS Gevonden", description: "Route naar melding wordt direct gestart." });
-      } else {
-        const timer = setTimeout(() => {
-          if (!userLocation) {
-            setAutoStartTimeoutReached(true);
-            setShowManualHint(true);
-          }
-        }, 5000);
-        return () => clearTimeout(timer);
-      }
+      if (userLocation && !autoStartAttempted.current) { autoStartAttempted.current = true; handleStartRoute(false); } 
+      else { const timer = setTimeout(() => { if (!userLocation) { setAutoStartTimeoutReached(true); setShowManualHint(true); } }, 5000); return () => clearTimeout(timer); }
     }
-  }, [userLocation, urlMeldingLocatie, navigationState, handleStartRoute, toast]);
+  }, [userLocation, urlMeldingLocatie, navigationState, handleStartRoute]);
 
-  const showSetupCard = React.useMemo(() => {
-    if (!urlMeldingLocatie) return true;
-    if (userLocation) return true;
-    if (autoStartTimeoutReached) return true;
-    return false;
-  }, [urlMeldingLocatie, userLocation, autoStartTimeoutReached]);
+  const showSetupCard = React.useMemo(() => !urlMeldingLocatie || userLocation || autoStartTimeoutReached, [urlMeldingLocatie, userLocation, autoStartTimeoutReached]);
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
@@ -1100,173 +750,28 @@ export default function StartNavigationPage() {
         <NavigatingView objectsOnRoute={objectsOnRoute} onExit={() => { setNavigationState('setup'); setObjectsOnRoute([]); if (searchParams.has('lat')) router.back(); }} initialUserLocation={tripStartLocation} isSimulating={isSimulationMode} />
       ) : (
         <div className="w-full h-full relative">
-          <MapGL ref={mapRef} initialViewState={{ longitude: userLocation?.longitude || 5.2913, latitude: userLocation?.latitude || 52.1326, zoom: userLocation ? 14 : 7 }} style={{ width: '100%', height: '100%' }} mapStyle={mapStyle} mapboxAccessToken={MAPBOX_TOKEN} onClick={e => { setUserLocation({ latitude: e.lngLat.lat, longitude: e.lngLat.lng }); setShowManualHint(false); }} interactive={true}>
-            {userLocation && (
-              <Marker longitude={userLocation.longitude} latitude={userLocation.latitude} anchor="center">
-                <div className="relative flex flex-col items-center">
-                  <div className="absolute h-10 w-10 rounded-full bg-green-500/30 animate-ping" />
-                  <div className="relative h-8 w-8 rounded-full bg-green-600 border-4 border-white shadow-xl flex items-center justify-center">
-                      <MapPin className="h-4 w-4 text-white fill-current" />
-                  </div>
-                  <div className="mt-1 bg-green-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow uppercase">Startpunt</div>
-                </div>
-              </Marker>
-            )}
-            {urlMeldingLocatie && (
-                <Marker longitude={urlMeldingLocatie.longitude} latitude={urlMeldingLocatie.latitude} anchor="center">
-                    <div className="relative flex flex-col items-center">
-                        <div className="absolute h-12 w-12 rounded-full bg-blue-500/20 animate-pulse" />
-                        <div className="relative h-10 w-10 rounded-full bg-primary border-4 border-white shadow-2xl flex items-center justify-center">
-                            <Flag className="h-5 w-5 text-white fill-current" />
-                        </div>
-                        <div className="mt-1 bg-primary text-white text-[9px] font-black px-2 py-0.5 rounded shadow-lg uppercase tracking-tighter">Vlag Bestemming</div>
-                    </div>
-                </Marker>
-            )}
-            {selectedRouteDef && 'startLatitude' in selectedRouteDef && (selectedRouteDef as any).startLatitude && (selectedRouteDef as any).startLongitude && (
-                <Marker longitude={(selectedRouteDef as any).startLongitude} latitude={(selectedRouteDef as any).startLatitude} anchor="center">
-                    <div className="relative flex flex-col items-center">
-                        <div className="absolute h-12 w-12 rounded-full bg-blue-50/20 animate-pulse" />
-                        <div className="relative h-10 w-10 rounded-full bg-primary border-4 border-white shadow-2xl flex items-center justify-center">
-                            <Home className="h-5 w-5 text-white fill-current" />
-                        </div>
-                        <div className="mt-1 bg-primary text-white text-[10px] font-black px-2 py-0.5 rounded shadow-lg uppercase tracking-tighter">Depot</div>
-                    </div>
-                </Marker>
-            )}
-            {routeGeoJSONFeatures && (
-                <Source id="route-area" type="geojson" data={{ type: 'FeatureCollection', features: routeGeoJSONFeatures.map((f: any) => ({ type: 'Feature', properties: {}, geometry: f.geometry })) }}>
-                    <Layer id="route-area-fill" type="fill" paint={{ 'fill-color': '#32ADE6', 'fill-opacity': 0.05 }} />
-                    <Layer id="route-area-outline" type="line" paint={{ 'line-color': '#32ADE6', 'line-width': 1, 'line-dasharray': [2, 2] }} />
-                </Source>
-            )}
-            {objectsOnMap?.map(obj => (
-                <Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude}>
-                    <div className="w-4 h-4 bg-primary rounded-full border-2 border-white shadow-lg" />
-                </Marker>
-            ))}
-            {routeType === 'meldingen' && allMeldingen?.map(m => (
-                <Marker key={m.id} longitude={m.longitude} latitude={m.latitude}>
-                    <div className="w-5 h-5 bg-red-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-[8px] font-black text-white">!</div>
-                </Marker>
-            ))}
+          <MapGL ref={mapRef} initialViewState={{ longitude: userLocation?.longitude || 5.2913, latitude: userLocation?.latitude || 52.1326, zoom: userLocation ? 14 : 7 }} style={{ width: '100%', height: '100%' }} mapStyle={mapStyle} mapboxAccessToken={MAPBOX_TOKEN} onClick={e => { setUserLocation({ latitude: e.lngLat.lat, longitude: e.lngLat.lng }); setShowManualHint(false); }}>
+            {userLocation && (<Marker longitude={userLocation.longitude} latitude={userLocation.latitude} anchor="center"><div className="relative flex flex-col items-center"><div className="absolute h-10 w-10 rounded-full bg-green-500/30 animate-ping" /><div className="relative h-8 w-8 rounded-full bg-green-600 border-4 border-white shadow-xl flex items-center justify-center"><MapPin className="h-4 w-4 text-white fill-current" /></div></div></Marker>)}
+            {urlMeldingLocatie && (<Marker longitude={urlMeldingLocatie.longitude} latitude={urlMeldingLocatie.latitude} anchor="center"><div className="relative flex flex-col items-center"><div className="absolute h-12 w-12 rounded-full bg-blue-500/20 animate-pulse" /><div className="relative h-10 w-10 rounded-full bg-primary border-4 border-white shadow-2xl flex items-center justify-center"><Flag className="h-5 w-5 text-white fill-current" /></div></div></Marker>)}
+            {routeGeoJSONFeatures && (<Source id="route-area" type="geojson" data={{ type: 'FeatureCollection', features: routeGeoJSONFeatures.map((f: any) => ({ type: 'Feature', properties: {}, geometry: f.geometry })) }}><Layer id="route-area-fill" type="fill" paint={{ 'fill-color': '#32ADE6', 'fill-opacity': 0.05 }} /><Layer id="route-area-outline" type="line" paint={{ 'line-color': '#32ADE6', 'line-width': 1, 'line-dasharray': [2, 2] }} /></Source>)}
+            {objectsOnMap?.map(obj => (<Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude}><div className="w-4 h-4 bg-primary rounded-full border-2 border-white shadow-lg" /></Marker>))}
+            {routeType === 'meldingen' && allMeldingen?.map(m => (<Marker key={m.id} longitude={m.longitude} latitude={m.latitude}><div className="w-5 h-5 bg-red-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-[8px] font-black text-white">!</div></Marker>))}
           </MapGL>
-
-          {urlMeldingLocatie && !userLocation && !autoStartTimeoutReached && (
-            <div className="absolute inset-0 z-[100] bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center text-white">
-                <div className="bg-white/10 p-8 rounded-3xl border border-white/20 flex flex-col items-center gap-6 animate-in zoom-in-95 duration-300 shadow-2xl">
-                    <div className="h-16 w-16 border-4 border-white/30 border-t-white rounded-full animate-spin" />
-                    <div className="text-center space-y-2">
-                        <p className="text-xl font-black uppercase tracking-tight">GPS Signaal zoeken...</p>
-                        <p className="text-sm font-medium opacity-70">De route start automatisch bij signaal.</p>
-                    </div>
-                </div>
-            </div>
-          )}
-
-          {showManualHint && !userLocation && (
-            <div className="absolute top-24 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-sm animate-in fade-in slide-in-from-top-4 duration-500">
-                <Alert className="bg-primary border-none text-white shadow-2xl rounded-2xl p-4">
-                    <div className="flex items-start gap-4">
-                        <div className="bg-white/20 p-2 rounded-xl shrink-0">
-                            <MousePointer2 className="h-6 w-6 text-white animate-bounce" />
-                        </div>
-                        <div>
-                            <AlertTitle className="font-black uppercase tracking-tight text-xs mb-1">Geen GPS gevonden</AlertTitle>
-                            <AlertDescription className="text-[11px] opacity-90 font-medium leading-relaxed">
-                                Klik op de kaart om uw huidige positie handmatig te bepalen en de route te starten.
-                            </AlertDescription>
-                        </div>
-                    </div>
-                </Alert>
-            </div>
-          )}
-
           {showSetupCard && (
             <Card className="absolute top-4 left-4 z-10 w-full max-w-[280px] shadow-2xl bg-white/95 backdrop-blur border-2 border-slate-100 animate-in slide-in-from-left-4 duration-300">
-                <CardHeader className="p-3 border-b bg-slate-50/50">
-                <div className="flex items-center gap-3">
-                    <Button variant="ghost" size="icon" onClick={() => router.push('/')} className="h-7 w-7 hover:bg-white rounded-full flex items-center justify-center"><ArrowLeft className="h-3.5 w-3.5" /></Button>
-                    <CardTitle className="text-sm font-black uppercase tracking-tighter">Navigatie Setup</CardTitle>
-                </div>
-                </CardHeader>
+                <CardHeader className="p-3 border-b bg-slate-50/50"><div className="flex items-center gap-3"><Button variant="ghost" size="icon" onClick={() => router.push('/')} className="h-7 w-7 hover:bg-white rounded-full flex items-center justify-center"><ArrowLeft className="h-3.5 w-3.5" /></Button><CardTitle className="text-sm font-black uppercase tracking-tighter">Navigatie Setup</CardTitle></div></CardHeader>
                 <CardContent className="p-3 space-y-3">
-                <div className="space-y-1">
-                    <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Project</Label>
-                    <Select value={selectedProjectId || ''} onValueChange={v => setSelectedProjectId(v || null)} disabled={isLoadingProjects}>
-                    <SelectTrigger className="h-8 border font-bold text-xs"><SelectValue placeholder="Selecteer project" /></SelectTrigger>
-                    <SelectContent>{projects?.map(p => <SelectItem key={p.id} value={p.id!}>{p.projectnaam}</SelectItem>)}</SelectContent>
-                    </Select>
-                </div>
-                
-                {!urlMeldingLocatie && (
-                    <>
-                    <div className="space-y-1">
-                        <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Type Inzet</Label>
-                        <div className="grid grid-cols-3 gap-1">
-                            <Button variant={routeType === 'veeg' ? 'default' : 'outline'} onClick={() => setRouteType('veeg')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[9px] p-1", routeType === 'veeg' ? "bg-primary border-primary shadow-md text-white" : "border-slate-200")}>Veeg</Button>
-                            <Button variant={routeType === 'prullenbak' ? 'default' : 'outline'} onClick={() => setRouteType('prullenbak')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[9px] p-1", routeType === 'prullenbak' ? "bg-primary border-primary shadow-md text-white" : "border-slate-200")}>Bakken</Button>
-                            <Button variant={routeType === 'meldingen' ? 'default' : 'outline'} onClick={() => setRouteType('meldingen')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[9px] p-1", routeType === 'meldingen' ? "bg-primary border-primary shadow-md text-white" : "border-slate-200")}>Melding</Button>
-                        </div>
-                    </div>
-                    {routeType !== 'meldingen' && (
-                        <div className="space-y-1">
-                            <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Route Keuze</Label>
-                            <Select onValueChange={setSelectedRouteId} value={selectedRouteId} disabled={!routeType}>
-                                <SelectTrigger className="h-8 border font-bold text-xs"><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="--nieuwe-route--">-- Kies een route --</SelectItem>
-                                    {availableRoutes.map((r: any) => (
-                                        <SelectItem key={r.id} value={r.id}>{r.naam}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    )}
-                    </>
-                )}
-
-                {urlMeldingLocatie && (
-                    <Alert className="bg-blue-50 border-blue-200 py-2">
-                        <Navigation className="h-3 w-3 text-primary" />
-                        <AlertTitle className="text-[10px] font-black uppercase text-blue-700">Bestemming geladen</AlertTitle>
-                        <AlertDescription className="text-[9px] font-bold text-blue-600 truncate">
-                            {urlMeldingLocatie.straat}
-                        </AlertDescription>
-                    </Alert>
-                )}
-
-                <div className="flex flex-col gap-1.5 pt-1">
-                    <Button className="w-full h-9 text-xs font-black bg-primary hover:bg-primary/90 shadow-lg rounded-lg uppercase tracking-tighter flex items-center justify-center text-white" onClick={() => handleStartRoute(false)} disabled={(urlMeldingLocatie ? !userLocation : (routeType === 'meldingen' ? false : selectedRouteId === '--nieuwe-route--')) || isStarting}>
-                        {isStarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4 fill-current" />} 
-                        {urlMeldingLocatie ? 'START RIT NAAR MELDING' : 'START LIVE RIT'}
-                    </Button>
-                    <div className="grid grid-cols-2 gap-1.5">
-                        {isPrivileged && (
-                            <Button variant="outline" className="h-8 border-slate-200 text-slate-600 hover:bg-slate-50 font-black uppercase tracking-tighter rounded-lg flex items-center justify-center text-[9px]" onClick={() => setIsHistoryDialogOpen(true)}>
-                                <History className="mr-1.5 h-3 w-3" /> GESCHIEDENIS
-                            </Button>
-                        )}
-                        {isSuperUser && (
-                            <Button variant="outline" className="h-8 border-dashed border-primary/30 text-primary hover:bg-primary/5 font-black uppercase tracking-tighter rounded-lg flex items-center justify-center text-[9px]" onClick={() => handleStartRoute(true)} disabled={(urlMeldingLocatie ? false : (routeType === 'meldingen' ? false : selectedRouteId === '--nieuwe-route--')) || isStarting}>
-                                <Gauge className="mr-1.5 h-3 w-3" /> SIMULATOR
-                            </Button>
-                        )}
-                    </div>
-                </div>
-                <p className="text-[8px] text-slate-400 font-bold uppercase text-center mt-2">Pc-gebruiker: klik op de kaart voor startlocatie.</p>
-                </CardContent>
+                <div className="space-y-1"><Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Project</Label><Select value={selectedProjectId || ''} onValueChange={v => setSelectedProjectId(v || null)} disabled={isLoadingProjects}><SelectTrigger className="h-8 border font-bold text-xs"><SelectValue placeholder="Kies project" /></SelectTrigger><SelectContent>{projects?.map(p => <SelectItem key={p.id} value={p.id!}>{p.projectnaam}</SelectItem>)}</SelectContent></Select></div>
+                {!urlMeldingLocatie && (<><div className="space-y-1"><Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Type Inzet</Label><div className="grid grid-cols-3 gap-1"><Button variant={routeType === 'veeg' ? 'default' : 'outline'} onClick={() => setRouteType('veeg')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[9px] p-1", routeType === 'veeg' ? "bg-primary border-primary text-white" : "border-slate-200")}>Veeg</Button><Button variant={routeType === 'prullenbak' ? 'default' : 'outline'} onClick={() => setRouteType('prullenbak')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[9px] p-1", routeType === 'prullenbak' ? "bg-primary border-primary text-white" : "border-slate-200")}>Bakken</Button><Button variant={routeType === 'meldingen' ? 'default' : 'outline'} onClick={() => setRouteType('meldingen')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[9px] p-1", routeType === 'meldingen' ? "bg-primary border-primary text-white" : "border-slate-200")}>Melding</Button></div></div>
+                    {routeType !== 'meldingen' && (<div className="space-y-1"><Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Route Keuze</Label><Select onValueChange={setSelectedRouteId} value={selectedRouteId} disabled={!routeType}><SelectTrigger className="h-8 border font-bold text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="--nieuwe-route--">-- Kies een route --</SelectItem>{availableRoutes.map((r: any) => (<SelectItem key={r.id} value={r.id}>{r.naam}</SelectItem>))}</SelectContent></Select></div>)}</>)}
+                <div className="flex flex-col gap-1.5 pt-1"><Button className="w-full h-9 text-xs font-black bg-primary hover:bg-primary/90 shadow-lg uppercase tracking-tighter" onClick={() => handleStartRoute(false)} disabled={(urlMeldingLocatie ? !userLocation : (routeType === 'meldingen' ? false : selectedRouteId === '--nieuwe-route--')) || isStarting}>{isStarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4 fill-current" />} {urlMeldingLocatie ? 'START RIT' : 'START LIVE RIT'}</Button>
+                    <div className="grid grid-cols-2 gap-1.5">{isPrivileged && (<Button variant="outline" className="h-8 border-slate-200 text-slate-600 font-black uppercase text-[9px]" onClick={() => setIsHistoryDialogOpen(true)}><History className="mr-1.5 h-3 w-3" /> GESCHIEDENIS</Button>)}<Button variant="outline" className="h-8 border-dashed border-primary/30 text-primary font-black uppercase text-[9px]" onClick={() => handleStartRoute(true)} disabled={(urlMeldingLocatie ? false : (routeType === 'meldingen' ? false : selectedRouteId === '--nieuwe-route--')) || isStarting}><Gauge className="mr-1.5 h-3 w-3" /> SIMULATOR</Button></div>
+                </div></CardContent>
             </Card>
           )}
         </div>
       )}
-      {isPrivileged && (
-          <RouteHistoryDialog
-            open={isHistoryDialogOpen}
-            onOpenChange={isHistoryDialogOpen => setIsHistoryDialogOpen(isHistoryDialogOpen)}
-            projectId={selectedProjectId}
-          />
-      )}
+      {isPrivileged && (<RouteHistoryDialog open={isHistoryDialogOpen} onOpenChange={setIsHistoryDialogOpen} projectId={selectedProjectId} />)}
     </div>
   );
 }
