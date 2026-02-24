@@ -533,7 +533,7 @@ function NavigatingView({
                       <CardDescription className="font-bold text-slate-500">Meldingsnummer: <span className="text-slate-900">{arrivedObject.name || arrivedObject.id}</span></CardDescription>
                   </CardHeader>
                   <CardContent className="p-6 pt-2 space-y-3">
-                      <Button onClick={() => { onExit(); router.push(`/issues?id=${arrivedObject.id}`); }} className="w-full h-14 bg-primary hover:bg-primary/90 text-lg font-black uppercase tracking-tight gap-2">
+                      <Button onClick={() => { router.push(`/issues?id=${arrivedObject.id}`); }} className="w-full h-14 bg-primary hover:bg-primary/90 text-lg font-black uppercase tracking-tight gap-2">
                           <FileText className="h-5 w-5" /> Open Werkbon
                       </Button>
                       <Button variant="outline" onClick={() => handleArrivedAction('finish')} className="w-full h-12 border-2 font-black uppercase tracking-tight gap-2">
@@ -735,12 +735,26 @@ export default function StartNavigationPage() {
     setObjectsOnRoute(sortedObjects); setNavigationState('navigating'); setIsStarting(false);
   }, [userLocation, selectedRouteDef, urlMeldingLocatie, routeType, allMeldingen, user, objectsOnMap, toast]);
 
+  // AUTO-START LOGICA: Start de route direct als type=meldingen aanwezig is of een specifieke locatie
   React.useEffect(() => {
-    if (urlMeldingLocatie && navigationState === 'setup') {
-      if (userLocation && !autoStartAttempted.current) { autoStartAttempted.current = true; handleStartRoute(false); } 
-      else { const timer = setTimeout(() => { if (!userLocation) { setAutoStartTimeoutReached(true); setShowManualHint(true); } }, 5000); return () => clearTimeout(timer); }
+    const isMeldingenRoute = routeType === 'meldingen';
+    const isReadyToAutoStart = !!urlMeldingLocatie || (isMeldingenRoute && allMeldingen && allMeldingen.length > 0);
+
+    if (isReadyToAutoStart && navigationState === 'setup' && !autoStartAttempted.current) {
+      if (userLocation) {
+        autoStartAttempted.current = true;
+        handleStartRoute(false);
+      } else {
+        const timer = setTimeout(() => {
+          if (!userLocation) {
+            setAutoStartTimeoutReached(true);
+            setShowManualHint(true);
+          }
+        }, 5000);
+        return () => clearTimeout(timer);
+      }
     }
-  }, [userLocation, urlMeldingLocatie, navigationState, handleStartRoute]);
+  }, [userLocation, urlMeldingLocatie, routeType, allMeldingen, navigationState, handleStartRoute]);
 
   const showSetupCard = React.useMemo(() => !urlMeldingLocatie || userLocation || autoStartTimeoutReached, [urlMeldingLocatie, userLocation, autoStartTimeoutReached]);
 

@@ -87,6 +87,15 @@ export default function IssuesPage() {
   const [elapsedTime, setElapsedTime] = React.useState<string>("0 uur en 0 minuten");
   const [userLocation, setUserLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
 
+  const meldingIdFromUrl = searchParams.get('id');
+
+  // REDIRECT LOGIC: Als we geen specifiek ID hebben, ga direct naar de route op de kaart
+  React.useEffect(() => {
+    if (!meldingIdFromUrl) {
+      router.replace('/navigation-module?type=meldingen');
+    }
+  }, [meldingIdFromUrl, router]);
+
   const meldingenQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
@@ -166,14 +175,13 @@ export default function IssuesPage() {
 
   React.useEffect(() => {
     if (filteredMeldingen.length > 0 && !selectedMeldingId) {
-      const idFromUrl = searchParams.get('id');
-      if (idFromUrl && filteredMeldingen.find(m => m.id === idFromUrl)) {
-        setSelectedMeldingId(idFromUrl);
-      } else if (!idFromUrl) {
+      if (meldingIdFromUrl && filteredMeldingen.find(m => m.id === meldingIdFromUrl)) {
+        setSelectedMeldingId(meldingIdFromUrl);
+      } else if (!meldingIdFromUrl) {
         setSelectedMeldingId(filteredMeldingen[0].id);
       }
     }
-  }, [filteredMeldingen, selectedMeldingId, searchParams]);
+  }, [filteredMeldingen, selectedMeldingId, meldingIdFromUrl]);
 
   React.useEffect(() => {
     const melding = meldingen?.find(m => m.id === selectedMeldingId);
@@ -265,10 +273,10 @@ export default function IssuesPage() {
   }, [selectedMeldingId, app]);
 
   const onSubmit = async (data: MeldingFormValues) => {
-      // This is a placeholder for manual saves if needed, but handled by buttons primarily.
+      // Manual save handler
   };
 
-  if (isLoadingMeldingen || isLoadingProjects) return <LoadingScreen message="Werkbonnen laden..." />;
+  if (isLoadingMeldingen || isLoadingProjects || !meldingIdFromUrl) return <LoadingScreen message="Werkbonnen laden..." />;
 
   return (
     <div className="flex flex-col flex-1 h-full min-h-0 overflow-hidden text-sm bg-gray-100 dark:bg-gray-900">
