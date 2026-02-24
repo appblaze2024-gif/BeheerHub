@@ -84,9 +84,9 @@ export function MeetingMinuteDialog({
   const [improvingId, setImprovingId] = React.useState<string | null>(null);
 
   const templateRef = useMemoFirebase(() => {
-    if (!firestore || !contractor?.projectId) return null;
-    return doc(firestore, 'projects', contractor.projectId, 'settings', 'minute_template');
-  }, [firestore, contractor?.projectId]);
+    if (!firestore || !contractor?.id) return null;
+    return doc(firestore, 'contractors', contractor.id, 'settings', 'minute_template');
+  }, [firestore, contractor?.id]);
 
   const { data: template } = useDoc<MinuteTemplate>(templateRef);
 
@@ -95,7 +95,7 @@ export function MeetingMinuteDialog({
     defaultValues: {
       title: '',
       documentTitle: 'Agenda operationeel Startwerkoverleg',
-      documentSubtitle: 'Meerlanden afdeling Noordwijkerhout en Meerlanden',
+      documentSubtitle: '',
       logoLeftUrl: 'https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png',
       logoRightUrl: 'https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png',
       date: format(new Date(), 'yyyy-MM-dd'),
@@ -118,13 +118,13 @@ export function MeetingMinuteDialog({
         form.reset({
           title: minute.title,
           documentTitle: minute.documentTitle || 'Agenda operationeel Startwerkoverleg',
-          documentSubtitle: minute.documentSubtitle || 'Meerlanden afdeling Noordwijkerhout en Meerlanden',
+          documentSubtitle: minute.documentSubtitle || '',
           logoLeftUrl: minute.logoLeftUrl || 'https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png',
           logoRightUrl: minute.logoRightUrl || 'https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png',
           date: minute.date,
           location: minute.location || 'Aarbergerweg 5-7 Rijsenhout',
           attendees: minute.attendees || '',
-          createdBy: minute.createdBy || profile?.displayName || 'Django Stoutenburg',
+          createdBy: minute.createdBy || profile?.displayName || '',
           agendaItems: minute.agendaItems || DEFAULT_AGENDA.map((title, i) => ({ id: `item-${i+1}`, title: `${i+1}. ${title}`, content: '' })),
           actionPoints: minute.actionPoints || '',
         });
@@ -133,13 +133,13 @@ export function MeetingMinuteDialog({
         form.reset({
           title: `Operationeel Startwerkoverleg ${contractor.name}`,
           documentTitle: template?.documentTitle || 'Agenda operationeel Startwerkoverleg',
-          documentSubtitle: template?.documentSubtitle || 'Meerlanden afdeling Noordwijkerhout en Meerlanden',
+          documentSubtitle: template?.documentSubtitle || `Overleg met ${contractor.name}`,
           logoLeftUrl: template?.logoLeftUrl || 'https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png',
           logoRightUrl: template?.logoRightUrl || 'https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png',
           date: format(new Date(), 'yyyy-MM-dd'),
           location: template?.location || 'Aarbergerweg 5-7 Rijsenhout',
           attendees: '',
-          createdBy: profile?.displayName || 'Django Stoutenburg',
+          createdBy: profile?.displayName || '',
           agendaItems: template?.agendaItems || DEFAULT_AGENDA.map((title, i) => ({ id: `item-${i+1}`, title: `${i+1}. ${title}`, content: '' })),
           actionPoints: '',
         });
@@ -212,17 +212,14 @@ export function MeetingMinuteDialog({
         <div className="bg-white border-b shrink-0 p-8 space-y-6">
             <div className="flex justify-between items-start gap-8">
                 <div className="flex flex-col gap-2 w-48">
-                    <div className="relative w-full h-12 border-2 border-dashed border-slate-100 rounded-lg hover:border-primary/20 transition-all group">
-                        <Image src={form.watch('logoLeftUrl') || 'https://placehold.co/200x50'} alt="Logo Links" fill className="object-contain object-left" />
-                        <div className="absolute inset-0 bg-white/80 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                            <Input 
-                                placeholder="Logo URL..." 
-                                {...form.register('logoLeftUrl')} 
-                                className="h-6 text-[8px] border-none bg-transparent focus:ring-0 text-center font-bold" 
-                            />
-                        </div>
+                    <div className="relative w-full h-12 border-2 border-dashed border-slate-100 rounded-lg overflow-hidden group">
+                        {form.watch('logoLeftUrl') ? (
+                            <Image src={form.watch('logoLeftUrl')!} alt="Logo Links" fill className="object-contain object-left" />
+                        ) : (
+                            <div className="flex items-center justify-center h-full bg-slate-50"><ImageIcon className="h-4 w-4 text-slate-300" /></div>
+                        )}
                     </div>
-                    <span className="text-[8px] font-black uppercase text-slate-300 text-center tracking-widest">Logo Links (URL)</span>
+                    <span className="text-[8px] font-black uppercase text-slate-300 text-center tracking-widest">Logo Links</span>
                 </div>
 
                 <div className="flex-1 text-center space-y-2">
@@ -239,17 +236,14 @@ export function MeetingMinuteDialog({
                 </div>
 
                 <div className="flex flex-col gap-2 w-48">
-                    <div className="relative w-full h-12 border-2 border-dashed border-slate-100 rounded-lg hover:border-primary/20 transition-all group">
-                        <Image src={form.watch('logoRightUrl') || 'https://placehold.co/200x50'} alt="Logo Rechts" fill className="object-contain object-right" />
-                        <div className="absolute inset-0 bg-white/80 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                            <Input 
-                                placeholder="Logo URL..." 
-                                {...form.register('logoRightUrl')} 
-                                className="h-6 text-[8px] border-none bg-transparent focus:ring-0 text-center font-bold" 
-                            />
-                        </div>
+                    <div className="relative w-full h-12 border-2 border-dashed border-slate-100 rounded-lg overflow-hidden group">
+                        {form.watch('logoRightUrl') ? (
+                            <Image src={form.watch('logoRightUrl')!} alt="Logo Rechts" fill className="object-contain object-right" />
+                        ) : (
+                            <div className="flex items-center justify-center h-full bg-slate-50"><ImageIcon className="h-4 w-4 text-slate-300" /></div>
+                        )}
                     </div>
-                    <span className="text-[8px] font-black uppercase text-slate-300 text-center tracking-widest">Logo Rechts (URL)</span>
+                    <span className="text-[8px] font-black uppercase text-slate-300 text-center tracking-widest">Logo Rechts</span>
                 </div>
             </div>
 
@@ -269,7 +263,7 @@ export function MeetingMinuteDialog({
                 <span>Verslaglegging:</span>
                 <div className="flex items-center gap-2">
                   <Input placeholder="Naam verslaglegger..." {...form.register('createdBy')} className="h-7 py-0 flex-1 font-bold border-slate-200" />
-                  <span className="text-slate-400 shrink-0">Meerlanden</span>
+                  <span className="text-slate-400 shrink-0">BeheerHub</span>
                 </div>
             </div>
         </div>

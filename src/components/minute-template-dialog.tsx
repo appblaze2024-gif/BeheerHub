@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -21,7 +22,7 @@ import { useFirestore, setDocumentNonBlocking, useDoc, useMemoFirebase, useFireb
 import { doc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { Loader2, Sparkles, X, Plus, Image as ImageIcon, MapPin, Upload } from 'lucide-react';
-import type { MinuteTemplate } from '@/lib/types';
+import type { MinuteTemplate, Contractor } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { useToast } from './ui/use-toast';
@@ -63,11 +64,11 @@ type TemplateFormValues = z.infer<typeof templateSchema>;
 export function MinuteTemplateDialog({
   open,
   onOpenChange,
-  projectId
+  contractor
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  projectId: string;
+  contractor: Contractor;
 }) {
   const firestore = useFirestore();
   const app = useFirebaseApp();
@@ -77,9 +78,9 @@ export function MinuteTemplateDialog({
   const [isUploadingRight, setIsUploadingRight] = React.useState(false);
 
   const templateRef = useMemoFirebase(() => {
-    if (!firestore || !projectId) return null;
-    return doc(firestore, 'projects', projectId, 'settings', 'minute_template');
-  }, [firestore, projectId]);
+    if (!firestore || !contractor?.id) return null;
+    return doc(firestore, 'contractors', contractor.id, 'settings', 'minute_template');
+  }, [firestore, contractor?.id]);
 
   const { data: template, isLoading } = useDoc<MinuteTemplate>(templateRef);
 
@@ -87,7 +88,7 @@ export function MinuteTemplateDialog({
     resolver: zodResolver(templateSchema),
     defaultValues: {
       documentTitle: 'Agenda operationeel Startwerkoverleg',
-      documentSubtitle: 'Meerlanden afdeling Noordwijkerhout en Meerlanden',
+      documentSubtitle: `Overleg met ${contractor.name}`,
       logoLeftUrl: 'https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png',
       logoRightUrl: 'https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png',
       location: 'Aarbergerweg 5-7 Rijsenhout',
@@ -115,14 +116,14 @@ export function MinuteTemplateDialog({
 
   const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>, side: 'left' | 'right') => {
     const file = event.target.files?.[0];
-    if (!file || !app || !projectId) return;
+    if (!file || !app || !contractor.id) return;
 
     const setUploading = side === 'left' ? setIsUploadingLeft : setIsUploadingRight;
     setUploading(true);
 
     try {
       const storage = getStorage(app);
-      const storagePath = `projects/${projectId}/minute_templates/logo_${side}_${Date.now()}_${file.name}`;
+      const storagePath = `contractors/${contractor.id}/minute_templates/logo_${side}_${Date.now()}_${file.name}`;
       const storageRef = ref(storage, storagePath);
       const uploadTask = uploadBytesResumable(storageRef, file);
 
@@ -130,7 +131,7 @@ export function MinuteTemplateDialog({
       const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
       
       form.setValue(side === 'left' ? 'logoLeftUrl' : 'logoRightUrl', downloadUrl, { shouldDirty: true });
-      toast({ title: "Logo geüpload", description: `De afbeelding voor ${side === 'left' ? 'links' : 'rechts'} is succesvol verwerkt.` });
+      toast({ title: "Logo geüpload", description: `Logo voor ${contractor.name} is succesvol verwerkt.` });
     } catch (err) {
       console.error("Logo upload error:", err);
       toast({ variant: 'destructive', title: "Upload mislukt", description: "Kon de afbeelding niet opslaan." });
@@ -140,17 +141,17 @@ export function MinuteTemplateDialog({
   };
 
   const onSubmit = async (values: TemplateFormValues) => {
-    if (!firestore || !projectId) return;
+    if (!firestore || !contractor.id) return;
     setIsSubmitting(true);
 
     try {
-      await setDocumentNonBlocking(doc(firestore, 'projects', projectId, 'settings', 'minute_template'), {
+      await setDocumentNonBlocking(doc(firestore, 'contractors', contractor.id, 'settings', 'minute_template'), {
         ...values,
-        projectId,
+        contractorId: contractor.id,
         updatedAt: new Date().toISOString(),
       }, { merge: true });
       
-      toast({ title: "Sjabloon opgeslagen", description: "Nieuwe verslagen gebruiken nu deze instellingen." });
+      toast({ title: "Sjabloon opgeslagen", description: `Standaard layout voor ${contractor.name} is bijgewerkt.` });
       onOpenChange(false);
     } catch (error) {
       console.error("Error saving template:", error);
@@ -165,10 +166,10 @@ export function MinuteTemplateDialog({
       <DialogContent className="sm:max-w-4xl h-[90vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
         <DialogHeader className="p-6 border-b shrink-0 bg-slate-900 text-white">
           <div className="flex items-center gap-3">
-            <Sparkles className="h-6 w-6 text-primary" />
+            <Settings2 className="h-6 w-6 text-primary" />
             <div>
-              <DialogTitle className="text-xl font-black uppercase tracking-tight">Document Sjabloon</DialogTitle>
-              <DialogDescription className="text-slate-400 font-bold">Beheer de standaard layout en agenda voor alle verslagen in dit project.</DialogDescription>
+              <DialogTitle className="text-xl font-black uppercase tracking-tight">Sjabloon: {contractor.name}</DialogTitle>
+              <DialogDescription className="text-slate-400 font-bold">Beheer de specifieke layout en agenda voor verslagen van deze aannemer.</DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -176,14 +177,12 @@ export function MinuteTemplateDialog({
         <ScrollArea className="flex-1 bg-white">
           <Form {...form}>
             <form id="template-form" onSubmit={form.handleSubmit(onSubmit)} className="p-8 space-y-10">
-              {/* Logo & Header Section */}
               <div className="space-y-6">
                 <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b pb-2 flex items-center gap-2">
                   <ImageIcon className="h-3.5 w-3.5" /> Koptekst & Logo's
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-6">
-                    {/* Logo Left */}
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase">Logo Links (JPG/PNG)</Label>
                       <div className="flex flex-col gap-3">
@@ -213,7 +212,6 @@ export function MinuteTemplateDialog({
                       </div>
                     </div>
 
-                    {/* Logo Right */}
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase">Logo Rechts (JPG/PNG)</Label>
                       <div className="flex flex-col gap-3">
@@ -267,10 +265,9 @@ export function MinuteTemplateDialog({
                 </div>
               </div>
 
-              {/* Agenda Section */}
               <div className="space-y-6">
                 <div className="flex justify-between items-center border-b pb-2">
-                  <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Standaard Agenda Structuur</h3>
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Vaste Agenda Structuur</h3>
                   <Button type="button" variant="outline" size="sm" className="h-7 text-[9px] font-black uppercase" onClick={() => append({ id: `item-${fields.length + 1}`, title: `${fields.length + 1}. `, content: '' })}>
                     <Plus className="h-3 w-3 mr-1" /> Item toevoegen
                   </Button>
@@ -298,7 +295,7 @@ export function MinuteTemplateDialog({
         <DialogFooter className="p-6 border-t bg-slate-50 shrink-0">
           <DialogClose asChild><Button variant="ghost" className="font-bold">Annuleren</Button></DialogClose>
           <Button type="submit" form="template-form" disabled={isSubmitting || isUploadingLeft || isUploadingRight} className="font-black uppercase tracking-tight h-12 px-12 shadow-xl shadow-primary/20 rounded-xl">
-            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Instellingen Opslaan'}
+            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sjabloon Opslaan'}
           </Button>
         </DialogFooter>
       </DialogContent>

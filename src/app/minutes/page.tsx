@@ -111,9 +111,6 @@ export default function MinutesPage() {
       >
         {selectedProjectId && (
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setIsTemplateDialogOpen(true)} className="font-bold h-10 border-slate-300">
-              <Settings2 className="mr-2 h-4 w-4" /> Sjabloon
-            </Button>
             <Button onClick={() => setIsContractorDialogOpen(true)} className="font-black h-10 uppercase tracking-tight">
               <Plus className="mr-2 h-4 w-4" /> Nieuwe Aannemer
             </Button>
@@ -203,6 +200,9 @@ export default function MinutesPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={() => setIsTemplateDialogOpen(true)} className="font-bold h-9 border-slate-300">
+                      <Settings2 className="mr-2 h-4 w-4" /> Sjabloon
+                    </Button>
                     <Button onClick={() => setIsMinuteDialogOpen(true)} size="sm" className="h-9 font-black uppercase tracking-tight shadow-lg shadow-primary/20">
                       <Plus className="mr-2 h-4 w-4" /> Verslag Maken
                     </Button>
@@ -249,7 +249,7 @@ export default function MinutesPage() {
                             </div>
                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-primary" onClick={() => { setEditingMinute(m); setIsMinuteDialogOpen(true); }}>
-                                <Pencil className="h-4 w-4" />
+                                <item.icon className="h-4 w-4" />
                               </Button>
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-600" onClick={() => handleDeleteMinute(m.id)}>
                                 <Trash2 className="h-4 w-4" />
@@ -304,11 +304,11 @@ export default function MinutesPage() {
         />
       )}
 
-      {selectedProjectId && (
+      {selectedContractor && (
         <MinuteTemplateDialog
           open={isTemplateDialogOpen}
           onOpenChange={setIsTemplateDialogOpen}
-          projectId={selectedProjectId}
+          contractor={selectedContractor}
         />
       )}
     </div>
