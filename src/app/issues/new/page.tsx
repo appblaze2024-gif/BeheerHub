@@ -54,6 +54,7 @@ import { parseIssuePdf } from '@/ai/flows/parse-issue-pdf-flow';
 import type { Melding, UploadedFile, Object as MapObject } from '@/lib/types';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { LoadingScreen } from '@/components/loading-screen';
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
