@@ -47,7 +47,6 @@ export type ParseIssuePdfOutput = z.infer<typeof ParseIssuePdfOutputSchema>;
 
 const parsePrompt = ai.definePrompt({
   name: 'parseIssuePdfPrompt',
-  model: 'googleai/gemini-1.5-flash',
   input: { schema: ParseIssuePdfInputSchema },
   output: { schema: ParseIssuePdfOutputSchema },
   prompt: `Je bent een expert in het verwerken van "Formulier melding / Klacht" documenten.

@@ -47,6 +47,8 @@ import Image from 'next/image';
 import { PDFDocument } from 'pdf-lib';
 import * as pdfjs from 'pdfjs-dist';
 import * as turf from '@turf/turf';
+
+// UI Components
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -79,12 +81,16 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+
+// Custom Components & AI
 import { MapboxView } from '@/components/mapbox-view';
 import { parseIssuePdf } from '@/ai/flows/parse-issue-pdf-flow';
-import type { Melding, UploadedFile, Object as MapObject } from '@/lib/types';
-import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
 import { LoadingScreen } from '@/components/loading-screen';
+
+// Types
+import type { Melding, UploadedFile, Object as MapObject } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -260,7 +266,7 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[1200px] h-[95vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
-                <DialogHeader className="p-6 border-b shrink-0 bg-slate-50">
+                <DialogHeader className="p-6 border-b shrink-0 bg-slate-50/80 backdrop-blur-md">
                     <div className="flex justify-between items-center">
                         <div>
                             <DialogTitle className="text-xl font-black uppercase tracking-tight text-slate-900">AI Training & Sjabloon Beheer</DialogTitle>
@@ -364,6 +370,9 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
                 </div>
 
                 <DialogFooter className="p-6 border-t shrink-0 bg-slate-50">
+                    <DialogClose asChild>
+                        <Button variant="ghost" className="font-bold">Sluiten</Button>
+                    </DialogClose>
                     <Button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto font-black uppercase tracking-tight h-12 px-12 shadow-xl shadow-primary/20">
                         {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                         Configuratie Opslaan
