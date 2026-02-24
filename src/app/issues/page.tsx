@@ -716,13 +716,14 @@ export default function IssuesPage() {
 
             {selectedMelding ? (
               <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                  {selectedProjectId && (
-                  <Link href={`/navigation-module?projectId=${selectedProjectId}&lat=${selectedMelding.latitude}&lng=${selectedMelding.longitude}&straat=${encodeURIComponent(selectedMelding.straatnaam || '')}`}>
-                      <Button variant="outline" size="icon" className="h-9 w-9 bg-primary text-white hover:bg-primary/90 shadow-lg shadow-black/20">
-                          <Navigation className="h-4 w-4" />
-                      </Button>
-                  </Link>
-                  )}
+                  <Button 
+                    variant="outline" 
+                    className="h-9 font-black border-primary text-primary hover:bg-primary hover:text-white gap-2 px-4 shadow-sm"
+                    onClick={() => router.push('/navigation-module?type=meldingen')}
+                  >
+                    <Navigation className="h-4 w-4" />
+                    ROUTE
+                  </Button>
                   {selectedMelding.workStartedAt ? (
                     <Button
                       className="bg-orange-500 hover:bg-orange-600 text-white font-bold h-9 flex-1 sm:flex-none"
@@ -730,7 +731,7 @@ export default function IssuesPage() {
                       disabled={isSubmitting}
                     >
                       {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                      WERKBON AFRONDEN
+                      WERKBON AFHANDELEN
                     </Button>
                   ) : (
                     <Button
@@ -1027,7 +1028,7 @@ export default function IssuesPage() {
                             <CardHeader className="p-4 border-b">
                                 <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Foto's van Melding</CardTitle>
                             </CardHeader>
-                            <CardContent className="flex-1 flex flex-col p-4 min-h-0">
+                            <CardContent className="1 flex-1 flex flex-col p-4 min-h-0">
                                 {uploadedPhotos.length > 0 ? (
                                 <div className="space-y-4 flex flex-col flex-1 min-h-0">
                                     <div
@@ -1279,37 +1280,17 @@ export default function IssuesPage() {
                                     ) : (
                                         <div className="flex flex-col items-center justify-center py-12 text-slate-300">
                                             <Package className="h-10 w-10 mb-2 opacity-10" />
-                                            <p className="text-[10px] font-black uppercase tracking-widest">Geen materiaalverbruik</p>
+                                            <p className="text-[10px] font-black uppercase tracking-widest">Geen materiaalverbruik geregistreerd</p>
                                         </div>
                                     )}
                                 </CardContent>
                             </Card>
                         </div>
                     </TabsContent>
-                </div>
-            </Tabs>
-        ) : (
-            <LoadingScreen message="Werkbonnen laden..." />
-        )}
-        {fullScreenPhoto && (
-            <Dialog open={!!fullScreenPhoto} onOpenChange={(open) => !open && setFullScreenPhoto(null)}>
-                <DialogContent className="max-w-[95vw] h-auto max-h-[95vh] p-0 bg-black/90 border-0 shadow-2xl flex items-center justify-center overflow-hidden rounded-none">
-                    <DialogHeader className="sr-only">
-                        <DialogTitle>Vergroting: {fullScreenPhoto.name}</DialogTitle>
-                    </DialogHeader>
-                    <Image 
-                        src={fullScreenPhoto.url} 
-                        alt={fullScreenPhoto.name}
-                        width={1920}
-                        height={1080}
-                        className="object-contain w-auto h-auto max-w-full max-h-full"
-                    />
-                    <DialogClose className="absolute top-4 right-4 rounded-full bg-white/10 backdrop-blur-md p-2 text-white hover:bg-white/20 transition-all outline-none">
-                        <X className="h-6 w-6" />
-                    </DialogClose>
-                </DialogContent>
-            </Dialog>
-        )}
+                </Tabs>
+            </div>
+          </form>
+        </Form>
     </div>
   );
 }

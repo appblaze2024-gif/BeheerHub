@@ -39,12 +39,13 @@ import {
   Flag,
   MousePointer2,
   Maximize,
-  Minimize
+  Minimize,
+  FileText
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { Project, Route, Veegroute, Prullenbakkenroute, Object as MapObject } from '@/lib/types';
+import type { Project, Route, Veegroute, Prullenbakkenroute, Object as MapObject, Melding } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import * as turf from '@turf/turf';
@@ -70,7 +71,7 @@ const routeLayer: Layer = {
     'line-cap': 'round',
   },
   paint: {
-    'line-color': '#1d4ed8', // Changed from #32ADE6 to dark blue
+    'line-color': '#1d4ed8', 
     'line-width': 10,
     'line-opacity': 0.9,
   },
@@ -85,7 +86,7 @@ const routeLayerCasing: Layer = {
     'line-cap': 'round',
   },
   paint: {
-    'line-color': '#1e3a8a', // Slightly darker blue casing
+    'line-color': '#1e3a8a', 
     'line-width': 14,
     'line-opacity': 0.3,
   },
@@ -103,6 +104,7 @@ function NavigatingView({
     isSimulating?: boolean
 }) {
   const mapRef = React.useRef<MapRef>(null);
+  const router = useRouter();
   const isMobile = useIsMobile(768);
   const [targetLocation, setTargetLocation] = React.useState<{ latitude: number, longitude: number, speed: number | null, heading: number | null } | null>(initialUserLocation ? { ...initialUserLocation, speed: 0, heading: 0 } : null);
   const [smoothLocation, setSmoothLocation] = React.useState<{ latitude: number, longitude: number, speed: number | null, heading: number | null } | null>(initialUserLocation ? { ...initialUserLocation, speed: 0, heading: 0 } : null);
@@ -126,7 +128,6 @@ function NavigatingView({
 
   const lastUpdateDistRef = React.useRef(0);
 
-  // Check if this is a Work Order navigation (single destination 'Bestemming')
   const isWorkOrder = objectsOnRoute.length === 1 && objectsOnRoute[0].id === 'Bestemming';
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -206,7 +207,6 @@ function NavigatingView({
         setSmoothLocation(prevSmooth => {
             if (!targetLocation || !prevSmooth || isPaused) return prevSmooth;
 
-            // Only update if moved more than 10cm to save CPU/Battery
             const dist = Math.sqrt(Math.pow(targetLocation.latitude - prevSmooth.latitude, 2) + Math.pow(targetLocation.longitude - prevSmooth.longitude, 2));
             if (dist < 0.000001 && !isSimulating) return prevSmooth;
 
@@ -228,7 +228,6 @@ function NavigatingView({
             };
 
             if (isFollowing && !arrivedObject) {
-                // Throttle map state updates to save GPU
                 const changeThreshold = 0.000005;
                 if (Math.abs(newLat - lastSetLat) > changeThreshold || Math.abs(newLng - lastSetLng) > changeThreshold) {
                     lastSetLat = newLat;
@@ -258,7 +257,7 @@ function NavigatingView({
     return () => {
         if (smoothingAnimationRef.current) cancelAnimationFrame(smoothingAnimationRef.current);
     };
-  }, [targetLocation?.latitude, targetLocation?.longitude, isFollowing, isPaused, arrivedObject, isSimulating, isWorkOrder]);
+  }, [targetLocation?.latitude, targetLocation?.longitude, isFollowing, isPaused, arrivedObject, isSimulating]);
 
   const snappedLocation = React.useMemo(() => {
     if (!smoothLocation || !currentRouteGeometry) return smoothLocation;
@@ -294,13 +293,11 @@ function NavigatingView({
       const remaining = turf.length(sliced, { units: 'meters' });
       
       const roundedRemaining = Math.round(remaining);
-      // Only update distance tracking if moved significantly
       if (Math.abs(lastUpdateDistRef.current - roundedRemaining) >= 1) {
           setDistanceRemainingToDestination(roundedRemaining);
           lastUpdateDistRef.current = roundedRemaining;
           setHasReachedCurrentTarget(roundedRemaining < 80);
 
-          // For Work Orders: Auto-return if within 25 meters
           if (isWorkOrder && roundedRemaining < 25) {
               onExit();
           }
@@ -358,7 +355,6 @@ function NavigatingView({
     return null;
   }, [currentLeg, distanceRemainingToDestination]);
 
-  // Performance: Throttled Geometry updates
   React.useEffect(() => {
     if (!currentRouteGeometry || isCalculatingRoute || !snappedLocation) {
         setThrottledGeometry(null);
@@ -576,7 +572,7 @@ function NavigatingView({
         <div className="flex flex-col items-center justify-center h-full gap-4 bg-background p-6 text-center">
             <CheckCircle2 className="h-16 w-16 text-green-500" />
             <h1 className="text-3xl font-black tracking-tight uppercase">Route Voltooid!</h1>
-            <p className="text-muted-foreground font-medium">Alle prullenbakken zijn bezocht.</p>
+            <p className="text-muted-foreground font-medium">Alle bestemmingen zijn bezocht.</p>
             <Button onClick={onExit} size="lg" className="px-10 h-14 text-lg font-bold uppercase tracking-tighter mt-4 bg-primary text-white">Terug naar Overzicht</Button>
         </div>
     )
@@ -637,26 +633,17 @@ function NavigatingView({
                         else toast({ title: "Buiten bereik", description: `Rijd eerst dichterbij (${Math.round(dist)}m).` });
                     }}
                 >
-                    {isWorkOrder ? (
-                        <div className="relative flex flex-col items-center">
-                            <div className={cn("absolute h-12 w-12 rounded-full bg-blue-500/20", inRange && "animate-pulse")} />
-                            <div className={cn(
-                                "relative h-10 w-10 rounded-full bg-primary border-4 border-white shadow-2xl flex items-center justify-center transition-all",
-                                inRange && "scale-125 bg-green-600"
-                            )}>
-                                <Flag className="h-5 w-5 text-white fill-current" />
-                            </div>
-                        </div>
-                    ) : (
+                    <div className="relative flex flex-col items-center">
+                        <div className={cn("absolute h-12 w-12 rounded-full bg-blue-500/20", inRange && "animate-pulse")} />
                         <div className={cn(
-                            "w-8 h-8 rounded-full border-4 border-white shadow-lg flex items-center justify-center text-[10px] font-black text-white transition-all cursor-pointer hover:scale-110",
+                            "relative h-10 w-10 rounded-full border-4 border-white shadow-2xl flex items-center justify-center transition-all",
                             isTarget ? "bg-primary scale-125 ring-4 ring-primary/30" : "bg-slate-400",
-                            inRange && "bg-green-600 ring-green-500/50"
+                            inRange && "scale-125 bg-green-600"
                         )}>
-                            {inRange && <div className="absolute inset-0 rounded-full animate-ping bg-green-400 opacity-75" />}
-                            {idx + 1}
+                            <Flag className="h-5 w-5 text-white fill-current" />
                         </div>
-                    )}
+                        <div className="mt-1 bg-black/60 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow uppercase">{idx + 1}</div>
+                    </div>
                 </Marker>
             );
         })}
@@ -757,12 +744,20 @@ function NavigatingView({
                           <MapPin className="h-8 w-8 text-green-600 fill-current" />
                       </div>
                       <CardTitle className="text-2xl font-black uppercase tracking-tight">Bestemming Bereikt</CardTitle>
-                      <CardDescription className="font-bold text-slate-500">Unit ID: <span className="text-slate-900">{arrivedObject.id}</span></CardDescription>
+                      <CardDescription className="font-bold text-slate-500">ID: <span className="text-slate-900">{arrivedObject.name || arrivedObject.id}</span></CardDescription>
                   </CardHeader>
                   <CardContent className="p-6 pt-2 space-y-3">
                       <Button onClick={() => handleArrivedAction('finish')} className="w-full h-14 bg-green-600 hover:bg-green-700 text-lg font-black uppercase tracking-tight gap-2">
                           <CheckCircle2 className="h-5 w-5" /> Afronden & Door
                       </Button>
+                      
+                      <Button variant="secondary" onClick={() => {
+                          onExit();
+                          router.push(`/issues?id=${arrivedObject.id}`);
+                      }} className="w-full h-12 bg-blue-100 text-blue-700 hover:bg-blue-200 font-black uppercase tracking-tight gap-2 border-none">
+                          <FileText className="h-4 w-4" /> Open Werkbon
+                      </Button>
+
                       <Button variant="outline" onClick={() => handleArrivedAction('issue')} className="w-full h-12 border-2 border-orange-200 text-orange-600 hover:bg-orange-50 font-black uppercase tracking-tight gap-2">
                           <AlertTriangle className="h-4 w-4" /> Issue Melden
                       </Button>
@@ -880,7 +875,7 @@ export default function StartNavigationPage() {
   
   const [userLocation, setUserLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
   const [tripStartLocation, setTripStartLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
-  const [routeType, setRouteType] = React.useState<'veeg' | 'prullenbak' | null>(null);
+  const [routeType, setRouteType] = React.useState<'veeg' | 'prullenbak' | 'meldingen' | null>(null);
   const [selectedRouteId, setSelectedRouteId] = React.useState<string>('--nieuwe-route--');
   const [navigationState, setNavigationState] = React.useState<'setup' | 'navigating'>('setup');
   const [objectsOnRoute, setObjectsOnRoute] = React.useState<MapObject[]>([]);
@@ -919,9 +914,14 @@ export default function StartNavigationPage() {
     const lng = searchParams.get('lng');
     const straat = searchParams.get('straat');
     const projectIdFromUrl = searchParams.get('projectId');
+    const typeFromUrl = searchParams.get('type');
     
     if (projectIdFromUrl && selectedProjectId !== projectIdFromUrl) {
         setSelectedProjectId(projectIdFromUrl);
+    }
+
+    if (typeFromUrl === 'meldingen') {
+        setRouteType('meldingen');
     }
 
     if (lat && lng) {
@@ -935,6 +935,13 @@ export default function StartNavigationPage() {
 
   const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
   const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
+
+  const meldingenQuery = useMemoFirebase(() => {
+    if (!firestore || routeType !== 'meldingen') return null;
+    return query(collection(firestore, 'meldingen'), where('status', 'not-in', ['Afgerond', 'Niet in beheer']));
+  }, [firestore, routeType]);
+
+  const { data: allMeldingen } = useCollection<Melding>(meldingenQuery);
 
   const selectedProject = React.useMemo(() => projects?.find(p => p.id === selectedProjectId) || null, [projects, selectedProjectId]);
   const availableRoutes = React.useMemo(() => {
@@ -976,6 +983,7 @@ export default function StartNavigationPage() {
           if (routeGeoJSONFeatures?.features) features = [...features, ...routeGeoJSONFeatures.features];
           if (objectsOnMap && objectsOnMap.length > 0) features = [...features, ...objectsOnMap.map(obj => turf.point([obj.longitude, obj.latitude]))];
           if (urlMeldingLocatie) features.push(turf.point([urlMeldingLocatie.longitude, urlMeldingLocatie.latitude]));
+          if (routeType === 'meldingen' && allMeldingen) features = [...features, ...allMeldingen.map(m => turf.point([m.longitude, m.latitude]))];
           if (selectedRouteDef && 'startLatitude' in selectedRouteDef && (selectedRouteDef as any).startLatitude && (selectedRouteDef as any).startLongitude) {
               features.push(turf.point([(selectedRouteDef as any).startLongitude, (selectedRouteDef as any).startLatitude]));
           }
@@ -989,7 +997,7 @@ export default function StartNavigationPage() {
       };
       if (map.isStyleLoaded()) fit();
       else map.once('style.load', fit);
-  }, [selectedRouteId, routeGeoJSONFeatures, objectsOnMap, selectedRouteDef, urlMeldingLocatie]);
+  }, [selectedRouteId, routeGeoJSONFeatures, objectsOnMap, selectedRouteDef, urlMeldingLocatie, routeType, allMeldingen]);
 
   const handleStartRoute = React.useCallback(async (simulate = false) => {
     setIsSimulationMode(simulate);
@@ -1005,12 +1013,32 @@ export default function StartNavigationPage() {
         toast({ title: "Locatie vereist", description: "GPS vereist voor Live Rit. Klik op de kaart voor een handmatige start.", variant: "destructive" }); 
         return; 
     }
-    if (!selectedProjectId || (!selectedRouteDef && !urlMeldingLocatie) || !user) return;
     
     setIsStarting(true);
     
     let sortedObjects: MapObject[] = [];
-    if (selectedRouteDef && objectsOnMap) {
+    if (routeType === 'meldingen' && allMeldingen) {
+        if (allMeldingen.length === 0) { toast({ title: "Geen meldingen", description: "Er zijn geen openstaande meldingen." }); setIsStarting(false); return; }
+        const startCoords = startLoc || { latitude: allMeldingen[0].latitude, longitude: allMeldingen[0].longitude };
+        const unvisited = [...allMeldingen];
+        let currentPos = startCoords;
+        while (unvisited.length > 0) {
+          let nearestIdx = 0; let minD = Infinity;
+          unvisited.forEach((u, i) => {
+            const d = turf.distance(turf.point([currentPos.longitude, currentPos.latitude]), turf.point([u.longitude, u.latitude]));
+            if (d < minD) { minD = d; nearestIdx = i; }
+          });
+          const next = unvisited.splice(nearestIdx, 1)[0];
+          sortedObjects.push({
+              id: next.id,
+              latitude: next.latitude,
+              longitude: next.longitude,
+              name: next.intakenummer
+          } as MapObject);
+          currentPos = { latitude: next.latitude, longitude: next.longitude };
+        }
+        setTripStartLocation(startCoords);
+    } else if (selectedRouteDef && objectsOnMap) {
         if (objectsOnMap.length === 0) { toast({ title: "Geen objecten", description: "Deze route is leeg." }); setIsStarting(false); return; }
         const startCoords = startLoc || { latitude: objectsOnMap[0].latitude, longitude: objectsOnMap[0].longitude };
         const unvisited = [...objectsOnMap];
@@ -1039,9 +1067,8 @@ export default function StartNavigationPage() {
     setObjectsOnRoute(sortedObjects);
     setNavigationState('navigating');
     setIsStarting(false);
-  }, [userLocation, selectedRouteDef, urlMeldingLocatie, selectedProjectId, user, objectsOnMap, toast]);
+  }, [userLocation, selectedRouteDef, urlMeldingLocatie, routeType, allMeldingen, user, objectsOnMap, toast]);
 
-  // AUTO-START LOGIC
   React.useEffect(() => {
     if (urlMeldingLocatie && navigationState === 'setup') {
       if (userLocation && !autoStartAttempted.current) {
@@ -1118,6 +1145,11 @@ export default function StartNavigationPage() {
                     <div className="w-4 h-4 bg-primary rounded-full border-2 border-white shadow-lg" />
                 </Marker>
             ))}
+            {routeType === 'meldingen' && allMeldingen?.map(m => (
+                <Marker key={m.id} longitude={m.longitude} latitude={m.latitude}>
+                    <div className="w-5 h-5 bg-red-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-[8px] font-black text-white">!</div>
+                </Marker>
+            ))}
           </MapGL>
 
           {urlMeldingLocatie && !userLocation && !autoStartTimeoutReached && (
@@ -1171,23 +1203,26 @@ export default function StartNavigationPage() {
                     <>
                     <div className="space-y-1">
                         <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Type Inzet</Label>
-                        <div className="grid grid-cols-2 gap-1.5">
-                        <Button variant={routeType === 'veeg' ? 'default' : 'outline'} onClick={() => setRouteType('veeg')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[10px]", routeType === 'veeg' ? "bg-primary border-primary shadow-md text-white" : "border-slate-200")}>Veegwagen</Button>
-                        <Button variant={routeType === 'prullenbak' ? 'default' : 'outline'} onClick={() => setRouteType('prullenbak')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[10px]", routeType === 'prullenbak' ? "bg-primary border-primary shadow-md text-white" : "border-slate-200")}>Prullenbakken</Button>
+                        <div className="grid grid-cols-3 gap-1">
+                            <Button variant={routeType === 'veeg' ? 'default' : 'outline'} onClick={() => setRouteType('veeg')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[9px] p-1", routeType === 'veeg' ? "bg-primary border-primary shadow-md text-white" : "border-slate-200")}>Veeg</Button>
+                            <Button variant={routeType === 'prullenbak' ? 'default' : 'outline'} onClick={() => setRouteType('prullenbak')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[9px] p-1", routeType === 'prullenbak' ? "bg-primary border-primary shadow-md text-white" : "border-slate-200")}>Bakken</Button>
+                            <Button variant={routeType === 'meldingen' ? 'default' : 'outline'} onClick={() => setRouteType('meldingen')} disabled={!selectedProjectId} className={cn("font-black h-8 border text-[9px] p-1", routeType === 'meldingen' ? "bg-primary border-primary shadow-md text-white" : "border-slate-200")}>Melding</Button>
                         </div>
                     </div>
-                    <div className="space-y-1">
-                        <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Route Keuze</Label>
-                        <Select onValueChange={setSelectedRouteId} value={selectedRouteId} disabled={!routeType}>
-                            <SelectTrigger className="h-8 border font-bold text-xs"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="--nieuwe-route--">-- Kies een route --</SelectItem>
-                                {availableRoutes.map((r: any) => (
-                                    <SelectItem key={r.id} value={r.id}>{r.naam}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                    {routeType !== 'meldingen' && (
+                        <div className="space-y-1">
+                            <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Route Keuze</Label>
+                            <Select onValueChange={setSelectedRouteId} value={selectedRouteId} disabled={!routeType}>
+                                <SelectTrigger className="h-8 border font-bold text-xs"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="--nieuwe-route--">-- Kies een route --</SelectItem>
+                                    {availableRoutes.map((r: any) => (
+                                        <SelectItem key={r.id} value={r.id}>{r.naam}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
                     </>
                 )}
 
@@ -1202,7 +1237,7 @@ export default function StartNavigationPage() {
                 )}
 
                 <div className="flex flex-col gap-1.5 pt-1">
-                    <Button className="w-full h-9 text-xs font-black bg-primary hover:bg-primary/90 shadow-lg rounded-lg uppercase tracking-tighter flex items-center justify-center text-white" onClick={() => handleStartRoute(false)} disabled={(urlMeldingLocatie ? !userLocation : (selectedRouteId === '--nieuwe-route--')) || isStarting}>
+                    <Button className="w-full h-9 text-xs font-black bg-primary hover:bg-primary/90 shadow-lg rounded-lg uppercase tracking-tighter flex items-center justify-center text-white" onClick={() => handleStartRoute(false)} disabled={(urlMeldingLocatie ? !userLocation : (routeType === 'meldingen' ? false : selectedRouteId === '--nieuwe-route--')) || isStarting}>
                         {isStarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4 fill-current" />} 
                         {urlMeldingLocatie ? 'START RIT NAAR MELDING' : 'START LIVE RIT'}
                     </Button>
@@ -1213,7 +1248,7 @@ export default function StartNavigationPage() {
                             </Button>
                         )}
                         {isSuperUser && (
-                            <Button variant="outline" className="h-8 border-dashed border-primary/30 text-primary hover:bg-primary/5 font-black uppercase tracking-tighter rounded-lg flex items-center justify-center text-[9px]" onClick={() => handleStartRoute(true)} disabled={(urlMeldingLocatie ? false : (selectedRouteId === '--nieuwe-route--')) || isStarting}>
+                            <Button variant="outline" className="h-8 border-dashed border-primary/30 text-primary hover:bg-primary/5 font-black uppercase tracking-tighter rounded-lg flex items-center justify-center text-[9px]" onClick={() => handleStartRoute(true)} disabled={(urlMeldingLocatie ? false : (routeType === 'meldingen' ? false : selectedRouteId === '--nieuwe-route--')) || isStarting}>
                                 <Gauge className="mr-1.5 h-3 w-3" /> SIMULATOR
                             </Button>
                         )}
