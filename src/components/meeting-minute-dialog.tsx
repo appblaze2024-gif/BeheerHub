@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -51,6 +50,7 @@ const minuteSchema = z.object({
   date: z.string().min(1, 'Datum is verplicht'),
   location: z.string().optional(),
   attendees: z.string().optional(),
+  createdBy: z.string().min(1, 'Verslaglegger is verplicht'),
   agendaItems: z.array(z.object({
     id: z.string(),
     title: z.string(),
@@ -85,6 +85,7 @@ export function MeetingMinuteDialog({
       date: format(new Date(), 'yyyy-MM-dd'),
       location: 'Aarbergerweg 5-7 Rijsenhout',
       attendees: '',
+      createdBy: '',
       agendaItems: DEFAULT_AGENDA.map((title, i) => ({ id: `item-${i+1}`, title: `${i+1}. ${title}`, content: '' })),
       actionPoints: '',
     },
@@ -103,6 +104,7 @@ export function MeetingMinuteDialog({
           date: minute.date,
           location: minute.location || 'Aarbergerweg 5-7 Rijsenhout',
           attendees: minute.attendees || '',
+          createdBy: minute.createdBy || profile?.displayName || 'Django Stoutenburg',
           agendaItems: minute.agendaItems || DEFAULT_AGENDA.map((title, i) => ({ id: `item-${i+1}`, title: `${i+1}. ${title}`, content: '' })),
           actionPoints: minute.actionPoints || '',
         });
@@ -112,12 +114,13 @@ export function MeetingMinuteDialog({
           date: format(new Date(), 'yyyy-MM-dd'),
           location: 'Aarbergerweg 5-7 Rijsenhout',
           attendees: '',
+          createdBy: profile?.displayName || 'Django Stoutenburg',
           agendaItems: DEFAULT_AGENDA.map((title, i) => ({ id: `item-${i+1}`, title: `${i+1}. ${title}`, content: '' })),
           actionPoints: '',
         });
       }
     }
-  }, [open, minute, contractor, form]);
+  }, [open, minute, contractor, form, profile]);
 
   const handleAIImprove = async (index: number) => {
     const item = form.getValues(`agendaItems.${index}`);
@@ -154,7 +157,6 @@ export function MeetingMinuteDialog({
         contractorId: contractor.id,
         projectId: contractor.projectId,
         updatedAt: new Date().toISOString(),
-        createdBy: profile?.displayName || profile?.email || 'Systeem',
       };
 
       if (minute) {
@@ -211,7 +213,10 @@ export function MeetingMinuteDialog({
                 <Input placeholder="Namen van aanwezigen..." {...form.register('attendees')} className="h-7 py-0 font-bold border-slate-200" />
                 
                 <span>Verslaglegging:</span>
-                <span className="text-slate-400">{profile?.displayName || 'Django Stoutenburg'} Meerlanden</span>
+                <div className="flex items-center gap-2">
+                  <Input placeholder="Naam verslaglegger..." {...form.register('createdBy')} className="h-7 py-0 flex-1 font-bold border-slate-200" />
+                  <span className="text-slate-400 shrink-0">Meerlanden</span>
+                </div>
             </div>
         </div>
         
