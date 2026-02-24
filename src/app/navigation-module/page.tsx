@@ -553,7 +553,7 @@ function NavigatingView({
         )}
       </div>
 
-      <div className={cn("absolute right-4 z-[70] transition-all duration-300 flex items-center gap-3", isDrawerExpanded ? "bottom-[312px]" : "bottom-[122px]", !isMobile && "bottom-[130px]")}>
+      <div className={cn("absolute right-4 z-[70] transition-all duration-300 flex items-center gap-3", isDrawerExpanded ? "bottom-[300px]" : "bottom-[110px]", !isMobile && "bottom-[130px]")}>
           <div className="h-14 w-14 rounded-full bg-white border-[6px] border-red-600 flex items-center justify-center shadow-xl animate-in fade-in zoom-in duration-500"><span className="text-xl font-black text-slate-900 tabular-nums">{currentSpeedLimit}</span></div>
           <div className={cn("h-20 w-20 rounded-full backdrop-blur shadow-2xl border-4 flex flex-col items-center justify-center overflow-hidden transition-colors duration-500", isSpeeding ? "bg-red-50/95 border-red-200" : "bg-white/95 border-slate-100")}>
               <div className="flex flex-col items-center leading-none z-10"><span className={cn("text-2xl font-black tabular-nums transition-colors", isSpeeding ? "text-red-600" : "text-slate-900")}>{speedKmh}</span><span className={cn("text-[8px] font-black uppercase mt-0.5 tracking-widest", isSpeeding ? "text-red-400" : "text-slate-400")}>km/h</span></div>
