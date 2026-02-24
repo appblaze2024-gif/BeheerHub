@@ -138,7 +138,7 @@ export function MinuteTemplateDialog({
             <Settings2 className="h-6 w-6 text-primary" />
             <div>
               <DialogTitle className="text-xl font-black uppercase tracking-tight text-white">Sjabloon: {contractor.name}</DialogTitle>
-              <DialogDescription className="text-slate-400 font-bold">Beheer de standaard layout en agenda voor alle verslagen van deze aannemer.</DialogDescription>
+              <DialogDescription className="text-slate-400 font-bold">Beheer de specifieke layout en agenda voor verslagen van deze aannemer.</DialogDescription>
             </div>
           </div>
         </DialogHeader>
