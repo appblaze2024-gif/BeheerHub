@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -16,11 +17,11 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { collection, doc } from 'firebase/firestore';
 import { Loader2, ScrollText, Sparkles, User, MapPin, Calendar, Check, X, Image as ImageIcon } from 'lucide-react';
-import type { MeetingMinute, Contractor, AgendaItem } from '@/lib/types';
+import type { MeetingMinute, Contractor, AgendaItem, MinuteTemplate } from '@/lib/types';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -82,6 +83,13 @@ export function MeetingMinuteDialog({
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [improvingId, setImprovingId] = React.useState<string | null>(null);
 
+  const templateRef = useMemoFirebase(() => {
+    if (!firestore || !contractor?.projectId) return null;
+    return doc(firestore, 'projects', contractor.projectId, 'settings', 'minute_template');
+  }, [firestore, contractor?.projectId]);
+
+  const { data: template } = useDoc<MinuteTemplate>(templateRef);
+
   const form = useForm<MinuteFormValues>({
     resolver: zodResolver(minuteSchema),
     defaultValues: {
@@ -121,22 +129,23 @@ export function MeetingMinuteDialog({
           actionPoints: minute.actionPoints || '',
         });
       } else {
+        // Create new minute - check for template first
         form.reset({
           title: `Operationeel Startwerkoverleg ${contractor.name}`,
-          documentTitle: 'Agenda operationeel Startwerkoverleg',
-          documentSubtitle: 'Meerlanden afdeling Noordwijkerhout en Meerlanden',
-          logoLeftUrl: 'https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png',
-          logoRightUrl: 'https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png',
+          documentTitle: template?.documentTitle || 'Agenda operationeel Startwerkoverleg',
+          documentSubtitle: template?.documentSubtitle || 'Meerlanden afdeling Noordwijkerhout en Meerlanden',
+          logoLeftUrl: template?.logoLeftUrl || 'https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png',
+          logoRightUrl: template?.logoRightUrl || 'https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png',
           date: format(new Date(), 'yyyy-MM-dd'),
-          location: 'Aarbergerweg 5-7 Rijsenhout',
+          location: template?.location || 'Aarbergerweg 5-7 Rijsenhout',
           attendees: '',
           createdBy: profile?.displayName || 'Django Stoutenburg',
-          agendaItems: DEFAULT_AGENDA.map((title, i) => ({ id: `item-${i+1}`, title: `${i+1}. ${title}`, content: '' })),
+          agendaItems: template?.agendaItems || DEFAULT_AGENDA.map((title, i) => ({ id: `item-${i+1}`, title: `${i+1}. ${title}`, content: '' })),
           actionPoints: '',
         });
       }
     }
-  }, [open, minute, contractor, form, profile]);
+  }, [open, minute, contractor, form, profile, template]);
 
   const handleAIImprove = async (index: number) => {
     const item = form.getValues(`agendaItems.${index}`);

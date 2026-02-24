@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -18,13 +19,15 @@ import {
   Briefcase,
   MoreVertical,
   ArrowLeft,
-  Loader2
+  Loader2,
+  Settings2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useProject } from '@/context/project-context';
 import { LoadingScreen } from '@/components/loading-screen';
 import { ContractorDialog } from '@/components/contractor-dialog';
 import { MeetingMinuteDialog } from '@/components/meeting-minute-dialog';
+import { MinuteTemplateDialog } from '@/components/minute-template-dialog';
 import type { Contractor, MeetingMinute, Project } from '@/lib/types';
 import {
   DropdownMenu,
@@ -44,6 +47,7 @@ export default function MinutesPage() {
   const [selectedContractor, setSelectedContractor] = React.useState<Contractor | null>(null);
   const [isContractorDialogOpen, setIsContractorDialogOpen] = React.useState(false);
   const [isMinuteDialogOpen, setIsMinuteDialogOpen] = React.useState(false);
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = React.useState(false);
   const [editingMinute, setEditingMinute] = React.useState<MeetingMinute | null>(null);
   const isMobile = useIsMobile();
 
@@ -106,9 +110,14 @@ export default function MinutesPage() {
         description={activeProject ? `Beheer verslagen voor project: ${activeProject.projectnaam}` : "Selecteer een project om verslagen te beheren."}
       >
         {selectedProjectId && (
-          <Button onClick={() => setIsContractorDialogOpen(true)} className="font-black h-10 uppercase tracking-tight">
-            <Plus className="mr-2 h-4 w-4" /> Nieuwe Aannemer
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setIsTemplateDialogOpen(true)} className="font-bold h-10 border-slate-300">
+              <Settings2 className="mr-2 h-4 w-4" /> Sjabloon
+            </Button>
+            <Button onClick={() => setIsContractorDialogOpen(true)} className="font-black h-10 uppercase tracking-tight">
+              <Plus className="mr-2 h-4 w-4" /> Nieuwe Aannemer
+            </Button>
+          </div>
         )}
       </PageHeader>
 
@@ -292,6 +301,14 @@ export default function MinutesPage() {
           }}
           contractor={selectedContractor}
           minute={editingMinute}
+        />
+      )}
+
+      {selectedProjectId && (
+        <MinuteTemplateDialog
+          open={isTemplateDialogOpen}
+          onOpenChange={setIsTemplateDialogOpen}
+          projectId={selectedProjectId}
         />
       )}
     </div>

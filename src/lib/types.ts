@@ -369,3 +369,15 @@ export interface MeetingMinute {
   createdAt: string;
   createdBy: string;
 }
+
+export interface MinuteTemplate {
+  id: string;
+  projectId: string;
+  documentTitle?: string;
+  documentSubtitle?: string;
+  logoLeftUrl?: string;
+  logoRightUrl?: string;
+  location?: string;
+  agendaItems: { id: string; title: string; content: string }[];
+  updatedAt: string;
+}
