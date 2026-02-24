@@ -20,7 +20,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { collection, doc } from 'firebase/firestore';
-import { Loader2, ScrollText, Sparkles, User, MapPin, Calendar, Check } from 'lucide-react';
+import { Loader2, ScrollText, Sparkles, User, MapPin, Calendar, Check, X } from 'lucide-react';
 import type { MeetingMinute, Contractor, AgendaItem } from '@/lib/types';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -176,6 +176,11 @@ export function MeetingMinuteDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-5xl h-[95vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
+        <DialogHeader className="sr-only">
+          <DialogTitle>{form.watch('title')}</DialogTitle>
+          <DialogDescription>Vergaderverslag voor {contractor.name}</DialogDescription>
+        </DialogHeader>
+
         {/* Document Header matching the image style */}
         <div className="bg-white border-b shrink-0 p-8">
             <div className="flex justify-between items-start mb-8">

@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -11,8 +12,6 @@ import {
   Plus, 
   Search, 
   User, 
-  Calendar, 
-  FileText, 
   ChevronRight, 
   Trash2, 
   Pencil, 
@@ -22,8 +21,6 @@ import {
   ArrowLeft,
   Loader2
 } from 'lucide-react';
-import { format } from 'date-fns';
-import { nl } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useProject } from '@/context/project-context';
 import { LoadingScreen } from '@/components/loading-screen';
@@ -37,6 +34,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { format } from 'date-fns';
+import { nl } from 'date-fns/locale';
 
 export default function MinutesPage() {
   const firestore = useFirestore();
@@ -230,7 +229,7 @@ export default function MinutesPage() {
                           </div>
                           <h4 className="font-black text-slate-900 uppercase tracking-tight mb-2 line-clamp-1">{m.title}</h4>
                           <p className="text-xs text-slate-500 font-medium line-clamp-3 mb-4 leading-relaxed italic">
-                            {m.content}
+                            {m.agendaItems?.[0]?.content || 'Geen inhoud'}
                           </p>
                           <div className="flex items-center justify-between pt-4 border-t border-slate-100">
                             <div className="flex items-center gap-2">
@@ -254,7 +253,7 @@ export default function MinutesPage() {
                   ) : (
                     <div className="flex flex-col items-center justify-center py-20 text-slate-300">
                       <div className="bg-slate-50 p-8 rounded-full mb-4">
-                        <FileText className="h-12 w-12 opacity-20" />
+                        <ScrollText className="h-12 w-12 opacity-20" />
                       </div>
                       <p className="text-[10px] font-black uppercase tracking-widest">Nog geen verslagen aanwezig</p>
                       <p className="text-xs font-medium text-slate-400 mt-2">Maak uw eerste notulen voor deze aannemer.</p>
