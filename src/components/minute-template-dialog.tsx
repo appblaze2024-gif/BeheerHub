@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -13,7 +14,7 @@ import {
   DialogDescription,
   DialogClose
 } from '@/components/ui/dialog';
-import { Button } from './ui/button';
+import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,8 +25,8 @@ import { Loader2, Sparkles, X, Plus, Image as ImageIcon, MapPin, Upload, Setting
 import type { MinuteTemplate, Contractor } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
-import { useToast } from './ui/use-toast';
-import { ScrollArea } from './ui/scroll-area';
+import { useToast } from '@/components/ui/use-toast';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const DEFAULT_AGENDA = [
   "Opening/ Mededeling",
@@ -136,10 +137,12 @@ export function MinuteTemplateDialog({
       toast({ 
         variant: 'destructive', 
         title: "Upload mislukt", 
-        description: err.message || "Kon de afbeelding niet opslaan door een rechtenprobleem." 
+        description: err.message || "Geen rechten om naar deze map te schrijven." 
       });
     } finally {
       setUploading(false);
+      // Reset input zodat hetzelfde bestand opnieuw gekozen kan worden indien nodig
+      event.target.value = '';
     }
   };
 
@@ -158,7 +161,7 @@ export function MinuteTemplateDialog({
       onOpenChange(false);
     } catch (error) {
       console.error("Error saving template:", error);
-      toast({ variant: 'destructive', title: "Fout", description: "Kon sjabloon niet opslaan." });
+      toast({ variant: 'destructive', title: "Fout", description: "Kon sjabloon niet opslaan in de database." });
     } finally {
       setIsSubmitting(false);
     }

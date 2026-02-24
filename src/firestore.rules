@@ -39,7 +39,8 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isPrivileged() || isAdmin();
 
-      match /minutes/{minuteId} {
+      // Wildcard match voor alle subcollecties (minutes, settings, etc.)
+      match /{allSubcollections=**} {
         allow read: if isSignedIn();
         allow write: if isPrivileged() || isAdmin();
       }
