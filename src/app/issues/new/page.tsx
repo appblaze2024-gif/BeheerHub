@@ -15,34 +15,10 @@ import { useToast } from '@/components/ui/use-toast';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import Image from 'next/image';
 import { PDFDocument } from 'pdf-lib';
+import * as pdfjs from 'pdfjs-dist';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
-import type { UploadedFile, Object as MapObject, Melding } from '@/lib/types';
-import { MapboxView } from '@/components/mapbox-view';
-import * as turf from '@turf/turf';
-import { parseIssuePdf } from '@/ai/flows/parse-issue-pdf-flow';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-  DialogTrigger,
-  DialogClose,
-} from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { LoadingScreen } from '@/components/loading-screen';
+// Configure PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 const newMeldingSchema = z.object({
   intakenummer: z.string().min(1, 'Meldingsnummer is verplicht'),
@@ -668,6 +644,31 @@ export default function NewIssuePage() {
     }
   };
 
+  /**
+   * Extraheert tekst uit een PDF om kosten te besparen bij AI-verwerking.
+   */
+  const extractTextFromPdf = async (file: File): Promise<string> => {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+      let fullText = '';
+      
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map((item: any) => item.str)
+          .join(' ');
+        fullText += `--- PAGINA ${i} ---\n${pageText}\n\n`;
+      }
+      
+      return fullText.trim();
+    } catch (error) {
+      console.error('Text extraction failed:', error);
+      return '';
+    }
+  };
+
   const handlePdfUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0 || !firestore || !app) return;
@@ -676,27 +677,31 @@ export default function NewIssuePage() {
     setAddressSuggestions([]);
     const fileArray = Array.from(files);
     
-    toast({ description: `BeheerHub AI analyseert ${fileArray.length} document(en)...` });
+    toast({ description: `BeheerHub AI analyseert ${fileArray.length} document(en) via de meest voordelige methode...` });
 
     try {
         for (const file of fileArray) {
-            const pdfArrayBuffer = await file.arrayBuffer();
+            // Stap 1: Probeer tekst te extraheren (90% goedkoper)
+            const extractedText = await extractTextFromPdf(file);
+            const isTextAvailable = extractedText.length > 50;
+
             const base64 = await new Promise<string>((resolve) => {
                 const reader = new FileReader();
                 reader.onload = (e) => resolve(e.target?.result as string);
                 reader.readAsDataURL(file);
             });
 
+            // Stap 2: Roep de AI flow aan met tekst indien beschikbaar
             const result = await parseIssuePdf({ 
-                pdfDataUri: base64,
+                pdfDataUri: isTextAvailable ? undefined : base64,
+                textContent: isTextAvailable ? extractedText : undefined,
                 instructions: pdfInstructions
             });
 
-            // Load original PDF for splitting
+            const pdfArrayBuffer = await file.arrayBuffer();
             const pdfDoc = await PDFDocument.load(pdfArrayBuffer);
 
             for (const parsed of result.meldingen) {
-                // Geocoding the address from PDF
                 let lat = 0;
                 let lng = 0;
                 const fullAddress = `${parsed.straatnaam || ''} ${parsed.huisnummer || ''}, ${parsed.plaats || ''}`.trim();
@@ -710,7 +715,6 @@ export default function NewIssuePage() {
                     } catch (e) {}
                 }
 
-                // Automatically create new melding
                 const mData: any = {
                     intakenummer: parsed.intakenummer || `M-${Date.now()}`,
                     containernummer: parsed.containernummer || '',
@@ -738,7 +742,6 @@ export default function NewIssuePage() {
                 const docRef = await addDoc(collection(firestore, 'meldingen'), mData);
                 const meldingId = docRef.id;
 
-                // Extract specific page if paginanummer is known
                 let fileToUpload: Blob = file;
                 let fileNameToUpload = file.name;
 
@@ -751,7 +754,6 @@ export default function NewIssuePage() {
                     fileNameToUpload = `bon_${parsed.intakenummer || Date.now()}.pdf`;
                 }
 
-                // Upload split PDF page to Storage
                 const storage = getStorage(app);
                 const storagePath = `meldingen/${meldingId}/documents/${Date.now()}-${fileNameToUpload}`;
                 const uploadTask = uploadBytesResumable(ref(storage, storagePath), fileToUpload);
@@ -771,7 +773,6 @@ export default function NewIssuePage() {
                     files: [fileObj]
                 });
 
-                // Update global settings if new labels found
                 if (parsed.label_1 && !hoofdcategorieOptions.includes(parsed.label_1)) {
                     updateDocumentNonBlocking(categoriesRef!, { hoofdcategorieen: arrayUnion(parsed.label_1) });
                 }
@@ -787,7 +788,7 @@ export default function NewIssuePage() {
             }
         }
 
-        toast({ title: "Scans voltooid", description: `${fileArray.length} document(en) verwerkt en opgesplitst.` });
+        toast({ title: "Scans voltooid", description: `${fileArray.length} document(en) verwerkt via de voordelige tekst-methode.` });
         router.push('/issues/portal');
     } catch (err) {
         console.error("Batch PDF error:", err);
@@ -904,7 +905,7 @@ export default function NewIssuePage() {
                     )}
                     <input type="file" ref={pdfInputRef} onChange={handlePdfUpload} className="hidden" accept="application/pdf" multiple />
                     <Button type="button" variant="outline" onClick={() => pdfInputRef.current?.click()} className="h-8 bg-white border-blue-600 text-blue-600 hover:bg-blue-50" disabled={isParsingPdf}>
-                        {isParsingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />} PDF-scan
+                        {isParsingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />} PDF-scan (Slim)
                     </Button>
                     <Button type="button" variant="ghost" onClick={() => router.back()} className="h-8">Annuleren</Button>
                     <Button type="submit" form="new-melding-form" disabled={isSubmitting} className="h-8">

@@ -1,4 +1,3 @@
-
 export type UserPermissions = {
   [module: string]: {
     view?: boolean;

@@ -1,7 +1,7 @@
 'use server';
 /**
- * @fileOverview AI flow voor het uitlezen van "Formulier melding / Klacht" PDF's.
- * Ondersteunt nu het extraheren van meerdere bonnen uit één enkel document en geeft paginanummers terug voor automatische opsplitsing.
+ * @fileOverview AI flow voor het uitlezen van "Formulier melding / Klacht" documenten.
+ * Geoptimaliseerd voor kosten door ondersteuning van zowel tekst als media (PDF/Beeld).
  */
 
 import { ai } from '@/ai/genkit';
@@ -28,9 +28,14 @@ const IssueSchema = z.object({
 const ParseIssuePdfInputSchema = z.object({
   pdfDataUri: z
     .string()
+    .optional()
     .describe(
-      "De PDF van de melding als data URI. Verwacht formaat: 'data:application/pdf;base64,<encoded_data>'."
+      "De PDF van de melding als data URI. Gebruik dit alleen als textContent niet beschikbaar is (voor scans)."
     ),
+  textContent: z
+    .string()
+    .optional()
+    .describe("De geëxtraheerde tekst uit de PDF. Dit is veel goedkoper om te verwerken."),
   instructions: z.string().optional().describe("Aanvullende veld-specifieke instructies van de gebruiker."),
 });
 export type ParseIssuePdfInput = z.infer<typeof ParseIssuePdfInputSchema>;
@@ -40,20 +45,19 @@ const ParseIssuePdfOutputSchema = z.object({
 });
 export type ParseIssuePdfOutput = z.infer<typeof ParseIssuePdfOutputSchema>;
 
-export async function parseIssuePdf(input: ParseIssuePdfInput): Promise<ParseIssuePdfOutput> {
-  return parseIssuePdfFlow(input);
-}
-
-const prompt = ai.definePrompt({
+const parsePrompt = ai.definePrompt({
   name: 'parseIssuePdfPrompt',
   input: { schema: ParseIssuePdfInputSchema },
   output: { schema: ParseIssuePdfOutputSchema },
+  config: {
+    model: 'googleai/gemini-1.5-flash',
+  },
   prompt: `Je bent een expert in het verwerken van "Formulier melding / Klacht" documenten.
-Een enkel document kan MEERDERE afzonderlijke meldingen of bonnen bevatten (vaak één per pagina of gescheiden door koppen).
+Een document kan MEERDERE afzonderlijke meldingen of bonnen bevatten.
 
 INSTRUCTIE:
-Scan het volledige document en identificeer ELKE unieke melding. Retourneer een lijst van alle gevonden meldingen.
-BELANGRIJK: Geef voor elke gevonden melding het exacte paginanummer op in het veld 'paginanummer'. Dit is cruciaal voor het automatisch splitsen van de PDF.
+Scan de aangeleverde bron en identificeer ELKE unieke melding. Retourneer een lijst van alle gevonden meldingen.
+Geef voor elke melding het paginanummer op indien mogelijk.
 
 {{#if instructions}}
 STRIKTE VELD-SPECIFIEKE INSTRUCTIES VOOR DE LAYOUT:
@@ -61,25 +65,19 @@ STRIKTE VELD-SPECIFIEKE INSTRUCTIES VOOR DE LAYOUT:
 {{/if}}
 
 MAPPING BASISREGELS PER BON:
-1. HEADER:
-   - "Datum" (linksboven) -> datum (YYYY-MM-DD).
-   - "Tijdstip" -> tijdstip (HH:mm).
-   - "Intakenummer" -> intakenummer.
-   - "Aangenomen door" -> behandelaar.
-   - Eventueel "Containernummer" of "Baknummer" -> containernummer.
+1. HEADER: Datum, Tijdstip, Intakenummer, Aangenomen door (behandelaar), Containernummer.
+2. CATEGORIE: label_1 (Hoofdindeling), label_2 (Indeling).
+3. LOCATIE: Straat, Huisnummer, Postcode, Plaats.
+4. INHOUD: Extra informatie melding.
 
-2. CATEGORIE (Midden):
-   - De waarde linksboven in het witte categorievlak is label_1 (Hoofdindeling).
-   - De waarde direct daaronder is label_2 (Indeling).
-
-3. LOCATIE:
-   - "Adres" -> extract de straat en het huisnummer.
-   - "Postcode/Plaats" -> extract postcode en plaats.
-
-4. INHOUD:
-   - "Extra informatie melding" -> extra_informatie.
-
-PDF Bron: {{media url=pdfDataUri}}`,
+BRON GEGEVENS:
+{{#if textContent}}
+TEKST INHOUD (GEËXTRAHEERD):
+{{{textContent}}}
+{{else}}
+MULTIMODALE BRON (SCAN):
+{{media url=pdfDataUri}}
+{{/if}}`,
 });
 
 export const parseIssuePdfFlow = ai.defineFlow(
@@ -89,8 +87,12 @@ export const parseIssuePdfFlow = ai.defineFlow(
     outputSchema: ParseIssuePdfOutputSchema,
   },
   async input => {
-    const { output } = await prompt(input);
-    if (!output) throw new Error('Kon de PDF niet succesvol uitlezen.');
+    const { output } = await parsePrompt(input);
+    if (!output) throw new Error('Kon de bron niet succesvol uitlezen.');
     return output;
   }
 );
+
+export async function parseIssuePdf(input: ParseIssuePdfInput): Promise<ParseIssuePdfOutput> {
+  return parseIssuePdfFlow(input);
+}
