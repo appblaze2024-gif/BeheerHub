@@ -3,7 +3,7 @@
 import * as React from 'react';
 import MapGL, { Marker, Source, Layer, type MapRef } from 'react-map-gl';
 import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, doc, getDocs, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
@@ -112,8 +112,8 @@ function NavigatingView({
     isSimulating?: boolean
 }) {
   const mapRef = React.useRef<MapRef>(null);
-  const router = useRouter();
   const isMobile = useInternalIsMobile(768);
+  const router = useRouter();
   const [targetLocation, setTargetLocation] = React.useState<{ latitude: number, longitude: number, speed: number | null, heading: number | null } | null>(initialUserLocation ? { ...initialUserLocation, speed: 0, heading: 0 } : null);
   const [smoothLocation, setSmoothLocation] = React.useState<{ latitude: number, longitude: number, speed: number | null, heading: number | null } | null>(initialUserLocation ? { ...initialUserLocation, speed: 0, heading: 0 } : null);
   
@@ -354,7 +354,7 @@ function NavigatingView({
       (error) => { if (error.code === 1) setGpsError('permission'); else setGpsError('signal'); },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
-    return () => navigator.geolocation.clearWatch(watchId);
+    return () => navigator.geolocation.closeWatch(watchId);
   }, [isSimulating]);
 
   const lastFetchedTargetId = React.useRef<string | null>(null);
@@ -552,7 +552,7 @@ function NavigatingView({
         )}
       </div>
 
-      <div className={cn("absolute right-4 z-[70] transition-all duration-300 flex items-center gap-3", isDrawerExpanded ? "bottom-[320px]" : "bottom-[160px]")}>
+      <div className={cn("absolute right-4 z-[70] transition-all duration-300 flex items-center gap-3", isDrawerExpanded ? "bottom-[280px]" : "bottom-[130px]")}>
           <div className="h-14 w-14 rounded-full bg-white border-[6px] border-red-600 flex items-center justify-center shadow-xl animate-in fade-in zoom-in duration-500"><span className="text-xl font-black text-slate-900 tabular-nums">{currentSpeedLimit}</span></div>
           <div className={cn("h-20 w-20 rounded-full backdrop-blur shadow-2xl border-4 flex flex-col items-center justify-center overflow-hidden transition-colors duration-500", isSpeeding ? "bg-red-50/95 border-red-200" : "bg-white/95 border-slate-100")}>
               <div className="flex flex-col items-center leading-none z-10"><span className={cn("text-2xl font-black tabular-nums transition-colors", isSpeeding ? "text-red-600" : "text-slate-900")}>{speedKmh}</span><span className={cn("text-[8px] font-black uppercase mt-0.5 tracking-widest", isSpeeding ? "text-red-400" : "text-slate-400")}>km/h</span></div>
@@ -588,8 +588,8 @@ function NavigatingView({
         {!isFollowing && (<Button onClick={() => setIsFollowing(true)} className="h-12 w-12 md:h-14 md:w-14 rounded-full shadow-2xl bg-primary text-white border-none hover:scale-110 active:scale-95 transition-all flex items-center justify-center mb-4"><LocateFixed className="h-6 w-6" /></Button>)}
         {isMobile ? (
             <div className="w-full flex flex-col items-center gap-3">
-                <Card className={cn("w-full bg-white shadow-2xl border-none rounded-[32px] pt-2 pb-6 px-8 transition-all duration-300 ease-in-out cursor-pointer", isDrawerExpanded ? "max-h-[300px]" : "max-h-[140px]")} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onClick={() => setIsDrawerExpanded(!isDrawerExpanded)}>
-                    <div className="h-1.5 w-12 bg-slate-200 rounded-full mx-auto mb-6" />
+                <Card className={cn("w-full bg-white shadow-2xl border-none rounded-[32px] pt-2 pb-4 px-8 transition-all duration-300 ease-in-out cursor-pointer", isDrawerExpanded ? "max-h-[300px]" : "max-h-[110px]")} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onClick={() => setIsDrawerExpanded(!isDrawerExpanded)}>
+                    <div className="h-1.5 w-12 bg-slate-200 rounded-full mx-auto mb-3" />
                     <div className="flex items-center justify-between">
                         <div className="flex flex-col items-center"><p className="text-2xl font-black text-black leading-none mb-1">{arrivalTime}</p><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">aankomst</p></div>
                         <div className="flex flex-col items-center"><p className="text-2xl font-black text-black leading-none mb-1">{durationMin}</p><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">min.</p></div>
