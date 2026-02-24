@@ -47,7 +47,6 @@ import { useToast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { RouteHistoryDialog } from '@/components/route-history-dialog';
 import { LoadingScreen } from '@/components/loading-screen';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { addSeconds, format as formatDate } from 'date-fns';
 import { nl } from 'date-fns/locale';
 
@@ -181,6 +180,21 @@ function NavigatingView({
     return limit <= 0 ? 50 : limit;
   }, [currentLeg, distanceRemainingToDestination]);
 
+  // STABLE REFS FOR LOOPS TO AVOID DEP LOOPS
+  const targetLocationRef = React.useRef(targetLocation);
+  const isPausedRef = React.useRef(isPaused);
+  const arrivedObjectRef = React.useRef(arrivedObject);
+  const isCalculatingRouteRef = React.useRef(isCalculatingRoute);
+  const isFollowingRef = React.useRef(isFollowing);
+  const currentSpeedLimitRef = React.useRef(currentSpeedLimit);
+
+  React.useEffect(() => { targetLocationRef.current = targetLocation; }, [targetLocation]);
+  React.useEffect(() => { isPausedRef.current = isPaused; }, [isPaused]);
+  React.useEffect(() => { arrivedObjectRef.current = arrivedObject; }, [arrivedObject]);
+  React.useEffect(() => { isCalculatingRouteRef.current = isCalculatingRoute; }, [isCalculatingRoute]);
+  React.useEffect(() => { isFollowingRef.current = isFollowing; }, [isFollowing]);
+  React.useEffect(() => { currentSpeedLimitRef.current = currentSpeedLimit; }, [currentSpeedLimit]);
+
   React.useEffect(() => {
     let lastTime = performance.now();
     let lastSetLat = 0;
@@ -189,22 +203,23 @@ function NavigatingView({
         const deltaTime = (time - lastTime) / 1000;
         lastTime = time;
         setSmoothLocation(prevSmooth => {
-            if (!targetLocation || !prevSmooth || isPaused) return prevSmooth;
-            const dist = Math.sqrt(Math.pow(targetLocation.latitude - prevSmooth.latitude, 2) + Math.pow(targetLocation.longitude - prevSmooth.longitude, 2));
+            const target = targetLocationRef.current;
+            if (!target || !prevSmooth || isPausedRef.current) return prevSmooth;
+            const dist = Math.sqrt(Math.pow(target.latitude - prevSmooth.latitude, 2) + Math.pow(target.longitude - prevSmooth.longitude, 2));
             if (dist < 0.000001 && !isSimulating) return prevSmooth;
             const lerpFactor = isSimulating ? 1 : 0.15; 
-            const newLat = prevSmooth.latitude + (targetLocation.latitude - prevSmooth.latitude) * lerpFactor;
-            const newLng = prevSmooth.longitude + (targetLocation.longitude - prevSmooth.longitude) * lerpFactor;
-            let diff = (targetLocation.heading || 0) - (prevSmooth.heading || 0);
+            const newLat = prevSmooth.latitude + (target.latitude - prevSmooth.latitude) * lerpFactor;
+            const newLng = prevSmooth.longitude + (target.longitude - prevSmooth.longitude) * lerpFactor;
+            let diff = (target.heading || 0) - (prevSmooth.heading || 0);
             while (diff < -180) diff += 360;
             while (diff > 180) diff -= 360;
             const newHeading = (prevSmooth.heading || 0) + diff * (lerpFactor * 0.5);
-            const newSmooth = { latitude: newLat, longitude: newLng, speed: targetLocation.speed, heading: newHeading };
-            if (isFollowing && !arrivedObject) {
+            const newSmooth = { latitude: newLat, longitude: newLng, speed: target.speed, heading: newHeading };
+            if (isFollowingRef.current && !arrivedObjectRef.current) {
                 const changeThreshold = 0.000005;
                 if (Math.abs(newLat - lastSetLat) > changeThreshold || Math.abs(newLng - lastSetLng) > changeThreshold) {
                     lastSetLat = newLat; lastSetLng = newLng;
-                    const currentSpeedKmh = (targetLocation.speed || 0) * 3.6;
+                    const currentSpeedKmh = (target.speed || 0) * 3.6;
                     const targetZoom = Math.max(15, 18.5 - (Math.min(currentSpeedKmh, 80) / 30));
                     setViewState(prevView => ({
                         ...prevView,
@@ -222,7 +237,7 @@ function NavigatingView({
     };
     smoothingAnimationRef.current = requestAnimationFrame(animateSmoothly);
     return () => { if (smoothingAnimationRef.current) cancelAnimationFrame(smoothingAnimationRef.current); };
-  }, [targetLocation?.latitude, targetLocation?.longitude, isFollowing, isPaused, arrivedObject, isSimulating]);
+  }, [isSimulating]); // Removed volatile deps
 
   const snappedLocation = React.useMemo(() => {
     if (!smoothLocation || !currentRouteGeometry) return smoothLocation;
@@ -308,13 +323,11 @@ function NavigatingView({
       const line = turf.lineString(coords);
       const pt = turf.point([snappedLocation.longitude, snappedLocation.latitude]);
       
-      // Calculate where we are on the line to remove the portion behind us
       const snapped = turf.nearestPointOnLine(line, pt);
       const distanceTravelled = snapped.properties.location || 0; 
       
       const totalDist = turf.length(line, { units: 'kilometers' });
       
-      // Slice the line from current position to end
       const sliced = turf.lineSliceAlong(line, distanceTravelled, totalDist, { units: 'kilometers' });
       
       setThrottledGeometry({
@@ -323,7 +336,6 @@ function NavigatingView({
         geometry: sliced.geometry
       });
     } catch (e) {
-      // Fallback if slicing fails
       setThrottledGeometry({
         type: 'Feature',
         properties: {},
@@ -350,7 +362,7 @@ function NavigatingView({
   const lastFetchedTargetId = React.useRef<string | null>(null);
 
   React.useEffect(() => {
-    if (!isSimulating || !currentRouteGeometry || !nextObject || arrivedObject || isCalculatingRoute) return;
+    if (!isSimulating || !currentRouteGeometry || !nextObject || arrivedObjectRef.current || isCalculatingRouteRef.current) return;
     const coords = currentRouteGeometry.coordinates;
     if (!Array.isArray(coords) || coords.length < 2) return;
     let line: any; try { line = turf.lineString(coords); } catch (e) { return; }
@@ -360,7 +372,7 @@ function NavigatingView({
     simStateRef.current.currentSpeedMs = 0;
     simStateRef.current.lastTimestamp = 0;
     const runSimulation = (timestamp: number) => {
-        if (isPaused || arrivedObject || isCalculatingRoute || !currentRouteGeometry) {
+        if (isPausedRef.current || arrivedObjectRef.current || isCalculatingRouteRef.current || !currentRouteGeometry) {
             simStateRef.current.lastTimestamp = timestamp;
             simAnimationRef.current = requestAnimationFrame(runSimulation);
             return;
@@ -369,7 +381,7 @@ function NavigatingView({
         const deltaTime = Math.min((timestamp - simStateRef.current.lastTimestamp) / 1000, 0.1);
         simStateRef.current.lastTimestamp = timestamp;
         const distanceToDestination = totalDistance - simStateRef.current.distanceTravelled;
-        const currentLimitMs = currentSpeedLimit / 3.6;
+        const currentLimitMs = currentSpeedLimitRef.current / 3.6;
         simStateRef.current.targetSpeedMs = distanceToDestination < 40 ? 3 : currentLimitMs - 0.5; 
         const accel = simStateRef.current.targetSpeedMs > simStateRef.current.currentSpeedMs ? 4 : 8;
         simStateRef.current.currentSpeedMs += (simStateRef.current.targetSpeedMs - simStateRef.current.currentSpeedMs) * deltaTime * accel;
@@ -393,7 +405,7 @@ function NavigatingView({
     };
     simAnimationRef.current = requestAnimationFrame(runSimulation);
     return () => { if (simAnimationRef.current) cancelAnimationFrame(simAnimationRef.current); };
-  }, [isSimulating, isPaused, arrivedObject, currentRouteGeometry, nextObject?.id, isCalculatingRoute, currentSpeedLimit]);
+  }, [isSimulating, currentRouteGeometry, nextObject?.id]); // Stabilized dependencies
 
   React.useEffect(() => {
     if (!targetLocation || !nextObject || arrivedObject || isCalculatingRoute) return;
@@ -756,7 +768,6 @@ export default function StartNavigationPage() {
     setObjectsOnRoute(sortedObjects); setNavigationState('navigating'); setIsStarting(false);
   }, [userLocation, selectedRouteDef, urlMeldingLocatie, routeType, allMeldingen, user, objectsOnMap, toast]);
 
-  // AUTO-START LOGICA: Start de route direct als type=meldingen aanwezig is of een specifieke locatie
   React.useEffect(() => {
     const isMeldingenRoute = routeType === 'meldingen';
     const isReadyToAutoStart = !!urlMeldingLocatie || (isMeldingenRoute && allMeldingen && allMeldingen.length > 0);
@@ -810,3 +821,12 @@ export default function StartNavigationPage() {
     </div>
   );
 }
+
+const useIsMobile = (width: number) => {
+  const [isMobile, setIsMobile] = React.useState(false);
+  React.useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < width);
+    check(); window.addEventListener('resize', check); return () => window.removeEventListener('resize', check);
+  }, [width]);
+  return isMobile;
+};
