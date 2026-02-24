@@ -6,8 +6,38 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { format, addDays, isWeekend } from 'date-fns';
-import { ArrowLeft, Loader2, Search, UploadCloud, FileIcon, Trash2, Camera, MapPin, Sparkles, Settings2, FileText, Eye, X, ZoomIn, ZoomOut, Target, Upload, ChevronDown, Package, Clock } from 'lucide-react';
-import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking, useFirebaseApp, useCollection, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
+import { 
+  ArrowLeft, 
+  Loader2, 
+  Search, 
+  UploadCloud, 
+  FileIcon, 
+  Trash2, 
+  Camera, 
+  MapPin, 
+  Sparkles, 
+  Settings2, 
+  FileText, 
+  Eye, 
+  X, 
+  ZoomIn, 
+  ZoomOut, 
+  Target, 
+  Upload, 
+  ChevronDown, 
+  Package, 
+  Clock 
+} from 'lucide-react';
+import { 
+  useFirestore, 
+  addDocumentNonBlocking, 
+  updateDocumentNonBlocking, 
+  useFirebaseApp, 
+  useCollection, 
+  useDoc, 
+  setDocumentNonBlocking, 
+  useMemoFirebase 
+} from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { collection, doc, arrayUnion, serverTimestamp, addDoc, updateDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
@@ -785,8 +815,9 @@ export default function NewIssuePage() {
                 let fileNameToUpload = file.name;
 
                 if (parsed.paginanummer && parsed.paginanummer > 0 && parsed.paginanummer <= pdfDoc.getPageCount()) {
+                    const i = parsed.paginanummer - 1;
                     const newDoc = await PDFDocument.create();
-                    const [copiedPage] = await newDoc.copyPages(pdfDoc, [parsed.paginanummer - 1]);
+                    const [copiedPage] = await newDoc.copyPages(pdfDoc, [i]);
                     newDoc.addPage(copiedPage);
                     const pdfBytes = await newDoc.save();
                     fileToUpload = new Blob([pdfBytes], { type: 'application/pdf' });
@@ -915,14 +946,6 @@ export default function NewIssuePage() {
           router.push('/issues/open');
       }
     } catch (error) { toast({ variant: 'destructive', title: 'Fout opgetreden' }); } finally { setIsSubmitting(false); }
-  };
-
-  const formatDuration = (minutes?: number) => {
-    if (minutes === undefined || minutes === null) return '-';
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    if (hours === 0) return `${mins}m`;
-    return `${hours}u ${mins}m`;
   };
 
   return (
@@ -1060,7 +1083,7 @@ export default function NewIssuePage() {
                                 {isSearching && <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-primary" />}
                             </div></FormItem>
                             {addressSuggestions.length > 0 && (
-                                <div className="absolute z-100 w-full mt-1 bg-white border rounded-xl shadow-2xl max-h-48 overflow-y-auto">
+                                <div className="absolute z-10 w-full mt-1 bg-white border rounded-xl shadow-2xl max-h-48 overflow-y-auto">
                                     {addressSuggestions.map((s) => (
                                         <div 
                                             key={s.id} 
@@ -1146,7 +1169,7 @@ export default function NewIssuePage() {
                             {!isReadOnly && <Button type="button" variant="outline" className="w-full h-12 border-dashed border-2 font-bold uppercase text-[10px] tracking-widest" onClick={() => document.getElementById('photo-input')?.click()}>
                                 <Upload className="mr-2 h-4 w-4" /> Foto uploaden
                             </Button>}
-                            <input type="file" id="photo-input" className="hidden" accept="image/*" onChange={(e) => e.target.files && handlePhotoUploads(e.target.files)} className="hidden" multiple accept="image/*" />
+                            <input type="file" id="photo-input" className="hidden" accept="image/*" onChange={(e) => e.target.files && handlePhotoUploads(e.target.files)} multiple />
                             <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-10 gap-3">
                                 {uploadedPhotos.map(p => (
                                     <div key={p.storagePath} className="relative aspect-square rounded-xl overflow-hidden border shadow-sm group">
@@ -1245,3 +1268,11 @@ export default function NewIssuePage() {
     </div>
   );
 }
+
+const formatDuration = (minutes?: number) => {
+  if (minutes === undefined || minutes === null) return '-';
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours === 0) return `${mins}m`;
+  return `${hours}u ${mins}m`;
+};
