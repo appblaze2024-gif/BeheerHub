@@ -213,14 +213,6 @@ function NavigatingView({
   React.useEffect(() => { isFollowingRef.current = isFollowing; }, [isFollowing]);
   React.useEffect(() => { currentSpeedLimitRef.current = currentSpeedLimit; }, [currentSpeedLimit]);
 
-  const navHudData = React.useMemo(() => {
-    if (!currentLeg?.steps || currentLeg.steps.length === 0) return null;
-    const step = currentLeg.steps[0];
-    return {
-      instruction: step.maneuver?.instruction || 'Rijd naar bestemming'
-    };
-  }, [currentLeg]);
-
   React.useEffect(() => {
     let lastTime = performance.now();
     let lastCameraUpdateLat = 0;
@@ -537,18 +529,6 @@ function NavigatingView({
       </MapGL>
       
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[70] w-[92%] max-w-lg flex flex-col gap-3">
-        {navHudData && !arrivedObject && !isCalculatingRoute && (
-            <Card className="bg-black text-white shadow-2xl border-none overflow-hidden animate-in slide-in-from-top duration-300 rounded-[24px] py-2">
-                <CardContent className="p-3 flex items-center gap-4">
-                    <div className="bg-white/10 p-2 rounded-xl"><Navigation2 className="h-7 w-7 text-white fill-current" /></div>
-                    <div className="min-w-0 flex-1">
-                        <p className="text-lg font-black tracking-tight leading-none mb-0.5">{navHudData.instruction.split(' op ')[0] || 'Navigeer'} op</p>
-                        <p className="text-xl font-black tracking-tighter leading-tight truncate">{navHudData.instruction.split(' op ')[1] || 'de weg'}</p>
-                    </div>
-                </CardContent>
-            </Card>
-        )}
-        
         {objectsOnRoute.length > 0 && !arrivedObject && (
             <Card className="bg-white text-black shadow-xl border-none overflow-hidden animate-in slide-in-from-top duration-500 rounded-full py-1">
                 <CardContent className="p-3 flex items-center justify-between gap-4">
@@ -964,7 +944,7 @@ export default function StartNavigationPage() {
           )}
         </div>
       )}
-      {isPrivileged && (<RouteHistoryDialog open={isHistoryDialogOpen} onOpenChange={setIsHistoryDialogOpen} projectId={selectedProjectId} />)}
+      {isPrivileged && (<HistoryDialog open={isHistoryDialogOpen} onOpenChange={setIsHistoryDialogOpen} projectId={selectedProjectId} />)}
     </div>
   );
 }
