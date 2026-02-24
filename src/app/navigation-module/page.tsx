@@ -296,20 +296,41 @@ function NavigatingView({
   }, [currentLeg, distanceRemainingToDestination]);
 
   React.useEffect(() => {
-    if (!currentRouteGeometry || isCalculatingRoute || !snappedLocation) { setThrottledGeometry(null); return; }
-    const timer = setTimeout(() => {
-        try {
-            const coords = currentRouteGeometry.coordinates;
-            if (!Array.isArray(coords) || coords.length < 2) return;
-            const line = turf.lineString(coords);
-            const startPoint = turf.point([snappedLocation.longitude, snappedLocation.latitude]);
-            const endPoint = turf.point(coords[coords.length - 1]);
-            const sliced = turf.lineSlice(startPoint, endPoint, line);
-            setThrottledGeometry({ type: 'Feature' as const, properties: {}, geometry: sliced.geometry });
-        } catch (e) { setThrottledGeometry({ type: 'Feature' as const, properties: {}, geometry: currentRouteGeometry }); }
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [currentRouteGeometry, isCalculatingRoute, snappedLocation?.longitude, snappedLocation?.latitude]);
+    if (!currentRouteGeometry || !snappedLocation) { 
+      setThrottledGeometry(null); 
+      return; 
+    }
+    
+    try {
+      const coords = currentRouteGeometry.coordinates;
+      if (!Array.isArray(coords) || coords.length < 2) return;
+      
+      const line = turf.lineString(coords);
+      const pt = turf.point([snappedLocation.longitude, snappedLocation.latitude]);
+      
+      // Calculate where we are on the line to remove the portion behind us
+      const snapped = turf.nearestPointOnLine(line, pt);
+      const distanceTravelled = snapped.properties.location || 0; 
+      
+      const totalDist = turf.length(line, { units: 'kilometers' });
+      
+      // Slice the line from current position to end
+      const sliced = turf.lineSliceAlong(line, distanceTravelled, totalDist, { units: 'kilometers' });
+      
+      setThrottledGeometry({
+        type: 'Feature',
+        properties: {},
+        geometry: sliced.geometry
+      });
+    } catch (e) {
+      // Fallback if slicing fails
+      setThrottledGeometry({
+        type: 'Feature',
+        properties: {},
+        geometry: currentRouteGeometry
+      });
+    }
+  }, [currentRouteGeometry, snappedLocation?.longitude, snappedLocation?.latitude]);
 
   React.useEffect(() => {
     if (isSimulating) return;
