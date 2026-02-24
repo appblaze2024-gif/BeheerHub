@@ -114,6 +114,7 @@ function NavigatingView({
   const mapRef = React.useRef<MapRef>(null);
   const isMobile = useInternalIsMobile(768);
   const router = useRouter();
+  
   const [targetLocation, setTargetLocation] = React.useState<{ latitude: number, longitude: number, speed: number | null, heading: number | null } | null>(initialUserLocation ? { ...initialUserLocation, speed: 0, heading: 0 } : null);
   const [smoothLocation, setSmoothLocation] = React.useState<{ latitude: number, longitude: number, speed: number | null, heading: number | null } | null>(initialUserLocation ? { ...initialUserLocation, speed: 0, heading: 0 } : null);
   
@@ -740,19 +741,85 @@ export default function StartNavigationPage() {
 
     setIsStarting(true);
     let sortedObjects: MapObject[] = [];
+    
     if (routeType === 'meldingen' && allMeldingen) {
-        if (allMeldingen.length === 0) { toast({ title: "Geen meldingen", description: "Geen openstaande meldingen." }); setIsStarting(false); return; }
+        if (allMeldingen.length === 0) { 
+            toast({ title: "Geen meldingen", description: "Geen openstaande meldingen." }); 
+            setIsStarting(false); 
+            return; 
+        }
+        
         const startCoords = startLoc || { latitude: allMeldingen[0].latitude, longitude: allMeldingen[0].longitude };
-        const unvisited = [...allMeldingen]; let currentPos = startCoords;
-        while (unvisited.length > 0) {
-          let nearestIdx = 0; let minD = Infinity;
-          unvisited.forEach((u, i) => {
-            const d = turf.distance(turf.point([currentPos.longitude, currentPos.latitude]), turf.point([u.longitude, u.latitude]));
-            if (d < minD) { minD = d; nearestIdx = i; }
-          });
-          const next = unvisited.splice(nearestIdx, 1)[0];
-          sortedObjects.push({ id: next.id, latitude: next.latitude, longitude: next.longitude, name: next.intakenummer } as MapObject);
-          currentPos = { latitude: next.latitude, longitude: next.longitude };
+        
+        try {
+            // Road distance sorting using Mapbox Matrix API
+            // Max 25 points supported in a single call. Coordinates are [lng, lat] for turf, but string lng,lat for API.
+            const subset = allMeldingen.slice(0, 24);
+            const points = [startCoords, ...subset.map(m => ({ longitude: m.longitude, latitude: m.latitude }))];
+            const coordsString = points.map(p => `${p.longitude},${p.latitude}`).join(';');
+            
+            const matrixUrl = `https://api.mapbox.com/directions-matrix/v1/mapbox/driving/${coordsString}?annotations=distance&access_token=${MAPBOX_TOKEN}`;
+            const response = await fetch(matrixUrl);
+            const data = await response.json();
+
+            if (data.code === 'Ok' && data.distances) {
+                let currentIndex = 0; // Starts at 'startCoords'
+                let unvisitedIndices = subset.map((_, i) => i + 1); // Indici in the points array
+
+                while (unvisitedIndices.length > 0) {
+                    let nearestIndex = -1;
+                    let minDistance = Infinity;
+
+                    for (const idx of unvisitedIndices) {
+                        const d = data.distances[currentIndex][idx];
+                        if (d !== null && d < minDistance) {
+                            minDistance = d;
+                            nearestIndex = idx;
+                        }
+                    }
+
+                    if (nearestIndex === -1) {
+                        // Fallback: take the first unvisited if matrix entry is null
+                        nearestIndex = unvisitedIndices[0];
+                    }
+
+                    const melding = subset[nearestIndex - 1];
+                    sortedObjects.push({ 
+                        id: melding.id, 
+                        latitude: melding.latitude, 
+                        longitude: melding.longitude, 
+                        name: melding.intakenummer 
+                    } as MapObject);
+
+                    unvisitedIndices = unvisitedIndices.filter(i => i !== nearestIndex);
+                    currentIndex = nearestIndex;
+                }
+                
+                // Add any remaining meldingen that were beyond the 24 limit (straight-line fallback for these)
+                if (allMeldingen.length > 24) {
+                    const remaining = allMeldingen.slice(24);
+                    remaining.forEach(next => {
+                        sortedObjects.push({ id: next.id, latitude: next.latitude, longitude: next.longitude, name: next.intakenummer } as MapObject);
+                    });
+                }
+            } else {
+                throw new Error("Matrix API non-OK response");
+            }
+        } catch (error) {
+            console.warn("Road distance sort failed, falling back to straight-line:", error);
+            // Fallback to straight-line greedy (hemelsbreed)
+            const unvisited = [...allMeldingen];
+            let currentPos = startCoords;
+            while (unvisited.length > 0) {
+                let nearestIdx = 0; let minD = Infinity;
+                unvisited.forEach((u, i) => {
+                    const d = turf.distance(turf.point([currentPos.longitude, currentPos.latitude]), turf.point([u.longitude, u.latitude]));
+                    if (d < minD) { minD = d; nearestIdx = i; }
+                });
+                const next = unvisited.splice(nearestIdx, 1)[0];
+                sortedObjects.push({ id: next.id, latitude: next.latitude, longitude: next.longitude, name: next.intakenummer } as MapObject);
+                currentPos = { latitude: next.latitude, longitude: next.longitude };
+            }
         }
         setTripStartLocation(startCoords);
     } else if (selectedRouteDef && objectsOnMap) {
