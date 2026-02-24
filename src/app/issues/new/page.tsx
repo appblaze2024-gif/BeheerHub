@@ -43,6 +43,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogTrigger,
+  DialogClose,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -51,6 +52,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { MapboxView } from '@/components/mapbox-view';
 import { parseIssuePdf } from '@/ai/flows/parse-issue-pdf-flow';
 import type { Melding, UploadedFile, Object as MapObject } from '@/lib/types';
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
