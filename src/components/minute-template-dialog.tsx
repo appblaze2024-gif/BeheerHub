@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -17,9 +16,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useFirestore, setDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
+import { useFirestore, setDocumentNonBlocking, useDoc, useMemoFirebase, useFirebaseApp } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { Loader2, Sparkles, X, Plus, Image as ImageIcon, MapPin } from 'lucide-react';
+import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { Loader2, Sparkles, X, Plus, Image as ImageIcon, MapPin, Upload } from 'lucide-react';
 import type { MinuteTemplate } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -69,8 +69,11 @@ export function MinuteTemplateDialog({
   projectId: string;
 }) {
   const firestore = useFirestore();
+  const app = useFirebaseApp();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isUploadingLeft, setIsUploadingLeft] = React.useState(false);
+  const [isUploadingRight, setIsUploadingRight] = React.useState(false);
 
   const templateRef = useMemoFirebase(() => {
     if (!firestore || !projectId) return null;
@@ -108,6 +111,32 @@ export function MinuteTemplateDialog({
       });
     }
   }, [open, template, form]);
+
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>, side: 'left' | 'right') => {
+    const file = event.target.files?.[0];
+    if (!file || !app || !projectId) return;
+
+    const setUploading = side === 'left' ? setIsUploadingLeft : setIsUploadingRight;
+    setUploading(true);
+
+    try {
+      const storage = getStorage(app);
+      const storagePath = `projects/${projectId}/minute_templates/logo_${side}_${Date.now()}_${file.name}`;
+      const storageRef = ref(storage, storagePath);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      await uploadTask;
+      const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+      
+      form.setValue(side === 'left' ? 'logoLeftUrl' : 'logoRightUrl', downloadUrl, { shouldDirty: true });
+      toast({ title: "Logo geüpload", description: `De afbeelding voor ${side === 'left' ? 'links' : 'rechts'} is succesvol verwerkt.` });
+    } catch (err) {
+      console.error("Logo upload error:", err);
+      toast({ variant: 'destructive', title: "Upload mislukt", description: "Kon de afbeelding niet opslaan." });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const onSubmit = async (values: TemplateFormValues) => {
     if (!firestore || !projectId) return;
@@ -152,41 +181,89 @@ export function MinuteTemplateDialog({
                   <ImageIcon className="h-3.5 w-3.5" /> Koptekst & Logo's
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-4">
-                    <FormField control={form.control} name="logoLeftUrl" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-[10px] font-black uppercase">Logo Links (URL)</FormLabel>
-                        <FormControl><Input {...field} className="h-10 font-bold" /></FormControl>
-                      </FormItem>
-                    )} />
-                    <FormField control={form.control} name="logoRightUrl" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-[10px] font-black uppercase">Logo Rechts (URL)</FormLabel>
-                        <FormControl><Input {...field} className="h-10 font-bold" /></FormControl>
-                      </FormItem>
-                    )} />
+                  <div className="space-y-6">
+                    {/* Logo Left */}
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase">Logo Links (JPG/PNG)</Label>
+                      <div className="flex flex-col gap-3">
+                        <div className="relative w-full h-32 border-2 border-dashed border-slate-200 rounded-2xl overflow-hidden bg-slate-50 flex items-center justify-center group">
+                          {form.watch('logoLeftUrl') ? (
+                            <Image src={form.watch('logoLeftUrl')!} alt="Logo Links" fill className="object-contain p-4" />
+                          ) : (
+                            <ImageIcon className="h-8 w-8 text-slate-200" />
+                          )}
+                          {isUploadingLeft && (
+                            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center">
+                              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                            </div>
+                          )}
+                        </div>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm" 
+                          className="w-full h-9 font-bold"
+                          onClick={() => document.getElementById('logo-left-upload')?.click()}
+                          disabled={isUploadingLeft}
+                        >
+                          <Upload className="h-4 w-4 mr-2" /> Afbeelding Kiezen
+                        </Button>
+                        <input id="logo-left-upload" type="file" className="hidden" accept="image/*" onChange={(e) => handleLogoUpload(e, 'left')} />
+                      </div>
+                    </div>
+
+                    {/* Logo Right */}
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase">Logo Rechts (JPG/PNG)</Label>
+                      <div className="flex flex-col gap-3">
+                        <div className="relative w-full h-32 border-2 border-dashed border-slate-200 rounded-2xl overflow-hidden bg-slate-50 flex items-center justify-center group">
+                          {form.watch('logoRightUrl') ? (
+                            <Image src={form.watch('logoRightUrl')!} alt="Logo Rechts" fill className="object-contain p-4" />
+                          ) : (
+                            <ImageIcon className="h-8 w-8 text-slate-200" />
+                          )}
+                          {isUploadingRight && (
+                            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center">
+                              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                            </div>
+                          )}
+                        </div>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm" 
+                          className="w-full h-9 font-bold"
+                          onClick={() => document.getElementById('logo-right-upload')?.click()}
+                          disabled={isUploadingRight}
+                        >
+                          <Upload className="h-4 w-4 mr-2" /> Afbeelding Kiezen
+                        </Button>
+                        <input id="logo-right-upload" type="file" className="hidden" accept="image/*" onChange={(e) => handleLogoUpload(e, 'right')} />
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-4">
+
+                  <div className="space-y-6">
                     <FormField control={form.control} name="documentTitle" render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-[10px] font-black uppercase">Document Titel</FormLabel>
-                        <FormControl><Input {...field} className="h-10 font-black uppercase" /></FormControl>
+                        <FormControl><Input {...field} className="h-11 font-black uppercase rounded-xl border-slate-200" /></FormControl>
                       </FormItem>
                     )} />
                     <FormField control={form.control} name="documentSubtitle" render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-[10px] font-black uppercase">Subtitel</FormLabel>
-                        <FormControl><Input {...field} className="h-10 font-bold" /></FormControl>
+                        <FormControl><Input {...field} className="h-11 font-bold rounded-xl border-slate-200" /></FormControl>
+                      </FormItem>
+                    )} />
+                    <FormField control={form.control} name="location" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-[10px] font-black uppercase flex items-center gap-2"><MapPin className="h-3 w-3" /> Standaard Locatie</FormLabel>
+                        <FormControl><Input {...field} className="h-11 font-bold rounded-xl border-slate-200" /></FormControl>
                       </FormItem>
                     )} />
                   </div>
                 </div>
-                <FormField control={form.control} name="location" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[10px] font-black uppercase flex items-center gap-2"><MapPin className="h-3 w-3" /> Standaard Locatie</FormLabel>
-                    <FormControl><Input {...field} className="h-10 font-bold" /></FormControl>
-                  </FormItem>
-                )} />
               </div>
 
               {/* Agenda Section */}
@@ -203,10 +280,10 @@ export function MinuteTemplateDialog({
                       <div className="flex-1">
                         <Input 
                           {...form.register(`agendaItems.${index}.title`)} 
-                          className="h-9 text-xs font-bold bg-slate-50 border-slate-100" 
+                          className="h-10 text-xs font-bold bg-slate-50 border-slate-100 rounded-xl" 
                         />
                       </div>
-                      <Button type="button" variant="ghost" size="icon" className="h-9 w-9 text-slate-300 hover:text-red-600" onClick={() => remove(index)}>
+                      <Button type="button" variant="ghost" size="icon" className="h-10 w-10 text-slate-300 hover:text-red-600 rounded-xl" onClick={() => remove(index)}>
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
@@ -219,7 +296,7 @@ export function MinuteTemplateDialog({
 
         <DialogFooter className="p-6 border-t bg-slate-50 shrink-0">
           <DialogClose asChild><Button variant="ghost" className="font-bold">Annuleren</Button></DialogClose>
-          <Button type="submit" form="template-form" disabled={isSubmitting} className="font-black uppercase tracking-tight h-12 px-12 shadow-xl shadow-primary/20">
+          <Button type="submit" form="template-form" disabled={isSubmitting || isUploadingLeft || isUploadingRight} className="font-black uppercase tracking-tight h-12 px-12 shadow-xl shadow-primary/20 rounded-xl">
             {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Instellingen Opslaan'}
           </Button>
         </DialogFooter>
