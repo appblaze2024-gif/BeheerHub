@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -14,7 +13,7 @@ import {
   DialogDescription,
   DialogClose
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { Button } from './ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -82,7 +81,7 @@ export function MinuteTemplateDialog({
     return doc(firestore, 'contractors', contractor.id, 'settings', 'minute_template');
   }, [firestore, contractor?.id]);
 
-  const { data: template, isLoading } = useDoc<MinuteTemplate>(templateRef);
+  const { data: template } = useDoc<MinuteTemplate>(templateRef);
 
   const form = useForm<TemplateFormValues>({
     resolver: zodResolver(templateSchema),
@@ -132,9 +131,13 @@ export function MinuteTemplateDialog({
       
       form.setValue(side === 'left' ? 'logoLeftUrl' : 'logoRightUrl', downloadUrl, { shouldDirty: true });
       toast({ title: "Logo geüpload", description: `Logo voor ${contractor.name} is succesvol verwerkt.` });
-    } catch (err) {
+    } catch (err: any) {
       console.error("Logo upload error:", err);
-      toast({ variant: 'destructive', title: "Upload mislukt", description: "Kon de afbeelding niet opslaan." });
+      toast({ 
+        variant: 'destructive', 
+        title: "Upload mislukt", 
+        description: err.message || "Kon de afbeelding niet opslaan door een rechtenprobleem." 
+      });
     } finally {
       setUploading(false);
     }
@@ -168,7 +171,7 @@ export function MinuteTemplateDialog({
           <div className="flex items-center gap-3">
             <Settings2 className="h-6 w-6 text-primary" />
             <div>
-              <DialogTitle className="text-xl font-black uppercase tracking-tight">Sjabloon: {contractor.name}</DialogTitle>
+              <DialogTitle className="text-xl font-black uppercase tracking-tight text-white">Sjabloon: {contractor.name}</DialogTitle>
               <DialogDescription className="text-slate-400 font-bold">Beheer de specifieke layout en agenda voor verslagen van deze aannemer.</DialogDescription>
             </div>
           </div>
