@@ -64,64 +64,38 @@
       },
       "required": ["projectnummer", "projectnaam"]
     },
-    "AnnualPlanningSection": {
-      "title": "AnnualPlanningSection",
-      "description": "Een blok of sectie binnen de jaarplanning.",
+    "Contractor": {
+      "title": "Contractor",
+      "description": "Een aannemer of externe partij gekoppeld aan een project.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
         "projectId": { "type": "string" },
-        "year": { "type": "number" },
+        "name": { "type": "string" },
+        "contactPerson": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["projectId", "name"]
+    },
+    "MeetingMinute": {
+      "title": "MeetingMinute",
+      "description": "Notulen of een verslag van een vergadering met een aannemer.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "contractorId": { "type": "string" },
+        "projectId": { "type": "string" },
         "title": { "type": "string" },
-        "order": { "type": "number" },
-        "hidden": { "type": "boolean" }
+        "date": { "type": "string", "format": "date" },
+        "attendees": { "type": "string" },
+        "content": { "type": "string" },
+        "actionPoints": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" }
       },
-      "required": ["projectId", "year", "title"]
-    },
-    "AnnualPlanningItem": {
-      "title": "AnnualPlanningItem",
-      "description": "Planning van inzet (uren) per machine of medewerker voor een heel jaar.",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "projectId": { "type": "string" },
-        "sectionId": { "type": "string" },
-        "resourceName": { "type": "string" },
-        "category": { "type": "string" },
-        "year": { "type": "number" },
-        "weeks": { "type": "object" },
-        "color": { "type": "string" },
-        "order": { "type": "number" }
-      },
-      "required": ["resourceName", "year", "projectId"]
-    },
-    "AnnualMilestone": {
-      "title": "AnnualMilestone",
-      "description": "Speciale gebeurtenissen of projectfases in een specifieke week.",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "projectId": { "type": "string" },
-        "weekNumber": { "type": "number" },
-        "label": { "type": "string" },
-        "year": { "type": "number" },
-        "color": { "type": "string" },
-        "borderLeft": { "type": "boolean" },
-        "borderRight": { "type": "boolean" }
-      },
-      "required": ["weekNumber", "label", "year", "projectId"]
-    },
-    "AnnualPlanningConfig": {
-      "title": "AnnualPlanningConfig",
-      "description": "Instellingen per jaarplanning, zoals de weergavetitel.",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "projectId": { "type": "string" },
-        "year": { "type": "number" },
-        "title": { "type": "string" }
-      },
-      "required": ["projectId", "year", "title"]
+      "required": ["contractorId", "projectId", "title", "date"]
     }
   },
   "auth": {
@@ -140,21 +114,13 @@
       "schema": { "$ref": "#/entities/Project" },
       "description": "Projectgegevens."
     },
-    "/annual_planning/{itemId}": {
-      "schema": { "$ref": "#/entities/AnnualPlanningItem" },
-      "description": "Jaarplanning items."
+    "/contractors/{contractorId}": {
+      "schema": { "$ref": "#/entities/Contractor" },
+      "description": "Aannemersgegevens."
     },
-    "/annual_planning_sections/{sectionId}": {
-      "schema": { "$ref": "#/entities/AnnualPlanningSection" },
-      "description": "Jaarplanning secties/blokken."
-    },
-    "/annual_milestones/{milestoneId}": {
-      "schema": { "$ref": "#/entities/AnnualMilestone" },
-      "description": "Milestones per jaar."
-    },
-    "/annual_planning_configs/{configId}": {
-      "schema": { "$ref": "#/entities/AnnualPlanningConfig" },
-      "description": "Configuratie (zoals titels) voor jaarplanningen."
+    "/contractors/{contractorId}/minutes/{minuteId}": {
+      "schema": { "$ref": "#/entities/MeetingMinute" },
+      "description": "Notulen per aannemer."
     }
   }
 }

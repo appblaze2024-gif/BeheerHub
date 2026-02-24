@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -14,6 +15,7 @@ import {
   User,
   FileWarning,
   Cpu,
+  ScrollText,
 } from 'lucide-react';
 import { ElementType } from 'react';
 
@@ -83,6 +85,7 @@ export const allMenuItems: MenuItem[] = [
         { href: '/issues/archive', label: 'Archief', id: 'archive' },
       ]
     },
+    { href: '/minutes', label: 'Notulen', icon: ScrollText, module: 'minutes' },
     { href: '/objects', label: 'Objecten', icon: MapPin, module: 'objects' },
     { href: '/spec-reports', label: 'Bestek', icon: FileWarning, module: 'specReports' },
     { href: '/navigation-module', label: 'Navigatie', icon: Navigation, module: 'navigation' },

@@ -3,19 +3,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * BEHEERHUB SECURITY RULES - TOP LEVEL ACCESS
-     * Prioriteit voor Jaarplanning om "Missing permissions" errors te voorkomen.
-     */
-    
-    match /annual_planning/{document=**} {
-      allow read, write: if request.auth != null;
-    }
-    
-    match /annual_milestones/{document=**} {
-      allow read, write: if request.auth != null;
-    }
-
     // --- HELPER FUNCTIES ---
 
     function isSignedIn() {
@@ -30,93 +17,102 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
-    function hasRole(role) {
-      return isSignedIn() && userExists() && getUserData().role == role;
+    function isAdmin() {
+      return isSignedIn() && userExists() && getUserData().role == 'Super admin';
     }
 
     function isPrivileged() {
       return isSignedIn() && userExists() && (getUserData().role == 'Super admin' || getUserData().role == 'toezichthouder');
     }
 
-    // Meldingen en werkbonnen
+    // --- RULES ---
+
+    match /annual_planning/{document=**} {
+      allow read, write: if isSignedIn();
+    }
+    
+    match /annual_milestones/{document=**} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /contractors/{contractorId} {
+      allow read: if isSignedIn();
+      allow write: if isPrivileged() || isAdmin();
+
+      match /minutes/{minuteId} {
+        allow read: if isSignedIn();
+        allow write: if isPrivileged() || isAdmin();
+      }
+    }
+
     match /meldingen/{meldingId} {
       allow read, write: if isSignedIn();
     }
 
-    // Gebruikersprofielen
     match /users/{userId} {
-      allow read: if isSignedIn();
-      allow write: if request.auth.uid == userId || (userExists() && getUserData().role == 'Super admin');
+      allow read, list: if isSignedIn();
+      allow write: if request.auth.uid == userId || isAdmin();
 
-      // Berichten / Notificaties
       match /messages/{messageId} {
-        allow read, list, update, delete: if request.auth.uid == userId || (userExists() && getUserData().role == 'Super admin');
+        allow read, list, update, delete: if request.auth.uid == userId || isAdmin();
         allow create: if isSignedIn(); 
       }
 
-      // Routes historie
       match /routes/{routeId} {
         allow read: if request.auth.uid == userId || isPrivileged();
         allow write: if request.auth.uid == userId || isPrivileged();
       }
     }
 
-    // Projecten en bijbehorende data
     match /projects/{projectId} {
       allow read: if isSignedIn();
-      allow write: if isPrivileged() || hasRole('ondersteuner');
+      allow write: if isPrivileged() || isAdmin();
 
       match /{allSubcollections=**} {
         allow read: if isSignedIn();
-        allow write: if isPrivileged() || hasRole('ondersteuner');
+        allow write: if isPrivileged() || isAdmin();
       }
     }
 
-    // Personeelsbestand
     match /medewerkers/{medewerkerId} {
       allow read: if isSignedIn();
-      allow write: if isPrivileged() || hasRole('ondersteuner');
+      allow write: if isPrivileged() || isAdmin();
     }
 
-    // IoT Sensoren
     match /sensors/{sensorId} {
       allow read: if isSignedIn();
       allow write: if isSignedIn();
     }
 
-    // Wagenpark en Materieel
     match /voertuigen/{id} {
       allow read: if isSignedIn();
-      allow write: if isPrivileged() || hasRole('ondersteuner');
+      allow write: if isPrivileged() || isAdmin();
       match /{allSubcollections=**} {
         allow read: if isSignedIn();
-        allow write: if isPrivileged() || hasRole('ondersteuner');
+        allow write: if isPrivileged() || isAdmin();
       }
     }
     match /machines/{id} {
       allow read: if isSignedIn();
-      allow write: if isPrivileged() || hasRole('ondersteuner');
+      allow write: if isPrivileged() || isAdmin();
       match /{allSubcollections=**} {
         allow read: if isSignedIn();
-        allow write: if isPrivileged() || hasRole('ondersteuner');
+        allow write: if isPrivileged() || isAdmin();
       }
     }
 
-    // Areaal objecten
     match /objects/{objectId} {
       allow read: if isSignedIn();
       allow write: if isPrivileged();
     }
     
-    // Systeeminstellingen
     match /settings/{settingId} {
       allow read: if isSignedIn();
       allow write: if isPrivileged();
     }
 
-    // GLOBALE REGEL: Super admin mag alles
     match /{document=**} {
-      allow read, write: if userExists() && getUserData().role == 'Super admin';
+      allow read, write: if isAdmin();
     }
   }
 }

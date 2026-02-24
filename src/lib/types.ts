@@ -1,3 +1,4 @@
+
 export type UserPermissions = {
   [module: string]: {
     view?: boolean;
@@ -333,4 +334,27 @@ export interface Route {
   completedObjects?: string[];
   skippedObjects?: string[];
   totalObjects?: number;
+}
+
+export interface Contractor {
+  id: string;
+  projectId: string;
+  name: string;
+  contactPerson?: string;
+  email?: string;
+  phone?: string;
+  createdAt: string;
+}
+
+export interface MeetingMinute {
+  id: string;
+  contractorId: string;
+  projectId: string;
+  title: string;
+  date: string;
+  attendees?: string;
+  content: string;
+  actionPoints?: string;
+  createdAt: string;
+  createdBy: string;
 }

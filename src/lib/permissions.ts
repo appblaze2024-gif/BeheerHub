@@ -1,3 +1,4 @@
+
 export const permissionConfig = [
     { 
         module: 'projects', 
@@ -30,6 +31,7 @@ export const permissionConfig = [
     { module: 'workPlanning', label: 'Werkplanning', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'edit', label: 'Bewerken' }] },
     { module: 'weeklyReports', label: 'Weekstaten', actions: [{ id: 'view', label: 'Bekijken' }] },
     { module: 'reports', label: 'Rapportages', actions: [{ id: 'view', label: 'Bekijken' }] },
+    { module: 'minutes', label: 'Notulen', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }] },
     { module: 'bestanden', label: 'Bestanden', actions: [{ id: 'view', label: 'Bekijken' }] },
     { 
         module: 'vehicles', 
