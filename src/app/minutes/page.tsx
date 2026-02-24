@@ -208,7 +208,7 @@ export default function MinutesPage() {
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-400"><MoreVertical className="h-5 w-5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-400"><MoreHorizontal className="h-5 w-5" /></Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => setIsContractorDialogOpen(true)} className="font-bold">Gegevens bewerken</DropdownMenuItem>
@@ -249,7 +249,7 @@ export default function MinutesPage() {
                             </div>
                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-primary" onClick={() => { setEditingMinute(m); setIsMinuteDialogOpen(true); }}>
-                                <item.icon className="h-4 w-4" />
+                                <Pencil className="h-4 w-4" />
                               </Button>
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-600" onClick={() => handleDeleteMinute(m.id)}>
                                 <Trash2 className="h-4 w-4" />
