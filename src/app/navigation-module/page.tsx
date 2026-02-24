@@ -185,7 +185,6 @@ function NavigatingView({
     if (!currentLeg?.annotation?.maxspeed) return 50;
     const maxspeeds = currentLeg.annotation.maxspeed;
     const totalLegDist = currentLeg.distance;
-    const distTravelled = Math.max(0, totalLegDist - distanceRemainingToDestination);
     const ratio = distTravelled / (totalLegDist || 1);
     const index = Math.floor(ratio * maxspeeds.length);
     const speedVal = maxspeeds[Math.min(index, maxspeeds.length - 1)];
@@ -508,9 +507,8 @@ function NavigatingView({
             return (
                 <Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude} anchor="center" onClick={(e) => {
                     e.originalEvent.stopPropagation();
-                    const dist = turf.distance(turf.point([targetLocation!.longitude, targetLocation!.latitude]), turf.point([obj.longitude, obj.latitude]), { units: 'meters' });
-                    if (dist <= 250) setArrivedObject(obj);
-                    else toast({ title: "Buiten bereik", description: `Rijd eerst dichterbij (${Math.round(dist)}m).` });
+                    // Radius-check verwijderd: Altijd de bestemming selecteren bij klik
+                    setArrivedObject(obj);
                 }}>
                     <div className="relative flex flex-col items-center">
                         <div className={cn("absolute h-12 w-12 rounded-full bg-blue-500/20", inRange && "animate-pulse")} />
