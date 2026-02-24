@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -104,16 +105,19 @@ function NavigatingView({
     objectsOnRoute, 
     onExit,
     initialUserLocation,
-    isSimulating = false
+    isSimulating = false,
+    routeType
 }: { 
     objectsOnRoute: MapObject[], 
     onExit: () => void,
     initialUserLocation: { latitude: number; longitude: number; } | null,
-    isSimulating?: boolean
+    isSimulating?: boolean,
+    routeType: 'veeg' | 'prullenbak' | 'meldingen' | null
 }) {
   const mapRef = React.useRef<MapRef>(null);
   const isMobile = useInternalIsMobile(768);
   const router = useRouter();
+  const { toast } = useToast();
   
   const [targetLocation, setTargetLocation] = React.useState<{ latitude: number, longitude: number, speed: number | null, heading: number | null } | null>(initialUserLocation ? { ...initialUserLocation, speed: 0, heading: 0 } : null);
   const [smoothLocation, setSmoothLocation] = React.useState<{ latitude: number, longitude: number, speed: number | null, heading: number | null } | null>(initialUserLocation ? { ...initialUserLocation, speed: 0, heading: 0 } : null);
@@ -138,7 +142,7 @@ function NavigatingView({
   const lastDistanceCalcTimeRef = React.useRef(0);
   const lastGeometryUpdateTimeRef = React.useRef(0);
 
-  const isWorkOrder = objectsOnRoute.length === 1 && objectsOnRoute[0].id === 'Bestemming';
+  const isWorkOrder = routeType === 'meldingen';
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY;
@@ -159,7 +163,6 @@ function NavigatingView({
 
   const { profile } = useProfile();
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
-  const { toast } = useToast();
   
   const [viewState, setViewState] = React.useState({
     pitch: 65,
@@ -185,7 +188,7 @@ function NavigatingView({
     if (!currentLeg?.annotation?.maxspeed) return 50;
     const maxspeeds = currentLeg.annotation.maxspeed;
     const totalLegDist = currentLeg.distance;
-    const ratio = distTravelled / (totalLegDist || 1);
+    const ratio = (totalLegDist - distanceRemainingToDestination) / (totalLegDist || 1);
     const index = Math.floor(ratio * maxspeeds.length);
     const speedVal = maxspeeds[Math.min(index, maxspeeds.length - 1)];
     let limit = 50;
@@ -323,10 +326,10 @@ function NavigatingView({
       const pt = turf.point([snappedLocation.longitude, snappedLocation.latitude]);
       
       const snapped = turf.nearestPointOnLine(line, pt);
-      const distanceTravelled = snapped.properties.location || 0; 
+      const distanceTravelledAlong = snapped.properties.location || 0; 
       
       const totalDist = turf.length(line, { units: 'kilometers' });
-      const sliced = turf.lineSliceAlong(line, distanceTravelled, totalDist, { units: 'kilometers' });
+      const sliced = turf.lineSliceAlong(line, distanceTravelledAlong, totalDist, { units: 'kilometers' });
       
       setThrottledGeometry({
         type: 'Feature',
@@ -507,8 +510,31 @@ function NavigatingView({
             return (
                 <Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude} anchor="center" onClick={(e) => {
                     e.originalEvent.stopPropagation();
-                    // Radius-check verwijderd: Altijd de bestemming selecteren bij klik
-                    setArrivedObject(obj);
+                    
+                    if (routeType === 'meldingen') {
+                        // Werkbonnen: Geen afstandsbeperking
+                        setArrivedObject(obj);
+                    } else {
+                        // Prullenbakken/Veegroutes: Moet binnen 150m zijn
+                        if (!targetLocation) {
+                            toast({ title: "GPS Signaal", description: "Wachten op locatiebepaling...", variant: "destructive" });
+                            return;
+                        }
+                        const dist = turf.distance(
+                            turf.point([targetLocation.longitude, targetLocation.latitude]),
+                            turf.point([obj.longitude, obj.latitude]),
+                            { units: 'meters' }
+                        );
+                        if (dist < 150) {
+                            setArrivedObject(obj);
+                        } else {
+                            toast({ 
+                                title: "Te ver weg", 
+                                description: `U moet binnen 150m van de ${routeType === 'prullenbak' ? 'bak' : 'locatie'} zijn om deze af te melden.`,
+                                variant: "destructive" 
+                            });
+                        }
+                    }
                 }}>
                     <div className="relative flex flex-col items-center">
                         <div className={cn("absolute h-12 w-12 rounded-full bg-blue-500/20", inRange && "animate-pulse")} />
@@ -533,7 +559,7 @@ function NavigatingView({
                 <CardContent className="p-3 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-2">
                         <Badge className="bg-primary text-white font-black text-xs h-6 px-3">{completedObjects.length}/{objectsOnRoute.length}</Badge>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Meldingen gereed</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{isWorkOrder ? 'Bonnen gereed' : 'Bakken gereed'}</span>
                     </div>
                     <div className="flex-1 max-w-[120px]">
                         <Progress value={(completedObjects.length / objectsOnRoute.length) * 100} className="h-1.5" />
@@ -564,11 +590,11 @@ function NavigatingView({
                   <CardHeader className="text-center pb-2">
                       <div className="mx-auto bg-blue-100 p-3 rounded-full w-16 h-16 flex items-center justify-center mb-4"><MapPin className="h-8 w-8 text-blue-600 fill-current" /></div>
                       <CardTitle className="text-2xl font-black uppercase tracking-tight">Bestemming Selectie</CardTitle>
-                      <CardDescription className="font-bold text-slate-500">Meldingsnummer: <span className="text-slate-900">{arrivedObject.name || arrivedObject.id}</span></CardDescription>
+                      <CardDescription className="font-bold text-slate-500">{isWorkOrder ? 'Meldingsnummer' : 'Object ID'}: <span className="text-slate-900">{arrivedObject.name || arrivedObject.id}</span></CardDescription>
                   </CardHeader>
                   <CardContent className="p-6 pt-2 space-y-3">
-                      <Button onClick={() => { router.push(`/issues?id=${arrivedObject.id}`); }} className="w-full h-14 bg-primary hover:bg-primary/90 text-lg font-black uppercase tracking-tight gap-2">
-                          <FileText className="h-5 w-5" /> Open Werkbon
+                      <Button onClick={() => { if (isWorkOrder) router.push(`/issues?id=${arrivedObject.id}`); else router.push(`/objects?id=${arrivedObject.id}`); }} className="w-full h-14 bg-primary hover:bg-primary/90 text-lg font-black uppercase tracking-tight gap-2">
+                          <FileText className="h-5 w-5" /> Open Details
                       </Button>
                       <Button variant="outline" onClick={() => handleArrivedAction('finish')} className="w-full h-12 border-2 font-black uppercase tracking-tight gap-2">
                           <CheckCircle2 className="h-4 w-4" /> Marker Verbergen
@@ -857,12 +883,12 @@ export default function StartNavigationPage() {
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {navigationState === 'navigating' ? (
-        <NavigatingView objectsOnRoute={objectsOnRoute} onExit={() => { setNavigationState('setup'); setObjectsOnRoute([]); if (searchParams.has('lat')) router.back(); }} initialUserLocation={tripStartLocation} isSimulating={isSimulationMode} />
+        <NavigatingView objectsOnRoute={objectsOnRoute} onExit={() => { setNavigationState('setup'); setObjectsOnRoute([]); if (searchParams.has('lat')) router.back(); }} initialUserLocation={tripStartLocation} isSimulating={isSimulationMode} routeType={routeType} />
       ) : (
         <div className="w-full h-full relative">
           <MapGL ref={mapRef} initialViewState={{ longitude: userLocation?.longitude || 5.2913, latitude: userLocation?.latitude || 52.1326, zoom: userLocation ? 14 : 7 }} style={{ width: '100%', height: '100%' }} mapStyle={mapStyle} mapboxAccessToken={MAPBOX_TOKEN} onClick={e => { setUserLocation({ latitude: e.lngLat.lat, longitude: e.lngLat.lng }); }}>
             {userLocation && (<Marker longitude={userLocation.longitude} latitude={userLocation.latitude} anchor="center"><div className="relative flex flex-col items-center"><div className="absolute h-10 w-10 rounded-full bg-green-500/30 animate-ping" /><div className="relative h-8 w-8 rounded-full bg-green-600 border-4 border-white shadow-xl flex items-center justify-center"><MapPin className="h-4 w-4 text-white fill-current" /></div></div></Marker>)}
-            {urlMeldingLocatie && (<Marker longitude={urlMeldingLocatie.longitude} latitude={urlMeldingLocatie.latitude} anchor="center"><div className="relative flex flex-col items-center"><div className="absolute h-12 w-12 rounded-full bg-blue-500/20 animate-pulse" /><div className="relative h-10 w-10 rounded-full bg-primary border-4 border-white shadow-2xl flex items-center justify-center"><Flag className="h-5 w-5 text-white fill-current" /></div></div></Marker>)}
+            {urlMeldingLocatie && (<Marker longitude={urlMeldingLocatie.longitude} latitude={urlMeldingLocatie.latitude} anchor="center"><div className="relative flex flex-col items-center"><div className="absolute h-12 w-12 rounded-full bg-blue-50/20 animate-pulse" /><div className="relative h-10 w-10 rounded-full bg-primary border-4 border-white shadow-2xl flex items-center justify-center"><Flag className="h-5 w-5 text-white fill-current" /></div></div></Marker>)}
             {routeGeoJSONFeatures && (<Source id="route-area" type="geojson" data={{ type: 'FeatureCollection', features: routeGeoJSONFeatures.features }}><Layer id="route-area-fill" type="fill" paint={{ 'fill-color': '#32ADE6', 'fill-opacity': 0.05 }} /><Layer id="route-area-outline" type="line" paint={{ 'line-color': '#32ADE6', 'line-width': 1, 'line-dasharray': [2, 2] }} /></Source>)}
             {objectsOnMap?.map(obj => (<Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude}><div className="w-4 h-4 bg-primary rounded-full border-2 border-white shadow-lg" /></Marker>))}
             {routeType === 'meldingen' && allMeldingen?.map(m => (<Marker key={m.id} longitude={m.longitude} latitude={m.latitude}><div className="w-5 h-5 bg-red-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-[8px] font-black text-white">!</div></Marker>))}
