@@ -50,6 +50,8 @@ export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, allPrul
   const [isMaximized, setIsMaximized] = React.useState(false);
 
   const firestore = useFirestore();
+  
+  // Properly memoize the collection reference to prevent infinite loops
   const objectsCollection = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'objects');
@@ -59,7 +61,6 @@ export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, allPrul
 
   const [selectedObjectIds, setSelectedObjectIds] = React.useState<string[]>([]);
   const [isSaving, setIsSaving] = React.useState(false);
-  const [initialViewState, setInitialViewState] = React.useState({ longitude: 5.2913, latitude: 52.1326, zoom: 7 });
 
   const routeGeoJSONFeatures = React.useMemo(() => {
     if (!route?.subGebieden) return [];
@@ -254,6 +255,8 @@ export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, allPrul
       cleanup();
     }
   }, [open, cleanup]);
+
+  const initialViewState = { longitude: 5.2913, latitude: 52.1326, zoom: 7 };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

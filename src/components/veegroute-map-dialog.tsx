@@ -14,7 +14,7 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { Button } from './ui/button';
-import { Maximize, Minimize, X, BoxSelect, Trash2, Plus } from 'lucide-react';
+import { Maximize, Minimize, X, BoxSelect, Trash2, Plus, Loader2 } from 'lucide-react';
 import * as turf from '@turf/turf';
 import { cn } from '@/lib/utils';
 import { useProfile } from '@/firebase/profile-provider';
@@ -130,7 +130,7 @@ export function VeegrouteMapDialog({ open, onOpenChange, route, onSave, readOnly
             {
                 'id': 'gl-draw-polygon-fill-inactive',
                 'type': 'fill',
-                'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon'], ['!=', 'mode', 'static'], ['!', ['has', 'user_roadTypes']]],
+                'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon'], ['!=', 'mode', 'static'], ['!has', 'user_roadTypes']],
                 'paint': {
                     'fill-color': '#3bb2d0',
                     'fill-outline-color': '#3bb2d0',
@@ -150,7 +150,7 @@ export function VeegrouteMapDialog({ open, onOpenChange, route, onSave, readOnly
             {
                 'id': 'gl-draw-polygon-stroke-inactive',
                 'type': 'line',
-                'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon'], ['!=', 'mode', 'static'], ['!', ['has', 'user_roadTypes']]],
+                'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon'], ['!=', 'mode', 'static'], ['!has', 'user_roadTypes']],
                 'layout': { 'line-cap': 'round', 'line-join': 'round' },
                 'paint': { 'line-color': '#3bb2d0', 'line-width': 2 }
             },
