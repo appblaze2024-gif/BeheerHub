@@ -17,7 +17,7 @@ import { Button } from './ui/button';
 import { Loader2, BoxSelect, Trash2, Maximize, Minimize, X } from 'lucide-react';
 import * as turf from '@turf/turf';
 import { cn } from '@/lib/utils';
-import { useFirestore, useCollection, updateDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useCollection, updateDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { writeBatch, collection, doc } from 'firebase/firestore';
 import type { Object as MapObject } from '@/lib/types';
 import { useProfile } from '@/firebase/profile-provider';
@@ -50,7 +50,7 @@ export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, allPrul
   const [isMaximized, setIsMaximized] = React.useState(false);
 
   const firestore = useFirestore();
-  const objectsCollection = React.useMemo(() => {
+  const objectsCollection = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'objects');
   }, [firestore]);

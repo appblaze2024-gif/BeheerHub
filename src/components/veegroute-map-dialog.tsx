@@ -130,7 +130,7 @@ export function VeegrouteMapDialog({ open, onOpenChange, route, onSave, readOnly
             {
                 'id': 'gl-draw-polygon-fill-inactive',
                 'type': 'fill',
-                'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon'], ['!=', 'mode', 'static']],
+                'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon'], ['!=', 'mode', 'static'], ['!', ['has', 'user_roadTypes']]],
                 'paint': {
                     'fill-color': '#3bb2d0',
                     'fill-outline-color': '#3bb2d0',
@@ -150,7 +150,7 @@ export function VeegrouteMapDialog({ open, onOpenChange, route, onSave, readOnly
             {
                 'id': 'gl-draw-polygon-stroke-inactive',
                 'type': 'line',
-                'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon'], ['!=', 'mode', 'static']],
+                'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon'], ['!=', 'mode', 'static'], ['!', ['has', 'user_roadTypes']]],
                 'layout': { 'line-cap': 'round', 'line-join': 'round' },
                 'paint': { 'line-color': '#3bb2d0', 'line-width': 2 }
             },
@@ -167,7 +167,7 @@ export function VeegrouteMapDialog({ open, onOpenChange, route, onSave, readOnly
                 'filter': ['all', ['==', 'active', 'false'], ['has', 'user_roadTypes']],
                 'paint': {
                     'fill-color': '#9333ea',
-                    'fill-opacity': 0.3
+                    'fill-opacity': 0.4
                 }
             },
             {
@@ -176,7 +176,7 @@ export function VeegrouteMapDialog({ open, onOpenChange, route, onSave, readOnly
                 'filter': ['all', ['==', 'active', 'false'], ['has', 'user_roadTypes']],
                 'paint': {
                     'line-color': '#9333ea',
-                    'line-width': 2
+                    'line-width': 3
                 }
             },
             {
@@ -238,7 +238,11 @@ export function VeegrouteMapDialog({ open, onOpenChange, route, onSave, readOnly
         : [...activeRoadTypes, roadType];
         
     setActiveRoadTypes(newTypes);
-    drawRef.current.setFeatureProperty(selectedFeatureId, 'roadTypes', newTypes);
+    if (newTypes.length > 0) {
+        drawRef.current.setFeatureProperty(selectedFeatureId, 'roadTypes', newTypes);
+    } else {
+        drawRef.current.setFeatureProperty(selectedFeatureId, 'roadTypes', undefined);
+    }
   };
 
   const handleSaveArea = async () => {
