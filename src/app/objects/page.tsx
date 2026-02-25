@@ -24,6 +24,7 @@ import {
   Loader2,
   Check,
   PlusCircle,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +34,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
@@ -52,7 +55,7 @@ import { MapboxView } from '@/components/mapbox-view';
 import { ObjectImportDialog } from '@/components/object-import-dialog';
 import { ObjectExportDialog } from '@/components/object-export-dialog';
 import { useCollection, useFirestore, updateDocumentNonBlocking, useMemoFirebase, useDoc, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, orderBy, limit, writeBatch, arrayUnion } from 'firebase/firestore';
+import { collection, doc, query, orderBy, limit, writeBatch, arrayUnion, deleteDoc } from 'firebase/firestore';
 import type { Wijk } from '@/lib/types';
 import * as turf from '@turf/turf';
 import { Label } from '@/components/ui/label';
@@ -79,6 +82,16 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type Area = {
   id: string;
@@ -254,6 +267,7 @@ export default function ObjectsPage() {
   const [isAddFilterDialogOpen, setIsAddFilterDialogOpen] = React.useState(false);
   const [newFilterName, setNewFilterName] = React.useState('');
   const [isSavingFilter, setIsSavingFilter] = React.useState(false);
+  const [isBulkDeleteAlertOpen, setIsBulkDeleteAlertOpen] = React.useState(false);
 
   const { selectedProjectId, setSelectedProjectId } = useProject();
   const [selectedAreaIds, setSelectedAreaIds] = React.useState<string[]>([]);
@@ -315,7 +329,6 @@ export default function ObjectsPage() {
         
         if (typeFilter === 'container') return isContainer;
         if (typeFilter === 'prullenbak') {
-            // Also check against all custom filters to keep them out of "prullenbak" if they match something specific
             const matchesAnyCustom = customFilters.some(cf => {
                 const cfLower = cf.toLowerCase();
                 return typeStr.includes(cfLower) || subTypeStr.includes(cfLower);
@@ -323,7 +336,6 @@ export default function ObjectsPage() {
             return !isContainer && !matchesAnyCustom;
         }
         
-        // Custom filter
         const filterLower = typeFilter.toLowerCase();
         return typeStr.includes(filterLower) || subTypeStr.includes(filterLower);
       });
@@ -391,6 +403,40 @@ export default function ObjectsPage() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (!firestore || filteredObjectsList.length === 0) return;
+    setIsBulkLoading(true);
+    
+    const count = filteredObjectsList.length;
+    const batchSize = 500;
+    
+    try {
+      for (let i = 0; i < filteredObjectsList.length; i += batchSize) {
+        const batch = writeBatch(firestore);
+        const chunk = filteredObjectsList.slice(i, i + batchSize);
+        chunk.forEach(obj => {
+          batch.delete(doc(firestore, 'objects', obj.id));
+        });
+        await batch.commit();
+      }
+      
+      toast({
+        title: "Bulk verwijdering voltooid",
+        description: `${count} objecten zijn verwijderd.`,
+      });
+      setIsBulkDeleteAlertOpen(false);
+    } catch (error) {
+      console.error("Error bulk deleting objects:", error);
+      toast({
+        variant: "destructive",
+        title: "Fout bij verwijderen",
+        description: "Kon de objecten niet in bulk verwijderen.",
+      });
+    } finally {
+      setIsBulkLoading(false);
+    }
+  };
+
   const handleAreaSelectionChange = (areaId: string, checked: boolean) => {
     setSelectedAreaIds(prev => 
       checked ? [...prev, areaId] : prev.filter(id => id !== areaId)
@@ -423,7 +469,6 @@ export default function ObjectsPage() {
             return !isContainer && !matchesAnyCustom;
         }
         
-        // Custom
         const filterLower = typeFilter.toLowerCase();
         return typeStr.includes(filterLower) || subTypeStr.includes(filterLower);
       });
@@ -505,6 +550,8 @@ export default function ObjectsPage() {
     }
   };
 
+  const currentFilterName = typeFilter === 'all' ? 'alle objecten' : typeFilter;
+
   if (isLoadingObjects || isLoadingProjects) {
     return <LoadingScreen message="Objecten laden..." />;
   }
@@ -556,6 +603,11 @@ export default function ObjectsPage() {
             <DropdownMenuContent align="start" className="w-56">
               <DropdownMenuItem onClick={handleSetAllActive} className="font-bold cursor-pointer">
                 Zet alle op Actief
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setIsBulkDeleteAlertOpen(true)} className="font-black uppercase tracking-tight text-red-600 cursor-pointer">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Verwijder alle {currentFilterName}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -936,6 +988,29 @@ export default function ObjectsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={isBulkDeleteAlertOpen} onOpenChange={setIsBulkDeleteAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
+            <AlertDialogDescription>
+              U staat op het punt om <strong>{filteredObjectsList.length}</strong> objecten te verwijderen die vallen onder de actieve filter: <strong>{currentFilterName}</strong>. 
+              Deze actie kan niet ongedaan worden gemaakt.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isBulkLoading}>Annuleren</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleBulkDelete} 
+              disabled={isBulkLoading}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isBulkLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+              Ja, verwijder {filteredObjectsList.length} objecten
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
