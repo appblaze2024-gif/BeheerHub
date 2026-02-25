@@ -50,7 +50,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { MapboxView } from '@/components/mapbox-view';
 import { ObjectImportDialog } from '@/components/object-import-dialog';
 import { ObjectExportDialog } from '@/components/object-export-dialog';
@@ -58,6 +58,7 @@ import { useCollection, useFirestore, updateDocumentNonBlocking, useMemoFirebase
 import { collection, doc, query, orderBy, limit, writeBatch, arrayUnion, deleteDoc } from 'firebase/firestore';
 import type { Wijk } from '@/lib/types';
 import * as turf from '@turf/turf';
+import * as XLSX from 'xlsx';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useProject } from '@/context/project-context';
@@ -92,6 +93,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 type Area = {
   id: string;
@@ -269,6 +271,11 @@ export default function ObjectsPage() {
   const [isSavingFilter, setIsSavingFilter] = React.useState(false);
   const [isBulkDeleteAlertOpen, setIsBulkDeleteAlertOpen] = React.useState(false);
 
+  // Duplicates state
+  const [duplicateObjects, setDuplicateObjects] = React.useState<any[]>([]);
+  const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = React.useState(false);
+  const [isFindingDuplicates, setIsFindingDuplicates] = React.useState(false);
+
   const { selectedProjectId, setSelectedProjectId } = useProject();
   const [selectedAreaIds, setSelectedAreaIds] = React.useState<string[]>([]);
 
@@ -437,6 +444,59 @@ export default function ObjectsPage() {
     }
   };
 
+  const handleFindDuplicates = () => {
+    setIsFindingDuplicates(true);
+    const seen = new Map<string, any[]>();
+    const duplicates: any[] = [];
+
+    filteredObjectsList.forEach(obj => {
+      if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return;
+      
+      const key = `${obj.latitude.toFixed(8)}_${obj.longitude.toFixed(8)}`;
+      if (seen.has(key)) {
+        const group = seen.get(key)!;
+        if (group.length === 1) {
+          duplicates.push(group[0]);
+        }
+        duplicates.push(obj);
+        group.push(obj);
+      } else {
+        seen.set(key, [obj]);
+      }
+    });
+
+    setDuplicateObjects(duplicates);
+    setIsDuplicateDialogOpen(true);
+    setIsFindingDuplicates(false);
+    
+    if (duplicates.length === 0) {
+        toast({ title: "Geen duplicaten", description: "Alle objecten in deze filter hebben unieke coördinaten." });
+    }
+  };
+
+  const handleExportDuplicates = () => {
+    if (duplicateObjects.length === 0) return;
+
+    const currentFilterName = typeFilter === 'all' ? 'alle objecten' : typeFilter;
+
+    const dataForSheet = duplicateObjects.map(obj => ({
+      'ID Nummer': obj.id,
+      'Straatnaam': obj.straatnaam || '',
+      'Huisnummer': obj.huisnummer || '',
+      'Postcode': obj.postcode || '',
+      'X-coordinaat': obj.longitude,
+      'Y-coordinaat': obj.latitude,
+      'Locatie Type': obj.locatieType,
+      'Filter': typeFilter
+    }));
+    
+    const worksheet = XLSX.utils.json_to_sheet(dataForSheet);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Dubbele Objecten");
+    
+    XLSX.writeFile(workbook, `dubbele_coordinaten_${currentFilterName}.xlsx`);
+  };
+
   const handleAreaSelectionChange = (areaId: string, checked: boolean) => {
     setSelectedAreaIds(prev => 
       checked ? [...prev, areaId] : prev.filter(id => id !== areaId)
@@ -603,6 +663,10 @@ export default function ObjectsPage() {
             <DropdownMenuContent align="start" className="w-56">
               <DropdownMenuItem onClick={handleSetAllActive} className="font-bold cursor-pointer">
                 Zet alle op Actief
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleFindDuplicates} className="font-bold cursor-pointer">
+                {isFindingDuplicates ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+                Zoek dubbele coördinaten
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setIsBulkDeleteAlertOpen(true)} className="font-black uppercase tracking-tight text-red-600 cursor-pointer">
@@ -1011,6 +1075,48 @@ export default function ObjectsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={isDuplicateDialogOpen} onOpenChange={setIsDuplicateDialogOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl rounded-3xl">
+          <DialogHeader className="p-6 border-b bg-slate-50">
+            <DialogTitle className="text-xl font-black uppercase tracking-tight">Dubbele Coördinaten Gevonden</DialogTitle>
+            <DialogDescription className="font-bold text-slate-500">
+              Er zijn {duplicateObjects.length} objecten gevonden met exact dezelfde coördinaten binnen de filter "{currentFilterName}".
+            </DialogDescription>
+          </DialogHeader>
+          
+          <ScrollArea className="flex-1 my-4 px-6">
+            <div className="divide-y border rounded-2xl overflow-hidden bg-white">
+              {duplicateObjects.map((obj, i) => (
+                <div key={i} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-black text-sm uppercase tracking-tight text-slate-900 truncate">{obj.id}</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{obj.straatnaam} {obj.huisnummer}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-[10px] font-mono font-black text-primary bg-primary/5 px-2 py-1 rounded-lg">
+                        {obj.latitude.toFixed(6)}, {obj.longitude.toFixed(6)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              {duplicateObjects.length === 0 && (
+                  <div className="p-12 text-center text-slate-300">
+                      <p className="text-sm font-bold uppercase tracking-widest">Geen duplicaten gevonden.</p>
+                  </div>
+              )}
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="p-6 border-t bg-slate-50">
+            <Button variant="ghost" onClick={() => setIsDuplicateDialogOpen(false)} className="font-bold">Sluiten</Button>
+            <Button onClick={handleExportDuplicates} disabled={duplicateObjects.length === 0} className="font-black uppercase tracking-tight h-11 px-8 shadow-xl shadow-primary/20">
+              <Download className="mr-2 h-4 w-4" />
+              Exporteer naar Excel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
