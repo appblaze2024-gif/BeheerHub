@@ -55,7 +55,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { MapboxView } from '@/components/mapbox-view';
 import { ObjectImportDialog } from '@/components/object-import-dialog';
 import { ObjectExportDialog } from '@/components/object-export-dialog';
@@ -478,7 +478,7 @@ export default function ObjectsPage() {
         } else seenLocation.set(locKey, [obj]);
       }
 
-      // 2. Check ID (External or Internal)
+      // 2. Check ID (External or Internal) - Explicit search for numbers like 141619
       if (dupCriteria.id && obj.id) {
         const idKey = String(obj.id).toLowerCase().trim();
         if (seenId.has(idKey)) {
@@ -702,7 +702,7 @@ export default function ObjectsPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-64 p-2 rounded-xl border-slate-100 shadow-xl">
-              <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-2">Data Beheer</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-2">Beheer</DropdownMenuLabel>
               <DropdownMenuItem onClick={handleSetAllActive} className="font-bold cursor-pointer rounded-lg h-10">
                 <ShieldCheck className="mr-3 h-4 w-4 text-green-600" />
                 Zet alle op Actief
@@ -1149,8 +1149,8 @@ export default function ObjectsPage() {
             <div className="flex items-center space-x-3 p-3 rounded-2xl border-2 border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => setDupCriteria(p => ({ ...p, id: !p.id }))}>
                 <Checkbox checked={dupCriteria.id} onCheckedChange={(c) => setDupCriteria(p => ({ ...p, id: !!c }))} />
                 <div className="flex-1">
-                    <Label className="font-black uppercase text-xs cursor-pointer">Uniek ID Nummer</Label>
-                    <p className="text-[10px] text-slate-400 font-bold leading-none mt-1">Match op intern ID of Serienummer</p>
+                    <Label className="font-black uppercase text-xs cursor-pointer">ID Nummer (bijv. 141619)</Label>
+                    <p className="text-[10px] text-slate-400 font-bold leading-none mt-1">Match op uniek systeemnummer</p>
                 </div>
             </div>
 
