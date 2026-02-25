@@ -25,6 +25,11 @@ import {
   Check,
   PlusCircle,
   Trash2,
+  ShieldCheck,
+  SearchCode,
+  FileCheck,
+  AlertTriangle,
+  Settings2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -74,6 +79,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import {
   Dialog,
@@ -272,9 +278,17 @@ export default function ObjectsPage() {
   const [isBulkDeleteAlertOpen, setIsBulkDeleteAlertOpen] = React.useState(false);
 
   // Duplicates state
-  const [duplicateObjects, setDuplicateObjects] = React.useState<any[]>([]);
+  const [duplicateObjects, setDuplicateObjects] = React.useState<{ obj: any, reason: string }[]>([]);
   const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = React.useState(false);
+  const [isQualityDialogOpen, setIsQualityDialogOpen] = React.useState(false);
   const [isFindingDuplicates, setIsFindingDuplicates] = React.useState(false);
+  
+  // Duplicate finding criteria
+  const [dupCriteria, setDupCriteria] = React.useState({
+    location: true,
+    id: true,
+    address: false,
+  });
 
   const { selectedProjectId, setSelectedProjectId } = useProject();
   const [selectedAreaIds, setSelectedAreaIds] = React.useState<string[]>([]);
@@ -446,48 +460,74 @@ export default function ObjectsPage() {
 
   const handleFindDuplicates = () => {
     setIsFindingDuplicates(true);
-    // Use the native JS Map constructor, not shadowed by the lucide icon
-    const seen = new Map<string, any[]>();
-    const duplicates: any[] = [];
+    const seenLocation = new globalThis.Map<string, any[]>();
+    const seenId = new globalThis.Map<string, any[]>();
+    const seenAddress = new globalThis.Map<string, any[]>();
+    
+    const duplicates: { obj: any, reason: string }[] = [];
 
     filteredObjectsList.forEach(obj => {
-      if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return;
-      
-      const key = `${obj.latitude.toFixed(8)}_${obj.longitude.toFixed(8)}`;
-      if (seen.has(key)) {
-        const group = seen.get(key)!;
-        if (group.length === 1) {
-          duplicates.push(group[0]);
-        }
-        duplicates.push(obj);
-        group.push(obj);
-      } else {
-        seen.set(key, [obj]);
+      // 1. Check Location
+      if (dupCriteria.location && typeof obj.latitude === 'number' && typeof obj.longitude === 'number') {
+        const locKey = `${obj.latitude.toFixed(8)}_${obj.longitude.toFixed(8)}`;
+        if (seenLocation.has(locKey)) {
+          const group = seenLocation.get(locKey)!;
+          if (group.length === 1) duplicates.push({ obj: group[0], reason: 'Zelfde locatie' });
+          duplicates.push({ obj, reason: 'Zelfde locatie' });
+          group.push(obj);
+        } else seenLocation.set(locKey, [obj]);
+      }
+
+      // 2. Check ID (External or Internal)
+      if (dupCriteria.id && obj.id) {
+        const idKey = String(obj.id).toLowerCase().trim();
+        if (seenId.has(idKey)) {
+          const group = seenId.get(idKey)!;
+          if (group.length === 1) duplicates.push({ obj: group[0], reason: 'Zelfde ID' });
+          duplicates.push({ obj, reason: 'Zelfde ID' });
+          group.push(obj);
+        } else seenId.set(idKey, [obj]);
+      }
+
+      // 3. Check Address
+      if (dupCriteria.address && obj.straatnaam && obj.huisnummer) {
+        const addrKey = `${obj.straatnaam.toLowerCase()}_${obj.huisnummer.toLowerCase()}`.trim();
+        if (seenAddress.has(addrKey)) {
+          const group = seenAddress.get(addrKey)!;
+          if (group.length === 1) duplicates.push({ obj: group[0], reason: 'Zelfde adres' });
+          duplicates.push({ obj, reason: 'Zelfde adres' });
+          group.push(obj);
+        } else seenAddress.set(addrKey, [obj]);
       }
     });
 
-    setDuplicateObjects(duplicates);
+    // Remove duplicates from the result list if they matched multiple criteria
+    const uniqueResults = duplicates.reduce((acc, current) => {
+        const x = acc.find(item => item.obj.id === current.obj.id);
+        if (!x) return acc.concat([current]);
+        return acc;
+    }, [] as { obj: any, reason: string }[]);
+
+    setDuplicateObjects(uniqueResults);
     setIsDuplicateDialogOpen(true);
+    setIsQualityDialogOpen(false);
     setIsFindingDuplicates(false);
     
-    if (duplicates.length === 0) {
-        toast({ title: "Geen duplicaten", description: "Alle objecten in deze filter hebben unieke coördinaten." });
+    if (uniqueResults.length === 0) {
+        toast({ title: "Geen duplicaten", description: "Geen dubbele objecten gevonden op basis van uw criteria." });
     }
   };
 
   const handleExportDuplicates = () => {
     if (duplicateObjects.length === 0) return;
 
-    const currentFilterName = typeFilter === 'all' ? 'alle objecten' : typeFilter;
-
-    const dataForSheet = duplicateObjects.map(obj => ({
-      'ID Nummer': obj.id,
-      'Straatnaam': obj.straatnaam || '',
-      'Huisnummer': obj.huisnummer || '',
-      'Postcode': obj.postcode || '',
-      'X-coordinaat': obj.longitude,
-      'Y-coordinaat': obj.latitude,
-      'Locatie Type': obj.locatieType,
+    const dataForSheet = duplicateObjects.map(d => ({
+      'ID Nummer': d.obj.id,
+      'Straatnaam': d.obj.straatnaam || '',
+      'Huisnummer': d.obj.huisnummer || '',
+      'Reden': d.reason,
+      'X-coordinaat': d.obj.longitude,
+      'Y-coordinaat': d.obj.latitude,
       'Filter': typeFilter
     }));
     
@@ -495,7 +535,7 @@ export default function ObjectsPage() {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Dubbele Objecten");
     
-    XLSX.writeFile(workbook, `dubbele_coordinaten_${currentFilterName}.xlsx`);
+    XLSX.writeFile(workbook, `controle_duplicaten_${typeFilter}.xlsx`);
   };
 
   const handleAreaSelectionChange = (areaId: string, checked: boolean) => {
@@ -656,22 +696,29 @@ export default function ObjectsPage() {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="shrink-0 font-bold h-9">
-                {isBulkLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              <Button variant="outline" size="sm" className="shrink-0 font-bold h-9 shadow-sm">
+                <Settings2 className="mr-2 h-4 w-4" />
                 Bulk Acties <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56">
-              <DropdownMenuItem onClick={handleSetAllActive} className="font-bold cursor-pointer">
+            <DropdownMenuContent align="start" className="w-64 p-2 rounded-xl border-slate-100 shadow-xl">
+              <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-2">Data Beheer</DropdownMenuLabel>
+              <DropdownMenuItem onClick={handleSetAllActive} className="font-bold cursor-pointer rounded-lg h-10">
+                <ShieldCheck className="mr-3 h-4 w-4 text-green-600" />
                 Zet alle op Actief
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleFindDuplicates} className="font-bold cursor-pointer">
-                {isFindingDuplicates ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
-                Zoek dubbele coördinaten
-              </DropdownMenuItem>
+              
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setIsBulkDeleteAlertOpen(true)} className="font-black uppercase tracking-tight text-red-600 cursor-pointer">
-                <Trash2 className="mr-2 h-4 w-4" />
+              <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-2">Kwaliteitscontrole</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => setIsQualityDialogOpen(true)} className="font-bold cursor-pointer rounded-lg h-10">
+                <SearchCode className="mr-3 h-4 w-4 text-primary" />
+                Zoek duplicaten...
+              </DropdownMenuItem>
+              
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-2">Opschonen</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => setIsBulkDeleteAlertOpen(true)} className="font-black uppercase tracking-tight text-red-600 cursor-pointer rounded-lg h-10 focus:text-red-600 focus:bg-red-50">
+                <Trash2 className="mr-3 h-4 w-4" />
                 Verwijder alle {currentFilterName}
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -1077,33 +1124,90 @@ export default function ObjectsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Quality Control Selection Dialog */}
+      <Dialog open={isQualityDialogOpen} onOpenChange={setIsQualityDialogOpen}>
+        <DialogContent className="sm:max-w-md border-none shadow-2xl rounded-3xl">
+          <DialogHeader className="p-2">
+            <div className="bg-primary/10 h-12 w-12 rounded-2xl flex items-center justify-center mb-4">
+                <SearchCode className="h-6 w-6 text-primary" />
+            </div>
+            <DialogTitle className="text-xl font-black uppercase tracking-tight">Slimme Kwaliteitscontrole</DialogTitle>
+            <DialogDescription className="font-bold text-slate-500">
+              Op welke criteria wilt u de {currentFilterName} controleren op dubbele invoer?
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-6 space-y-4">
+            <div className="flex items-center space-x-3 p-3 rounded-2xl border-2 border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => setDupCriteria(p => ({ ...p, location: !p.location }))}>
+                <Checkbox checked={dupCriteria.location} onCheckedChange={(c) => setDupCriteria(p => ({ ...p, location: !!c }))} />
+                <div className="flex-1">
+                    <Label className="font-black uppercase text-xs cursor-pointer">Exacte Coördinaten</Label>
+                    <p className="text-[10px] text-slate-400 font-bold leading-none mt-1">Match op Latitude & Longitude</p>
+                </div>
+            </div>
+            
+            <div className="flex items-center space-x-3 p-3 rounded-2xl border-2 border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => setDupCriteria(p => ({ ...p, id: !p.id }))}>
+                <Checkbox checked={dupCriteria.id} onCheckedChange={(c) => setDupCriteria(p => ({ ...p, id: !!c }))} />
+                <div className="flex-1">
+                    <Label className="font-black uppercase text-xs cursor-pointer">Uniek ID Nummer</Label>
+                    <p className="text-[10px] text-slate-400 font-bold leading-none mt-1">Match op intern ID of Serienummer</p>
+                </div>
+            </div>
+
+            <div className="flex items-center space-x-3 p-3 rounded-2xl border-2 border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => setDupCriteria(p => ({ ...p, address: !p.address }))}>
+                <Checkbox checked={dupCriteria.address} onCheckedChange={(c) => setDupCriteria(p => ({ ...p, address: !!c }))} />
+                <div className="flex-1">
+                    <Label className="font-black uppercase text-xs cursor-pointer">Straatnaam & Nummer</Label>
+                    <p className="text-[10px] text-slate-400 font-bold leading-none mt-1">Match op fysieke adresgegevens</p>
+                </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsQualityDialogOpen(false)} className="font-bold">Annuleren</Button>
+            <Button onClick={handleFindDuplicates} disabled={isFindingDuplicates || (!dupCriteria.location && !dupCriteria.id && !dupCriteria.address)} className="font-black uppercase tracking-tight h-11 px-8 shadow-xl shadow-primary/20">
+              {isFindingDuplicates ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileCheck className="mr-2 h-4 w-4" />}
+              Start Controle
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isDuplicateDialogOpen} onOpenChange={setIsDuplicateDialogOpen}>
         <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl rounded-3xl">
           <DialogHeader className="p-6 border-b bg-slate-50">
-            <DialogTitle className="text-xl font-black uppercase tracking-tight">Dubbele Coördinaten Gevonden</DialogTitle>
+            <DialogTitle className="text-xl font-black uppercase tracking-tight">Analyse Resultaten</DialogTitle>
             <DialogDescription className="font-bold text-slate-500">
-              Er zijn {duplicateObjects.length} objecten gevonden met exact dezelfde coördinaten binnen de filter "{currentFilterName}".
+              Er zijn {duplicateObjects.length} objecten gevonden die mogelijk duplicaten zijn binnen "{currentFilterName}".
             </DialogDescription>
           </DialogHeader>
           
           <ScrollArea className="flex-1 my-4 px-6">
             <div className="divide-y border rounded-2xl overflow-hidden bg-white">
-              {duplicateObjects.map((obj, i) => (
-                <div key={i} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+              {duplicateObjects.map((item, i) => (
+                <div key={i} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors group">
                   <div className="min-w-0 flex-1">
-                    <p className="font-black text-sm uppercase tracking-tight text-slate-900 truncate">{obj.id}</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{obj.straatnaam} {obj.huisnummer}</p>
+                    <div className="flex items-center gap-2 mb-1">
+                        <p className="font-black text-sm uppercase tracking-tight text-slate-900 truncate">{item.obj.id}</p>
+                        <Badge variant="outline" className="text-[8px] h-4 uppercase font-black bg-slate-100 border-none">{item.reason}</Badge>
+                    </div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{item.obj.straatnaam} {item.obj.huisnummer}</p>
                   </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-[10px] font-mono font-black text-primary bg-primary/5 px-2 py-1 rounded-lg">
-                        {obj.latitude.toFixed(6)}, {obj.longitude.toFixed(6)}
-                    </p>
+                  <div className="text-right shrink-0 flex items-center gap-3">
+                    <div className="hidden sm:block">
+                        <p className="text-[10px] font-mono font-bold text-slate-400">
+                            {item.obj.latitude.toFixed(5)}, {item.obj.longitude.toFixed(5)}
+                        </p>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => { setSelectedObject(item.obj); setIsDuplicateDialogOpen(false); }} className="h-8 w-8 text-slate-300 hover:text-primary hover:bg-primary/5 transition-colors">
+                        <ChevronRight className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               ))}
               {duplicateObjects.length === 0 && (
                   <div className="p-12 text-center text-slate-300">
-                      <p className="text-sm font-bold uppercase tracking-widest">Geen duplicaten gevonden.</p>
+                      <p className="text-sm font-bold uppercase tracking-widest">Geen duplicaten gevonden op basis van de selectie.</p>
                   </div>
               )}
             </div>
@@ -1113,7 +1217,7 @@ export default function ObjectsPage() {
             <Button variant="ghost" onClick={() => setIsDuplicateDialogOpen(false)} className="font-bold">Sluiten</Button>
             <Button onClick={handleExportDuplicates} disabled={duplicateObjects.length === 0} className="font-black uppercase tracking-tight h-11 px-8 shadow-xl shadow-primary/20">
               <Download className="mr-2 h-4 w-4" />
-              Exporteer naar Excel
+              Exporteer Rapport (XLSX)
             </Button>
           </DialogFooter>
         </DialogContent>
