@@ -98,7 +98,13 @@ function Header() {
         <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="hover:bg-slate-100 rounded-xl h-10 w-10">
-              <Menu className="h-6 w-6 text-slate-900" />
+              <Image 
+                src="https://i.ibb.co/kgtwqH50/favicon-32x32.png" 
+                alt="BeheerHub" 
+                width={24} 
+                height={24} 
+                className="object-contain"
+              />
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="p-0 border-none w-[320px] sm:w-80">
@@ -202,7 +208,7 @@ function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
 
     try {
       const [hours, minutes] = shift.eind.split(':').map(Number);
-      if (isNaN(hours) || isNaN(minutes)) return;
+      if (isNaN(hours) || iisNaN(minutes)) return;
 
       const now = new Date();
       const endTimeToday = new Date();
