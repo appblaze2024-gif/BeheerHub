@@ -23,6 +23,7 @@ import {
   History,
   Loader2,
   Check,
+  PlusCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,12 +47,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { MapboxView } from '@/components/mapbox-view';
 import { ObjectImportDialog } from '@/components/object-import-dialog';
 import { ObjectExportDialog } from '@/components/object-export-dialog';
-import { useCollection, useFirestore, updateDocumentNonBlocking, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, doc, query, orderBy, limit, writeBatch } from 'firebase/firestore';
+import { useCollection, useFirestore, updateDocumentNonBlocking, useMemoFirebase, useDoc, setDocumentNonBlocking } from '@/firebase';
+import { collection, doc, query, orderBy, limit, writeBatch, arrayUnion } from 'firebase/firestore';
 import type { Wijk } from '@/lib/types';
 import * as turf from '@turf/turf';
 import { Label } from '@/components/ui/label';
@@ -68,7 +69,16 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
 
 type Area = {
   id: string;
@@ -240,7 +250,10 @@ export default function ObjectsPage() {
   const [viewMode, setViewMode] = React.useState<'list' | 'map'>('list');
   const [showHeatmap, setShowHeatmap] = React.useState(false);
   const [isBulkLoading, setIsBulkLoading] = React.useState(false);
-  const [typeFilter, setTypeFilter] = React.useState<'all' | 'prullenbak' | 'container'>('all');
+  const [typeFilter, setTypeFilter] = React.useState<string>('all');
+  const [isAddFilterDialogOpen, setIsAddFilterDialogOpen] = React.useState(false);
+  const [newFilterName, setNewFilterName] = React.useState('');
+  const [isSavingFilter, setIsSavingFilter] = React.useState(false);
 
   const { selectedProjectId, setSelectedProjectId } = useProject();
   const [selectedAreaIds, setSelectedAreaIds] = React.useState<string[]>([]);
@@ -254,6 +267,10 @@ export default function ObjectsPage() {
       if (!firestore) return null;
       return collection(firestore, 'projects');
   }, [firestore]);
+
+  const filtersRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'object_filters') : null, [firestore]);
+  const { data: filtersData } = useDoc<{ custom: string[] }>(filtersRef);
+  const customFilters = filtersData?.custom || [];
 
   const { data: objects, isLoading: isLoadingObjects } = useCollection<any>(objectsQuery);
   const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsCollection);
@@ -292,12 +309,23 @@ export default function ObjectsPage() {
     // Apply Type Filter
     if (typeFilter !== 'all') {
       filtered = filtered.filter(obj => {
-        const isContainer = (obj.locatieType?.toLowerCase().includes('container') || 
-                            obj.locatieSubType?.toLowerCase().includes('container') ||
-                            obj.locatieType?.toLowerCase().includes('ondergronds'));
+        const typeStr = (obj.locatieType || '').toLowerCase();
+        const subTypeStr = (obj.locatieSubType || '').toLowerCase();
+        const isContainer = typeStr.includes('container') || subTypeStr.includes('container') || typeStr.includes('ondergronds');
         
         if (typeFilter === 'container') return isContainer;
-        return !isContainer; // default to prullenbak for everything else
+        if (typeFilter === 'prullenbak') {
+            // Also check against all custom filters to keep them out of "prullenbak" if they match something specific
+            const matchesAnyCustom = customFilters.some(cf => {
+                const cfLower = cf.toLowerCase();
+                return typeStr.includes(cfLower) || subTypeStr.includes(cfLower);
+            });
+            return !isContainer && !matchesAnyCustom;
+        }
+        
+        // Custom filter
+        const filterLower = typeFilter.toLowerCase();
+        return typeStr.includes(filterLower) || subTypeStr.includes(filterLower);
       });
     }
 
@@ -312,7 +340,7 @@ export default function ObjectsPage() {
     }
     
     return filtered;
-  }, [objects, searchTerm, typeFilter]);
+  }, [objects, searchTerm, typeFilter, customFilters]);
 
   React.useEffect(() => {
     if (!selectedObject && filteredObjectsList && filteredObjectsList.length > 0 && !isTablet) {
@@ -382,12 +410,22 @@ export default function ObjectsPage() {
     // Apply Type Filter to map
     if (typeFilter !== 'all') {
       filtered = filtered.filter(obj => {
-        const isContainer = (obj.locatieType?.toLowerCase().includes('container') || 
-                            obj.locatieSubType?.toLowerCase().includes('container') ||
-                            obj.locatieType?.toLowerCase().includes('ondergronds'));
+        const typeStr = (obj.locatieType || '').toLowerCase();
+        const subTypeStr = (obj.locatieSubType || '').toLowerCase();
+        const isContainer = typeStr.includes('container') || subTypeStr.includes('container') || typeStr.includes('ondergronds');
         
         if (typeFilter === 'container') return isContainer;
-        return !isContainer;
+        if (typeFilter === 'prullenbak') {
+            const matchesAnyCustom = customFilters.some(cf => {
+                const cfLower = cf.toLowerCase();
+                return typeStr.includes(cfLower) || subTypeStr.includes(cfLower);
+            });
+            return !isContainer && !matchesAnyCustom;
+        }
+        
+        // Custom
+        const filterLower = typeFilter.toLowerCase();
+        return typeStr.includes(filterLower) || subTypeStr.includes(filterLower);
       });
     }
 
@@ -400,7 +438,7 @@ export default function ObjectsPage() {
     return filtered.filter(obj => 
         obj.locatieWerkgebieden && Array.isArray(obj.locatieWerkgebieden) && obj.locatieWerkgebieden.some((gebied: string) => selectedAreaNames.includes(gebied))
     );
-  }, [objects, selectedAreaIds, selectedAreas, typeFilter]);
+  }, [objects, selectedAreaIds, selectedAreas, typeFilter, customFilters]);
 
   const areaPolygons = React.useMemo(() => {
     return selectedAreas.flatMap(area => {
@@ -449,6 +487,24 @@ export default function ObjectsPage() {
     return counts;
   }, [objects, projectAreas]);
 
+  const handleAddCustomFilter = async () => {
+    if (!firestore || !newFilterName.trim() || !filtersRef) return;
+    setIsSavingFilter(true);
+    try {
+        await setDocumentNonBlocking(filtersRef, {
+            custom: arrayUnion(newFilterName.trim())
+        }, { merge: true });
+        toast({ title: 'Filter toegevoegd', description: `De categorie '${newFilterName}' is toegevoegd aan de filters.` });
+        setNewFilterName('');
+        setIsAddFilterDialogOpen(false);
+    } catch (error) {
+        console.error("Error adding filter:", error);
+        toast({ variant: 'destructive', title: 'Fout', description: 'Kon het filter niet opslaan.' });
+    } finally {
+        setIsSavingFilter(false);
+    }
+  };
+
   if (isLoadingObjects || isLoadingProjects) {
     return <LoadingScreen message="Objecten laden..." />;
   }
@@ -461,7 +517,7 @@ export default function ObjectsPage() {
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="shrink-0 font-bold h-9 gap-2">
                 <Filter className="h-4 w-4" /> 
-                {typeFilter === 'all' ? 'Filter' : typeFilter === 'prullenbak' ? 'Prullenbakken' : 'Containers'}
+                {typeFilter === 'all' ? 'Filter' : typeFilter}
                 <ChevronDown className="h-3 w-3 opacity-50" />
               </Button>
             </DropdownMenuTrigger>
@@ -474,6 +530,18 @@ export default function ObjectsPage() {
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setTypeFilter('container')} className="font-bold flex items-center justify-between">
                 Ondergrondse containers {typeFilter === 'container' && <Check className="h-4 w-4" />}
+              </DropdownMenuItem>
+              
+              {customFilters.map(filter => (
+                <DropdownMenuItem key={filter} onClick={() => setTypeFilter(filter)} className="font-bold flex items-center justify-between">
+                    {filter} {typeFilter === filter && <Check className="h-4 w-4" />}
+                </DropdownMenuItem>
+              ))}
+
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setIsAddFilterDialogOpen(true)} className="font-black uppercase tracking-tight text-primary">
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Nieuw filter toevoegen
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -840,6 +908,34 @@ export default function ObjectsPage() {
           <MapboxView objects={objectsOnMap} wijkPolygons={areaPolygons} showHeatmap={showHeatmap} />
         </div>
       )}
+
+      <Dialog open={isAddFilterDialogOpen} onOpenChange={setIsAddFilterDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nieuw filter toevoegen</DialogTitle>
+            <DialogDescription>
+              Voer een naam in voor de nieuwe objectcategorie (bijv. Lichtmasten).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="filter-name">Categorienaam</Label>
+            <Input 
+              id="filter-name" 
+              value={newFilterName} 
+              onChange={(e) => setNewFilterName(e.target.value)} 
+              placeholder="Bijv. Lichtmasten"
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsAddFilterDialogOpen(false)}>Annuleren</Button>
+            <Button onClick={handleAddCustomFilter} disabled={!newFilterName.trim() || isSavingFilter}>
+              {isSavingFilter ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Filter Toevoegen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
