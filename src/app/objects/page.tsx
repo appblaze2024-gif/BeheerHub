@@ -4,7 +4,7 @@ import * as React from 'react';
 import {
   Filter,
   Save,
-  Map,
+  Map as MapIcon,
   Plus,
   Search,
   ChevronDown,
@@ -446,6 +446,7 @@ export default function ObjectsPage() {
 
   const handleFindDuplicates = () => {
     setIsFindingDuplicates(true);
+    // Use the native JS Map constructor, not shadowed by the lucide icon
     const seen = new Map<string, any[]>();
     const duplicates: any[] = [];
 
@@ -594,6 +595,7 @@ export default function ObjectsPage() {
 
   const handleAddCustomFilter = async () => {
     if (!firestore || !newFilterName.trim() || !filtersRef) return;
+    setIsAddFilterDialogOpen(false);
     setIsSavingFilter(true);
     try {
         await setDocumentNonBlocking(filtersRef, {
@@ -601,7 +603,6 @@ export default function ObjectsPage() {
         }, { merge: true });
         toast({ title: 'Filter toegevoegd', description: `De categorie '${newFilterName}' is toegevoegd aan de filters.` });
         setNewFilterName('');
-        setIsAddFilterDialogOpen(false);
     } catch (error) {
         console.error("Error adding filter:", error);
         toast({ variant: 'destructive', title: 'Fout', description: 'Kon het filter niet opslaan.' });
@@ -676,7 +677,7 @@ export default function ObjectsPage() {
             </DropdownMenuContent>
           </DropdownMenu>
           <Button variant="default" size="sm" className="shrink-0 font-black h-9 uppercase tracking-tight" onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}>
-            {viewMode === 'list' ? <Map className="mr-2 h-4 w-4" /> : <List className="mr-2 h-4 w-4" />}
+            {viewMode === 'list' ? <MapIcon className="mr-2 h-4 w-4" /> : <List className="mr-2 h-4 w-4" />}
             {viewMode === 'list' ? 'Kaart' : 'Lijst'}
           </Button>
           {viewMode === 'map' && (
