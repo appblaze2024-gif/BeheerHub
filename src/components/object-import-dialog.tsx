@@ -19,15 +19,16 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
 } from '@/components/ui/select';
-import { useFirestore } from '@/firebase';
-import { collection, doc, writeBatch } from 'firebase/firestore';
+import { useFirestore, useMemoFirebase, useDoc, setDocumentNonBlocking } from '@/firebase';
+import { collection, doc, writeBatch, arrayUnion } from 'firebase/firestore';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader2, PlusCircle, Tag } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import * as shapefile from 'shapefile';
-import * as turf from '@turf/turf';
 
 interface ObjectImportDialogProps {
   children: React.ReactNode;
@@ -43,7 +44,6 @@ const objectFields = [
 ];
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
-
 
 // Robust CSV parser
 const parseCSV = (csv: string): { headers: string[], data: string[][] } => {
@@ -95,7 +95,6 @@ const parseXLSX = (arrayBuffer: ArrayBuffer): { headers: string[], data: string[
   return { headers, data };
 }
 
-
 export function ObjectImportDialog({
   children,
   open,
@@ -113,6 +112,15 @@ export function ObjectImportDialog({
   const [error, setError] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  // Category selection state
+  const [selectedCategory, setSelectedCategory] = React.useState<string>('prullenbak');
+  const [newCategoryName, setNewCategoryName] = React.useState('');
+  const [showNewCategoryInput, setShowNewCategoryInput] = React.useState(false);
+
+  const filtersRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'object_filters') : null, [firestore]);
+  const { data: filtersData } = useDoc<{ custom: string[] }>(filtersRef);
+  const customFilters = filtersData?.custom || [];
+
   React.useEffect(() => {
     if (!open) {
       setTimeout(() => {
@@ -124,6 +132,9 @@ export function ObjectImportDialog({
         setIsImporting(false);
         setImportProgress(0);
         setError(null);
+        setSelectedCategory('prullenbak');
+        setNewCategoryName('');
+        setShowNewCategoryInput(false);
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
@@ -135,7 +146,7 @@ export function ObjectImportDialog({
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
-    setFile(files[0]); // Keep one file for UI state for now
+    setFile(files[0]);
     setError(null);
 
     const shpFile = Array.from(files).find(f => f.name.toLowerCase().endsWith('.shp'));
@@ -257,6 +268,18 @@ export function ObjectImportDialog({
     setImportProgress(0);
     setError(null);
 
+    // Determine final category
+    let finalCategory = selectedCategory;
+    if (showNewCategoryInput && newCategoryName.trim()) {
+        finalCategory = newCategoryName.trim();
+        // Save new category to filters
+        if (filtersRef) {
+            await setDocumentNonBlocking(filtersRef, {
+                custom: arrayUnion(finalCategory)
+            }, { merge: true });
+        }
+    }
+
     const headerIndexMap: Record<string, number> = {};
     headers.forEach((h, i) => { headerIndexMap[h] = i; });
 
@@ -268,7 +291,7 @@ export function ObjectImportDialog({
     }
 
     const objectsColRef = collection(firestore, 'objects');
-    const batchSize = 100; // Smaller batch size due to API calls
+    const batchSize = 100;
 
     try {
       for (let i = 0; i < data.length; i += batchSize) {
@@ -276,7 +299,9 @@ export function ObjectImportDialog({
         const chunk = data.slice(i, i + batchSize);
 
         for (const row of chunk) {
-            const objectData: Record<string, any> = {};
+            const objectData: Record<string, any> = {
+                locatieType: finalCategory
+            };
             let objectId = row[fieldIndexMap['id']];
 
             if (!objectId || objectId.trim() === '') {
@@ -301,6 +326,9 @@ export function ObjectImportDialog({
                     }
                 }
             }
+
+            // Force selected category if not specifically mapping it or if we want to override
+            objectData.locatieType = finalCategory;
 
             if (!objectData.straatnaam && objectData.latitude && objectData.longitude) {
               const { street, houseNumber } = await fetchAddress(objectData.longitude, objectData.latitude);
@@ -334,79 +362,146 @@ export function ObjectImportDialog({
         return (
              <div className='flex flex-col items-center justify-center gap-4 py-8'>
                 <Loader2 className="h-16 w-16 animate-spin text-primary" />
-                <p>Objecten importeren...</p>
-                 <p className="text-sm text-muted-foreground">Dit kan even duren, omdat adresgegevens worden opgehaald.</p>
+                <p className="font-black uppercase tracking-tight">Objecten importeren...</p>
+                 <p className="text-xs text-muted-foreground font-bold">Dit kan even duren, omdat adresgegevens worden opgehaald.</p>
                 <Progress value={importProgress} className="w-full" />
-                <p className='text-sm text-muted-foreground'>{Math.round(importProgress)}% voltooid</p>
+                <p className='text-sm text-muted-foreground font-black'>{Math.round(importProgress)}% voltooid</p>
             </div>
         )
       }
       switch(step) {
           case 1:
               return (
-                <div className="py-8">
-                    <Label htmlFor="csv-file" className="sr-only">Bestand</Label>
-                    <Input
-                    id="csv-file"
-                    type="file"
-                    accept=".csv,.xlsx,.xls,.dbf,.prj,.shp,.shx"
-                    onChange={handleFileChange}
-                    ref={fileInputRef}
-                    className="w-full h-12 text-base"
-                    multiple
-                    />
-                     {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+                <div className="py-8 space-y-4">
+                    <div className="p-8 border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center gap-4 bg-slate-50/50">
+                        <Label htmlFor="csv-file" className="sr-only">Bestand</Label>
+                        <Input
+                            id="csv-file"
+                            type="file"
+                            accept=".csv,.xlsx,.xls,.dbf,.prj,.shp,.shx"
+                            onChange={handleFileChange}
+                            ref={fileInputRef}
+                            className="w-full h-12 text-base"
+                            multiple
+                        />
+                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">
+                            Ondersteunt: .csv, .xlsx, of .shp + .dbf
+                        </p>
+                    </div>
+                     {error && <p className="text-red-500 text-sm font-bold text-center">{error}</p>}
                 </div>
               );
           case 2:
               return (
-                 <div>
-                    <p className="text-sm text-muted-foreground mb-4">
-                        We hebben {data.length} rijen gevonden. Koppel de kolommen aan de juiste velden.
-                    </p>
-                    <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-6 max-h-64 overflow-y-auto pr-2">
-                    {objectFields.map((field) => (
-                        <div key={field} className="grid grid-cols-2 items-center gap-4">
-                        <Label htmlFor={`mapping-${field}`} className="capitalize text-right">
-                            {field.replace('_', ' ')}
-                        </Label>
-                        <Select
-                            value={mapping[field]}
-                            onValueChange={(value) =>
-                            setMapping((prev) => ({ ...prev, [field]: value }))
-                            }
-                        >
-                            <SelectTrigger id={`mapping-${field}`}>
-                            <SelectValue placeholder="Selecteer een kolom" />
-                            </SelectTrigger>
-                            <SelectContent>
-                            <SelectItem value="--ignore--">-- Negeer --</SelectItem>
-                            {headers.map((header) => (
-                                <SelectItem key={header} value={header}>
-                                {header}
-                                </SelectItem>
-                            ))}
-                            </SelectContent>
-                        </Select>
+                 <div className="space-y-6">
+                    <div className="bg-slate-900 text-white p-6 rounded-3xl space-y-4 shadow-xl">
+                        <div className="flex items-center gap-3 border-b border-white/10 pb-3">
+                            <Tag className="h-5 w-5 text-primary" />
+                            <h3 className="text-sm font-black uppercase tracking-tight">Doelcategorie (Filter)</h3>
                         </div>
-                    ))}
+                        
+                        <div className="space-y-3">
+                            <Select 
+                                value={showNewCategoryInput ? 'new' : selectedCategory} 
+                                onValueChange={(v) => {
+                                    if (v === 'new') {
+                                        setShowNewCategoryInput(true);
+                                    } else {
+                                        setShowNewCategoryInput(false);
+                                        setSelectedCategory(v);
+                                    }
+                                }}
+                            >
+                                <SelectTrigger className="h-11 font-black bg-white/10 border-none text-white focus:ring-primary/30">
+                                    <SelectValue placeholder="Kies een categorie..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectGroup>
+                                        <SelectLabel>Standaard</SelectLabel>
+                                        <SelectItem value="prullenbak">Prullenbakken</SelectItem>
+                                        <SelectItem value="container">Ondergrondse containers</SelectItem>
+                                    </SelectGroup>
+                                    {customFilters.length > 0 && (
+                                        <SelectGroup>
+                                            <SelectLabel>Uw Filters</SelectLabel>
+                                            {customFilters.map(cf => (
+                                                <SelectItem key={cf} value={cf}>{cf}</SelectItem>
+                                            ))}
+                                        </SelectGroup>
+                                    )}
+                                    <SelectItem value="new" className="font-black uppercase text-primary tracking-tighter">
+                                        <PlusCircle className="mr-2 h-4 w-4 inline" />
+                                        Nieuwe categorie aanmaken
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+
+                            {showNewCategoryInput && (
+                                <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-300">
+                                    <Label className="text-[10px] font-black uppercase text-slate-400">Naam nieuwe categorie</Label>
+                                    <Input 
+                                        placeholder="Bv. Lichtmasten..." 
+                                        value={newCategoryName} 
+                                        onChange={e => setNewCategoryName(e.target.value)}
+                                        className="h-11 bg-white/10 border-none text-white font-bold focus:ring-primary/30"
+                                        autoFocus
+                                    />
+                                </div>
+                            )}
+                        </div>
                     </div>
-                    <Alert variant={mapping['id'] ? "default" : "destructive"}>
+
+                    <div className="space-y-4">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                            Veld Mapping (Gevonden: {data.length} rijen)
+                        </p>
+                        <div className="grid grid-cols-2 gap-x-8 gap-y-4 max-h-64 overflow-y-auto pr-2 custom-scrollbar bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                        {objectFields.map((field) => (
+                            <div key={field} className="grid grid-cols-2 items-center gap-4">
+                            <Label htmlFor={`mapping-${field}`} className="capitalize text-right font-bold text-xs text-slate-600">
+                                {field.replace('_', ' ')}
+                            </Label>
+                            <Select
+                                value={mapping[field]}
+                                onValueChange={(value) =>
+                                setMapping((prev) => ({ ...prev, [field]: value }))
+                                }
+                            >
+                                <SelectTrigger id={`mapping-${field}`} className="h-9 border-slate-200 font-medium text-[11px]">
+                                <SelectValue placeholder="Selecteer een kolom" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                <SelectItem value="--ignore--">-- Negeer --</SelectItem>
+                                {headers.map((header) => (
+                                    <SelectItem key={header} value={header}>
+                                    {header}
+                                    </SelectItem>
+                                ))}
+                                </SelectContent>
+                            </Select>
+                            </div>
+                        ))}
+                        </div>
+                    </div>
+
+                    <Alert variant={mapping['id'] ? "default" : "destructive"} className="rounded-2xl border-2">
                         <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>{mapping['id'] ? "Klaar om te importeren" : "Opgelet!"}</AlertTitle>
-                        <AlertDescription>
-                          {mapping['id'] ? "Het veld 'id' is gekoppeld. U kunt nu importeren." : "Zorg ervoor dat de kolom voor 'id' is gekoppeld, dit wordt gebruikt als de unieke ID voor elk object."}
+                        <AlertTitle className="font-black uppercase tracking-tight text-xs">{mapping['id'] ? "Klaar om te importeren" : "Opgelet!"}</AlertTitle>
+                        <AlertDescription className="text-[10px] font-bold">
+                          {mapping['id'] ? `De objecten worden opgeslagen onder filter: ${showNewCategoryInput ? (newCategoryName || 'Nieuw') : selectedCategory}` : "Zorg ervoor dat de kolom voor 'id' is gekoppeld, dit wordt gebruikt als de unieke ID voor elk object."}
                         </AlertDescription>
                     </Alert>
-                    {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+                    {error && <p className="text-red-500 text-sm font-bold mt-2">{error}</p>}
                 </div>
               );
           case 3:
               return (
-                 <div className='flex flex-col items-center gap-4 py-8'>
-                    <CheckCircle className="h-16 w-16 text-green-500" />
-                    <p className='font-medium text-lg'>Importeren voltooid!</p>
-                    <p className='text-sm text-muted-foreground text-center'>{data.length} objecten succesvol verwerkt.</p>
+                 <div className='flex flex-col items-center gap-4 py-12'>
+                    <div className="h-20 w-20 rounded-full bg-green-100 flex items-center justify-center mb-4">
+                        <CheckCircle className="h-12 w-12 text-green-500" />
+                    </div>
+                    <p className='font-black uppercase tracking-tight text-xl'>Importeren voltooid!</p>
+                    <p className='text-sm text-slate-500 font-medium text-center'>{data.length} objecten zijn succesvol toegevoegd aan de categorie.</p>
                 </div>
               )
       }
@@ -415,32 +510,34 @@ export function ObjectImportDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[650px]">
-        <DialogHeader>
-          <DialogTitle>Objecten Importeren</DialogTitle>
-          <DialogDescription>
-            {step === 1 && 'Selecteer een CSV, XLSX of Shapefile (.shp, .shx, .dbf, .prj) om te importeren.'}
-            {step === 2 && 'Koppel uw kolommen aan de databasevelden.'}
+      <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden border-none shadow-2xl rounded-3xl">
+        <DialogHeader className="p-8 border-b bg-slate-50 shrink-0">
+          <DialogTitle className="text-2xl font-black uppercase tracking-tight">Objecten Importeren</DialogTitle>
+          <DialogDescription className="font-bold text-slate-500">
+            {step === 1 && 'Selecteer een CSV, XLSX of Shapefile om te importeren.'}
+            {step === 2 && 'Koppel uw kolommen en kies de juiste doel-categorie.'}
             {step === 3 && 'De import is succesvol afgerond.'}
           </DialogDescription>
         </DialogHeader>
 
-        {renderContent()}
+        <div className="p-8">
+            {renderContent()}
+        </div>
 
-        <DialogFooter>
-          {step === 1 && <Button variant="ghost" onClick={() => onOpenChange(false)}>Annuleren</Button>}
+        <DialogFooter className="p-8 border-t bg-slate-50 shrink-0">
+          {step === 1 && <Button variant="ghost" onClick={() => onOpenChange(false)} className="font-bold">Annuleren</Button>}
           {step === 2 && !isImporting && (
             <>
-              <Button variant="ghost" onClick={() => setStep(1)}>
+              <Button variant="ghost" onClick={() => setStep(1)} className="font-bold">
                 Terug
               </Button>
-              <Button onClick={handleImport} disabled={!mapping['id']}>
+              <Button onClick={handleImport} disabled={!mapping['id'] || (showNewCategoryInput && !newCategoryName.trim())} className="h-12 px-12 font-black uppercase tracking-tight shadow-xl shadow-primary/20 rounded-xl">
                 Importeer {data.length} Objecten
               </Button>
             </>
           )}
           {step === 3 && !isImporting && (
-             <Button onClick={() => onOpenChange(false)}>
+             <Button onClick={() => onOpenChange(false)} className="h-12 px-12 font-black uppercase tracking-tight shadow-xl shadow-primary/20 rounded-xl">
                 Sluiten
             </Button>
           )}
