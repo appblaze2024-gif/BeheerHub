@@ -22,6 +22,7 @@ import {
   Activity,
   History,
   Loader2,
+  Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,7 +46,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { MapboxView } from '@/components/mapbox-view';
 import { ObjectImportDialog } from '@/components/object-import-dialog';
 import { ObjectExportDialog } from '@/components/object-export-dialog';
@@ -239,6 +240,7 @@ export default function ObjectsPage() {
   const [viewMode, setViewMode] = React.useState<'list' | 'map'>('list');
   const [showHeatmap, setShowHeatmap] = React.useState(false);
   const [isBulkLoading, setIsBulkLoading] = React.useState(false);
+  const [typeFilter, setTypeFilter] = React.useState<'all' | 'prullenbak' | 'container'>('all');
 
   const { selectedProjectId, setSelectedProjectId } = useProject();
   const [selectedAreaIds, setSelectedAreaIds] = React.useState<string[]>([]);
@@ -284,15 +286,33 @@ export default function ObjectsPage() {
 
   const filteredObjectsList = React.useMemo(() => {
     if (!objects) return [];
-    if (!searchTerm) return objects;
-    const q = searchTerm.toLowerCase();
-    return objects.filter(
-      (obj) =>
-        obj.id.toLowerCase().includes(q) ||
-        obj.straatnaam?.toLowerCase().includes(q) ||
-        obj.locatieSubType?.toLowerCase().includes(q)
-    );
-  }, [objects, searchTerm]);
+    
+    let filtered = objects;
+
+    // Apply Type Filter
+    if (typeFilter !== 'all') {
+      filtered = filtered.filter(obj => {
+        const isContainer = (obj.locatieType?.toLowerCase().includes('container') || 
+                            obj.locatieSubType?.toLowerCase().includes('container') ||
+                            obj.locatieType?.toLowerCase().includes('ondergronds'));
+        
+        if (typeFilter === 'container') return isContainer;
+        return !isContainer; // default to prullenbak for everything else
+      });
+    }
+
+    if (searchTerm) {
+      const q = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (obj) =>
+          obj.id.toLowerCase().includes(q) ||
+          obj.straatnaam?.toLowerCase().includes(q) ||
+          obj.locatieSubType?.toLowerCase().includes(q)
+      );
+    }
+    
+    return filtered;
+  }, [objects, searchTerm, typeFilter]);
 
   React.useEffect(() => {
     if (!selectedObject && filteredObjectsList && filteredObjectsList.length > 0 && !isTablet) {
@@ -356,16 +376,31 @@ export default function ObjectsPage() {
 
   const objectsOnMap = React.useMemo(() => {
     if (!objects) return [];
+    
+    let filtered = objects;
+
+    // Apply Type Filter to map
+    if (typeFilter !== 'all') {
+      filtered = filtered.filter(obj => {
+        const isContainer = (obj.locatieType?.toLowerCase().includes('container') || 
+                            obj.locatieSubType?.toLowerCase().includes('container') ||
+                            obj.locatieType?.toLowerCase().includes('ondergronds'));
+        
+        if (typeFilter === 'container') return isContainer;
+        return !isContainer;
+      });
+    }
+
     if (selectedAreaIds.length === 0) {
-      return objects;
+      return filtered;
     }
 
     const selectedAreaNames = selectedAreas.map(area => area.naam);
 
-    return objects.filter(obj => 
+    return filtered.filter(obj => 
         obj.locatieWerkgebieden && Array.isArray(obj.locatieWerkgebieden) && obj.locatieWerkgebieden.some((gebied: string) => selectedAreaNames.includes(gebied))
     );
-  }, [objects, selectedAreaIds, selectedAreas]);
+  }, [objects, selectedAreaIds, selectedAreas, typeFilter]);
 
   const areaPolygons = React.useMemo(() => {
     return selectedAreas.flatMap(area => {
@@ -422,9 +457,27 @@ export default function ObjectsPage() {
     <div className="flex flex-col flex-1 h-full min-h-0 bg-white">
       <header className="flex flex-col md:flex-row items-center justify-between p-4 md:p-6 bg-white border-b shadow-sm gap-4">
         <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto no-scrollbar pb-1">
-          <Button variant="outline" size="sm" className="shrink-0 font-bold h-9">
-            <Filter className="mr-2 h-4 w-4" /> Filter
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="shrink-0 font-bold h-9 gap-2">
+                <Filter className="h-4 w-4" /> 
+                {typeFilter === 'all' ? 'Filter' : typeFilter === 'prullenbak' ? 'Prullenbakken' : 'Containers'}
+                <ChevronDown className="h-3 w-3 opacity-50" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuItem onClick={() => setTypeFilter('all')} className="font-bold flex items-center justify-between">
+                Alles tonen {typeFilter === 'all' && <Check className="h-4 w-4" />}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTypeFilter('prullenbak')} className="font-bold flex items-center justify-between">
+                Prullenbakken {typeFilter === 'prullenbak' && <Check className="h-4 w-4" />}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTypeFilter('container')} className="font-bold flex items-center justify-between">
+                Ondergrondse containers {typeFilter === 'container' && <Check className="h-4 w-4" />}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="shrink-0 font-bold h-9">
@@ -719,7 +772,7 @@ export default function ObjectsPage() {
                      </CardContent>
                      </Card>
                  </div>
-
+ 
                  <div className="xl:col-span-3 h-full overflow-hidden">
                     <IoTHistoryColumn sensor={sensor} history={history} isLoading={sensorLoading || historyLoading} />
                  </div>

@@ -301,7 +301,7 @@ export function VeegrouteMapDialog({ open, onOpenChange, route, onSave, readOnly
             initialViewState={initialViewState} 
             mapStyle={currentMapStyle} 
             mapboxAccessToken={MAPBOX_TOKEN} 
-            onLoad={onMapLoad} 
+            onMapLoad={onMapLoad} 
             preserveDrawingBuffer 
             cursor={readOnly ? 'default' : 'grab'} 
           />
