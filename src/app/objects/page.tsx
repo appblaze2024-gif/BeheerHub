@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -1137,7 +1136,7 @@ export default function ObjectsPage() {
             </div>
             <DialogTitle className="text-xl font-black uppercase tracking-tight">Slimme Kwaliteitscontrole</DialogTitle>
             <DialogDescription className="font-bold text-slate-500">
-              Op welke criteria wilt u de {currentFilterName} controleren op dubbele invoer?
+              Op welke criteria wilt u de database controleren op dubbele vermeldingen?
             </DialogDescription>
           </DialogHeader>
           
@@ -1171,7 +1170,7 @@ export default function ObjectsPage() {
             <Button variant="ghost" onClick={() => setIsQualityDialogOpen(false)} className="font-bold">Annuleren</Button>
             <Button onClick={handleFindDuplicates} disabled={isFindingDuplicates || (!dupCriteria.location && !dupCriteria.id && !dupCriteria.address)} className="font-black uppercase tracking-tight h-11 px-8 shadow-xl shadow-primary/20">
               {isFindingDuplicates ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileCheck className="mr-2 h-4 w-4" />}
-              Start Controle
+              Start Analyse
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1182,7 +1181,7 @@ export default function ObjectsPage() {
           <DialogHeader className="p-6 border-b bg-slate-50">
             <DialogTitle className="text-xl font-black uppercase tracking-tight">Analyse Resultaten</DialogTitle>
             <DialogDescription className="font-bold text-slate-500">
-              Er zijn {duplicateObjects.length} objecten gevonden die mogelijk duplicaten zijn (gezocht over alle filters).
+              Er zijn {duplicateObjects.length} objecten gevonden die mogelijk duplicaten zijn.
             </DialogDescription>
           </DialogHeader>
           
@@ -1216,7 +1215,7 @@ export default function ObjectsPage() {
               ))}
               {duplicateObjects.length === 0 && (
                   <div className="p-12 text-center text-slate-300">
-                      <p className="text-sm font-bold uppercase tracking-widest">Geen duplicaten gevonden op basis van de selectie.</p>
+                      <p className="text-sm font-bold uppercase tracking-widest">Geen duplicaten gevonden.</p>
                   </div>
               )}
             </div>

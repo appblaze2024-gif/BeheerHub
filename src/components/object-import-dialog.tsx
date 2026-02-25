@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -338,9 +337,8 @@ export function ObjectImportDialog({
             }
 
             if(originalId) {
-                // Composite ID allows same original ID in different categories
-                const firestoreId = `${finalCategory}_${originalId}`.replace(/\//g, '-'); 
-                const docRef = doc(objectsColRef, firestoreId);
+                // Use a random document ID to distinguish same ID numbers across uploads or categories
+                const docRef = doc(objectsColRef); 
                 // Store both the random Firestore ID (as id) and original ID (as idNummer)
                 batch.set(docRef, { ...objectData, idNummer: originalId }, { merge: true });
             }
