@@ -252,6 +252,7 @@ export interface Folder {
 
 export interface Object {
   id: string;
+  idNummer?: string;
   latitude: number;
   longitude: number;
   locatieType?: string;

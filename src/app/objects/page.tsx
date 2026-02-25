@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -30,6 +31,7 @@ import {
   FileCheck,
   AlertTriangle,
   Settings2,
+  Tag,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,7 +57,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { MapboxView } from '@/components/mapbox-view';
 import { ObjectImportDialog } from '@/components/object-import-dialog';
 import { ObjectExportDialog } from '@/components/object-export-dialog';
@@ -366,7 +368,7 @@ export default function ObjectsPage() {
       const q = searchTerm.toLowerCase();
       filtered = filtered.filter(
         (obj) =>
-          obj.id.toLowerCase().includes(q) ||
+          (obj.idNummer || obj.id).toLowerCase().includes(q) ||
           obj.straatnaam?.toLowerCase().includes(q) ||
           obj.locatieSubType?.toLowerCase().includes(q)
       );
@@ -460,13 +462,15 @@ export default function ObjectsPage() {
 
   const handleFindDuplicates = () => {
     setIsFindingDuplicates(true);
+    // Use the full objects array to find duplicates across filters
+    const sourceList = objects || [];
     const seenLocation = new globalThis.Map<string, any[]>();
     const seenId = new globalThis.Map<string, any[]>();
     const seenAddress = new globalThis.Map<string, any[]>();
     
     const duplicates: { obj: any, reason: string }[] = [];
 
-    filteredObjectsList.forEach(obj => {
+    sourceList.forEach(obj => {
       // 1. Check Location
       if (dupCriteria.location && typeof obj.latitude === 'number' && typeof obj.longitude === 'number') {
         const locKey = `${obj.latitude.toFixed(8)}_${obj.longitude.toFixed(8)}`;
@@ -478,9 +482,10 @@ export default function ObjectsPage() {
         } else seenLocation.set(locKey, [obj]);
       }
 
-      // 2. Check ID (External or Internal) - Explicit search for numbers like 141619
-      if (dupCriteria.id && obj.id) {
-        const idKey = String(obj.id).toLowerCase().trim();
+      // 2. Check ID (External or Internal)
+      const idToMatch = obj.idNummer || obj.id;
+      if (dupCriteria.id && idToMatch) {
+        const idKey = String(idToMatch).toLowerCase().trim();
         if (seenId.has(idKey)) {
           const group = seenId.get(idKey)!;
           if (group.length === 1) duplicates.push({ obj: group[0], reason: 'Zelfde ID' });
@@ -501,7 +506,6 @@ export default function ObjectsPage() {
       }
     });
 
-    // Remove duplicates from the result list if they matched multiple criteria
     const uniqueResults = duplicates.reduce((acc, current) => {
         const x = acc.find(item => item.obj.id === current.obj.id);
         if (!x) return acc.concat([current]);
@@ -522,20 +526,20 @@ export default function ObjectsPage() {
     if (duplicateObjects.length === 0) return;
 
     const dataForSheet = duplicateObjects.map(d => ({
-      'ID Nummer': d.obj.id,
+      'ID Nummer': d.obj.idNummer || d.obj.id,
       'Straatnaam': d.obj.straatnaam || '',
       'Huisnummer': d.obj.huisnummer || '',
       'Reden': d.reason,
+      'Categorie': d.obj.locatieType || '',
       'X-coordinaat': d.obj.longitude,
-      'Y-coordinaat': d.obj.latitude,
-      'Filter': typeFilter
+      'Y-coordinaat': d.obj.latitude
     }));
     
     const worksheet = XLSX.utils.json_to_sheet(dataForSheet);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Dubbele Objecten");
     
-    XLSX.writeFile(workbook, `controle_duplicaten_${typeFilter}.xlsx`);
+    XLSX.writeFile(workbook, `controle_duplicaten.xlsx`);
   };
 
   const handleAreaSelectionChange = (areaId: string, checked: boolean) => {
@@ -790,7 +794,7 @@ export default function ObjectsPage() {
                         <MapPin className={cn("h-4 w-4", selectedObject?.id === obj.id && !isTablet ? "text-white" : "text-primary")} />
                        </div>
                        <div>
-                         <p className={cn("font-black uppercase tracking-tight text-xs", selectedObject?.id === obj.id && !isTablet ? "text-white" : "text-slate-900")}>{obj.id}</p>
+                         <p className={cn("font-black uppercase tracking-tight text-xs", selectedObject?.id === obj.id && !isTablet ? "text-white" : "text-slate-900")}>{obj.idNummer || obj.id}</p>
                          <p className={cn("text-[10px] font-bold uppercase tracking-widest truncate", selectedObject?.id === obj.id && !isTablet ? "text-white/70" : "text-slate-400")}>
                            {obj.straatnaam ? `${obj.straatnaam} ${obj.huisnummer || ''}` : 'Adres onbekend'}
                          </p>
@@ -824,7 +828,7 @@ export default function ObjectsPage() {
                             </Button>
                         )}
                         <div>
-                            <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-900 leading-none mb-1">{selectedObject.id}</h2>
+                            <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-900 leading-none mb-1">{selectedObject.idNummer || selectedObject.id}</h2>
                             <p className="text-[10px] font-black uppercase tracking-widest">{selectedObject.locatieSubType || 'Basis Object'}</p>
                         </div>
                      </div>
@@ -1178,7 +1182,7 @@ export default function ObjectsPage() {
           <DialogHeader className="p-6 border-b bg-slate-50">
             <DialogTitle className="text-xl font-black uppercase tracking-tight">Analyse Resultaten</DialogTitle>
             <DialogDescription className="font-bold text-slate-500">
-              Er zijn {duplicateObjects.length} objecten gevonden die mogelijk duplicaten zijn binnen "{currentFilterName}".
+              Er zijn {duplicateObjects.length} objecten gevonden die mogelijk duplicaten zijn (gezocht over alle filters).
             </DialogDescription>
           </DialogHeader>
           
@@ -1188,15 +1192,20 @@ export default function ObjectsPage() {
                 <div key={i} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors group">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                        <p className="font-black text-sm uppercase tracking-tight text-slate-900 truncate">{item.obj.id}</p>
+                        <p className="font-black text-sm uppercase tracking-tight text-slate-900 truncate">
+                            {item.obj.idNummer || item.obj.id}
+                        </p>
                         <Badge variant="outline" className="text-[8px] h-4 uppercase font-black bg-slate-100 border-none">{item.reason}</Badge>
+                        <Badge variant="secondary" className="text-[8px] h-4 uppercase font-bold bg-blue-50 text-blue-600 border-none flex items-center gap-1">
+                            <Tag className="h-2 w-2" /> {item.obj.locatieType}
+                        </Badge>
                     </div>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{item.obj.straatnaam} {item.obj.huisnummer}</p>
                   </div>
                   <div className="text-right shrink-0 flex items-center gap-3">
                     <div className="hidden sm:block">
                         <p className="text-[10px] font-mono font-bold text-slate-400">
-                            {item.obj.latitude.toFixed(5)}, {item.obj.longitude.toFixed(5)}
+                            {item.obj.latitude?.toFixed(5)}, {item.obj.longitude?.toFixed(5)}
                         </p>
                     </div>
                     <Button variant="ghost" size="icon" onClick={() => { setSelectedObject(item.obj); setIsDuplicateDialogOpen(false); }} className="h-8 w-8 text-slate-300 hover:text-primary hover:bg-primary/5 transition-colors">

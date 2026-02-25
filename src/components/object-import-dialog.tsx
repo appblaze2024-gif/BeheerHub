@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -302,12 +303,12 @@ export function ObjectImportDialog({
             const objectData: Record<string, any> = {
                 locatieType: finalCategory
             };
-            let objectId = row[fieldIndexMap['id']];
+            let originalId = row[fieldIndexMap['id']];
 
-            if (!objectId || objectId.trim() === '') {
-                objectId = "N.B";
+            if (!originalId || originalId.trim() === '') {
+                originalId = "N.B";
             } else {
-                objectId = objectId.trim();
+                originalId = originalId.trim();
             }
 
             for(const field in fieldIndexMap) {
@@ -327,7 +328,7 @@ export function ObjectImportDialog({
                 }
             }
 
-            // Force selected category if not specifically mapping it or if we want to override
+            // Force selected category
             objectData.locatieType = finalCategory;
 
             if (!objectData.straatnaam && objectData.latitude && objectData.longitude) {
@@ -336,9 +337,12 @@ export function ObjectImportDialog({
               objectData.huisnummer = houseNumber;
             }
 
-            if(objectId) {
-                const docRef = doc(objectsColRef, objectId === "N.B" ? doc(collection(firestore, 'temp')).id : objectId);
-                batch.set(docRef, { ...objectData, id: objectId }, { merge: true });
+            if(originalId) {
+                // Composite ID allows same original ID in different categories
+                const firestoreId = `${finalCategory}_${originalId}`.replace(/\//g, '-'); 
+                const docRef = doc(objectsColRef, firestoreId);
+                // Store both the random Firestore ID (as id) and original ID (as idNummer)
+                batch.set(docRef, { ...objectData, idNummer: originalId }, { merge: true });
             }
         }
         
