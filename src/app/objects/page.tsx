@@ -462,7 +462,7 @@ export default function ObjectsPage() {
 
   const handleFindDuplicates = () => {
     setIsFindingDuplicates(true);
-    // Use the full objects array or filtered array to find duplicates
+    // Use globalThis.Map to avoid Lucide 'Map' icon shadowing
     let sourceList = objects || [];
 
     if (dupFilter !== 'all') {
@@ -714,7 +714,7 @@ export default function ObjectsPage() {
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setIsAddFilterDialogOpen(true)} className="font-black uppercase tracking-tight text-primary">
                   <PlusCircle className="mr-2 h-4 w-4" />
-                  Nieuw filter toevoegen
+                  + Nieuw filter toevoegen
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -1149,7 +1149,6 @@ export default function ObjectsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Quality Control Selection Dialog */}
       <Dialog open={isQualityDialogOpen} onOpenChange={setIsQualityDialogOpen}>
         <DialogContent className="sm:max-w-md border-none shadow-2xl rounded-3xl flex flex-col p-0 overflow-hidden h-[80vh]">
           <DialogHeader className="p-6 bg-slate-50 border-b shrink-0">
@@ -1226,51 +1225,53 @@ export default function ObjectsPage() {
       </Dialog>
 
       <Dialog open={isDuplicateDialogOpen} onOpenChange={setIsDuplicateDialogOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl rounded-3xl">
-          <DialogHeader className="p-6 border-b bg-slate-50">
+        <DialogContent className="sm:max-w-2xl h-[85vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl rounded-3xl">
+          <DialogHeader className="p-6 border-b bg-slate-50 shrink-0">
             <DialogTitle className="text-xl font-black uppercase tracking-tight">Analyse Resultaten</DialogTitle>
             <DialogDescription className="font-bold text-slate-500">
               Er zijn {duplicateObjects.length} objecten gevonden die mogelijk duplicaten zijn.
             </DialogDescription>
           </DialogHeader>
           
-          <ScrollArea className="flex-1 my-4 px-6">
-            <div className="divide-y border rounded-2xl overflow-hidden bg-white">
-              {duplicateObjects.map((item, i) => (
-                <div key={i} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors group">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                        <p className="font-black text-sm uppercase tracking-tight text-slate-900 truncate">
-                            {item.obj.idNummer || item.obj.id}
-                        </p>
-                        <Badge variant="outline" className="text-[8px] h-4 uppercase font-black bg-slate-100 border-none">{item.reason}</Badge>
-                        <Badge variant="secondary" className="text-[8px] h-4 uppercase font-bold bg-blue-50 text-blue-600 border-none flex items-center gap-1">
-                            <Tag className="h-2 w-2" /> {item.obj.locatieType}
-                        </Badge>
+          <ScrollArea className="flex-1 bg-white">
+            <div className="p-6">
+              <div className="divide-y border rounded-2xl overflow-hidden bg-white shadow-sm">
+                {duplicateObjects.map((item, i) => (
+                  <div key={i} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors group">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                          <p className="font-black text-sm uppercase tracking-tight text-slate-900 truncate">
+                              {item.obj.idNummer || item.obj.id}
+                          </p>
+                          <Badge variant="outline" className="text-[8px] h-4 uppercase font-black bg-slate-100 border-none">{item.reason}</Badge>
+                          <Badge variant="secondary" className="text-[8px] h-4 uppercase font-bold bg-blue-50 text-blue-600 border-none flex items-center gap-1">
+                              <Tag className="h-2 w-2" /> {item.obj.locatieType}
+                          </Badge>
+                      </div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{item.obj.straatnaam} {item.obj.huisnummer}</p>
                     </div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{item.obj.straatnaam} {item.obj.huisnummer}</p>
-                  </div>
-                  <div className="text-right shrink-0 flex items-center gap-3">
-                    <div className="hidden sm:block">
-                        <p className="text-[10px] font-mono font-bold text-slate-400">
-                            {item.obj.latitude?.toFixed(5)}, {item.obj.longitude?.toFixed(5)}
-                        </p>
+                    <div className="text-right shrink-0 flex items-center gap-3">
+                      <div className="hidden sm:block">
+                          <p className="text-[10px] font-mono font-bold text-slate-400">
+                              {item.obj.latitude?.toFixed(5)}, {item.obj.longitude?.toFixed(5)}
+                          </p>
+                      </div>
+                      <Button variant="ghost" size="icon" onClick={() => { setSelectedObject(item.obj); setIsDuplicateDialogOpen(false); }} className="h-8 w-8 text-slate-300 hover:text-primary hover:bg-primary/5 transition-colors">
+                          <ChevronRight className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => { setSelectedObject(item.obj); setIsDuplicateDialogOpen(false); }} className="h-8 w-8 text-slate-300 hover:text-primary hover:bg-primary/5 transition-colors">
-                        <ChevronRight className="h-4 w-4" />
-                    </Button>
                   </div>
-                </div>
-              ))}
-              {duplicateObjects.length === 0 && (
-                  <div className="p-12 text-center text-slate-300">
-                      <p className="text-sm font-bold uppercase tracking-widest">Geen duplicaten gevonden.</p>
-                  </div>
-              )}
+                ))}
+                {duplicateObjects.length === 0 && (
+                    <div className="p-12 text-center text-slate-300">
+                        <p className="text-sm font-bold uppercase tracking-widest">Geen duplicaten gevonden.</p>
+                    </div>
+                )}
+              </div>
             </div>
           </ScrollArea>
 
-          <DialogFooter className="p-6 border-t bg-slate-50">
+          <DialogFooter className="p-6 border-t bg-slate-50 shrink-0">
             <Button variant="ghost" onClick={() => setIsDuplicateDialogOpen(false)} className="font-bold">Sluiten</Button>
             <Button onClick={handleExportDuplicates} disabled={duplicateObjects.length === 0} className="font-black uppercase tracking-tight h-11 px-8 shadow-xl shadow-primary/20">
               <Download className="mr-2 h-4 w-4" />
