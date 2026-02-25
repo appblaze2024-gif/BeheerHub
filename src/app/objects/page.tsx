@@ -290,6 +290,7 @@ export default function ObjectsPage() {
     id: true,
     address: false,
   });
+  const [dupFilter, setDupFilter] = React.useState<string>('all');
 
   const { selectedProjectId, setSelectedProjectId } = useProject();
   const [selectedAreaIds, setSelectedAreaIds] = React.useState<string[]>([]);
@@ -461,8 +462,29 @@ export default function ObjectsPage() {
 
   const handleFindDuplicates = () => {
     setIsFindingDuplicates(true);
-    // Use the full objects array to find duplicates across filters
-    const sourceList = objects || [];
+    // Use the full objects array or filtered array to find duplicates
+    let sourceList = objects || [];
+
+    if (dupFilter !== 'all') {
+        sourceList = sourceList.filter(obj => {
+            const typeStr = (obj.locatieType || '').toLowerCase();
+            const subTypeStr = (obj.locatieSubType || '').toLowerCase();
+            const isContainer = typeStr.includes('container') || subTypeStr.includes('container') || typeStr.includes('ondergronds');
+            
+            if (dupFilter === 'container') return isContainer;
+            if (dupFilter === 'prullenbak') {
+                const matchesAnyCustom = customFilters.some(cf => {
+                    const cfLower = cf.toLowerCase();
+                    return typeStr.includes(cfLower) || subTypeStr.includes(cfLower);
+                });
+                return !isContainer && !matchesAnyCustom;
+            }
+            
+            const filterLower = dupFilter.toLowerCase();
+            return typeStr.includes(filterLower) || subTypeStr.includes(filterLower);
+        });
+    }
+
     const seenLocation = new globalThis.Map<string, any[]>();
     const seenId = new globalThis.Map<string, any[]>();
     const seenAddress = new globalThis.Map<string, any[]>();
@@ -713,7 +735,7 @@ export default function ObjectsPage() {
               
               <DropdownMenuSeparator />
               <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-2">Kwaliteitscontrole</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => setIsQualityDialogOpen(true)} className="font-bold cursor-pointer rounded-lg h-10">
+              <DropdownMenuItem onClick={() => { setDupFilter(typeFilter); setIsQualityDialogOpen(true); }} className="font-bold cursor-pointer rounded-lg h-10">
                 <SearchCode className="mr-3 h-4 w-4 text-primary" />
                 Zoek duplicaten...
               </DropdownMenuItem>
@@ -1129,44 +1151,71 @@ export default function ObjectsPage() {
 
       {/* Quality Control Selection Dialog */}
       <Dialog open={isQualityDialogOpen} onOpenChange={setIsQualityDialogOpen}>
-        <DialogContent className="sm:max-w-md border-none shadow-2xl rounded-3xl">
-          <DialogHeader className="p-2">
+        <DialogContent className="sm:max-w-md border-none shadow-2xl rounded-3xl flex flex-col p-0 overflow-hidden h-[80vh]">
+          <DialogHeader className="p-6 bg-slate-50 border-b shrink-0">
             <div className="bg-primary/10 h-12 w-12 rounded-2xl flex items-center justify-center mb-4">
                 <SearchCode className="h-6 w-6 text-primary" />
             </div>
             <DialogTitle className="text-xl font-black uppercase tracking-tight">Slimme Kwaliteitscontrole</DialogTitle>
             <DialogDescription className="font-bold text-slate-500">
-              Op welke criteria wilt u de database controleren op dubbele vermeldingen?
+              Selecteer uw scan-parameters en criteria.
             </DialogDescription>
           </DialogHeader>
           
-          <div className="py-6 space-y-4">
-            <div className="flex items-center space-x-3 p-3 rounded-2xl border-2 border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => setDupCriteria(p => ({ ...p, location: !p.location }))}>
-                <Checkbox checked={dupCriteria.location} onCheckedChange={(c) => setDupCriteria(p => ({ ...p, location: !!c }))} />
-                <div className="flex-1">
-                    <Label className="font-black uppercase text-xs cursor-pointer">Exacte Coördinaten</Label>
-                    <p className="text-[10px] text-slate-400 font-bold leading-none mt-1">Match op Latitude & Longitude</p>
-                </div>
-            </div>
-            
-            <div className="flex items-center space-x-3 p-3 rounded-2xl border-2 border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => setDupCriteria(p => ({ ...p, id: !p.id }))}>
-                <Checkbox checked={dupCriteria.id} onCheckedChange={(c) => setDupCriteria(p => ({ ...p, id: !!c }))} />
-                <div className="flex-1">
-                    <Label className="font-black uppercase text-xs cursor-pointer">ID Nummer (bijv. 141619)</Label>
-                    <p className="text-[10px] text-slate-400 font-bold leading-none mt-1">Match op uniek systeemnummer</p>
-                </div>
-            </div>
+          <ScrollArea className="flex-1 p-6">
+            <div className="space-y-8">
+              <div className="space-y-3">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Scan Bereik</Label>
+                <Select value={dupFilter} onValueChange={setDupFilter}>
+                  <SelectTrigger className="h-11 font-black border-2 bg-white">
+                    <SelectValue placeholder="Kies scan bereik..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" className="font-bold">Volledige database</SelectItem>
+                    <SelectGroup>
+                      <SelectLabel>Filters</SelectLabel>
+                      <SelectItem value="prullenbak">Alleen Prullenbakken</SelectItem>
+                      <SelectItem value="container">Alleen Containers</SelectItem>
+                      {customFilters.map(f => (
+                        <SelectItem key={f} value={f}>{f}</SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="flex items-center space-x-3 p-3 rounded-2xl border-2 border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => setDupCriteria(p => ({ ...p, address: !p.address }))}>
-                <Checkbox checked={dupCriteria.address} onCheckedChange={(c) => setDupCriteria(p => ({ ...p, address: !!c }))} />
-                <div className="flex-1">
-                    <Label className="font-black uppercase text-xs cursor-pointer">Straatnaam & Nummer</Label>
-                    <p className="text-[10px] text-slate-400 font-bold leading-none mt-1">Match op fysieke adresgegevens</p>
-                </div>
-            </div>
-          </div>
+              <div className="space-y-3">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Duplicaat Criteria</Label>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-3 p-3 rounded-2xl border-2 border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => setDupCriteria(p => ({ ...p, location: !p.location }))}>
+                      <Checkbox checked={dupCriteria.location} onCheckedChange={(c) => setDupCriteria(p => ({ ...p, location: !!c }))} />
+                      <div className="flex-1">
+                          <Label className="font-black uppercase text-xs cursor-pointer">Exacte Coördinaten</Label>
+                          <p className="text-[10px] text-slate-400 font-bold leading-none mt-1">Match op Latitude & Longitude</p>
+                      </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3 p-3 rounded-2xl border-2 border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => setDupCriteria(p => ({ ...p, id: !p.id }))}>
+                      <Checkbox checked={dupCriteria.id} onCheckedChange={(c) => setDupCriteria(p => ({ ...p, id: !!c }))} />
+                      <div className="flex-1">
+                          <Label className="font-black uppercase text-xs cursor-pointer">ID Nummer (bijv. 141619)</Label>
+                          <p className="text-[10px] text-slate-400 font-bold leading-none mt-1">Match op uniek systeemnummer</p>
+                      </div>
+                  </div>
 
-          <DialogFooter>
+                  <div className="flex items-center space-x-3 p-3 rounded-2xl border-2 border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => setDupCriteria(p => ({ ...p, address: !p.address }))}>
+                      <Checkbox checked={dupCriteria.address} onCheckedChange={(c) => setDupCriteria(p => ({ ...p, address: !!c }))} />
+                      <div className="flex-1">
+                          <Label className="font-black uppercase text-xs cursor-pointer">Straatnaam & Nummer</Label>
+                          <p className="text-[10px] text-slate-400 font-bold leading-none mt-1">Match op fysieke adresgegevens</p>
+                      </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="p-6 border-t bg-slate-50 shrink-0">
             <Button variant="ghost" onClick={() => setIsQualityDialogOpen(false)} className="font-bold">Annuleren</Button>
             <Button onClick={handleFindDuplicates} disabled={isFindingDuplicates || (!dupCriteria.location && !dupCriteria.id && !dupCriteria.address)} className="font-black uppercase tracking-tight h-11 px-8 shadow-xl shadow-primary/20">
               {isFindingDuplicates ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileCheck className="mr-2 h-4 w-4" />}
