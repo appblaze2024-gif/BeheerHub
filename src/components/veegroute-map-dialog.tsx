@@ -130,7 +130,7 @@ export function VeegrouteMapDialog({ open, onOpenChange, route, onSave, readOnly
             {
                 'id': 'gl-draw-polygon-fill-inactive',
                 'type': 'fill',
-                'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon'], ['!=', 'mode', 'static'], ['!has', 'user_roadTypes']],
+                'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon'], ['!=', 'mode', 'static'], ['!has', 'roadTypes']],
                 'paint': {
                     'fill-color': '#3bb2d0',
                     'fill-outline-color': '#3bb2d0',
@@ -150,7 +150,7 @@ export function VeegrouteMapDialog({ open, onOpenChange, route, onSave, readOnly
             {
                 'id': 'gl-draw-polygon-stroke-inactive',
                 'type': 'line',
-                'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon'], ['!=', 'mode', 'static'], ['!has', 'user_roadTypes']],
+                'filter': ['all', ['==', 'active', 'false'], ['==', '$type', 'Polygon'], ['!=', 'mode', 'static'], ['!has', 'roadTypes']],
                 'layout': { 'line-cap': 'round', 'line-join': 'round' },
                 'paint': { 'line-color': '#3bb2d0', 'line-width': 2 }
             },
@@ -164,7 +164,7 @@ export function VeegrouteMapDialog({ open, onOpenChange, route, onSave, readOnly
             {
                 'id': 'gl-draw-polygon-fill-has-types',
                 'type': 'fill',
-                'filter': ['all', ['==', 'active', 'false'], ['has', 'user_roadTypes']],
+                'filter': ['all', ['==', 'active', 'false'], ['has', 'roadTypes']],
                 'paint': {
                     'fill-color': '#9333ea',
                     'fill-opacity': 0.4
@@ -173,7 +173,7 @@ export function VeegrouteMapDialog({ open, onOpenChange, route, onSave, readOnly
             {
                 'id': 'gl-draw-polygon-stroke-has-types',
                 'type': 'line',
-                'filter': ['all', ['==', 'active', 'false'], ['has', 'user_roadTypes']],
+                'filter': ['all', ['==', 'active', 'false'], ['has', 'roadTypes']],
                 'paint': {
                     'line-color': '#9333ea',
                     'line-width': 3

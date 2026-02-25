@@ -287,8 +287,8 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
-        <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='25' fill='%23003087'/><path d='M30 30 H70 V40 H30 Z M30 50 H70 V60 H30 Z M30 70 H70 V80 H30 Z' fill='white'/></svg>" />
-        <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='25' fill='%23003087'/><path d='M30 30 H70 V40 H30 Z M30 50 H70 V60 H30 Z M30 70 H70 V80 H30 Z' fill='white'/></svg>" />
+        <link rel="icon" type="image/png" sizes="32x32" href="https://i.ibb.co/kgtwqH50/favicon-32x32.png" />
+        <link rel="apple-touch-icon" href="https://i.ibb.co/kgtwqH50/favicon-32x32.png" />
       </head>
       <body className="h-full overflow-hidden bg-slate-50 antialiased">
         <FirebaseClientProvider>
