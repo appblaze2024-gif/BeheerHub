@@ -629,9 +629,9 @@ export default function NewIssuePage() {
   }, [form, toast, categoriesData]);
   
   React.useEffect(() => {
+    if (searchQuery.trim().length < 3) { setAddressSuggestions([]); return; }
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     if (justSelectedSuggestion.current) { justSelectedSuggestion.current = false; return; }
-    if (!searchQuery.trim()) { setAddressSuggestions([]); return; }
 
     setIsSearching(true);
     searchTimeoutRef.current = setTimeout(async () => {
@@ -721,9 +721,6 @@ export default function NewIssuePage() {
     }
   };
 
-  /**
-   * Extraheert tekst uit een PDF om kosten te besparen bij AI-verwerking.
-   */
   const extractTextFromPdf = async (file: File): Promise<string> => {
     try {
       const arrayBuffer = await file.arrayBuffer();
@@ -754,11 +751,10 @@ export default function NewIssuePage() {
     setAddressSuggestions([]);
     const fileArray = Array.from(files);
     
-    toast({ description: `BeheerHub AI analyseert ${fileArray.length} document(en) via de meest voordelige methode...` });
+    toast({ description: `BeheerHub AI analyseert ${fileArray.length} document(en)...` });
 
     try {
         for (const file of fileArray) {
-            // Stap 1: Probeer tekst te extraheren (90% goedkoper dan visuele scan)
             const extractedText = await extractTextFromPdf(file);
             const isTextAvailable = extractedText.length > 50;
 
@@ -768,7 +764,6 @@ export default function NewIssuePage() {
                 reader.readAsDataURL(file);
             });
 
-            // Stap 2: Roep de AI flow aan met tekst indien beschikbaar, anders afbeelding
             const result = await parseIssuePdf({ 
                 pdfDataUri: isTextAvailable ? undefined : base64,
                 textContent: isTextAvailable ? extractedText : undefined,
@@ -866,7 +861,7 @@ export default function NewIssuePage() {
             }
         }
 
-        toast({ title: "Scans voltooid", description: `${fileArray.length} document(en) verwerkt via de voordelige tekst-methode.` });
+        toast({ title: "Scans voltooid", description: `${fileArray.length} document(en) verwerkt.` });
         router.push('/issues/portal');
     } catch (err) {
         console.error("Batch PDF error:", err);
@@ -1104,7 +1099,6 @@ export default function NewIssuePage() {
                                                 setAddressSuggestions([]);
                                                 justSelectedSuggestion.current = true;
                                                 
-                                                // Extract individual fields if possible
                                                 const street = s.text || '';
                                                 const houseNum = s.address || '';
                                                 const postcode = s.context?.find((c: any) => c.id.includes('postcode'))?.text || '';
@@ -1183,7 +1177,7 @@ export default function NewIssuePage() {
                                     <div key={p.storagePath} className="relative aspect-square rounded-xl overflow-hidden border shadow-sm group">
                                         <Image src={p.url} alt={p.name} fill className="object-cover" />
                                         {!isReadOnly && <Button type="button" variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setUploadedPhotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}>
-                                            <Trash2 className="h-3 w-3" />
+                                            <Trash2 className="h-3.5 w-3.5" />
                                         </Button>}
                                     </div>
                                 ))}

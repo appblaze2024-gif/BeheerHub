@@ -51,13 +51,12 @@ export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, allPrul
 
   const firestore = useFirestore();
   
-  // Properly memoize the collection reference to prevent infinite loops
-  const objectsCollection = useMemoFirebase(() => {
+  const objectsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'objects');
   }, [firestore]);
 
-  const { data: allObjects } = useCollection<MapObject>(objectsCollection);
+  const { data: allObjects } = useCollection<MapObject>(objectsQuery);
 
   const [selectedObjectIds, setSelectedObjectIds] = React.useState<string[]>([]);
   const [isSaving, setIsSaving] = React.useState(false);
@@ -105,7 +104,6 @@ export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, allPrul
   const fitMapToBounds = React.useCallback((map: any) => {
     if (!map) return;
     
-    // Priority 1: Drawn area from subGebieden
     if (routeGeoJSONFeatures && routeGeoJSONFeatures.length > 0) {
       try {
         const featureCollection = turf.featureCollection(routeGeoJSONFeatures);
@@ -117,7 +115,6 @@ export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, allPrul
       } catch (e) { /* ignore */ }
     }
     
-    // Priority 2: Objects already in the route
     if (allObjects && route) {
         const objectsInRoute = allObjects.filter(obj => 
             Array.isArray(obj.locatieWerkgebieden) && obj.locatieWerkgebieden.includes(route.naam)
@@ -135,7 +132,6 @@ export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, allPrul
         }
     }
     
-    // Priority 3: All objects
     if (allObjects && allObjects.length > 0) {
        const points = allObjects.map(obj => turf.point([obj.longitude, obj.latitude]));
        const featureCollection = turf.featureCollection(points);
@@ -148,7 +144,6 @@ export function PrullenbakkenrouteMapDialog({ open, onOpenChange, route, allPrul
        } catch(e) { /* ignore */ }
     }
     
-    // Fallback to default
     map.flyTo({ center: [5.2913, 52.1326], zoom: 7 });
 
   }, [routeGeoJSONFeatures, allObjects, route]);

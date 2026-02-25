@@ -22,11 +22,14 @@ export default function ResetPasswordPage() {
     <div className="flex h-screen w-screen flex-col items-center justify-start bg-gray-100 p-4 dark:bg-gray-950">
        <div className="w-full max-w-md space-y-6">
             <div className="flex justify-center">
+                {/* Enhanced Logo: High quality and non-blurry on mobile */}
                 <Image
                     src="https://i.ibb.co/DgYjGBTt/Ontwerp-zonder-titel-5.png"
                     alt="BEHEERHUB"
-                    width={360}
-                    height={90}
+                    width={720}
+                    height={180}
+                    style={{ width: '360px', height: 'auto' }}
+                    quality={100}
                     priority
                 />
             </div>

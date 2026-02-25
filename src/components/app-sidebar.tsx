@@ -145,8 +145,11 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       <Sidebar isCollapsed={false} className="w-full bg-white border-r border-slate-200 shadow-none">
           <SidebarHeader className="p-4 border-b border-slate-100">
             <div className="flex items-center gap-4 w-full">
-              <div className="bg-primary h-10 w-10 rounded-xl flex items-center justify-center shadow-lg shadow-black/20">
-                <LayoutGrid className="text-white h-6 w-6" />
+              {/* Sharp SVG Logo for BeheerHub */}
+              <div className="bg-primary h-10 w-10 rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
+                <svg viewBox="0 0 100 100" className="h-6 w-6 text-white" fill="currentColor">
+                    <path d="M20 20 H80 V35 H20 Z M20 45 H80 V60 H20 Z M20 70 H80 V85 H20 Z" />
+                </svg>
               </div>
               <div className="flex flex-col">
                   <span className="font-black text-slate-900 uppercase tracking-tighter text-lg leading-none">BeheerHub</span>
