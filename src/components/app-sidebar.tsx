@@ -146,7 +146,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       <Sidebar isCollapsed={false} className="w-full bg-white border-r border-slate-200 shadow-none">
           <SidebarHeader className="p-4 border-b border-slate-100">
             <div className="flex items-center gap-4 w-full">
-              <div className="bg-primary h-10 w-10 rounded-xl flex items-center justify-center shadow-lg shadow-primary/20 overflow-hidden shrink-0">
+              <div className="h-10 w-10 flex items-center justify-center overflow-hidden shrink-0">
                 <Image 
                   src="https://i.ibb.co/kgtwqH50/favicon-32x32.png" 
                   alt="BeheerHub Logo" 
