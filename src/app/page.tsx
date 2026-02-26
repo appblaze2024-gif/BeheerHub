@@ -13,9 +13,10 @@ import {
   Package,
   Activity,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  ChevronRight
 } from 'lucide-react';
-import { useCollection, useFirestore } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, limit, orderBy } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
@@ -24,18 +25,20 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { useProject } from '@/context/project-context';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
 export default function DashboardPage() {
   const router = useRouter();
   const firestore = useFirestore();
   const { selectedProjectId } = useProject();
 
-  const objectsQuery = React.useMemo(() => {
+  const objectsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'objects');
   }, [firestore]);
 
-  const issuesQuery = React.useMemo(() => {
+  const issuesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'meldingen'), where('status', '==', 'Nieuw'), limit(10));
   }, [firestore]);

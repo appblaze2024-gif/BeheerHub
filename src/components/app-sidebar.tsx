@@ -19,11 +19,12 @@ import {
   Cpu,
   ChevronRight,
   LayoutGrid,
-  History
+  History,
+  Command
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useProject } from '@/context/project-context';
-import { useCollection, useFirestore } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -38,7 +39,7 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { profile } = useProfile();
   const firestore = useFirestore();
 
-  const projectsQuery = React.useMemo(() => {
+  const projectsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'projects');
   }, [firestore]);
