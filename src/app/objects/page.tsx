@@ -31,6 +31,7 @@ import {
   AlertTriangle,
   Settings2,
   Tag,
+  LayoutGrid,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -102,13 +103,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-type Area = {
-  id: string;
-  naam: string;
-  subGebieden: string;
-  type: 'wijk' | 'veegroute' | 'prullenbakkenroute';
-};
-
 type Project = {
   id: string;
   projectnaam: string;
@@ -117,204 +111,25 @@ type Project = {
   prullenbakkenroutes?: Wijk[];
 };
 
-function PlanningAccordionContent({ selectedObject, handleUpdateField, projects, isLoadingProjects }: { selectedObject: any, handleUpdateField: (field: string, value: any) => void, projects: Project[] | null, isLoadingProjects: boolean }) {
-  const [selectedProjectId, setSelectedProjectId] = React.useState('');
-
-  const projectRoutes = React.useMemo(() => {
-    if (!selectedProjectId) return [];
-    const project = projects?.find(p => p.id === selectedProjectId);
-    return project?.prullenbakkenroutes || [];
-  }, [selectedProjectId, projects]);
-
-  const handleRouteAssignment = (routeName: string, isChecked: boolean) => {
-    const currentAssignments = selectedObject.locatieWerkgebieden || [];
-    let newAssignments;
-    if (isChecked) {
-      newAssignments = [...currentAssignments, routeName];
-    } else {
-      newAssignments = currentAssignments.filter((name: string) => name !== routeName);
-    }
-    handleUpdateField('locatieWerkgebieden', newAssignments);
-  };
-  
-  if (!selectedObject) return null;
-
-  return (
-    <div className='space-y-6 pt-4'>
-      <div className="space-y-2">
-          <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Toewijzen aan project</Label>
-          <Select onValueChange={setSelectedProjectId} value={selectedProjectId} disabled={isLoadingProjects}>
-            <SelectTrigger className="h-12 font-black bg-slate-50 border-none shadow-inner-soft rounded-2xl">
-              <SelectValue placeholder="Selecteer een project" />
-            </SelectTrigger>
-            <SelectContent className="rounded-3xl shadow-2xl border-slate-100">
-              {projects?.map(p => (
-                <SelectItem key={p.id} value={p.id} className="font-bold rounded-2xl h-11">{p.projectnaam}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-      </div>
-
-      {selectedProjectId && (
-        <div className="space-y-3 bg-slate-50 p-5 rounded-[2rem] border-2 border-slate-100 shadow-inner-soft">
-          <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Beschikbare Prullenbakkenroutes</h4>
-          <div className="grid gap-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-            {projectRoutes.length > 0 ? projectRoutes.map(route => (
-                <div key={route.id} className="flex items-center space-x-4 p-3 hover:bg-white rounded-2xl transition-premium border-2 border-transparent hover:border-primary/10">
-                <Checkbox
-                    id={`route-${route.id}`}
-                    checked={(selectedObject.locatieWerkgebieden || []).includes(route.naam)}
-                    onCheckedChange={(checked) => handleRouteAssignment(route.naam, !!checked)}
-                    className="h-5 w-5 rounded-md"
-                />
-                <Label htmlFor={`route-${route.id}`} className="font-black uppercase text-[11px] text-slate-700 cursor-pointer flex-1">{route.naam}</Label>
-                </div>
-            )) : (
-                <p className="text-[10px] font-black uppercase text-slate-300 italic py-4 text-center">Geen routes gevonden.</p>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function IoTHistoryColumn({ sensor, history, isLoading }: { sensor: any, history: any[] | null, isLoading: boolean }) {
-  if (isLoading) {
-    return (
-      <div className="p-8 space-y-6">
-        <Skeleton className="h-4 w-24 rounded-full" />
-        <Skeleton className="h-24 w-full rounded-3xl" />
-        <Skeleton className="h-4 w-32 rounded-full" />
-        <div className="space-y-3">
-            <Skeleton className="h-16 w-full rounded-2xl" />
-            <Skeleton className="h-16 w-full rounded-2xl" />
-            <Skeleton className="h-16 w-full rounded-2xl" />
-        </div>
-      </div>
-    );
-  }
-
-  if (!sensor) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full p-12 text-center text-slate-300">
-        <div className="bg-slate-50 p-10 rounded-[2.5rem] shadow-xl border-2 border-white mb-6">
-          <Cpu className="h-14 w-14 opacity-10" />
-        </div>
-        <p className="text-xs font-black uppercase tracking-widest">Geen IOT Unit Gekoppeld</p>
-        <p className="text-[10px] font-bold text-slate-400 mt-3 max-w-[180px] leading-relaxed">
-            Koppel een sensor via de Wizard met het serienummer van dit object.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col h-full bg-slate-50/30 border-l border-slate-100">
-      <div className="p-8 border-b bg-white/50 backdrop-blur-md">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">IOT Live Status</h3>
-          <Badge variant="outline" className={cn(
-            "text-[9px] h-6 uppercase font-black px-3 rounded-full border-2",
-            sensor.status === 'Online' ? "text-green-600 border-green-200 bg-green-50" : "text-red-600 border-red-200 bg-red-50"
-          )}>
-            {sensor.status || 'Offline'}
-          </Badge>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white p-4 rounded-2xl border-2 border-slate-50 shadow-inner-soft text-center">
-            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Vulgraad</p>
-            <p className="text-2xl font-black text-slate-900 leading-none">{sensor.vulgraad || 0}%</p>
-          </div>
-          <div className="bg-white p-4 rounded-2xl border-2 border-slate-50 shadow-inner-soft text-center">
-            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Afstand</p>
-            <p className="text-2xl font-black text-slate-900 leading-none">{sensor.currentDistanceCm || 0}<span className="text-xs ml-0.5 opacity-30">cm</span></p>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex-1 p-8 space-y-6 overflow-y-auto no-scrollbar">
-        <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
-          <History className="h-4 w-4 text-slate-400" />
-          <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Live Metingen</h4>
-        </div>
-        
-        <div className="space-y-3">
-          {history && history.length > 0 ? (
-            history.map((log, i) => (
-              <div key={i} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 shadow-sm transition-premium hover:border-primary/20 hover:shadow-xl">
-                <div className="flex flex-col">
-                  <span className="text-[11px] font-black text-slate-900 uppercase tracking-tighter">
-                    {log.timestamp ? format(new Date(log.timestamp), 'dd MMM', { locale: nl }) : '--'}
-                  </span>
-                  <span className="text-[9px] font-bold text-slate-400">
-                    {log.timestamp ? format(new Date(log.timestamp), 'HH:mm') : '--:--'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="text-sm font-black text-slate-900 leading-none">{log.vulgraad}%</p>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase mt-0.5">{log.currentDistanceCm}cm</p>
-                  </div>
-                  <Activity className="h-4 w-4 text-primary opacity-20" />
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="py-20 text-center border-4 border-dashed rounded-[2.5rem] border-slate-100 bg-white/50">
-              <Clock className="h-8 w-8 text-slate-200 mx-auto mb-3 opacity-20" />
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-300">Geen logs</p>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function ObjectsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const isMobile = useIsMobile();
   const isTablet = useIsMobile(1024);
   const [isImporting, setIsImporting] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');
   const [selectedObject, setSelectedObject] = React.useState<any | null>(null);
   const [viewMode, setViewMode] = React.useState<'list' | 'map'>('list');
   const [showHeatmap, setShowHeatmap] = React.useState(false);
-  const [isBulkLoading, setIsBulkLoading] = React.useState(false);
   const [typeFilter, setTypeFilter] = React.useState<string>('all');
   const [isAddFilterDialogOpen, setIsAddFilterDialogOpen] = React.useState(false);
   const [newFilterName, setNewFilterName] = React.useState('');
   const [isSavingFilter, setIsSavingFilter] = React.useState(false);
   const [isBulkDeleteAlertOpen, setIsBulkDeleteAlertOpen] = React.useState(false);
-
-  // Duplicates state
-  const [duplicateObjects, setDuplicateObjects] = React.useState<{ obj: any, reason: string }[]>([]);
-  const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = React.useState(false);
-  const [isQualityDialogOpen, setIsQualityDialogOpen] = React.useState(false);
-  const [isFindingDuplicates, setIsFindingDuplicates] = React.useState(false);
-  
-  // Duplicate finding criteria
-  const [dupCriteria, setDupCriteria] = React.useState({
-    location: true,
-    id: true,
-    address: false,
-  });
-  const [dupFilter, setDupFilter] = React.useState<string>('all');
-
-  const { selectedProjectId, setSelectedProjectId } = useProject();
-  const [selectedAreaIds, setSelectedAreaIds] = React.useState<string[]>([]);
+  const [isBulkLoading, setIsBulkLoading] = React.useState(false);
 
   const objectsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'objects');
-  }, [firestore]);
-  
-  const projectsCollection = useMemoFirebase(() => {
-      if (!firestore) return null;
-      return collection(firestore, 'projects');
   }, [firestore]);
 
   const filtersRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'object_filters') : null, [firestore]);
@@ -322,57 +137,16 @@ export default function ObjectsPage() {
   const customFilters = filtersData?.custom || [];
 
   const { data: objects, isLoading: isLoadingObjects } = useCollection<any>(objectsQuery);
-  const { data: projects, isLoading: isLoadingProjects } = useCollection<Project>(projectsCollection);
-
-  const sensorRef = useMemoFirebase(() => {
-    if (!firestore || !selectedObject?.id) return null;
-    return doc(firestore, 'sensors', selectedObject.id);
-  }, [firestore, selectedObject?.id]);
-  const { data: sensor, isLoading: sensorLoading } = useDoc<any>(sensorRef);
-
-  const historyQuery = useMemoFirebase(() => {
-    if (!firestore || !selectedObject?.id) return null;
-    return query(
-      collection(firestore, 'sensors', selectedObject.id, 'history'),
-      orderBy('timestamp', 'desc'),
-      limit(20)
-    );
-  }, [firestore, selectedObject?.id]);
-  const { data: history, isLoading: historyLoading } = useCollection<any>(historyQuery);
-
-  const selectedProject = React.useMemo(() => {
-    return projects?.find(p => p.id === selectedProjectId) ?? null;
-  }, [projects, selectedProjectId]);
-  
-  const projectAreas = React.useMemo<Area[]>(() => {
-    if (!selectedProject) return [];
-    return (selectedProject.prullenbakkenroutes || []).map(r => ({ ...r, type: 'prullenbakkenroute' }));
-  }, [selectedProject]);
-
 
   const filteredObjectsList = React.useMemo(() => {
     if (!objects) return [];
-    
     let filtered = objects;
 
-    // Apply Type Filter
     if (typeFilter !== 'all') {
       filtered = filtered.filter(obj => {
         const typeStr = (obj.locatieType || '').toLowerCase();
-        const subTypeStr = (obj.locatieSubType || '').toLowerCase();
-        const isContainer = typeStr.includes('container') || subTypeStr.includes('container') || typeStr.includes('ondergronds');
-        
-        if (typeFilter === 'container') return isContainer;
-        if (typeFilter === 'prullenbak') {
-            const matchesAnyCustom = customFilters.some(cf => {
-                const cfLower = cf.toLowerCase();
-                return typeStr.includes(cfLower) || subTypeStr.includes(cfLower);
-            });
-            return !isContainer && !matchesAnyCustom;
-        }
-        
         const filterLower = typeFilter.toLowerCase();
-        return typeStr.includes(filterLower) || subTypeStr.includes(filterLower);
+        return typeStr.includes(filterLower);
       });
     }
 
@@ -381,27 +155,11 @@ export default function ObjectsPage() {
       filtered = filtered.filter(
         (obj) =>
           (obj.idNummer || obj.id).toLowerCase().includes(q) ||
-          obj.straatnaam?.toLowerCase().includes(q) ||
-          obj.locatieSubType?.toLowerCase().includes(q)
+          obj.straatnaam?.toLowerCase().includes(q)
       );
     }
-    
     return filtered;
-  }, [objects, searchTerm, typeFilter, customFilters]);
-
-  React.useEffect(() => {
-    if (!selectedObject && filteredObjectsList && filteredObjectsList.length > 0 && !isTablet) {
-      setSelectedObject(filteredObjectsList[0]);
-    } else if (selectedObject && filteredObjectsList) {
-        if (!filteredObjectsList.find((v) => v.id === selectedObject.id)) {
-            setSelectedObject(null);
-        }
-    }
-  }, [filteredObjectsList, selectedObject, isTablet]);
-  
-  const handleImportSuccess = () => {
-    setIsImporting(false);
-  };
+  }, [objects, searchTerm, typeFilter]);
 
   const handleUpdateField = (field: string, value: any) => {
     if (!firestore || !selectedObject) return;
@@ -410,830 +168,208 @@ export default function ObjectsPage() {
     setSelectedObject((prev: any) => ({ ...prev, [field]: value }));
   };
 
-  const handleSetAllActive = async () => {
-    if (!firestore || !objects) return;
-    setIsBulkLoading(true);
-    const batch = writeBatch(firestore);
-    
-    objects.forEach((obj: any) => {
-      const docRef = doc(firestore, 'objects', obj.id);
-      batch.update(docRef, { isActief: true });
-    });
-
-    try {
-      await batch.commit();
-      toast({
-        title: "Bulk actie voltooid",
-        description: `${objects.length} objecten zijn op actief gezet.`,
-      });
-    } catch (error) {
-      console.error("Fout bij activeren objecten:", error);
-      toast({
-        variant: "destructive",
-        title: "Fout opgetreden",
-        description: "Kon de objecten niet in bulk bijwerken.",
-      });
-    } finally {
-      setIsBulkLoading(false);
-    }
-  };
-
-  const handleBulkDelete = async () => {
-    if (!firestore || filteredObjectsList.length === 0) return;
-    setIsBulkLoading(true);
-    
-    const count = filteredObjectsList.length;
-    const batchSize = 500;
-    
-    try {
-      for (let i = 0; i < filteredObjectsList.length; i += batchSize) {
-        const batch = writeBatch(firestore);
-        const chunk = filteredObjectsList.slice(i, i + batchSize);
-        chunk.forEach(obj => {
-          batch.delete(doc(firestore, 'objects', obj.id));
-        });
-        await batch.commit();
-      }
-      
-      toast({
-        title: "Bulk verwijdering voltooid",
-        description: `${count} objecten zijn verwijderd.`,
-      });
-      setIsBulkDeleteAlertOpen(false);
-    } catch (error) {
-      console.error("Error bulk deleting objects:", error);
-      toast({
-        variant: "destructive",
-        title: "Fout bij verwijderen",
-        description: "Kon de objecten niet in bulk verwijderen.",
-      });
-    } finally {
-      setIsBulkLoading(false);
-    }
-  };
-
-  const handleFindDuplicates = () => {
-    setIsFindingDuplicates(true);
-    let sourceList = objects || [];
-
-    if (dupFilter !== 'all') {
-        sourceList = sourceList.filter(obj => {
-            const typeStr = (obj.locatieType || '').toLowerCase();
-            const subTypeStr = (obj.locatieSubType || '').toLowerCase();
-            const isContainer = typeStr.includes('container') || subTypeStr.includes('container') || typeStr.includes('ondergronds');
-            
-            if (dupFilter === 'container') return isContainer;
-            if (dupFilter === 'prullenbak') {
-                const matchesAnyCustom = customFilters.some(cf => {
-                    const cfLower = cf.toLowerCase();
-                    return typeStr.includes(cfLower) || subTypeStr.includes(cfLower);
-                });
-                return !isContainer && !matchesAnyCustom;
-            }
-            
-            const filterLower = dupFilter.toLowerCase();
-            return typeStr.includes(filterLower) || subTypeStr.includes(filterLower);
-        });
-    }
-
-    const seenLocation = new globalThis.Map<string, any[]>();
-    const seenId = new globalThis.Map<string, any[]>();
-    const seenAddress = new globalThis.Map<string, any[]>();
-    
-    const duplicates: { obj: any, reason: string }[] = [];
-
-    sourceList.forEach(obj => {
-      if (dupCriteria.location && typeof obj.latitude === 'number' && typeof obj.longitude === 'number') {
-        const locKey = `${obj.latitude.toFixed(8)}_${obj.longitude.toFixed(8)}`;
-        if (seenLocation.has(locKey)) {
-          const group = seenLocation.get(locKey)!;
-          if (group.length === 1) duplicates.push({ obj: group[0], reason: 'Zelfde locatie' });
-          duplicates.push({ obj, reason: 'Zelfde locatie' });
-          group.push(obj);
-        } else seenLocation.set(locKey, [obj]);
-      }
-
-      const idToMatch = obj.idNummer || obj.id;
-      if (dupCriteria.id && idToMatch) {
-        const idKey = String(idToMatch).toLowerCase().trim();
-        if (seenId.has(idKey)) {
-          const group = seenId.get(idKey)!;
-          if (group.length === 1) duplicates.push({ obj: group[0], reason: 'Zelfde ID' });
-          duplicates.push({ obj, reason: 'Zelfde ID' });
-          group.push(obj);
-        } else seenId.set(idKey, [obj]);
-      }
-
-      if (dupCriteria.address && obj.straatnaam && obj.huisnummer) {
-        const addrKey = `${obj.straatnaam.toLowerCase()}_${obj.huisnummer.toLowerCase()}`.trim();
-        if (seenAddress.has(addrKey)) {
-          const group = seenAddress.get(addrKey)!;
-          if (group.length === 1) duplicates.push({ obj: group[0], reason: 'Zelfde adres' });
-          duplicates.push({ obj, reason: 'Zelfde adres' });
-          group.push(obj);
-        } else seenAddress.set(addrKey, [obj]);
-      }
-    });
-
-    const uniqueResults = duplicates.reduce((acc, current) => {
-        const x = acc.find(item => item.obj.id === current.obj.id);
-        if (!x) return acc.concat([current]);
-        return acc;
-    }, [] as { obj: any, reason: string }[]);
-
-    setDuplicateObjects(uniqueResults);
-    setIsDuplicateDialogOpen(true);
-    setIsQualityDialogOpen(false);
-    setIsFindingDuplicates(false);
-    
-    if (uniqueResults.length === 0) {
-        toast({ title: "Geen duplicaten", description: "Geen dubbele objecten gevonden op basis van uw criteria." });
-    }
-  };
-
-  const handleExportDuplicates = () => {
-    if (duplicateObjects.length === 0) return;
-
-    const dataForSheet = duplicateObjects.map(d => ({
-      'ID Nummer': d.obj.idNummer || d.obj.id,
-      'Straatnaam': d.obj.straatnaam || '',
-      'Huisnummer': d.obj.huisnummer || '',
-      'Reden': d.reason,
-      'Categorie': d.obj.locatieType || '',
-      'X-coordinaat': d.obj.longitude,
-      'Y-coordinaat': d.obj.latitude
-    }));
-    
-    const worksheet = XLSX.utils.json_to_sheet(dataForSheet);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Dubbele Objecten");
-    
-    XLSX.writeFile(workbook, `controle_duplicaten.xlsx`);
-  };
-
-  const handleAreaSelectionChange = (areaId: string, checked: boolean) => {
-    setSelectedAreaIds(prev => 
-      checked ? [...prev, areaId] : prev.filter(id => id !== areaId)
-    );
-  };
-  
-  const selectedAreas = React.useMemo(() => {
-      if (!projectAreas) return [];
-      return projectAreas.filter(area => selectedAreaIds.includes(area.id));
-  }, [projectAreas, selectedAreaIds]);
-
-  const objectsOnMap = React.useMemo(() => {
-    if (!objects) return [];
-    
-    let filtered = objects;
-
-    // Apply Type Filter to map
-    if (typeFilter !== 'all') {
-      filtered = filtered.filter(obj => {
-        const typeStr = (obj.locatieType || '').toLowerCase();
-        const subTypeStr = (obj.locatieSubType || '').toLowerCase();
-        const isContainer = typeStr.includes('container') || subTypeStr.includes('container') || typeStr.includes('ondergronds');
-        
-        if (typeFilter === 'container') return isContainer;
-        if (typeFilter === 'prullenbak') {
-            const matchesAnyCustom = customFilters.some(cf => {
-                const cfLower = cf.toLowerCase();
-                return typeStr.includes(cfLower) || subTypeStr.includes(cfLower);
-            });
-            return !isContainer && !matchesAnyCustom;
-        }
-        
-        const filterLower = typeFilter.toLowerCase();
-        return typeStr.includes(filterLower) || subTypeStr.includes(filterLower);
-      });
-    }
-
-    if (selectedAreaIds.length === 0) {
-      return filtered;
-    }
-
-    const selectedAreaNames = selectedAreas.map(area => area.naam);
-
-    return filtered.filter(obj => 
-        obj.locatieWerkgebieden && Array.isArray(obj.locatieWerkgebieden) && obj.locatieWerkgebieden.some((gebied: string) => selectedAreaNames.includes(gebied))
-    );
-  }, [objects, selectedAreaIds, selectedAreas, typeFilter, customFilters]);
-
-  const areaPolygons = React.useMemo(() => {
-    return selectedAreas.flatMap(area => {
-      try {
-        const features = JSON.parse(area.subGebieden);
-        if (Array.isArray(features)) {
-          return features.map((feature: any) => ({
-            ...feature,
-            properties: { ...feature.properties, areaNaam: area.naam },
-          }));
-        }
-        return [];
-      } catch (e) {
-        console.error(`Invalid GeoJSON for area ${area.naam}:`, e);
-        return [];
-      }
-    });
-  }, [selectedAreas]);
-
-  const objectCountsPerArea = React.useMemo(() => {
-    if (!objects || !projectAreas) return {};
-
-    const counts: { [areaId: string]: number } = {};
-
-    for (const area of projectAreas) {
-      let objectCount = 0;
-      try {
-        const features = JSON.parse(area.subGebieden);
-        if (Array.isArray(features)) {
-          for (const obj of objects) {
-            if (typeof obj.latitude === 'number' && typeof obj.longitude === 'number') {
-              const point = turf.point([obj.longitude, obj.latitude]);
-              for (const polygon of features) {
-                if (turf.booleanPointInPolygon(point, polygon)) {
-                  objectCount++;
-                  break;
-                }
-              }
-            }
-          }
-        }
-      } catch (e) {
-      }
-      counts[area.id] = objectCount;
-    }
-    return counts;
-  }, [objects, projectAreas]);
-
   const handleAddCustomFilter = async () => {
     if (!firestore || !newFilterName.trim() || !filtersRef) return;
     setIsAddFilterDialogOpen(false);
     setIsSavingFilter(true);
     try {
-        await setDocumentNonBlocking(filtersRef, {
-            custom: arrayUnion(newFilterName.trim())
-        }, { merge: true });
+        await setDocumentNonBlocking(filtersRef, { custom: arrayUnion(newFilterName.trim()) }, { merge: true });
         toast({ title: 'Filter toegevoegd', description: `De categorie '${newFilterName}' is toegevoegd aan de filters.` });
         setNewFilterName('');
     } catch (error) {
-        console.error("Error adding filter:", error);
         toast({ variant: 'destructive', title: 'Fout', description: 'Kon het filter niet opslaan.' });
     } finally {
         setIsSavingFilter(false);
     }
   };
 
-  const currentFilterName = typeFilter === 'all' ? 'alle objecten' : typeFilter;
-
-  if (isLoadingObjects || isLoadingProjects) {
-    return <LoadingScreen message="Objecten laden..." />;
-  }
+  if (isLoadingObjects) return <LoadingScreen message="Objecten laden..." />;
 
   return (
-    <div className="flex flex-col flex-1 h-full min-h-0 bg-white">
-      <header className="flex flex-col md:flex-row items-center justify-between p-6 md:p-10 bg-white border-b shadow-premium gap-6 shrink-0">
-        <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto no-scrollbar pb-1">
+    <div className="flex flex-col h-full bg-zinc-50/50">
+      <header className="h-16 border-b bg-white flex items-center justify-between px-6 shrink-0 shadow-sm">
+        <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="shrink-0 font-black h-11 gap-3 uppercase tracking-widest transition-premium px-6 rounded-2xl">
-                <Filter className="h-5 w-5" /> 
-                {typeFilter === 'all' ? 'Filter' : typeFilter}
-                <ChevronDown className="h-4 w-4 opacity-50" />
+              <Button variant="outline" size="sm" className="h-9 font-bold gap-2 rounded-lg border-zinc-200">
+                <Filter className="h-4 w-4 text-zinc-400" /> 
+                {typeFilter === 'all' ? 'Alle Objecten' : typeFilter}
+                <ChevronDown className="h-3 w-3 opacity-50" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-64 rounded-[2rem] shadow-2xl border-slate-100 p-3">
-              <DropdownMenuItem onClick={() => setTypeFilter('all')} className="font-black uppercase text-[11px] tracking-widest flex items-center justify-between rounded-xl h-12">
-                Alles tonen {typeFilter === 'all' && <Check className="h-4 w-4" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTypeFilter('prullenbak')} className="font-black uppercase text-[11px] tracking-widest flex items-center justify-between rounded-xl h-12">
-                Prullenbakken {typeFilter === 'prullenbak' && <Check className="h-4 w-4" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTypeFilter('container')} className="font-black uppercase text-[11px] tracking-widest flex items-center justify-between rounded-xl h-12">
-                Containers {typeFilter === 'container' && <Check className="h-4 w-4" />}
-              </DropdownMenuItem>
-              
+            <DropdownMenuContent align="start" className="w-56 rounded-xl shadow-xl p-1.5 border-zinc-200">
+              <DropdownMenuItem onClick={() => setTypeFilter('all')} className="rounded-lg h-9 text-xs font-semibold">Alles tonen</DropdownMenuItem>
+              <DropdownMenuSeparator />
               {customFilters.map(filter => (
-                <DropdownMenuItem key={filter} onClick={() => setTypeFilter(filter)} className="font-black uppercase text-[11px] tracking-widest flex items-center justify-between rounded-xl h-12">
-                    {filter} {typeFilter === filter && <Check className="h-4 w-4" />}
-                </DropdownMenuItem>
+                <DropdownMenuItem key={filter} onClick={() => setTypeFilter(filter)} className="rounded-lg h-9 text-xs font-semibold">{filter}</DropdownMenuItem>
               ))}
-
-              <DropdownMenuSeparator className="bg-slate-50" />
-              <DropdownMenuItem onClick={() => setIsAddFilterDialogOpen(true)} className="font-black uppercase tracking-tight text-primary rounded-xl h-12">
-                  <PlusCircle className="mr-3 h-5 w-5" />
-                  + Nieuw filter
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setIsAddFilterDialogOpen(true)} className="rounded-lg h-9 text-xs font-bold text-zinc-900">
+                <PlusCircle className="mr-2 h-4 w-4" /> Nieuw filter
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="shrink-0 font-black h-11 shadow-sm uppercase tracking-widest gap-3 px-6 rounded-2xl transition-premium">
-                <Settings2 className="mr-2 h-5 w-5" />
-                Bulk Acties <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-72 p-3 rounded-[2rem] border-slate-100 shadow-2xl">
-              <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-4 pl-4">Beheer & Kwaliteit</DropdownMenuLabel>
-              <DropdownMenuItem onClick={handleSetAllActive} className="font-black uppercase text-[11px] tracking-widest cursor-pointer rounded-2xl h-14">
-                <ShieldCheck className="mr-4 h-5 w-5 text-green-600" />
-                Zet alle op Actief
-              </DropdownMenuItem>
-              
-              <DropdownMenuItem onClick={() => { setDupFilter(typeFilter); setIsQualityDialogOpen(true); }} className="font-black uppercase text-[11px] tracking-widest cursor-pointer rounded-2xl h-14">
-                <SearchCode className="mr-4 h-5 w-5 text-primary" />
-                Kwaliteitscontrole...
-              </DropdownMenuItem>
-              
-              <DropdownMenuSeparator className="bg-slate-50" />
-              <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-4 pl-4">Opschonen</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => setIsBulkDeleteAlertOpen(true)} className="font-black uppercase tracking-widest text-[11px] text-red-600 cursor-pointer rounded-2xl h-14 focus:text-red-600 focus:bg-red-50">
-                <Trash2 className="mr-4 h-5 w-5" />
-                Wis alle {currentFilterName}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button variant="default" size="sm" className="shrink-0 font-black h-11 uppercase tracking-widest shadow-xl shadow-primary/10 transition-premium px-6 rounded-2xl" onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}>
-            {viewMode === 'list' ? <MapIcon className="mr-2 h-5 w-5" /> : <List className="mr-2 h-5 w-5" />}
-            {viewMode === 'list' ? 'Kaart' : 'Lijst'}
+          <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="sm" className="h-9 font-bold rounded-lg" onClick={() => setViewMode('list')}>
+            <List className="h-4 w-4 mr-2" /> Lijst
           </Button>
-          {viewMode === 'map' && (
-            <Button variant={showHeatmap ? 'secondary' : 'outline'} size="sm" className="shrink-0 font-black h-11 uppercase tracking-widest border-2 transition-premium px-6 rounded-2xl" onClick={() => setShowHeatmap(!showHeatmap)}>
-                <Palette className="mr-2 h-5 w-5" />
-                Vulgraden
-            </Button>
-          )}
+          <Button variant={viewMode === 'map' ? 'secondary' : 'ghost'} size="sm" className="h-9 font-bold rounded-lg" onClick={() => setViewMode('map')}>
+            <MapIcon className="h-4 w-4 mr-2" /> Kaart
+          </Button>
         </div>
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="relative flex-1 md:w-72">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-            <Input placeholder="Zoek object..." className="pl-12 h-11 font-black bg-slate-50 border-none rounded-2xl shadow-inner-soft" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+
+        <div className="flex items-center gap-2">
+          <div className="relative w-64 hidden sm:block">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400" />
+            <Input placeholder="Snelzoeken..." className="pl-9 h-9 text-xs font-medium rounded-lg border-zinc-200 bg-zinc-50" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
           </div>
-           <ObjectImportDialog
-            open={isImporting}
-            onOpenChange={setIsImporting}
-            onSuccess={handleImportSuccess}
-          >
-            <Button variant="outline" size="sm" className="h-11 font-black uppercase tracking-widest transition-premium px-6 rounded-2xl">
-              <Upload className="mr-2 h-5 w-5" />
-              Import
-            </Button>
+          <ObjectImportDialog open={isImporting} onOpenChange={setIsImporting} onSuccess={() => setIsImporting(false)}>
+            <Button variant="outline" size="sm" className="h-9 font-bold rounded-lg"><Upload className="h-4 w-4 mr-2" /> Import</Button>
           </ObjectImportDialog>
-          <ObjectExportDialog objects={objects} projects={projects}>
-            <Button variant="outline" size="sm" className="h-11 font-black uppercase tracking-widest transition-premium px-6 rounded-2xl">
-              <Download className="mr-2 h-5 w-5" />
-              Export
-            </Button>
-          </ObjectExportDialog>
+          <Button variant="outline" size="sm" className="h-9 font-bold rounded-lg"><Download className="h-4 w-4 mr-2" /> Export</Button>
         </div>
       </header>
 
-      {viewMode === 'list' ? (
-         <div className="flex flex-1 min-h-0 relative bg-slate-50/30">
-         <aside className={cn(
-             "w-full lg:w-96 bg-white border-r border-slate-100 flex flex-col transition-premium",
-             isTablet && selectedObject ? "hidden" : "flex"
-         )}>
-           <div className="p-8 border-b bg-slate-50/50">
-             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Geregistreerde Units</p>
-             <Input placeholder="Zoek op adres..." className="h-12 font-black uppercase tracking-tighter bg-white rounded-2xl border-slate-200 shadow-inner-soft" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-           </div>
-           <ScrollArea className="flex-1">
-              <div className="flex flex-col space-y-2 p-4">
-               {filteredObjectsList && filteredObjectsList.length > 0 ? (
-                 filteredObjectsList.map((obj) => (
-                   <div
-                     key={obj.id}
-                     onClick={() => setSelectedObject(obj)}
-                     className={cn(
-                         "flex items-start justify-between p-5 rounded-[2rem] text-left cursor-pointer transition-premium",
-                         selectedObject?.id === obj.id && !isTablet
-                            ? "bg-primary text-white shadow-2xl shadow-primary/20 scale-[1.02]"
-                            : "hover:bg-slate-50"
-                     )}
-                   >
-                     <div className="flex items-start gap-5">
-                       <div className={cn(
-                           "p-3 rounded-2xl transition-premium shadow-sm",
-                           selectedObject?.id === obj.id && !isTablet ? "bg-white/20" : "bg-slate-100"
-                       )}>
-                        <MapPin className={cn("h-5 w-5", selectedObject?.id === obj.id && !isTablet ? "text-white" : "text-primary")} />
-                       </div>
-                       <div className="min-w-0">
-                         <p className={cn("font-black uppercase tracking-tighter text-sm leading-none mb-1.5", selectedObject?.id === obj.id && !isTablet ? "text-white" : "text-slate-900")}>{obj.idNummer || obj.id}</p>
-                         <p className={cn("text-[10px] font-bold uppercase tracking-widest truncate", selectedObject?.id === obj.id && !isTablet ? "text-white/70" : "text-slate-400")}>
-                           {obj.straatnaam ? `${obj.straatnaam} ${obj.huisnummer || ''}` : 'Locatie onbekend'}
-                         </p>
-                       </div>
-                     </div>
-                      <ChevronRight className={cn("h-5 w-5 mt-2.5 transition-premium", selectedObject?.id === obj.id && !isTablet ? "text-white" : "text-slate-200")} />
-                   </div>
-                 ))
-               ) : (
-                  <div className="p-20 text-center text-muted-foreground bg-slate-50/50 rounded-[3rem] m-6 border-4 border-dashed border-slate-100">
-                   <MapPin className="h-16 w-16 mx-auto mb-6 opacity-10" />
-                   <p className="font-black uppercase text-[11px] tracking-widest">Geen resultaten</p>
-                 </div>
-               )}
-             </div>
-           </ScrollArea>
-         </aside>
- 
-         <main className={cn(
-             "flex-1 p-0 overflow-y-auto no-scrollbar bg-white",
-             selectedObject ? "flex" : "hidden lg:flex"
-         )}>
-              {selectedObject ? (
-               <div className="h-full flex-1 flex flex-col">
-               <div className="p-0 flex-1 flex flex-col xl:grid xl:grid-cols-12 gap-0 overflow-hidden">
-                 <div className="xl:col-span-5 space-y-10 p-10 border-r border-slate-100 overflow-y-auto custom-scrollbar bg-white">
-                     <div className="flex items-center gap-8 mb-10">
-                        {isTablet && (
-                            <Button variant="ghost" size="icon" onClick={() => setSelectedObject(null)} className="h-14 w-14 rounded-3xl bg-slate-50 border-2 border-slate-100 shrink-0">
-                                <ArrowLeft className="h-6 w-6" />
-                            </Button>
-                        )}
-                        <div className="min-w-0">
-                            <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none mb-3 truncate">{selectedObject.idNummer || selectedObject.id}</h2>
-                            <div className="flex items-center gap-3">
-                                <Badge variant="outline" className="text-[10px] font-black uppercase border-2 tracking-widest px-4 h-7 rounded-full">{selectedObject.locatieSubType || 'Basis Object'}</Badge>
-                                <Badge variant="secondary" className="bg-blue-50 text-blue-600 border-none font-black text-[10px] uppercase px-4 h-7 rounded-full">{selectedObject.locatieType}</Badge>
-                            </div>
-                        </div>
-                     </div>
-
-                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-10">
-                       <div className="space-y-8">
-                         <div className="space-y-3">
-                           <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Locatie type</Label>
-                           <Select value={selectedObject.locatieType} onValueChange={(v) => handleUpdateField('locatieType', v)}>
-                             <SelectTrigger className="h-14 font-black uppercase tracking-tight bg-slate-50 border-none shadow-inner-soft rounded-2xl px-5">
-                               <SelectValue />
-                             </SelectTrigger>
-                             <SelectContent className="rounded-3xl shadow-2xl border-slate-100 p-2">
-                               <SelectItem value={selectedObject.locatieType} className="font-bold rounded-2xl h-12">{selectedObject.locatieType}</SelectItem>
-                             </SelectContent>
-                           </Select>
-                         </div>
-                         <div className="space-y-3">
-                           <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Kwaliteit (Bestek)</Label>
-                           <Select value={selectedObject.kwaliteit} onValueChange={(v) => handleUpdateField('kwaliteit', v)}>
-                             <SelectTrigger className="h-14 font-black uppercase tracking-tight bg-slate-50 border-none shadow-inner-soft rounded-2xl px-5">
-                               <SelectValue />
-                             </SelectTrigger>
-                             <SelectContent className="rounded-3xl shadow-2xl border-slate-100 p-2">
-                               <SelectItem value="A" className="font-bold rounded-2xl h-12">A - Hoogwaardig</SelectItem>
-                               <SelectItem value="B" className="font-bold rounded-2xl h-12">B - Standaard</SelectItem>
-                               <SelectItem value="C" className="font-bold rounded-2xl h-12">C - Minimaal</SelectItem>
-                             </SelectContent>
-                           </Select>
-                         </div>
-                       </div>
-                       <div className="space-y-8">
-                         <div className="space-y-3">
-                           <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Status Beheer</Label>
-                           <div className="flex items-center justify-between p-5 bg-slate-50 rounded-[1.5rem] border-2 border-slate-100 shadow-inner-soft">
-                             <div className="flex flex-col">
-                                  <span className="text-[11px] font-black uppercase tracking-widest text-slate-400 leading-none mb-1">Operationeel</span>
-                                  <span className="text-[9px] font-bold text-slate-400 uppercase">Actief in route</span>
-                             </div>
-                             <div className="flex items-center gap-4">
-                               <Switch
-                                 checked={selectedObject.isActief}
-                                 onCheckedChange={(c) => handleUpdateField('isActief', c)}
-                                 className="data-[state=checked]:bg-green-500"
-                               />
-                             </div>
-                           </div>
-                         </div>
-                         <div className="space-y-3">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">GIS Coördinaten</Label>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-100 shadow-inner-soft text-center">
-                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1.5">LAT</p>
-                                    <p className="font-mono text-[11px] font-bold text-slate-900">{selectedObject.latitude?.toFixed(6)}</p>
-                                </div>
-                                <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-100 shadow-inner-soft text-center">
-                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1.5">LNG</p>
-                                    <p className="font-mono text-[11px] font-bold text-slate-900">{selectedObject.longitude?.toFixed(6)}</p>
-                                </div>
-                            </div>
-                         </div>
-                       </div>
-                     </div>
- 
-                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 items-end">
-                         <div className="sm:col-span-2 space-y-3">
-                             <Label htmlFor="street-name" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Straatnaam</Label>
-                             <Input
-                             id="street-name"
-                             value={selectedObject.straatnaam || ''}
-                             onChange={(e) => handleUpdateField('straatnaam', e.target.value)}
-                             className="h-14 font-black uppercase tracking-tighter bg-slate-50 border-none shadow-inner-soft rounded-2xl px-5 text-base"
-                             />
-                         </div>
-                         <div className="space-y-3">
-                             <Label htmlFor="house-number" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Huisnr.</Label>
-                             <Input 
-                                 id="house-number" 
-                                 value={selectedObject.huisnummer || ''}
-                                 onChange={(e) => handleUpdateField('huisnummer', e.target.value)}
-                                 className="h-14 font-black uppercase tracking-tighter bg-slate-50 border-none shadow-inner-soft rounded-2xl px-5 text-base text-center"
-                             />
-                         </div>
-                     </div>
- 
-                     <div className="pt-4">
-                       <Accordion type="single" collapsible className="w-full bg-slate-50/50 rounded-[2rem] border-2 border-slate-100 px-8">
-                         <AccordionItem value="planning" className="border-none">
-                             <AccordionTrigger className="font-black uppercase tracking-widest text-[11px] text-slate-400 hover:no-underline py-7 group transition-premium">
-                                <div className="flex items-center gap-4">
-                                    <LayoutGrid className="h-5 w-5 text-primary group-hover:scale-110 transition-premium" />
-                                    Project & Route Koppeling
-                                </div>
-                             </AccordionTrigger>
-                             <AccordionContent className="pt-0 pb-10">
-                                <PlanningAccordionContent selectedObject={selectedObject} handleUpdateField={handleUpdateField} projects={projects} isLoadingProjects={isLoadingProjects} />
-                             </AccordionContent>
-                         </AccordionItem>
-                       </Accordion>
-                     </div>
-
-                     <div className="space-y-8 pt-6">
-                         <div className="space-y-3">
-                             <Label htmlFor="warning" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Waarschuwing / Memo</Label>
-                             <Textarea id="warning" placeholder="Typ hier bijzonderheden..." value={selectedObject.waarschuwing || ''} onChange={(e) => handleUpdateField('waarschuwing', e.target.value)} className="resize-none font-medium italic border-none shadow-inner-soft bg-orange-50/50 focus:ring-orange-500/20 rounded-[2rem] p-6 min-h-[140px] leading-relaxed" />
-                         </div>
-                         <Separator className="bg-slate-50" />
-                         <div className="space-y-5">
-                             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Geplande Routes</h3>
-                             <div className="flex flex-wrap gap-3">
-                              {selectedObject.locatieWerkgebieden && selectedObject.locatieWerkgebieden.length > 0 ? (
-                                selectedObject.locatieWerkgebieden.map((gebied: string) => (
-                                    <Badge key={gebied} variant="secondary" className="bg-blue-50 text-blue-600 border-none font-black uppercase text-[10px] tracking-widest px-6 h-9 rounded-full shadow-sm">
-                                        {gebied}
-                                    </Badge>
-                                ))
-                              ) : (
-                                <p className="text-xs font-bold text-slate-300 italic py-4 pl-2">Nog niet ingepland in een route.</p>
-                              )}
-                             </div>
-                         </div>
-                     </div>
-                 </div>
- 
-                 <div className="xl:col-span-4 space-y-10 p-10 bg-slate-50/30 border-r border-slate-100 overflow-y-auto custom-scrollbar">
-                     <Card className="h-80 rounded-[2.5rem] border-none shadow-2xl overflow-hidden bg-white group ring-8 ring-white/50">
-                        <CardContent className="p-0 h-full relative">
-                            <MapboxView 
-                                key={selectedObject?.id}
-                                longitude={selectedObject?.longitude}
-                                latitude={selectedObject?.latitude}
-                                interactive={false}
-                            />
-                            <div className="absolute top-6 left-6 z-10 bg-white/95 backdrop-blur-md px-4 py-2 rounded-2xl shadow-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-900 group-hover:scale-105 transition-premium">
-                                <MapPin className="h-3 w-3 inline mr-2 text-primary" /> GIS Locatie
-                            </div>
-                        </CardContent>
-                     </Card>
-                     
-                     <Card className="rounded-[2.5rem] border-none shadow-2xl overflow-hidden bg-white p-10 ring-8 ring-white/50">
-                        <div className="flex justify-between items-end mb-6">
-                            <div className="space-y-1.5">
-                                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Object Vulgraad</h3>
-                                <p className="text-[9px] font-black text-primary uppercase tracking-widest">Real-time Meting</p>
-                            </div>
-                            <span className="text-5xl font-black text-slate-900 leading-none tracking-tighter">{selectedObject?.vulgraad || 0}<span className="text-xl opacity-20 ml-1">%</span></span>
-                        </div>
-                        <Progress value={selectedObject?.vulgraad || 0} variant="gauge" className="h-4 bg-slate-100 rounded-full" />
-                        <div className="mt-10 grid grid-cols-2 gap-6">
-                            <div className="bg-slate-50 p-4 rounded-2xl text-center shadow-inner-soft">
-                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Systeem Status</span>
-                                <span className="text-[11px] font-black text-slate-900 uppercase">Operationeel</span>
-                            </div>
-                            <div className="bg-slate-50 p-4 rounded-2xl text-center shadow-inner-soft">
-                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Systeem ID</span>
-                                <span className="text-[11px] font-black text-slate-900 uppercase font-mono">{selectedObject.idNummer || 'N.B.'}</span>
-                            </div>
-                        </div>
-                     </Card>
-
-                     <Card className="h-72 rounded-[2.5rem] border-none shadow-2xl overflow-hidden bg-white flex flex-col items-center justify-center text-slate-300 p-10 group cursor-pointer hover:bg-slate-50 transition-premium ring-8 ring-white/50">
-                        <div className="bg-slate-50 p-10 rounded-[3rem] mb-6 group-hover:scale-110 transition-premium shadow-inner-soft border-2 border-white">
-                            <ImageIcon className="h-14 w-14 opacity-10" />
-                        </div>
-                        <p className="text-[10px] font-black uppercase tracking-widest">Geen Media Gekoppeld</p>
-                        <Button variant="ghost" size="sm" className="mt-5 font-black uppercase tracking-widest text-[9px] text-primary bg-primary/5 hover:bg-primary/10 px-6 rounded-full">Upload Foto</Button>
-                     </Card>
-                 </div>
- 
-                 <div className="xl:col-span-3 h-full overflow-hidden bg-white">
-                    <IoTHistoryColumn sensor={sensor} history={history} isLoading={sensorLoading || historyLoading} />
-                 </div>
-               </div>
-               </div>
-             ) : (
-                 <div className="flex flex-1 flex-col items-center justify-center text-center bg-slate-50/50 p-12">
-                    <div className="bg-white p-16 rounded-[4rem] shadow-2xl mb-10 border-4 border-white ring-8 ring-slate-100/50">
-                        <MapPin className="h-32 w-32 text-slate-200 opacity-20" />
-                    </div>
-                    <h3 className="text-3xl font-black uppercase tracking-tight text-slate-900 mb-3">Geen object geselecteerd</h3>
-                    <p className="text-slate-400 font-bold max-w-sm mx-auto leading-relaxed uppercase text-[11px] tracking-widest opacity-60">
-                        Kies een unit uit de lijst aan de linkerkant om de details, planning en IOT-sensordata te beheren.
+      <div className="flex-1 flex min-h-0">
+        <aside className={cn(
+          "w-full lg:w-80 border-r bg-white flex flex-col shrink-0",
+          isTablet && selectedObject ? "hidden" : "flex"
+        )}>
+          <div className="p-4 border-b">
+            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1 ml-1">Gevonden Units</p>
+            <p className="text-xl font-extrabold tracking-tighter text-zinc-900 ml-1">{filteredObjectsList.length}</p>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-2 space-y-1">
+              {filteredObjectsList.map(obj => (
+                <button
+                  key={obj.id}
+                  onClick={() => setSelectedObject(obj)}
+                  className={cn(
+                    "w-full flex items-start gap-3 p-3 rounded-xl transition-all text-left group",
+                    selectedObject?.id === obj.id ? "bg-zinc-900 text-white shadow-lg" : "hover:bg-zinc-50"
+                  )}
+                >
+                  <div className={cn(
+                    "h-10 w-10 rounded-lg flex items-center justify-center shrink-0 border",
+                    selectedObject?.id === obj.id ? "bg-white/10 border-white/10" : "bg-zinc-100 border-zinc-200"
+                  )}>
+                    <MapPin className={cn("h-5 w-5", selectedObject?.id === obj.id ? "text-white" : "text-zinc-400")} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold truncate uppercase tracking-tight">{obj.idNummer || obj.id}</p>
+                    <p className={cn("text-[10px] font-medium truncate uppercase tracking-widest mt-0.5", selectedObject?.id === obj.id ? "text-white/60" : "text-zinc-400")}>
+                      {obj.straatnaam} {obj.huisnummer}
                     </p>
-                 </div>
-             )}
-         </main>
-       </div>
-      )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </ScrollArea>
+        </aside>
+
+        <main className="flex-1 overflow-hidden relative bg-white">
+          {selectedObject ? (
+            <div className="h-full flex flex-col md:flex-row min-h-0">
+              <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-8 custom-scrollbar">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="space-y-1">
+                    <h2 className="text-4xl font-extrabold tracking-tighter text-zinc-900 uppercase">{selectedObject.idNummer || selectedObject.id}</h2>
+                    <div className="flex gap-2">
+                      <Badge variant="outline" className="h-6 font-bold uppercase text-[9px] tracking-widest border-2">{selectedObject.locatieType}</Badge>
+                      <Badge className="h-6 font-bold uppercase text-[9px] tracking-widest bg-zinc-900">{selectedObject.isActief ? 'Operationeel' : 'Inactief'}</Badge>
+                    </div>
+                  </div>
+                  {isTablet && <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => setSelectedObject(null)}><ArrowLeft className="h-5 w-5" /></Button>}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold uppercase text-zinc-400 tracking-widest ml-1">Straatnaam</Label>
+                    <Input value={selectedObject.straatnaam || ''} onChange={e => handleUpdateField('straatnaam', e.target.value)} className="h-11 font-bold rounded-lg border-zinc-200" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold uppercase text-zinc-400 tracking-widest ml-1">Huisnummer</Label>
+                    <Input value={selectedObject.huisnummer || ''} onChange={e => handleUpdateField('huisnummer', e.target.value)} className="h-11 font-bold rounded-lg border-zinc-200" />
+                  </div>
+                </div>
+
+                <div className="p-6 bg-zinc-50 border rounded-2xl space-y-6">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 border-b pb-3 flex items-center gap-2"><Settings2 className="h-4 w-4" /> Configuratie</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-bold text-zinc-900 uppercase">Actieve status</p>
+                        <p className="text-[10px] font-medium text-zinc-400">Object opnemen in routes</p>
+                      </div>
+                      <Switch checked={selectedObject.isActief} onCheckedChange={c => handleUpdateField('isActief', c)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-bold uppercase text-zinc-400 tracking-widest ml-1">Kwaliteit</Label>
+                      <Select value={selectedObject.kwaliteit} onValueChange={v => handleUpdateField('kwaliteit', v)}>
+                        <SelectTrigger className="h-10 font-bold bg-white border-zinc-200"><SelectValue /></SelectTrigger>
+                        <SelectContent className="rounded-xl shadow-xl">
+                          <SelectItem value="A" className="font-semibold">A - Hoog</SelectItem>
+                          <SelectItem value="B" className="font-semibold">B - Standaard</SelectItem>
+                          <SelectItem value="C" className="font-semibold">C - Laag</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase text-zinc-400 tracking-widest ml-1">Memo / Waarschuwing</Label>
+                  <Textarea value={selectedObject.waarschuwing || ''} onChange={e => handleUpdateField('waarschuwing', e.target.value)} placeholder="Bijzonderheden..." className="min-h-[120px] rounded-2xl border-zinc-200 font-medium resize-none leading-relaxed" />
+                </div>
+              </div>
+
+              <div className="w-full md:w-[400px] border-l bg-zinc-50/30 flex flex-col p-6 gap-6 overflow-y-auto no-scrollbar">
+                <Card className="aspect-square w-full border-none shadow-lg ring-1 ring-black/5 rounded-[2rem] overflow-hidden">
+                  <MapboxView latitude={selectedObject.latitude} longitude={selectedObject.longitude} interactive={false} />
+                </Card>
+
+                <div className="bg-white p-8 rounded-[2.5rem] shadow-xl shadow-black/5 ring-1 ring-zinc-100 flex flex-col items-center text-center gap-4">
+                  <div className="h-16 w-16 rounded-2xl bg-zinc-900 flex items-center justify-center text-white text-2xl font-black">
+                    {selectedObject.vulgraad || 0}%
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold uppercase text-zinc-400 tracking-widest mb-1">Vulgraad</h4>
+                    <p className="text-xs font-medium text-zinc-500 max-w-[200px]">Real-time meting verzonden via IOT sensor.</p>
+                  </div>
+                  <Progress value={selectedObject.vulgraad || 0} variant="gauge" className="h-2 w-full mt-2" />
+                </div>
+
+                <Card className="h-48 border-zinc-200 border-dashed border-2 bg-transparent flex flex-col items-center justify-center text-zinc-300 gap-3 group cursor-pointer hover:bg-zinc-50 transition-colors">
+                  <ImageIcon className="h-8 w-8 opacity-20 group-hover:scale-110 transition-transform" />
+                  <p className="text-[10px] font-bold uppercase tracking-widest">Geen Media</p>
+                </Card>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full p-12 text-center bg-grid">
+              <div className="bg-white p-8 rounded-[2rem] shadow-2xl border mb-6">
+                <MapPin className="h-12 w-12 text-zinc-200" />
+              </div>
+              <h3 className="text-xl font-extrabold tracking-tight text-zinc-900 uppercase">Geen object geselecteerd</h3>
+              <p className="text-zinc-400 font-medium max-w-xs mx-auto text-sm">Kies een unit uit de lijst aan de linkerkant om de details te beheren.</p>
+            </div>
+          )}
+        </main>
+      </div>
 
       <Dialog open={isAddFilterDialogOpen} onOpenChange={setIsAddFilterDialogOpen}>
-        <DialogContent className="rounded-[3rem] border-none shadow-2xl p-8">
+        <DialogContent className="rounded-2xl border-none shadow-2xl p-8 max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-black uppercase tracking-tight">Nieuwe Categorie</DialogTitle>
-            <DialogDescription className="font-bold text-slate-500 mt-2">
-              Voer een naam in voor de nieuwe objectcategorie voor filtering.
-            </DialogDescription>
+            <DialogTitle className="text-xl font-extrabold uppercase tracking-tight">Nieuw Filter</DialogTitle>
+            <DialogDescription className="font-medium text-zinc-500">Geef een naam op voor de nieuwe categorie.</DialogDescription>
           </DialogHeader>
-          <div className="py-8">
-            <Label htmlFor="filter-name" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Categorienaam</Label>
-            <Input 
-              id="filter-name" 
-              value={newFilterName} 
-              onChange={(e) => setNewFilterName(e.target.value)} 
-              placeholder="Bv. Lichtmasten"
-              className="h-14 font-black uppercase tracking-tighter bg-slate-50 border-none rounded-2xl mt-3 shadow-inner-soft text-lg text-center"
-              autoFocus
-            />
+          <div className="py-6">
+            <Input value={newFilterName} onChange={e => setNewFilterName(e.target.value)} placeholder="Bv. Parkbankjes" className="h-12 font-bold rounded-xl text-center text-lg" autoFocus />
           </div>
-          <DialogFooter className="gap-3">
-            <Button variant="ghost" onClick={() => setIsAddFilterDialogOpen(false)} className="font-black uppercase tracking-widest text-[10px] text-slate-400">Annuleren</Button>
-            <Button onClick={handleAddCustomFilter} disabled={!newFilterName.trim() || isSavingFilter} className="h-14 px-12 font-black uppercase tracking-tight shadow-2xl shadow-primary/20 rounded-2xl">
-              {isSavingFilter ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : null}
-              Filter Aanmaken
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog open={isBulkDeleteAlertOpen} onOpenChange={setIsBulkDeleteAlertOpen}>
-        <AlertDialogContent className="rounded-[3rem] border-none shadow-2xl p-8">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-2xl font-black uppercase tracking-tight">Data Verwijderen?</AlertDialogTitle>
-            <AlertDialogDescription className="font-bold text-slate-500 leading-relaxed mt-4">
-              U staat op het punt om <span className="text-red-600 font-black">{filteredObjectsList.length}</span> objecten te verwijderen onder de filter: <span className="text-slate-900 uppercase font-black">{currentFilterName}</span>. 
-              Deze actie kan niet ongedaan worden gemaakt.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="mt-10 gap-3">
-            <AlertDialogCancel disabled={isBulkLoading} className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-none">Annuleren</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleBulkDelete} 
-              disabled={isBulkLoading}
-              className="bg-red-600 hover:bg-red-700 h-14 px-12 font-black uppercase tracking-tight shadow-2xl shadow-red-600/20 rounded-2xl"
-            >
-              {isBulkLoading ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : <Trash2 className="mr-3 h-5 w-5" />}
-              Ja, Wis Alles
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <Dialog open={isQualityDialogOpen} onOpenChange={setIsQualityDialogOpen}>
-        <DialogContent className="sm:max-w-xl border-none shadow-2xl rounded-[3.5rem] flex flex-col p-0 overflow-hidden h-[85vh]">
-          <DialogHeader className="p-10 bg-slate-900 text-white shrink-0">
-            <div className="bg-primary/30 h-16 w-16 rounded-[1.5rem] flex items-center justify-center mb-8 shadow-2xl border-2 border-white/10">
-                <SearchCode className="h-8 w-8 text-white" />
-            </div>
-            <DialogTitle className="text-3xl font-black uppercase tracking-tighter leading-none mb-2">Kwaliteitscontrole</DialogTitle>
-            <DialogDescription className="text-slate-400 font-black uppercase tracking-widest text-[10px] opacity-60">
-              Scan de database op dubbele coördinaten of ID's.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <ScrollArea className="flex-1 p-10 bg-white">
-            <div className="space-y-12">
-              <div className="space-y-5">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Scan Bereik</Label>
-                <Select value={dupFilter} onValueChange={setDupFilter}>
-                  <SelectTrigger className="h-14 font-black uppercase tracking-tighter border-none bg-slate-50 rounded-2xl px-6 shadow-inner-soft transition-premium text-lg">
-                    <SelectValue placeholder="Kies bereik..." />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-[2rem] shadow-2xl border-slate-100 p-2">
-                    <SelectItem value="all" className="font-bold rounded-xl h-12">Volledige database</SelectItem>
-                    <SelectGroup>
-                      <SelectLabel className="text-[10px] font-black uppercase text-slate-400 py-3 pl-4 tracking-widest">Filters</SelectLabel>
-                      <SelectItem value="prullenbak" className="font-bold rounded-xl h-12">Alleen Prullenbakken</SelectItem>
-                      <SelectItem value="container" className="font-bold rounded-xl h-12">Alleen Containers</SelectItem>
-                      {customFilters.map(f => (
-                        <SelectItem key={f} value={f} className="font-bold rounded-xl h-12">{f}</SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-5">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Selecteer Criteria</Label>
-                <div className="grid gap-4">
-                  <div className="flex items-center space-x-5 p-6 rounded-[2rem] border-2 border-slate-50 hover:bg-slate-50 transition-premium cursor-pointer group" onClick={() => setDupCriteria(p => ({ ...p, location: !p.location }))}>
-                      <Checkbox checked={dupCriteria.location} onCheckedChange={(c) => setDupCriteria(p => ({ ...p, location: !!c }))} className="rounded-xl border-slate-300 h-7 w-7" />
-                      <div className="flex-1 min-w-0">
-                          <Label className="font-black uppercase text-sm cursor-pointer text-slate-900 group-hover:text-primary transition-premium tracking-tight">Exacte Coördinaten</Label>
-                          <p className="text-[10px] text-slate-400 font-bold leading-tight mt-1.5 tracking-wide">Match op Latitude & Longitude</p>
-                      </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-5 p-6 rounded-[2rem] border-2 border-slate-50 hover:bg-slate-50 transition-premium cursor-pointer group" onClick={() => setDupCriteria(p => ({ ...p, id: !p.id }))}>
-                      <Checkbox checked={dupCriteria.id} onCheckedChange={(c) => setDupCriteria(p => ({ ...p, id: !!c }))} className="rounded-xl border-slate-300 h-7 w-7" />
-                      <div className="flex-1 min-w-0">
-                          <Label className="font-black uppercase text-sm cursor-pointer text-slate-900 group-hover:text-primary transition-premium tracking-tight">ID Nummer (bv. 141619)</Label>
-                          <p className="text-[10px] text-slate-400 font-bold leading-tight mt-1.5 tracking-wide">Match op uniek systeemnummer</p>
-                      </div>
-                  </div>
-
-                  <div className="flex items-center space-x-5 p-6 rounded-[2rem] border-2 border-slate-50 hover:bg-slate-50 transition-premium cursor-pointer group" onClick={() => setDupCriteria(p => ({ ...p, address: !p.address }))}>
-                      <Checkbox checked={dupCriteria.address} onCheckedChange={(c) => setDupCriteria(p => ({ ...p, address: !!c }))} className="rounded-xl border-slate-300 h-7 w-7" />
-                      <div className="flex-1 min-w-0">
-                          <Label className="font-black uppercase text-sm cursor-pointer text-slate-900 group-hover:text-primary transition-premium tracking-tight">Straatnaam & Nummer</Label>
-                          <p className="text-[10px] text-slate-400 font-bold leading-tight mt-1.5 tracking-wide">Match op fysieke adresgegevens</p>
-                      </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </ScrollArea>
-
-          <DialogFooter className="p-10 border-t bg-slate-50 shrink-0 gap-4">
-            <Button variant="ghost" onClick={() => setIsQualityDialogOpen(false)} className="font-black uppercase text-slate-400 tracking-widest text-[10px]">Annuleren</Button>
-            <Button onClick={handleFindDuplicates} disabled={isFindingDuplicates || (!dupCriteria.location && !dupCriteria.id && !dupCriteria.address)} className="font-black uppercase tracking-tight h-14 px-12 shadow-2xl shadow-primary/20 rounded-2xl ml-auto text-base">
-              {isFindingDuplicates ? <Loader2 className="mr-3 h-6 w-6 animate-spin" /> : <FileCheck className="mr-3 h-6 w-6" />}
-              Start Analyse
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isDuplicateDialogOpen} onOpenChange={setIsDuplicateDialogOpen}>
-        <DialogContent className="sm:max-w-4xl h-[85vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl rounded-[3.5rem]">
-          <DialogHeader className="p-10 border-b bg-slate-50 shrink-0">
-            <div className="flex items-center justify-between">
-                <div>
-                    <DialogTitle className="text-3xl font-black uppercase tracking-tighter leading-none mb-2">Analyse Resultaten</DialogTitle>
-                    <DialogDescription className="font-black uppercase tracking-widest text-[10px] text-slate-400">
-                        Gevonden duplicaten in systeem: <span className="text-primary font-black ml-1">{duplicateObjects.length} objecten</span>
-                    </DialogDescription>
-                </div>
-                <Badge variant="outline" className="h-10 px-6 border-4 font-black uppercase tracking-widest bg-white rounded-2xl shadow-sm">Scan Voltooid</Badge>
-            </div>
-          </DialogHeader>
-          
-          <ScrollArea className="flex-1 bg-white">
-            <div className="p-10">
-              <div className="divide-y border-2 border-slate-50 rounded-[2.5rem] overflow-hidden bg-white shadow-xl transition-premium">
-                {duplicateObjects.map((item, i) => (
-                  <div key={i} className="p-6 flex items-center justify-between hover:bg-slate-50 transition-premium group border-slate-50">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-4 mb-2">
-                          <p className="font-black text-lg uppercase tracking-tight text-slate-900 truncate">
-                              {item.obj.idNummer || item.obj.id}
-                          </p>
-                          <Badge variant="outline" className="text-[9px] h-5 uppercase font-black bg-slate-50 border-none text-slate-400 tracking-widest">{item.reason}</Badge>
-                          <Badge variant="secondary" className="text-[9px] h-5 uppercase font-black bg-blue-50 text-blue-600 border-none flex items-center gap-2 px-3">
-                              <Tag className="h-3 w-3" /> {item.obj.locatieType}
-                          </Badge>
-                      </div>
-                      <div className="flex items-center gap-6">
-                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest truncate">{item.obj.straatnaam} {item.obj.huisnummer}</p>
-                        <p className="text-[10px] font-mono font-bold text-slate-300 tabular-nums">
-                            {item.obj.latitude?.toFixed(5)}, {item.obj.longitude?.toFixed(5)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <Button variant="ghost" size="icon" onClick={() => { setSelectedObject(item.obj); setIsDuplicateDialogOpen(false); }} className="h-12 w-12 rounded-2xl bg-slate-50 text-slate-300 hover:text-primary hover:bg-white hover:shadow-xl transition-premium">
-                          <ChevronRight className="h-6 w-6" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-                {duplicateObjects.length === 0 && (
-                    <div className="p-32 text-center text-slate-300 flex flex-col items-center gap-6">
-                        <CheckCircle className="h-24 w-24 text-green-100" />
-                        <p className="text-sm font-black uppercase tracking-widest text-slate-400">Database is schoon. Geen duplicaten gevonden.</p>
-                    </div>
-                )}
-              </div>
-            </div>
-          </ScrollArea>
-
-          <DialogFooter className="p-10 border-t bg-slate-50 shrink-0 gap-4">
-            <Button variant="ghost" onClick={() => setIsDuplicateDialogOpen(false)} className="font-black uppercase text-[10px] tracking-widest text-slate-400">Sluiten</Button>
-            <Button onClick={handleExportDuplicates} disabled={duplicateObjects.length === 0} className="h-14 px-12 font-black uppercase tracking-tight shadow-2xl shadow-primary/20 rounded-2xl ml-auto text-base">
-              <Download className="mr-3 h-6 w-6" />
-              Exporteer Rapport (XLSX)
-            </Button>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsAddFilterDialogOpen(false)} className="font-bold">Annuleren</Button>
+            <Button onClick={handleAddCustomFilter} disabled={!newFilterName.trim() || isSavingFilter} className="h-12 px-8 font-bold rounded-xl bg-zinc-900 shadow-xl shadow-black/10">Opslaan</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

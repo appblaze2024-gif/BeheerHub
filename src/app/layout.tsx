@@ -1,30 +1,35 @@
 'use client';
 
-import type { Metadata } from 'next';
-import Image from 'next/image';
-import Link from 'next/link';
 import './globals.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { Suspense, useState, useEffect } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { cn } from '@/lib/utils';
 import {
   FirebaseClientProvider,
   useUser,
   useAuth,
 } from '@/firebase';
 import { ProfileProvider, useProfile } from '@/firebase/profile-provider';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState, Suspense, useRef } from 'react';
-import { cn } from '@/lib/utils';
-import { Toaster } from '@/components/ui/toaster';
 import { NavigationUIProvider, useNavigationUI } from '@/context/navigation-ui-context';
 import { ProjectProvider, useProject } from '@/context/project-context';
-import { signOut } from 'firebase/auth';
-import { format, isAfter } from 'date-fns';
-import { nl } from 'date-fns/locale';
-import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from '@/components/ui/sheet';
-import { Menu, Search, Bell, User, Settings, LogOut, ChevronRight, LayoutGrid } from 'lucide-react';
+import { Toaster } from '@/components/ui/toaster';
 import { AppSidebar } from '@/components/app-sidebar';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { Button } from '@/components/ui/button';
+import { 
+  Menu, 
+  Search, 
+  Bell, 
+  User, 
+  Settings, 
+  LogOut, 
+  ChevronRight,
+  Command,
+  HelpCircle,
+  LogOut as LogOutIcon
+} from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,10 +38,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { signOut } from 'firebase/auth';
 import { LoadingScreen } from '@/components/loading-screen';
-import { NotificationCenter } from '@/components/notification-center';
-
+import Link from 'next/link';
 
 function Header() {
   const auth = useAuth();
@@ -44,125 +48,102 @@ function Header() {
   const { user } = useUser();
   const { profile } = useProfile();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const isMobile = useIsMobile();
-
-  const getInitials = (firstName?: string, lastName?: string) => {
-    const firstInitial = firstName?.[0] || '';
-    const lastInitial = lastName?.[0] || '';
-    return `${firstInitial}${lastInitial}`.toUpperCase();
-  };
 
   const getPageTitle = () => {
     const parts = pathname.split('/').filter(Boolean);
     if (parts.length === 0) return 'Dashboard';
-    
-    const translations: Record<string, string> = {
+    const mapping: Record<string, string> = {
       'projects': 'Projecten',
-      'annual-planning': 'Jaarplanning',
-      'bestanden': 'Documenten',
       'employees': 'Personeel',
-      'work-planning': 'Werkplanning',
       'vehicles': 'Wagenpark',
-      'weekly-reports': 'Weekstaten',
       'issues': 'Meldingen',
       'objects': 'Objecten',
-      'spec-reports': 'Bestek',
-      'navigation-module': 'Navigatie',
-      'iot': 'Internet of Things',
-      'mail': 'Mail',
-      'profile': 'Mijn Profiel',
-      'settings': 'Instellingen',
-      'portal': 'Portaal',
-      'archive': 'Archief'
+      'iot': 'IoT Sensors',
+      'mail': 'Berichten',
+      'profile': 'Profiel',
+      'settings': 'Instellingen'
     };
-
-    const mainKey = parts[0].toLowerCase();
-    const main = translations[mainKey] || parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
-    return main;
+    return mapping[parts[0].toLowerCase()] || parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
   };
 
   return (
-    <header className="bg-white/80 backdrop-blur-2xl flex h-20 shrink-0 items-center justify-between border-b px-6 md:px-10 z-40 sticky top-0 transition-all duration-500">
-      <div className="flex items-center gap-6">
+    <header className="h-14 border-b bg-white/80 backdrop-blur-md flex items-center justify-between px-4 sticky top-0 z-50">
+      <div className="flex items-center gap-4">
         <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="hover:bg-slate-100 rounded-2xl h-12 w-12 text-slate-600 transition-premium">
-              <Menu className="h-7 w-7" />
+            <Button variant="ghost" size="icon" className="lg:hidden h-9 w-9 rounded-md">
+              <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="p-0 border-none w-[340px] shadow-2xl">
+          <SheetContent side="left" className="p-0 border-r w-72 shadow-xl">
             <SheetHeader className="sr-only">
-                <SheetTitle>Navigatie Menu</SheetTitle>
+              <SheetTitle>Navigatie</SheetTitle>
             </SheetHeader>
             <AppSidebar onNavigate={() => setIsSidebarOpen(false)} />
           </SheetContent>
         </Sheet>
         
-        <div className="flex flex-col">
-            <h2 className="text-sm font-black uppercase tracking-tighter text-slate-900 leading-none">{getPageTitle()}</h2>
+        <div className="flex items-center gap-2">
+          <div className="bg-zinc-950 p-1.5 rounded-lg flex items-center justify-center">
+            <Command className="h-4 w-4 text-white" />
+          </div>
+          <span className="text-sm font-bold tracking-tight text-zinc-900 hidden sm:inline-block">BeheerHub</span>
+          <div className="h-4 w-[1px] bg-zinc-200 mx-2 hidden sm:block" />
+          <h1 className="text-sm font-semibold text-zinc-600">{getPageTitle()}</h1>
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="hidden lg:flex items-center relative mr-2">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Snel zoeken..."
-              className="pl-11 h-12 w-72 bg-slate-50 border-none focus:ring-4 focus:ring-primary/5 rounded-[1.25rem] text-sm font-bold outline-none transition-premium shadow-inner-soft"
-            />
+      <div className="flex items-center gap-2">
+        <div className="hidden md:flex items-center bg-zinc-100 rounded-lg px-2 py-1.5 border border-zinc-200 w-64">
+          <Search className="h-3.5 w-3.5 text-zinc-400 mr-2" />
+          <input 
+            type="text" 
+            placeholder="Snelzoeken..." 
+            className="bg-transparent text-xs outline-none w-full font-medium"
+          />
+          <kbd className="text-[10px] font-bold text-zinc-400 bg-white border border-zinc-200 px-1.5 rounded">⌘K</kbd>
         </div>
 
-        <NotificationCenter />
+        <Button variant="ghost" size="icon" className="h-9 w-9 text-zinc-500 rounded-md">
+          <Bell className="h-4.5 w-4.5" />
+        </Button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-12 w-12 rounded-2xl p-0 hover:bg-slate-50 transition-premium ml-1">
-              <Avatar className="h-10 w-10 rounded-2xl border-4 border-white shadow-xl ring-1 ring-slate-100">
-                <AvatarImage src={user?.photoURL || undefined} alt={profile?.displayName || ''} />
-                <AvatarFallback className="bg-primary text-white font-black text-[10px]">
-                  {getInitials(profile?.firstName, profile?.lastName)}
+            <Button variant="ghost" className="h-9 px-2 gap-2 rounded-md hover:bg-zinc-100 transition-colors">
+              <Avatar className="h-6 w-6 rounded-md">
+                <AvatarImage src={user?.photoURL || undefined} />
+                <AvatarFallback className="text-[10px] bg-zinc-900 text-white font-bold">
+                  {profile?.firstName?.[0]}{profile?.lastName?.[0]}
                 </AvatarFallback>
               </Avatar>
+              <span className="text-xs font-semibold text-zinc-700 hidden sm:inline-block">{profile?.firstName}</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-72 mt-4 rounded-[2rem] shadow-2xl border-slate-100 p-3" align="end">
-            <DropdownMenuLabel className="font-normal p-5">
-              <div className="flex flex-col space-y-1.5">
-                <p className="text-base font-black leading-none text-slate-900 uppercase tracking-tight">{profile?.displayName}</p>
-                <p className="text-[10px] font-black leading-none text-muted-foreground mt-1 uppercase tracking-widest">
-                  {user?.email}
-                </p>
+          <DropdownMenuContent align="end" className="w-56 mt-1 rounded-xl shadow-xl border-zinc-200 p-1.5">
+            <DropdownMenuLabel className="font-normal px-2 py-2">
+              <div className="flex flex-col space-y-1">
+                <p className="text-xs font-bold leading-none">{profile?.displayName}</p>
+                <p className="text-[10px] font-medium text-zinc-400 leading-none">{user?.email}</p>
               </div>
             </DropdownMenuLabel>
-            <DropdownMenuSeparator className="bg-slate-50" />
-            <div className="p-1.5 space-y-1.5">
-                <DropdownMenuItem asChild className="rounded-2xl h-12 font-bold focus:bg-slate-50 cursor-pointer">
-                    <Link href="/profile" className="flex items-center w-full">
-                        <User className="mr-4 h-5 w-5 text-primary" />
-                        <span>Mijn Profiel</span>
-                    </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className="rounded-2xl h-12 font-bold focus:bg-slate-50 cursor-pointer">
-                    <Link href="/settings" className="flex items-center w-full">
-                        <Settings className="mr-4 h-5 w-5 text-primary" />
-                        <span>Instellingen</span>
-                    </Link>
-                </DropdownMenuItem>
-            </div>
-            <DropdownMenuSeparator className="bg-slate-50" />
-            <div className="p-1.5">
-                <DropdownMenuItem 
-                    onClick={() => {
-                        localStorage.removeItem('impersonatedUserProfileId');
-                        signOut(auth);
-                    }}
-                    className="rounded-2xl h-12 font-black uppercase tracking-tight text-red-600 focus:bg-red-50 focus:text-red-600 cursor-pointer"
-                >
-                    <LogOut className="mr-4 h-5 w-5" />
-                    Uitloggen
-                </DropdownMenuItem>
-            </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild className="rounded-lg h-9 text-xs font-semibold">
+              <Link href="/profile"><User className="mr-2 h-4 w-4" /> Mijn Profiel</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild className="rounded-lg h-9 text-xs font-semibold">
+              <Link href="/settings"><Settings className="mr-2 h-4 w-4" /> Instellingen</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild className="rounded-lg h-9 text-xs font-semibold">
+              <Link href="/help"><HelpCircle className="mr-2 h-4 w-4" /> Help Center</Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              onClick={() => signOut(auth)}
+              className="rounded-lg h-9 text-xs font-semibold text-red-600 focus:text-red-600 focus:bg-red-50"
+            >
+              <LogOutIcon className="mr-2 h-4 w-4" /> Uitloggen
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -170,122 +151,71 @@ function Header() {
   );
 }
 
-
-function ProtectedAppLayout({ children }: { children: React.ReactNode }) {
+function MainLayout({ children }: { children: React.ReactNode }) {
   const { isHeaderVisible } = useNavigationUI();
   const { isUserLoading } = useUser();
-  const { profile, isLoading: isProfileLoading } = useProfile();
-  const auth = useAuth();
-
-  useEffect(() => {
-    if (isProfileLoading || !profile || profile.role !== 'medewerkers' || !profile.urenPerDag) {
-      return;
-    }
-
-    const dayName = format(new Date(), 'eeee', { locale: nl }).toLowerCase() as keyof typeof profile.urenPerDag;
-    const shift = profile.urenPerDag[dayName];
-
-    if (!shift || !shift.eind) {
-      return;
-    }
-
-    try {
-      const [hours, minutes] = shift.eind.split(':').map(Number);
-      if (isNaN(hours) || isNaN(minutes)) return;
-
-      const now = new Date();
-      const endTimeToday = new Date();
-      endTimeToday.setHours(hours, minutes, 0, 0);
-
-      if (now.getTime() > endTimeToday.getTime()) {
-        if (auth.currentUser?.metadata.lastSignInTime) {
-          const lastLoginTime = new Date(auth.currentUser.metadata.lastSignInTime);
-          if (isAfter(lastLoginTime, endTimeToday)) return;
-        }
-        signOut(auth);
-        return;
-      }
-
-      const timeUntilLogout = endTimeToday.getTime() - now.getTime();
-      const logoutTimer = setTimeout(() => signOut(auth), timeUntilLogout);
-      return () => clearTimeout(logoutTimer);
-    } catch (e) {
-      console.error("Auto-logout error:", e);
-    }
-  }, [profile, isProfileLoading, auth]);
+  const { isLoading: isProfileLoading } = useProfile();
 
   if (isUserLoading || isProfileLoading) {
-      return <LoadingScreen className="h-screen" />;
+    return <LoadingScreen className="h-screen" />;
   }
 
   return (
-    <div className={cn('font-body antialiased flex flex-col h-svh overflow-hidden bg-slate-50')}>
+    <div className="flex flex-col h-screen overflow-hidden bg-background">
       {isHeaderVisible && <Header />}
-      <main className="flex-1 flex flex-col overflow-auto no-scrollbar">
-        {children}
-      </main>
+      <div className="flex flex-1 min-h-0 relative">
+        <aside className="hidden lg:block w-64 border-r shrink-0">
+          <AppSidebar />
+        </aside>
+        <main className="flex-1 overflow-auto bg-grid relative custom-scrollbar">
+          {children}
+        </main>
+      </div>
       <Toaster />
     </div>
   );
 }
 
-function AppLayout({ children }: { children: React.ReactNode }) {
+function AuthWrapper({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
 
-  const [isMounted, setIsMounted] = useState(false);
-  useEffect(() => setIsMounted(true), []);
-
-  const mode = searchParams.get('mode');
-  const oobCode = searchParams.get('oobCode');
-  const isPasswordResetFlow = mode === 'resetPassword' && oobCode;
-
-  useEffect(() => {
-    if (isPasswordResetFlow && pathname !== '/reset-password') {
-      router.replace(`/reset-password?${searchParams.toString()}`);
-    }
-  }, [isPasswordResetFlow, pathname, router, searchParams]);
+  useEffect(() => setMounted(true), []);
 
   const isPublicPage = pathname === '/login' || pathname.startsWith('/reset-password');
 
   useEffect(() => {
-    if (!isMounted || isUserLoading || isPasswordResetFlow) return;
-    if (!user && !isPublicPage) router.push('/login');
-    else if (user && pathname === '/login') router.push('/');
-  }, [user, isUserLoading, pathname, router, isPublicPage, isMounted, isPasswordResetFlow]);
+    if (mounted && !isUserLoading) {
+      if (!user && !isPublicPage) router.push('/login');
+      else if (user && pathname === '/login') router.push('/');
+    }
+  }, [user, isUserLoading, pathname, mounted, isPublicPage, router]);
 
-  if (!isMounted) return null;
-
+  if (!mounted) return null;
   if (isPublicPage) return <>{children}</>;
 
-  return <ProtectedAppLayout>{children}</ProtectedAppLayout>;
+  return <MainLayout>{children}</MainLayout>;
 }
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="nl" suppressHydrationWarning className="h-full">
+    <html lang="nl" className="h-full">
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, interactive-widget=resizer-content, viewport-fit=cover" />
-        <title>BeheerHub | Smart Infra Management</title>
+        <title>BeheerHub | Modern Infra Management</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
-        <link rel="icon" type="image/png" sizes="32x32" href="https://i.ibb.co/kgtwqH50/favicon-32x32.png" />
-        <link rel="apple-touch-icon" href="https://i.ibb.co/kgtwqH50/favicon-32x32.png" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
       </head>
-      <body className="h-full overflow-hidden bg-slate-50 antialiased">
+      <body className="h-full font-sans">
         <FirebaseClientProvider>
           <ProfileProvider>
             <ProjectProvider>
               <NavigationUIProvider>
                 <Suspense fallback={null}>
-                  <AppLayout>{children}</AppLayout>
+                  <AuthWrapper>{children}</AuthWrapper>
                 </Suspense>
               </NavigationUIProvider>
             </ProjectProvider>
