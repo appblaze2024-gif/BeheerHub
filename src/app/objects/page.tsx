@@ -37,6 +37,7 @@ import {
   X,
   Pencil,
   Calendar,
+  LocateFixed,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -116,6 +117,11 @@ export default function ObjectsPage() {
   const [isSavingFilter, setIsSavingFilter] = React.useState(false);
   const [filterToRename, setFilterToRename] = React.useState<string | null>(null);
 
+  // Proximity Filter States
+  const [isProximityFilterActive, setIsProximityFilterActive] = React.useState(false);
+  const [currentUserCoords, setCurrentUserCoords] = React.useState<{ latitude: number; longitude: number } | null>(null);
+  const [isFindingLocation, setIsFindingLocation] = React.useState(false);
+
   const objectsQuery = useMemoFirebase(() => {
     if (!firestore || !typeFilter) return null;
     if (typeFilter === 'all') return collection(firestore, 'objects');
@@ -140,8 +146,56 @@ export default function ObjectsPage() {
           (obj.straatnaam || '').toLowerCase().includes(q)
       );
     }
+
+    if (isProximityFilterActive && currentUserCoords) {
+      filtered = filtered.filter(obj => {
+        if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
+        try {
+          const from = turf.point([currentUserCoords.longitude, currentUserCoords.latitude]);
+          const to = turf.point([obj.longitude, obj.latitude]);
+          const distance = turf.distance(from, to, { units: 'meters' });
+          return distance <= 25;
+        } catch (e) {
+          return false;
+        }
+      });
+    }
+
     return filtered;
-  }, [objects, searchTerm]);
+  }, [objects, searchTerm, isProximityFilterActive, currentUserCoords]);
+
+  const handleToggleProximityFilter = () => {
+    if (isProximityFilterActive) {
+      setIsProximityFilterActive(false);
+      setCurrentUserCoords(null);
+      toast({ title: 'Locatiefilter uit', description: 'De volledige lijst wordt weer getoond.' });
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      toast({ variant: 'destructive', title: 'GPS niet beschikbaar', description: 'Uw browser ondersteunt geen locatievoorzieningen.' });
+      return;
+    }
+
+    setIsFindingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setCurrentUserCoords({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
+        });
+        setIsProximityFilterActive(true);
+        setIsFindingLocation(false);
+        toast({ title: 'Locatiefilter actief', description: 'Objecten binnen 25m worden getoond.' });
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        setIsFindingLocation(false);
+        toast({ variant: 'destructive', title: 'Locatiefout', description: 'Kon uw huidige locatie niet bepalen. Controleer uw GPS instellingen.' });
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
 
   const handleUpdateField = (field: string, value: any) => {
     if (!firestore || !selectedObject) return;
@@ -311,13 +365,28 @@ export default function ObjectsPage() {
               isTablet && selectedObject ? "hidden" : "flex"
             )}>
               <div className="p-4 border-b flex justify-between items-end">
-                <div>
+                <div className="min-w-0">
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Resultaten</p>
                   <p className="text-xl font-bold tracking-tight text-slate-900 ml-1">
                     {isLoadingObjects ? '...' : filteredObjectsList.length}
                   </p>
                 </div>
-                <Badge variant="secondary" className="mb-1 text-[10px] font-medium">{typeFilter}</Badge>
+                <div className="flex items-center gap-2 mb-1">
+                    <Button 
+                        variant={isProximityFilterActive ? "default" : "outline"} 
+                        size="icon" 
+                        className={cn(
+                            "h-8 w-8 rounded-lg transition-all", 
+                            isProximityFilterActive ? "bg-primary text-white border-primary shadow-md" : "text-slate-400 border-slate-200"
+                        )}
+                        onClick={handleToggleProximityFilter}
+                        disabled={isLoadingObjects}
+                        title="Toon alleen objecten binnen 25m"
+                    >
+                        {isFindingLocation ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
+                    </Button>
+                    <Badge variant="secondary" className="text-[10px] font-medium max-w-[100px] truncate">{typeFilter}</Badge>
+                </div>
               </div>
               <ScrollArea className="flex-1">
                 {isLoadingObjects ? (
@@ -353,7 +422,7 @@ export default function ObjectsPage() {
                 ) : (
                   <div className="p-12 text-center text-muted-foreground">
                     <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-20" />
-                    <p className="text-xs font-medium">Geen resultaten gevonden</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest">Geen resultaten</p>
                   </div>
                 )}
               </ScrollArea>
@@ -412,7 +481,7 @@ export default function ObjectsPage() {
 
                     <div className="space-y-6">
                         <h3 className="text-lg font-bold text-slate-900 border-b pb-3 flex items-center gap-2"><Calendar className="h-5 w-5 text-primary" /> Weekplanning</h3>
-                        <p className="text-sm text-slate-500">Selecteer de dagen waarop deze unit geleegd of gecontroleerd moet worden.</p>
+                        <p className="text-sm text-slate-500 font-medium">Selecteer de dagen waarop deze unit geleegd of gecontroleerd moet worden.</p>
                         <div className="flex flex-wrap gap-3">
                             {DAYS_OF_WEEK.map((day) => {
                                 const isActive = selectedObject.planningDagen?.includes(day.id);
