@@ -488,17 +488,6 @@ export default function ObjectsPage() {
                       <MapboxView latitude={selectedObject.latitude} longitude={selectedObject.longitude} interactive={false} />
                     </Card>
 
-                    <div className="bg-white p-8 rounded-[2.5rem] shadow-xl shadow-black/5 ring-1 ring-slate-100 flex flex-col items-center text-center gap-4">
-                      <div className="h-16 w-16 rounded-2xl bg-primary flex items-center justify-center text-white text-2xl font-bold">
-                        {selectedObject.vulgraad || 0}%
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-bold uppercase text-slate-400 tracking-widest mb-1">Vulgraad</h4>
-                        <p className="text-xs font-medium text-slate-500 max-w-[200px]">Real-time meting verzonden via IOT sensor.</p>
-                      </div>
-                      <Progress value={selectedObject.vulgraad || 0} variant="gauge" className="h-2 w-full mt-2" />
-                    </div>
-
                     <Card className="h-48 border-slate-200 border-dashed border-2 bg-transparent flex flex-col items-center justify-center text-slate-300 gap-3 group cursor-pointer hover:bg-slate-50 transition-colors">
                       <ImageIcon className="h-8 w-8 opacity-20 group-hover:scale-110 transition-transform" />
                       <p className="text-xs font-medium uppercase tracking-widest">Geen Media</p>
