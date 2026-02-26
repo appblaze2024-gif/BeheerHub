@@ -7,7 +7,6 @@ import { z } from 'zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { 
-  ArrowLeft, 
   Loader2, 
   Search, 
   UploadCloud, 
@@ -686,13 +685,7 @@ export default function NewIssuePage() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-slate-50">
-        <header className="h-14 bg-white border-b flex items-center justify-between px-6 shrink-0 shadow-sm z-10">
-            <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-8 w-8 rounded-full hover:bg-slate-100">
-                    <ArrowLeft className="h-4 w-4" />
-                </Button>
-            </div>
-            
+        <header className="h-14 bg-white border-b flex items-center justify-end px-6 shrink-0 shadow-sm z-10">
             <div className="flex items-center gap-2">
                 <AIConfigDialog instructions={pdfInstructions} samplePdfUrl={samplePdfUrl} onSave={handleSaveAIInstructions} isSaving={isSavingConfig} />
                 <input type="file" ref={pdfInputRef} onChange={handlePdfUpload} className="hidden" accept="application/pdf" multiple />
@@ -710,11 +703,11 @@ export default function NewIssuePage() {
 
         <main className="flex-1 overflow-hidden flex flex-col lg:flex-row min-h-0">
             <div className="flex-1 overflow-hidden flex flex-col bg-slate-50">
-                <ScrollArea className="flex-1 h-full">
-                    <div className="p-4 lg:p-6 space-y-4">
-                        <Form {...form}>
-                            <form id="new-melding-form" onSubmit={form.handleSubmit(onSubmit)} className="w-full max-w-full space-y-4 pb-10">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 lg:p-6 space-y-4 flex-1">
+                    <Form {...form}>
+                        <form id="new-melding-form" onSubmit={form.handleSubmit(onSubmit)} className="w-full max-w-full flex flex-col h-full gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-4">
                                     <Card className="rounded-xl border-slate-200 shadow-sm overflow-hidden bg-white">
                                         <CardHeader className="bg-slate-50 border-b py-1 px-4">
                                             <CardTitle className="text-[9px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
@@ -776,7 +769,9 @@ export default function NewIssuePage() {
                                             </FormRow>
                                         </CardContent>
                                     </Card>
+                                </div>
 
+                                <div className="space-y-4">
                                     <Card className="rounded-xl border-slate-200 shadow-sm overflow-hidden bg-white">
                                         <CardHeader className="bg-slate-50 border-b py-1 px-4">
                                             <CardTitle className="text-[9px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
@@ -829,135 +824,89 @@ export default function NewIssuePage() {
                                                     <FormItem><FormControl><Input {...field} className="h-7 text-[11px] font-bold border-slate-200" disabled={isReadOnly} /></FormControl></FormItem>
                                                 )} />
                                             </FormRow>
-                                            <FormRow label="E-mail">
-                                                <FormField control={form.control} name="email_melder" render={({ field }) => (
-                                                    <FormItem><FormControl><Input type="email" {...field} className="h-7 text-[11px] font-bold border-slate-200" disabled={isReadOnly} /></FormControl></FormItem>
-                                                )} />
-                                            </FormRow>
-                                            <FormRow label="Telefoon">
-                                                <FormField control={form.control} name="telefoon_melder" render={({ field }) => (
-                                                    <FormItem><FormControl><Input type="tel" {...field} className="h-7 text-[11px] font-bold border-slate-200" disabled={isReadOnly} /></FormControl></FormItem>
-                                                )} />
-                                            </FormRow>
-                                        </CardContent>
-                                    </Card>
-
-                                    <Card className="rounded-xl border-slate-200 shadow-sm overflow-hidden bg-white">
-                                        <CardHeader className="bg-slate-50 border-b py-1 px-4">
-                                            <CardTitle className="text-[9px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
-                                                <Calendar className="h-3 w-3" /> Tijden
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="p-3 pt-0">
                                             <div className="grid grid-cols-2 gap-2">
-                                                <FormRow label="Melddatum">
-                                                    <FormField control={form.control} name="meldingsdatum" render={({ field }) => (
-                                                        <FormItem>
-                                                            <FormControl>
-                                                                <Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} className="h-7 text-[9px] font-bold border-slate-200" disabled={isReadOnly} />
-                                                            </FormControl>
-                                                        </FormItem>
+                                                <FormRow label="E-mail">
+                                                    <FormField control={form.control} name="email_melder" render={({ field }) => (
+                                                        <FormItem><FormControl><Input type="email" {...field} className="h-7 text-[11px] font-bold border-slate-200" disabled={isReadOnly} /></FormControl></FormItem>
                                                     )} />
                                                 </FormRow>
-                                                <FormRow label="Uur">
-                                                    <FormField control={form.control} name="meldingsuur" render={({ field }) => (
-                                                        <FormItem><FormControl><Input type="time" {...field} className="h-7 text-[9px] font-bold border-slate-200" disabled={isReadOnly} /></FormControl></FormItem>
-                                                    )} />
-                                                </FormRow>
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <FormRow label="Voorvaldat.">
-                                                    <FormField control={form.control} name="voorvaldatum" render={({ field }) => (
-                                                        <FormItem>
-                                                            <FormControl>
-                                                                <Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} className="h-7 text-[9px] font-bold border-slate-200" disabled={isReadOnly} />
-                                                            </FormControl>
-                                                        </FormItem>
-                                                    )} />
-                                                </FormRow>
-                                                <FormRow label="Tijd">
-                                                    <FormField control={form.control} name="voorvaltijd" render={({ field }) => (
-                                                        <FormItem><FormControl><Input type="time" {...field} className="h-7 text-[9px] font-bold border-slate-200" disabled={isReadOnly} /></FormControl></FormItem>
+                                                <FormRow label="Telefoon">
+                                                    <FormField control={form.control} name="telefoon_melder" render={({ field }) => (
+                                                        <FormItem><FormControl><Input type="tel" {...field} className="h-7 text-[11px] font-bold border-slate-200" disabled={isReadOnly} /></FormControl></FormItem>
                                                     )} />
                                                 </FormRow>
                                             </div>
                                         </CardContent>
                                     </Card>
-
-                                    <Card className="rounded-xl border-slate-200 shadow-sm overflow-hidden bg-white">
-                                        <CardHeader className="bg-slate-50 border-b py-1 px-4">
-                                            <CardTitle className="text-[9px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
-                                                <AlertCircle className="h-3 w-3" /> Memo
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="p-3 pt-0">
-                                            <FormField control={form.control} name="extra_informatie" render={({ field }) => (
-                                                <FormItem><FormControl><Textarea {...field} className="resize-none min-h-[60px] text-[11px] font-medium border-slate-200 bg-slate-50/30" placeholder="Omschrijving melding..." disabled={isReadOnly}/></FormControl></FormItem>
-                                            )} />
-                                        </CardContent>
-                                    </Card>
                                 </div>
+                            </div>
 
-                                <div className="grid grid-cols-2 gap-4 mt-2">
-                                    <Button 
-                                        type="button" 
-                                        variant="outline" 
-                                        className="h-20 border-2 border-dashed border-slate-200 bg-white hover:border-primary/30 hover:bg-slate-50 transition-all flex flex-col gap-2 rounded-2xl"
-                                        onClick={() => document.getElementById('media-doc-input')?.click()}
-                                    >
-                                        <UploadCloud className="h-6 w-6 text-slate-400" />
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Document Toevoegen</span>
-                                        <input type="file" id="media-doc-input" className="hidden" multiple />
-                                    </Button>
-                                    <Button 
-                                        type="button" 
-                                        variant="outline" 
-                                        className="h-20 border-2 border-dashed border-slate-200 bg-white hover:border-primary/30 hover:bg-slate-50 transition-all flex flex-col gap-2 rounded-2xl"
-                                        onClick={() => document.getElementById('media-photo-input')?.click()}
-                                    >
-                                        <Camera className="h-6 w-6 text-slate-400" />
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Foto Toevoegen</span>
-                                        <input type="file" id="media-photo-input" className="hidden" accept="image/*" multiple />
-                                    </Button>
-                                </div>
-
-                                {viewedMelding && (
-                                    <Card className="rounded-xl border-primary/10 shadow-sm overflow-hidden border-2 bg-white mt-4">
-                                        <CardHeader className="bg-primary/5 py-1 px-4">
-                                            <CardTitle className="text-[9px] font-bold uppercase tracking-widest text-primary flex items-center gap-2">
-                                                <Check className="h-3 w-3" /> Afhandelingsinformatie
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="p-3 pt-0">
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                                <FormField control={form.control} name="afgehandeld_door" render={({ field }) => (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <Card className="rounded-xl border-slate-200 shadow-sm overflow-hidden bg-white">
+                                    <CardHeader className="bg-slate-50 border-b py-1 px-4">
+                                        <CardTitle className="text-[9px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                                            <Calendar className="h-3 w-3" /> Tijden
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-3 pt-0">
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <FormRow label="Melddatum">
+                                                <FormField control={form.control} name="meldingsdatum" render={({ field }) => (
                                                     <FormItem>
-                                                        <FormLabel className="text-[8px] font-bold uppercase text-slate-400">Door</FormLabel>
-                                                        <FormControl><Input {...field} size="sm" className="h-7 text-[11px] font-bold border-slate-200" disabled={isReadOnly} /></FormControl>
-                                                    </FormItem>
-                                                )} />
-                                                <FormField control={form.control} name="afhandeling_datum" render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel className="text-[8px] font-bold uppercase text-slate-400">Datum</FormLabel>
                                                         <FormControl>
-                                                            <Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} className="h-7 text-[11px] font-bold border-slate-200" disabled={isReadOnly} />
+                                                            <Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} className="h-7 text-[9px] font-bold border-slate-200" disabled={isReadOnly} />
                                                         </FormControl>
                                                     </FormItem>
                                                 )} />
-                                                <FormField control={form.control} name="afhandeling_tijdstip" render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel className="text-[8px] font-bold uppercase text-slate-400">Tijd</FormLabel>
-                                                        <FormControl><Input type="time" {...field} className="h-7 text-[11px] font-bold border-slate-200" disabled={isReadOnly} /></FormControl>
-                                                    </FormItem>
+                                            </FormRow>
+                                            <FormRow label="Uur">
+                                                <FormField control={form.control} name="meldingsuur" render={({ field }) => (
+                                                    <FormItem><FormControl><Input type="time" {...field} className="h-7 text-[9px] font-bold border-slate-200" disabled={isReadOnly} /></FormControl></FormItem>
                                                 )} />
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                )}
-                            </form>
-                        </Form>
-                    </div>
-                </ScrollArea>
+                                            </FormRow>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="rounded-xl border-slate-200 shadow-sm overflow-hidden bg-white">
+                                    <CardHeader className="bg-slate-50 border-b py-1 px-4">
+                                        <CardTitle className="text-[9px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                                            <AlertCircle className="h-3 w-3" /> Memo
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-3 pt-0">
+                                        <FormField control={form.control} name="extra_informatie" render={({ field }) => (
+                                            <FormItem><FormControl><Textarea {...field} className="resize-none min-h-[40px] text-[11px] font-medium border-slate-200 bg-slate-50/30" placeholder="Omschrijving melding..." disabled={isReadOnly}/></FormControl></FormItem>
+                                        )} />
+                                    </CardContent>
+                                </Card>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 mt-auto">
+                                <Button 
+                                    type="button" 
+                                    variant="outline" 
+                                    className="h-20 border-2 border-dashed border-slate-200 bg-white hover:border-primary/30 hover:bg-slate-50 transition-all flex flex-col gap-2 rounded-2xl"
+                                    onClick={() => document.getElementById('media-doc-input')?.click()}
+                                >
+                                    <UploadCloud className="h-6 w-6 text-slate-400" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Document Toevoegen</span>
+                                    <input type="file" id="media-doc-input" className="hidden" multiple />
+                                </Button>
+                                <Button 
+                                    type="button" 
+                                    variant="outline" 
+                                    className="h-20 border-2 border-dashed border-slate-200 bg-white hover:border-primary/30 hover:bg-slate-50 transition-all flex flex-col gap-2 rounded-2xl"
+                                    onClick={() => document.getElementById('media-photo-input')?.click()}
+                                >
+                                    <Camera className="h-6 w-6 text-slate-400" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Foto Toevoegen</span>
+                                    <input type="file" id="media-photo-input" className="hidden" accept="image/*" multiple />
+                                </Button>
+                            </div>
+                        </form>
+                    </Form>
+                </div>
             </div>
             
             <div className="w-full lg:w-[400px] p-4 bg-slate-50 border-l shrink-0 h-full overflow-hidden flex flex-col gap-4">
