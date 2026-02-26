@@ -8,39 +8,23 @@ import {
   Navigation,
   Activity,
   ChevronRight,
-  TrendingUp,
 } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, limit } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
 
 export default function DashboardPage() {
   const router = useRouter();
   const firestore = useFirestore();
-
-  const objectsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'objects');
-  }, [firestore]);
 
   const issuesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'meldingen'), where('status', '==', 'Nieuw'), limit(10));
   }, [firestore]);
 
-  const { data: objects } = useCollection<any>(objectsQuery);
   const { data: recentIssues } = useCollection<any>(issuesQuery);
-
-  const stats = [
-    { label: 'Actieve Objecten', value: objects?.length || 0, icon: MapPin, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Nieuwe Meldingen', value: recentIssues?.length || 0, icon: Bell, color: 'text-red-600', bg: 'bg-red-50' },
-    { label: 'Live Ritten', value: 4, icon: Navigation, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Systeem Status', value: '98%', icon: Activity, color: 'text-green-600', bg: 'bg-green-50' },
-  ];
 
   return (
     <div className="p-6 space-y-6">
@@ -53,25 +37,6 @@ export default function DashboardPage() {
           <Navigation className="mr-2 h-4 w-4" /> Start Navigatie
         </Button>
       </header>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => (
-          <Card key={stat.label} className="border-none shadow-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className={cn("p-3 rounded-lg", stat.bg)}>
-                  <stat.icon className={cn("h-6 w-6", stat.color)} />
-                </div>
-                <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider">Actueel</Badge>
-              </div>
-              <div className="mt-4">
-                <p className="text-3xl font-bold text-slate-900">{stat.value}</p>
-                <p className="text-sm font-medium text-slate-500 mt-1">{stat.label}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 border-none shadow-sm h-full flex flex-col min-h-[500px]">
