@@ -936,14 +936,14 @@ export default function NewIssuePage() {
             </div>
             
             <div className="w-full lg:w-[400px] bg-white border-l shadow-xl z-0 relative flex flex-col shrink-0">
-                <div className="flex-1 relative bg-slate-100">
+                <div className="h-1/2 relative bg-slate-100">
                     <MapboxView latitude={location?.latitude} longitude={location?.longitude} />
                     <div className="absolute top-3 left-3 z-10 bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-lg border border-slate-200 shadow-md flex items-center gap-2">
                         <div className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
                         <span className="text-[9px] font-bold uppercase tracking-widest text-slate-900">Live Kaart</span>
                     </div>
                 </div>
-                <div className="h-1/3 bg-slate-50 p-4 border-t overflow-y-auto custom-scrollbar">
+                <div className="h-1/2 bg-slate-50 p-4 border-t overflow-y-auto custom-scrollbar">
                     <h3 className="text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-3">Media & Bijlagen</h3>
                     <div className="grid grid-cols-2 gap-3">
                         <Card className="aspect-video border-2 border-dashed border-slate-200 bg-white flex flex-col items-center justify-center text-slate-400 hover:border-primary/30 hover:text-primary transition-all cursor-pointer group">
