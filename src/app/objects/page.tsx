@@ -32,6 +32,7 @@ import {
   Settings2,
   Tag,
   LayoutGrid,
+  MapPinned,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,7 +58,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { MapboxView } from '@/components/mapbox-view';
 import { ObjectImportDialog } from '@/components/object-import-dialog';
 import { ObjectExportDialog } from '@/components/object-export-dialog';
@@ -154,8 +155,8 @@ export default function ObjectsPage() {
       const q = searchTerm.toLowerCase();
       filtered = filtered.filter(
         (obj) =>
-          (obj.idNummer || obj.id).toLowerCase().includes(q) ||
-          obj.straatnaam?.toLowerCase().includes(q)
+          (obj.idNummer || obj.id || '').toLowerCase().includes(q) ||
+          (obj.straatnaam || '').toLowerCase().includes(q)
       );
     }
     return filtered;
@@ -271,7 +272,7 @@ export default function ObjectsPage() {
         <main className="flex-1 overflow-hidden relative bg-white">
           {selectedObject ? (
             <div className="h-full flex flex-col md:flex-row min-h-0">
-              <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-8 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-10 custom-scrollbar">
                 <div className="flex items-center justify-between mb-8">
                   <div className="space-y-1">
                     <h2 className="text-4xl font-extrabold tracking-tighter text-zinc-900 uppercase">{selectedObject.idNummer || selectedObject.id}</h2>
@@ -283,16 +284,52 @@ export default function ObjectsPage() {
                   {isTablet && <Button variant="outline" size="icon" className="h-10 w-10" onClick={() => setSelectedObject(null)}><ArrowLeft className="h-5 w-5" /></Button>}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase text-zinc-400 tracking-widest ml-1">Straatnaam</Label>
-                    <Input value={selectedObject.straatnaam || ''} onChange={e => handleUpdateField('straatnaam', e.target.value)} className="h-11 font-bold rounded-lg border-zinc-200" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase text-zinc-400 tracking-widest ml-1">Huisnummer</Label>
-                    <Input value={selectedObject.huisnummer || ''} onChange={e => handleUpdateField('huisnummer', e.target.value)} className="h-11 font-bold rounded-lg border-zinc-200" />
-                  </div>
+                <div className="space-y-6">
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 border-b pb-3 flex items-center gap-2"><MapPin className="h-4 w-4" /> Locatie & Adres</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-bold uppercase text-zinc-400 tracking-widest ml-1">Straatnaam</Label>
+                            <Input value={selectedObject.straatnaam || ''} onChange={e => handleUpdateField('straatnaam', e.target.value)} className="h-11 font-bold rounded-lg border-zinc-200" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-bold uppercase text-zinc-400 tracking-widest ml-1">Huisnummer</Label>
+                            <Input value={selectedObject.huisnummer || ''} onChange={e => handleUpdateField('huisnummer', e.target.value)} className="h-11 font-bold rounded-lg border-zinc-200" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-bold uppercase text-zinc-400 tracking-widest ml-1">Postcode</Label>
+                            <Input value={selectedObject.postcode || ''} onChange={e => handleUpdateField('postcode', e.target.value)} className="h-11 font-bold rounded-lg border-zinc-200" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-bold uppercase text-zinc-400 tracking-widest ml-1">Plaats</Label>
+                            <Input value={selectedObject.plaats || ''} onChange={e => handleUpdateField('plaats', e.target.value)} className="h-11 font-bold rounded-lg border-zinc-200" />
+                        </div>
+                    </div>
                 </div>
+
+                <div className="space-y-6">
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 border-b pb-3 flex items-center gap-2"><Tag className="h-4 w-4" /> Categorisering</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-bold uppercase text-zinc-400 tracking-widest ml-1">Hoofdtype</Label>
+                            <Input value={selectedObject.locatieType || ''} onChange={e => handleUpdateField('locatieType', e.target.value)} className="h-11 font-bold rounded-lg border-zinc-200" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-bold uppercase text-zinc-400 tracking-widest ml-1">Subtype</Label>
+                            <Input value={selectedObject.locatieSubType || ''} onChange={e => handleUpdateField('locatieSubType', e.target.value)} className="h-11 font-bold rounded-lg border-zinc-200" />
+                        </div>
+                    </div>
+                </div>
+
+                {selectedObject.locatieWerkgebieden && selectedObject.locatieWerkgebieden.length > 0 && (
+                    <div className="space-y-4">
+                        <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 border-b pb-3 flex items-center gap-2"><MapPinned className="h-4 w-4" /> Werkgebieden & Routes</h3>
+                        <div className="flex flex-wrap gap-2">
+                            {selectedObject.locatieWerkgebieden.map((area: string) => (
+                                <Badge key={area} variant="secondary" className="px-3 py-1 font-bold uppercase text-[9px] tracking-widest rounded-lg bg-zinc-100 border-zinc-200">{area}</Badge>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 <div className="p-6 bg-zinc-50 border rounded-2xl space-y-6">
                   <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 border-b pb-3 flex items-center gap-2"><Settings2 className="h-4 w-4" /> Configuratie</h3>
