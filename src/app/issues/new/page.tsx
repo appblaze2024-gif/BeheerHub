@@ -713,7 +713,7 @@ export default function NewIssuePage() {
                     <div className="p-4 lg:p-6 space-y-4">
                         <Form {...form}>
                             <form id="new-melding-form" onSubmit={form.handleSubmit(onSubmit)} className="w-full max-w-full space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <Card className="rounded-xl border-slate-200 shadow-sm overflow-hidden bg-white">
                                         <CardHeader className="bg-slate-50 border-b py-1 px-4">
                                             <CardTitle className="text-[9px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
@@ -739,6 +739,38 @@ export default function NewIssuePage() {
                                                             <SelectContent>{statusOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                                         </Select>
                                                     </FormItem>
+                                                )} />
+                                            </FormRow>
+                                        </CardContent>
+                                    </Card>
+
+                                    <Card className="rounded-xl border-slate-200 shadow-sm overflow-hidden bg-white">
+                                        <CardHeader className="bg-slate-50 border-b py-1 px-4">
+                                            <CardTitle className="text-[9px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                                                <MapPin className="h-3 w-3" /> Locatie
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-3 pt-0">
+                                            <FormRow label="Straatnaam">
+                                                <FormField control={form.control} name="straatnaam" render={({ field }) => (
+                                                    <FormItem><FormControl><Input {...field} className="h-7 text-[11px] font-bold border-slate-200" disabled={isReadOnly} /></FormControl></FormItem>
+                                                )} />
+                                            </FormRow>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <FormRow label="Huisnr.">
+                                                    <FormField control={form.control} name="nummer" render={({ field }) => (
+                                                        <FormItem><FormControl><Input {...field} className="h-7 text-[11px] font-bold border-slate-200" disabled={isReadOnly} /></FormControl></FormItem>
+                                                    )} />
+                                                </FormRow>
+                                                <FormRow label="Postcode">
+                                                    <FormField control={form.control} name="postcode" render={({ field }) => (
+                                                        <FormItem><FormControl><Input {...field} className="h-7 text-[11px] font-bold border-slate-200" disabled={isReadOnly} /></FormControl></FormItem>
+                                                    )} />
+                                                </FormRow>
+                                            </div>
+                                            <FormRow label="Plaats">
+                                                <FormField control={form.control} name="plaats" render={({ field }) => (
+                                                    <FormItem><FormControl><Input {...field} className="h-7 text-[11px] font-bold border-slate-200" disabled={isReadOnly} /></FormControl></FormItem>
                                                 )} />
                                             </FormRow>
                                         </CardContent>
@@ -779,38 +811,6 @@ export default function NewIssuePage() {
                                                             <SelectContent>{displayHandlerOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                                         </Select>
                                                     </FormItem>
-                                                )} />
-                                            </FormRow>
-                                        </CardContent>
-                                    </Card>
-
-                                    <Card className="rounded-xl border-slate-200 shadow-sm overflow-hidden bg-white">
-                                        <CardHeader className="bg-slate-50 border-b py-1 px-4">
-                                            <CardTitle className="text-[9px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
-                                                <MapPin className="h-3 w-3" /> Locatie
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="p-3 pt-0">
-                                            <FormRow label="Straatnaam">
-                                                <FormField control={form.control} name="straatnaam" render={({ field }) => (
-                                                    <FormItem><FormControl><Input {...field} className="h-7 text-[11px] font-bold border-slate-200" disabled={isReadOnly} /></FormControl></FormItem>
-                                                )} />
-                                            </FormRow>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <FormRow label="Huisnr.">
-                                                    <FormField control={form.control} name="nummer" render={({ field }) => (
-                                                        <FormItem><FormControl><Input {...field} className="h-7 text-[11px] font-bold border-slate-200" disabled={isReadOnly} /></FormControl></FormItem>
-                                                    )} />
-                                                </FormRow>
-                                                <FormRow label="Postcode">
-                                                    <FormField control={form.control} name="postcode" render={({ field }) => (
-                                                        <FormItem><FormControl><Input {...field} className="h-7 text-[11px] font-bold border-slate-200" disabled={isReadOnly} /></FormControl></FormItem>
-                                                    )} />
-                                                </FormRow>
-                                            </div>
-                                            <FormRow label="Plaats">
-                                                <FormField control={form.control} name="plaats" render={({ field }) => (
-                                                    <FormItem><FormControl><Input {...field} className="h-7 text-[11px] font-bold border-slate-200" disabled={isReadOnly} /></FormControl></FormItem>
                                                 )} />
                                             </FormRow>
                                         </CardContent>
