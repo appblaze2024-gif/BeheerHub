@@ -394,6 +394,7 @@ export default function NewIssuePage() {
 
   const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
   const [uploadedPhotos, setUploadedPhotos] = React.useState<UploadedFile[]>([]);
+  const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
   const [location, setLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
   const pdfInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -545,6 +546,61 @@ export default function NewIssuePage() {
         toast({ variant: 'destructive', title: "Fout bij opslaan" });
     } finally {
         setIsSavingConfig(false);
+    }
+  };
+
+  const handleFileUpload = React.useCallback(async (files: FileList | File[], type: 'files' | 'fotos') => {
+    if (!files || files.length === 0 || !app) return;
+    
+    const storage = getStorage(app);
+    const tempId = form.getValues('intakenummer') || `temp-${Date.now()}`;
+
+    for (const file of Array.from(files)) {
+      const storagePath = `meldingen/${tempId}/${type}/${Date.now()}-${file.name}`;
+      const storageRef = ref(storage, storagePath);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      uploadTask.on('state_changed', 
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
+        },
+        (error) => {
+          console.error("Upload failed:", error);
+          toast({ variant: 'destructive', title: 'Upload mislukt', description: `Kon ${file.name} niet uploaden.` });
+        },
+        async () => {
+          const url = await getDownloadURL(uploadTask.snapshot.ref);
+          const uploaded: UploadedFile = {
+            name: file.name,
+            url,
+            size: file.size,
+            type: file.type,
+            uploadedAt: new Date().toISOString(),
+            storagePath
+          };
+
+          if (type === 'files') {
+            setUploadedFiles(prev => [...prev, uploaded]);
+          } else {
+            setUploadedPhotos(prev => [...prev, uploaded]);
+          }
+          
+          setUploadProgress(prev => {
+            const next = { ...prev };
+            delete next[file.name];
+            return next;
+          });
+        }
+      );
+    }
+  }, [app, form, toast]);
+
+  const handleRemoveFile = (storagePath: string, type: 'files' | 'fotos') => {
+    if (type === 'files') {
+      setUploadedFiles(prev => prev.filter(f => f.storagePath !== storagePath));
+    } else {
+      setUploadedPhotos(prev => prev.filter(f => f.storagePath !== storagePath));
     }
   };
 
@@ -703,7 +759,7 @@ export default function NewIssuePage() {
 
         <main className="flex-1 overflow-hidden flex flex-col lg:flex-row min-h-0">
             <div className="flex-1 overflow-hidden flex flex-col bg-slate-50">
-                <div className="p-4 lg:p-6 space-y-3 flex-1">
+                <div className="p-4 lg:p-6 space-y-3 flex-1 overflow-y-auto no-scrollbar">
                     <Form {...form}>
                         <form id="new-melding-form" onSubmit={form.handleSubmit(onSubmit)} className="w-full max-w-full flex flex-col h-full gap-3">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -882,27 +938,70 @@ export default function NewIssuePage() {
                                 </Card>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3 mt-1">
-                                <Button 
-                                    type="button" 
-                                    variant="outline" 
-                                    className="h-20 border-2 border-dashed border-slate-200 bg-white hover:border-primary/30 hover:bg-slate-50 transition-all flex flex-col gap-2 rounded-2xl"
-                                    onClick={() => document.getElementById('media-doc-input')?.click()}
-                                >
-                                    <UploadCloud className="h-6 w-6 text-slate-400" />
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Document Toevoegen</span>
-                                    <input type="file" id="media-doc-input" className="hidden" multiple />
-                                </Button>
-                                <Button 
-                                    type="button" 
-                                    variant="outline" 
-                                    className="h-20 border-2 border-dashed border-slate-200 bg-white hover:border-primary/30 hover:bg-slate-50 transition-all flex flex-col gap-2 rounded-2xl"
-                                    onClick={() => document.getElementById('media-photo-input')?.click()}
-                                >
-                                    <Camera className="h-6 w-6 text-slate-400" />
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Foto Toevoegen</span>
-                                    <input type="file" id="media-photo-input" className="hidden" accept="image/*" multiple />
-                                </Button>
+                            <div className="space-y-3">
+                                <div className="grid grid-cols-2 gap-3 mt-1">
+                                    <Button 
+                                        type="button" 
+                                        variant="outline" 
+                                        className="h-20 border-2 border-dashed border-slate-200 bg-white hover:border-primary/30 hover:bg-slate-50 transition-all flex flex-col gap-2 rounded-2xl"
+                                        onClick={() => document.getElementById('media-doc-input')?.click()}
+                                    >
+                                        <UploadCloud className="h-6 w-6 text-slate-400" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Document Toevoegen</span>
+                                        <input type="file" id="media-doc-input" className="hidden" multiple onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'files')} />
+                                    </Button>
+                                    <Button 
+                                        type="button" 
+                                        variant="outline" 
+                                        className="h-20 border-2 border-dashed border-slate-200 bg-white hover:border-primary/30 hover:bg-slate-50 transition-all flex flex-col gap-2 rounded-2xl"
+                                        onClick={() => document.getElementById('media-photo-input')?.click()}
+                                    >
+                                        <Camera className="h-6 w-6 text-slate-400" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Foto Toevoegen</span>
+                                        <input type="file" id="media-photo-input" className="hidden" accept="image/*" multiple onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'fotos')} />
+                                    </Button>
+                                </div>
+
+                                {/* Progress Bars */}
+                                {Object.entries(uploadProgress).map(([name, progress]) => (
+                                    <div key={name} className="bg-white p-2 rounded-lg border border-slate-100 shadow-sm animate-in fade-in">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-[10px] font-bold truncate pr-4">{name}</span>
+                                            <span className="text-[10px] font-black text-primary">{Math.round(progress)}%</span>
+                                        </div>
+                                        <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+                                            <div className="h-full bg-primary transition-all duration-300" style={{ width: `${progress}%` }} />
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {/* Uploaded Items List */}
+                                {(uploadedFiles.length > 0 || uploadedPhotos.length > 0) && (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                                        {uploadedFiles.map(file => (
+                                            <div key={file.storagePath} className="flex items-center justify-between p-2 rounded-xl bg-blue-50 border border-blue-100 group">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <Paperclip className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                                                    <span className="text-[10px] font-bold truncate text-blue-700">{file.name}</span>
+                                                </div>
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-lg text-blue-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveFile(file.storagePath, 'files')}>
+                                                    <X className="h-3 w-3" />
+                                                </Button>
+                                            </div>
+                                        ))}
+                                        {uploadedPhotos.map(photo => (
+                                            <div key={photo.storagePath} className="flex items-center justify-between p-2 rounded-xl bg-green-50 border border-green-100 group">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <Camera className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                                                    <span className="text-[10px] font-bold truncate text-green-700">{photo.name}</span>
+                                                </div>
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-lg text-green-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveFile(photo.storagePath, 'fotos')}>
+                                                    <X className="h-3 w-3" />
+                                                </Button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </form>
                     </Form>
