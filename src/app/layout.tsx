@@ -74,9 +74,17 @@ function Header() {
       'iot': 'IoT Beheer',
       'mail': 'Mailberichten',
       'profile': 'Profiel',
-      'settings': 'Instellingen'
+      'settings': 'Instellingen',
+      'work-planning': 'Werkplanning',
+      'annual-planning': 'Jaarplanning',
+      'weekly-reports': 'Weekstaten',
+      'spec-reports': 'Besteksmeldingen',
+      'navigation-module': 'Navigatie',
+      'bestanden': 'Documenten',
+      'minutes': 'Notulen'
     };
-    return mapping[parts[0].toLowerCase()] || parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+    const key = parts[0].toLowerCase();
+    return mapping[key] || parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
   };
 
   return (
