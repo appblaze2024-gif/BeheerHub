@@ -23,7 +23,7 @@
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 199 89% 48%;
-    --radius: 1rem;
+    --radius: 1.5rem;
   }
 
   .dark {
@@ -57,6 +57,9 @@
     @apply bg-background text-foreground font-sans antialiased selection:bg-primary/20 selection:text-primary;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', sans-serif;
+  }
 }
 
 html, body, #__next__ {
@@ -73,18 +76,31 @@ html, body, #__next__ {
   scrollbar-width: none;
 }
 
-/* Glassmorphism Classes */
+/* Hyper-Light Glassmorphism */
 .glass-panel {
-  @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-xl;
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.04);
 }
 
 .glass-card {
-  @apply bg-white/80 backdrop-blur-sm border border-slate-200/60 shadow-lg hover:shadow-xl transition-all duration-300;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.05);
+  transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.glass-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.08);
 }
 
 /* Custom Scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -92,22 +108,23 @@ html, body, #__next__ {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  @apply bg-slate-200 rounded-full hover:bg-slate-300 transition-colors;
+  @apply bg-slate-200/50 rounded-full hover:bg-slate-300 transition-colors;
 }
 
-/* Tech Background Pattern */
+/* Tech Grid Background */
 .bg-tech {
   background-color: #f8fafc;
-  background-image: radial-gradient(#cbd5e1 0.5px, transparent 0.5px);
-  background-size: 24px 24px;
+  background-image: 
+    linear-gradient(rgba(226, 232, 240, 0.3) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(226, 232, 240, 0.3) 1px, transparent 1px);
+  background-size: 40px 40px;
 }
 
-/* Animated Glow */
 @keyframes glow {
-  0%, 100% { opacity: 0.5; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.05); }
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.02); }
 }
 
 .animate-glow {
-  animation: glow 3s ease-in-out infinite;
+  animation: glow 4s ease-in-out infinite;
 }
