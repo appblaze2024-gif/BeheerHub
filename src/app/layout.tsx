@@ -16,6 +16,7 @@ import { ProjectProvider } from '@/context/project-context';
 import { Toaster } from '@/components/ui/toaster';
 import { AppSidebar } from '@/components/app-sidebar';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { 
   Menu, 
   Search, 
@@ -63,29 +64,31 @@ function Header() {
   return (
     <header className="h-14 flex items-center justify-between px-4 bg-[#3498db] text-white sticky top-0 z-50 shadow-sm">
       <div className="flex items-center gap-4">
-        <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="lg:hidden text-white hover:bg-white/10">
-              <Menu className="h-6 w-6" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="p-0 border-none w-64 bg-white">
-            <SheetHeader className="sr-only">
-              <SheetTitle>Navigatie</SheetTitle>
-            </SheetHeader>
-            <AppSidebar onNavigate={() => setIsSidebarOpen(false)} />
-          </SheetContent>
-        </Sheet>
-        
         <div className="flex items-center gap-2">
-          <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
-            <div className="bg-white text-[#3498db] p-1 rounded">
-              <ChevronLeft className="h-5 w-5" />
-            </div>
-            <span className="text-lg font-bold tracking-tight">Demo</span>
-          </Link>
-          <div className="h-6 w-[1px] bg-white/20 mx-2" />
-          <h1 className="text-base font-semibold">{getPageTitle()}</h1>
+          <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="lg:hidden text-white hover:bg-white/10">
+                <Menu className="h-6 w-6" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="p-0 border-none w-64 bg-white text-slate-900">
+              <SheetHeader className="sr-only">
+                <SheetTitle>Navigatie</SheetTitle>
+              </SheetHeader>
+              <AppSidebar onNavigate={() => setIsSidebarOpen(false)} />
+            </SheetContent>
+          </Sheet>
+          
+          <div className="flex items-center gap-2">
+            <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
+              <div className="bg-white text-[#3498db] p-1 rounded">
+                <ChevronLeft className="h-5 w-5" />
+              </div>
+              <span className="text-lg font-bold tracking-tight">Demo</span>
+            </Link>
+            <div className="h-6 w-[1px] bg-white/20 mx-2" />
+            <h1 className="text-base font-semibold">{getPageTitle()}</h1>
+          </div>
         </div>
       </div>
 
