@@ -29,6 +29,7 @@ import {
   SearchCode,
   FileCheck,
   AlertTriangle,
+  AlertCircle,
   Settings2,
   Tag,
   LayoutGrid,
@@ -114,7 +115,6 @@ export default function ObjectsPage() {
   const [newFilterName, setNewFilterName] = React.useState('');
   const [isSavingFilter, setIsSavingFilter] = React.useState(false);
 
-  // Gefilterde query om reads te beperken: haal alleen op wat nodig is
   const objectsQuery = useMemoFirebase(() => {
     if (!firestore || !typeFilter) return null;
     if (typeFilter === 'all') return collection(firestore, 'objects');
