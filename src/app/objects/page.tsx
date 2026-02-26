@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -92,6 +93,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const DAYS_OF_WEEK = [
   { id: 'maandag', label: 'Ma' },
@@ -364,28 +366,36 @@ export default function ObjectsPage() {
               "w-full lg:w-80 border-r bg-white flex flex-col shrink-0",
               isTablet && selectedObject ? "hidden" : "flex"
             )}>
-              <div className="p-4 border-b flex justify-between items-end">
-                <div className="min-w-0">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Resultaten</p>
-                  <p className="text-xl font-bold tracking-tight text-slate-900 ml-1">
+              <div className="p-4 border-b flex justify-between items-center bg-slate-50/20">
+                <div className="flex flex-col min-w-0">
+                  <span className="text-xs font-semibold text-slate-500">Resultaten</span>
+                  <span className="text-2xl font-bold text-slate-900 leading-tight">
                     {isLoadingObjects ? '...' : filteredObjectsList.length}
-                  </p>
+                  </span>
                 </div>
-                <div className="flex items-center gap-2 mb-1">
-                    <Button 
-                        variant={isProximityFilterActive ? "default" : "outline"} 
-                        size="icon" 
-                        className={cn(
-                            "h-8 w-8 rounded-lg transition-all", 
-                            isProximityFilterActive ? "bg-primary text-white border-primary shadow-md" : "text-slate-400 border-slate-200"
-                        )}
-                        onClick={handleToggleProximityFilter}
-                        disabled={isLoadingObjects}
-                        title="Toon alleen objecten binnen 25m"
-                    >
-                        {isFindingLocation ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
-                    </Button>
-                    <Badge variant="secondary" className="text-[10px] font-medium max-w-[100px] truncate">{typeFilter}</Badge>
+                <div className="flex items-center gap-2">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                              variant={isProximityFilterActive ? "default" : "outline"} 
+                              size="icon" 
+                              className={cn(
+                                  "h-9 w-9 rounded-xl transition-all", 
+                                  isProximityFilterActive ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" : "text-slate-400 border-slate-200"
+                              )}
+                              onClick={handleToggleProximityFilter}
+                              disabled={isLoadingObjects}
+                          >
+                              {isFindingLocation ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Objecten binnen 25m filteren</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <Badge variant="secondary" className="px-3 py-1 font-semibold rounded-lg bg-slate-100 border-none text-slate-600 max-w-[100px] truncate">
+                      {typeFilter === 'all' ? 'Alle Objecten' : typeFilter}
+                    </Badge>
                 </div>
               </div>
               <ScrollArea className="flex-1">
@@ -412,7 +422,7 @@ export default function ObjectsPage() {
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-bold truncate tracking-tight">{obj.idNummer || obj.id}</p>
-                          <p className={cn("text-[10px] font-medium truncate mt-0.5", selectedObject?.id === obj.id ? "text-white/80" : "text-slate-500")}>
+                          <p className={cn("text-xs font-medium truncate mt-0.5", selectedObject?.id === obj.id ? "text-white/80" : "text-slate-500")}>
                             {obj.straatnaam} {obj.huisnummer}
                           </p>
                         </div>
@@ -422,7 +432,7 @@ export default function ObjectsPage() {
                 ) : (
                   <div className="p-12 text-center text-muted-foreground">
                     <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-20" />
-                    <p className="text-[10px] font-bold uppercase tracking-widest">Geen resultaten</p>
+                    <p className="text-xs font-medium">Geen resultaten</p>
                   </div>
                 )}
               </ScrollArea>
