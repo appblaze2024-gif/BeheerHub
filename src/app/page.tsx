@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MapboxView } from '@/components/mapbox-view';
 import { useProfile } from '@/firebase/profile-provider';
+import { Badge } from '@/components/ui/badge';
 
 export default function DashboardPage() {
   const router = useRouter();
