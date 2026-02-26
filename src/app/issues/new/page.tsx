@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { format, addDays, isWeekend } from 'date-fns';
+import { format } from 'date-fns';
 import { 
   ArrowLeft, 
   Loader2, 
@@ -18,13 +18,11 @@ import {
   Sparkles, 
   Settings2, 
   FileText, 
-  Eye, 
   X, 
   ZoomIn, 
   ZoomOut, 
   Target, 
-  Upload, 
-  ChevronDown, 
+  ChevronRight, 
   Package, 
   Clock,
   User,
@@ -44,14 +42,13 @@ import {
 } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { useGlobalLoading } from '@/context/global-loading-context';
-import { collection, doc, arrayUnion, serverTimestamp, addDoc, updateDoc } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, addDoc, updateDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import Image from 'next/image';
 import { PDFDocument } from 'pdf-lib';
 import * as pdfjs from 'pdfjs-dist';
-import * as turf from '@turf/turf';
 
 // UI Components
 import { Button } from '@/components/ui/button';
@@ -62,7 +59,6 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -87,13 +83,11 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 
 // Custom Components & AI
 import { MapboxView } from '@/components/mapbox-view';
 import { parseIssuePdf } from '@/ai/flows/parse-issue-pdf-flow';
-import { LoadingScreen } from '@/components/loading-screen';
 
 // Types
 import type { Melding, UploadedFile, Object as MapObject } from '@/lib/types';
@@ -477,7 +471,6 @@ export default function NewIssuePage() {
   const watchedHoofdcategorie = form.watch('hoofdcategorie');
   const watchedSubcategorie = form.watch('subcategorie');
   const watchedBehandelaar = form.watch('behandelaar');
-  const watchedIntakenummer = form.watch('intakenummer');
 
   const displayHoofdOptions = React.useMemo(() => {
     const opts = [...hoofdcategorieOptions];
@@ -816,7 +809,10 @@ export default function NewIssuePage() {
                                     <FormField control={form.control} name="meldingsdatum" render={({ field }) => (
                                         <FormItem>
                                             <FormLabel className="text-[10px] font-black uppercase text-slate-400">Meldingsdatum</FormLabel>
-                                            <FormControl><Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} className="h-10 font-bold" disabled={isReadOnly} /></FormItem>
+                                            <FormControl>
+                                                <Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} className="h-10 font-bold" disabled={isReadOnly} />
+                                            </FormControl>
+                                        </FormItem>
                                     )} />
                                     <FormField control={form.control} name="meldingsuur" render={({ field }) => (
                                         <FormItem>
@@ -827,7 +823,10 @@ export default function NewIssuePage() {
                                     <FormField control={form.control} name="voorvaldatum" render={({ field }) => (
                                         <FormItem>
                                             <FormLabel className="text-[10px] font-black uppercase text-slate-400">Voorvaldatum</FormLabel>
-                                            <FormControl><Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} className="h-10 font-bold" disabled={isReadOnly} /></FormItem>
+                                            <FormControl>
+                                                <Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} className="h-10 font-bold" disabled={isReadOnly} />
+                                            </FormControl>
+                                        </FormItem>
                                     )} />
                                     <FormField control={form.control} name="voorvaltijd" render={({ field }) => (
                                         <FormItem>
@@ -838,7 +837,10 @@ export default function NewIssuePage() {
                                     <FormField control={form.control} name="actiedatum" render={({ field }) => (
                                         <FormItem>
                                             <FormLabel className="text-[10px] font-black uppercase text-slate-400">Actiedatum</FormLabel>
-                                            <FormControl><Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} className="h-10 font-bold" disabled={isReadOnly} /></FormItem>
+                                            <FormControl>
+                                                <Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} className="h-10 font-bold" disabled={isReadOnly} />
+                                            </FormControl>
+                                        </FormItem>
                                     )} />
                                 </div>
                             </CardContent>
@@ -966,7 +968,9 @@ export default function NewIssuePage() {
                                         <FormField control={form.control} name="afhandeling_datum" render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel className="text-[10px] font-black uppercase text-slate-400">Afhandeldatum</FormLabel>
-                                                <FormControl><Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} className="h-10 font-bold" disabled={isReadOnly} /></FormControl>
+                                                <FormControl>
+                                                    <Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} className="h-10 font-bold" disabled={isReadOnly} />
+                                                </FormControl>
                                             </FormItem>
                                         )} />
                                         <FormField control={form.control} name="afhandeling_tijdstip" render={({ field }) => (
