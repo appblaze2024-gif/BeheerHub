@@ -68,6 +68,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { LoadingScreen } from '@/components/loading-screen';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 type MaterieelType = 'voertuigen' | 'machines';
 
@@ -199,51 +200,53 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                 />
             </div>
           </CardHeader>
-          <CardContent className="p-2 flex-1 min-h-0 overflow-y-auto no-scrollbar">
-            <div className="flex flex-col space-y-1">
-              {filteredMaterieel && filteredMaterieel.length > 0 ? (
-                filteredMaterieel.map((item) => (
-                  <div
-                    key={item.id}
-                    onClick={() => setSelectedItem(item)}
-                    className={cn(
-                        "flex items-start justify-between p-3 rounded-xl text-left cursor-pointer transition-all",
-                        selectedItem?.id === item.id && !isTablet
-                            ? "bg-primary text-white shadow-lg scale-[1.02]"
-                            : "hover:bg-slate-50 dark:hover:bg-slate-800"
-                    )}
-                  >
-                    <div className="flex-1 min-w-0">
-                       <div className={cn(
-                           "inline-flex items-center rounded-sm border-[1.5px] overflow-hidden font-mono font-bold text-[10px]",
-                           selectedItem?.id === item.id && !isTablet ? "bg-yellow-400 border-black text-black" : "bg-yellow-400 border-black text-black"
-                       )}>
-                        <div className="bg-blue-600 px-1 py-0.5 text-white">
-                           <span className='font-sans text-[8px]'>NL</span>
+          <CardContent className="p-0 flex-1 min-h-0">
+            <ScrollArea className="h-full">
+              <div className="flex flex-col space-y-1 p-2">
+                {filteredMaterieel && filteredMaterieel.length > 0 ? (
+                  filteredMaterieel.map((item) => (
+                    <div
+                      key={item.id}
+                      onClick={() => setSelectedItem(item)}
+                      className={cn(
+                          "flex items-start justify-between p-3 rounded-xl text-left cursor-pointer transition-all",
+                          selectedItem?.id === item.id && !isTablet
+                              ? "bg-primary text-white shadow-lg scale-[1.02]"
+                              : "hover:bg-slate-50 dark:hover:bg-slate-800"
+                      )}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className={cn(
+                            "inline-flex items-center rounded-sm border-[1.5px] overflow-hidden font-mono font-bold text-[10px]",
+                            selectedItem?.id === item.id && !isTablet ? "bg-yellow-400 border-black text-black" : "bg-yellow-400 border-black text-black"
+                        )}>
+                          <div className="bg-blue-600 px-1 py-0.5 text-white">
+                            <span className='font-sans text-[8px]'>NL</span>
+                          </div>
+                          <span className="px-1.5 py-0.5 tracking-wider">{item.id}</span>
                         </div>
-                        <span className="px-1.5 py-0.5 tracking-wider">{item.id}</span>
-                      </div>
-                      <p className={cn("text-xs font-black mt-1.5 truncate uppercase tracking-tight", selectedItem?.id === item.id && !isTablet ? "text-white" : "text-slate-900")}>
-                        {item.merk} {item.model}
-                      </p>
-                      {(item.type || item.bouwjaar) && (
-                        <p className={cn("text-[10px] font-bold uppercase tracking-tighter mt-0.5", selectedItem?.id === item.id && !isTablet ? "text-white/70" : "text-slate-400")}>
-                          {item.type} {item.bouwjaar && `(${item.bouwjaar})`}
+                        <p className={cn("text-xs font-black mt-1.5 truncate uppercase tracking-tight", selectedItem?.id === item.id && !isTablet ? "text-white" : "text-slate-900")}>
+                          {item.merk} {item.model}
                         </p>
+                        {(item.type || item.bouwjaar) && (
+                          <p className={cn("text-[10px] font-bold uppercase tracking-tighter mt-0.5", selectedItem?.id === item.id && !isTablet ? "text-white/70" : "text-slate-400")}>
+                            {item.type} {item.bouwjaar && `(${item.bouwjaar})`}
+                          </p>
+                        )}
+                      </div>
+                      {selectedItem?.id !== item.id && (
+                          <ChevronRight className="h-4 w-4 text-slate-300 mt-1" />
                       )}
                     </div>
-                    {selectedItem?.id !== item.id && (
-                        <ChevronRight className="h-4 w-4 text-slate-300 mt-1" />
-                    )}
+                  ))
+                ) : (
+                  <div className="text-center p-12 text-muted-foreground bg-slate-50/50 rounded-2xl m-2">
+                    <Truck className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                    <p className="font-bold uppercase text-[10px] tracking-widest">Geen {materieelType}</p>
                   </div>
-                ))
-              ) : (
-                <div className="text-center p-12 text-muted-foreground bg-slate-50/50 rounded-2xl m-2">
-                  <Truck className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                  <p className="font-bold uppercase text-[10px] tracking-widest">Geen {materieelType}</p>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            </ScrollArea>
           </CardContent>
         </Card>
 
