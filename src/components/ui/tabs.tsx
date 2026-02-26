@@ -14,7 +14,7 @@ const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      "inline-flex h-12 items-center justify-start rounded-none border-b border-slate-200 bg-transparent p-0 text-muted-foreground w-full gap-8",
+      "inline-flex h-12 items-center justify-start rounded-none border-b border-slate-200 bg-transparent p-0 text-muted-foreground w-full gap-6",
       className
     )}
     {...props}
@@ -22,10 +22,6 @@ const TabsList = React.forwardRef<
 ))
 TabsList.displayName = TabsPrimitive.List.displayName
 
-/**
- * Gestandaardiseerde TabsTrigger voor BeheerHub.
- * Gebruikt vetgedrukte hoofdletters en Indigo-accenten.
- */
 const TabsTrigger = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Trigger>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
@@ -33,7 +29,7 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "inline-flex items-center justify-center whitespace-nowrap py-3 text-sm font-black uppercase tracking-widest ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary rounded-none h-full",
+      "inline-flex items-center justify-center whitespace-nowrap py-3 text-[10px] sm:text-xs font-black uppercase tracking-widest ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:text-primary border-b-2 border-transparent data-[state=active]:border-primary rounded-none h-full",
       className
     )}
     {...props}
@@ -48,7 +44,7 @@ const TabsContent = React.forwardRef<
   <TabsPrimitive.Content
     ref={ref}
     className={cn(
-      "mt-6 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+      "mt-6 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex-1 min-h-0",
       className
     )}
     {...props}

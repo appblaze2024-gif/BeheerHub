@@ -56,7 +56,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { MapboxView } from '@/components/mapbox-view';
 import { ObjectImportDialog } from '@/components/object-import-dialog';
 import { ObjectExportDialog } from '@/components/object-export-dialog';
@@ -462,7 +462,6 @@ export default function ObjectsPage() {
 
   const handleFindDuplicates = () => {
     setIsFindingDuplicates(true);
-    // Use globalThis.Map to avoid Lucide 'Map' icon shadowing
     let sourceList = objects || [];
 
     if (dupFilter !== 'all') {
@@ -492,7 +491,6 @@ export default function ObjectsPage() {
     const duplicates: { obj: any, reason: string }[] = [];
 
     sourceList.forEach(obj => {
-      // 1. Check Location
       if (dupCriteria.location && typeof obj.latitude === 'number' && typeof obj.longitude === 'number') {
         const locKey = `${obj.latitude.toFixed(8)}_${obj.longitude.toFixed(8)}`;
         if (seenLocation.has(locKey)) {
@@ -503,7 +501,6 @@ export default function ObjectsPage() {
         } else seenLocation.set(locKey, [obj]);
       }
 
-      // 2. Check ID (External or Internal)
       const idToMatch = obj.idNummer || obj.id;
       if (dupCriteria.id && idToMatch) {
         const idKey = String(idToMatch).toLowerCase().trim();
@@ -515,7 +512,6 @@ export default function ObjectsPage() {
         } else seenId.set(idKey, [obj]);
       }
 
-      // 3. Check Address
       if (dupCriteria.address && obj.straatnaam && obj.huisnummer) {
         const addrKey = `${obj.straatnaam.toLowerCase()}_${obj.huisnummer.toLowerCase()}`.trim();
         if (seenAddress.has(addrKey)) {
@@ -684,35 +680,35 @@ export default function ObjectsPage() {
 
   return (
     <div className="flex flex-col flex-1 h-full min-h-0 bg-white">
-      <header className="flex flex-col md:flex-row items-center justify-between p-4 md:p-6 bg-white border-b shadow-sm gap-4">
+      <header className="flex flex-col md:flex-row items-center justify-between p-4 md:p-6 bg-white border-b shadow-sm gap-4 shrink-0">
         <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto no-scrollbar pb-1">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="shrink-0 font-bold h-9 gap-2">
+              <Button variant="outline" size="sm" className="shrink-0 font-black h-9 gap-2 uppercase tracking-tighter transition-premium">
                 <Filter className="h-4 w-4" /> 
                 {typeFilter === 'all' ? 'Filter' : typeFilter}
                 <ChevronDown className="h-3 w-3 opacity-50" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56">
-              <DropdownMenuItem onClick={() => setTypeFilter('all')} className="font-bold flex items-center justify-between">
+            <DropdownMenuContent align="start" className="w-56 rounded-2xl shadow-2xl border-slate-100 p-2">
+              <DropdownMenuItem onClick={() => setTypeFilter('all')} className="font-bold flex items-center justify-between rounded-xl h-10">
                 Alles tonen {typeFilter === 'all' && <Check className="h-4 w-4" />}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTypeFilter('prullenbak')} className="font-bold flex items-center justify-between">
+              <DropdownMenuItem onClick={() => setTypeFilter('prullenbak')} className="font-bold flex items-center justify-between rounded-xl h-10">
                 Prullenbakken {typeFilter === 'prullenbak' && <Check className="h-4 w-4" />}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTypeFilter('container')} className="font-bold flex items-center justify-between">
+              <DropdownMenuItem onClick={() => setTypeFilter('container')} className="font-bold flex items-center justify-between rounded-xl h-10">
                 Ondergrondse containers {typeFilter === 'container' && <Check className="h-4 w-4" />}
               </DropdownMenuItem>
               
               {customFilters.map(filter => (
-                <DropdownMenuItem key={filter} onClick={() => setTypeFilter(filter)} className="font-bold flex items-center justify-between">
+                <DropdownMenuItem key={filter} onClick={() => setTypeFilter(filter)} className="font-bold flex items-center justify-between rounded-xl h-10">
                     {filter} {typeFilter === filter && <Check className="h-4 w-4" />}
                 </DropdownMenuItem>
               ))}
 
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setIsAddFilterDialogOpen(true)} className="font-black uppercase tracking-tight text-primary">
+              <DropdownMenuSeparator className="bg-slate-50" />
+              <DropdownMenuItem onClick={() => setIsAddFilterDialogOpen(true)} className="font-black uppercase tracking-tight text-primary rounded-xl h-10">
                   <PlusCircle className="mr-2 h-4 w-4" />
                   + Nieuw filter toevoegen
               </DropdownMenuItem>
@@ -721,39 +717,37 @@ export default function ObjectsPage() {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="shrink-0 font-bold h-9 shadow-sm">
+              <Button variant="outline" size="sm" className="shrink-0 font-black h-9 shadow-sm uppercase tracking-tighter gap-2 transition-premium">
                 <Settings2 className="mr-2 h-4 w-4" />
                 Bulk Acties <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-64 p-2 rounded-xl border-slate-100 shadow-xl">
-              <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-2">Beheer</DropdownMenuLabel>
-              <DropdownMenuItem onClick={handleSetAllActive} className="font-bold cursor-pointer rounded-lg h-10">
+            <DropdownMenuContent align="start" className="w-64 p-2 rounded-2xl border-slate-100 shadow-xl">
+              <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3 pl-3">Beheer & Kwaliteit</DropdownMenuLabel>
+              <DropdownMenuItem onClick={handleSetAllActive} className="font-bold cursor-pointer rounded-xl h-11">
                 <ShieldCheck className="mr-3 h-4 w-4 text-green-600" />
                 Zet alle op Actief
               </DropdownMenuItem>
               
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-2">Kwaliteitscontrole</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => { setDupFilter(typeFilter); setIsQualityDialogOpen(true); }} className="font-bold cursor-pointer rounded-lg h-10">
+              <DropdownMenuItem onClick={() => { setDupFilter(typeFilter); setIsQualityDialogOpen(true); }} className="font-bold cursor-pointer rounded-xl h-11">
                 <SearchCode className="mr-3 h-4 w-4 text-primary" />
                 Zoek duplicaten...
               </DropdownMenuItem>
               
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-2">Opschonen</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => setIsBulkDeleteAlertOpen(true)} className="font-black uppercase tracking-tight text-red-600 cursor-pointer rounded-lg h-10 focus:text-red-600 focus:bg-red-50">
+              <DropdownMenuSeparator className="bg-slate-50" />
+              <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3 pl-3">Opschonen</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => setIsBulkDeleteAlertOpen(true)} className="font-black uppercase tracking-tight text-red-600 cursor-pointer rounded-xl h-11 focus:text-red-600 focus:bg-red-50">
                 <Trash2 className="mr-3 h-4 w-4" />
                 Verwijder alle {currentFilterName}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="default" size="sm" className="shrink-0 font-black h-9 uppercase tracking-tight" onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}>
+          <Button variant="default" size="sm" className="shrink-0 font-black h-9 uppercase tracking-tight shadow-md shadow-primary/10 transition-premium" onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}>
             {viewMode === 'list' ? <MapIcon className="mr-2 h-4 w-4" /> : <List className="mr-2 h-4 w-4" />}
             {viewMode === 'list' ? 'Kaart' : 'Lijst'}
           </Button>
           {viewMode === 'map' && (
-            <Button variant={showHeatmap ? 'secondary' : 'outline'} size="sm" className="shrink-0 font-bold h-9" onClick={() => setShowHeatmap(!showHeatmap)}>
+            <Button variant={showHeatmap ? 'secondary' : 'outline'} size="sm" className="shrink-0 font-black h-9 uppercase tracking-tighter border-2 transition-premium" onClick={() => setShowHeatmap(!showHeatmap)}>
                 <Palette className="mr-2 h-4 w-4" />
                 Vulgraden
             </Button>
@@ -762,20 +756,20 @@ export default function ObjectsPage() {
         <div className="flex items-center gap-2 w-full md:w-auto">
           <div className="relative flex-1 md:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Zoek een object..." className="pl-9 h-9 font-bold" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <Input placeholder="Zoek een object..." className="pl-9 h-9 font-bold bg-slate-50 border-none rounded-xl" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
            <ObjectImportDialog
             open={isImporting}
             onOpenChange={setIsImporting}
             onSuccess={handleImportSuccess}
           >
-            <Button variant="outline" size="sm" className="h-9 font-bold">
+            <Button variant="outline" size="sm" className="h-9 font-black uppercase tracking-tighter transition-premium">
               <Upload className="mr-2 h-4 w-4" />
               Import
             </Button>
           </ObjectImportDialog>
           <ObjectExportDialog objects={objects} projects={projects}>
-            <Button variant="outline" size="sm" className="h-9 font-bold">
+            <Button variant="outline" size="sm" className="h-9 font-black uppercase tracking-tighter transition-premium">
               <Download className="mr-2 h-4 w-4" />
               Export
             </Button>
@@ -784,341 +778,286 @@ export default function ObjectsPage() {
       </header>
 
       {viewMode === 'list' ? (
-         <div className="flex flex-1 min-h-0 relative">
+         <div className="flex flex-1 min-h-0 relative bg-slate-50/30">
          <aside className={cn(
-             "w-full lg:w-72 bg-white border-r flex flex-col",
+             "w-full lg:w-80 bg-white border-r flex flex-col transition-premium",
              isTablet && selectedObject ? "hidden" : "flex"
          )}>
-           <div className="p-4 border-b bg-slate-50/50">
-             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Geregistreerde Objecten</p>
-             <Input placeholder="Snel filteren..." className="h-9 font-bold" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+           <div className="p-6 border-b bg-slate-50/50">
+             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Geregistreerde Objecten</p>
+             <Input placeholder="Snel filteren op adres..." className="h-10 font-bold bg-white rounded-xl border-slate-200" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
            </div>
-           <div className="flex-1 overflow-y-auto no-scrollbar">
-              <div className="flex flex-col space-y-1 p-2">
+           <ScrollArea className="flex-1">
+              <div className="flex flex-col space-y-1 p-3">
                {filteredObjectsList && filteredObjectsList.length > 0 ? (
                  filteredObjectsList.map((obj) => (
                    <div
                      key={obj.id}
                      onClick={() => setSelectedObject(obj)}
                      className={cn(
-                         "flex items-start justify-between p-3 rounded-xl text-left cursor-pointer transition-all",
+                         "flex items-start justify-between p-4 rounded-2xl text-left cursor-pointer transition-premium",
                          selectedObject?.id === obj.id && !isTablet
-                            ? "bg-primary text-white shadow-lg scale-[1.02]"
-                            : "hover:bg-slate-50 dark:hover:bg-slate-800"
+                            ? "bg-primary text-white shadow-xl shadow-primary/20 scale-[1.02]"
+                            : "hover:bg-slate-50"
                      )}
                    >
-                     <div className="flex items-start gap-3">
+                     <div className="flex items-start gap-4">
                        <div className={cn(
-                           "p-2 rounded-lg",
+                           "p-2.5 rounded-xl transition-premium",
                            selectedObject?.id === obj.id && !isTablet ? "bg-white/20" : "bg-slate-100"
                        )}>
                         <MapPin className={cn("h-4 w-4", selectedObject?.id === obj.id && !isTablet ? "text-white" : "text-primary")} />
                        </div>
-                       <div>
+                       <div className="min-w-0">
                          <p className={cn("font-black uppercase tracking-tight text-xs", selectedObject?.id === obj.id && !isTablet ? "text-white" : "text-slate-900")}>{obj.idNummer || obj.id}</p>
-                         <p className={cn("text-[10px] font-bold uppercase tracking-widest truncate", selectedObject?.id === obj.id && !isTablet ? "text-white/70" : "text-slate-400")}>
+                         <p className={cn("text-[10px] font-bold uppercase tracking-widest truncate mt-0.5", selectedObject?.id === obj.id && !isTablet ? "text-white/70" : "text-slate-400")}>
                            {obj.straatnaam ? `${obj.straatnaam} ${obj.huisnummer || ''}` : 'Adres onbekend'}
                          </p>
                        </div>
                      </div>
-                      <ChevronRight className={cn("h-4 w-4 mt-1 transition-all", selectedObject?.id === obj.id && !isTablet ? "text-white" : "text-slate-200")} />
+                      <ChevronRight className={cn("h-4 w-4 mt-1 transition-premium", selectedObject?.id === obj.id && !isTablet ? "text-white" : "text-slate-200")} />
                    </div>
                  ))
                ) : (
-                  <div className="p-12 text-center text-muted-foreground bg-slate-50/50 rounded-2xl m-2">
+                  <div className="p-12 text-center text-muted-foreground bg-slate-50/50 rounded-3xl m-4 border-2 border-dashed border-slate-100">
                    <MapPin className="h-12 w-12 mx-auto mb-4 opacity-10" />
-                   <p className="font-bold uppercase text-[10px] tracking-widest">Geen objecten</p>
+                   <p className="font-bold uppercase text-[10px] tracking-widest">Geen objecten gevonden</p>
                  </div>
                )}
              </div>
-           </div>
+           </ScrollArea>
          </aside>
  
          <main className={cn(
-             "flex-1 p-0 overflow-y-auto no-scrollbar bg-slate-50/30",
+             "flex-1 p-0 overflow-y-auto no-scrollbar bg-white",
              selectedObject ? "flex" : "hidden lg:flex"
          )}>
               {selectedObject ? (
-               <Card className="h-full border-none rounded-none shadow-none flex-1 flex flex-col bg-white">
-               <CardContent className="p-0 flex-1 flex flex-col xl:grid xl:grid-cols-12 gap-0">
-                 <div className="xl:col-span-5 space-y-6 p-6 border-r border-slate-100 overflow-y-auto no-scrollbar">
-                     <div className="flex items-center gap-4 mb-6">
+               <div className="h-full flex-1 flex flex-col">
+               <div className="p-0 flex-1 flex flex-col xl:grid xl:grid-cols-12 gap-0 overflow-hidden">
+                 <div className="xl:col-span-5 space-y-8 p-8 border-r border-slate-100 overflow-y-auto custom-scrollbar">
+                     <div className="flex items-center gap-6 mb-8">
                         {isTablet && (
-                            <Button variant="ghost" size="icon" onClick={() => setSelectedObject(null)} className="h-10 w-10 rounded-full bg-slate-50 border border-slate-100 shrink-0">
+                            <Button variant="ghost" size="icon" onClick={() => setSelectedObject(null)} className="h-11 w-11 rounded-2xl bg-slate-50 border border-slate-100 shrink-0">
                                 <ArrowLeft className="h-5 w-5" />
                             </Button>
                         )}
-                        <div>
-                            <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-900 leading-none mb-1">{selectedObject.idNummer || selectedObject.id}</h2>
-                            <p className="text-[10px] font-black uppercase tracking-widest">{selectedObject.locatieSubType || 'Basis Object'}</p>
+                        <div className="min-w-0">
+                            <h2 className="text-3xl font-black uppercase tracking-tighter text-slate-900 leading-none mb-1 truncate">{selectedObject.idNummer || selectedObject.id}</h2>
+                            <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-[10px] font-black uppercase border-2 tracking-widest">{selectedObject.locatieSubType || 'Basis Object'}</Badge>
+                                <Badge variant="secondary" className="bg-blue-50 text-blue-600 border-none font-black text-[9px] uppercase">{selectedObject.locatieType}</Badge>
+                            </div>
                         </div>
                      </div>
 
-                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                       <div className="space-y-4">
-                         <div className="space-y-1.5">
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                       <div className="space-y-6">
+                         <div className="space-y-2">
                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Locatie type</Label>
                            <Select value={selectedObject.locatieType} onValueChange={(v) => handleUpdateField('locatieType', v)}>
-                             <SelectTrigger className="h-10 font-bold">
+                             <SelectTrigger className="h-11 font-black bg-slate-50 border-none shadow-inner rounded-xl">
                                <SelectValue />
                              </SelectTrigger>
-                             <SelectContent>
-                               <SelectItem value={selectedObject.locatieType}>
-                                 {selectedObject.locatieType}
-                               </SelectItem>
+                             <SelectContent className="rounded-2xl shadow-2xl border-slate-100">
+                               <SelectItem value={selectedObject.locatieType} className="font-bold rounded-xl">{selectedObject.locatieType}</SelectItem>
                              </SelectContent>
                            </Select>
                          </div>
-                         <div className="space-y-1.5">
-                           <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Locatie sub type</Label>
-                           <Select value={selectedObject.locatieSubType} onValueChange={(v) => handleUpdateField('locatieSubType', v)}>
-                             <SelectTrigger className="h-10 font-bold">
+                         <div className="space-y-2">
+                           <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Kwaliteit (Beeldbestek)</Label>
+                           <Select value={selectedObject.kwaliteit} onValueChange={(v) => handleUpdateField('kwaliteit', v)}>
+                             <SelectTrigger className="h-11 font-black bg-slate-50 border-none shadow-inner rounded-xl">
                                <SelectValue />
                              </SelectTrigger>
-                             <SelectContent>
-                               <SelectItem value={selectedObject.locatieSubType}>
-                                 {selectedObject.locatieSubType}
-                               </SelectItem>
+                             <SelectContent className="rounded-2xl shadow-2xl border-slate-100">
+                               <SelectItem value="A" className="font-bold rounded-xl">A - Hoogwaardig</SelectItem>
+                               <SelectItem value="B" className="font-bold rounded-xl">B - Standaard</SelectItem>
+                               <SelectItem value="C" className="font-bold rounded-xl">C - Minimaal</SelectItem>
                              </SelectContent>
                            </Select>
                          </div>
                        </div>
-                       <div className="space-y-4">
-                         <div className="space-y-1.5">
-                           <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Kwaliteit</Label>
-                           <Select value={selectedObject.kwaliteit} onValueChange={(v) => handleUpdateField('kwaliteit', v)}>
-                             <SelectTrigger className="h-10 font-bold">
-                               <SelectValue />
-                             </SelectTrigger>
-                             <SelectContent>
-                               <SelectItem value="A">A - Hoog</SelectItem>
-                               <SelectItem value="B">B - Midden</SelectItem>
-                               <SelectItem value="C">C - Laag</SelectItem>
-                             </SelectContent>
-                           </Select>
+                       <div className="space-y-6">
+                         <div className="space-y-2">
+                           <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Status Beheer</Label>
+                           <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 shadow-inner">
+                             <div className="flex flex-col">
+                                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none">Operationeel</span>
+                                  <span className="text-[9px] font-bold text-slate-400 mt-1 uppercase">Systeemactief</span>
+                             </div>
+                             <div className="flex items-center gap-3">
+                               <Switch
+                                 checked={selectedObject.isActief}
+                                 onCheckedChange={(c) => handleUpdateField('isActief', c)}
+                                 className="data-[state=checked]:bg-green-500"
+                               />
+                             </div>
+                           </div>
                          </div>
-                         <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
-                           <div className="flex flex-col">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Object Status</span>
-                                <span className="text-xs font-bold text-slate-900 mt-0.5">Operationeel</span>
-                           </div>
-                           <div className="flex items-center gap-3">
-                             <Switch
-                               checked={selectedObject.isActief}
-                               onCheckedChange={(c) => handleUpdateField('isActief', c)}
-                             />
-                             <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">Actief</span>
-                           </div>
+                         <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Locatie coördinaten</Label>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 shadow-inner">
+                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">LAT</p>
+                                    <p className="font-mono text-[10px] font-bold text-slate-900 leading-none">{selectedObject.latitude?.toFixed(6)}</p>
+                                </div>
+                                <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 shadow-inner">
+                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">LNG</p>
+                                    <p className="font-mono text-[10px] font-bold text-slate-900 leading-none">{selectedObject.longitude?.toFixed(6)}</p>
+                                </div>
+                            </div>
                          </div>
                        </div>
                      </div>
  
-                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
-                         <div className="sm:col-span-2 space-y-1.5">
+                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 items-end">
+                         <div className="sm:col-span-2 space-y-2">
                              <Label htmlFor="street-name" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Straatnaam</Label>
                              <Input
                              id="street-name"
                              value={selectedObject.straatnaam || ''}
                              onChange={(e) => handleUpdateField('straatnaam', e.target.value)}
-                             className="h-10 font-bold"
+                             className="h-11 font-black bg-slate-50 border-none shadow-inner rounded-xl"
                              />
                          </div>
-                         <div className="space-y-1.5">
-                             <Label htmlFor="house-number" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Huisnummer</Label>
+                         <div className="space-y-2">
+                             <Label htmlFor="house-number" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Huisnr.</Label>
                              <Input 
                                  id="house-number" 
                                  value={selectedObject.huisnummer || ''}
                                  onChange={(e) => handleUpdateField('huisnummer', e.target.value)}
-                                 className="h-10 font-bold"
+                                 className="h-11 font-black bg-slate-50 border-none shadow-inner rounded-xl"
                              />
                          </div>
                      </div>
-
-                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                            <Label htmlFor="latitude" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Latitude</Label>
-                            <Input 
-                                id="latitude" 
-                                type="number"
-                                step="any"
-                                value={selectedObject.latitude || ''}
-                                onChange={(e) => handleUpdateField('latitude', parseFloat(e.target.value))}
-                                className="h-10 font-mono"
-                            />
-                        </div>
-                        <div className="space-y-1.5">
-                            <Label htmlFor="longitude" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Longitude</Label>
-                            <Input 
-                                id="longitude" 
-                                type="number"
-                                step="any"
-                                value={selectedObject.longitude || ''}
-                                onChange={(e) => handleUpdateField('longitude', parseFloat(e.target.value))}
-                                className="h-10 font-mono"
-                            />
-                        </div>
-                    </div>
  
                      <div>
-                       <Accordion type="single" collapsible className="w-full bg-slate-50/50 rounded-xl border border-slate-100 px-4">
+                       <Accordion type="single" collapsible className="w-full bg-slate-50/50 rounded-2xl border-2 border-slate-100 px-6">
                          <AccordionItem value="planning" className="border-none">
-                             <AccordionTrigger className="font-black uppercase tracking-widest text-[10px] text-slate-400 hover:no-underline py-4">Routing & Planning</AccordionTrigger>
-                             <AccordionContent className="pt-0 pb-6">
+                             <AccordionTrigger className="font-black uppercase tracking-widest text-[10px] text-slate-400 hover:no-underline py-5 group transition-premium">
+                                <div className="flex items-center gap-3">
+                                    <LayoutGrid className="h-4 w-4 text-primary group-hover:scale-110 transition-premium" />
+                                    Routing & Route-toewijzing
+                                </div>
+                             </AccordionTrigger>
+                             <AccordionContent className="pt-0 pb-8">
                                 <PlanningAccordionContent selectedObject={selectedObject} handleUpdateField={handleUpdateField} projects={projects} isLoadingProjects={isLoadingProjects} />
                              </AccordionContent>
                          </AccordionItem>
                        </Accordion>
                      </div>
 
-                     <div className="space-y-4 pt-2">
-                         <div className="space-y-1.5">
+                     <div className="space-y-6 pt-4">
+                         <div className="space-y-2">
                              <Label htmlFor="warning" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Waarschuwing / Bijzonderheden</Label>
-                             <Textarea id="warning" placeholder="Typ hier eventuele veiligheidsmeldingen..." value={selectedObject.waarschuwing || ''} onChange={(e) => handleUpdateField('waarschuwing', e.target.value)} className="resize-none font-medium italic border-orange-100 focus:ring-orange-500/20 bg-orange-50/30" rows={3} />
+                             <Textarea id="warning" placeholder="Typ hier eventuele veiligheidsmeldingen..." value={selectedObject.waarschuwing || ''} onChange={(e) => handleUpdateField('waarschuwing', e.target.value)} className="resize-none font-medium italic border-none shadow-inner bg-orange-50/50 focus:ring-orange-500/20 rounded-2xl p-4 min-h-[100px]" />
                          </div>
                          <Separator className="bg-slate-100" />
-                         <div>
-                             <div className="flex items-center gap-2 mb-3">
-                                 <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Actieve Gebieden</h3>
-                             </div>
+                         <div className="space-y-4">
+                             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Gekoppeld aan routes</h3>
                              <div className="flex flex-wrap gap-2">
                               {selectedObject.locatieWerkgebieden && selectedObject.locatieWerkgebieden.length > 0 ? (
                                 selectedObject.locatieWerkgebieden.map((gebied: string) => (
-                                    <Badge key={gebied} variant="secondary" className="bg-blue-50 text-blue-600 border-none font-black uppercase text-[9px] tracking-tighter px-3 h-6">
+                                    <Badge key={gebied} variant="secondary" className="bg-blue-50 text-blue-600 border-none font-black uppercase text-[9px] tracking-widest px-4 h-7 rounded-full shadow-sm">
                                         {gebied}
                                     </Badge>
                                 ))
                               ) : (
-                                <p className="text-xs font-medium text-slate-400 italic">Geen routes gekoppeld.</p>
+                                <p className="text-xs font-medium text-slate-300 italic py-2 pl-1">Dit object is nog niet aan een route gekoppeld.</p>
                               )}
                              </div>
                          </div>
                      </div>
                  </div>
  
-                 <div className="xl:col-span-4 space-y-6 p-6 bg-slate-50/30 border-r border-slate-100 overflow-y-auto no-scrollbar">
-                     <Card className="h-64 rounded-2xl border-slate-100 shadow-sm overflow-hidden bg-white">
-                     <CardContent className="p-0 h-full">
-                         <MapboxView 
-                         key={selectedObject?.id}
-                         longitude={selectedObject?.longitude}
-                         latitude={selectedObject?.latitude}
-                         interactive={false}
-                         />
-                     </CardContent>
+                 <div className="xl:col-span-4 space-y-8 p-8 bg-slate-50/30 border-r border-slate-100 overflow-y-auto custom-scrollbar">
+                     <Card className="h-72 rounded-3xl border-none shadow-2xl overflow-hidden bg-white group">
+                        <CardContent className="p-0 h-full relative">
+                            <MapboxView 
+                                key={selectedObject?.id}
+                                longitude={selectedObject?.longitude}
+                                latitude={selectedObject?.latitude}
+                                interactive={false}
+                            />
+                            <div className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur px-3 py-1.5 rounded-full shadow-lg border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-900 group-hover:scale-105 transition-premium">
+                                GIS Locatie
+                            </div>
+                        </CardContent>
                      </Card>
-                     <Card className="h-64 rounded-2xl border-slate-100 shadow-sm overflow-hidden bg-white">
-                     <CardContent className="p-4 h-full flex flex-col items-center justify-center text-slate-300">
-                         <div className="bg-slate-50 p-6 rounded-full mb-4">
-                            <ImageIcon className="h-10 w-10 opacity-20" />
-                         </div>
-                         <p className="text-[10px] font-black uppercase tracking-widest">Geen objectfoto</p>
-                         <Button variant="ghost" size="sm" className="mt-4 font-bold text-primary">Uploaden</Button>
-                     </CardContent>
+                     
+                     <Card className="rounded-3xl border-none shadow-2xl overflow-hidden bg-white p-8">
+                        <div className="flex justify-between items-end mb-4">
+                            <div className="space-y-1">
+                                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Object Vulgraad</h3>
+                                <p className="text-[9px] font-bold text-slate-400 uppercase">Laatste Meting</p>
+                            </div>
+                            <span className="text-4xl font-black text-slate-900 leading-none tracking-tighter">{selectedObject?.vulgraad || 0}%</span>
+                        </div>
+                        <Progress value={selectedObject?.vulgraad || 0} variant="gauge" className="h-3 bg-slate-100 rounded-full" />
+                        <div className="mt-6 grid grid-cols-2 gap-4">
+                            <div className="bg-slate-50 p-3 rounded-2xl text-center">
+                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Status</span>
+                                <span className="text-[10px] font-black text-slate-900 uppercase">Geen Alarm</span>
+                            </div>
+                            <div className="bg-slate-50 p-3 rounded-2xl text-center">
+                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">ID</span>
+                                <span className="text-[10px] font-black text-slate-900 uppercase font-mono">{selectedObject.idNummer || 'N.B.'}</span>
+                            </div>
+                        </div>
                      </Card>
-                     <Card className="rounded-2xl border-slate-100 shadow-sm overflow-hidden bg-white">
-                     <CardContent className="p-6">
-                         <div className="flex justify-between items-end mb-3">
-                            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Live Vulgraad (GIS)</h3>
-                            <span className="text-2xl font-black text-slate-900 leading-none">{selectedObject?.vulgraad || 0}%</span>
-                         </div>
-                         <Progress value={selectedObject?.vulgraad || 0} variant="gauge" className="h-2 bg-slate-100" />
-                         <div className="mt-4 flex items-center justify-between text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                             <span>Leeg</span>
-                             <span>Vol</span>
-                         </div>
-                     </CardContent>
+
+                     <Card className="h-64 rounded-3xl border-none shadow-2xl overflow-hidden bg-white flex flex-col items-center justify-center text-slate-300 p-8 group cursor-pointer hover:bg-slate-50 transition-premium">
+                        <div className="bg-slate-50 p-8 rounded-full mb-4 group-hover:scale-110 transition-premium">
+                            <ImageIcon className="h-12 w-12 opacity-10" />
+                        </div>
+                        <p className="text-[10px] font-black uppercase tracking-widest">Foto Toevoegen</p>
+                        <Button variant="ghost" size="sm" className="mt-4 font-black uppercase tracking-widest text-[9px] text-primary">Media Upload</Button>
                      </Card>
                  </div>
  
-                 <div className="xl:col-span-3 h-full overflow-hidden">
+                 <div className="xl:col-span-3 h-full overflow-hidden bg-white">
                     <IoTHistoryColumn sensor={sensor} history={history} isLoading={sensorLoading || historyLoading} />
                  </div>
-               </CardContent>
-             </Card>
+               </div>
+               </div>
              ) : (
-                 <div className="flex flex-col items-center justify-center h-full p-12 text-center bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-200 m-6">
-                    <MapPin className="h-16 w-16 text-slate-200 mb-4 opacity-20" />
-                    <p className="font-black uppercase text-[10px] tracking-widest text-slate-400">Selecteer een object om de details en IOT metingen te bekijken.</p>
+                 <div className="flex flex-1 flex-col items-center justify-center text-center bg-slate-50/50 p-12">
+                    <div className="bg-white p-12 rounded-[3rem] shadow-2xl mb-8 border-2 border-slate-100">
+                        <MapPin className="h-24 w-24 text-slate-200 opacity-20" />
+                    </div>
+                    <h3 className="text-2xl font-black uppercase tracking-tight text-slate-900 mb-2">Geen object geselecteerd</h3>
+                    <p className="text-slate-400 font-medium max-w-xs mx-auto leading-relaxed">
+                        Kies een unit uit de lijst aan de linkerkant om de details, planning en IOT-sensordata te bekijken.
+                    </p>
                  </div>
              )}
          </main>
        </div>
-      ) : (
-        <div className="flex flex-1 min-h-0 relative">
-          <aside className="absolute top-0 left-0 z-10 m-4 w-full max-w-[320px] bg-white/95 backdrop-blur-md border-2 border-slate-100 rounded-2xl shadow-2xl p-4 hidden sm:block">
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Project Selectie</Label>
-                <Select
-                  value={selectedProjectId || ''}
-                  onValueChange={(value) => {
-                    setSelectedProjectId(value || null);
-                    setSelectedAreaIds([]);
-                  }}
-                  disabled={isLoadingProjects}
-                >
-                  <SelectTrigger className="h-11 font-black bg-slate-50 border-none shadow-inner">
-                    <SelectValue placeholder="Kies een project..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {projects?.map(p => <SelectItem key={p.id} value={p.id!}>{p.projectnaam}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              {selectedProject && (
-                <div className="space-y-3">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Filter op Gebied</Label>
-                  <div className="space-y-1 max-h-80 overflow-y-auto no-scrollbar bg-slate-50 rounded-2xl p-2 border border-slate-100 shadow-inner">
-                    {(projectAreas && projectAreas.length > 0) ? (
-                        projectAreas.map(area => (
-                            <div key={area.id} className="flex items-center space-x-3 p-2 hover:bg-white rounded-xl transition-all cursor-pointer group">
-                                <Checkbox
-                                    id={`area-${area.id}`}
-                                    checked={selectedAreaIds.includes(area.id)}
-                                    onCheckedChange={(checked) => handleAreaSelectionChange(area.id, !!checked)}
-                                    className="border-slate-300"
-                                />
-                                <Label htmlFor={`area-${area.id}`} className="flex-1 flex justify-between items-center cursor-pointer">
-                                  <span className="text-xs font-black uppercase tracking-tight text-slate-700 group-hover:text-primary transition-colors">{area.naam}</span>
-                                  <Badge variant="outline" className="text-[9px] font-black border-slate-200 bg-white text-slate-400">{objectCountsPerArea[area.id] || 0}</Badge>
-                                </Label>
-                            </div>
-                        ))
-                    ) : (
-                        <div className="p-8 text-center">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase leading-relaxed">Geen routes voor dit project</p>
-                        </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </aside>
-          <MapboxView objects={objectsOnMap} wijkPolygons={areaPolygons} showHeatmap={showHeatmap} />
-        </div>
       )}
 
       <Dialog open={isAddFilterDialogOpen} onOpenChange={setIsAddFilterDialogOpen}>
-        <DialogContent>
+        <DialogContent className="rounded-3xl border-none shadow-2xl">
           <DialogHeader>
-            <DialogTitle>Nieuw filter toevoegen</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-xl font-black uppercase tracking-tight">Nieuwe Categorie</DialogTitle>
+            <DialogDescription className="font-bold text-slate-500">
               Voer een naam in voor de nieuwe objectcategorie (bijv. Lichtmasten).
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <Label htmlFor="filter-name">Categorienaam</Label>
+          <div className="py-6">
+            <Label htmlFor="filter-name" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Categorienaam</Label>
             <Input 
               id="filter-name" 
               value={newFilterName} 
               onChange={(e) => setNewFilterName(e.target.value)} 
               placeholder="Bijv. Lichtmasten"
+              className="h-12 font-black uppercase bg-slate-50 border-none rounded-xl mt-2"
               autoFocus
             />
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setIsAddFilterDialogOpen(false)}>Annuleren</Button>
-            <Button onClick={handleAddCustomFilter} disabled={!newFilterName.trim() || isSavingFilter}>
+            <Button variant="ghost" onClick={() => setIsAddFilterDialogOpen(false)} className="font-bold text-slate-400">Annuleren</Button>
+            <Button onClick={handleAddCustomFilter} disabled={!newFilterName.trim() || isSavingFilter} className="h-12 px-8 font-black uppercase tracking-tight shadow-xl shadow-primary/20">
               {isSavingFilter ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Filter Toevoegen
             </Button>
@@ -1127,86 +1066,86 @@ export default function ObjectsPage() {
       </Dialog>
 
       <AlertDialog open={isBulkDeleteAlertOpen} onOpenChange={setIsBulkDeleteAlertOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-3xl border-none shadow-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
-            <AlertDialogDescription>
-              U staat op het punt om <strong>{filteredObjectsList.length}</strong> objecten te verwijderen die vallen onder de actieve filter: <strong>{currentFilterName}</strong>. 
+            <AlertDialogTitle className="text-xl font-black uppercase tracking-tight">Data Verwijderen?</AlertDialogTitle>
+            <AlertDialogDescription className="font-bold text-slate-500 leading-relaxed">
+              U staat op het punt om <span className="text-red-600">{filteredObjectsList.length}</span> objecten te verwijderen onder de filter: <span className="text-slate-900 uppercase font-black">{currentFilterName}</span>. 
               Deze actie kan niet ongedaan worden gemaakt.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isBulkLoading}>Annuleren</AlertDialogCancel>
+          <AlertDialogFooter className="mt-6">
+            <AlertDialogCancel disabled={isBulkLoading} className="font-bold border-none">Annuleren</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleBulkDelete} 
               disabled={isBulkLoading}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-red-600 hover:bg-red-700 h-12 px-8 font-black uppercase tracking-tight shadow-xl shadow-red-600/20"
             >
               {isBulkLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-              Ja, verwijder {filteredObjectsList.length} objecten
+              Ja, verwijder alles
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       <Dialog open={isQualityDialogOpen} onOpenChange={setIsQualityDialogOpen}>
-        <DialogContent className="sm:max-w-md border-none shadow-2xl rounded-3xl flex flex-col p-0 overflow-hidden h-[80vh]">
-          <DialogHeader className="p-6 bg-slate-50 border-b shrink-0">
-            <div className="bg-primary/10 h-12 w-12 rounded-2xl flex items-center justify-center mb-4">
-                <SearchCode className="h-6 w-6 text-primary" />
+        <DialogContent className="sm:max-w-md border-none shadow-2xl rounded-[2.5rem] flex flex-col p-0 overflow-hidden h-[80vh]">
+          <DialogHeader className="p-8 bg-slate-900 text-white shrink-0">
+            <div className="bg-primary/20 h-14 w-14 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
+                <SearchCode className="h-7 w-7 text-primary" />
             </div>
-            <DialogTitle className="text-xl font-black uppercase tracking-tight">Slimme Kwaliteitscontrole</DialogTitle>
-            <DialogDescription className="font-bold text-slate-500">
-              Selecteer uw scan-parameters en criteria.
+            <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Slimme Kwaliteitscontrole</DialogTitle>
+            <DialogDescription className="text-slate-400 font-bold">
+              Scan de database op dubbele coördinaten of ID's.
             </DialogDescription>
           </DialogHeader>
           
-          <ScrollArea className="flex-1 p-6">
-            <div className="space-y-8">
-              <div className="space-y-3">
+          <ScrollArea className="flex-1 p-8 bg-white">
+            <div className="space-y-10">
+              <div className="space-y-4">
                 <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Scan Bereik</Label>
                 <Select value={dupFilter} onValueChange={setDupFilter}>
-                  <SelectTrigger className="h-11 font-black border-2 bg-white">
+                  <SelectTrigger className="h-12 font-black border-2 bg-white rounded-2xl transition-premium">
                     <SelectValue placeholder="Kies scan bereik..." />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all" className="font-bold">Volledige database</SelectItem>
+                  <SelectContent className="rounded-2xl shadow-2xl border-slate-100">
+                    <SelectItem value="all" className="font-bold rounded-xl">Volledige database</SelectItem>
                     <SelectGroup>
-                      <SelectLabel>Filters</SelectLabel>
-                      <SelectItem value="prullenbak">Alleen Prullenbakken</SelectItem>
-                      <SelectItem value="container">Alleen Containers</SelectItem>
+                      <SelectLabel className="text-[10px] font-black uppercase text-slate-400 py-2">Filters</SelectLabel>
+                      <SelectItem value="prullenbak" className="font-bold rounded-xl">Alleen Prullenbakken</SelectItem>
+                      <SelectItem value="container" className="font-bold rounded-xl">Alleen Containers</SelectItem>
                       {customFilters.map(f => (
-                        <SelectItem key={f} value={f}>{f}</SelectItem>
+                        <SelectItem key={f} value={f} className="font-bold rounded-xl">{f}</SelectItem>
                       ))}
                     </SelectGroup>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-3">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Duplicaat Criteria</Label>
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-3 p-3 rounded-2xl border-2 border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => setDupCriteria(p => ({ ...p, location: !p.location }))}>
-                      <Checkbox checked={dupCriteria.location} onCheckedChange={(c) => setDupCriteria(p => ({ ...p, location: !!c }))} />
-                      <div className="flex-1">
-                          <Label className="font-black uppercase text-xs cursor-pointer">Exacte Coördinaten</Label>
-                          <p className="text-[10px] text-slate-400 font-bold leading-none mt-1">Match op Latitude & Longitude</p>
+              <div className="space-y-4">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Selecteer Criteria</Label>
+                <div className="grid gap-3">
+                  <div className="flex items-center space-x-4 p-4 rounded-2xl border-2 border-slate-50 hover:bg-slate-50 transition-premium cursor-pointer group" onClick={() => setDupCriteria(p => ({ ...p, location: !p.location }))}>
+                      <Checkbox checked={dupCriteria.location} onCheckedChange={(c) => setDupCriteria(p => ({ ...p, location: !!c }))} className="rounded-md border-slate-300 h-5 w-5" />
+                      <div className="flex-1 min-w-0">
+                          <Label className="font-black uppercase text-xs cursor-pointer text-slate-900 group-hover:text-primary transition-premium">Exacte Coördinaten</Label>
+                          <p className="text-[10px] text-slate-400 font-bold leading-tight mt-1">Match op Latitude & Longitude</p>
                       </div>
                   </div>
                   
-                  <div className="flex items-center space-x-3 p-3 rounded-2xl border-2 border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => setDupCriteria(p => ({ ...p, id: !p.id }))}>
-                      <Checkbox checked={dupCriteria.id} onCheckedChange={(c) => setDupCriteria(p => ({ ...p, id: !!c }))} />
-                      <div className="flex-1">
-                          <Label className="font-black uppercase text-xs cursor-pointer">ID Nummer (bijv. 141619)</Label>
-                          <p className="text-[10px] text-slate-400 font-bold leading-none mt-1">Match op uniek systeemnummer</p>
+                  <div className="flex items-center space-x-4 p-4 rounded-2xl border-2 border-slate-50 hover:bg-slate-50 transition-premium cursor-pointer group" onClick={() => setDupCriteria(p => ({ ...p, id: !p.id }))}>
+                      <Checkbox checked={dupCriteria.id} onCheckedChange={(c) => setDupCriteria(p => ({ ...p, id: !!c }))} className="rounded-md border-slate-300 h-5 w-5" />
+                      <div className="flex-1 min-w-0">
+                          <Label className="font-black uppercase text-xs cursor-pointer text-slate-900 group-hover:text-primary transition-premium">ID Nummer (bv. 141619)</Label>
+                          <p className="text-[10px] text-slate-400 font-bold leading-tight mt-1">Match op uniek systeemnummer</p>
                       </div>
                   </div>
 
-                  <div className="flex items-center space-x-3 p-3 rounded-2xl border-2 border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => setDupCriteria(p => ({ ...p, address: !p.address }))}>
-                      <Checkbox checked={dupCriteria.address} onCheckedChange={(c) => setDupCriteria(p => ({ ...p, address: !!c }))} />
-                      <div className="flex-1">
-                          <Label className="font-black uppercase text-xs cursor-pointer">Straatnaam & Nummer</Label>
-                          <p className="text-[10px] text-slate-400 font-bold leading-none mt-1">Match op fysieke adresgegevens</p>
+                  <div className="flex items-center space-x-4 p-4 rounded-2xl border-2 border-slate-50 hover:bg-slate-50 transition-premium cursor-pointer group" onClick={() => setDupCriteria(p => ({ ...p, address: !p.address }))}>
+                      <Checkbox checked={dupCriteria.address} onCheckedChange={(c) => setDupCriteria(p => ({ ...p, address: !!c }))} className="rounded-md border-slate-300 h-5 w-5" />
+                      <div className="flex-1 min-w-0">
+                          <Label className="font-black uppercase text-xs cursor-pointer text-slate-900 group-hover:text-primary transition-premium">Straatnaam & Nummer</Label>
+                          <p className="text-[10px] text-slate-400 font-bold leading-tight mt-1">Match op fysieke adresgegevens</p>
                       </div>
                   </div>
                 </div>
@@ -1214,9 +1153,9 @@ export default function ObjectsPage() {
             </div>
           </ScrollArea>
 
-          <DialogFooter className="p-6 border-t bg-slate-50 shrink-0">
-            <Button variant="ghost" onClick={() => setIsQualityDialogOpen(false)} className="font-bold">Annuleren</Button>
-            <Button onClick={handleFindDuplicates} disabled={isFindingDuplicates || (!dupCriteria.location && !dupCriteria.id && !dupCriteria.address)} className="font-black uppercase tracking-tight h-11 px-8 shadow-xl shadow-primary/20">
+          <DialogFooter className="p-8 border-t bg-slate-50 shrink-0">
+            <Button variant="ghost" onClick={() => setIsQualityDialogOpen(false)} className="font-black uppercase text-slate-400 tracking-widest text-[10px]">Annuleren</Button>
+            <Button onClick={handleFindDuplicates} disabled={isFindingDuplicates || (!dupCriteria.location && !dupCriteria.id && !dupCriteria.address)} className="font-black uppercase tracking-tight h-12 px-10 shadow-xl shadow-primary/20 rounded-2xl ml-auto">
               {isFindingDuplicates ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileCheck className="mr-2 h-4 w-4" />}
               Start Analyse
             </Button>
@@ -1225,55 +1164,61 @@ export default function ObjectsPage() {
       </Dialog>
 
       <Dialog open={isDuplicateDialogOpen} onOpenChange={setIsDuplicateDialogOpen}>
-        <DialogContent className="sm:max-w-2xl h-[85vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl rounded-3xl">
-          <DialogHeader className="p-6 border-b bg-slate-50 shrink-0">
-            <DialogTitle className="text-xl font-black uppercase tracking-tight">Analyse Resultaten</DialogTitle>
-            <DialogDescription className="font-bold text-slate-500">
-              Er zijn {duplicateObjects.length} objecten gevonden die mogelijk duplicaten zijn.
-            </DialogDescription>
+        <DialogContent className="sm:max-w-3xl h-[85vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl rounded-[2.5rem]">
+          <DialogHeader className="p-8 border-b bg-slate-50 shrink-0">
+            <div className="flex items-center justify-between">
+                <div>
+                    <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Analyse Resultaten</DialogTitle>
+                    <DialogDescription className="font-bold text-slate-500">
+                        Er zijn <span className="text-primary font-black">{duplicateObjects.length}</span> objecten gevonden die mogelijk duplicaten zijn.
+                    </DialogDescription>
+                </div>
+                <Badge variant="outline" className="h-8 px-4 border-2 font-black uppercase tracking-widest bg-white">Scan Voltooid</Badge>
+            </div>
           </DialogHeader>
           
           <ScrollArea className="flex-1 bg-white">
-            <div className="p-6">
-              <div className="divide-y border rounded-2xl overflow-hidden bg-white shadow-sm">
+            <div className="p-8">
+              <div className="divide-y border rounded-[2rem] overflow-hidden bg-white shadow-sm transition-premium">
                 {duplicateObjects.map((item, i) => (
-                  <div key={i} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors group">
+                  <div key={i} className="p-5 flex items-center justify-between hover:bg-slate-50 transition-premium group border-slate-50">
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-3 mb-1.5">
                           <p className="font-black text-sm uppercase tracking-tight text-slate-900 truncate">
                               {item.obj.idNummer || item.obj.id}
                           </p>
-                          <Badge variant="outline" className="text-[8px] h-4 uppercase font-black bg-slate-100 border-none">{item.reason}</Badge>
+                          <Badge variant="outline" className="text-[8px] h-4 uppercase font-black bg-slate-50 border-none text-slate-400">{item.reason}</Badge>
                           <Badge variant="secondary" className="text-[8px] h-4 uppercase font-bold bg-blue-50 text-blue-600 border-none flex items-center gap-1">
                               <Tag className="h-2 w-2" /> {item.obj.locatieType}
                           </Badge>
                       </div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{item.obj.straatnaam} {item.obj.huisnummer}</p>
-                    </div>
-                    <div className="text-right shrink-0 flex items-center gap-3">
-                      <div className="hidden sm:block">
-                          <p className="text-[10px] font-mono font-bold text-slate-400">
-                              {item.obj.latitude?.toFixed(5)}, {item.obj.longitude?.toFixed(5)}
-                          </p>
+                      <div className="flex items-center gap-4">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{item.obj.straatnaam} {item.obj.huisnummer}</p>
+                        <p className="text-[9px] font-mono font-bold text-slate-300 tabular-nums">
+                            {item.obj.latitude?.toFixed(5)}, {item.obj.longitude?.toFixed(5)}
+                        </p>
                       </div>
-                      <Button variant="ghost" size="icon" onClick={() => { setSelectedObject(item.obj); setIsDuplicateDialogOpen(false); }} className="h-8 w-8 text-slate-300 hover:text-primary hover:bg-primary/5 transition-colors">
-                          <ChevronRight className="h-4 w-4" />
+                    </div>
+                    <div className="text-right shrink-0">
+                      <Button variant="ghost" size="icon" onClick={() => { setSelectedObject(item.obj); setIsDuplicateDialogOpen(false); }} className="h-10 w-10 rounded-full bg-slate-50 text-slate-300 hover:text-primary hover:bg-white hover:shadow-md transition-premium">
+                          <ChevronRight className="h-5 w-5" />
                       </Button>
                     </div>
                   </div>
                 ))}
                 {duplicateObjects.length === 0 && (
-                    <div className="p-12 text-center text-slate-300">
-                        <p className="text-sm font-bold uppercase tracking-widest">Geen duplicaten gevonden.</p>
+                    <div className="p-20 text-center text-slate-300 flex flex-col items-center gap-4">
+                        <CheckCircle className="h-16 w-16 text-green-100" />
+                        <p className="text-sm font-black uppercase tracking-widest text-slate-400">Database is schoon. Geen duplicaten.</p>
                     </div>
                 )}
               </div>
             </div>
           </ScrollArea>
 
-          <DialogFooter className="p-6 border-t bg-slate-50 shrink-0">
-            <Button variant="ghost" onClick={() => setIsDuplicateDialogOpen(false)} className="font-bold">Sluiten</Button>
-            <Button onClick={handleExportDuplicates} disabled={duplicateObjects.length === 0} className="font-black uppercase tracking-tight h-11 px-8 shadow-xl shadow-primary/20">
+          <DialogFooter className="p-8 border-t bg-slate-50 shrink-0">
+            <Button variant="ghost" onClick={() => setIsDuplicateDialogOpen(false)} className="font-black uppercase text-[10px] tracking-widest text-slate-400">Sluiten</Button>
+            <Button onClick={handleExportDuplicates} disabled={duplicateObjects.length === 0} className="h-12 px-10 font-black uppercase tracking-tight shadow-xl shadow-primary/20 rounded-2xl ml-auto">
               <Download className="mr-2 h-4 w-4" />
               Exporteer Rapport (XLSX)
             </Button>

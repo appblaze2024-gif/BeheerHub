@@ -7,20 +7,18 @@ html, body, #__next__ {
   max-height: 100svh;
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
-  /* Voorkomt pull-to-refresh en bounce-effecten op mobiel */
   overscroll-behavior-y: none;
 }
 
 body {
   font-family: 'PT Sans', sans-serif;
   touch-action: manipulation;
-  /* Voorkomt ongewenste tekstselectie voor een app-gevoel */
   user-select: none;
   -webkit-user-select: none;
   background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
 }
 
-/* Sta selectie toe in invoervelden */
 input, textarea {
   user-select: text;
   -webkit-user-select: text;
@@ -28,68 +26,26 @@ input, textarea {
 
 @layer base {
   :root {
-    --background: 210 20% 98%; /* Soft grayish white - #F8FAFC equivalent */
+    --background: 210 40% 98%; /* Soft Slate 50 */
     --foreground: 222 47% 11%;
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
-    --primary: 221 83% 28%; /* Deeper Dark Blue */
-    --primary-foreground: 0 0% 100%;
+    --primary: 221 83% 28%; /* Meerlanden Blue */
+    --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222 47% 11.2%;
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 221 83% 45%; /* Changed from Teal to a lighter primary blue */
-    --accent-foreground: 0 0% 100%;
+    --accent: 221 83% 45%;
+    --accent-foreground: 210 40% 98%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 221 83% 28%;
-    --radius: 0.75rem;
-    --chart-1: 221 83% 28%;
-    --chart-2: 221 83% 45%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 240 10% 3.9%;
-    --sidebar-primary: 221 83% 28%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 210 20% 98%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 214.3 31.8% 91.4%;
-    --sidebar-ring: 221 83% 28%;
-  }
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217 81% 45%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217 81% 45%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 217 81% 45%;
-    --sidebar-background: 240 5% 15%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 217 81% 45%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217 81% 45%;
+    --radius: 1rem;
   }
 }
 
@@ -111,50 +67,25 @@ input, textarea {
   scrollbar-width: none;
 }
 
-@media print {
-  body > * {
-    display: none !important;
-  }
-  
-  #planning-container, #planning-container * {
-    display: block !important;
-    visibility: visible !important;
-  }
-  
-  html, body, #__next__, #planning-container {
-    height: auto !important;
-    max-height: none !important;
-    overflow: visible !important;
-    background: white !important;
-    color: black !important;
-  }
-  
-  #planning-container header, #planning-container .add-button {
-    display: none !important;
-  }
-  
-  #planning-container .min-w-\[1200px\] {
-    min-width: 100% !important;
-    border: 1px solid #ccc;
-  }
-  
-  .day-column, .medewerker-header {
-    border-color: #ccc !important;
-  }
+/* Custom transitions for a fluid feel */
+.transition-premium {
+  @apply transition-all duration-300 ease-in-out;
+}
 
-  body.print-day-view .day-column {
-    display: none !important;
-  }
+/* Glassmorphism effects */
+.glass-panel {
+  @apply bg-white/80 backdrop-blur-md border border-white/20;
+}
 
-  body.print-day-view .grid-cols-\[250px_repeat\(7\,1fr\)\] {
-    grid-template-columns: 250px 1fr !important;
-  }
-  
-  body.print-week-view .day-column {
-    display: flex !important;
-  }
-  
-  @page {
-    margin: 0.5in;
-  }
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-slate-200 rounded-full hover:bg-slate-300;
 }

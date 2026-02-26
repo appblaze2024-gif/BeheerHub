@@ -34,7 +34,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Input } from '@/components/ui/input';
 import { LoadingScreen } from '@/components/loading-screen';
 import { NotificationCenter } from '@/components/notification-center';
 
@@ -44,8 +43,6 @@ function Header() {
   const pathname = usePathname();
   const { user } = useUser();
   const { profile } = useProfile();
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
 
@@ -75,33 +72,25 @@ function Header() {
       'mail': 'Mail',
       'profile': 'Mijn Profiel',
       'settings': 'Instellingen',
-      'open': 'Openstaand',
-      'new': 'Melding maken',
       'portal': 'Portaal',
       'archive': 'Archief'
     };
 
     const mainKey = parts[0].toLowerCase();
     const main = translations[mainKey] || parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
-    
-    if (parts.length > 1 && !isMobile) {
-        const subKey = parts[1].toLowerCase();
-        const sub = translations[subKey] || parts[1].charAt(0).toUpperCase() + parts[1].slice(1);
-        return `${main} > ${sub}`;
-    }
     return main;
   };
 
   return (
-    <header className="bg-white/80 backdrop-blur-md flex h-16 shrink-0 items-center justify-between border-b px-4 md:px-8 z-40 sticky top-0">
-      <div className="flex items-center gap-2 md:gap-6">
+    <header className="bg-white/95 backdrop-blur-xl flex h-16 shrink-0 items-center justify-between border-b px-4 md:px-8 z-40 sticky top-0 shadow-sm transition-premium">
+      <div className="flex items-center gap-4">
         <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="hover:bg-slate-100 rounded-xl h-10 w-10">
-              <Menu className="h-6 w-6 text-slate-600" />
+            <Button variant="ghost" size="icon" className="hover:bg-slate-100 rounded-xl h-10 w-10 text-slate-600">
+              <Menu className="h-6 w-6" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="p-0 border-none w-[320px] sm:w-80">
+          <SheetContent side="left" className="p-0 border-none w-[320px] sm:w-80 shadow-2xl">
             <SheetHeader className="sr-only">
                 <SheetTitle>Navigatie Menu</SheetTitle>
             </SheetHeader>
@@ -110,17 +99,17 @@ function Header() {
         </Sheet>
         
         <div className="flex flex-col">
-            <h2 className="text-sm font-black uppercase tracking-tighter text-slate-900 truncate max-w-[120px] sm:max-w-none">{getPageTitle()}</h2>
+            <h2 className="text-sm font-black uppercase tracking-tighter text-slate-900 leading-none">{getPageTitle()}</h2>
         </div>
       </div>
 
-      <div className="flex items-center gap-1.5 md:gap-3">
+      <div className="flex items-center gap-2">
         <div className="hidden lg:flex items-center relative mr-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               type="text"
               placeholder="Snel zoeken..."
-              className="pl-9 h-10 w-64 bg-slate-50 border-transparent focus:bg-white focus:border-slate-200 rounded-xl text-sm font-bold outline-none transition-all"
+              className="pl-9 h-10 w-64 bg-slate-50 border-none focus:ring-2 focus:ring-primary/10 rounded-xl text-sm font-bold outline-none transition-premium"
             />
         </div>
 
@@ -128,7 +117,7 @@ function Header() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-10 w-10 rounded-xl p-0 hover:bg-slate-50 transition-all ml-1">
+            <Button variant="ghost" className="relative h-10 w-10 rounded-xl p-0 hover:bg-slate-50 transition-premium ml-1">
               <Avatar className="h-9 w-9 rounded-xl border-2 border-white shadow-sm ring-1 ring-slate-100">
                 <AvatarImage src={user?.photoURL || undefined} alt={profile?.displayName || ''} />
                 <AvatarFallback className="bg-primary text-white font-black text-[10px]">
@@ -137,7 +126,7 @@ function Header() {
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-64 mt-2 rounded-2xl shadow-2xl border-slate-100 p-2" align="end" forceMount>
+          <DropdownMenuContent className="w-64 mt-2 rounded-2xl shadow-2xl border-slate-100 p-2" align="end">
             <DropdownMenuLabel className="font-normal p-4">
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-black leading-none text-slate-900">{profile?.displayName}</p>
