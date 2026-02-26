@@ -972,14 +972,14 @@ export default function NewIssuePage() {
                 </ScrollArea>
             </div>
             
-            <div className="w-full lg:w-[400px] bg-slate-50 border-l shadow-xl z-0 relative flex flex-col shrink-0 overflow-hidden h-full">
-                <div className="h-1/2 relative bg-slate-100 overflow-hidden">
+            <div className="w-full lg:w-[400px] p-4 bg-slate-50 border-l shrink-0 h-full overflow-hidden flex flex-col gap-4">
+                <Card className="h-1/2 relative overflow-hidden border-none shadow-2xl rounded-2xl bg-slate-100">
                     <MapboxView latitude={location?.latitude} longitude={location?.longitude} />
                     <div className="absolute top-3 left-3 z-10 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-lg border border-slate-200 shadow-md flex items-center gap-2">
                         <div className="h-1 w-1 rounded-full bg-red-500 animate-pulse" />
                         <span className="text-[8px] font-bold uppercase tracking-widest text-slate-900">Live Kaart</span>
                     </div>
-                </div>
+                </Card>
             </div>
         </main>
     </div>
