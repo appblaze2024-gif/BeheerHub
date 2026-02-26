@@ -28,7 +28,8 @@ import {
   User,
   AlertCircle,
   Check,
-  Calendar
+  Calendar,
+  Paperclip
 } from 'lucide-react';
 import { 
   useFirestore, 
@@ -712,7 +713,7 @@ export default function NewIssuePage() {
                 <ScrollArea className="flex-1 h-full">
                     <div className="p-4 lg:p-6 space-y-4">
                         <Form {...form}>
-                            <form id="new-melding-form" onSubmit={form.handleSubmit(onSubmit)} className="w-full max-w-full space-y-4">
+                            <form id="new-melding-form" onSubmit={form.handleSubmit(onSubmit)} className="w-full max-w-full space-y-4 pb-10">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <Card className="rounded-xl border-slate-200 shadow-sm overflow-hidden bg-white">
                                         <CardHeader className="bg-slate-50 border-b py-1 px-4">
@@ -897,32 +898,31 @@ export default function NewIssuePage() {
                                     </Card>
                                 </div>
 
-                                <div className="mt-2">
-                                    <Card className="rounded-xl border-slate-200 shadow-sm overflow-hidden bg-white">
-                                        <CardHeader className="bg-slate-50 border-b py-1 px-4">
-                                            <CardTitle className="text-[9px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
-                                                <UploadCloud className="h-3 w-3" /> Media & Bijlagen
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="p-3 bg-slate-50/30">
-                                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                                                <Card className="aspect-[2/1] border-2 border-dashed border-slate-200 bg-white flex flex-col items-center justify-center text-slate-400 hover:border-primary/30 hover:text-primary transition-all cursor-pointer group" onClick={() => document.getElementById('media-doc-input')?.click()}>
-                                                    <UploadCloud className="h-5 w-5 mb-1 group-hover:scale-110 transition-transform" />
-                                                    <span className="text-[8px] font-bold uppercase">Document</span>
-                                                    <input type="file" id="media-doc-input" className="hidden" multiple />
-                                                </Card>
-                                                <Card className="aspect-[2/1] border-2 border-dashed border-slate-200 bg-white flex flex-col items-center justify-center text-slate-400 hover:border-primary/30 hover:text-primary transition-all cursor-pointer group" onClick={() => document.getElementById('media-photo-input')?.click()}>
-                                                    <Camera className="h-5 w-5 mb-1 group-hover:scale-110 transition-transform" />
-                                                    <span className="text-[8px] font-bold uppercase">Foto</span>
-                                                    <input type="file" id="media-photo-input" className="hidden" accept="image/*" multiple />
-                                                </Card>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
+                                <div className="grid grid-cols-2 gap-4 mt-2">
+                                    <Button 
+                                        type="button" 
+                                        variant="outline" 
+                                        className="h-20 border-2 border-dashed border-slate-200 bg-white hover:border-primary/30 hover:bg-slate-50 transition-all flex flex-col gap-2 rounded-2xl"
+                                        onClick={() => document.getElementById('media-doc-input')?.click()}
+                                    >
+                                        <UploadCloud className="h-6 w-6 text-slate-400" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Document Toevoegen</span>
+                                        <input type="file" id="media-doc-input" className="hidden" multiple />
+                                    </Button>
+                                    <Button 
+                                        type="button" 
+                                        variant="outline" 
+                                        className="h-20 border-2 border-dashed border-slate-200 bg-white hover:border-primary/30 hover:bg-slate-50 transition-all flex flex-col gap-2 rounded-2xl"
+                                        onClick={() => document.getElementById('media-photo-input')?.click()}
+                                    >
+                                        <Camera className="h-6 w-6 text-slate-400" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Foto Toevoegen</span>
+                                        <input type="file" id="media-photo-input" className="hidden" accept="image/*" multiple />
+                                    </Button>
                                 </div>
 
                                 {viewedMelding && (
-                                    <Card className="rounded-xl border-primary/10 shadow-sm overflow-hidden border-2 bg-white mt-2">
+                                    <Card className="rounded-xl border-primary/10 shadow-sm overflow-hidden border-2 bg-white mt-4">
                                         <CardHeader className="bg-primary/5 py-1 px-4">
                                             <CardTitle className="text-[9px] font-bold uppercase tracking-widest text-primary flex items-center gap-2">
                                                 <Check className="h-3 w-3" /> Afhandelingsinformatie
