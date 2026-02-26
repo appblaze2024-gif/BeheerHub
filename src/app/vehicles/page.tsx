@@ -217,13 +217,13 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                     >
                       <div className="flex-1 min-w-0">
                         <div className={cn(
-                            "inline-flex items-center rounded-sm border-[1.5px] overflow-hidden font-mono font-bold text-[10px]",
+                            "inline-flex items-center rounded-sm border-2 overflow-hidden font-mono font-bold text-xs",
                             selectedItem?.id === item.id && !isTablet ? "bg-yellow-400 border-black text-black" : "bg-yellow-400 border-black text-black"
                         )}>
                           <div className="bg-blue-600 px-1 py-0.5 text-white">
-                            <span className='font-sans text-[8px]'>NL</span>
+                            <span className='font-sans text-[9px]'>NL</span>
                           </div>
-                          <span className="px-1.5 py-0.5 tracking-wider">{item.id}</span>
+                          <span className="px-2 py-0.5 tracking-wider">{item.id}</span>
                         </div>
                         <p className={cn("text-xs font-black mt-1.5 truncate uppercase tracking-tight", selectedItem?.id === item.id && !isTablet ? "text-white" : "text-slate-900")}>
                           {item.merk} {item.model}
