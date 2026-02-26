@@ -19,14 +19,8 @@ import { Button } from '@/components/ui/button';
 import { 
   Menu, 
   Search, 
-  Bell, 
-  User, 
-  Settings, 
   LogOut as LogOutIcon,
-  ChevronRight,
-  Zap,
-  HelpCircle,
-  Cpu
+  ChevronLeft
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -41,7 +35,6 @@ import {
 import { signOut } from 'firebase/auth';
 import { LoadingScreen } from '@/components/loading-screen';
 import Link from 'next/link';
-import { NotificationCenter } from '@/components/notification-center';
 
 function Header() {
   const auth = useAuth();
@@ -52,108 +45,90 @@ function Header() {
 
   const getPageTitle = () => {
     const parts = pathname.split('/').filter(Boolean);
-    if (parts.length === 0) return 'Operations Control';
+    if (parts.length === 0) return 'Dashboard';
     const mapping: Record<string, string> = {
-      'projects': 'Infrastructure',
-      'employees': 'Human Capital',
-      'vehicles': 'Fleet Engine',
-      'issues': 'Signal Terminal',
-      'objects': 'Asset Map',
-      'iot': 'IoT Core',
-      'mail': 'Comm Link',
-      'profile': 'Account',
-      'settings': 'Core Systems'
+      'projects': 'Projecten',
+      'employees': 'Personeel',
+      'vehicles': 'Wagenpark',
+      'issues': 'Meldingen',
+      'objects': 'Objecten',
+      'iot': 'IoT Beheer',
+      'mail': 'Mailberichten',
+      'profile': 'Profiel',
+      'settings': 'Instellingen'
     };
     return mapping[parts[0].toLowerCase()] || parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
   };
 
   return (
-    <header className="h-20 flex items-center justify-between px-8 sticky top-0 z-50">
-      <div className="flex items-center gap-8">
+    <header className="h-14 flex items-center justify-between px-4 bg-[#3498db] text-white sticky top-0 z-50 shadow-sm">
+      <div className="flex items-center gap-4">
         <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="lg:hidden h-12 w-12 rounded-2xl hover:bg-white shadow-sm border border-white/40">
+            <Button variant="ghost" size="icon" className="lg:hidden text-white hover:bg-white/10">
               <Menu className="h-6 w-6" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="p-0 border-none w-80 glass-panel">
+          <SheetContent side="left" className="p-0 border-none w-64 bg-white">
             <SheetHeader className="sr-only">
-              <SheetTitle>Navigation</SheetTitle>
+              <SheetTitle>Navigatie</SheetTitle>
             </SheetHeader>
             <AppSidebar onNavigate={() => setIsSidebarOpen(false)} />
           </SheetContent>
         </Sheet>
         
-        <div className="flex items-center gap-4">
-          <div className="bg-primary h-12 w-12 rounded-2xl shadow-xl shadow-primary/20 flex items-center justify-center relative overflow-hidden group">
-            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
-            <Cpu className="h-6 w-6 text-white relative z-10" />
-          </div>
-          <div className="flex flex-col leading-none">
-            <span className="text-lg font-black tracking-tighter text-slate-900 uppercase">BeheerHub</span>
-            <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mt-1 opacity-80">Tech Protocol</span>
-          </div>
-          <div className="h-8 w-[1px] bg-slate-200/60 mx-4 hidden sm:block" />
-          <h1 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] hidden md:block pt-1">{getPageTitle()}</h1>
+        <div className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
+            <div className="bg-white text-[#3498db] p-1 rounded">
+              <ChevronLeft className="h-5 w-5" />
+            </div>
+            <span className="text-lg font-bold tracking-tight">Demo</span>
+          </Link>
+          <div className="h-6 w-[1px] bg-white/20 mx-2" />
+          <h1 className="text-base font-semibold">{getPageTitle()}</h1>
         </div>
       </div>
 
       <div className="flex items-center gap-4">
-        <div className="hidden md:flex items-center bg-white/60 backdrop-blur-md rounded-2xl px-4 h-12 border border-white/40 w-80 group focus-within:ring-4 focus-within:ring-primary/10 transition-all shadow-sm">
-          <Search className="h-4 w-4 text-slate-400 mr-3 group-focus-within:text-primary transition-colors" />
-          <input 
+        <div className="hidden md:flex items-center bg-white/10 rounded px-3 h-9 w-64 border border-white/20">
+          <Input 
             type="text" 
-            placeholder="Search telemetry..." 
-            className="bg-transparent text-xs outline-none w-full font-bold text-slate-600 placeholder:text-slate-400"
+            placeholder="Zoeken..." 
+            className="bg-transparent border-none text-white text-sm placeholder:text-white/60 focus-visible:ring-0 h-full p-0"
           />
-          <kbd className="hidden lg:inline-flex text-[9px] font-black text-slate-400 bg-slate-50 border border-slate-200 px-2 py-1 rounded-lg shadow-inner">⌘K</kbd>
+          <Search className="h-4 w-4 text-white/60 ml-2" />
         </div>
 
-        <div className="flex items-center gap-2">
-          <NotificationCenter />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-12 px-2 gap-4 rounded-2xl hover:bg-white hover:shadow-md transition-all border border-transparent hover:border-white/40">
-                <div className="hidden sm:flex flex-col items-end text-right">
-                  <span className="text-xs font-black text-slate-900 leading-none">{profile?.firstName}</span>
-                  <span className="text-[9px] font-bold text-primary uppercase tracking-tighter mt-1">{profile?.role}</span>
-                </div>
-                <Avatar className="h-9 w-9 rounded-xl border-2 border-white shadow-lg ring-1 ring-slate-100">
-                  <AvatarImage src={user?.photoURL || undefined} />
-                  <AvatarFallback className="text-[10px] bg-primary text-white font-black uppercase">
-                    {profile?.firstName?.[0]}{profile?.lastName?.[0]}
-                  </AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-72 mt-2 rounded-[2rem] shadow-2xl border-white/40 p-3 glass-panel animate-in slide-in-from-top-2">
-              <DropdownMenuLabel className="font-normal px-4 py-4 bg-primary/5 rounded-[1.5rem] mb-2">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-black text-slate-900 leading-none">{profile?.displayName}</p>
-                  <p className="text-[10px] font-bold text-slate-400 leading-none truncate mt-1">{user?.email}</p>
-                </div>
-              </DropdownMenuLabel>
-              <div className="space-y-1">
-                <DropdownMenuItem asChild className="rounded-xl h-11 text-xs font-bold text-slate-600 hover:text-primary hover:bg-white transition-all cursor-pointer">
-                  <Link href="/profile"><User className="mr-3 h-4 w-4" /> My Profile</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className="rounded-xl h-11 text-xs font-bold text-slate-600 hover:text-primary hover:bg-white transition-all cursor-pointer">
-                  <Link href="/settings"><Settings className="mr-3 h-4 w-4" /> Core Config</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className="rounded-xl h-11 text-xs font-bold text-slate-600 hover:text-primary hover:bg-white transition-all cursor-pointer">
-                  <Link href="/help"><HelpCircle className="mr-3 h-4 w-4" /> Intel Base</Link>
-                </DropdownMenuItem>
-              </div>
-              <DropdownMenuSeparator className="my-3 opacity-20" />
-              <DropdownMenuItem 
-                onClick={() => signOut(auth)}
-                className="rounded-xl h-11 text-xs font-black text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer"
-              >
-                <LogOutIcon className="mr-3 h-4 w-4" /> Terminate Session
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-9 px-2 gap-2 text-white hover:bg-white/10">
+              <Avatar className="h-7 w-7 border border-white/40">
+                <AvatarImage src={user?.photoURL || undefined} />
+                <AvatarFallback className="text-[10px] bg-white text-[#3498db] font-bold">
+                  {profile?.firstName?.[0]}{profile?.lastName?.[0]}
+                </AvatarFallback>
+              </Avatar>
+              <span className="hidden sm:inline text-sm font-medium">{profile?.firstName}</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56 mt-1">
+            <DropdownMenuLabel>Mijn Account</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild className="cursor-pointer">
+              <Link href="/profile">Profielinstellingen</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild className="cursor-pointer">
+              <Link href="/settings">Systeeminstellingen</Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              onClick={() => signOut(auth)}
+              className="text-red-600 cursor-pointer"
+            >
+              <LogOutIcon className="mr-2 h-4 w-4" /> Uitloggen
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );
@@ -169,18 +144,14 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-tech">
+    <div className="flex flex-col h-screen overflow-hidden">
       {isHeaderVisible && <Header />}
-      <div className="flex flex-1 min-h-0 relative px-8 pb-8 gap-8">
-        <aside className="hidden lg:block w-80 shrink-0 h-full">
-          <div className="h-full glass-panel rounded-[3rem] overflow-hidden">
-            <AppSidebar />
-          </div>
+      <div className="flex flex-1 min-h-0 relative">
+        <aside className="hidden lg:block w-64 shrink-0 h-full border-r bg-white">
+          <AppSidebar />
         </aside>
-        <main className="flex-1 overflow-auto relative custom-scrollbar">
-          <div className="h-full rounded-[3rem] overflow-hidden bg-transparent">
-            {children}
-          </div>
+        <main className="flex-1 overflow-auto bg-slate-50 custom-scrollbar">
+          {children}
         </main>
       </div>
       <Toaster />
@@ -213,15 +184,12 @@ function AuthWrapper({ children }: { children: React.ReactNode }) {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="h-full">
+    <html lang="nl" className="h-full">
       <head>
-        <title>BeheerHub | Aero Tech Intel</title>
+        <title>BeheerHub | Beheer & Onderhoud</title>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
       </head>
-      <body className="h-full font-sans bg-slate-50">
+      <body className="h-full">
         <FirebaseClientProvider>
           <ProfileProvider>
             <ProjectProvider>
