@@ -35,6 +35,7 @@ import {
   LayoutGrid,
   MapPinned,
   X,
+  Pencil,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -63,13 +64,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { MapboxView } from '@/components/mapbox-view';
 import { ObjectImportDialog } from '@/components/object-import-dialog';
-import { ObjectExportDialog } from '@/components/object-export-dialog';
 import { useCollection, useFirestore, updateDocumentNonBlocking, useMemoFirebase, useDoc, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, where, arrayRemove } from 'firebase/firestore';
+import { collection, doc, query, where, arrayRemove, writeBatch } from 'firebase/firestore';
 import type { Wijk } from '@/lib/types';
 import * as turf from '@turf/turf';
 import { Label } from '@/components/ui/label';
-import { useProject } from '@/context/project-context';
 import { LoadingScreen } from '@/components/loading-screen';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
@@ -90,16 +89,6 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function ObjectsPage() {
@@ -114,6 +103,7 @@ export default function ObjectsPage() {
   const [isAddFilterDialogOpen, setIsAddFilterDialogOpen] = React.useState(false);
   const [newFilterName, setNewFilterName] = React.useState('');
   const [isSavingFilter, setIsSavingFilter] = React.useState(false);
+  const [filterToRename, setFilterToRename] = React.useState<string | null>(null);
 
   const objectsQuery = useMemoFirebase(() => {
     if (!firestore || !typeFilter) return null;
@@ -164,6 +154,44 @@ export default function ObjectsPage() {
     }
   };
 
+  const handleRenameFilter = async () => {
+    if (!firestore || !newFilterName.trim() || !filtersRef || !filterToRename) return;
+    setIsSavingFilter(true);
+    setIsAddFilterDialogOpen(false);
+    
+    try {
+        const batch = writeBatch(firestore);
+        
+        // 1. Update the filter list in settings
+        const updatedFilters = customFilters.map(f => f === filterToRename ? newFilterName.trim() : f);
+        batch.set(filtersRef, { custom: updatedFilters }, { merge: true });
+        
+        // 2. Update all objects that have this tag (if they are currently loaded or we fetch them)
+        // Note: For large datasets, this might require a more complex server-side function, 
+        // but for typical category sizes it works in a batch.
+        if (objects && objects.length > 0) {
+            objects.forEach(obj => {
+                if (obj.locatieType === filterToRename) {
+                    batch.update(doc(firestore, 'objects', obj.id), { locatieType: newFilterName.trim() });
+                }
+            });
+        }
+
+        await batch.commit();
+        
+        if (typeFilter === filterToRename) setTypeFilter(newFilterName.trim());
+        
+        toast({ title: 'Filter hernoemd', description: `De categorie '${filterToRename}' is nu '${newFilterName}'. De gekoppelde objecten zijn bijgewerkt.` });
+        setFilterToRename(null);
+        setNewFilterName('');
+    } catch (error) {
+        console.error(error);
+        toast({ variant: 'destructive', title: 'Fout', description: 'Kon het filter niet hernoemen.' });
+    } finally {
+        setIsSavingFilter(false);
+    }
+  };
+
   const handleDeleteFilter = async (filterName: string) => {
     if (!firestore || !filtersRef) return;
     try {
@@ -174,6 +202,14 @@ export default function ObjectsPage() {
         toast({ variant: 'destructive', title: 'Fout', description: 'Kon het filter niet verwijderen.' });
     }
   };
+
+  const openRenameDialog = (filterName: string) => {
+    setFilterToRename(filterName);
+    setNewFilterName(filterName);
+    setIsAddFilterDialogOpen(true);
+  };
+
+  const isRenaming = !!filterToRename;
 
   return (
     <div className="flex flex-col h-full bg-zinc-50/50">
@@ -196,23 +232,33 @@ export default function ObjectsPage() {
               <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-2 py-1">Filters</DropdownMenuLabel>
               <ScrollArea className="max-h-60">
                 {customFilters.map(filter => (
-                  <div key={filter} className="flex items-center group">
+                  <div key={filter} className="flex items-center group px-1">
                     <DropdownMenuItem onClick={() => setTypeFilter(filter)} className="flex-1 rounded-lg h-9 text-xs font-semibold">
                       {filter}
                     </DropdownMenuItem>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-7 w-7 opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-600 mr-1"
-                      onClick={(e) => { e.stopPropagation(); handleDeleteFilter(filter); }}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
+                    <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7 text-slate-300 hover:text-primary"
+                          onClick={(e) => { e.stopPropagation(); openRenameDialog(filter); }}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7 text-slate-300 hover:text-red-600"
+                          onClick={(e) => { e.stopPropagation(); handleDeleteFilter(filter); }}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                    </div>
                   </div>
                 ))}
               </ScrollArea>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setIsAddFilterDialogOpen(true)} className="rounded-lg h-9 text-xs font-bold text-primary">
+              <DropdownMenuItem onClick={() => { setFilterToRename(null); setNewFilterName(''); setIsAddFilterDialogOpen(true); }} className="rounded-lg h-9 text-xs font-bold text-primary">
                 <PlusCircle className="mr-2 h-4 w-4" /> Nieuwe categorie
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -435,15 +481,21 @@ export default function ObjectsPage() {
       <Dialog open={isAddFilterDialogOpen} onOpenChange={setIsAddFilterDialogOpen}>
         <DialogContent className="rounded-2xl border-none shadow-2xl p-8 max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-xl font-extrabold uppercase tracking-tight">Nieuw Filter</DialogTitle>
-            <DialogDescription className="font-medium text-zinc-500">Geef een naam op voor de nieuwe categorie.</DialogDescription>
+            <DialogTitle className="text-xl font-extrabold uppercase tracking-tight">
+                {isRenaming ? 'Filter Hernoemen' : 'Nieuw Filter'}
+            </DialogTitle>
+            <DialogDescription className="font-medium text-zinc-500">
+                {isRenaming ? `Wijzig de naam van '${filterToRename}'. Dit werkt ook alle objecten bij.` : 'Geef een naam op voor de nieuwe categorie.'}
+            </DialogDescription>
           </DialogHeader>
           <div className="py-6">
             <Input value={newFilterName} onChange={e => setNewFilterName(e.target.value)} placeholder="Bv. Parkbankjes" className="h-12 font-bold rounded-xl text-center text-lg" autoFocus />
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setIsAddFilterDialogOpen(false)} className="font-bold">Annuleren</Button>
-            <Button onClick={handleAddCustomFilter} disabled={!newFilterName.trim() || isSavingFilter} className="h-12 px-8 font-bold rounded-xl bg-zinc-900 shadow-xl shadow-black/10">Opslaan</Button>
+            <Button onClick={isRenaming ? handleRenameFilter : handleAddCustomFilter} disabled={!newFilterName.trim() || isSavingFilter} className="h-12 px-8 font-bold rounded-xl bg-zinc-900 shadow-xl shadow-black/10">
+                {isSavingFilter ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Opslaan'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
