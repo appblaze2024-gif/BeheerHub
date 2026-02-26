@@ -39,6 +39,7 @@ import Link from 'next/link';
 
 function Header() {
   const auth = useAuth();
+  const router = useRouter();
   const pathname = usePathname();
   const { user } = useUser();
   const { profile } = useProfile();
@@ -80,12 +81,15 @@ function Header() {
           </Sheet>
           
           <div className="flex items-center gap-2">
-            <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
+            <button 
+              onClick={() => router.back()} 
+              className="flex items-center gap-2 hover:opacity-90 transition-opacity focus:outline-none"
+            >
               <div className="bg-white text-[#3498db] p-1 rounded">
                 <ChevronLeft className="h-5 w-5" />
               </div>
-              <span className="text-lg font-bold tracking-tight">Demo</span>
-            </Link>
+              <span className="text-lg font-bold tracking-tight">Terug</span>
+            </button>
             <div className="h-6 w-[1px] bg-white/20 mx-2" />
             <h1 className="text-base font-semibold">{getPageTitle()}</h1>
           </div>
