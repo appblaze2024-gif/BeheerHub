@@ -3,10 +3,10 @@
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
-  MapPin, 
   Bell, 
   Map as MapIcon,
   ChevronRight,
+  MapPin,
 } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, limit } from 'firebase/firestore';
@@ -16,11 +16,13 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { MapboxView } from '@/components/mapbox-view';
 import { useProfile } from '@/firebase/profile-provider';
 import { Badge } from '@/components/ui/badge';
+import { useProject } from '@/context/project-context';
 
 export default function DashboardPage() {
   const router = useRouter();
   const firestore = useFirestore();
   const { profile } = useProfile();
+  const { selectedProjectId } = useProject();
 
   const issuesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -28,6 +30,33 @@ export default function DashboardPage() {
   }, [firestore]);
 
   const { data: recentIssues } = useCollection<any>(issuesQuery);
+
+  const projectsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'projects');
+  }, [firestore]);
+
+  const { data: projects } = useCollection<any>(projectsQuery);
+
+  const wijkPolygons = React.useMemo(() => {
+    if (!projects) return [];
+    // Als er een project geselecteerd is, toon alleen die grenzen. Anders toon alles.
+    const projectsToUse = selectedProjectId 
+      ? projects.filter((p: any) => p.id === selectedProjectId) 
+      : projects;
+
+    return projectsToUse.flatMap((p: any) => 
+      (p.wijken || []).flatMap((wijk: any) => {
+        try {
+          const features = JSON.parse(wijk.subGebieden);
+          return Array.isArray(features) ? features : [];
+        } catch (e) {
+          console.error("Error parsing wijk geometry:", e);
+          return [];
+        }
+      })
+    );
+  }, [projects, selectedProjectId]);
 
   return (
     <div className="p-6 space-y-6 h-full flex flex-col">
@@ -58,10 +87,10 @@ export default function DashboardPage() {
           <CardContent className="p-0 flex-1 overflow-hidden">
             <ScrollArea className="h-full">
               <div className="divide-y">
-                {recentIssues?.map((issue) => (
+                {recentIssues?.map((issue: any) => (
                   <div 
                     key={issue.id} 
-                    onClick={() => router.push('/issues/portal')} 
+                    onClick={() => router.push(`/issues/new?id=${issue.id}`)} 
                     className="p-4 hover:bg-slate-50 transition-colors cursor-pointer flex items-center justify-between group"
                   >
                     <div className="flex items-center gap-4 min-w-0">
@@ -108,16 +137,11 @@ export default function DashboardPage() {
             )}
           </CardHeader>
           <CardContent className="p-0 flex-1 relative min-h-[400px]">
-            <MapboxView interactive={true} showHeatmap={false} />
-            <div className="absolute bottom-4 right-4 z-10 flex flex-col gap-2">
-              <Button 
-                className="bg-white text-slate-900 hover:bg-slate-100 shadow-lg font-bold border"
-                size="sm"
-                onClick={() => router.push('/objects')}
-              >
-                <MapPin className="mr-2 h-4 w-4 text-[#3498db]" /> Objecten
-              </Button>
-            </div>
+            <MapboxView 
+              interactive={true} 
+              showHeatmap={false} 
+              wijkPolygons={wijkPolygons}
+            />
           </CardContent>
         </Card>
       </div>
