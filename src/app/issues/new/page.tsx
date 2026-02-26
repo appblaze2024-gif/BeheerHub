@@ -898,8 +898,31 @@ export default function NewIssuePage() {
                             </div>
                         </div>
 
+                        {/* Media Section: Moved here from Sidebar */}
+                        <div className="mt-4">
+                            <Card className="rounded-xl border-slate-200 shadow-sm overflow-hidden bg-white">
+                                <CardHeader className="bg-slate-50 border-b py-2 px-4">
+                                    <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                                        <UploadCloud className="h-3 w-3" /> Media & Bijlagen
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4 bg-slate-50/30">
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                        <Card className="aspect-video border-2 border-dashed border-slate-200 bg-white flex flex-col items-center justify-center text-slate-400 hover:border-primary/30 hover:text-primary transition-all cursor-pointer group">
+                                            <UploadCloud className="h-6 w-6 mb-1.5 group-hover:scale-110 transition-transform" />
+                                            <span className="text-[9px] font-bold uppercase">Document</span>
+                                        </Card>
+                                        <Card className="aspect-video border-2 border-dashed border-slate-200 bg-white flex flex-col items-center justify-center text-slate-400 hover:border-primary/30 hover:text-primary transition-all cursor-pointer group">
+                                            <Camera className="h-6 w-6 mb-1.5 group-hover:scale-110 transition-transform" />
+                                            <span className="text-[9px] font-bold uppercase">Foto</span>
+                                        </Card>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+
                         {viewedMelding && (
-                            <Card className="rounded-xl border-primary/10 shadow-sm overflow-hidden border-2 bg-white">
+                            <Card className="rounded-xl border-primary/10 shadow-sm overflow-hidden border-2 bg-white mt-4">
                                 <CardHeader className="bg-primary/5 py-2 px-4">
                                     <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-2">
                                         <Check className="h-3 w-3" /> Afhandelingsinformatie
@@ -943,18 +966,8 @@ export default function NewIssuePage() {
                         <span className="text-[9px] font-bold uppercase tracking-widest text-slate-900">Live Kaart</span>
                     </div>
                 </div>
-                <div className="h-1/2 bg-slate-50 p-4 border-t overflow-y-auto custom-scrollbar">
-                    <h3 className="text-[9px] font-bold uppercase text-slate-400 tracking-widest mb-3">Media & Bijlagen</h3>
-                    <div className="grid grid-cols-2 gap-3">
-                        <Card className="aspect-video border-2 border-dashed border-slate-200 bg-white flex flex-col items-center justify-center text-slate-400 hover:border-primary/30 hover:text-primary transition-all cursor-pointer group">
-                            <UploadCloud className="h-6 w-6 mb-1.5 group-hover:scale-110 transition-transform" />
-                            <span className="text-[9px] font-bold uppercase">Document</span>
-                        </Card>
-                        <Card className="aspect-video border-2 border-dashed border-slate-200 bg-white flex flex-col items-center justify-center text-slate-400 hover:border-primary/30 hover:text-primary transition-all cursor-pointer group">
-                            <Camera className="h-6 w-6 mb-1.5 group-hover:scale-110 transition-transform" />
-                            <span className="text-[9px] font-bold uppercase">Foto</span>
-                        </Card>
-                    </div>
+                {/* Empty bottom half as requested */}
+                <div className="h-1/2 bg-slate-50/50 p-4 border-t">
                 </div>
             </div>
         </main>
