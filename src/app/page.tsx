@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   MapPin, 
   Bell, 
-  Navigation,
   Activity,
   ChevronRight,
 } from 'lucide-react';
@@ -33,9 +32,6 @@ export default function DashboardPage() {
           <h2 className="text-2xl font-bold text-slate-900">Dashboard Overzicht</h2>
           <p className="text-sm text-slate-500">Real-time status van al uw beheer-objecten en meldingen.</p>
         </div>
-        <Button onClick={() => router.push('/navigation-module')} className="bg-[#3498db] hover:bg-[#2980b9] text-white font-bold h-10 px-6">
-          <Navigation className="mr-2 h-4 w-4" /> Start Navigatie
-        </Button>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
