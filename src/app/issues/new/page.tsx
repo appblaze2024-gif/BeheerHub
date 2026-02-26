@@ -961,17 +961,11 @@ export default function NewIssuePage() {
             </div>
             
             <div className="w-full lg:w-[400px] bg-white border-l shadow-xl z-0 relative flex flex-col shrink-0 overflow-hidden h-full">
-                <div className="h-[70%] relative bg-slate-100 overflow-hidden">
+                <div className="flex-1 relative bg-slate-100 overflow-hidden">
                     <MapboxView latitude={location?.latitude} longitude={location?.longitude} />
                     <div className="absolute top-3 left-3 z-10 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-lg border border-slate-200 shadow-md flex items-center gap-2">
                         <div className="h-1 w-1 rounded-full bg-red-500 animate-pulse" />
                         <span className="text-[8px] font-bold uppercase tracking-widest text-slate-900">Live Kaart</span>
-                    </div>
-                </div>
-                <div className="h-[30%] bg-slate-50/50 p-3 border-t flex flex-col items-center justify-center">
-                    <div className="text-center space-y-1 opacity-20">
-                        <AlertCircle className="h-8 w-8 mx-auto text-slate-300" />
-                        <p className="text-[9px] font-black uppercase tracking-[0.2em]">Context Paneel</p>
                     </div>
                 </div>
             </div>
