@@ -184,12 +184,12 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
   }
 
   return (
-    <div className="grid lg:grid-cols-[300px_1fr] gap-6 min-h-0 h-full relative">
+    <div className="grid lg:grid-cols-[300px_1fr] gap-6 min-h-0 h-full relative overflow-hidden">
         <Card className={cn(
-            "flex-col h-full min-h-0", 
+            "flex-col h-full min-h-0 overflow-hidden", 
             isTablet && selectedItem ? "hidden" : "flex"
         )}>
-          <CardHeader className="p-4 border-b">
+          <CardHeader className="p-4 border-b shrink-0">
             <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
@@ -200,7 +200,7 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
                 />
             </div>
           </CardHeader>
-          <CardContent className="p-0 flex-1 min-h-0">
+          <CardContent className="p-0 flex-1 min-h-0 overflow-hidden">
             <ScrollArea className="h-full">
               <div className="flex flex-col space-y-1 p-2">
                 {filteredMaterieel && filteredMaterieel.length > 0 ? (
@@ -251,357 +251,362 @@ function MaterielView({ materieelType, canEdit, canDelete }: { materieelType: Ma
         </Card>
 
         <div className={cn(
-            "flex-col gap-6 min-h-0", 
+            "flex-col gap-6 min-h-0 h-full overflow-hidden", 
             selectedItem ? "flex" : "hidden lg:flex"
         )}>
           {selectedItem ? (
-            <div key={selectedItem.id} className="flex flex-col gap-6 flex-1 min-h-0">
-              <Card className="rounded-2xl shadow-sm border-slate-100 overflow-hidden shrink-0">
-                <CardHeader className="bg-slate-50/50 border-b p-4 md:p-6">
-                  <div className="flex items-start justify-between">
-                    <div className='flex items-center gap-3'>
-                       {isTablet && (
-                          <Button variant="ghost" size="icon" onClick={() => setSelectedItem(null)} className="h-9 w-9 rounded-full bg-white shadow-sm border border-slate-200">
-                            <ArrowLeft className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <div>
-                            <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-900 leading-none mb-1">
-                            {selectedItem?.id}
-                            </h2>
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{selectedItem?.merk} {selectedItem?.model}</p>
+            <div key={selectedItem.id} className="flex flex-col gap-6 flex-1 min-h-0 overflow-hidden">
+              <ScrollArea className="flex-1">
+                <div className="flex flex-col gap-6 pb-10">
+                  <Card className="rounded-2xl shadow-sm border-slate-100 overflow-hidden shrink-0">
+                    <CardHeader className="bg-slate-50/50 border-b p-4 md:p-6">
+                      <div className="flex items-start justify-between">
+                        <div className='flex items-center gap-3'>
+                          {isTablet && (
+                              <Button variant="ghost" size="icon" onClick={() => setSelectedItem(null)} className="h-9 w-9 rounded-full bg-white shadow-sm border border-slate-200">
+                                <ArrowLeft className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <div>
+                                <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-900 leading-none mb-1">
+                                {selectedItem?.id}
+                                </h2>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{selectedItem?.merk} {selectedItem?.model}</p>
+                            </div>
                         </div>
-                    </div>
-                    <Badge
-                      variant={
-                        selectedItem?.status === 'Actief'
-                          ? 'outline'
-                          : 'destructive'
-                      }
-                      className={cn(
-                        "font-black uppercase text-[10px] tracking-widest px-3 h-6",
-                        selectedItem?.status === 'Actief'
-                          ? 'text-green-600 border-green-200 bg-green-50'
-                          : 'bg-red-600 text-white'
-                      )}
-                    >
-                      {selectedItem?.status ?? 'Onbekend'}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="flex flex-col xl:flex-row gap-8">
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">
-                          Specificaties
-                        </h3>
-                        {canEdit && <AddVehicleDialog
-                          vehicle={selectedItem}
-                          open={isVehicleDialogOpen}
-                          onOpenChange={setIsVehicleDialogOpen}
-                          materieelType={materieelType}
+                        <Badge
+                          variant={
+                            selectedItem?.status === 'Actief'
+                              ? 'outline'
+                              : 'destructive'
+                          }
+                          className={cn(
+                            "font-black uppercase text-[10px] tracking-widest px-3 h-6",
+                            selectedItem?.status === 'Actief'
+                              ? 'text-green-600 border-green-200 bg-green-50'
+                              : 'bg-red-600 text-white'
+                          )}
                         >
-                          <Button variant="outline" size="sm" className="h-8 font-bold" onClick={handleEditVehicle}>
-                            <Pencil className="mr-2 h-3.5 w-3.5" />
-                            Bewerken
-                          </Button>
-                        </AddVehicleDialog>}
+                          {selectedItem?.status ?? 'Onbekend'}
+                        </Badge>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-4">
-                        <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
-                          <span className="text-slate-400 uppercase tracking-tighter">
-                            {idLabel}
-                          </span>
-                          <span className="text-slate-900 font-black">
-                            {selectedItem?.id}
-                          </span>
-                        </div>
-                        <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
-                          <span className="text-slate-400 uppercase tracking-tighter">
-                            {numberLabel}
-                          </span>
-                          <span className="text-slate-900 font-black">
-                            {selectedItem?.[numberField] ?? '-'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
-                          <span className="text-slate-400 uppercase tracking-tighter">Merk</span>
-                          <span className="text-slate-900 font-black">
-                            {selectedItem?.merk}
-                          </span>
-                        </div>
-                        <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
-                          <span className="text-slate-400 uppercase tracking-tighter">Model</span>
-                          <span className="text-slate-900 font-black">
-                            {selectedItem?.model}
-                          </span>
-                        </div>
-                        <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
-                          <span className="text-slate-400 uppercase tracking-tighter">Type</span>
-                          <span className="text-slate-900 font-black">
-                            {selectedItem?.type ?? '-'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
-                          <span className="text-slate-400 uppercase tracking-tighter">
-                            Bouwjaar
-                          </span>
-                          <span className="text-slate-900 font-black">
-                            {selectedItem?.bouwjaar ?? '-'}
-                          </span>
-                        </div>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                      <div className="flex flex-col xl:flex-row gap-8">
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">
+                              Specificaties
+                            </h3>
+                            {canEdit && <AddVehicleDialog
+                              vehicle={selectedItem}
+                              open={isVehicleDialogOpen}
+                              onOpenChange={setIsVehicleDialogOpen}
+                              materieelType={materieelType}
+                            >
+                              <Button variant="outline" size="sm" className="h-8 font-bold" onClick={handleEditVehicle}>
+                                <Pencil className="mr-2 h-3.5 w-3.5" />
+                                Bewerken
+                              </Button>
+                            </AddVehicleDialog>}
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-4">
+                            <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
+                              <span className="text-slate-400 uppercase tracking-tighter">
+                                {idLabel}
+                              </span>
+                              <span className="text-slate-900 font-black">
+                                {selectedItem?.id}
+                              </span>
+                            </div>
+                            <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
+                              <span className="text-slate-400 uppercase tracking-tighter">
+                                {numberLabel}
+                              </span>
+                              <span className="text-slate-900 font-black">
+                                {selectedItem?.[numberField] ?? '-'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
+                              <span className="text-slate-400 uppercase tracking-tighter">Merk</span>
+                              <span className="text-slate-900 font-black">
+                                {selectedItem?.merk}
+                              </span>
+                            </div>
+                            <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
+                              <span className="text-slate-400 uppercase tracking-tighter">Model</span>
+                              <span className="text-slate-900 font-black">
+                                {selectedItem?.model}
+                              </span>
+                            </div>
+                            <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
+                              <span className="text-slate-400 uppercase tracking-tighter">Type</span>
+                              <span className="text-slate-900 font-black">
+                                {selectedItem?.type ?? '-'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
+                              <span className="text-slate-400 uppercase tracking-tighter">
+                                Bouwjaar
+                              </span>
+                              <span className="text-slate-900 font-black">
+                                {selectedItem?.bouwjaar ?? '-'}
+                              </span>
+                            </div>
 
-                        <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
-                          <span className="text-slate-400 uppercase tracking-tighter">
-                            Brandstof
-                          </span>
-                          <span className="text-slate-900 font-black">
-                            {selectedItem?.brandstof ?? '-'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
-                          <span className="text-slate-400 uppercase tracking-tighter">
-                            APK vervaldatum
-                          </span>
-                          <span className="text-slate-900 font-black">
-                            {selectedItem?.apk_vervaldatum
-                              ? format(
-                                  new Date(selectedItem.apk_vervaldatum),
-                                  'dd-MM-yyyy'
-                                )
-                              : '-'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
-                          <span className="text-slate-400 uppercase tracking-tighter">
-                            Opbouw keuring
-                          </span>
-                          <span className="text-slate-900 font-black">
-                            {selectedItem?.opbouw_keuring
-                              ? format(
-                                  new Date(selectedItem.opbouw_keuring),
-                                  'dd-MM-yyyy'
-                                )
-                              : '-'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
-                          <span className="text-slate-400 uppercase tracking-tighter">
-                            Bandenwissel
-                          </span>
-                          <span className="text-slate-900 font-black">
-                            {selectedItem?.bandenwissel
-                              ? format(
-                                  new Date(selectedItem.bandenwissel),
-                                  'dd-MM-yyyy'
-                                )
-                              : '-'}
-                          </span>
+                            <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
+                              <span className="text-slate-400 uppercase tracking-tighter">
+                                Brandstof
+                              </span>
+                              <span className="text-slate-900 font-black">
+                                {selectedItem?.brandstof ?? '-'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
+                              <span className="text-slate-400 uppercase tracking-tighter">
+                                APK vervaldatum
+                              </span>
+                              <span className="text-slate-900 font-black">
+                                {selectedItem?.apk_vervaldatum
+                                  ? format(
+                                      new Date(selectedItem.apk_vervaldatum),
+                                      'dd-MM-yyyy'
+                                    )
+                                  : '-'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
+                              <span className="text-slate-400 uppercase tracking-tighter">
+                                Opbouw keuring
+                              </span>
+                              <span className="text-slate-900 font-black">
+                                {selectedItem?.opbouw_keuring
+                                  ? format(
+                                      new Date(selectedItem.opbouw_keuring),
+                                      'dd-MM-yyyy'
+                                    )
+                                  : '-'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between border-b border-slate-100 pb-2 text-xs font-bold">
+                              <span className="text-slate-400 uppercase tracking-tighter">
+                                Bandenwissel
+                              </span>
+                              <span className="text-slate-900 font-black">
+                                {selectedItem?.bandenwissel
+                                  ? format(
+                                      new Date(selectedItem.bandenwissel),
+                                      'dd-MM-yyyy'
+                                    )
+                                  : '-'}
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </div>
+                    </CardContent>
+                  </Card>
+
+                  <Tabs key={selectedItem.id} defaultValue="maintenance" className="flex-1 flex flex-col min-h-[400px]">
+                    <div className="overflow-x-auto no-scrollbar pb-1 shrink-0">
+                        <TabsList className="w-max inline-flex">
+                            {canViewTab('maintenance') && <TabsTrigger value="maintenance">Onderhoud</TabsTrigger>}
+                            {canViewTab('damages') && <TabsTrigger value="damages">Schade</TabsTrigger>}
+                            {canViewTab('documents') && <TabsTrigger value="documents">Documenten</TabsTrigger>}
+                        </TabsList>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                    
+                    {canViewTab('maintenance') && <TabsContent value="maintenance" className="flex-1 mt-4 min-h-0">
+                      <Card className="h-full flex flex-col rounded-2xl shadow-sm border-slate-100 overflow-hidden">
+                        <CardHeader className="flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border-b">
+                          <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Onderhoudshistorie</CardTitle>
+                          {canEdit && <AddMaintenanceDialog materieelId={selectedItem.id} materieelType={materieelType}>
+                            <Button size="sm" className="w-full sm:w-auto h-8 font-black uppercase tracking-tight">
+                              <Plus className="mr-2 h-4 w-4" />
+                              Toevoegen
+                            </Button>
+                          </AddMaintenanceDialog>}
+                        </CardHeader>
+                        <CardContent className="flex-1 overflow-auto p-0">
+                          <div className="overflow-x-auto">
+                            <Table className="min-w-[700px]">
+                                <TableHeader className="bg-slate-50/50 sticky top-0 z-10">
+                                <TableRow className="hover:bg-transparent">
+                                    <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Datum</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Omschrijving</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Type</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Details</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3 text-right">Kosten</TableHead>
+                                    <TableHead className="w-[50px]"></TableHead>
+                                </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                {maintenanceLoading ? (
+                                    <TableRow><TableCell colSpan={6} className="text-center py-10"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></TableCell></TableRow>
+                                ) : maintenance && maintenance.length > 0 ? (
+                                    maintenance.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((item: any) => (
+                                    <TableRow key={item.id} className="group hover:bg-slate-50/50 transition-colors border-b border-slate-100">
+                                        <TableCell className="text-xs font-bold text-slate-600">{format(new Date(item.date), 'dd-MM-yyyy')}</TableCell>
+                                        <TableCell className="font-black text-xs text-slate-900">{item.description}</TableCell>
+                                        <TableCell><Badge variant="secondary" className="text-[9px] font-black uppercase px-2 h-5 bg-slate-100 border-none">{item.type}</Badge></TableCell>
+                                        <TableCell className="text-[11px] text-slate-400 max-w-[200px] truncate italic" title={item.details}>{item.details || '-'}</TableCell>
+                                        <TableCell className="text-right font-black text-xs">€ {Number(item.cost || 0).toLocaleString('nl-NL', { minimumFractionDigits: 2 })}</TableCell>
+                                        <TableCell>
+                                        {canDelete && (
+                                            <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="h-4 w-4" /></Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
+                                                <AlertDialogDescription>Dit onderhoudsrecord wordt permanent verwijderd.</AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDeleteMaintenance(item.id)} className="bg-red-600">Verwijderen</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                            </AlertDialog>
+                                        )}
+                                        </TableCell>
+                                    </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow><TableCell colSpan={6} className="text-center py-16 text-muted-foreground bg-slate-50/30">
+                                        <Wrench className="h-10 w-10 mx-auto mb-3 opacity-10" />
+                                        <p className="text-[10px] font-black uppercase tracking-widest">Geen onderhoudshistorie</p>
+                                    </TableCell></TableRow>
+                                )}
+                                </TableBody>
+                            </Table>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </TabsContent>}
 
-              <Tabs key={selectedItem.id} defaultValue="maintenance" className="flex-1 flex flex-col min-h-0">
-                <div className="overflow-x-auto no-scrollbar pb-1 shrink-0">
-                    <TabsList className="w-max inline-flex">
-                        {canViewTab('maintenance') && <TabsTrigger value="maintenance">Onderhoud</TabsTrigger>}
-                        {canViewTab('damages') && <TabsTrigger value="damages">Schade</TabsTrigger>}
-                        {canViewTab('documents') && <TabsTrigger value="documents">Documenten</TabsTrigger>}
-                    </TabsList>
+                    {canViewTab('damages') && <TabsContent value="damages" className="flex-1 mt-4 min-h-0">
+                      <Card className="h-full flex flex-col rounded-2xl shadow-sm border-slate-100 overflow-hidden">
+                        <CardHeader className="flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border-b">
+                          <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Schademeldingen</CardTitle>
+                          {canEdit && <Button size="sm" onClick={handleAddNewDamage} className="w-full sm:w-auto h-8 font-black uppercase tracking-tight">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Schade melden
+                          </Button>}
+                        </CardHeader>
+                        <CardContent className="flex-1 overflow-auto p-0">
+                          <div className="overflow-x-auto">
+                            <Table className="min-w-[600px]">
+                                <TableHeader className="bg-slate-50/50 sticky top-0 z-10">
+                                <TableRow className="hover:bg-transparent">
+                                    <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Datum</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Omschrijving</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Status</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3 text-center">Bestanden</TableHead>
+                                    <TableHead className="w-[50px]"></TableHead>
+                                </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                {damagesLoading ? (
+                                    <TableRow><TableCell colSpan={5} className="text-center py-10"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></TableCell></TableRow>
+                                ) : damages && damages.length > 0 ? (
+                                    damages.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((item: any) => (
+                                    <TableRow key={item.id} className="group cursor-pointer hover:bg-slate-50/50 transition-colors border-b border-slate-100" onClick={() => handleEditDamage(item)}>
+                                        <TableCell className="text-xs font-bold text-slate-600">{format(new Date(item.date), 'dd-MM-yyyy')}</TableCell>
+                                        <TableCell className="font-black text-xs text-slate-900 truncate max-w-xs">{item.description}</TableCell>
+                                        <TableCell>
+                                        <Badge variant={item.status === 'Afgehandeld' ? 'outline' : 'secondary'} className={cn(
+                                            "text-[9px] font-black uppercase px-2 h-5",
+                                            item.status === 'Afgehandeld' ? "text-green-600 border-green-200" : "bg-orange-100 text-orange-600 border-none"
+                                        )}>
+                                            {item.status || 'Open'}
+                                        </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                        {item.files?.length > 0 ? (
+                                            <div className="flex items-center justify-center gap-1.5 text-slate-400">
+                                            <FileIcon className="h-3.5 w-3.5" />
+                                            <span className="text-[10px] font-black">{item.files.length}</span>
+                                            </div>
+                                        ) : '-'}
+                                        </TableCell>
+                                        <TableCell>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="h-4 w-4" /></Button>
+                                        </TableCell>
+                                    </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow><TableCell colSpan={5} className="text-center py-16 text-muted-foreground bg-slate-50/30">
+                                        <AlertCircle className="h-10 w-10 mx-auto mb-3 opacity-10" />
+                                        <p className="text-[10px] font-black uppercase tracking-widest">Geen schademeldingen</p>
+                                    </TableCell></TableRow>
+                                )}
+                                </TableBody>
+                            </Table>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </TabsContent>}
+
+                    {canViewTab('documents') && <TabsContent value="documents" className="flex-1 mt-4 min-h-0">
+                      <Card className="h-full flex flex-col rounded-2xl shadow-sm border-slate-100 overflow-hidden">
+                        <CardHeader className="flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border-b">
+                          <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Projectbestanden</CardTitle>
+                          {canEdit && <Button size="sm" onClick={handleAddNewDocument} className="w-full sm:w-auto h-8 font-black uppercase tracking-tight">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Toevoegen
+                          </Button>}
+                        </CardHeader>
+                        <CardContent className="flex-1 overflow-auto p-0">
+                          <div className="overflow-x-auto">
+                            <Table className="min-w-[600px]">
+                                <TableHeader className="bg-slate-50/50 sticky top-0 z-10">
+                                <TableRow className="hover:bg-transparent">
+                                    <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Titel</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Omschrijving</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Datum</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3 text-center">Bijlagen</TableHead>
+                                    <TableHead className="w-[50px]"></TableHead>
+                                </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                {documentsLoading ? (
+                                    <TableRow><TableCell colSpan={5} className="text-center py-10"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></TableCell></TableRow>
+                                ) : documents && documents.length > 0 ? (
+                                    documents.sort((a: any, b: any) => new Date(b.updatedAt?.seconds * 1000 || 0).getTime() - new Date(a.updatedAt?.seconds * 1000 || 0).getTime()).map((item: any) => (
+                                    <TableRow key={item.id} className="group cursor-pointer hover:bg-slate-50/50 transition-colors border-b border-slate-100" onClick={() => handleEditDocument(item)}>
+                                        <TableCell className="font-black text-xs text-slate-900">{item.title}</TableCell>
+                                        <TableCell className="text-[11px] text-slate-400 truncate max-w-xs italic">{item.description || '-'}</TableCell>
+                                        <TableCell className="text-xs font-bold text-slate-600">{item.updatedAt ? format(new Date(item.updatedAt.seconds * 1000), 'dd-MM-yyyy') : '-'}</TableCell>
+                                        <TableCell className="text-center">
+                                        {item.files?.length > 0 ? (
+                                            <div className="flex items-center justify-center gap-1.5 text-slate-400">
+                                            <FileIcon className="h-3.5 w-3.5" />
+                                            <span className="text-[10px] font-black">{item.files.length}</span>
+                                            </div>
+                                        ) : '-'}
+                                        </TableCell>
+                                        <TableCell>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="h-4 w-4" /></Button>
+                                        </TableCell>
+                                    </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow><TableCell colSpan={5} className="text-center py-16 text-muted-foreground bg-slate-50/30">
+                                        <FileText className="h-10 w-10 mx-auto mb-3 opacity-10" />
+                                        <p className="text-[10px] font-black uppercase tracking-widest">Geen documenten</p>
+                                    </TableCell></TableRow>
+                                )}
+                                </TableBody>
+                            </Table>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </TabsContent>}
+                  </Tabs>
                 </div>
-                
-                {canViewTab('maintenance') && <TabsContent value="maintenance" className="flex-1 mt-4 min-h-0">
-                   <Card className="h-full flex flex-col rounded-2xl shadow-sm border-slate-100 overflow-hidden">
-                    <CardHeader className="flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border-b">
-                      <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Onderhoudshistorie</CardTitle>
-                      {canEdit && <AddMaintenanceDialog materieelId={selectedItem.id} materieelType={materieelType}>
-                        <Button size="sm" className="w-full sm:w-auto h-8 font-black uppercase tracking-tight">
-                          <Plus className="mr-2 h-4 w-4" />
-                          Toevoegen
-                        </Button>
-                      </AddMaintenanceDialog>}
-                    </CardHeader>
-                    <CardContent className="flex-1 overflow-auto p-0">
-                      <div className="overflow-x-auto">
-                        <Table className="min-w-[700px]">
-                            <TableHeader className="bg-slate-50/50 sticky top-0 z-10">
-                            <TableRow className="hover:bg-transparent">
-                                <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Datum</TableHead>
-                                <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Omschrijving</TableHead>
-                                <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Type</TableHead>
-                                <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Details</TableHead>
-                                <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3 text-right">Kosten</TableHead>
-                                <TableHead className="w-[50px]"></TableHead>
-                            </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                            {maintenanceLoading ? (
-                                <TableRow><TableCell colSpan={6} className="text-center py-10"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></TableCell></TableRow>
-                            ) : maintenance && maintenance.length > 0 ? (
-                                maintenance.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((item: any) => (
-                                <TableRow key={item.id} className="group hover:bg-slate-50/50 transition-colors border-b border-slate-100">
-                                    <TableCell className="text-xs font-bold text-slate-600">{format(new Date(item.date), 'dd-MM-yyyy')}</TableCell>
-                                    <TableCell className="font-black text-xs text-slate-900">{item.description}</TableCell>
-                                    <TableCell><Badge variant="secondary" className="text-[9px] font-black uppercase px-2 h-5 bg-slate-100 border-none">{item.type}</Badge></TableCell>
-                                    <TableCell className="text-[11px] text-slate-400 max-w-[200px] truncate italic" title={item.details}>{item.details || '-'}</TableCell>
-                                    <TableCell className="text-right font-black text-xs">€ {Number(item.cost || 0).toLocaleString('nl-NL', { minimumFractionDigits: 2 })}</TableCell>
-                                    <TableCell>
-                                    {canDelete && (
-                                        <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="h-4 w-4" /></Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                            <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
-                                            <AlertDialogDescription>Dit onderhoudsrecord wordt permanent verwijderd.</AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                            <AlertDialogCancel>Annuleren</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handleDeleteMaintenance(item.id)} className="bg-red-600">Verwijderen</AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                        </AlertDialog>
-                                    )}
-                                    </TableCell>
-                                </TableRow>
-                                ))
-                            ) : (
-                                <TableRow><TableCell colSpan={6} className="text-center py-16 text-muted-foreground bg-slate-50/30">
-                                    <Wrench className="h-10 w-10 mx-auto mb-3 opacity-10" />
-                                    <p className="text-[10px] font-black uppercase tracking-widest">Geen onderhoudshistorie</p>
-                                </TableCell></TableRow>
-                            )}
-                            </TableBody>
-                        </Table>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>}
-
-                {canViewTab('damages') && <TabsContent value="damages" className="flex-1 mt-4 min-h-0">
-                  <Card className="h-full flex flex-col rounded-2xl shadow-sm border-slate-100 overflow-hidden">
-                    <CardHeader className="flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border-b">
-                      <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Schademeldingen</CardTitle>
-                      {canEdit && <Button size="sm" onClick={handleAddNewDamage} className="w-full sm:w-auto h-8 font-black uppercase tracking-tight">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Schade melden
-                      </Button>}
-                    </CardHeader>
-                    <CardContent className="flex-1 overflow-auto p-0">
-                      <div className="overflow-x-auto">
-                        <Table className="min-w-[600px]">
-                            <TableHeader className="bg-slate-50/50 sticky top-0 z-10">
-                            <TableRow className="hover:bg-transparent">
-                                <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Datum</TableHead>
-                                <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Omschrijving</TableHead>
-                                <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Status</TableHead>
-                                <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3 text-center">Bestanden</TableHead>
-                                <TableHead className="w-[50px]"></TableHead>
-                            </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                            {damagesLoading ? (
-                                <TableRow><TableCell colSpan={5} className="text-center py-10"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></TableCell></TableRow>
-                            ) : damages && damages.length > 0 ? (
-                                damages.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((item: any) => (
-                                <TableRow key={item.id} className="group cursor-pointer hover:bg-slate-50/50 transition-colors border-b border-slate-100" onClick={() => handleEditDamage(item)}>
-                                    <TableCell className="text-xs font-bold text-slate-600">{format(new Date(item.date), 'dd-MM-yyyy')}</TableCell>
-                                    <TableCell className="font-black text-xs text-slate-900 truncate max-w-xs">{item.description}</TableCell>
-                                    <TableCell>
-                                    <Badge variant={item.status === 'Afgehandeld' ? 'outline' : 'secondary'} className={cn(
-                                        "text-[9px] font-black uppercase px-2 h-5",
-                                        item.status === 'Afgehandeld' ? "text-green-600 border-green-200" : "bg-orange-100 text-orange-600 border-none"
-                                    )}>
-                                        {item.status || 'Open'}
-                                    </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-center">
-                                    {item.files?.length > 0 ? (
-                                        <div className="flex items-center justify-center gap-1.5 text-slate-400">
-                                        <FileIcon className="h-3.5 w-3.5" />
-                                        <span className="text-[10px] font-black">{item.files.length}</span>
-                                        </div>
-                                    ) : '-'}
-                                    </TableCell>
-                                    <TableCell>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="h-4 w-4" /></Button>
-                                    </TableCell>
-                                </TableRow>
-                                ))
-                            ) : (
-                                <TableRow><TableCell colSpan={5} className="text-center py-16 text-muted-foreground bg-slate-50/30">
-                                    <AlertCircle className="h-10 w-10 mx-auto mb-3 opacity-10" />
-                                    <p className="text-[10px] font-black uppercase tracking-widest">Geen schademeldingen</p>
-                                </TableCell></TableRow>
-                            )}
-                            </TableBody>
-                        </Table>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>}
-
-                {canViewTab('documents') && <TabsContent value="documents" className="flex-1 mt-4 min-h-0">
-                  <Card className="h-full flex flex-col rounded-2xl shadow-sm border-slate-100 overflow-hidden">
-                    <CardHeader className="flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border-b">
-                      <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Projectbestanden</CardTitle>
-                      {canEdit && <Button size="sm" onClick={handleAddNewDocument} className="w-full sm:w-auto h-8 font-black uppercase tracking-tight">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Toevoegen
-                      </Button>}
-                    </CardHeader>
-                    <CardContent className="flex-1 overflow-auto p-0">
-                      <div className="overflow-x-auto">
-                        <Table className="min-w-[600px]">
-                            <TableHeader className="bg-slate-50/50 sticky top-0 z-10">
-                            <TableRow className="hover:bg-transparent">
-                                <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Titel</TableHead>
-                                <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Omschrijving</TableHead>
-                                <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3">Datum</TableHead>
-                                <TableHead className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3 text-center">Bijlagen</TableHead>
-                                <TableHead className="w-[50px]"></TableHead>
-                            </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                            {documentsLoading ? (
-                                <TableRow><TableCell colSpan={5} className="text-center py-10"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></TableCell></TableRow>
-                            ) : documents && documents.length > 0 ? (
-                                documents.sort((a: any, b: any) => new Date(b.updatedAt?.seconds * 1000 || 0).getTime() - new Date(a.updatedAt?.seconds * 1000 || 0).getTime()).map((item: any) => (
-                                <TableRow key={item.id} className="group cursor-pointer hover:bg-slate-50/50 transition-colors border-b border-slate-100" onClick={() => handleEditDocument(item)}>
-                                    <TableCell className="font-black text-xs text-slate-900">{item.title}</TableCell>
-                                    <TableCell className="text-[11px] text-slate-400 truncate max-w-xs italic">{item.description || '-'}</TableCell>
-                                    <TableCell className="text-xs font-bold text-slate-600">{item.updatedAt ? format(new Date(item.updatedAt.seconds * 1000), 'dd-MM-yyyy') : '-'}</TableCell>
-                                    <TableCell className="text-center">
-                                    {item.files?.length > 0 ? (
-                                        <div className="flex items-center justify-center gap-1.5 text-slate-400">
-                                        <FileIcon className="h-3.5 w-3.5" />
-                                        <span className="text-[10px] font-black">{item.files.length}</span>
-                                        </div>
-                                    ) : '-'}
-                                    </TableCell>
-                                    <TableCell>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"><Pencil className="h-4 w-4" /></Button>
-                                    </TableCell>
-                                </TableRow>
-                                ))
-                            ) : (
-                                <TableRow><TableCell colSpan={5} className="text-center py-16 text-muted-foreground bg-slate-50/30">
-                                    <FileText className="h-10 w-10 mx-auto mb-3 opacity-10" />
-                                    <p className="text-[10px] font-black uppercase tracking-widest">Geen documenten</p>
-                                </TableCell></TableRow>
-                            )}
-                            </TableBody>
-                        </Table>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>}
-              </Tabs>
+              </ScrollArea>
+              
               <AddDamageDialog
                 open={isDamageDialogOpen}
                 onOpenChange={setIsDamageDialogOpen}
@@ -649,9 +654,9 @@ export default function MaterieelBeheerPage() {
   };
   
   return (
-    <div className="grid grid-rows-[auto_1fr] flex-1 min-h-0 bg-white">
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as MaterieelType)} className="flex-1 flex flex-col min-h-0">
-        <header className="flex flex-col md:flex-row items-center justify-between gap-4 p-4 md:p-6 border-b bg-slate-50/30">
+    <div className="grid grid-rows-[auto_1fr] flex-1 min-h-0 h-full overflow-hidden bg-white">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as MaterieelType)} className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">
+        <header className="flex flex-col md:flex-row items-center justify-between gap-4 p-4 md:p-6 border-b bg-slate-50/30 shrink-0">
             <TabsList className="w-full sm:w-auto">
                 <TabsTrigger value="voertuigen" className="flex-1 sm:flex-none">Voertuigen</TabsTrigger>
                 <TabsTrigger value="machines" className="flex-1 sm:flex-none">Machines</TabsTrigger>
@@ -684,10 +689,10 @@ export default function MaterieelBeheerPage() {
             </Button>
             </div>
         </header>
-        <TabsContent value="voertuigen" className="p-4 md:p-6 flex-1 min-h-0">
+        <TabsContent value="voertuigen" className="p-4 md:p-6 flex-1 min-h-0 h-full overflow-hidden">
           <MaterielView materieelType="voertuigen" canEdit={canEdit} canDelete={canDelete} />
         </TabsContent>
-        <TabsContent value="machines" className="p-4 md:p-6 flex-1 min-h-0">
+        <TabsContent value="machines" className="p-4 md:p-6 flex-1 min-h-0 h-full overflow-hidden">
           <MaterielView materieelType="machines" canEdit={canEdit} canDelete={canDelete} />
         </TabsContent>
       </Tabs>
