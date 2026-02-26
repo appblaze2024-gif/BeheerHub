@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Info, Loader2, CalendarIcon } from 'lucide-react';
 import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { useGlobalLoading } from '@/context/global-loading-context';
 import { collection, doc } from 'firebase/firestore';
 
 import {
@@ -89,6 +90,7 @@ export function MedewerkerDialog({
   medewerker,
 }: MedewerkerDialogProps) {
   const firestore = useFirestore();
+  const { startProcessing } = useGlobalLoading();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [addAnother, setAddAnother] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState("Basis");
@@ -126,20 +128,12 @@ export function MedewerkerDialog({
 
   const dateToInputString = (date: any): string | undefined => {
     if (!date) return undefined;
-    
     let d: Date;
-    if (date.toDate) { // Firestore Timestamp
-      d = date.toDate();
-    } else if (date instanceof Date) {
-      d = date;
-    } else if (typeof date === 'string') {
-      d = new Date(date);
-    } else {
-        return undefined;
-    }
-    
+    if (date.toDate) d = date.toDate();
+    else if (date instanceof Date) d = date;
+    else if (typeof date === 'string') d = new Date(date);
+    else return undefined;
     if (isNaN(d.getTime())) return undefined;
-
     return format(d, 'yyyy-MM-dd');
   }
   
@@ -202,36 +196,19 @@ export function MedewerkerDialog({
     try {
       if (medewerker) {
         const medewerkerRef = doc(firestore, 'medewerkers', medewerker.id);
-        await updateDocumentNonBlocking(medewerkerRef, dataToSave);
+        updateDocumentNonBlocking(medewerkerRef, dataToSave);
       } else {
         const medewerkersColRef = collection(firestore, 'medewerkers');
-        await addDocumentNonBlocking(medewerkersColRef, dataToSave);
+        addDocumentNonBlocking(medewerkersColRef, dataToSave);
       }
       
       if (addAnother) {
-        form.reset({
-            voornaam: '',
-            tussenvoegsel: '',
-            achternaam: '',
-            email: '',
-            telefoonnummer: '',
-            mobiel: '',
-            taal: 'Nederlands',
-            functie: '',
-            status: 'Niet uitgenodigd',
-            soortMedewerker: '',
-            kostprijs: 0,
-            verkoopprijs: 0,
-            contractType: '',
-            urenPerDag: defaultUren,
-            notities: '',
-            indiensttreding: '',
-            uitdiensttreding: '',
-        });
+        form.reset();
         setActiveTab("Basis");
         setIsSubmitting(false);
       } else {
         onOpenChange(false);
+        startProcessing(1000);
       }
     } catch (error) {
       console.error('Fout bij opslaan medewerker:', error);

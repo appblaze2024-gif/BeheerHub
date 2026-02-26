@@ -9,6 +9,7 @@ import { doc } from 'firebase/firestore';
 
 import { cn } from '@/lib/utils';
 import { useFirestore, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { useGlobalLoading } from '@/context/global-loading-context';
 import { carData } from '@/lib/car-data';
 
 import {
@@ -78,6 +79,7 @@ const fuelTypes = [
 
 export function AddVehicleDialog({ children, vehicle = null, open: controlledOpen, onOpenChange: controlledOnOpenChange, materieelType }: AddVehicleDialogProps) {
   const firestore = useFirestore();
+  const { startProcessing } = useGlobalLoading();
   const [isLocallyOpen, setLocallyOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
@@ -132,41 +134,19 @@ export function AddVehicleDialog({ children, vehicle = null, open: controlledOpe
     }
   }, [open, vehicle, form, isMachine]);
 
-  React.useEffect(() => {
-    if (isMachine || !form.formState.isDirty) return;
-    if (selectedBrand !== vehicle?.merk) {
-      form.setValue('model', '');
-      form.setValue('type', '');
-    }
-  }, [selectedBrand, form, vehicle, isMachine]);
-
-  React.useEffect(() => {
-    if (isMachine || !form.formState.isDirty) return;
-    if (selectedModel !== vehicle?.model) {
-      form.setValue('type', '');
-    }
-  }, [selectedModel, form, vehicle, isMachine]);
-
-
   const onSubmit = async (data: MaterieelFormValues) => {
-    if (!firestore) {
-      console.error('Firestore not available');
-      return;
-    }
+    if (!firestore) return;
     
     setIsSubmitting(true);
 
     try {
       const { nummer, ...restOfData } = data;
-      const materieelData: any = {
-        ...restOfData,
-      };
+      const materieelData: any = { ...restOfData };
 
       if (isMachine) {
         materieelData.machinenummer = nummer || null;
-        // Don't save apk_vervaldatum for machines
         delete materieelData.apk_vervaldatum;
-      } else { // It's a vehicle
+      } else {
         materieelData.voertuignummer = nummer || null;
         materieelData.apk_vervaldatum = data.apk_vervaldatum || null;
       }
@@ -174,17 +154,13 @@ export function AddVehicleDialog({ children, vehicle = null, open: controlledOpe
       const materieelRef = doc(firestore, materieelType, materieelData.id);
       
       if (vehicle) {
-        if (vehicle.id !== data.id) {
-            console.error("Changing ID/Kenteken is not allowed.");
-            setIsSubmitting(false);
-            return
-        }
-        await updateDocumentNonBlocking(materieelRef, materieelData);
+        updateDocumentNonBlocking(materieelRef, materieelData);
       } else {
-        await setDocumentNonBlocking(materieelRef, materieelData, { merge: false });
+        setDocumentNonBlocking(materieelRef, materieelData, { merge: false });
       }
 
       onOpenChange(false);
+      startProcessing(1000);
     } catch (error) {
       console.error(`Error saving ${materieelType}: `, error);
     } finally {

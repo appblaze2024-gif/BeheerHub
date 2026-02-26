@@ -12,6 +12,7 @@ import {
   updateDocumentNonBlocking,
   useUser,
 } from '@/firebase';
+import { useGlobalLoading } from '@/context/global-loading-context';
 import { collection, doc } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
@@ -90,6 +91,7 @@ export function DienstToevoegenDialog({
 }: DienstToevoegenDialogProps) {
   const firestore = useFirestore();
   const { user } = useUser();
+  const { startProcessing } = useGlobalLoading();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [quickSubmitType, setQuickSubmitType] = React.useState<'Verlof' | 'ADV' | 'Ziek' | null>(null);
   const [useCustomColor, setUseCustomColor] = React.useState(false);
@@ -113,10 +115,7 @@ export function DienstToevoegenDialog({
       } else if (medewerker && datum) {
         const dayName = format(datum, 'eeee', { locale: nl }).toLowerCase() as keyof NonNullable<Medewerker['urenPerDag']>;
         const defaultTimes = medewerker.urenPerDag?.[dayName];
-        
-        // Default to false for new services as requested
         setUseCustomColor(false);
-        
         form.reset({
           werksoort: '',
           starttijd: defaultTimes?.start || '07:00',
@@ -124,16 +123,6 @@ export function DienstToevoegenDialog({
           voertuignummer: null,
           notities: '',
           celkleur: currentUserProfile?.lastUsedDienstColor || '#000000',
-        });
-      } else {
-        setUseCustomColor(false);
-         form.reset({
-          werksoort: '',
-          starttijd: '07:00',
-          eindtijd: '15:30',
-          voertuignummer: null,
-          notities: '',
-          celkleur: '#000000',
         });
       }
     } else {
@@ -168,8 +157,9 @@ export function DienstToevoegenDialog({
 
     try {
         const dienstenColRef = collection(firestore, 'projects', project.id, 'diensten');
-        await addDocumentNonBlocking(dienstenColRef, dienstData);
+        addDocumentNonBlocking(dienstenColRef, dienstData);
         onSuccess();
+        startProcessing(600);
     } catch (error) {
         console.error(`Fout bij opslaan ${werksoort}:`, error);
     } finally {
@@ -184,7 +174,6 @@ export function DienstToevoegenDialog({
     
     const medewerkerId = medewerker?.id || dienst?.medewerkerId;
     if (!medewerkerId) {
-        console.error("Medewerker ID is missing, cannot save dienst.");
         setIsSubmitting(false);
         return;
     }
@@ -201,23 +190,19 @@ export function DienstToevoegenDialog({
     try {
       if (dienst) {
         const dienstRef = doc(firestore, 'projects', project.id, 'diensten', dienst.id);
-        await updateDocumentNonBlocking(dienstRef, dienstData);
+        updateDocumentNonBlocking(dienstRef, dienstData);
       } else {
-        const dienstenColRef = collection(
-          firestore,
-          'projects',
-          project.id,
-          'diensten'
-        );
-        await addDocumentNonBlocking(dienstenColRef, dienstData);
+        const dienstenColRef = collection(firestore, 'projects', project.id, 'diensten');
+        addDocumentNonBlocking(dienstenColRef, dienstData);
       }
 
       if (useCustomColor && data.celkleur && user) {
         const userProfileRef = doc(firestore, 'users', user.uid);
-        await updateDocumentNonBlocking(userProfileRef, { lastUsedDienstColor: data.celkleur });
+        updateDocumentNonBlocking(userProfileRef, { lastUsedDienstColor: data.celkleur });
       }
 
       onSuccess();
+      startProcessing(600);
     } catch (error) {
       console.error('Fout bij opslaan dienst:', error);
     } finally {
@@ -230,8 +215,9 @@ export function DienstToevoegenDialog({
     setIsSubmitting(true);
     try {
       const dienstRef = doc(firestore, 'projects', project.id, 'diensten', dienst.id);
-      await deleteDocumentNonBlocking(dienstRef);
+      deleteDocumentNonBlocking(dienstRef);
       onSuccess();
+      startProcessing(600);
     } catch (error) {
         console.error("Fout bij verwijderen dienst:", error);
     } finally {
@@ -239,248 +225,136 @@ export function DienstToevoegenDialog({
     }
   }
   
-  if (!medewerker && !dienst) {
-    return null;
-  }
+  if (!medewerker && !dienst) return null;
   
-  const medewerkerNaam = medewerker ? `${medewerker.voornaam || ''} ${
-    medewerker.tussenvoegsel || ''
-  } ${medewerker.achternaam || ''}`.trim() : 'Laden...';
-  
-  const displayDate = datum || (dienst ? new Date(dienst.datum) : new Date());
-
-  const formattedDate = format(displayDate, 'eeee d MMMM yyyy', { locale: nl });
-
-  const effectiveMedewerkerName = medewerker ? medewerkerNaam : dienst?.medewerkerId;
+  const formattedDate = format(datum || (dienst ? new Date(dienst.datum) : new Date()), 'eeee d MMMM yyyy', { locale: nl });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{dienst ? 'Dienst Bewerken' : 'Dienst Toevoegen'}: {formattedDate}</DialogTitle>
-           <DialogDescription>
-            Voer de details voor de dienst in en klik op opslaan.
-          </DialogDescription>
+           <DialogDescription>Voer de details voor de dienst in en klik op opslaan.</DialogDescription>
         </DialogHeader>
         
         <div className="py-4 space-y-4">
             {!dienst && (
                 <>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        <Button type="button" variant="outline" className="w-full" onClick={() => handleFullDaySubmit('Verlof')} disabled={isSubmitting}>
+                        <Button type="button" variant="outline" className="w-full text-[10px] font-black uppercase" onClick={() => handleFullDaySubmit('Verlof')} disabled={isSubmitting}>
                             {isSubmitting && quickSubmitType === 'Verlof' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                            Hele dag Verlof
+                            Verlof
                         </Button>
-                        <Button type="button" variant="outline" className="w-full" onClick={() => handleFullDaySubmit('ADV')} disabled={isSubmitting}>
+                        <Button type="button" variant="outline" className="w-full text-[10px] font-black uppercase" onClick={() => handleFullDaySubmit('ADV')} disabled={isSubmitting}>
                             {isSubmitting && quickSubmitType === 'ADV' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                            Hele dag ADV
+                            ADV
                         </Button>
-                        <Button type="button" variant="outline" className="w-full" onClick={() => handleFullDaySubmit('Ziek')} disabled={isSubmitting}>
+                        <Button type="button" variant="outline" className="w-full text-[10px] font-black uppercase" onClick={() => handleFullDaySubmit('Ziek')} disabled={isSubmitting}>
                             {isSubmitting && quickSubmitType === 'Ziek' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                            Hele dag Ziek
+                            Ziek
                         </Button>
                     </div>
-                    <div className="relative">
-                        <Separator />
-                        <span className="absolute left-1/2 -translate-x-1/2 -top-2.5 bg-background px-2 text-xs text-muted-foreground">OF</span>
-                    </div>
+                    <div className="relative"><Separator /><span className="absolute left-1/2 -translate-x-1/2 -top-2 bg-background px-2 text-[8px] font-black text-slate-400 uppercase tracking-widest">OF REGULIER</span></div>
                 </>
             )}
             <Form {...form}>
             <form id="dienst-toevoegen-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormItem>
-                    <FormLabel>Medewerker</FormLabel>
-                    <Input value={effectiveMedewerkerName} disabled />
+                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Medewerker</FormLabel>
+                    <Input value={medewerker ? `${medewerker.voornaam} ${medewerker.achternaam}` : ''} disabled className="h-9 font-bold bg-slate-50" />
                 </FormItem>
                 <FormField
                 control={form.control}
                 name="werksoort"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>Dienst omschrijving</FormLabel>
-                    <FormControl>
-                        <Input placeholder='Bijv. Schoffelen' {...field} />
-                    </FormControl>
+                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Omschrijving</FormLabel>
+                    <FormControl><Input placeholder='Bijv. Schoffelen' {...field} className="h-9 font-bold" /></FormControl>
                     <FormMessage />
                     </FormItem>
                 )}
                 />
 
                 <div className="grid grid-cols-2 gap-4">
-                <FormField
-                    control={form.control}
-                    name="starttijd"
-                    render={({ field }) => (
+                <FormField control={form.control} name="starttijd" render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Starttijd</FormLabel>
-                        <FormControl>
-                        <Input type="time" {...field} />
-                        </FormControl>
+                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Starttijd</FormLabel>
+                        <FormControl><Input type="time" {...field} className="h-9 font-bold" /></FormControl>
                         <FormMessage />
                     </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="eindtijd"
-                    render={({ field }) => (
+                )} />
+                <FormField control={form.control} name="eindtijd" render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Eindtijd</FormLabel>
-                        <FormControl>
-                        <Input type="time" {...field} />
-                        </FormControl>
+                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Eindtijd</FormLabel>
+                        <FormControl><Input type="time" {...field} className="h-9 font-bold" /></FormControl>
                         <FormMessage />
                     </FormItem>
-                    )}
-                />
+                )} />
                 </div>
                 
-                <FormField
-                    control={form.control}
-                    name="voertuignummer"
-                    render={({ field }) => (
+                <FormField control={form.control} name="voertuignummer" render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Voertuig/Machine</FormLabel>
+                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Voertuig/Machine</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value || ''}>
-                            <FormControl>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Selecteer een voertuig of machine" />
-                            </SelectTrigger>
-                            </FormControl>
+                            <FormControl><SelectTrigger className="h-9 font-bold"><SelectValue placeholder="Selecteer voertuig" /></SelectTrigger></FormControl>
                             <SelectContent>
                                 <SelectItem value=" ">Geen voertuig/machine</SelectItem>
-                                {equipment.filter(e => e.__type === 'voertuig').length > 0 && (
-                                    <SelectGroup>
-                                        <SelectLabel>Voertuigen</SelectLabel>
-                                        {equipment.filter(e => e.__type === 'voertuig').map((v) => (
-                                            <SelectItem key={v.id} value={(v as Voertuig).voertuignummer || v.id}>
-                                            {(v as Voertuig).voertuignummer || v.id} ({v.merk} {v.model})
-                                            </SelectItem>
-                                        ))}
-                                    </SelectGroup>
-                                )}
-                                {equipment.filter(e => e.__type === 'machine').length > 0 && (
-                                     <SelectGroup>
-                                        <SelectLabel>Machines</SelectLabel>
-                                        {equipment.filter(e => e.__type === 'machine').map((m) => (
-                                            <SelectItem key={m.id} value={(m as Machine).machinenummer || m.id}>
-                                            {(m as Machine).machinenummer || m.id} ({m.merk} {m.model})
-                                            </SelectItem>
-                                        ))}
-                                    </SelectGroup>
-                                )}
+                                {equipment.map((v) => (
+                                    <SelectItem key={v.id} value={(v as any).voertuignummer || (v as any).machinenummer || v.id}>
+                                        {(v as any).voertuignummer || (v as any).machinenummer || v.id} ({v.merk} {v.model})
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                         <FormMessage />
                     </FormItem>
-                    )}
-                />
+                )} />
                 
-                <FormField
-                    control={form.control}
-                    name="notities"
-                    render={({ field }) => (
+                <FormField control={form.control} name="notities" render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Opmerking</FormLabel>
-                        <FormControl>
-                        <Textarea placeholder="Voeg een opmerking toe..." {...field} />
-                        </FormControl>
+                        <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Opmerking</FormLabel>
+                        <FormControl><Textarea placeholder="Voeg een opmerking toe..." {...field} className="min-h-[80px] text-xs font-bold" /></FormControl>
                         <FormMessage />
                     </FormItem>
-                    )}
-                />
+                )} />
 
                 <div className="flex items-center space-x-2 pt-2">
-                    <Checkbox
-                        id="use-celkleur"
-                        checked={useCustomColor}
-                        onCheckedChange={(checked) => setUseCustomColor(!!checked)}
-                    />
-                    <label
-                        htmlFor="use-celkleur"
-                        className="text-sm font-medium leading-none"
-                    >
-                        Gebruik aangepaste celkleur
-                    </label>
+                    <Checkbox id="use-celkleur" checked={useCustomColor} onCheckedChange={(checked) => setUseCustomColor(!!checked)} />
+                    <label htmlFor="use-celkleur" className="text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer">Gebruik aangepaste kleur</label>
                 </div>
 
                 {useCustomColor && (
-                  <FormField
-                      control={form.control}
-                      name="celkleur"
-                      render={({ field }) => (
-                          <FormItem>
-                              <FormLabel>Celkleur</FormLabel>
-                              <FormControl>
-                                  <div className="flex items-center gap-2">
-                                      <Input 
-                                          type="color" 
-                                          value={field.value || '#000000'}
-                                          onChange={field.onChange}
-                                          className="h-10 w-12 p-1" 
-                                      />
-                                      <Input 
-                                          type="text"
-                                          value={field.value || ''}
-                                          onChange={field.onChange}
-                                          placeholder="#RRGGBB"
-                                          className="flex-1"
-                                      />
-                                  </div>
-                              </FormControl>
-                              <FormMessage />
-                          </FormItem>
-                      )}
-                  />
+                  <FormField control={form.control} name="celkleur" render={({ field }) => (
+                      <FormItem>
+                          <FormControl>
+                              <div className="flex items-center gap-2">
+                                  <Input type="color" value={field.value || '#000000'} onChange={field.onChange} className="h-10 w-12 p-1" />
+                                  <Input type="text" value={field.value || ''} onChange={field.onChange} placeholder="#RRGGBB" className="flex-1 h-10 font-mono text-xs" />
+                              </div>
+                          </FormControl>
+                      </FormItem>
+                  )} />
                 )}
-
             </form>
             </Form>
         </div>
 
-        <DialogFooter className="pt-4 sm:justify-between">
+        <DialogFooter className="pt-4 sm:justify-between px-6 pb-6">
               <div>
                 {dienst && (
                   <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button type="button" variant="destructive" disabled={isSubmitting}>
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Verwijderen
-                      </Button>
-                    </AlertDialogTrigger>
+                    <AlertDialogTrigger asChild><Button type="button" variant="ghost" size="icon" className="text-red-600 hover:bg-red-50" disabled={isSubmitting}><Trash2 className="h-4 w-4" /></Button></AlertDialogTrigger>
                     <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Deze actie kan niet ongedaan worden gemaakt. Dit zal de dienst permanent verwijderen.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Annuleren</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete}>Doorgaan</AlertDialogAction>
-                      </AlertDialogFooter>
+                      <AlertDialogHeader><AlertDialogTitle>Dienst verwijderen?</AlertDialogTitle><AlertDialogDescription>Deze actie kan niet ongedaan worden gemaakt.</AlertDialogDescription></AlertDialogHeader>
+                      <AlertDialogFooter><AlertDialogCancel>Annuleren</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-red-600">Verwijderen</AlertDialogAction></AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
                 )}
               </div>
               <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => onOpenChange(false)}
-                    disabled={isSubmitting}
-                  >
-                    Annuleren
-                  </Button>
-                <Button type="submit" form="dienst-toevoegen-form" disabled={isSubmitting}>
-                  {isSubmitting && !quickSubmitType ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      {dienst ? 'Opslaan...' : 'Toevoegen...'}
-                    </>
-                  ) : (
-                    dienst ? 'Opslaan' : 'Toevoegen'
-                  )}
+                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isSubmitting} className="font-bold">Annuleren</Button>
+                <Button type="submit" form="dienst-toevoegen-form" disabled={isSubmitting} className="font-black uppercase tracking-tight px-8">
+                  {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Opslaan</> : (dienst ? 'Opslaan' : 'Toevoegen')}
                 </Button>
               </div>
             </DialogFooter>

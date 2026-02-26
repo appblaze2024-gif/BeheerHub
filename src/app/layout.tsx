@@ -13,6 +13,7 @@ import {
 import { ProfileProvider, useProfile } from '@/firebase/profile-provider';
 import { NavigationUIProvider, useNavigationUI } from '@/context/navigation-ui-context';
 import { ProjectProvider } from '@/context/project-context';
+import { GlobalLoadingProvider, useGlobalLoading } from '@/context/global-loading-context';
 import { Toaster } from '@/components/ui/toaster';
 import { AppSidebar } from '@/components/app-sidebar';
 import { Button } from '@/components/ui/button';
@@ -21,7 +22,8 @@ import {
   Menu, 
   Search, 
   LogOut as LogOutIcon,
-  ChevronLeft
+  ChevronLeft,
+  Loader2
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -36,6 +38,21 @@ import {
 import { signOut } from 'firebase/auth';
 import { LoadingScreen } from '@/components/loading-screen';
 import Link from 'next/link';
+
+function ProcessingOverlay() {
+  const { isProcessing } = useGlobalLoading();
+  
+  if (!isProcessing) return null;
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-white/60 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="flex flex-col items-center gap-4 p-8 rounded-3xl bg-white shadow-2xl border border-slate-100 scale-110">
+        <Loader2 className="h-10 w-10 animate-spin text-[#3498db]" />
+        <p className="text-sm font-black uppercase tracking-[0.2em] text-slate-900">Verwerken...</p>
+      </div>
+    </div>
+  );
+}
 
 function Header() {
   const auth = useAuth();
@@ -157,7 +174,8 @@ function MainLayout({ children }: { children: React.ReactNode }) {
         <aside className="hidden lg:block w-64 shrink-0 h-full border-r bg-white">
           <AppSidebar />
         </aside>
-        <main className="flex-1 overflow-auto bg-slate-50 custom-scrollbar">
+        <main className="flex-1 overflow-auto bg-slate-50 custom-scrollbar relative">
+          <ProcessingOverlay />
           {children}
         </main>
       </div>
@@ -198,15 +216,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="h-full">
         <FirebaseClientProvider>
-          <ProfileProvider>
-            <ProjectProvider>
-              <NavigationUIProvider>
-                <Suspense fallback={null}>
-                  <AuthWrapper>{children}</AuthWrapper>
-                </Suspense>
-              </NavigationUIProvider>
-            </ProjectProvider>
-          </ProfileProvider>
+          <GlobalLoadingProvider>
+            <ProfileProvider>
+              <ProjectProvider>
+                <NavigationUIProvider>
+                  <Suspense fallback={null}>
+                    <AuthWrapper>{children}</AuthWrapper>
+                  </Suspense>
+                </NavigationUIProvider>
+              </ProjectProvider>
+            </ProfileProvider>
+          </GlobalLoadingProvider>
         </FirebaseClientProvider>
       </body>
     </html>
