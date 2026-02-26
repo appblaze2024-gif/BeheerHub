@@ -130,38 +130,38 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   return (
     <>
       <Sidebar isCollapsed={false} className="w-full bg-white border-r border-slate-100 shadow-none">
-          <SidebarHeader className="p-6 border-b border-slate-100 shrink-0">
-            <div className="flex items-center gap-4 w-full group">
-              <div className="h-11 w-11 flex items-center justify-center overflow-hidden shrink-0 group-hover:scale-105 transition-premium">
+          <SidebarHeader className="p-8 border-b border-slate-100 shrink-0">
+            <div className="flex items-center gap-5 w-full group">
+              <div className="h-12 w-12 flex items-center justify-center overflow-hidden shrink-0 group-hover:scale-110 transition-premium">
                 <Image 
                   src="https://i.ibb.co/kgtwqH50/favicon-32x32.png" 
                   alt="BeheerHub" 
-                  width={32} 
-                  height={32} 
+                  width={40} 
+                  height={40} 
                   className="object-contain"
                 />
               </div>
               <div className="flex flex-col min-w-0">
-                  <span className="font-black text-slate-900 uppercase tracking-tighter text-xl leading-none">BeheerHub</span>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Smart Infra</span>
+                  <span className="font-black text-slate-900 uppercase tracking-tighter text-2xl leading-none">BeheerHub</span>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1.5">Smart Infra Management</span>
               </div>
             </div>
           </SidebarHeader>
 
-          <SidebarContent className="p-4 space-y-8 no-scrollbar overflow-y-auto">
-            <div className="space-y-2.5 px-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Project Selectie</Label>
+          <SidebarContent className="p-6 space-y-10 no-scrollbar overflow-y-auto">
+            <div className="space-y-3 px-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Actief Project</Label>
               <Select
                 value={selectedProjectId || ''}
                 onValueChange={(value) => setSelectedProjectId(value === '' ? null : value)}
                 disabled={isLoadingProjects || isLoadingProject}
               >
-                <SelectTrigger className="bg-slate-50 border-none text-slate-900 h-12 font-black uppercase tracking-tighter shadow-inner rounded-xl focus:ring-primary/10 transition-premium">
+                <SelectTrigger className="bg-slate-50 border-none text-slate-900 h-14 font-black uppercase tracking-tighter shadow-inner-soft rounded-2xl focus:ring-primary/10 transition-premium">
                   <SelectValue placeholder="Kies project..." />
                 </SelectTrigger>
-                <SelectContent className="rounded-2xl shadow-2xl border-slate-100 p-2">
+                <SelectContent className="rounded-3xl shadow-2xl border-slate-100 p-3">
                   {projects?.map((project) => (
-                    <SelectItem key={project.id} value={project.id!} className="font-bold rounded-xl h-10 focus:bg-slate-50">
+                    <SelectItem key={project.id} value={project.id!} className="font-bold rounded-2xl h-12 focus:bg-slate-50">
                       {project.projectnaam}
                     </SelectItem>
                   ))}
@@ -169,7 +169,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
               </Select>
             </div>
 
-            <SidebarMenu className="gap-1.5">
+            <SidebarMenu className="gap-2">
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.label}>
                   {item.subItems ? (
@@ -178,26 +178,26 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                         <SidebarMenuButton
                           isActive={pathname.startsWith(item.href)}
                           className={cn(
-                            "h-12 text-[13px] font-black uppercase tracking-tight justify-between transition-premium rounded-2xl px-4",
+                            "h-14 text-[14px] font-black uppercase tracking-tight justify-between transition-premium rounded-2xl px-5",
                             pathname.startsWith(item.href) 
-                              ? "bg-primary text-white shadow-xl shadow-primary/20" 
+                              ? "bg-primary text-white shadow-2xl shadow-primary/20" 
                               : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                           )}
                         >
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-4">
                             <item.icon className={cn("h-5 w-5", pathname.startsWith(item.href) ? "text-white" : "text-slate-400")} />
                             <span>{item.label}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             {item.module === 'issues' && newMeldingenCount > 0 && (
-                              <Badge variant="destructive" className="h-5 min-w-5 px-1 font-black text-[10px] bg-red-500 border-none">{newMeldingenCount}</Badge>
+                              <Badge variant="destructive" className="h-6 min-w-6 px-1.5 font-black text-[10px] bg-red-500 border-none shadow-lg">{newMeldingenCount}</Badge>
                             )}
-                            <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                            <ChevronRight className="h-4 w-4 transition-transform duration-300 group-data-[state=open]/collapsible:rotate-90" />
                           </div>
                         </SidebarMenuButton>
                       </CollapsibleTrigger>
                       <CollapsibleContent className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down overflow-hidden">
-                        <SidebarMenuSub className="border-l-2 border-slate-100 ml-6 mt-2 space-y-1.5 pb-2">
+                        <SidebarMenuSub className="border-l-4 border-slate-100 ml-7 mt-3 space-y-2 pb-3">
                           {item.subItems.filter(subItem => {
                               if (isSuperUser) return true;
                               if (!item.module) return true;
@@ -210,13 +210,13 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                                   href={subItem.href} 
                                   onClick={onNavigate} 
                                   className={cn(
-                                    "flex justify-between w-full items-center h-10 px-4 rounded-xl font-bold text-xs transition-premium",
+                                    "flex justify-between w-full items-center h-11 px-5 rounded-2xl font-black text-[11px] uppercase tracking-tighter transition-premium",
                                     pathname === subItem.href ? "text-primary bg-primary/5" : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
                                   )}
                                 >
                                   <span>{subItem.label}</span>
                                   {subItem.id === 'portal' && newMeldingenCount > 0 && (
-                                    <Badge variant="destructive" className="h-4 min-w-4 px-1 text-[9px] bg-red-500 border-none">{newMeldingenCount}</Badge>
+                                    <Badge variant="destructive" className="h-5 min-w-5 px-1 font-black text-[9px] bg-red-500 border-none">{newMeldingenCount}</Badge>
                                   )}
                                 </Link>
                               </SidebarMenuSubButton>
@@ -230,9 +230,9 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                       asChild
                       isActive={pathname === item.href}
                       className={cn(
-                        "h-12 text-[13px] font-black uppercase tracking-tight transition-premium rounded-2xl px-4",
+                        "h-14 text-[14px] font-black uppercase tracking-tight transition-premium rounded-2xl px-5",
                         pathname === item.href 
-                          ? "bg-primary text-white shadow-xl shadow-primary/20" 
+                          ? "bg-primary text-white shadow-2xl shadow-primary/20" 
                           : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                       )}
                     >
@@ -247,49 +247,49 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
             </SidebarMenu>
           </SidebarContent>
 
-          <SidebarFooter className="p-4 border-t border-slate-100 bg-slate-50/50 shrink-0">
-              <div className="bg-white rounded-3xl p-4 flex items-center gap-4 shadow-sm border border-slate-100">
-                <Avatar className="h-10 w-10 border-2 border-white shadow-md ring-1 ring-slate-100 shrink-0">
+          <SidebarFooter className="p-6 border-t border-slate-100 bg-slate-50/50 shrink-0">
+              <div className="bg-white rounded-[2rem] p-5 flex items-center gap-4 shadow-xl border-2 border-white/50">
+                <Avatar className="h-12 w-12 border-4 border-white shadow-2xl ring-1 ring-slate-100 shrink-0">
                   <AvatarImage src={user?.photoURL || undefined} />
                   <AvatarFallback className="bg-primary text-white font-black text-xs">
                     {getInitials(profile?.firstName, profile?.lastName)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col min-w-0">
-                  <p className="text-xs font-black text-slate-900 truncate uppercase tracking-tight">{profile?.displayName}</p>
-                  <p className="text-[10px] font-bold text-slate-400 truncate uppercase tracking-widest mt-0.5">{profile?.role}</p>
+                  <p className="text-xs font-black text-slate-900 truncate uppercase tracking-tight leading-none mb-1">{profile?.displayName}</p>
+                  <p className="text-[10px] font-bold text-slate-400 truncate uppercase tracking-widest leading-none">{profile?.role}</p>
                 </div>
               </div>
-              <div className='mt-4 flex items-center justify-center gap-3'>
+              <div className='mt-6 flex items-center justify-center gap-4'>
                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">{version}</span>
                   {isSuperUser && (
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-300 hover:text-primary hover:bg-white rounded-full shadow-sm border border-transparent hover:border-slate-100 transition-premium" onClick={() => setIsVersionDialogOpen(true)}>
-                      <Settings className="h-3.5 w-3.5" />
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-primary hover:bg-white rounded-full shadow-lg border border-transparent hover:border-slate-100 transition-premium" onClick={() => setIsVersionDialogOpen(true)}>
+                      <Settings className="h-4 w-4" />
                     </Button>
                   )}
               </div>
           </SidebarFooter>
       </Sidebar>
       <Dialog open={isVersionDialogOpen} onOpenChange={setIsVersionDialogOpen}>
-        <DialogContent className="rounded-3xl border-none shadow-2xl">
-            <DialogHeader>
-                <DialogTitle className="text-xl font-black uppercase tracking-tight">Software Versiebeheer</DialogTitle>
+        <DialogContent className="rounded-[2.5rem] border-none shadow-2xl">
+            <DialogHeader className="p-4">
+                <DialogTitle className="text-2xl font-black uppercase tracking-tight">Software Versiebeheer</DialogTitle>
                 <DialogDescription className="font-bold text-slate-500">
                     Pas het versienummer van de applicatie aan voor alle gebruikers.
                 </DialogDescription>
             </DialogHeader>
-            <div className="py-6">
-                <Label htmlFor="version-input" className="text-[10px] font-black uppercase text-slate-400 ml-1">Nieuw versienummer</Label>
+            <div className="py-8">
+                <Label htmlFor="version-input" className="text-[10px] font-black uppercase text-slate-400 ml-2">Nieuw versienummer</Label>
                 <Input
                     id="version-input"
                     value={newVersion}
                     onChange={(e) => setNewVersion(e.target.value)}
-                    className="h-12 font-mono font-bold rounded-xl mt-2 bg-slate-50 border-none shadow-inner"
+                    className="h-14 font-mono font-bold rounded-2xl mt-3 bg-slate-50 border-none shadow-inner-soft text-lg text-center"
                 />
             </div>
-            <DialogFooter>
-                <Button variant="ghost" onClick={() => setIsVersionDialogOpen(false)} className="font-bold text-slate-400">Annuleren</Button>
-                <Button onClick={handleVersionSave} className="h-12 px-8 font-black uppercase tracking-tight shadow-xl shadow-primary/20">Opslaan</Button>
+            <DialogFooter className="p-4">
+                <Button variant="ghost" onClick={() => setIsVersionDialogOpen(false)} className="font-black uppercase tracking-widest text-[10px] text-slate-400">Annuleren</Button>
+                <Button onClick={handleVersionSave} className="h-14 px-12 font-black uppercase tracking-tight shadow-2xl shadow-primary/20 rounded-2xl">Bijwerken</Button>
             </DialogFooter>
         </DialogContent>
       </Dialog>

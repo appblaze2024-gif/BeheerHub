@@ -140,33 +140,39 @@ function PlanningAccordionContent({ selectedObject, handleUpdateField, projects,
   if (!selectedObject) return null;
 
   return (
-    <div className='space-y-4'>
-      <Select onValueChange={setSelectedProjectId} value={selectedProjectId} disabled={isLoadingProjects}>
-        <SelectTrigger className="h-10 font-bold">
-          <SelectValue placeholder="Selecteer een project" />
-        </SelectTrigger>
-        <SelectContent>
-          {projects?.map(p => (
-            <SelectItem key={p.id} value={p.id}>{p.projectnaam}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+    <div className='space-y-6 pt-4'>
+      <div className="space-y-2">
+          <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Toewijzen aan project</Label>
+          <Select onValueChange={setSelectedProjectId} value={selectedProjectId} disabled={isLoadingProjects}>
+            <SelectTrigger className="h-12 font-black bg-slate-50 border-none shadow-inner-soft rounded-2xl">
+              <SelectValue placeholder="Selecteer een project" />
+            </SelectTrigger>
+            <SelectContent className="rounded-3xl shadow-2xl border-slate-100">
+              {projects?.map(p => (
+                <SelectItem key={p.id} value={p.id} className="font-bold rounded-2xl h-11">{p.projectnaam}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+      </div>
 
       {selectedProjectId && (
-        <div className="space-y-2 border rounded-xl p-4 max-h-48 overflow-y-auto no-scrollbar bg-slate-50/50">
-          <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Prullenbakkenroutes</h4>
-          {projectRoutes.length > 0 ? projectRoutes.map(route => (
-            <div key={route.id} className="flex items-center space-x-2 p-1.5 hover:bg-white rounded-lg transition-colors">
-              <Checkbox
-                id={`route-${route.id}`}
-                checked={(selectedObject.locatieWerkgebieden || []).includes(route.naam)}
-                onCheckedChange={(checked) => handleRouteAssignment(route.naam, !!checked)}
-              />
-              <Label htmlFor={`route-${route.id}`} className="font-bold text-xs text-slate-700 cursor-pointer">{route.naam}</Label>
-            </div>
-          )) : (
-            <p className="text-xs font-medium text-slate-400 italic">Geen routes beschikbaar voor dit project.</p>
-          )}
+        <div className="space-y-3 bg-slate-50 p-5 rounded-[2rem] border-2 border-slate-100 shadow-inner-soft">
+          <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Beschikbare Prullenbakkenroutes</h4>
+          <div className="grid gap-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+            {projectRoutes.length > 0 ? projectRoutes.map(route => (
+                <div key={route.id} className="flex items-center space-x-4 p-3 hover:bg-white rounded-2xl transition-premium border-2 border-transparent hover:border-primary/10">
+                <Checkbox
+                    id={`route-${route.id}`}
+                    checked={(selectedObject.locatieWerkgebieden || []).includes(route.naam)}
+                    onCheckedChange={(checked) => handleRouteAssignment(route.naam, !!checked)}
+                    className="h-5 w-5 rounded-md"
+                />
+                <Label htmlFor={`route-${route.id}`} className="font-black uppercase text-[11px] text-slate-700 cursor-pointer flex-1">{route.naam}</Label>
+                </div>
+            )) : (
+                <p className="text-[10px] font-black uppercase text-slate-300 italic py-4 text-center">Geen routes gevonden.</p>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -176,11 +182,15 @@ function PlanningAccordionContent({ selectedObject, handleUpdateField, projects,
 function IoTHistoryColumn({ sensor, history, isLoading }: { sensor: any, history: any[] | null, isLoading: boolean }) {
   if (isLoading) {
     return (
-      <div className="p-6 space-y-4">
-        <Skeleton className="h-4 w-24" />
-        <Skeleton className="h-20 w-full" />
-        <Skeleton className="h-4 w-32" />
-        <Skeleton className="h-40 w-full" />
+      <div className="p-8 space-y-6">
+        <Skeleton className="h-4 w-24 rounded-full" />
+        <Skeleton className="h-24 w-full rounded-3xl" />
+        <Skeleton className="h-4 w-32 rounded-full" />
+        <div className="space-y-3">
+            <Skeleton className="h-16 w-full rounded-2xl" />
+            <Skeleton className="h-16 w-full rounded-2xl" />
+            <Skeleton className="h-16 w-full rounded-2xl" />
+        </div>
       </div>
     );
   }
@@ -188,71 +198,73 @@ function IoTHistoryColumn({ sensor, history, isLoading }: { sensor: any, history
   if (!sensor) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-12 text-center text-slate-300">
-        <div className="bg-slate-50 p-6 rounded-full mb-4">
-          <Cpu className="h-10 w-10 opacity-20" />
+        <div className="bg-slate-50 p-10 rounded-[2.5rem] shadow-xl border-2 border-white mb-6">
+          <Cpu className="h-14 w-14 opacity-10" />
         </div>
-        <p className="text-[10px] font-black uppercase tracking-widest">Geen IOT Unit Gekoppeld</p>
-        <p className="text-[9px] font-medium text-slate-400 mt-2 max-w-[150px]">Koppel een sensor via het IOT dashboard met hetzelfde ID.</p>
+        <p className="text-xs font-black uppercase tracking-widest">Geen IOT Unit Gekoppeld</p>
+        <p className="text-[10px] font-bold text-slate-400 mt-3 max-w-[180px] leading-relaxed">
+            Koppel een sensor via de Wizard met het serienummer van dit object.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full bg-slate-50/50 border-l">
-      <div className="p-6 border-b bg-white">
-        <div className="flex items-center justify-between mb-4">
+    <div className="flex flex-col h-full bg-slate-50/30 border-l border-slate-100">
+      <div className="p-8 border-b bg-white/50 backdrop-blur-md">
+        <div className="flex items-center justify-between mb-6">
           <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">IOT Live Status</h3>
           <Badge variant="outline" className={cn(
-            "text-[9px] h-5 uppercase font-black px-2",
+            "text-[9px] h-6 uppercase font-black px-3 rounded-full border-2",
             sensor.status === 'Online' ? "text-green-600 border-green-200 bg-green-50" : "text-red-600 border-red-200 bg-red-50"
           )}>
             {sensor.status || 'Offline'}
           </Badge>
         </div>
         
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Vulgraad</p>
-            <p className="text-xl font-black text-slate-900 leading-none">{sensor.vulgraad || 0}%</p>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-white p-4 rounded-2xl border-2 border-slate-50 shadow-inner-soft text-center">
+            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Vulgraad</p>
+            <p className="text-2xl font-black text-slate-900 leading-none">{sensor.vulgraad || 0}%</p>
           </div>
-          <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Afstand</p>
-            <p className="text-xl font-black text-slate-900 leading-none">{sensor.currentDistanceCm || 0} cm</p>
+          <div className="bg-white p-4 rounded-2xl border-2 border-slate-50 shadow-inner-soft text-center">
+            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Afstand</p>
+            <p className="text-2xl font-black text-slate-900 leading-none">{sensor.currentDistanceCm || 0}<span className="text-xs ml-0.5 opacity-30">cm</span></p>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 p-6 space-y-4 overflow-y-auto no-scrollbar">
-        <div className="flex items-center gap-2">
-          <History className="h-3.5 w-3.5 text-slate-400" />
-          <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Historie (Metingen)</h4>
+      <div className="flex-1 p-8 space-y-6 overflow-y-auto no-scrollbar">
+        <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+          <History className="h-4 w-4 text-slate-400" />
+          <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Live Metingen</h4>
         </div>
         
-        <div className="space-y-2">
+        <div className="space-y-3">
           {history && history.length > 0 ? (
             history.map((log, i) => (
-              <div key={i} className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-100 shadow-sm transition-all hover:border-primary/20">
+              <div key={i} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 shadow-sm transition-premium hover:border-primary/20 hover:shadow-xl">
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-black text-slate-900">
+                  <span className="text-[11px] font-black text-slate-900 uppercase tracking-tighter">
                     {log.timestamp ? format(new Date(log.timestamp), 'dd MMM', { locale: nl }) : '--'}
                   </span>
                   <span className="text-[9px] font-bold text-slate-400">
                     {log.timestamp ? format(new Date(log.timestamp), 'HH:mm') : '--:--'}
                   </span>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <p className="text-xs font-black text-slate-900 leading-none">{log.vulgraad}%</p>
-                    <p className="text-[8px] font-bold text-slate-400 uppercase">{log.currentDistanceCm} cm</p>
+                    <p className="text-sm font-black text-slate-900 leading-none">{log.vulgraad}%</p>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase mt-0.5">{log.currentDistanceCm}cm</p>
                   </div>
-                  <Activity className="h-3 w-3 text-primary opacity-40" />
+                  <Activity className="h-4 w-4 text-primary opacity-20" />
                 </div>
               </div>
             ))
           ) : (
-            <div className="p-8 text-center border-2 border-dashed rounded-xl border-slate-100 bg-white/50">
-              <Clock className="h-6 w-6 text-slate-200 mx-auto mb-2" />
-              <p className="text-[9px] font-bold text-slate-400 uppercase">Geen historie beschikbaar</p>
+            <div className="py-20 text-center border-4 border-dashed rounded-[2.5rem] border-slate-100 bg-white/50">
+              <Clock className="h-8 w-8 text-slate-200 mx-auto mb-3 opacity-20" />
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-300">Geen logs</p>
             </div>
           )}
         </div>
@@ -680,97 +692,97 @@ export default function ObjectsPage() {
 
   return (
     <div className="flex flex-col flex-1 h-full min-h-0 bg-white">
-      <header className="flex flex-col md:flex-row items-center justify-between p-4 md:p-6 bg-white border-b shadow-sm gap-4 shrink-0">
-        <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto no-scrollbar pb-1">
+      <header className="flex flex-col md:flex-row items-center justify-between p-6 md:p-10 bg-white border-b shadow-premium gap-6 shrink-0">
+        <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto no-scrollbar pb-1">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="shrink-0 font-black h-9 gap-2 uppercase tracking-tighter transition-premium">
-                <Filter className="h-4 w-4" /> 
+              <Button variant="outline" size="sm" className="shrink-0 font-black h-11 gap-3 uppercase tracking-widest transition-premium px-6 rounded-2xl">
+                <Filter className="h-5 w-5" /> 
                 {typeFilter === 'all' ? 'Filter' : typeFilter}
-                <ChevronDown className="h-3 w-3 opacity-50" />
+                <ChevronDown className="h-4 w-4 opacity-50" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56 rounded-2xl shadow-2xl border-slate-100 p-2">
-              <DropdownMenuItem onClick={() => setTypeFilter('all')} className="font-bold flex items-center justify-between rounded-xl h-10">
+            <DropdownMenuContent align="start" className="w-64 rounded-[2rem] shadow-2xl border-slate-100 p-3">
+              <DropdownMenuItem onClick={() => setTypeFilter('all')} className="font-black uppercase text-[11px] tracking-widest flex items-center justify-between rounded-xl h-12">
                 Alles tonen {typeFilter === 'all' && <Check className="h-4 w-4" />}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTypeFilter('prullenbak')} className="font-bold flex items-center justify-between rounded-xl h-10">
+              <DropdownMenuItem onClick={() => setTypeFilter('prullenbak')} className="font-black uppercase text-[11px] tracking-widest flex items-center justify-between rounded-xl h-12">
                 Prullenbakken {typeFilter === 'prullenbak' && <Check className="h-4 w-4" />}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTypeFilter('container')} className="font-bold flex items-center justify-between rounded-xl h-10">
-                Ondergrondse containers {typeFilter === 'container' && <Check className="h-4 w-4" />}
+              <DropdownMenuItem onClick={() => setTypeFilter('container')} className="font-black uppercase text-[11px] tracking-widest flex items-center justify-between rounded-xl h-12">
+                Containers {typeFilter === 'container' && <Check className="h-4 w-4" />}
               </DropdownMenuItem>
               
               {customFilters.map(filter => (
-                <DropdownMenuItem key={filter} onClick={() => setTypeFilter(filter)} className="font-bold flex items-center justify-between rounded-xl h-10">
+                <DropdownMenuItem key={filter} onClick={() => setTypeFilter(filter)} className="font-black uppercase text-[11px] tracking-widest flex items-center justify-between rounded-xl h-12">
                     {filter} {typeFilter === filter && <Check className="h-4 w-4" />}
                 </DropdownMenuItem>
               ))}
 
               <DropdownMenuSeparator className="bg-slate-50" />
-              <DropdownMenuItem onClick={() => setIsAddFilterDialogOpen(true)} className="font-black uppercase tracking-tight text-primary rounded-xl h-10">
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  + Nieuw filter toevoegen
+              <DropdownMenuItem onClick={() => setIsAddFilterDialogOpen(true)} className="font-black uppercase tracking-tight text-primary rounded-xl h-12">
+                  <PlusCircle className="mr-3 h-5 w-5" />
+                  + Nieuw filter
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="shrink-0 font-black h-9 shadow-sm uppercase tracking-tighter gap-2 transition-premium">
-                <Settings2 className="mr-2 h-4 w-4" />
+              <Button variant="outline" size="sm" className="shrink-0 font-black h-11 shadow-sm uppercase tracking-widest gap-3 px-6 rounded-2xl transition-premium">
+                <Settings2 className="mr-2 h-5 w-5" />
                 Bulk Acties <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-64 p-2 rounded-2xl border-slate-100 shadow-xl">
-              <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3 pl-3">Beheer & Kwaliteit</DropdownMenuLabel>
-              <DropdownMenuItem onClick={handleSetAllActive} className="font-bold cursor-pointer rounded-xl h-11">
-                <ShieldCheck className="mr-3 h-4 w-4 text-green-600" />
+            <DropdownMenuContent align="start" className="w-72 p-3 rounded-[2rem] border-slate-100 shadow-2xl">
+              <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-4 pl-4">Beheer & Kwaliteit</DropdownMenuLabel>
+              <DropdownMenuItem onClick={handleSetAllActive} className="font-black uppercase text-[11px] tracking-widest cursor-pointer rounded-2xl h-14">
+                <ShieldCheck className="mr-4 h-5 w-5 text-green-600" />
                 Zet alle op Actief
               </DropdownMenuItem>
               
-              <DropdownMenuItem onClick={() => { setDupFilter(typeFilter); setIsQualityDialogOpen(true); }} className="font-bold cursor-pointer rounded-xl h-11">
-                <SearchCode className="mr-3 h-4 w-4 text-primary" />
-                Zoek duplicaten...
+              <DropdownMenuItem onClick={() => { setDupFilter(typeFilter); setIsQualityDialogOpen(true); }} className="font-black uppercase text-[11px] tracking-widest cursor-pointer rounded-2xl h-14">
+                <SearchCode className="mr-4 h-5 w-5 text-primary" />
+                Kwaliteitscontrole...
               </DropdownMenuItem>
               
               <DropdownMenuSeparator className="bg-slate-50" />
-              <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-3 pl-3">Opschonen</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => setIsBulkDeleteAlertOpen(true)} className="font-black uppercase tracking-tight text-red-600 cursor-pointer rounded-xl h-11 focus:text-red-600 focus:bg-red-50">
-                <Trash2 className="mr-3 h-4 w-4" />
-                Verwijder alle {currentFilterName}
+              <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400 py-4 pl-4">Opschonen</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => setIsBulkDeleteAlertOpen(true)} className="font-black uppercase tracking-widest text-[11px] text-red-600 cursor-pointer rounded-2xl h-14 focus:text-red-600 focus:bg-red-50">
+                <Trash2 className="mr-4 h-5 w-5" />
+                Wis alle {currentFilterName}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="default" size="sm" className="shrink-0 font-black h-9 uppercase tracking-tight shadow-md shadow-primary/10 transition-premium" onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}>
-            {viewMode === 'list' ? <MapIcon className="mr-2 h-4 w-4" /> : <List className="mr-2 h-4 w-4" />}
+          <Button variant="default" size="sm" className="shrink-0 font-black h-11 uppercase tracking-widest shadow-xl shadow-primary/10 transition-premium px-6 rounded-2xl" onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}>
+            {viewMode === 'list' ? <MapIcon className="mr-2 h-5 w-5" /> : <List className="mr-2 h-5 w-5" />}
             {viewMode === 'list' ? 'Kaart' : 'Lijst'}
           </Button>
           {viewMode === 'map' && (
-            <Button variant={showHeatmap ? 'secondary' : 'outline'} size="sm" className="shrink-0 font-black h-9 uppercase tracking-tighter border-2 transition-premium" onClick={() => setShowHeatmap(!showHeatmap)}>
-                <Palette className="mr-2 h-4 w-4" />
+            <Button variant={showHeatmap ? 'secondary' : 'outline'} size="sm" className="shrink-0 font-black h-11 uppercase tracking-widest border-2 transition-premium px-6 rounded-2xl" onClick={() => setShowHeatmap(!showHeatmap)}>
+                <Palette className="mr-2 h-5 w-5" />
                 Vulgraden
             </Button>
           )}
         </div>
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Zoek een object..." className="pl-9 h-9 font-bold bg-slate-50 border-none rounded-xl" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="relative flex-1 md:w-72">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+            <Input placeholder="Zoek object..." className="pl-12 h-11 font-black bg-slate-50 border-none rounded-2xl shadow-inner-soft" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
            <ObjectImportDialog
             open={isImporting}
             onOpenChange={setIsImporting}
             onSuccess={handleImportSuccess}
           >
-            <Button variant="outline" size="sm" className="h-9 font-black uppercase tracking-tighter transition-premium">
-              <Upload className="mr-2 h-4 w-4" />
+            <Button variant="outline" size="sm" className="h-11 font-black uppercase tracking-widest transition-premium px-6 rounded-2xl">
+              <Upload className="mr-2 h-5 w-5" />
               Import
             </Button>
           </ObjectImportDialog>
           <ObjectExportDialog objects={objects} projects={projects}>
-            <Button variant="outline" size="sm" className="h-9 font-black uppercase tracking-tighter transition-premium">
-              <Download className="mr-2 h-4 w-4" />
+            <Button variant="outline" size="sm" className="h-11 font-black uppercase tracking-widest transition-premium px-6 rounded-2xl">
+              <Download className="mr-2 h-5 w-5" />
               Export
             </Button>
           </ObjectExportDialog>
@@ -780,48 +792,48 @@ export default function ObjectsPage() {
       {viewMode === 'list' ? (
          <div className="flex flex-1 min-h-0 relative bg-slate-50/30">
          <aside className={cn(
-             "w-full lg:w-80 bg-white border-r flex flex-col transition-premium",
+             "w-full lg:w-96 bg-white border-r border-slate-100 flex flex-col transition-premium",
              isTablet && selectedObject ? "hidden" : "flex"
          )}>
-           <div className="p-6 border-b bg-slate-50/50">
-             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Geregistreerde Objecten</p>
-             <Input placeholder="Snel filteren op adres..." className="h-10 font-bold bg-white rounded-xl border-slate-200" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+           <div className="p-8 border-b bg-slate-50/50">
+             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Geregistreerde Units</p>
+             <Input placeholder="Zoek op adres..." className="h-12 font-black uppercase tracking-tighter bg-white rounded-2xl border-slate-200 shadow-inner-soft" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
            </div>
            <ScrollArea className="flex-1">
-              <div className="flex flex-col space-y-1 p-3">
+              <div className="flex flex-col space-y-2 p-4">
                {filteredObjectsList && filteredObjectsList.length > 0 ? (
                  filteredObjectsList.map((obj) => (
                    <div
                      key={obj.id}
                      onClick={() => setSelectedObject(obj)}
                      className={cn(
-                         "flex items-start justify-between p-4 rounded-2xl text-left cursor-pointer transition-premium",
+                         "flex items-start justify-between p-5 rounded-[2rem] text-left cursor-pointer transition-premium",
                          selectedObject?.id === obj.id && !isTablet
-                            ? "bg-primary text-white shadow-xl shadow-primary/20 scale-[1.02]"
+                            ? "bg-primary text-white shadow-2xl shadow-primary/20 scale-[1.02]"
                             : "hover:bg-slate-50"
                      )}
                    >
-                     <div className="flex items-start gap-4">
+                     <div className="flex items-start gap-5">
                        <div className={cn(
-                           "p-2.5 rounded-xl transition-premium",
+                           "p-3 rounded-2xl transition-premium shadow-sm",
                            selectedObject?.id === obj.id && !isTablet ? "bg-white/20" : "bg-slate-100"
                        )}>
-                        <MapPin className={cn("h-4 w-4", selectedObject?.id === obj.id && !isTablet ? "text-white" : "text-primary")} />
+                        <MapPin className={cn("h-5 w-5", selectedObject?.id === obj.id && !isTablet ? "text-white" : "text-primary")} />
                        </div>
                        <div className="min-w-0">
-                         <p className={cn("font-black uppercase tracking-tight text-xs", selectedObject?.id === obj.id && !isTablet ? "text-white" : "text-slate-900")}>{obj.idNummer || obj.id}</p>
-                         <p className={cn("text-[10px] font-bold uppercase tracking-widest truncate mt-0.5", selectedObject?.id === obj.id && !isTablet ? "text-white/70" : "text-slate-400")}>
-                           {obj.straatnaam ? `${obj.straatnaam} ${obj.huisnummer || ''}` : 'Adres onbekend'}
+                         <p className={cn("font-black uppercase tracking-tighter text-sm leading-none mb-1.5", selectedObject?.id === obj.id && !isTablet ? "text-white" : "text-slate-900")}>{obj.idNummer || obj.id}</p>
+                         <p className={cn("text-[10px] font-bold uppercase tracking-widest truncate", selectedObject?.id === obj.id && !isTablet ? "text-white/70" : "text-slate-400")}>
+                           {obj.straatnaam ? `${obj.straatnaam} ${obj.huisnummer || ''}` : 'Locatie onbekend'}
                          </p>
                        </div>
                      </div>
-                      <ChevronRight className={cn("h-4 w-4 mt-1 transition-premium", selectedObject?.id === obj.id && !isTablet ? "text-white" : "text-slate-200")} />
+                      <ChevronRight className={cn("h-5 w-5 mt-2.5 transition-premium", selectedObject?.id === obj.id && !isTablet ? "text-white" : "text-slate-200")} />
                    </div>
                  ))
                ) : (
-                  <div className="p-12 text-center text-muted-foreground bg-slate-50/50 rounded-3xl m-4 border-2 border-dashed border-slate-100">
-                   <MapPin className="h-12 w-12 mx-auto mb-4 opacity-10" />
-                   <p className="font-bold uppercase text-[10px] tracking-widest">Geen objecten gevonden</p>
+                  <div className="p-20 text-center text-muted-foreground bg-slate-50/50 rounded-[3rem] m-6 border-4 border-dashed border-slate-100">
+                   <MapPin className="h-16 w-16 mx-auto mb-6 opacity-10" />
+                   <p className="font-black uppercase text-[11px] tracking-widest">Geen resultaten</p>
                  </div>
                )}
              </div>
@@ -835,58 +847,58 @@ export default function ObjectsPage() {
               {selectedObject ? (
                <div className="h-full flex-1 flex flex-col">
                <div className="p-0 flex-1 flex flex-col xl:grid xl:grid-cols-12 gap-0 overflow-hidden">
-                 <div className="xl:col-span-5 space-y-8 p-8 border-r border-slate-100 overflow-y-auto custom-scrollbar">
-                     <div className="flex items-center gap-6 mb-8">
+                 <div className="xl:col-span-5 space-y-10 p-10 border-r border-slate-100 overflow-y-auto custom-scrollbar bg-white">
+                     <div className="flex items-center gap-8 mb-10">
                         {isTablet && (
-                            <Button variant="ghost" size="icon" onClick={() => setSelectedObject(null)} className="h-11 w-11 rounded-2xl bg-slate-50 border border-slate-100 shrink-0">
-                                <ArrowLeft className="h-5 w-5" />
+                            <Button variant="ghost" size="icon" onClick={() => setSelectedObject(null)} className="h-14 w-14 rounded-3xl bg-slate-50 border-2 border-slate-100 shrink-0">
+                                <ArrowLeft className="h-6 w-6" />
                             </Button>
                         )}
                         <div className="min-w-0">
-                            <h2 className="text-3xl font-black uppercase tracking-tighter text-slate-900 leading-none mb-1 truncate">{selectedObject.idNummer || selectedObject.id}</h2>
-                            <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-[10px] font-black uppercase border-2 tracking-widest">{selectedObject.locatieSubType || 'Basis Object'}</Badge>
-                                <Badge variant="secondary" className="bg-blue-50 text-blue-600 border-none font-black text-[9px] uppercase">{selectedObject.locatieType}</Badge>
+                            <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none mb-3 truncate">{selectedObject.idNummer || selectedObject.id}</h2>
+                            <div className="flex items-center gap-3">
+                                <Badge variant="outline" className="text-[10px] font-black uppercase border-2 tracking-widest px-4 h-7 rounded-full">{selectedObject.locatieSubType || 'Basis Object'}</Badge>
+                                <Badge variant="secondary" className="bg-blue-50 text-blue-600 border-none font-black text-[10px] uppercase px-4 h-7 rounded-full">{selectedObject.locatieType}</Badge>
                             </div>
                         </div>
                      </div>
 
-                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                       <div className="space-y-6">
-                         <div className="space-y-2">
-                           <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Locatie type</Label>
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-10">
+                       <div className="space-y-8">
+                         <div className="space-y-3">
+                           <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Locatie type</Label>
                            <Select value={selectedObject.locatieType} onValueChange={(v) => handleUpdateField('locatieType', v)}>
-                             <SelectTrigger className="h-11 font-black bg-slate-50 border-none shadow-inner rounded-xl">
+                             <SelectTrigger className="h-14 font-black uppercase tracking-tight bg-slate-50 border-none shadow-inner-soft rounded-2xl px-5">
                                <SelectValue />
                              </SelectTrigger>
-                             <SelectContent className="rounded-2xl shadow-2xl border-slate-100">
-                               <SelectItem value={selectedObject.locatieType} className="font-bold rounded-xl">{selectedObject.locatieType}</SelectItem>
+                             <SelectContent className="rounded-3xl shadow-2xl border-slate-100 p-2">
+                               <SelectItem value={selectedObject.locatieType} className="font-bold rounded-2xl h-12">{selectedObject.locatieType}</SelectItem>
                              </SelectContent>
                            </Select>
                          </div>
-                         <div className="space-y-2">
-                           <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Kwaliteit (Beeldbestek)</Label>
+                         <div className="space-y-3">
+                           <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Kwaliteit (Bestek)</Label>
                            <Select value={selectedObject.kwaliteit} onValueChange={(v) => handleUpdateField('kwaliteit', v)}>
-                             <SelectTrigger className="h-11 font-black bg-slate-50 border-none shadow-inner rounded-xl">
+                             <SelectTrigger className="h-14 font-black uppercase tracking-tight bg-slate-50 border-none shadow-inner-soft rounded-2xl px-5">
                                <SelectValue />
                              </SelectTrigger>
-                             <SelectContent className="rounded-2xl shadow-2xl border-slate-100">
-                               <SelectItem value="A" className="font-bold rounded-xl">A - Hoogwaardig</SelectItem>
-                               <SelectItem value="B" className="font-bold rounded-xl">B - Standaard</SelectItem>
-                               <SelectItem value="C" className="font-bold rounded-xl">C - Minimaal</SelectItem>
+                             <SelectContent className="rounded-3xl shadow-2xl border-slate-100 p-2">
+                               <SelectItem value="A" className="font-bold rounded-2xl h-12">A - Hoogwaardig</SelectItem>
+                               <SelectItem value="B" className="font-bold rounded-2xl h-12">B - Standaard</SelectItem>
+                               <SelectItem value="C" className="font-bold rounded-2xl h-12">C - Minimaal</SelectItem>
                              </SelectContent>
                            </Select>
                          </div>
                        </div>
-                       <div className="space-y-6">
-                         <div className="space-y-2">
-                           <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Status Beheer</Label>
-                           <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 shadow-inner">
+                       <div className="space-y-8">
+                         <div className="space-y-3">
+                           <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Status Beheer</Label>
+                           <div className="flex items-center justify-between p-5 bg-slate-50 rounded-[1.5rem] border-2 border-slate-100 shadow-inner-soft">
                              <div className="flex flex-col">
-                                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none">Operationeel</span>
-                                  <span className="text-[9px] font-bold text-slate-400 mt-1 uppercase">Systeemactief</span>
+                                  <span className="text-[11px] font-black uppercase tracking-widest text-slate-400 leading-none mb-1">Operationeel</span>
+                                  <span className="text-[9px] font-bold text-slate-400 uppercase">Actief in route</span>
                              </div>
-                             <div className="flex items-center gap-3">
+                             <div className="flex items-center gap-4">
                                <Switch
                                  checked={selectedObject.isActief}
                                  onCheckedChange={(c) => handleUpdateField('isActief', c)}
@@ -895,84 +907,84 @@ export default function ObjectsPage() {
                              </div>
                            </div>
                          </div>
-                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Locatie coördinaten</Label>
-                            <div className="grid grid-cols-2 gap-2">
-                                <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 shadow-inner">
-                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">LAT</p>
-                                    <p className="font-mono text-[10px] font-bold text-slate-900 leading-none">{selectedObject.latitude?.toFixed(6)}</p>
+                         <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">GIS Coördinaten</Label>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-100 shadow-inner-soft text-center">
+                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1.5">LAT</p>
+                                    <p className="font-mono text-[11px] font-bold text-slate-900">{selectedObject.latitude?.toFixed(6)}</p>
                                 </div>
-                                <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 shadow-inner">
-                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">LNG</p>
-                                    <p className="font-mono text-[10px] font-bold text-slate-900 leading-none">{selectedObject.longitude?.toFixed(6)}</p>
+                                <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-100 shadow-inner-soft text-center">
+                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1.5">LNG</p>
+                                    <p className="font-mono text-[11px] font-bold text-slate-900">{selectedObject.longitude?.toFixed(6)}</p>
                                 </div>
                             </div>
                          </div>
                        </div>
                      </div>
  
-                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 items-end">
-                         <div className="sm:col-span-2 space-y-2">
-                             <Label htmlFor="street-name" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Straatnaam</Label>
+                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 items-end">
+                         <div className="sm:col-span-2 space-y-3">
+                             <Label htmlFor="street-name" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Straatnaam</Label>
                              <Input
                              id="street-name"
                              value={selectedObject.straatnaam || ''}
                              onChange={(e) => handleUpdateField('straatnaam', e.target.value)}
-                             className="h-11 font-black bg-slate-50 border-none shadow-inner rounded-xl"
+                             className="h-14 font-black uppercase tracking-tighter bg-slate-50 border-none shadow-inner-soft rounded-2xl px-5 text-base"
                              />
                          </div>
-                         <div className="space-y-2">
-                             <Label htmlFor="house-number" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Huisnr.</Label>
+                         <div className="space-y-3">
+                             <Label htmlFor="house-number" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Huisnr.</Label>
                              <Input 
                                  id="house-number" 
                                  value={selectedObject.huisnummer || ''}
                                  onChange={(e) => handleUpdateField('huisnummer', e.target.value)}
-                                 className="h-11 font-black bg-slate-50 border-none shadow-inner rounded-xl"
+                                 className="h-14 font-black uppercase tracking-tighter bg-slate-50 border-none shadow-inner-soft rounded-2xl px-5 text-base text-center"
                              />
                          </div>
                      </div>
  
-                     <div>
-                       <Accordion type="single" collapsible className="w-full bg-slate-50/50 rounded-2xl border-2 border-slate-100 px-6">
+                     <div className="pt-4">
+                       <Accordion type="single" collapsible className="w-full bg-slate-50/50 rounded-[2rem] border-2 border-slate-100 px-8">
                          <AccordionItem value="planning" className="border-none">
-                             <AccordionTrigger className="font-black uppercase tracking-widest text-[10px] text-slate-400 hover:no-underline py-5 group transition-premium">
-                                <div className="flex items-center gap-3">
-                                    <LayoutGrid className="h-4 w-4 text-primary group-hover:scale-110 transition-premium" />
-                                    Routing & Route-toewijzing
+                             <AccordionTrigger className="font-black uppercase tracking-widest text-[11px] text-slate-400 hover:no-underline py-7 group transition-premium">
+                                <div className="flex items-center gap-4">
+                                    <LayoutGrid className="h-5 w-5 text-primary group-hover:scale-110 transition-premium" />
+                                    Project & Route Koppeling
                                 </div>
                              </AccordionTrigger>
-                             <AccordionContent className="pt-0 pb-8">
+                             <AccordionContent className="pt-0 pb-10">
                                 <PlanningAccordionContent selectedObject={selectedObject} handleUpdateField={handleUpdateField} projects={projects} isLoadingProjects={isLoadingProjects} />
                              </AccordionContent>
                          </AccordionItem>
                        </Accordion>
                      </div>
 
-                     <div className="space-y-6 pt-4">
-                         <div className="space-y-2">
-                             <Label htmlFor="warning" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Waarschuwing / Bijzonderheden</Label>
-                             <Textarea id="warning" placeholder="Typ hier eventuele veiligheidsmeldingen..." value={selectedObject.waarschuwing || ''} onChange={(e) => handleUpdateField('waarschuwing', e.target.value)} className="resize-none font-medium italic border-none shadow-inner bg-orange-50/50 focus:ring-orange-500/20 rounded-2xl p-4 min-h-[100px]" />
+                     <div className="space-y-8 pt-6">
+                         <div className="space-y-3">
+                             <Label htmlFor="warning" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Waarschuwing / Memo</Label>
+                             <Textarea id="warning" placeholder="Typ hier bijzonderheden..." value={selectedObject.waarschuwing || ''} onChange={(e) => handleUpdateField('waarschuwing', e.target.value)} className="resize-none font-medium italic border-none shadow-inner-soft bg-orange-50/50 focus:ring-orange-500/20 rounded-[2rem] p-6 min-h-[140px] leading-relaxed" />
                          </div>
-                         <Separator className="bg-slate-100" />
-                         <div className="space-y-4">
-                             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Gekoppeld aan routes</h3>
-                             <div className="flex flex-wrap gap-2">
+                         <Separator className="bg-slate-50" />
+                         <div className="space-y-5">
+                             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Geplande Routes</h3>
+                             <div className="flex flex-wrap gap-3">
                               {selectedObject.locatieWerkgebieden && selectedObject.locatieWerkgebieden.length > 0 ? (
                                 selectedObject.locatieWerkgebieden.map((gebied: string) => (
-                                    <Badge key={gebied} variant="secondary" className="bg-blue-50 text-blue-600 border-none font-black uppercase text-[9px] tracking-widest px-4 h-7 rounded-full shadow-sm">
+                                    <Badge key={gebied} variant="secondary" className="bg-blue-50 text-blue-600 border-none font-black uppercase text-[10px] tracking-widest px-6 h-9 rounded-full shadow-sm">
                                         {gebied}
                                     </Badge>
                                 ))
                               ) : (
-                                <p className="text-xs font-medium text-slate-300 italic py-2 pl-1">Dit object is nog niet aan een route gekoppeld.</p>
+                                <p className="text-xs font-bold text-slate-300 italic py-4 pl-2">Nog niet ingepland in een route.</p>
                               )}
                              </div>
                          </div>
                      </div>
                  </div>
  
-                 <div className="xl:col-span-4 space-y-8 p-8 bg-slate-50/30 border-r border-slate-100 overflow-y-auto custom-scrollbar">
-                     <Card className="h-72 rounded-3xl border-none shadow-2xl overflow-hidden bg-white group">
+                 <div className="xl:col-span-4 space-y-10 p-10 bg-slate-50/30 border-r border-slate-100 overflow-y-auto custom-scrollbar">
+                     <Card className="h-80 rounded-[2.5rem] border-none shadow-2xl overflow-hidden bg-white group ring-8 ring-white/50">
                         <CardContent className="p-0 h-full relative">
                             <MapboxView 
                                 key={selectedObject?.id}
@@ -980,39 +992,39 @@ export default function ObjectsPage() {
                                 latitude={selectedObject?.latitude}
                                 interactive={false}
                             />
-                            <div className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur px-3 py-1.5 rounded-full shadow-lg border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-900 group-hover:scale-105 transition-premium">
-                                GIS Locatie
+                            <div className="absolute top-6 left-6 z-10 bg-white/95 backdrop-blur-md px-4 py-2 rounded-2xl shadow-xl border border-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-900 group-hover:scale-105 transition-premium">
+                                <MapPin className="h-3 w-3 inline mr-2 text-primary" /> GIS Locatie
                             </div>
                         </CardContent>
                      </Card>
                      
-                     <Card className="rounded-3xl border-none shadow-2xl overflow-hidden bg-white p-8">
-                        <div className="flex justify-between items-end mb-4">
-                            <div className="space-y-1">
+                     <Card className="rounded-[2.5rem] border-none shadow-2xl overflow-hidden bg-white p-10 ring-8 ring-white/50">
+                        <div className="flex justify-between items-end mb-6">
+                            <div className="space-y-1.5">
                                 <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Object Vulgraad</h3>
-                                <p className="text-[9px] font-bold text-slate-400 uppercase">Laatste Meting</p>
+                                <p className="text-[9px] font-black text-primary uppercase tracking-widest">Real-time Meting</p>
                             </div>
-                            <span className="text-4xl font-black text-slate-900 leading-none tracking-tighter">{selectedObject?.vulgraad || 0}%</span>
+                            <span className="text-5xl font-black text-slate-900 leading-none tracking-tighter">{selectedObject?.vulgraad || 0}<span className="text-xl opacity-20 ml-1">%</span></span>
                         </div>
-                        <Progress value={selectedObject?.vulgraad || 0} variant="gauge" className="h-3 bg-slate-100 rounded-full" />
-                        <div className="mt-6 grid grid-cols-2 gap-4">
-                            <div className="bg-slate-50 p-3 rounded-2xl text-center">
-                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Status</span>
-                                <span className="text-[10px] font-black text-slate-900 uppercase">Geen Alarm</span>
+                        <Progress value={selectedObject?.vulgraad || 0} variant="gauge" className="h-4 bg-slate-100 rounded-full" />
+                        <div className="mt-10 grid grid-cols-2 gap-6">
+                            <div className="bg-slate-50 p-4 rounded-2xl text-center shadow-inner-soft">
+                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Systeem Status</span>
+                                <span className="text-[11px] font-black text-slate-900 uppercase">Operationeel</span>
                             </div>
-                            <div className="bg-slate-50 p-3 rounded-2xl text-center">
-                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">ID</span>
-                                <span className="text-[10px] font-black text-slate-900 uppercase font-mono">{selectedObject.idNummer || 'N.B.'}</span>
+                            <div className="bg-slate-50 p-4 rounded-2xl text-center shadow-inner-soft">
+                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Systeem ID</span>
+                                <span className="text-[11px] font-black text-slate-900 uppercase font-mono">{selectedObject.idNummer || 'N.B.'}</span>
                             </div>
                         </div>
                      </Card>
 
-                     <Card className="h-64 rounded-3xl border-none shadow-2xl overflow-hidden bg-white flex flex-col items-center justify-center text-slate-300 p-8 group cursor-pointer hover:bg-slate-50 transition-premium">
-                        <div className="bg-slate-50 p-8 rounded-full mb-4 group-hover:scale-110 transition-premium">
-                            <ImageIcon className="h-12 w-12 opacity-10" />
+                     <Card className="h-72 rounded-[2.5rem] border-none shadow-2xl overflow-hidden bg-white flex flex-col items-center justify-center text-slate-300 p-10 group cursor-pointer hover:bg-slate-50 transition-premium ring-8 ring-white/50">
+                        <div className="bg-slate-50 p-10 rounded-[3rem] mb-6 group-hover:scale-110 transition-premium shadow-inner-soft border-2 border-white">
+                            <ImageIcon className="h-14 w-14 opacity-10" />
                         </div>
-                        <p className="text-[10px] font-black uppercase tracking-widest">Foto Toevoegen</p>
-                        <Button variant="ghost" size="sm" className="mt-4 font-black uppercase tracking-widest text-[9px] text-primary">Media Upload</Button>
+                        <p className="text-[10px] font-black uppercase tracking-widest">Geen Media Gekoppeld</p>
+                        <Button variant="ghost" size="sm" className="mt-5 font-black uppercase tracking-widest text-[9px] text-primary bg-primary/5 hover:bg-primary/10 px-6 rounded-full">Upload Foto</Button>
                      </Card>
                  </div>
  
@@ -1023,12 +1035,12 @@ export default function ObjectsPage() {
                </div>
              ) : (
                  <div className="flex flex-1 flex-col items-center justify-center text-center bg-slate-50/50 p-12">
-                    <div className="bg-white p-12 rounded-[3rem] shadow-2xl mb-8 border-2 border-slate-100">
-                        <MapPin className="h-24 w-24 text-slate-200 opacity-20" />
+                    <div className="bg-white p-16 rounded-[4rem] shadow-2xl mb-10 border-4 border-white ring-8 ring-slate-100/50">
+                        <MapPin className="h-32 w-32 text-slate-200 opacity-20" />
                     </div>
-                    <h3 className="text-2xl font-black uppercase tracking-tight text-slate-900 mb-2">Geen object geselecteerd</h3>
-                    <p className="text-slate-400 font-medium max-w-xs mx-auto leading-relaxed">
-                        Kies een unit uit de lijst aan de linkerkant om de details, planning en IOT-sensordata te bekijken.
+                    <h3 className="text-3xl font-black uppercase tracking-tight text-slate-900 mb-3">Geen object geselecteerd</h3>
+                    <p className="text-slate-400 font-bold max-w-sm mx-auto leading-relaxed uppercase text-[11px] tracking-widest opacity-60">
+                        Kies een unit uit de lijst aan de linkerkant om de details, planning en IOT-sensordata te beheren.
                     </p>
                  </div>
              )}
@@ -1037,115 +1049,115 @@ export default function ObjectsPage() {
       )}
 
       <Dialog open={isAddFilterDialogOpen} onOpenChange={setIsAddFilterDialogOpen}>
-        <DialogContent className="rounded-3xl border-none shadow-2xl">
+        <DialogContent className="rounded-[3rem] border-none shadow-2xl p-8">
           <DialogHeader>
-            <DialogTitle className="text-xl font-black uppercase tracking-tight">Nieuwe Categorie</DialogTitle>
-            <DialogDescription className="font-bold text-slate-500">
-              Voer een naam in voor de nieuwe objectcategorie (bijv. Lichtmasten).
+            <DialogTitle className="text-2xl font-black uppercase tracking-tight">Nieuwe Categorie</DialogTitle>
+            <DialogDescription className="font-bold text-slate-500 mt-2">
+              Voer een naam in voor de nieuwe objectcategorie voor filtering.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-6">
-            <Label htmlFor="filter-name" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Categorienaam</Label>
+          <div className="py-8">
+            <Label htmlFor="filter-name" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Categorienaam</Label>
             <Input 
               id="filter-name" 
               value={newFilterName} 
               onChange={(e) => setNewFilterName(e.target.value)} 
-              placeholder="Bijv. Lichtmasten"
-              className="h-12 font-black uppercase bg-slate-50 border-none rounded-xl mt-2"
+              placeholder="Bv. Lichtmasten"
+              className="h-14 font-black uppercase tracking-tighter bg-slate-50 border-none rounded-2xl mt-3 shadow-inner-soft text-lg text-center"
               autoFocus
             />
           </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setIsAddFilterDialogOpen(false)} className="font-bold text-slate-400">Annuleren</Button>
-            <Button onClick={handleAddCustomFilter} disabled={!newFilterName.trim() || isSavingFilter} className="h-12 px-8 font-black uppercase tracking-tight shadow-xl shadow-primary/20">
-              {isSavingFilter ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Filter Toevoegen
+          <DialogFooter className="gap-3">
+            <Button variant="ghost" onClick={() => setIsAddFilterDialogOpen(false)} className="font-black uppercase tracking-widest text-[10px] text-slate-400">Annuleren</Button>
+            <Button onClick={handleAddCustomFilter} disabled={!newFilterName.trim() || isSavingFilter} className="h-14 px-12 font-black uppercase tracking-tight shadow-2xl shadow-primary/20 rounded-2xl">
+              {isSavingFilter ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : null}
+              Filter Aanmaken
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <AlertDialog open={isBulkDeleteAlertOpen} onOpenChange={setIsBulkDeleteAlertOpen}>
-        <AlertDialogContent className="rounded-3xl border-none shadow-2xl">
+        <AlertDialogContent className="rounded-[3rem] border-none shadow-2xl p-8">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl font-black uppercase tracking-tight">Data Verwijderen?</AlertDialogTitle>
-            <AlertDialogDescription className="font-bold text-slate-500 leading-relaxed">
-              U staat op het punt om <span className="text-red-600">{filteredObjectsList.length}</span> objecten te verwijderen onder de filter: <span className="text-slate-900 uppercase font-black">{currentFilterName}</span>. 
+            <AlertDialogTitle className="text-2xl font-black uppercase tracking-tight">Data Verwijderen?</AlertDialogTitle>
+            <AlertDialogDescription className="font-bold text-slate-500 leading-relaxed mt-4">
+              U staat op het punt om <span className="text-red-600 font-black">{filteredObjectsList.length}</span> objecten te verwijderen onder de filter: <span className="text-slate-900 uppercase font-black">{currentFilterName}</span>. 
               Deze actie kan niet ongedaan worden gemaakt.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="mt-6">
-            <AlertDialogCancel disabled={isBulkLoading} className="font-bold border-none">Annuleren</AlertDialogCancel>
+          <AlertDialogFooter className="mt-10 gap-3">
+            <AlertDialogCancel disabled={isBulkLoading} className="font-black uppercase tracking-widest text-[10px] text-slate-400 border-none">Annuleren</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleBulkDelete} 
               disabled={isBulkLoading}
-              className="bg-red-600 hover:bg-red-700 h-12 px-8 font-black uppercase tracking-tight shadow-xl shadow-red-600/20"
+              className="bg-red-600 hover:bg-red-700 h-14 px-12 font-black uppercase tracking-tight shadow-2xl shadow-red-600/20 rounded-2xl"
             >
-              {isBulkLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-              Ja, verwijder alles
+              {isBulkLoading ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : <Trash2 className="mr-3 h-5 w-5" />}
+              Ja, Wis Alles
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       <Dialog open={isQualityDialogOpen} onOpenChange={setIsQualityDialogOpen}>
-        <DialogContent className="sm:max-w-md border-none shadow-2xl rounded-[2.5rem] flex flex-col p-0 overflow-hidden h-[80vh]">
-          <DialogHeader className="p-8 bg-slate-900 text-white shrink-0">
-            <div className="bg-primary/20 h-14 w-14 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
-                <SearchCode className="h-7 w-7 text-primary" />
+        <DialogContent className="sm:max-w-xl border-none shadow-2xl rounded-[3.5rem] flex flex-col p-0 overflow-hidden h-[85vh]">
+          <DialogHeader className="p-10 bg-slate-900 text-white shrink-0">
+            <div className="bg-primary/30 h-16 w-16 rounded-[1.5rem] flex items-center justify-center mb-8 shadow-2xl border-2 border-white/10">
+                <SearchCode className="h-8 w-8 text-white" />
             </div>
-            <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Slimme Kwaliteitscontrole</DialogTitle>
-            <DialogDescription className="text-slate-400 font-bold">
+            <DialogTitle className="text-3xl font-black uppercase tracking-tighter leading-none mb-2">Kwaliteitscontrole</DialogTitle>
+            <DialogDescription className="text-slate-400 font-black uppercase tracking-widest text-[10px] opacity-60">
               Scan de database op dubbele coördinaten of ID's.
             </DialogDescription>
           </DialogHeader>
           
-          <ScrollArea className="flex-1 p-8 bg-white">
-            <div className="space-y-10">
-              <div className="space-y-4">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Scan Bereik</Label>
+          <ScrollArea className="flex-1 p-10 bg-white">
+            <div className="space-y-12">
+              <div className="space-y-5">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Scan Bereik</Label>
                 <Select value={dupFilter} onValueChange={setDupFilter}>
-                  <SelectTrigger className="h-12 font-black border-2 bg-white rounded-2xl transition-premium">
-                    <SelectValue placeholder="Kies scan bereik..." />
+                  <SelectTrigger className="h-14 font-black uppercase tracking-tighter border-none bg-slate-50 rounded-2xl px-6 shadow-inner-soft transition-premium text-lg">
+                    <SelectValue placeholder="Kies bereik..." />
                   </SelectTrigger>
-                  <SelectContent className="rounded-2xl shadow-2xl border-slate-100">
-                    <SelectItem value="all" className="font-bold rounded-xl">Volledige database</SelectItem>
+                  <SelectContent className="rounded-[2rem] shadow-2xl border-slate-100 p-2">
+                    <SelectItem value="all" className="font-bold rounded-xl h-12">Volledige database</SelectItem>
                     <SelectGroup>
-                      <SelectLabel className="text-[10px] font-black uppercase text-slate-400 py-2">Filters</SelectLabel>
-                      <SelectItem value="prullenbak" className="font-bold rounded-xl">Alleen Prullenbakken</SelectItem>
-                      <SelectItem value="container" className="font-bold rounded-xl">Alleen Containers</SelectItem>
+                      <SelectLabel className="text-[10px] font-black uppercase text-slate-400 py-3 pl-4 tracking-widest">Filters</SelectLabel>
+                      <SelectItem value="prullenbak" className="font-bold rounded-xl h-12">Alleen Prullenbakken</SelectItem>
+                      <SelectItem value="container" className="font-bold rounded-xl h-12">Alleen Containers</SelectItem>
                       {customFilters.map(f => (
-                        <SelectItem key={f} value={f} className="font-bold rounded-xl">{f}</SelectItem>
+                        <SelectItem key={f} value={f} className="font-bold rounded-xl h-12">{f}</SelectItem>
                       ))}
                     </SelectGroup>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-4">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Selecteer Criteria</Label>
-                <div className="grid gap-3">
-                  <div className="flex items-center space-x-4 p-4 rounded-2xl border-2 border-slate-50 hover:bg-slate-50 transition-premium cursor-pointer group" onClick={() => setDupCriteria(p => ({ ...p, location: !p.location }))}>
-                      <Checkbox checked={dupCriteria.location} onCheckedChange={(c) => setDupCriteria(p => ({ ...p, location: !!c }))} className="rounded-md border-slate-300 h-5 w-5" />
+              <div className="space-y-5">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Selecteer Criteria</Label>
+                <div className="grid gap-4">
+                  <div className="flex items-center space-x-5 p-6 rounded-[2rem] border-2 border-slate-50 hover:bg-slate-50 transition-premium cursor-pointer group" onClick={() => setDupCriteria(p => ({ ...p, location: !p.location }))}>
+                      <Checkbox checked={dupCriteria.location} onCheckedChange={(c) => setDupCriteria(p => ({ ...p, location: !!c }))} className="rounded-xl border-slate-300 h-7 w-7" />
                       <div className="flex-1 min-w-0">
-                          <Label className="font-black uppercase text-xs cursor-pointer text-slate-900 group-hover:text-primary transition-premium">Exacte Coördinaten</Label>
-                          <p className="text-[10px] text-slate-400 font-bold leading-tight mt-1">Match op Latitude & Longitude</p>
+                          <Label className="font-black uppercase text-sm cursor-pointer text-slate-900 group-hover:text-primary transition-premium tracking-tight">Exacte Coördinaten</Label>
+                          <p className="text-[10px] text-slate-400 font-bold leading-tight mt-1.5 tracking-wide">Match op Latitude & Longitude</p>
                       </div>
                   </div>
                   
-                  <div className="flex items-center space-x-4 p-4 rounded-2xl border-2 border-slate-50 hover:bg-slate-50 transition-premium cursor-pointer group" onClick={() => setDupCriteria(p => ({ ...p, id: !p.id }))}>
-                      <Checkbox checked={dupCriteria.id} onCheckedChange={(c) => setDupCriteria(p => ({ ...p, id: !!c }))} className="rounded-md border-slate-300 h-5 w-5" />
+                  <div className="flex items-center space-x-5 p-6 rounded-[2rem] border-2 border-slate-50 hover:bg-slate-50 transition-premium cursor-pointer group" onClick={() => setDupCriteria(p => ({ ...p, id: !p.id }))}>
+                      <Checkbox checked={dupCriteria.id} onCheckedChange={(c) => setDupCriteria(p => ({ ...p, id: !!c }))} className="rounded-xl border-slate-300 h-7 w-7" />
                       <div className="flex-1 min-w-0">
-                          <Label className="font-black uppercase text-xs cursor-pointer text-slate-900 group-hover:text-primary transition-premium">ID Nummer (bv. 141619)</Label>
-                          <p className="text-[10px] text-slate-400 font-bold leading-tight mt-1">Match op uniek systeemnummer</p>
+                          <Label className="font-black uppercase text-sm cursor-pointer text-slate-900 group-hover:text-primary transition-premium tracking-tight">ID Nummer (bv. 141619)</Label>
+                          <p className="text-[10px] text-slate-400 font-bold leading-tight mt-1.5 tracking-wide">Match op uniek systeemnummer</p>
                       </div>
                   </div>
 
-                  <div className="flex items-center space-x-4 p-4 rounded-2xl border-2 border-slate-50 hover:bg-slate-50 transition-premium cursor-pointer group" onClick={() => setDupCriteria(p => ({ ...p, address: !p.address }))}>
-                      <Checkbox checked={dupCriteria.address} onCheckedChange={(c) => setDupCriteria(p => ({ ...p, address: !!c }))} className="rounded-md border-slate-300 h-5 w-5" />
+                  <div className="flex items-center space-x-5 p-6 rounded-[2rem] border-2 border-slate-50 hover:bg-slate-50 transition-premium cursor-pointer group" onClick={() => setDupCriteria(p => ({ ...p, address: !p.address }))}>
+                      <Checkbox checked={dupCriteria.address} onCheckedChange={(c) => setDupCriteria(p => ({ ...p, address: !!c }))} className="rounded-xl border-slate-300 h-7 w-7" />
                       <div className="flex-1 min-w-0">
-                          <Label className="font-black uppercase text-xs cursor-pointer text-slate-900 group-hover:text-primary transition-premium">Straatnaam & Nummer</Label>
-                          <p className="text-[10px] text-slate-400 font-bold leading-tight mt-1">Match op fysieke adresgegevens</p>
+                          <Label className="font-black uppercase text-sm cursor-pointer text-slate-900 group-hover:text-primary transition-premium tracking-tight">Straatnaam & Nummer</Label>
+                          <p className="text-[10px] text-slate-400 font-bold leading-tight mt-1.5 tracking-wide">Match op fysieke adresgegevens</p>
                       </div>
                   </div>
                 </div>
@@ -1153,10 +1165,10 @@ export default function ObjectsPage() {
             </div>
           </ScrollArea>
 
-          <DialogFooter className="p-8 border-t bg-slate-50 shrink-0">
+          <DialogFooter className="p-10 border-t bg-slate-50 shrink-0 gap-4">
             <Button variant="ghost" onClick={() => setIsQualityDialogOpen(false)} className="font-black uppercase text-slate-400 tracking-widest text-[10px]">Annuleren</Button>
-            <Button onClick={handleFindDuplicates} disabled={isFindingDuplicates || (!dupCriteria.location && !dupCriteria.id && !dupCriteria.address)} className="font-black uppercase tracking-tight h-12 px-10 shadow-xl shadow-primary/20 rounded-2xl ml-auto">
-              {isFindingDuplicates ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileCheck className="mr-2 h-4 w-4" />}
+            <Button onClick={handleFindDuplicates} disabled={isFindingDuplicates || (!dupCriteria.location && !dupCriteria.id && !dupCriteria.address)} className="font-black uppercase tracking-tight h-14 px-12 shadow-2xl shadow-primary/20 rounded-2xl ml-auto text-base">
+              {isFindingDuplicates ? <Loader2 className="mr-3 h-6 w-6 animate-spin" /> : <FileCheck className="mr-3 h-6 w-6" />}
               Start Analyse
             </Button>
           </DialogFooter>
@@ -1164,62 +1176,62 @@ export default function ObjectsPage() {
       </Dialog>
 
       <Dialog open={isDuplicateDialogOpen} onOpenChange={setIsDuplicateDialogOpen}>
-        <DialogContent className="sm:max-w-3xl h-[85vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl rounded-[2.5rem]">
-          <DialogHeader className="p-8 border-b bg-slate-50 shrink-0">
+        <DialogContent className="sm:max-w-4xl h-[85vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl rounded-[3.5rem]">
+          <DialogHeader className="p-10 border-b bg-slate-50 shrink-0">
             <div className="flex items-center justify-between">
                 <div>
-                    <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Analyse Resultaten</DialogTitle>
-                    <DialogDescription className="font-bold text-slate-500">
-                        Er zijn <span className="text-primary font-black">{duplicateObjects.length}</span> objecten gevonden die mogelijk duplicaten zijn.
+                    <DialogTitle className="text-3xl font-black uppercase tracking-tighter leading-none mb-2">Analyse Resultaten</DialogTitle>
+                    <DialogDescription className="font-black uppercase tracking-widest text-[10px] text-slate-400">
+                        Gevonden duplicaten in systeem: <span className="text-primary font-black ml-1">{duplicateObjects.length} objecten</span>
                     </DialogDescription>
                 </div>
-                <Badge variant="outline" className="h-8 px-4 border-2 font-black uppercase tracking-widest bg-white">Scan Voltooid</Badge>
+                <Badge variant="outline" className="h-10 px-6 border-4 font-black uppercase tracking-widest bg-white rounded-2xl shadow-sm">Scan Voltooid</Badge>
             </div>
           </DialogHeader>
           
           <ScrollArea className="flex-1 bg-white">
-            <div className="p-8">
-              <div className="divide-y border rounded-[2rem] overflow-hidden bg-white shadow-sm transition-premium">
+            <div className="p-10">
+              <div className="divide-y border-2 border-slate-50 rounded-[2.5rem] overflow-hidden bg-white shadow-xl transition-premium">
                 {duplicateObjects.map((item, i) => (
-                  <div key={i} className="p-5 flex items-center justify-between hover:bg-slate-50 transition-premium group border-slate-50">
+                  <div key={i} className="p-6 flex items-center justify-between hover:bg-slate-50 transition-premium group border-slate-50">
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-3 mb-1.5">
-                          <p className="font-black text-sm uppercase tracking-tight text-slate-900 truncate">
+                      <div className="flex items-center gap-4 mb-2">
+                          <p className="font-black text-lg uppercase tracking-tight text-slate-900 truncate">
                               {item.obj.idNummer || item.obj.id}
                           </p>
-                          <Badge variant="outline" className="text-[8px] h-4 uppercase font-black bg-slate-50 border-none text-slate-400">{item.reason}</Badge>
-                          <Badge variant="secondary" className="text-[8px] h-4 uppercase font-bold bg-blue-50 text-blue-600 border-none flex items-center gap-1">
-                              <Tag className="h-2 w-2" /> {item.obj.locatieType}
+                          <Badge variant="outline" className="text-[9px] h-5 uppercase font-black bg-slate-50 border-none text-slate-400 tracking-widest">{item.reason}</Badge>
+                          <Badge variant="secondary" className="text-[9px] h-5 uppercase font-black bg-blue-50 text-blue-600 border-none flex items-center gap-2 px-3">
+                              <Tag className="h-3 w-3" /> {item.obj.locatieType}
                           </Badge>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{item.obj.straatnaam} {item.obj.huisnummer}</p>
-                        <p className="text-[9px] font-mono font-bold text-slate-300 tabular-nums">
+                      <div className="flex items-center gap-6">
+                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest truncate">{item.obj.straatnaam} {item.obj.huisnummer}</p>
+                        <p className="text-[10px] font-mono font-bold text-slate-300 tabular-nums">
                             {item.obj.latitude?.toFixed(5)}, {item.obj.longitude?.toFixed(5)}
                         </p>
                       </div>
                     </div>
                     <div className="text-right shrink-0">
-                      <Button variant="ghost" size="icon" onClick={() => { setSelectedObject(item.obj); setIsDuplicateDialogOpen(false); }} className="h-10 w-10 rounded-full bg-slate-50 text-slate-300 hover:text-primary hover:bg-white hover:shadow-md transition-premium">
-                          <ChevronRight className="h-5 w-5" />
+                      <Button variant="ghost" size="icon" onClick={() => { setSelectedObject(item.obj); setIsDuplicateDialogOpen(false); }} className="h-12 w-12 rounded-2xl bg-slate-50 text-slate-300 hover:text-primary hover:bg-white hover:shadow-xl transition-premium">
+                          <ChevronRight className="h-6 w-6" />
                       </Button>
                     </div>
                   </div>
                 ))}
                 {duplicateObjects.length === 0 && (
-                    <div className="p-20 text-center text-slate-300 flex flex-col items-center gap-4">
-                        <CheckCircle className="h-16 w-16 text-green-100" />
-                        <p className="text-sm font-black uppercase tracking-widest text-slate-400">Database is schoon. Geen duplicaten.</p>
+                    <div className="p-32 text-center text-slate-300 flex flex-col items-center gap-6">
+                        <CheckCircle className="h-24 w-24 text-green-100" />
+                        <p className="text-sm font-black uppercase tracking-widest text-slate-400">Database is schoon. Geen duplicaten gevonden.</p>
                     </div>
                 )}
               </div>
             </div>
           </ScrollArea>
 
-          <DialogFooter className="p-8 border-t bg-slate-50 shrink-0">
+          <DialogFooter className="p-10 border-t bg-slate-50 shrink-0 gap-4">
             <Button variant="ghost" onClick={() => setIsDuplicateDialogOpen(false)} className="font-black uppercase text-[10px] tracking-widest text-slate-400">Sluiten</Button>
-            <Button onClick={handleExportDuplicates} disabled={duplicateObjects.length === 0} className="h-12 px-10 font-black uppercase tracking-tight shadow-xl shadow-primary/20 rounded-2xl ml-auto">
-              <Download className="mr-2 h-4 w-4" />
+            <Button onClick={handleExportDuplicates} disabled={duplicateObjects.length === 0} className="h-14 px-12 font-black uppercase tracking-tight shadow-2xl shadow-primary/20 rounded-2xl ml-auto text-base">
+              <Download className="mr-3 h-6 w-6" />
               Exporteer Rapport (XLSX)
             </Button>
           </DialogFooter>

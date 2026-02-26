@@ -82,15 +82,15 @@ function Header() {
   };
 
   return (
-    <header className="bg-white/95 backdrop-blur-xl flex h-16 shrink-0 items-center justify-between border-b px-4 md:px-8 z-40 sticky top-0 shadow-sm transition-premium">
-      <div className="flex items-center gap-4">
+    <header className="bg-white/80 backdrop-blur-2xl flex h-20 shrink-0 items-center justify-between border-b px-6 md:px-10 z-40 sticky top-0 transition-all duration-500">
+      <div className="flex items-center gap-6">
         <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="hover:bg-slate-100 rounded-xl h-10 w-10 text-slate-600">
-              <Menu className="h-6 w-6" />
+            <Button variant="ghost" size="icon" className="hover:bg-slate-100 rounded-2xl h-12 w-12 text-slate-600 transition-premium">
+              <Menu className="h-7 w-7" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="p-0 border-none w-[320px] sm:w-80 shadow-2xl">
+          <SheetContent side="left" className="p-0 border-none w-[340px] shadow-2xl">
             <SheetHeader className="sr-only">
                 <SheetTitle>Navigatie Menu</SheetTitle>
             </SheetHeader>
@@ -103,13 +103,13 @@ function Header() {
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-4">
         <div className="hidden lg:flex items-center relative mr-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               type="text"
               placeholder="Snel zoeken..."
-              className="pl-9 h-10 w-64 bg-slate-50 border-none focus:ring-2 focus:ring-primary/10 rounded-xl text-sm font-bold outline-none transition-premium"
+              className="pl-11 h-12 w-72 bg-slate-50 border-none focus:ring-4 focus:ring-primary/5 rounded-[1.25rem] text-sm font-bold outline-none transition-premium shadow-inner-soft"
             />
         </div>
 
@@ -117,8 +117,8 @@ function Header() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-10 w-10 rounded-xl p-0 hover:bg-slate-50 transition-premium ml-1">
-              <Avatar className="h-9 w-9 rounded-xl border-2 border-white shadow-sm ring-1 ring-slate-100">
+            <Button variant="ghost" className="relative h-12 w-12 rounded-2xl p-0 hover:bg-slate-50 transition-premium ml-1">
+              <Avatar className="h-10 w-10 rounded-2xl border-4 border-white shadow-xl ring-1 ring-slate-100">
                 <AvatarImage src={user?.photoURL || undefined} alt={profile?.displayName || ''} />
                 <AvatarFallback className="bg-primary text-white font-black text-[10px]">
                   {getInitials(profile?.firstName, profile?.lastName)}
@@ -126,40 +126,40 @@ function Header() {
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-64 mt-2 rounded-2xl shadow-2xl border-slate-100 p-2" align="end">
-            <DropdownMenuLabel className="font-normal p-4">
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-black leading-none text-slate-900">{profile?.displayName}</p>
+          <DropdownMenuContent className="w-72 mt-4 rounded-[2rem] shadow-2xl border-slate-100 p-3" align="end">
+            <DropdownMenuLabel className="font-normal p-5">
+              <div className="flex flex-col space-y-1.5">
+                <p className="text-base font-black leading-none text-slate-900 uppercase tracking-tight">{profile?.displayName}</p>
                 <p className="text-[10px] font-black leading-none text-muted-foreground mt-1 uppercase tracking-widest">
                   {user?.email}
                 </p>
               </div>
             </DropdownMenuLabel>
-            <DropdownMenuSeparator className="bg-slate-100" />
-            <div className="p-1 space-y-1">
-                <DropdownMenuItem asChild className="rounded-xl h-10 font-bold focus:bg-slate-50 cursor-pointer">
+            <DropdownMenuSeparator className="bg-slate-50" />
+            <div className="p-1.5 space-y-1.5">
+                <DropdownMenuItem asChild className="rounded-2xl h-12 font-bold focus:bg-slate-50 cursor-pointer">
                     <Link href="/profile" className="flex items-center w-full">
-                        <User className="mr-3 h-4 w-4 text-primary" />
+                        <User className="mr-4 h-5 w-5 text-primary" />
                         <span>Mijn Profiel</span>
                     </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild className="rounded-xl h-10 font-bold focus:bg-slate-50 cursor-pointer">
+                <DropdownMenuItem asChild className="rounded-2xl h-12 font-bold focus:bg-slate-50 cursor-pointer">
                     <Link href="/settings" className="flex items-center w-full">
-                        <Settings className="mr-3 h-4 w-4 text-primary" />
+                        <Settings className="mr-4 h-5 w-5 text-primary" />
                         <span>Instellingen</span>
                     </Link>
                 </DropdownMenuItem>
             </div>
-            <DropdownMenuSeparator className="bg-slate-100" />
-            <div className="p-1">
+            <DropdownMenuSeparator className="bg-slate-50" />
+            <div className="p-1.5">
                 <DropdownMenuItem 
                     onClick={() => {
                         localStorage.removeItem('impersonatedUserProfileId');
                         signOut(auth);
                     }}
-                    className="rounded-xl h-10 font-black uppercase tracking-tight text-red-600 focus:bg-red-50 focus:text-red-600 cursor-pointer"
+                    className="rounded-2xl h-12 font-black uppercase tracking-tight text-red-600 focus:bg-red-50 focus:text-red-600 cursor-pointer"
                 >
-                    <LogOut className="mr-3 h-4 w-4" />
+                    <LogOut className="mr-4 h-5 w-5" />
                     Uitloggen
                 </DropdownMenuItem>
             </div>
