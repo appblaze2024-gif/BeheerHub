@@ -882,7 +882,7 @@ export default function NewIssuePage() {
                                 </Card>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3 mt-auto">
+                            <div className="grid grid-cols-2 gap-3 mt-1">
                                 <Button 
                                     type="button" 
                                     variant="outline" 
