@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -64,7 +63,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { MapboxView } from '@/components/mapbox-view';
 import { ObjectImportDialog } from '@/components/object-import-dialog';
 import { useCollection, useFirestore, updateDocumentNonBlocking, useMemoFirebase, useDoc, setDocumentNonBlocking } from '@/firebase';
@@ -393,9 +392,6 @@ export default function ObjectsPage() {
                         <TooltipContent>Objecten binnen 25m filteren</TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                    <Badge variant="secondary" className="px-3 py-1 font-semibold rounded-lg bg-slate-100 border-none text-slate-600 max-w-[100px] truncate">
-                      {typeFilter === 'all' ? 'Alle Objecten' : typeFilter}
-                    </Badge>
                 </div>
               </div>
               <ScrollArea className="flex-1">
@@ -432,7 +428,7 @@ export default function ObjectsPage() {
                 ) : (
                   <div className="p-12 text-center text-muted-foreground">
                     <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-20" />
-                    <p className="text-xs font-medium">Geen resultaten</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest">Geen resultaten</p>
                   </div>
                 )}
               </ScrollArea>
