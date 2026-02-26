@@ -36,6 +36,7 @@ import {
   MapPinned,
   X,
   Pencil,
+  Calendar,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -90,6 +91,16 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+
+const DAYS_OF_WEEK = [
+  { id: 'maandag', label: 'Ma' },
+  { id: 'dinsdag', label: 'Di' },
+  { id: 'woensdag', label: 'Wo' },
+  { id: 'donderdag', label: 'Do' },
+  { id: 'vrijdag', label: 'Vr' },
+  { id: 'zaterdag', label: 'Za' },
+  { id: 'zondag', label: 'Zo' },
+];
 
 export default function ObjectsPage() {
   const firestore = useFirestore();
@@ -167,8 +178,6 @@ export default function ObjectsPage() {
         batch.set(filtersRef, { custom: updatedFilters }, { merge: true });
         
         // 2. Update all objects that have this tag (if they are currently loaded or we fetch them)
-        // Note: For large datasets, this might require a more complex server-side function, 
-        // but for typical category sizes it works in a batch.
         if (objects && objects.length > 0) {
             objects.forEach(obj => {
                 if (obj.locatieType === filterToRename) {
@@ -398,6 +407,38 @@ export default function ObjectsPage() {
                                 <Label className="text-[10px] font-bold uppercase text-zinc-400 tracking-widest ml-1">Subtype</Label>
                                 <Input value={selectedObject.locatieSubType || ''} onChange={e => handleUpdateField('locatieSubType', e.target.value)} className="h-11 font-bold rounded-lg border-zinc-200" />
                             </div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-6">
+                        <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 border-b pb-3 flex items-center gap-2"><Calendar className="h-4 w-4" /> Weekplanning</h3>
+                        <p className="text-[10px] font-medium text-zinc-400 uppercase tracking-widest">Selecteer de dagen waarop deze unit geleegd of gecontroleerd moet worden.</p>
+                        <div className="flex flex-wrap gap-3">
+                            {DAYS_OF_WEEK.map((day) => {
+                                const isActive = selectedObject.planningDagen?.includes(day.id);
+                                return (
+                                    <Button
+                                        key={day.id}
+                                        variant={isActive ? 'default' : 'outline'}
+                                        size="sm"
+                                        className={cn(
+                                            "h-12 w-12 rounded-2xl font-black transition-all duration-300 uppercase text-[10px] tracking-tight",
+                                            isActive 
+                                                ? "bg-zinc-900 text-white shadow-xl scale-110 border-zinc-900 ring-4 ring-zinc-900/10" 
+                                                : "text-zinc-400 border-zinc-200 hover:border-zinc-400 hover:text-zinc-600"
+                                        )}
+                                        onClick={() => {
+                                            const current = selectedObject.planningDagen || [];
+                                            const next = isActive 
+                                                ? current.filter((d: string) => d !== day.id)
+                                                : [...current, day.id];
+                                            handleUpdateField('planningDagen', next);
+                                        }}
+                                    >
+                                        {day.label}
+                                    </Button>
+                                );
+                            })}
                         </div>
                     </div>
 
