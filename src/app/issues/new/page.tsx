@@ -81,6 +81,7 @@ import {
   DialogDescription,
   DialogTrigger,
   DialogClose,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -815,8 +816,7 @@ export default function NewIssuePage() {
                                     <FormField control={form.control} name="meldingsdatum" render={({ field }) => (
                                         <FormItem>
                                             <FormLabel className="text-[10px] font-black uppercase text-slate-400">Meldingsdatum</FormLabel>
-                                            <FormControl><Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} className="h-10 font-bold" disabled={isReadOnly} /></FormControl>
-                                        </FormItem>
+                                            <FormControl><Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} className="h-10 font-bold" disabled={isReadOnly} /></FormItem>
                                     )} />
                                     <FormField control={form.control} name="meldingsuur" render={({ field }) => (
                                         <FormItem>
@@ -827,8 +827,7 @@ export default function NewIssuePage() {
                                     <FormField control={form.control} name="voorvaldatum" render={({ field }) => (
                                         <FormItem>
                                             <FormLabel className="text-[10px] font-black uppercase text-slate-400">Voorvaldatum</FormLabel>
-                                            <FormControl><Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} className="h-10 font-bold" disabled={isReadOnly} /></FormControl>
-                                        </FormItem>
+                                            <FormControl><Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} className="h-10 font-bold" disabled={isReadOnly} /></FormItem>
                                     )} />
                                     <FormField control={form.control} name="voorvaltijd" render={({ field }) => (
                                         <FormItem>
@@ -839,8 +838,7 @@ export default function NewIssuePage() {
                                     <FormField control={form.control} name="actiedatum" render={({ field }) => (
                                         <FormItem>
                                             <FormLabel className="text-[10px] font-black uppercase text-slate-400">Actiedatum</FormLabel>
-                                            <FormControl><Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} className="h-10 font-bold" disabled={isReadOnly} /></FormControl>
-                                        </FormItem>
+                                            <FormControl><Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} className="h-10 font-bold" disabled={isReadOnly} /></FormItem>
                                     )} />
                                 </div>
                             </CardContent>
