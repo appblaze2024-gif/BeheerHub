@@ -690,11 +690,6 @@ export default function NewIssuePage() {
                 <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-8 w-8 rounded-full hover:bg-slate-100">
                     <ArrowLeft className="h-4 w-4" />
                 </Button>
-                <div>
-                    <h1 className="text-base font-bold text-slate-900 leading-none">
-                        {viewedMelding ? `Melding: ${viewedMelding.intakenummer}` : 'Nieuwe Melding'}
-                    </h1>
-                </div>
             </div>
             
             <div className="flex items-center gap-2">
@@ -718,7 +713,7 @@ export default function NewIssuePage() {
                     <div className="p-4 lg:p-6 space-y-4">
                         <Form {...form}>
                             <form id="new-melding-form" onSubmit={form.handleSubmit(onSubmit)} className="w-full max-w-full space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     <Card className="rounded-xl border-slate-200 shadow-sm overflow-hidden bg-white">
                                         <CardHeader className="bg-slate-50 border-b py-1 px-4">
                                             <CardTitle className="text-[9px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
@@ -896,7 +891,7 @@ export default function NewIssuePage() {
                                         </CardHeader>
                                         <CardContent className="p-3 pt-0">
                                             <FormField control={form.control} name="extra_informatie" render={({ field }) => (
-                                                <FormItem><FormControl><Textarea {...field} className="resize-none min-h-[80px] text-[11px] font-medium border-slate-200 bg-slate-50/30" placeholder="Omschrijving melding..." disabled={isReadOnly}/></FormControl></FormItem>
+                                                <FormItem><FormControl><Textarea {...field} className="resize-none min-h-[60px] text-[11px] font-medium border-slate-200 bg-slate-50/30" placeholder="Omschrijving melding..." disabled={isReadOnly}/></FormControl></FormItem>
                                             )} />
                                         </CardContent>
                                     </Card>
@@ -910,7 +905,7 @@ export default function NewIssuePage() {
                                             </CardTitle>
                                         </CardHeader>
                                         <CardContent className="p-3 bg-slate-50/30">
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
                                                 <Card className="aspect-[2/1] border-2 border-dashed border-slate-200 bg-white flex flex-col items-center justify-center text-slate-400 hover:border-primary/30 hover:text-primary transition-all cursor-pointer group" onClick={() => document.getElementById('media-doc-input')?.click()}>
                                                     <UploadCloud className="h-5 w-5 mb-1 group-hover:scale-110 transition-transform" />
                                                     <span className="text-[8px] font-bold uppercase">Document</span>
