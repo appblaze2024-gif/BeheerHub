@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -18,7 +17,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useNavigationUI } from '@/context/navigation-ui-context';
 import { useToast } from '@/components/ui/use-toast';
 import {
   DropdownMenu,
@@ -36,16 +34,8 @@ export default function MeldingenportaalPage() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = React.useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = React.useState('');
-  const { setIsHeaderVisible } = useNavigationUI();
 
   const [selectedMeldingForForward, setSelectedMeldingForForward] = React.useState<Melding | null>(null);
-
-  React.useEffect(() => {
-    setIsHeaderVisible(false);
-    return () => {
-      setIsHeaderVisible(true);
-    };
-  }, [setIsHeaderVisible]);
 
   // Portaal Query: Only fetch 'Nieuw' meldingen, sorted by creation date
   const portalQuery = useMemoFirebase(() => {

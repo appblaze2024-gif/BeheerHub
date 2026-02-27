@@ -20,7 +20,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useNavigationUI } from '@/context/navigation-ui-context';
 import { LoadingScreen } from '@/components/loading-screen';
 
 const openStatuses = [
@@ -36,14 +35,6 @@ export default function OpenIssuesPage() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = React.useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = React.useState('');
-  const { setIsHeaderVisible } = useNavigationUI();
-
-  React.useEffect(() => {
-    setIsHeaderVisible(false);
-    return () => {
-      setIsHeaderVisible(true);
-    };
-  }, [setIsHeaderVisible]);
 
   // OPTIMIZED QUERY: Only fetch meldingen with open statuses
   const meldingenQuery = useMemoFirebase(() => {

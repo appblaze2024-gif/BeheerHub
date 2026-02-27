@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -20,7 +19,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useNavigationUI } from '@/context/navigation-ui-context';
 import { LoadingScreen } from '@/components/loading-screen';
 
 const closedStatuses = ["Afgerond", "Niet in beheer", "Geweigerd", "Dubbel gemeld"];
@@ -31,14 +29,6 @@ export default function ArchiveIssuesPage() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = React.useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = React.useState('');
-  const { setIsHeaderVisible } = useNavigationUI();
-
-  React.useEffect(() => {
-    setIsHeaderVisible(false);
-    return () => {
-      setIsHeaderVisible(true);
-    };
-  }, [setIsHeaderVisible]);
 
   // OPTIMIZED QUERY: Filter by status only to avoid composite index requirements
   const archiveQuery = useMemoFirebase(() => {
