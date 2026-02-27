@@ -26,9 +26,10 @@ import { useFirestore, useMemoFirebase, useDoc, setDocumentNonBlocking } from '@
 import { collection, doc, writeBatch, arrayUnion } from 'firebase/firestore';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { AlertCircle, CheckCircle, Loader2, PlusCircle, Tag } from 'lucide-material';
+import { AlertCircle, CheckCircle, Loader2, PlusCircle, Tag } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import * as shapefile from 'shapefile';
+import { ScrollArea } from './ui/scroll-area';
 
 interface ObjectImportDialogProps {
   children: React.ReactNode;
