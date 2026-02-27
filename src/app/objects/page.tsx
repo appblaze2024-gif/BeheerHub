@@ -63,7 +63,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { AlertCircle as AlertCircleIcon } from 'lucide-react';
 import { MapboxView } from '@/components/mapbox-view';
 import { ObjectImportDialog } from '@/components/object-import-dialog';
 import { useCollection, useFirestore, updateDocumentNonBlocking, useMemoFirebase, useDoc, setDocumentNonBlocking } from '@/firebase';
@@ -91,6 +92,17 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -117,6 +129,7 @@ export default function ObjectsPage() {
   const [newFilterName, setNewFilterName] = React.useState('');
   const [isSavingFilter, setIsSavingFilter] = React.useState(false);
   const [filterToRename, setFilterToRename] = React.useState<string | null>(null);
+  const [isDeletingAll, setIsDeletingAll] = React.useState(false);
 
   // Proximity Filter States
   const [isProximityFilterActive, setIsProximityFilterActive] = React.useState(false);
@@ -198,6 +211,35 @@ export default function ObjectsPage() {
     );
   };
 
+  const handleDeleteFilteredObjects = async () => {
+    if (!firestore || !filteredObjectsList.length || !typeFilter) return;
+    
+    setIsDeletingAll(true);
+    const batchSize = 500;
+    const itemsToDelete = [...filteredObjectsList];
+    
+    try {
+      for (let i = 0; i < itemsToDelete.length; i += batchSize) {
+        const batch = writeBatch(firestore);
+        const chunk = itemsToDelete.slice(i, i + batchSize);
+        chunk.forEach(obj => {
+          batch.delete(doc(firestore, 'objects', obj.id));
+        });
+        await batch.commit();
+      }
+      toast({ 
+        title: 'Gereed', 
+        description: `${itemsToDelete.length} objecten verwijderd uit categorie ${typeFilter === 'all' ? 'Alle Objecten' : typeFilter}.` 
+      });
+      setSelectedObject(null);
+    } catch (error) {
+      console.error("Delete error:", error);
+      toast({ variant: 'destructive', title: 'Fout bij verwijderen' });
+    } finally {
+      setIsDeletingAll(false);
+    }
+  };
+
   const handleUpdateField = (field: string, value: any) => {
     if (!firestore || !selectedObject) return;
     const objectRef = doc(firestore, 'objects', selectedObject.id);
@@ -216,6 +258,7 @@ export default function ObjectsPage() {
     } catch (error) {
         toast({ variant: 'destructive', title: 'Fout', description: 'Kon het filter niet opslaan.' });
     } finally {
+        setIsAddFilterDialogOpen(false);
         setIsSavingFilter(false);
     }
   };
@@ -392,6 +435,39 @@ export default function ObjectsPage() {
                         <TooltipContent>Objecten binnen 25m filteren</TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
+
+                    {filteredObjectsList.length > 0 && (
+                      <AlertDialog>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <AlertDialogTrigger asChild>
+                              <TooltipTrigger asChild>
+                                <Button 
+                                  variant="outline" 
+                                  size="icon" 
+                                  className="h-9 w-9 rounded-xl text-red-400 border-slate-200 hover:text-red-600 hover:bg-red-50"
+                                >
+                                  {isDeletingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                </Button>
+                              </TooltipTrigger>
+                            </AlertDialogTrigger>
+                            <TooltipContent>Alle objecten in deze filter wissen</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Dit zal <strong>{filteredObjectsList.length} objecten</strong> definitief verwijderen uit de categorie <strong>{typeFilter === 'all' ? 'Alle Objecten' : typeFilter}</strong>. Deze actie kan niet ongedaan worden gemaakt.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDeleteFilteredObjects} className="bg-red-600 hover:bg-red-700">Ja, alles wissen</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
                 </div>
               </div>
               <ScrollArea className="flex-1">

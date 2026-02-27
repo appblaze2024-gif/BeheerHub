@@ -26,7 +26,7 @@ import { useFirestore, useMemoFirebase, useDoc, setDocumentNonBlocking } from '@
 import { collection, doc, writeBatch, arrayUnion } from 'firebase/firestore';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { AlertCircle, CheckCircle, Loader2, PlusCircle, Tag } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader2, PlusCircle, Tag } from 'lucide-material';
 import * as XLSX from 'xlsx';
 import * as shapefile from 'shapefile';
 
@@ -474,8 +474,8 @@ export function ObjectImportDialog({
                                 </SelectTrigger>
                                 <SelectContent>
                                 <SelectItem value="--ignore--">-- Negeer --</SelectItem>
-                                {headers.map((header) => (
-                                    <SelectItem key={header} value={header}>
+                                {headers.map((header, idx) => (
+                                    <SelectItem key={`${header}-${idx}`} value={header}>
                                     {header}
                                     </SelectItem>
                                 ))}
