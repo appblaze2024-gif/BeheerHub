@@ -52,50 +52,6 @@ import Image from 'next/image';
 import { PDFDocument } from 'pdf-lib';
 import * as pdfjs from 'pdfjs-dist';
 
-// UI Components
-import { Button } from '@/components/ui/button';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogTrigger,
-  DialogClose,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-
-// Custom Components & AI
-import { MapboxView } from '@/components/mapbox-view';
-import { parseIssuePdf } from '@/ai/flows/parse-issue-pdf-flow';
-import { IssueImportDialog } from '@/components/issue-import-dialog';
-
-// Types
-import type { Melding, UploadedFile, Object as MapObject } from '@/lib/types';
-import { cn } from '@/lib/utils';
-
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
@@ -718,6 +674,20 @@ export default function NewIssuePage() {
     }
   };
 
+  const geocodeAddress = async (address: string) => {
+    if (!address || address.length < 5) return { lat: 0, lng: 0 };
+    try {
+        const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=${MAPBOX_TOKEN}&country=NL&limit=1`);
+        const geo = await res.json();
+        if (geo.features?.length > 0) {
+            return { lng: geo.features[0].center[0], lat: geo.features[0].center[1] };
+        }
+    } catch (e) {
+        console.warn("Geocoding failed:", e);
+    }
+    return { lat: 0, lng: 0 };
+  };
+
   const handlePdfUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0 || !firestore || !app) return;
@@ -728,55 +698,59 @@ export default function NewIssuePage() {
 
     try {
         for (const file of fileArray) {
-            const extractedText = await pdfjs.getDocument(await file.arrayBuffer()).promise.then(async pdf => {
-                let txt = '';
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    const pg = await pdf.getPage(i);
-                    txt += (await pg.getTextContent()).items.map((it: any) => it.str).join(' ') + '\n';
-                }
-                return txt;
-            });
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjs.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+            
+            let textContent = '';
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const pg = await pdf.getPage(i);
+                const text = await pg.getTextContent();
+                textContent += text.items.map((it: any) => it.str).join(' ') + '\n';
+            }
 
-            const isTextAvailable = extractedText.length > 50;
-            const base64 = await new Promise<string>((resolve) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target?.result as string);
-                reader.readAsDataURL(file);
-            });
+            const isTextAvailable = textContent.trim().length > 50;
+            let base64 = '';
+            if (!isTextAvailable) {
+                base64 = await new Promise<string>((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target?.result as string);
+                    reader.readAsDataURL(file);
+                });
+            }
 
             const result = await parseIssuePdf({ 
                 pdfDataUri: isTextAvailable ? undefined : base64,
-                textContent: isTextAvailable ? extractedText : undefined,
+                textContent: isTextAvailable ? textContent : undefined,
                 instructions: pdfInstructions
             });
 
             if (result.meldingen.length === 1 && fileArray.length === 1) {
-                // If it's a single melding, fill the form directly
-                await handleSmartFill(result.meldingen[0]);
+                const parsed = result.meldingen[0];
+                await handleSmartFill(parsed);
                 
-                // Upload original PDF as a file attachment to the form
                 const storagePath = `meldingen/temp/${Date.now()}-${file.name}`;
-                const uploadTask = uploadBytesResumable(ref(getStorage(app), storagePath), file);
+                const storageRef = ref(getStorage(app), storagePath);
+                const uploadTask = uploadBytesResumable(storageRef, file);
                 await uploadTask;
                 const url = await getDownloadURL(uploadTask.snapshot.ref);
-                setUploadedFiles(prev => [...prev, { name: file.name, url, size: file.size, type: file.type, uploadedAt: new Date().toISOString(), storagePath }]);
                 
-                toast({ title: "Scan voltooid", description: "Het formulier is ingevuld op basis van de scan." });
+                setUploadedFiles(prev => [...prev, { 
+                    name: file.name, 
+                    url, 
+                    size: file.size, 
+                    type: file.type, 
+                    uploadedAt: new Date().toISOString(), 
+                    storagePath 
+                }]);
+                
+                toast({ title: "Scan voltooid", description: "Het formulier is ingevuld." });
             } else {
-                // Bulk creation logic for multiple results
-                const pdfArrayBuffer = await file.arrayBuffer();
-                const pdfDoc = await PDFDocument.load(pdfArrayBuffer);
+                const pdfDoc = await PDFDocument.load(arrayBuffer);
+                const userDisplayName = profile?.displayName || profile?.email || 'Onbekend';
 
                 for (const parsed of result.meldingen) {
-                    let lat = 0; let lng = 0;
                     const fullAddress = `${parsed.straatnaam || ''} ${parsed.huisnummer || ''}, ${parsed.plaats || ''}`.trim();
-                    if (fullAddress.length > 5) {
-                        try {
-                            const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(fullAddress)}.json?access_token=${MAPBOX_TOKEN}&country=NL&limit=1`);
-                            const geo = await res.json();
-                            if (geo.features?.length > 0) [lng, lat] = geo.features[0].center;
-                        } catch (e) {}
-                    }
+                    const { lat, lng } = await geocodeAddress(fullAddress);
 
                     const mData: any = {
                         intakenummer: parsed.intakenummer || `M-${Date.now()}`,
@@ -796,32 +770,46 @@ export default function NewIssuePage() {
                         longitude: lng,
                         datum: parsed.datum || format(new Date(), 'yyyy-MM-dd'),
                         tijdstip: parsed.tijdstip || format(new Date(), 'HH:mm'),
-                        aangenomen_door: profile?.displayName || profile?.email || 'Onbekend',
+                        aangenomen_door: userDisplayName,
                         createdAt: serverTimestamp(),
                         updatedAt: serverTimestamp(),
                     };
 
-                    const docRef = await addDoc(collection(firestore, 'meldingen'), mData);
+                    const meldingenCol = collection(firestore, 'meldingen');
+                    const meldingDocRef = doc(meldingenCol);
                     
-                    if (parsed.paginanummer) {
-                        const i = parsed.paginanummer - 1;
-                        const newDoc = await PDFDocument.create();
-                        const [copiedPage] = await newDoc.copyPages(pdfDoc, [i]);
-                        newDoc.addPage(copiedPage);
-                        const pdfBytes = await newDoc.save();
+                    if (parsed.paginanummer && parsed.paginanummer <= pdf.numPages) {
+                        const newPdf = await PDFDocument.create();
+                        const [page] = await newPdf.copyPages(pdfDoc, [parsed.paginanummer - 1]);
+                        newPdf.addPage(page);
+                        const pdfBytes = await newPdf.save();
                         const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-                        const storagePath = `meldingen/${docRef.id}/documents/${Date.now()}-bon_${parsed.intakenummer}.pdf`;
-                        const snap = await uploadBytesResumable(ref(getStorage(app), storagePath), blob);
-                        const url = await getDownloadURL(snap.ref);
-                        await updateDoc(docRef, { files: [{ name: `bon_${parsed.intakenummer}.pdf`, url, size: blob.size, type: 'application/pdf', uploadedAt: new Date().toISOString(), storagePath }] });
+                        
+                        const storagePath = `meldingen/${meldingDocRef.id}/documents/${Date.now()}-bon_${parsed.intakenummer}.pdf`;
+                        const storageRef = ref(getStorage(app), storagePath);
+                        const uploadTask = uploadBytesResumable(storageRef, blob);
+                        await uploadTask;
+                        const url = await getDownloadURL(uploadTask.snapshot.ref);
+                        
+                        mData.files = [{ 
+                            name: `bon_${parsed.intakenummer}.pdf`, 
+                            url, 
+                            size: blob.size, 
+                            type: 'application/pdf', 
+                            uploadedAt: new Date().toISOString(), 
+                            storagePath 
+                        }];
                     }
+
+                    setDocumentNonBlocking(meldingDocRef, mData, {});
                 }
-                toast({ title: "Bulk scan voltooid", description: "Meldingen zijn toegevoegd aan het portaal." });
+                toast({ title: "Bulk scan voltooid", description: `${result.meldingen.length} meldingen toegevoegd aan portaal.` });
                 router.push('/issues/portal');
             }
         }
-    } catch (err) {
-        toast({ variant: 'destructive', title: "Fout bij inlezen" });
+    } catch (err: any) {
+        console.error("PDF Scan error:", err);
+        toast({ variant: 'destructive', title: "Fout bij inlezen", description: err.message || "Er is een fout opgetreden bij het verwerken van de PDF." });
     } finally {
         setIsParsingPdf(false);
     }
@@ -1131,7 +1119,7 @@ export default function NewIssuePage() {
                                                     <Camera className="h-3.5 w-3.5 text-green-500 shrink-0" />
                                                     <span className="text-[10px] font-bold truncate text-green-700">{photo.name}</span>
                                                 </div>
-                                                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-lg text-green-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveFile(photo.storagePath, 'fotos')}>
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-lg text-blue-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleRemoveFile(photo.storagePath, 'fotos')}>
                                                     <X className="h-3 w-3" />
                                                 </Button>
                                             </div>
