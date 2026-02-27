@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -29,7 +30,8 @@ import {
   Check,
   Calendar,
   Paperclip,
-  FileSpreadsheet
+  FileSpreadsheet,
+  ClipboardPaste
 } from 'lucide-react';
 import { 
   useFirestore, 
@@ -182,6 +184,65 @@ const FormRow = ({ label, children, labelFor }: { label: string; children: React
 );
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
+
+function SmartPasteDialog({ onParsed, instructions }: { onParsed: (data: any) => void, instructions: string }) {
+    const [text, setText] = React.useState('');
+    const [isProcessing, setIsProcessing] = React.useState(false);
+    const { toast } = useToast();
+
+    const handlePaste = async () => {
+        if (!text.trim()) return;
+        setIsProcessing(true);
+        try {
+            const result = await parseIssuePdf({ 
+                textContent: text,
+                instructions: instructions
+            });
+            if (result.meldingen && result.meldingen.length > 0) {
+                onParsed(result.meldingen[0]);
+                toast({ title: "Tekst geanalyseerd", description: "Verschillende velden zijn automatisch ingevuld." });
+            }
+        } catch (err) {
+            toast({ variant: 'destructive', title: "Fout bij inlezen", description: "De AI kon de tekst niet begrijpen." });
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 border-slate-200 text-slate-600 hover:bg-slate-50 font-bold">
+                    <ClipboardPaste className="mr-2 h-3.5 w-3.5" />
+                    Tekst Inlezen (AI)
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-xl">
+                <DialogHeader>
+                    <DialogTitle className="font-black uppercase tracking-tight">Smart Paste</DialogTitle>
+                    <DialogDescription className="font-bold text-slate-500">
+                        Kopieer tekst uit een ander systeem (e-mail, CRM, etc.) en plak het hieronder. Onze AI haalt de gegevens eruit.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <Textarea 
+                        placeholder="Plak hier de tekst van de opdracht..." 
+                        className="min-h-[200px] font-medium text-xs leading-relaxed" 
+                        value={text} 
+                        onChange={(e) => setText(e.target.value)} 
+                    />
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button variant="ghost">Annuleren</Button></DialogClose>
+                    <Button onClick={handlePaste} disabled={isProcessing || !text.trim()} className="font-black uppercase shadow-lg shadow-primary/20">
+                        {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                        Velden Invullen
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { instructions: string, onSave: (val: string, pdfUrl?: string) => void, isSaving: boolean, samplePdfUrl?: string }) {
     const { toast } = useToast();
@@ -499,6 +560,52 @@ export default function NewIssuePage() {
     return allMeldingen.find(m => m.id === meldingIdFromUrl);
   }, [allMeldingen, meldingIdFromUrl]);
 
+  // Handle incoming data from external sources (Mail, Storage)
+  React.useEffect(() => {
+    const pendingData = localStorage.getItem('pending_forwarded_melding');
+    if (pendingData) {
+        try {
+            const { parsed, file } = JSON.parse(pendingData);
+            if (parsed) {
+                handleSmartFill(parsed);
+                if (file) setUploadedFiles([file]);
+            }
+            localStorage.removeItem('pending_forwarded_melding');
+        } catch (e) { console.error("Error loading pending intake:", e); }
+    }
+  }, []);
+
+  const handleSmartFill = async (data: any) => {
+    if (!data) return;
+    
+    // Auto geocode if address is provided
+    const address = `${data.straatnaam || ''} ${data.huisnummer || ''}, ${data.plaats || ''}`.trim();
+    if (address.length > 5) {
+        try {
+            const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=${MAPBOX_TOKEN}&country=NL&limit=1`);
+            const geo = await res.json();
+            if (geo.features?.length > 0) {
+                setLocation({ latitude: geo.features[0].center[1], longitude: geo.features[0].center[0] });
+            }
+        } catch (e) {}
+    }
+
+    form.reset({
+        ...form.getValues(),
+        intakenummer: data.intakenummer || form.getValues('intakenummer'),
+        ext_referentie: data.extern_meldingsnummer || form.getValues('ext_referentie'),
+        straatnaam: data.straatnaam || form.getValues('straatnaam'),
+        nummer: data.huisnummer || form.getValues('nummer'),
+        postcode: data.postcode || form.getValues('postcode'),
+        plaats: data.plaats || form.getValues('plaats'),
+        melder: data.melder || form.getValues('melder'),
+        extra_informatie: data.extra_informatie || form.getValues('extra_informatie'),
+        hoofdcategorie: data.label_1 || form.getValues('hoofdcategorie'),
+        subcategorie: data.label_2 || form.getValues('subcategorie'),
+        behandelaar: data.behandelaar || form.getValues('behandelaar'),
+    });
+  };
+
   React.useEffect(() => {
     if (viewedMeldingFromDb) {
       setViewedMelding(viewedMeldingFromDb);
@@ -749,14 +856,15 @@ export default function NewIssuePage() {
                 <IssueImportDialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen} onSuccess={() => router.push('/issues/portal')}>
                     <Button variant="outline" size="sm" className="h-9 border-green-200 text-green-600 hover:bg-green-50 font-bold">
                         <FileSpreadsheet className="mr-2 h-3.5 w-3.5" />
-                        Excel / CSV Import
+                        Excel / CSV Bulk
                     </Button>
                 </IssueImportDialog>
+                <SmartPasteDialog onParsed={handleSmartFill} instructions={pdfInstructions} />
                 <AIConfigDialog instructions={pdfInstructions} samplePdfUrl={samplePdfUrl} onSave={handleSaveAIInstructions} isSaving={isSavingConfig} />
                 <input type="file" ref={pdfInputRef} onChange={handlePdfUpload} className="hidden" accept="application/pdf" multiple />
                 <Button type="button" variant="outline" size="sm" onClick={() => pdfInputRef.current?.click()} className="h-9 border-blue-200 text-blue-600 hover:bg-blue-50 font-bold" disabled={isParsingPdf}>
                     {isParsingPdf ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-2 h-3.5 w-3.5" />} 
-                    PDF Inlezen
+                    PDF Scannen
                 </Button>
                 <Separator orientation="vertical" className="h-5 mx-1" />
                 <Button type="submit" form="new-melding-form" size="sm" disabled={isSubmitting} className="h-9 font-bold px-6 shadow-lg shadow-primary/20">

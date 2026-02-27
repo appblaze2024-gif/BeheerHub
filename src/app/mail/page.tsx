@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -250,34 +251,49 @@ export default function MailPage() {
     }
   };
 
-  const handleForwardToMelding = async (attachment: EmailAttachment) => {
-    if (!firestore || !app || isForwarding) return;
+  const handleForwardToMelding = async (attachment?: EmailAttachment) => {
+    if (!firestore || !app || isForwarding || !selectedMail) return;
     
     setIsForwarding(true);
 
     try {
-        const parsed = await parseIssuePdf({ 
-            pdfDataUri: `data:${attachment.contentType};base64,${attachment.content}`,
-            instructions: aiConfig?.instructions || ''
-        });
+        let parsed;
+        let fileData = null;
 
-        const storage = getStorage(app);
-        const storagePath = `meldingen/${parsed.intakenummer || 'temp'}/documents/${Date.now()}-${attachment.filename}`;
-        const pdfBlob = await fetch(`data:${attachment.contentType};base64,${attachment.content}`).then(r => r.blob());
-        const uploadTask = uploadBytesResumable(ref(storage, storagePath), pdfBlob);
-        await uploadTask;
-        const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+        if (attachment) {
+            // Forward specific PDF attachment
+            parsed = await parseIssuePdf({ 
+                pdfDataUri: `data:${attachment.contentType};base64,${attachment.content}`,
+                instructions: aiConfig?.instructions || ''
+            });
 
-        const forwardedData = {
-            parsed,
-            file: {
+            const storage = getStorage(app);
+            const storagePath = `meldingen/${parsed.intakenummer || 'temp'}/documents/${Date.now()}-${attachment.filename}`;
+            const pdfBlob = await fetch(`data:${attachment.contentType};base64,${attachment.content}`).then(r => r.blob());
+            const uploadTask = uploadBytesResumable(ref(storage, storagePath), pdfBlob);
+            await uploadTask;
+            const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+
+            fileData = {
                 name: attachment.filename,
                 url: downloadUrl,
                 size: attachment.size,
                 type: attachment.contentType,
                 uploadedAt: new Date().toISOString(),
                 storagePath
-            }
+            };
+        } else {
+            // Forward email body itself
+            const plainText = selectedMail.body.replace(/<[^>]*>?/gm, '');
+            parsed = await parseIssuePdf({ 
+                textContent: plainText,
+                instructions: aiConfig?.instructions || ''
+            });
+        }
+
+        const forwardedData = {
+            parsed,
+            file: fileData
         };
 
         localStorage.setItem('pending_forwarded_melding', JSON.stringify(forwardedData));
@@ -285,7 +301,7 @@ export default function MailPage() {
     } catch (err: any) {
         console.error("Forward error:", err);
         setIsForwarding(false);
-        toast({ variant: 'destructive', title: "Doorzetten mislukt", description: "De AI kon deze PDF niet volledig begrijpen." });
+        toast({ variant: 'destructive', title: "Doorzetten mislukt", description: "De AI kon de informatie niet volledig verwerken." });
     }
   };
   
@@ -424,10 +440,14 @@ export default function MailPage() {
                           </div>
                       </div>
                       <div className="p-4 border-b">
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                               <Button variant="outline" size="sm" onClick={handleReply}><Reply className="mr-2 h-4 w-4" /> Beantwoorden</Button>
                               <Button variant="outline" size="sm" onClick={handleReplyAll}><ReplyAll className="mr-2 h-4 w-4" /> Allen beantwoorden</Button>
                               <Button variant="outline" size="sm" onClick={handleForward}><Forward className="mr-2 h-4 w-4" /> Doorsturen</Button>
+                              <Button variant="secondary" size="sm" onClick={() => handleForwardToMelding()} disabled={isForwarding} className="bg-blue-600 text-white hover:bg-blue-700 font-bold">
+                                {isForwarding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                                Omzetten naar Melding
+                              </Button>
                               <Button variant="outline" size="sm" onClick={handleDelete} disabled={isDeleting}>{isDeleting ? <Loader2 className='h-4 w-4 animate-spin mr-2' /> : <Trash2 className="h-4 w-4 mr-2" />}Verwijderen</Button>
                               <Button variant="ghost" size="icon" className="h-8 w-8 ml-auto"><MoreVertical className="h-4 w-4" /></Button>
                           </div>
@@ -451,7 +471,7 @@ export default function MailPage() {
                                             {isPdf && (
                                                 <Button variant="secondary" size="sm" onClick={() => handleForwardToMelding(att)} disabled={isForwarding} className="h-8 font-black uppercase text-[10px] tracking-tight bg-blue-600 text-white hover:bg-blue-700">
                                                     {isForwarding ? <Loader2 className="h-3 w-3 animate-spin mr-1.5" /> : <Bell className="h-3 w-3 mr-1.5" />}
-                                                    Doorzetten naar Meldingen
+                                                    Inlezen als Melding
                                                 </Button>
                                             )}
                                             <a href={`data:${att.contentType};base64,${att.content}`} download={att.filename}><Button variant="ghost" size="sm" className="h-8 font-bold">Downloaden</Button></a>
