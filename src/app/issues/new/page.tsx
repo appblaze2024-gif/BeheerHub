@@ -153,7 +153,7 @@ const MAPPING_FIELDS = [
     { id: 'extra_informatie', label: 'Memo / Extra informatie' },
 ];
 
-const FormRow = ({ label, children }: { label: string; children: React.ReactNode }) => (
+const FormRow = ({ label, children }: { label: React.ReactNode; children: React.ReactNode }) => (
     <div className="flex flex-col gap-0.5 py-1 border-b border-slate-100 last:border-0 min-h-[36px]">
         <FormLabel className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">{label}</FormLabel>
         <div className="flex-1 min-w-0">
@@ -435,7 +435,7 @@ export default function NewIssuePage() {
                             <Card className="rounded-2xl overflow-hidden bg-white shadow-sm border-slate-200">
                                 <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Hoofdgegevens</CardTitle></CardHeader>
                                 <CardContent className="p-4 pt-2">
-                                    <FormRow label="Meldingsnummer*">
+                                    <FormRow label={<>Meldingsnummer<span className="text-red-500">*</span></>}>
                                         <FormField control={form.control} name="intakenummer" render={({ field }) => (
                                             <FormItem><FormControl><Input {...field} className="h-8 text-xs font-bold" /></FormControl><FormMessage /></FormItem>
                                         )} />
@@ -444,7 +444,7 @@ export default function NewIssuePage() {
                                         <FormRow label="Extern Nummer">
                                             <FormField control={form.control} name="extern_meldingsnummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} />
                                         </FormRow>
-                                        <FormRow label="Status*">
+                                        <FormRow label="Status">
                                             <FormField control={form.control} name="status" render={({ field }) => (
                                                 <FormItem>
                                                     <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue /></SelectTrigger></FormControl>
@@ -458,7 +458,7 @@ export default function NewIssuePage() {
                                         <FormRow label="Containernr.">
                                             <FormField control={form.control} name="containernummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} />
                                         </FormRow>
-                                        <FormRow label="Soort Melder*">
+                                        <FormRow label={<>Soort Melder<span className="text-red-500">*</span></>}>
                                             <FormField control={form.control} name="soort_melder" render={({ field }) => (
                                                 <FormItem>
                                                     <Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
@@ -480,8 +480,8 @@ export default function NewIssuePage() {
                                 <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Locatie & Gebied</CardTitle></CardHeader>
                                 <CardContent className="p-4 pt-2">
                                     <div className="grid grid-cols-3 gap-3">
-                                        <div className="col-span-2"><FormRow label="Straatnaam*"><FormField control={form.control} name="straatnaam" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow></div>
-                                        <FormRow label="Huisnr.*"><FormField control={form.control} name="huisnummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                                        <div className="col-span-2"><FormRow label={<>Straatnaam<span className="text-red-500">*</span></>}><FormField control={form.control} name="straatnaam" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow></div>
+                                        <FormRow label={<>Huisnr.<span className="text-red-500">*</span></>}><FormField control={form.control} name="huisnummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
                                         <FormRow label="Plaats"><FormField control={form.control} name="plaats" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
@@ -500,7 +500,7 @@ export default function NewIssuePage() {
                                 <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Categorie & Melder</CardTitle></CardHeader>
                                 <CardContent className="p-4 pt-2">
                                     <div className="grid grid-cols-2 gap-3">
-                                        <FormRow label="Hoofdtype*">
+                                        <FormRow label={<>Hoofdtype<span className="text-red-500">*</span></>}>
                                             <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (
                                                 <FormItem>
                                                     <Select onValueChange={field.onChange} value={field.value || ''}>
@@ -510,7 +510,7 @@ export default function NewIssuePage() {
                                                 </FormItem>
                                             )} />
                                         </FormRow>
-                                        <FormRow label="Subtype*">
+                                        <FormRow label={<>Subtype<span className="text-red-500">*</span></>}>
                                             <FormField control={form.control} name="subcategorie" render={({ field }) => (
                                                 <FormItem>
                                                     <Select onValueChange={field.onChange} value={field.value || ''}>
