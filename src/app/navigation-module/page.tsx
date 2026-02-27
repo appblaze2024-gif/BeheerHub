@@ -704,7 +704,10 @@ export default function StartNavigationPage() {
 
   const meldingenQuery = useMemoFirebase(() => {
     if (!firestore || routeType !== 'meldingen') return null;
-    return query(collection(firestore, 'meldingen'), where('status', 'not-in', ['Nieuw', 'Afgerond', 'Niet in beheer']));
+    return query(
+      collection(firestore, 'meldingen'), 
+      where('status', 'not-in', ['Afgerond', 'Niet in beheer', 'Geweigerd', 'Dubbel gemeld'])
+    );
   }, [firestore, routeType]);
 
   const { data: allMeldingen } = useCollection<Melding>(meldingenQuery);
