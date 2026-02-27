@@ -279,10 +279,6 @@ export default function IssuesPage() {
             </div>
             {selectedMelding && (
               <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                  <Button variant="outline" className="h-9 font-black border-primary text-primary gap-2" onClick={() => router.push('/navigation-module?type=meldingen')}>
-                    <Navigation className="h-4 w-4" />
-                    KAART
-                  </Button>
                   {selectedMelding.workStartedAt ? (
                     <Button className="bg-orange-600 hover:bg-orange-700 text-white font-black uppercase tracking-tight h-9 px-6" onClick={handleAfronden} disabled={isSubmitting}>
                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
