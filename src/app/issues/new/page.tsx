@@ -340,7 +340,7 @@ export default function NewIssuePage() {
   const form = useForm<NewMeldingFormValues>({
     resolver: zodResolver(newMeldingSchema),
     defaultValues: {
-      intakenummer: `M${Date.now().toString().slice(-6)}`, 
+      intakenummer: format(new Date(), 'yyyyMMdd'), 
       status: 'Nieuw', 
       meldingsdatum: new Date(), 
       meldingsuur: format(new Date(), 'HH:mm'),
@@ -383,7 +383,7 @@ export default function NewIssuePage() {
         if (geo.features?.length > 0) setLocation({ latitude: geo.features[0].center[1], longitude: geo.features[0].center[0] });
       } catch (e) {}
     }, 1000);
-    return () => clearTimeout(timer);
+    return () => typeof window !== 'undefined' && clearTimeout(timer);
   }, [watchedAddress, isReadOnly]);
 
   // AUTO DISTRICT (WIJK) DETECTION
