@@ -37,7 +37,8 @@ import {
   useFirebaseApp, 
   useDoc, 
   setDocumentNonBlocking, 
-  useMemoFirebase 
+  useMemoFirebase,
+  updateDocumentNonBlocking
 } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { useGlobalLoading } from '@/context/global-loading-context';
@@ -474,7 +475,7 @@ export default function NewIssuePage() {
                         </Button>
                     </>
                 )}
-                {isReadOnly && <Badge className="bg-slate-900 text-white font-black uppercase px-4 h-9 rounded-xl">ARCHIEF (READ-ONLY)</Badge>}
+                {isReadOnly && <Badge className="bg-[#3498db] text-white font-black uppercase px-4 h-9 rounded-xl shadow-lg shadow-blue-500/20">ARCHIEF (READ-ONLY)</Badge>}
             </div>
         </header>
 
@@ -532,8 +533,7 @@ export default function NewIssuePage() {
                                 <CardContent className="p-4 pt-2">
                                     <div className="grid grid-cols-3 gap-3">
                                         <div className="col-span-2"><FormRow label={<>Straatnaam<span className="text-red-500">*</span></>}><FormField control={form.control} name="straatnaam" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow></div>
-                                        <FormRow label={<>Huisnr.<span className="text-red-500">*</span></>}><FormField control={form.control} name="huisnummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
-                                    </div>
+                                        <FormRow label={<>Huisnr.<span className="text-red-500">*</span></>}><FormField control={form.control} name="huisnummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow></div>
                                     <div className="grid grid-cols-2 gap-3">
                                         <FormRow label="Plaats"><FormField control={form.control} name="plaats" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
                                         <FormRow label="Postcode"><FormField control={form.control} name="postcode" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
@@ -546,12 +546,12 @@ export default function NewIssuePage() {
                             </Card>
 
                             {existingMelding && existingMelding.status !== 'Nieuw' && (
-                                <Card className="rounded-2xl overflow-hidden bg-slate-900 text-white shadow-xl">
+                                <Card className="rounded-2xl overflow-hidden bg-[#3498db] text-white shadow-xl">
                                     <CardHeader className="bg-white/10 border-b border-white/10 py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-white/60 tracking-widest">Afhandeling & Uitvoering</CardTitle></CardHeader>
                                     <CardContent className="p-4 space-y-4">
                                         <FormRow label="Afgehandeld door">
                                             <div className="flex items-center gap-2 bg-white/5 p-2 rounded-xl border border-white/10">
-                                                <User className="h-4 w-4 text-primary" />
+                                                <User className="h-4 w-4 text-white" />
                                                 <span className="text-xs font-black uppercase tracking-tight">{existingMelding.afgehandeld_door || 'Nog niet afgehandeld'}</span>
                                             </div>
                                         </FormRow>
