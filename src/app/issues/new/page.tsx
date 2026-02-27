@@ -632,7 +632,7 @@ export default function NewIssuePage() {
                 </Form>
             </div>
             
-            <div className="w-full lg:w-[450px] bg-slate-50 border-l shrink-0 h-full overflow-hidden flex flex-col">
+            <div className="w-full lg:w-[350px] bg-slate-50 border-l shrink-0 h-full overflow-hidden flex flex-col">
                 <div className="h-1/2 relative overflow-hidden bg-slate-100">
                     <MapboxView latitude={location?.latitude} longitude={location?.longitude} />
                 </div>
