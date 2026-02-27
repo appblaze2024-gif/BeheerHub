@@ -6,13 +6,6 @@ import { collection, doc, query, where } from 'firebase/firestore';
 import { ArrowLeft, Navigation, Pencil, FileText, Camera, Package, Clock, Info, Trash2, File as FileIcon, Loader2, MapPin, UploadCloud, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import * as turf from '@turf/turf';
 import type { Melding, UploadedFile, MeldingTask, Hoeveelheid, Object as MapObject, Project } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
@@ -283,18 +276,6 @@ export default function IssuesPage() {
         <header className="p-4 border-b bg-gray-50 dark:bg-gray-900/50 flex flex-col sm:flex-row items-start sm:items-center justify-between shrink-0 gap-4">
             <div className="flex items-center gap-4 w-full sm:w-auto">
                  <Button variant="outline" size="icon" onClick={() => router.push('/navigation-module?type=meldingen')}><ArrowLeft className="h-4 w-4" /></Button>
-                 <Select value={selectedMeldingId || ''} onValueChange={setSelectedMeldingId}>
-                    <SelectTrigger className="w-full sm:w-72">
-                      <SelectValue>{filteredMeldingen.length > 0 ? `Meldingen (${filteredMeldingen.length})` : 'Geen meldingen'}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                        {filteredMeldingen.map(m => (
-                          <SelectItem key={m.id} value={m.id}>
-                            {m.intakenummer}: {(m.extra_informatie || '').substring(0, 30)}...
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
             </div>
             {selectedMelding && (
               <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
@@ -450,7 +431,7 @@ export default function IssuesPage() {
                     <TabsContent value="Info" className="mt-0">
                         <Card className="p-6 shadow-lg space-y-4">
                             <div className="flex justify-between border-b py-2"><span className="text-slate-400 font-bold">Status:</span><Badge className="font-black uppercase text-[10px]">{selectedMelding.status}</Badge></div>
-                            <div className="flex justify-between border-b py-2"><span className="text-slate-400 font-bold">Starttijd werk:</span><span className="font-black">{selectedMelding.workStartedAt ? format(new Date(selectedMelding.workStartedAt), 'HH:mm') : 'Nog niet gestart'}</span></div>
+                            <div className="flex justify-between border-b py-2"><span className="text-slate-400 font-bold">Starttijd work:</span><span className="font-black">{selectedMelding.workStartedAt ? format(new Date(selectedMelding.workStartedAt), 'HH:mm') : 'Nog niet gestart'}</span></div>
                             <div className="flex justify-between py-2"><span className="text-slate-400 font-bold">Aangenomen door:</span><span className="font-black">{selectedMelding.aangenomen_door || '-'}</span></div>
                         </Card>
                     </TabsContent>
