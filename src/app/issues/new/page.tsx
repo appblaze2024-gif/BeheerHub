@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { format } from 'date-fns';
+import * as turf from '@turf/turf';
 import { 
   Loader2, 
   UploadCloud, 
@@ -38,7 +39,8 @@ import {
   useDoc, 
   setDocumentNonBlocking, 
   useMemoFirebase,
-  updateDocumentNonBlocking
+  updateDocumentNonBlocking,
+  useCollection
 } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { useGlobalLoading } from '@/context/global-loading-context';
@@ -87,7 +89,7 @@ import {
 // Custom components
 import { IssueImportDialog } from '@/components/issue-import-dialog';
 import { MapboxView } from '@/components/mapbox-view';
-import type { Melding } from '@/lib/types';
+import type { Melding, Project } from '@/lib/types';
 
 // AI Flows
 import { parseIssuePdf } from '@/ai/flows/parse-issue-pdf-flow';
@@ -325,6 +327,9 @@ export default function NewIssuePage() {
   const aiConfigRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'pdf_config') : null, [firestore]);
   const { data: aiConfig } = useDoc<{ instructions: string, samplePdfUrl?: string }>(aiConfigRef);
 
+  const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
+  const { data: projects } = useCollection<any>(projectsQuery);
+
   const meldingRef = useMemoFirebase(() => {
     if (!firestore || !meldingId) return null;
     return doc(firestore, 'meldingen', meldingId);
@@ -380,6 +385,36 @@ export default function NewIssuePage() {
     }, 1000);
     return () => clearTimeout(timer);
   }, [watchedAddress, isReadOnly]);
+
+  // AUTO DISTRICT (WIJK) DETECTION
+  React.useEffect(() => {
+    if (!location || !projects || isReadOnly) return;
+
+    const pt = turf.point([location.longitude, location.latitude]);
+    let foundWijk = null;
+
+    for (const project of projects) {
+      if (!project.wijken) continue;
+      for (const wijk of project.wijken) {
+        try {
+          const features = JSON.parse(wijk.subGebieden);
+          // Check each polygon in the wijk
+          for (const feature of features) {
+            if (turf.booleanPointInPolygon(pt, feature as any)) {
+              foundWijk = wijk.naam;
+              break;
+            }
+          }
+        } catch (e) {}
+        if (foundWijk) break;
+      }
+      if (foundWijk) break;
+    }
+
+    if (foundWijk) {
+      form.setValue('wijk', foundWijk);
+    }
+  }, [location, projects, isReadOnly, form]);
 
   const handleFileUpload = async (files: FileList | File[], type: 'files' | 'fotos') => {
     if (!files.length || !app || isReadOnly) return;
