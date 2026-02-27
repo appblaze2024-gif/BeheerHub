@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useCollection, useFirestore, useFirebaseApp, updateDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { collection, doc, query, where } from 'firebase/firestore';
-import { ArrowLeft, Navigation, Pencil, FileText, Camera, Package, Clock, Info, Trash2, File as FileIcon, Loader2, MapPin, UploadCloud, X } from 'lucide-react';
+import { ArrowLeft, Navigation, Pencil, FileText, Camera, Package, Clock, Info, Trash2, File as FileIcon, Loader2, MapPin, UploadCloud, X, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import * as turf from '@turf/turf';
@@ -27,6 +27,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LoadingScreen } from '@/components/loading-screen';
 import { MapboxView } from '@/components/mapbox-view';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const meldingFormSchema = z.object({
   hoofdcategorie: z.string().min(1, 'Hoofdcategorie is verplicht'),
@@ -309,15 +310,44 @@ export default function IssuesPage() {
                 <div className="flex-1 overflow-y-auto p-4 md:p-6">
                     <TabsContent value="Werkzaamheden" className="mt-0">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <Card className="p-6 space-y-6">
-                                <div className="grid grid-cols-2 gap-6 border-b pb-6">
-                                    <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Intakenummer</p><p className="font-black text-lg">{selectedMelding.intakenummer}</p></div>
-                                    <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Datum</p><p className="font-black text-lg">{selectedMelding.datum}</p></div>
-                                    <div className="col-span-2"><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Adres</p><p className="font-black text-lg">{selectedMelding.straatnaam} {selectedMelding.huisnummer}, {selectedMelding.plaats}</p></div>
+                            <Card className="p-6 space-y-6 flex flex-col h-full">
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 border-b pb-6 shrink-0">
+                                    <div className="col-span-2 md:col-span-1">
+                                        <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-0.5">Intakenummer</p>
+                                        <p className="font-black text-base text-primary leading-tight">{selectedMelding.intakenummer}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-0.5">Datum</p>
+                                        <p className="font-bold text-sm leading-tight">{selectedMelding.datum}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-0.5">Tijdstip</p>
+                                        <p className="font-bold text-sm leading-tight">{selectedMelding.tijdstip || '--:--'}</p>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-0.5">Locatie</p>
+                                        <p className="font-bold text-sm truncate leading-tight">{selectedMelding.straatnaam} {selectedMelding.huisnummer}, {selectedMelding.plaats}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-0.5">Wijk</p>
+                                        <p className="font-bold text-sm truncate leading-tight">{selectedMelding.wijk || '-'}</p>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-0.5">Categorie</p>
+                                        <p className="font-bold text-sm truncate leading-tight">{selectedMelding.hoofdcategorie} • {selectedMelding.subcategorie}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-0.5">Melder</p>
+                                        <p className="font-bold text-sm truncate leading-tight">{selectedMelding.melder || 'Anoniem'}</p>
+                                    </div>
                                 </div>
-                                <div className="space-y-3">
-                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Omschrijving melding</p>
-                                    <p className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 italic text-slate-700 leading-relaxed font-medium">"{selectedMelding.extra_informatie}"</p>
+                                <div className="flex-1 min-h-0 flex flex-col space-y-2">
+                                    <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest shrink-0">Omschrijving melding</p>
+                                    <ScrollArea className="flex-1 bg-blue-50/30 rounded-xl border border-blue-100/50 p-3">
+                                        <p className="text-xs italic text-slate-700 leading-relaxed font-medium">
+                                            "{selectedMelding.extra_informatie || 'Geen omschrijving opgegeven.'}"
+                                        </p>
+                                    </ScrollArea>
                                 </div>
                             </Card>
                             <div className="rounded-2xl overflow-hidden border-2 border-white shadow-xl min-h-[350px]">
