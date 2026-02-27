@@ -27,7 +27,8 @@ import {
   ShieldCheck,
   Building2,
   Phone,
-  Mail
+  Mail,
+  Target
 } from 'lucide-react';
 import { 
   useFirestore, 
@@ -115,10 +116,6 @@ const newMeldingSchema = z.object({
   email_melder: z.string().optional().or(z.literal('')).nullable(),
   burgerservicenummer: z.string().optional().nullable(),
   extra_informatie: z.string().optional().nullable(),
-  afgehandeld_door: z.string().optional().nullable(),
-  afhandeling_datum: z.date().optional().nullable(),
-  afhandeling_tijdstip: z.string().optional().nullable(),
-  afhandeling_bijzonderheden: z.string().optional().nullable(),
 });
 
 type NewMeldingFormValues = z.infer<typeof newMeldingSchema>;
@@ -373,7 +370,6 @@ export default function NewIssuePage() {
         ...data,
         voorvaldatum: data.voorvaldatum ? format(data.voorvaldatum, 'yyyy-MM-dd') : null,
         meldingsdatum: data.meldingsdatum ? format(data.meldingsdatum, 'yyyy-MM-dd') : null,
-        afhandeling_datum: data.afhandeling_datum ? format(data.afhandeling_datum, 'yyyy-MM-dd') : null,
         latitude: location?.latitude || 0,
         longitude: location?.longitude || 0,
         files: uploadedFiles,
@@ -383,9 +379,9 @@ export default function NewIssuePage() {
         updatedAt: serverTimestamp(),
       };
       await addDocumentNonBlocking(collection(firestore, 'meldingen'), mData);
-      toast({ title: "Melding opgeslagen", description: `Melding ${data.intakenummer} is aangemaakt.` });
+      toast({ title: "Melding opgeslagen", description: `Melding ${data.intakenummer} is aangemaakt en staat in het portaal.` });
       startProcessing(1000);
-      router.push('/issues/open');
+      router.push('/issues/portal');
     } catch (e) {
       toast({ variant: 'destructive', title: 'Fout bij opslaan' });
     } finally {

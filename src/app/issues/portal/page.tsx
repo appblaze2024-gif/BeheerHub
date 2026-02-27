@@ -2,8 +2,8 @@
 
 import * as React from 'react';
 import { useCollection, useFirestore, updateDocumentNonBlocking, useMemoFirebase } from '@/firebase';
-import { collection, doc, query, where } from 'firebase/firestore';
-import { Search, ListFilter, ArrowLeft, MoreHorizontal, Mail, Info } from 'lucide-react';
+import { collection, doc, query, where, orderBy } from 'firebase/firestore';
+import { Search, ListFilter, ArrowLeft, MoreHorizontal, Mail, Info, CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { Melding } from '@/lib/types';
@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ForwardExternalDialog } from '@/components/forward-external-dialog';
 import { LoadingScreen } from '@/components/loading-screen';
+import { Badge } from '@/components/ui/badge';
 
 export default function MeldingenportaalPage() {
   const firestore = useFirestore();
@@ -45,13 +46,25 @@ export default function MeldingenportaalPage() {
     };
   }, [setIsHeaderVisible]);
 
-  // OPTIMIZED QUERY: Only fetch 'Nieuw' meldingen
+  // Portaal Query: Only fetch 'Nieuw' meldingen, sorted by creation date
   const portalQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'meldingen'), where('status', '==', 'Nieuw'));
+    return query(
+      collection(firestore, 'meldingen'), 
+      where('status', '==', 'Nieuw')
+    );
   }, [firestore]);
 
-  const { data: newMeldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(portalQuery);
+  const { data: rawMeldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(portalQuery);
+
+  const newMeldingen = React.useMemo(() => {
+    if (!rawMeldingen) return [];
+    return [...rawMeldingen].sort((a, b) => {
+        const timeA = a.createdAt?.seconds || 0;
+        const timeB = b.createdAt?.seconds || 0;
+        return timeB - timeA;
+    });
+  }, [rawMeldingen]);
 
   React.useEffect(() => {
     const handler = setTimeout(() => {
@@ -107,7 +120,7 @@ export default function MeldingenportaalPage() {
     <div className="flex flex-col h-screen bg-background">
       <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border-b shrink-0 gap-4 bg-slate-50/50">
         <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={() => router.back()} className="shrink-0 rounded-full h-9 w-9">
+            <Button variant="outline" size="icon" onClick={() => router.push('/')} className="shrink-0 rounded-full h-9 w-9">
                 <ArrowLeft className="h-4 w-4" />
             </Button>
             <h1 className="text-xl font-black uppercase tracking-tight text-slate-900">Meldingenportaal</h1>
@@ -161,25 +174,31 @@ export default function MeldingenportaalPage() {
                                     <TableCell className="py-2 px-4 border-r border-slate-100 text-[11px] font-bold text-slate-600" onClick={() => router.push(`/issues/new?id=${melding.id}`)}>{melding.datum ? format(new Date(melding.datum), 'dd-MM-yy') : '-'}</TableCell>
                                     <TableCell className='truncate py-2 px-4 border-r border-slate-100 hidden lg:table-cell text-xs font-medium' onClick={() => router.push(`/issues/new?id=${melding.id}`)}>{melding.melder || '-'}</TableCell>
                                     <TableCell className="text-right py-2 px-4">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-slate-600">
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-xl p-2 border-slate-100">
-                                                <DropdownMenuItem onClick={() => handleStatusChange(melding, 'In behandeling')} className="font-bold rounded-lg h-10 cursor-pointer">
-                                                    Accepteren & Doorzetten
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => setSelectedMeldingForForward(melding)} className="font-bold rounded-lg h-10 cursor-pointer">
-                                                    <Mail className="mr-2 h-4 w-4 text-primary" />
-                                                    Extern doorzetten
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => handleStatusChange(melding, 'Niet in beheer')} className="font-bold rounded-lg h-10 text-red-600 cursor-pointer">
-                                                    Niet in beheer
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
+                                        <div className="flex items-center justify-end gap-1">
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:bg-green-50" onClick={() => handleStatusChange(melding, 'In behandeling')}>
+                                                <CheckCircle2 className="h-4 w-4" />
+                                            </Button>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-slate-600">
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-xl p-2 border-slate-100">
+                                                    <DropdownMenuItem onClick={() => handleStatusChange(melding, 'In behandeling')} className="font-bold rounded-lg h-10 cursor-pointer">
+                                                        Accepteren & Doorzetten
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => setSelectedMeldingForForward(melding)} className="font-bold rounded-lg h-10 cursor-pointer">
+                                                        <Mail className="mr-2 h-4 w-4 text-primary" />
+                                                        Extern doorzetten
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => handleStatusChange(melding, 'Niet in beheer')} className="font-bold rounded-lg h-10 text-red-600 cursor-pointer">
+                                                        <XCircle className="mr-2 h-4 w-4" />
+                                                        Niet in beheer
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             ))}
