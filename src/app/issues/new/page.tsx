@@ -600,7 +600,31 @@ export default function NewIssuePage() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-slate-50">
-        <header className="h-14 bg-white border-b flex items-center justify-end px-6 shrink-0 shadow-sm z-10">
+        <header className="h-14 bg-white border-b flex items-center justify-between px-6 shrink-0 shadow-sm z-10">
+            <div className="flex items-center gap-2">
+                <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    className="h-9 border-slate-200 text-slate-600 hover:bg-slate-50 font-bold gap-2"
+                    onClick={() => document.getElementById('media-doc-input')?.click()}
+                >
+                    <UploadCloud className="h-4 w-4" />
+                    <span>Document</span>
+                    <input type="file" id="media-doc-input" className="hidden" multiple onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'files')} />
+                </Button>
+                <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    className="h-9 border-slate-200 text-slate-600 hover:bg-slate-50 font-bold gap-2"
+                    onClick={() => document.getElementById('media-photo-input')?.click()}
+                >
+                    <Camera className="h-4 w-4" />
+                    <span>Foto</span>
+                    <input type="file" id="media-photo-input" className="hidden" accept="image/*" multiple onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'fotos')} />
+                </Button>
+            </div>
             <div className="flex items-center gap-2">
                 <IssueImportDialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen} onSuccess={() => router.push('/issues/portal')}>
                     <Button variant="outline" size="sm" className="h-9 border-green-200 text-green-600 hover:bg-green-50 font-bold">
@@ -760,29 +784,6 @@ export default function NewIssuePage() {
                                             </FormRow>
                                         </CardContent>
                                     </Card>
-
-                                    <div className="grid grid-cols-2 gap-3 pt-1">
-                                        <Button 
-                                            type="button" 
-                                            variant="outline" 
-                                            className="h-16 border-2 border-dashed border-slate-200 bg-white hover:border-primary/30 hover:bg-slate-50 transition-all flex flex-col gap-1.5 rounded-2xl"
-                                            onClick={() => document.getElementById('media-doc-input')?.click()}
-                                        >
-                                            <UploadCloud className="h-5 w-5 text-slate-400" />
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 leading-none">Document</span>
-                                            <input type="file" id="media-doc-input" className="hidden" multiple onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'files')} />
-                                        </Button>
-                                        <Button 
-                                            type="button" 
-                                            variant="outline" 
-                                            className="h-16 border-2 border-dashed border-slate-200 bg-white hover:border-primary/30 hover:bg-slate-50 transition-all flex flex-col gap-1.5 rounded-2xl"
-                                            onClick={() => document.getElementById('media-photo-input')?.click()}
-                                        >
-                                            <Camera className="h-5 w-5 text-slate-400" />
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 leading-none">Foto</span>
-                                            <input type="file" id="media-photo-input" className="hidden" accept="image/*" multiple onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'fotos')} />
-                                        </Button>
-                                    </div>
                                 </div>
                             </div>
                         </form>
