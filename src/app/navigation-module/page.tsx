@@ -303,10 +303,14 @@ function NavigatingView({
           setDistanceRemainingToDestination(roundedRemaining);
           lastUpdateDistRef.current = roundedRemaining;
           setHasReachedCurrentTarget(roundedRemaining < 150);
-          if (isWorkOrder && roundedRemaining < 25) onExit();
+          
+          // Automatisch openen van werkbonnen bij aankomst (binnen 25 meter)
+          if (isWorkOrder && roundedRemaining < 25 && nextObject) {
+              router.push(`/issues?id=${nextObject.id}`);
+          }
       }
     } catch (e) {}
-  }, [snappedLocation?.latitude, snappedLocation?.longitude, currentRouteGeometry, isCalculatingRoute, isWorkOrder, onExit]);
+  }, [snappedLocation?.latitude, snappedLocation?.longitude, currentRouteGeometry, isCalculatingRoute, isWorkOrder, nextObject, router]);
 
   React.useEffect(() => {
     if (!currentRouteGeometry || !snappedLocation) { 
