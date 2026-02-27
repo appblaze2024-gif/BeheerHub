@@ -101,7 +101,7 @@ const newMeldingSchema = z.object({
   behandelende_afdeling: z.string().optional().nullable(),
   behandelaar: z.string().optional().nullable(),
   status: z.string().min(1, 'Status is verplicht'),
-  voorvaldatum: z.any().optional().nullable(), // Allow string or date for AI compatibility
+  voorvaldatum: z.any().optional().nullable(),
   voorvaltijd: z.string().optional().nullable(),
   meldingsdatum: z.any().optional().nullable(),
   meldingsuur: z.string().optional().nullable(),
@@ -222,7 +222,7 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
       const parsed: Record<string, string> = {};
       instructions.split('\n').forEach(line => {
           const [key, ...valParts] = line.split(':');
-          if (key && valParts.length > 0) parsed[key.trim().toLowerCase()] = valParts.join(':').trim();
+          if (key && valParts.join(':').trim()) parsed[key.trim().toLowerCase()] = valParts.join(':').trim();
       });
       setFieldInstructions(parsed);
   }, [instructions]);
@@ -366,8 +366,13 @@ export default function NewIssuePage() {
     if (!firestore || isSubmitting) return;
     setIsSubmitting(true);
     try {
+      // Map undefined values to null for Firestore compatibility
+      const sanitizedData = Object.fromEntries(
+        Object.entries(data).map(([key, value]) => [key, value === undefined ? null : value])
+      );
+
       const mData = {
-        ...data,
+        ...sanitizedData,
         voorvaldatum: data.voorvaldatum instanceof Date ? format(data.voorvaldatum, 'yyyy-MM-dd') : (data.voorvaldatum || null),
         meldingsdatum: data.meldingsdatum instanceof Date ? format(data.meldingsdatum, 'yyyy-MM-dd') : (data.meldingsdatum || null),
         latitude: location?.latitude || 0,
