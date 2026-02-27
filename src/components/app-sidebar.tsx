@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -10,11 +11,12 @@ import {
 import { cn } from '@/lib/utils';
 import { useProject } from '@/context/project-context';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { allMenuItems } from '@/lib/menu-config';
 import { useProfile } from '@/firebase/profile-provider';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Badge } from '@/components/ui/badge';
 
 export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
@@ -22,14 +24,16 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { profile } = useProfile();
   const firestore = useFirestore();
 
-  const projectsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'projects');
-  }, [firestore]);
-  
-  const { data: projects } = useCollection<any>(projectsQuery);
-
   const isSuperUser = profile?.role === 'Super admin';
+
+  // Fetch count of new issues for the portal badge
+  const newIssuesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'meldingen'), where('status', '==', 'Nieuw'));
+  }, [firestore]);
+
+  const { data: newIssues } = useCollection<any>(newIssuesQuery);
+  const unapprovedCount = newIssues?.length || 0;
 
   const menuItems = React.useMemo(() => {
     return allMenuItems.filter(item => {
@@ -48,6 +52,7 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || (item.subItems?.some(sub => pathname === sub.href));
+            const hasNewIssues = item.module === 'issues' && unapprovedCount > 0;
             
             if (item.subItems) {
               return (
@@ -58,24 +63,41 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
                       isActive ? "text-[#3498db] bg-[#f0f7fd]" : "text-slate-600"
                     )}>
                       <Icon className="h-5 w-5 mr-3 shrink-0" />
-                      <span className="flex-1 text-left">{item.label}</span>
+                      <span className="flex-1 text-left flex items-center justify-between">
+                        {item.label}
+                        {hasNewIssues && (
+                          <Badge variant="destructive" className="h-4 min-w-4 px-1 flex items-center justify-center font-black text-[8px] rounded-full mr-2">
+                            {unapprovedCount}
+                          </Badge>
+                        )}
+                      </span>
                       <ChevronDown className={cn("h-4 w-4 transition-transform", isActive ? "" : "-rotate-90")} />
                     </button>
                   </CollapsibleTrigger>
                   <CollapsibleContent className="bg-slate-50/50">
-                    {item.subItems.map((sub) => (
-                      <Link
-                        key={sub.href}
-                        href={sub.href}
-                        onClick={onNavigate}
-                        className={cn(
-                          "flex items-center pl-12 pr-4 py-2 text-[13px] font-medium transition-colors hover:text-[#3498db]",
-                          pathname === sub.href ? "text-[#3498db] font-bold" : "text-slate-500"
-                        )}
-                      >
-                        {sub.label}
-                      </Link>
-                    ))}
+                    {item.subItems.map((sub) => {
+                      const isSubPortal = sub.id === 'portal';
+                      return (
+                        <Link
+                          key={sub.href}
+                          href={sub.href}
+                          onClick={onNavigate}
+                          className={cn(
+                            "flex items-center pl-12 pr-4 py-2 text-[13px] font-medium transition-colors hover:text-[#3498db]",
+                            pathname === sub.href ? "text-[#3498db] font-bold" : "text-slate-500"
+                          )}
+                        >
+                          <span className="flex-1 flex items-center justify-between">
+                            {sub.label}
+                            {isSubPortal && unapprovedCount > 0 && (
+                              <Badge variant="destructive" className="h-4 min-w-4 px-1 flex items-center justify-center font-black text-[8px] rounded-full">
+                                {unapprovedCount}
+                              </Badge>
+                            )}
+                          </span>
+                        </Link>
+                      );
+                    })}
                   </CollapsibleContent>
                 </Collapsible>
               );

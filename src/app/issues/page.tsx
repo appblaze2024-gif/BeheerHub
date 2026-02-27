@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -100,7 +101,7 @@ export default function IssuesPage() {
     if (!firestore) return null;
     return query(
       collection(firestore, 'meldingen'),
-      where('status', 'not-in', ['Afgerond', 'Niet in beheer'])
+      where('status', 'not-in', ['Nieuw', 'Afgerond', 'Niet in beheer'])
     );
   }, [firestore]);
 
