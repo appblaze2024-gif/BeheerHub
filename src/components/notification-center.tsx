@@ -240,7 +240,7 @@ export function NotificationCenter() {
       <PopoverContent className="w-80 sm:w-96 p-0 mt-2 rounded-2xl shadow-2xl border-slate-100 overflow-hidden" align="end">
         {selectedChatUser ? (
           <div className="flex flex-col h-[500px]">
-            <div className="p-4 border-b bg-black text-white flex items-center justify-between">
+            <div className="p-4 border-b bg-primary text-white flex items-center justify-between">
               <div className="flex items-center gap-3 min-w-0">
                 <Button 
                   variant="ghost" 
@@ -252,14 +252,14 @@ export function NotificationCenter() {
                 </Button>
                 <div className="min-w-0">
                   <p className="text-sm font-black uppercase tracking-tight truncate">{selectedChatUser.displayName || selectedChatUser.email}</p>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mt-0.5">{selectedChatUser.role}</p>
+                  <p className="text-[10px] font-bold text-blue-100 uppercase tracking-widest leading-none mt-0.5">{selectedChatUser.role}</p>
                 </div>
               </div>
               
               {chatMessages.length > 0 && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-red-400 hover:bg-white/10 rounded-full">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10 rounded-full">
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </AlertDialogTrigger>
@@ -341,23 +341,23 @@ export function NotificationCenter() {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="p-4 border-b bg-slate-50/50 flex flex-col gap-4">
               <h3 className="text-sm font-black uppercase tracking-tight text-slate-900">Communicatie</h3>
-              <TabsList className="bg-black h-10 p-1 rounded-xl gap-1 border-none shadow-lg flex w-full">
+              <TabsList className="bg-primary h-10 p-1 rounded-xl gap-1 border-none shadow-lg flex w-full">
                 <TabsTrigger 
                   value="received" 
-                  className="flex-1 text-[10px] h-8 rounded-lg data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-md data-[state=inactive]:text-gray-400 data-[state=inactive]:hover:text-white transition-all font-black uppercase tracking-widest border-none"
+                  className="flex-1 text-[10px] h-8 rounded-lg data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-md data-[state=inactive]:text-blue-100 data-[state=inactive]:hover:text-white transition-all font-black uppercase tracking-widest border-none"
                 >
                   Inbox
                 </TabsTrigger>
                 <TabsTrigger 
                   value="new" 
-                  className="flex-1 text-[10px] h-8 rounded-lg data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-md data-[state=inactive]:text-gray-400 data-[state=inactive]:hover:text-white transition-all font-black uppercase tracking-widest border-none"
+                  className="flex-1 text-[10px] h-8 rounded-lg data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-md data-[state=inactive]:text-blue-100 data-[state=inactive]:hover:text-white transition-all font-black uppercase tracking-widest border-none"
                 >
                   Collega's
                 </TabsTrigger>
                 {isPrivileged && (
                   <TabsTrigger 
                     value="alerts" 
-                    className="flex-1 text-[10px] h-8 rounded-lg data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-md data-[state=inactive]:text-gray-400 data-[state=inactive]:hover:text-white transition-all font-black uppercase tracking-widest border-none"
+                    className="flex-1 text-[10px] h-8 rounded-lg data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-md data-[state=inactive]:text-blue-100 data-[state=inactive]:hover:text-white transition-all font-black uppercase tracking-widest border-none"
                   >
                     Meldingen
                   </TabsTrigger>
