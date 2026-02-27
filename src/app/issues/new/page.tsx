@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -603,6 +602,11 @@ export default function NewIssuePage() {
         hoofdcategorie: data.label_1 || form.getValues('hoofdcategorie'),
         subcategorie: data.label_2 || form.getValues('subcategorie'),
         behandelaar: data.behandelaar || form.getValues('behandelaar'),
+        voorvaldatum: data.datum ? new Date(data.datum) : form.getValues('voorvaldatum'),
+        voorvaltijd: data.tijdstip || form.getValues('voorvaltijd'),
+        meldingsdatum: data.datum ? new Date(data.datum) : form.getValues('meldingsdatum'),
+        meldingsuur: data.tijdstip || form.getValues('meldingsuur'),
+        containernummer: data.containernummer || form.getValues('containernummer'),
     });
   };
 
@@ -746,61 +750,76 @@ export default function NewIssuePage() {
                 instructions: pdfInstructions
             });
 
-            const pdfArrayBuffer = await file.arrayBuffer();
-            const pdfDoc = await PDFDocument.load(pdfArrayBuffer);
-
-            for (const parsed of result.meldingen) {
-                let lat = 0; let lng = 0;
-                const fullAddress = `${parsed.straatnaam || ''} ${parsed.huisnummer || ''}, ${parsed.plaats || ''}`.trim();
-                if (fullAddress.length > 5) {
-                    try {
-                        const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(fullAddress)}.json?access_token=${MAPBOX_TOKEN}&country=NL&limit=1`);
-                        const geo = await res.json();
-                        if (geo.features?.length > 0) [lng, lat] = geo.features[0].center;
-                    } catch (e) {}
-                }
-
-                const mData: any = {
-                    intakenummer: parsed.intakenummer || `M-${Date.now()}`,
-                    containernummer: parsed.containernummer || '',
-                    hoofdcategorie: parsed.label_1 || 'Overig',
-                    subcategorie: parsed.label_2 || 'Overige meldingen',
-                    behandelaar: parsed.behandelaar || 'Onbekend',
-                    status: 'Nieuw',
-                    melder: parsed.melder || 'Automatisch ingevoerd',
-                    extern_meldingsnummer: parsed.extern_meldingsnummer || '',
-                    extra_informatie: parsed.extra_informatie || '',
-                    straatnaam: parsed.straatnaam || '',
-                    huisnummer: parsed.huisnummer || '',
-                    postcode: parsed.postcode || '',
-                    plaats: parsed.plaats || '',
-                    latitude: lat,
-                    longitude: lng,
-                    datum: parsed.datum || format(new Date(), 'yyyy-MM-dd'),
-                    tijdstip: parsed.tijdstip || format(new Date(), 'HH:mm'),
-                    aangenomen_door: profile?.displayName || profile?.email || 'Onbekend',
-                    createdAt: serverTimestamp(),
-                    updatedAt: serverTimestamp(),
-                };
-
-                const docRef = await addDoc(collection(firestore, 'meldingen'), mData);
+            if (result.meldingen.length === 1 && fileArray.length === 1) {
+                // If it's a single melding, fill the form directly
+                await handleSmartFill(result.meldingen[0]);
                 
-                if (parsed.paginanummer) {
-                    const i = parsed.paginanummer - 1;
-                    const newDoc = await PDFDocument.create();
-                    const [copiedPage] = await newDoc.copyPages(pdfDoc, [i]);
-                    newDoc.addPage(copiedPage);
-                    const pdfBytes = await newDoc.save();
-                    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-                    const storagePath = `meldingen/${docRef.id}/documents/${Date.now()}-bon_${parsed.intakenummer}.pdf`;
-                    const snap = await uploadBytesResumable(ref(getStorage(app), storagePath), blob);
-                    const url = await getDownloadURL(snap.ref);
-                    await updateDoc(docRef, { files: [{ name: `bon_${parsed.intakenummer}.pdf`, url, size: blob.size, type: 'application/pdf', uploadedAt: new Date().toISOString(), storagePath }] });
+                // Upload original PDF as a file attachment to the form
+                const storagePath = `meldingen/temp/${Date.now()}-${file.name}`;
+                const uploadTask = uploadBytesResumable(ref(getStorage(app), storagePath), file);
+                await uploadTask;
+                const url = await getDownloadURL(uploadTask.snapshot.ref);
+                setUploadedFiles(prev => [...prev, { name: file.name, url, size: file.size, type: file.type, uploadedAt: new Date().toISOString(), storagePath }]);
+                
+                toast({ title: "Scan voltooid", description: "Het formulier is ingevuld op basis van de scan." });
+            } else {
+                // Bulk creation logic for multiple results
+                const pdfArrayBuffer = await file.arrayBuffer();
+                const pdfDoc = await PDFDocument.load(pdfArrayBuffer);
+
+                for (const parsed of result.meldingen) {
+                    let lat = 0; let lng = 0;
+                    const fullAddress = `${parsed.straatnaam || ''} ${parsed.huisnummer || ''}, ${parsed.plaats || ''}`.trim();
+                    if (fullAddress.length > 5) {
+                        try {
+                            const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(fullAddress)}.json?access_token=${MAPBOX_TOKEN}&country=NL&limit=1`);
+                            const geo = await res.json();
+                            if (geo.features?.length > 0) [lng, lat] = geo.features[0].center;
+                        } catch (e) {}
+                    }
+
+                    const mData: any = {
+                        intakenummer: parsed.intakenummer || `M-${Date.now()}`,
+                        containernummer: parsed.containernummer || '',
+                        hoofdcategorie: parsed.label_1 || 'Overig',
+                        subcategorie: parsed.label_2 || 'Overige meldingen',
+                        behandelaar: parsed.behandelaar || 'Onbekend',
+                        status: 'Nieuw',
+                        melder: parsed.melder || 'Automatisch ingevoerd',
+                        extern_meldingsnummer: parsed.extern_meldingsnummer || '',
+                        extra_informatie: parsed.extra_informatie || '',
+                        straatnaam: parsed.straatnaam || '',
+                        huisnummer: parsed.huisnummer || '',
+                        postcode: parsed.postcode || '',
+                        plaats: parsed.plaats || '',
+                        latitude: lat,
+                        longitude: lng,
+                        datum: parsed.datum || format(new Date(), 'yyyy-MM-dd'),
+                        tijdstip: parsed.tijdstip || format(new Date(), 'HH:mm'),
+                        aangenomen_door: profile?.displayName || profile?.email || 'Onbekend',
+                        createdAt: serverTimestamp(),
+                        updatedAt: serverTimestamp(),
+                    };
+
+                    const docRef = await addDoc(collection(firestore, 'meldingen'), mData);
+                    
+                    if (parsed.paginanummer) {
+                        const i = parsed.paginanummer - 1;
+                        const newDoc = await PDFDocument.create();
+                        const [copiedPage] = await newDoc.copyPages(pdfDoc, [i]);
+                        newDoc.addPage(copiedPage);
+                        const pdfBytes = await newDoc.save();
+                        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                        const storagePath = `meldingen/${docRef.id}/documents/${Date.now()}-bon_${parsed.intakenummer}.pdf`;
+                        const snap = await uploadBytesResumable(ref(getStorage(app), storagePath), blob);
+                        const url = await getDownloadURL(snap.ref);
+                        await updateDoc(docRef, { files: [{ name: `bon_${parsed.intakenummer}.pdf`, url, size: blob.size, type: 'application/pdf', uploadedAt: new Date().toISOString(), storagePath }] });
+                    }
                 }
+                toast({ title: "Bulk scan voltooid", description: "Meldingen zijn toegevoegd aan het portaal." });
+                router.push('/issues/portal');
             }
         }
-        toast({ title: "Scans voltooid" });
-        router.push('/issues/portal');
     } catch (err) {
         toast({ variant: 'destructive', title: "Fout bij inlezen" });
     } finally {
