@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -29,7 +28,8 @@ import {
   Building2,
   Phone,
   Mail,
-  Target
+  Target,
+  ArrowLeft
 } from 'lucide-react';
 import { 
   useFirestore, 
@@ -86,6 +86,7 @@ import {
 // Custom components
 import { IssueImportDialog } from '@/components/issue-import-dialog';
 import { MapboxView } from '@/components/mapbox-view';
+import type { Melding } from '@/lib/types';
 
 // AI Flows
 import { parseIssuePdf } from '@/ai/flows/parse-issue-pdf-flow';
@@ -307,10 +308,13 @@ type UploadedFile = { name: string; url: string; size: number; type: string; upl
 export default function NewIssuePage() {
   const firestore = useFirestore();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const { profile } = useProfile();
   const { startProcessing } = useGlobalLoading();
   const app = useFirebaseApp();
+  
+  const meldingId = searchParams.get('id');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isSavingConfig, setIsSavingConfig] = React.useState(false);
   const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
@@ -319,6 +323,13 @@ export default function NewIssuePage() {
 
   const aiConfigRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'pdf_config') : null, [firestore]);
   const { data: aiConfig } = useDoc<{ instructions: string, samplePdfUrl?: string }>(aiConfigRef);
+
+  const meldingRef = useMemoFirebase(() => {
+    if (!firestore || !meldingId) return null;
+    return doc(firestore, 'meldingen', meldingId);
+  }, [firestore, meldingId]);
+
+  const { data: existingMelding, isLoading: isLoadingExisting } = useDoc<Melding>(meldingRef);
 
   const form = useForm<NewMeldingFormValues>({
     resolver: zodResolver(newMeldingSchema),
@@ -334,9 +345,28 @@ export default function NewIssuePage() {
     },
   });
 
+  const isReadOnly = React.useMemo(() => {
+    if (!existingMelding) return false;
+    return ['Afgerond', 'Niet in beheer', 'Geweigerd', 'Dubbel gemeld'].includes(existingMelding.status);
+  }, [existingMelding]);
+
+  React.useEffect(() => {
+    if (existingMelding) {
+      form.reset({
+        ...existingMelding,
+        meldingsdatum: existingMelding.datum ? new Date(existingMelding.datum) : null,
+        voorvaldatum: existingMelding.voorvaldatum ? new Date(existingMelding.voorvaldatum) : null,
+      });
+      setUploadedFiles(existingMelding.files || []);
+      setUploadedPhotos(existingMelding.fotos || []);
+      setLocation({ latitude: existingMelding.latitude, longitude: existingMelding.longitude });
+    }
+  }, [existingMelding, form]);
+
   // AUTO GEOCODING
   const watchedAddress = form.watch(['straatnaam', 'huisnummer', 'plaats']);
   React.useEffect(() => {
+    if (isReadOnly) return;
     const [s, n, p] = watchedAddress;
     const addr = `${s || ''} ${n || ''}, ${p || ''}`.trim();
     if (addr.length < 5) return;
@@ -348,10 +378,10 @@ export default function NewIssuePage() {
       } catch (e) {}
     }, 1000);
     return () => clearTimeout(timer);
-  }, [watchedAddress]);
+  }, [watchedAddress, isReadOnly]);
 
   const handleFileUpload = async (files: FileList | File[], type: 'files' | 'fotos') => {
-    if (!files.length || !app) return;
+    if (!files.length || !app || isReadOnly) return;
     const storage = getStorage(app);
     for (const file of Array.from(files)) {
       const path = `meldingen/${Date.now()}_${file.name}`;
@@ -364,10 +394,9 @@ export default function NewIssuePage() {
   };
 
   const onSubmit = async (data: NewMeldingFormValues) => {
-    if (!firestore || isSubmitting) return;
+    if (!firestore || isSubmitting || isReadOnly) return;
     setIsSubmitting(true);
     try {
-      // Map undefined values to null for Firestore compatibility
       const sanitizedData = Object.fromEntries(
         Object.entries(data).map(([key, value]) => [key, value === undefined ? null : value])
       );
@@ -380,12 +409,18 @@ export default function NewIssuePage() {
         longitude: location?.longitude || 0,
         files: uploadedFiles,
         fotos: uploadedPhotos,
-        aangenomen_door: profile?.displayName || 'Onbekend',
-        createdAt: serverTimestamp(),
+        aangenomen_door: existingMelding?.aangenomen_door || profile?.displayName || 'Onbekend',
+        createdAt: existingMelding?.createdAt || serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
-      await addDocumentNonBlocking(collection(firestore, 'meldingen'), mData);
-      toast({ title: "Melding opgeslagen", description: `Melding ${data.intakenummer} is aangemaakt en staat in het portaal.` });
+
+      if (meldingId) {
+        await updateDocumentNonBlocking(doc(firestore, 'meldingen', meldingId), mData);
+      } else {
+        await addDocumentNonBlocking(collection(firestore, 'meldingen'), mData);
+      }
+
+      toast({ title: meldingId ? "Melding bijgewerkt" : "Melding opgeslagen" });
       startProcessing(1000);
       router.push('/issues/portal');
     } catch (e) {
@@ -397,7 +432,7 @@ export default function NewIssuePage() {
   };
 
   const onInvalid = (errors: any) => {
-    console.error("Form errors:", errors);
+    if (isReadOnly) return;
     const firstError = Object.values(errors)[0] as any;
     toast({ variant: 'destructive', title: 'Validatie mislukt', description: firstError?.message || 'Vul alle verplichte velden in.' });
   };
@@ -406,30 +441,40 @@ export default function NewIssuePage() {
     <div className="flex flex-col h-screen overflow-hidden bg-slate-50">
         <header className="h-14 bg-white border-b flex items-center justify-between px-6 shrink-0 shadow-sm z-10">
             <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" className="h-9 font-black gap-2 border-slate-200" onClick={() => document.getElementById('media-doc-input')?.click()}>
-                    <UploadCloud className="h-4 w-4 text-primary" /> DOC
-                    <input type="file" id="media-doc-input" className="hidden" multiple onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'files')} />
-                </Button>
-                <Button variant="outline" size="sm" className="h-9 font-black gap-2 border-slate-200" onClick={() => document.getElementById('media-photo-input')?.click()}>
-                    <Camera className="h-4 w-4 text-green-600" /> FOTO
-                    <input type="file" id="media-photo-input" className="hidden" accept="image/*" multiple onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'fotos')} />
-                </Button>
+                <Button variant="outline" size="icon" onClick={() => router.back()} className="mr-2 h-9 w-9 rounded-full"><ArrowLeft className="h-4 w-4" /></Button>
+                {!isReadOnly && (
+                    <>
+                        <Button variant="outline" size="sm" className="h-9 font-black gap-2 border-slate-200" onClick={() => document.getElementById('media-doc-input')?.click()}>
+                            <UploadCloud className="h-4 w-4 text-primary" /> DOC
+                            <input type="file" id="media-doc-input" className="hidden" multiple onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'files')} />
+                        </Button>
+                        <Button variant="outline" size="sm" className="h-9 font-black gap-2 border-slate-200" onClick={() => document.getElementById('media-photo-input')?.click()}>
+                            <Camera className="h-4 w-4 text-green-600" /> FOTO
+                            <input type="file" id="media-photo-input" className="hidden" accept="image/*" multiple onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'fotos')} />
+                        </Button>
+                    </>
+                )}
             </div>
             <div className="flex items-center gap-2">
-                <IssueImportDialog open={false} onOpenChange={() => {}} onSuccess={() => {}}>
-                    <Button variant="outline" size="sm" className="h-9 font-bold text-green-600 border-green-100"><FileSpreadsheet className="mr-2 h-3.5 w-3.5" /> EXCEL</Button>
-                </IssueImportDialog>
-                <SmartPasteDialog onParsed={(d) => form.reset({ ...form.getValues(), ...d })} instructions={aiConfig?.instructions || ''} />
-                <AIConfigDialog instructions={aiConfig?.instructions || ''} samplePdfUrl={aiConfig?.samplePdfUrl} onSave={async (v, url) => {
-                    if (!aiConfigRef) return;
-                    setIsSavingConfig(true);
-                    await setDocumentNonBlocking(aiConfigRef, { instructions: v, samplePdfUrl: url }, { merge: true });
-                    setIsSavingConfig(false);
-                }} isSaving={isSavingConfig} />
-                <Separator orientation="vertical" className="h-5 mx-1" />
-                <Button type="submit" form="new-melding-form" size="sm" disabled={isSubmitting} className="h-9 font-black uppercase px-8 shadow-lg shadow-primary/20">
-                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />} OPSLAAN
-                </Button>
+                {!isReadOnly && (
+                    <>
+                        <IssueImportDialog open={false} onOpenChange={() => {}} onSuccess={() => {}}>
+                            <Button variant="outline" size="sm" className="h-9 font-bold text-green-600 border-green-100"><FileSpreadsheet className="mr-2 h-3.5 w-3.5" /> EXCEL</Button>
+                        </IssueImportDialog>
+                        <SmartPasteDialog onParsed={(d) => form.reset({ ...form.getValues(), ...d })} instructions={aiConfig?.instructions || ''} />
+                        <AIConfigDialog instructions={aiConfig?.instructions || ''} samplePdfUrl={aiConfig?.samplePdfUrl} onSave={async (v, url) => {
+                            if (!aiConfigRef) return;
+                            setIsSavingConfig(true);
+                            await setDocumentNonBlocking(aiConfigRef, { instructions: v, samplePdfUrl: url }, { merge: true });
+                            setIsSavingConfig(false);
+                        }} isSaving={isSavingConfig} />
+                        <Separator orientation="vertical" className="h-5 mx-1" />
+                        <Button type="submit" form="new-melding-form" size="sm" disabled={isSubmitting} className="h-9 font-black uppercase px-8 shadow-lg shadow-primary/20">
+                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />} OPSLAAN
+                        </Button>
+                    </>
+                )}
+                {isReadOnly && <Badge className="bg-slate-900 text-white font-black uppercase px-4 h-9 rounded-xl">ARCHIEF (READ-ONLY)</Badge>}
             </div>
         </header>
 
@@ -443,17 +488,17 @@ export default function NewIssuePage() {
                                 <CardContent className="p-4 pt-2">
                                     <FormRow label={<>Meldingsnummer<span className="text-red-500">*</span></>}>
                                         <FormField control={form.control} name="intakenummer" render={({ field }) => (
-                                            <FormItem><FormControl><Input {...field} className="h-8 text-xs font-bold" /></FormControl><FormMessage /></FormItem>
+                                            <FormItem><FormControl><Input {...field} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl><FormMessage /></FormItem>
                                         )} />
                                     </FormRow>
                                     <div className="grid grid-cols-2 gap-3">
                                         <FormRow label="Extern Nummer">
-                                            <FormField control={form.control} name="extern_meldingsnummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} />
+                                            <FormField control={form.control} name="extern_meldingsnummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} />
                                         </FormRow>
                                         <FormRow label="Status">
                                             <FormField control={form.control} name="status" render={({ field }) => (
                                                 <FormItem>
-                                                    <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue /></SelectTrigger></FormControl>
+                                                    <Select onValueChange={field.onChange} value={field.value} disabled={isReadOnly}><FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue /></SelectTrigger></FormControl>
                                                         <SelectContent>{statusOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                                     </Select>
                                                 </FormItem>
@@ -462,12 +507,12 @@ export default function NewIssuePage() {
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
                                         <FormRow label="Containernr.">
-                                            <FormField control={form.control} name="containernummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} />
+                                            <FormField control={form.control} name="containernummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} />
                                         </FormRow>
                                         <FormRow label={<>Soort Melder<span className="text-red-500">*</span></>}>
                                             <FormField control={form.control} name="soort_melder" render={({ field }) => (
                                                 <FormItem>
-                                                    <Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
+                                                    <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
                                                         <SelectContent>
                                                             <SelectItem value="Inwoner">Inwoner</SelectItem>
                                                             <SelectItem value="Bedrijf">Bedrijf</SelectItem>
@@ -486,19 +531,46 @@ export default function NewIssuePage() {
                                 <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Locatie & Gebied</CardTitle></CardHeader>
                                 <CardContent className="p-4 pt-2">
                                     <div className="grid grid-cols-3 gap-3">
-                                        <div className="col-span-2"><FormRow label={<>Straatnaam<span className="text-red-500">*</span></>}><FormField control={form.control} name="straatnaam" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow></div>
-                                        <FormRow label={<>Huisnr.<span className="text-red-500">*</span></>}><FormField control={form.control} name="huisnummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                                        <div className="col-span-2"><FormRow label={<>Straatnaam<span className="text-red-500">*</span></>}><FormField control={form.control} name="straatnaam" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow></div>
+                                        <FormRow label={<>Huisnr.<span className="text-red-500">*</span></>}><FormField control={form.control} name="huisnummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
-                                        <FormRow label="Plaats"><FormField control={form.control} name="plaats" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
-                                        <FormRow label="Postcode"><FormField control={form.control} name="postcode" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                                        <FormRow label="Plaats"><FormField control={form.control} name="plaats" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                                        <FormRow label="Postcode"><FormField control={form.control} name="postcode" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
-                                        <FormRow label="Wijk"><FormField control={form.control} name="wijk" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
-                                        <FormRow label="Werkgebied"><FormField control={form.control} name="werkgebied" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                                        <FormRow label="Wijk"><FormField control={form.control} name="wijk" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                                        <FormRow label="Werkgebied"><FormField control={form.control} name="werkgebied" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
                                     </div>
                                 </CardContent>
                             </Card>
+
+                            {existingMelding && existingMelding.status !== 'Nieuw' && (
+                                <Card className="rounded-2xl overflow-hidden bg-slate-900 text-white shadow-xl">
+                                    <CardHeader className="bg-white/10 border-b border-white/10 py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-white/60 tracking-widest">Afhandeling & Uitvoering</CardTitle></CardHeader>
+                                    <CardContent className="p-4 space-y-4">
+                                        <FormRow label="Afgehandeld door">
+                                            <div className="flex items-center gap-2 bg-white/5 p-2 rounded-xl border border-white/10">
+                                                <User className="h-4 w-4 text-primary" />
+                                                <span className="text-xs font-black uppercase tracking-tight">{existingMelding.afgehandeld_door || 'Nog niet afgehandeld'}</span>
+                                            </div>
+                                        </FormRow>
+                                        <FormRow label="Afhandeling Details">
+                                            <div className="bg-white/5 p-3 rounded-xl border border-white/10 italic text-xs leading-relaxed text-white/80">
+                                                {existingMelding.afhandeling_bijzonderheden || 'Geen extra informatie opgegeven.'}
+                                            </div>
+                                        </FormRow>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <FormRow label="Gereed op">
+                                                <span className="text-xs font-bold">{existingMelding.afhandeling_datum || '-'}</span>
+                                            </FormRow>
+                                            <FormRow label="Tijdstip">
+                                                <span className="text-xs font-bold">{existingMelding.afhandeling_tijdstip || '-'}</span>
+                                            </FormRow>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
                         </div>
 
                         <div className="space-y-4">
@@ -509,7 +581,7 @@ export default function NewIssuePage() {
                                         <FormRow label={<>Hoofdtype<span className="text-red-500">*</span></>}>
                                             <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (
                                                 <FormItem>
-                                                    <Select onValueChange={field.onChange} value={field.value || ''}>
+                                                    <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
                                                         <FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
                                                         <SelectContent>{hoofdcategorieOptions.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
                                                     </Select>
@@ -519,7 +591,7 @@ export default function NewIssuePage() {
                                         <FormRow label={<>Subtype<span className="text-red-500">*</span></>}>
                                             <FormField control={form.control} name="subcategorie" render={({ field }) => (
                                                 <FormItem>
-                                                    <Select onValueChange={field.onChange} value={field.value || ''}>
+                                                    <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
                                                         <FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
                                                         <SelectContent>{subcategorieMapping[form.watch('hoofdcategorie') || '']?.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>)) || <SelectItem value="Overig">Overig</SelectItem>}</SelectContent>
                                                     </Select>
@@ -528,12 +600,12 @@ export default function NewIssuePage() {
                                         </FormRow>
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
-                                        <FormRow label="Naam Melder"><FormField control={form.control} name="melder" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
-                                        <FormRow label="BSN"><FormField control={form.control} name="burgerservicenummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                                        <FormRow label="Naam Melder"><FormField control={form.control} name="melder" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                                        <FormRow label="BSN"><FormField control={form.control} name="burgerservicenummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
-                                        <FormRow label="Telefoon"><FormField control={form.control} name="telefoon_melder" render={({ field }) => (<FormItem><FormControl><Input type="tel" {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
-                                        <FormRow label="Email"><FormField control={form.control} name="email_melder" render={({ field }) => (<FormItem><FormControl><Input type="email" {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                                        <FormRow label="Telefoon"><FormField control={form.control} name="telefoon_melder" render={({ field }) => (<FormItem><FormControl><Input type="tel" {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                                        <FormRow label="Email"><FormField control={form.control} name="email_melder" render={({ field }) => (<FormItem><FormControl><Input type="email" {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
                                     </div>
                                 </CardContent>
                             </Card>
@@ -542,16 +614,16 @@ export default function NewIssuePage() {
                                 <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Behandeling & Tijden</CardTitle></CardHeader>
                                 <CardContent className="p-4 pt-2">
                                     <div className="grid grid-cols-2 gap-3">
-                                        <FormRow label="Behandelaar"><FormField control={form.control} name="behandelaar" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
-                                        <FormRow label="Afdeling"><FormField control={form.control} name="behandelende_afdeling" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                                        <FormRow label="Behandelaar"><FormField control={form.control} name="behandelaar" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                                        <FormRow label="Afdeling"><FormField control={form.control} name="behandelende_afdeling" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
-                                        <FormRow label="Melddatum"><FormField control={form.control} name="meldingsdatum" render={({ field }) => (<FormItem><FormControl><Input type="date" {...field} value={field.value instanceof Date ? format(field.value, 'yyyy-MM-dd') : (field.value || '')} onChange={e => field.onChange(e.target.valueAsDate)} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
-                                        <FormRow label="Uur"><FormField control={form.control} name="meldingsuur" render={({ field }) => (<FormItem><FormControl><Input type="time" {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                                        <FormRow label="Melddatum"><FormField control={form.control} name="meldingsdatum" render={({ field }) => (<FormItem><FormControl><Input type="date" {...field} value={field.value instanceof Date ? format(field.value, 'yyyy-MM-dd') : (field.value || '')} onChange={e => field.onChange(e.target.valueAsDate)} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                                        <FormRow label="Uur"><FormField control={form.control} name="meldingsuur" render={({ field }) => (<FormItem><FormControl><Input type="time" {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
                                     </div>
                                     <FormRow label="Omschrijving Melding">
                                         <FormField control={form.control} name="extra_informatie" render={({ field }) => (
-                                            <FormItem><FormControl><Textarea {...field} value={field.value || ''} className="resize-none min-h-[60px] text-xs font-medium border-slate-100 bg-slate-50/30" placeholder="Aanvullende info..." /></FormControl></FormItem>
+                                            <FormItem><FormControl><Textarea {...field} value={field.value || ''} disabled={isReadOnly} className="resize-none min-h-[60px] text-xs font-medium border-slate-100 bg-slate-50/30" placeholder="Aanvullende info..." /></FormControl></FormItem>
                                         )} />
                                     </FormRow>
                                 </CardContent>
@@ -588,7 +660,7 @@ export default function NewIssuePage() {
                                             <p className="text-[9px] font-bold text-slate-400">DOCUMENT • {Math.round(f.size / 1024)} KB</p>
                                         </div>
                                     </div>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-600 rounded-full" onClick={() => setUploadedFiles(prev => prev.filter(x => x.storagePath !== f.storagePath))}><Trash2 className="h-4 w-4" /></Button>
+                                    {!isReadOnly && <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-600 rounded-full" onClick={() => setUploadedFiles(prev => prev.filter(x => x.storagePath !== f.storagePath))}><Trash2 className="h-4 w-4" /></Button>}
                                 </div>
                             ))}
                             {uploadedPhotos.map(p => (
@@ -601,7 +673,7 @@ export default function NewIssuePage() {
                                             <p className="text-[9px] font-bold text-slate-400">BEELD • {Math.round(p.size / 1024)} KB</p>
                                         </div>
                                     </div>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-600 rounded-full" onClick={() => setUploadedPhotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}><Trash2 className="h-4 w-4" /></Button>
+                                    {!isReadOnly && <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-600 rounded-full" onClick={() => setUploadedPhotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}><Trash2 className="h-4 w-4" /></Button>}
                                 </div>
                             ))}
                             {!uploadedFiles.length && !uploadedPhotos.length && (
@@ -610,7 +682,9 @@ export default function NewIssuePage() {
                                         <Paperclip className="h-10 w-10 text-slate-200" />
                                     </div>
                                     <p className="text-[10px] font-black uppercase tracking-[0.2em]">Geen bijlagen actief</p>
-                                    <p className="text-[9px] font-bold text-slate-400 mt-1">Upload bestanden via de header</p>
+                                    <p className="text-[9px] font-bold text-slate-400 mt-1">
+                                        {isReadOnly ? 'Dit archiefstuk bevat geen bijlagen' : 'Upload bestanden via de header'}
+                                    </p>
                                 </div>
                             )}
                         </div>
