@@ -72,7 +72,7 @@ import {
   FormItem, 
   FormLabel, 
   FormMessage 
-} from '@/form';
+} from '@/components/ui/form';
 import { 
   Dialog, 
   DialogContent, 
