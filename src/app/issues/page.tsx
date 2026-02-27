@@ -50,7 +50,6 @@ const werkbonNavItems = [
     { label: "Foto's", icon: Camera },
     { label: 'Hoeveelheid', icon: Package },
     { label: 'Uren', icon: Clock },
-    { label: 'Info', icon: Info },
 ];
 
 export default function IssuesPage() {
@@ -452,13 +451,6 @@ export default function IssuesPage() {
                             <div className="mt-8 flex justify-center gap-2">
                                 <Badge variant="secondary" className="bg-primary/5 text-primary border-none px-4 py-1.5 font-black uppercase tracking-widest text-[10px]">Live registratie</Badge>
                             </div>
-                        </Card>
-                    </TabsContent>
-                    <TabsContent value="Info" className="mt-0">
-                        <Card className="p-6 shadow-lg space-y-4">
-                            <div className="flex justify-between border-b py-2"><span className="text-slate-400 font-bold">Status:</span><Badge className="font-black uppercase text-[10px]">{selectedMelding.status}</Badge></div>
-                            <div className="flex justify-between border-b py-2"><span className="text-slate-400 font-bold">Starttijd work:</span><span className="font-black">{selectedMelding.workStartedAt ? format(new Date(selectedMelding.workStartedAt), 'HH:mm') : 'Nog niet gestart'}</span></div>
-                            <div className="flex justify-between py-2"><span className="text-slate-400 font-bold">Aangenomen door:</span><span className="font-black">{selectedMelding.aangenomen_door || '-'}</span></div>
                         </Card>
                     </TabsContent>
                 </div>
