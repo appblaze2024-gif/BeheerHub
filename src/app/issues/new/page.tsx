@@ -255,7 +255,7 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
           <DialogContent className="sm:max-w-[1100px] h-[90vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
               <DialogHeader className="p-6 border-b shrink-0 bg-white">
                   <div className="flex justify-between items-center">
-                      <DialogTitle className="text-xl font-bold">AI Training & Sjabloon</DialogTitle>
+                      <DialogTitle className="text-xl font-bold">AI Training &amp; Sjabloon</DialogTitle>
                       <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={isUploadingSample}>Sjabloon Uploaden</Button>
                       <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={async (e) => {
                           const file = e.target.files?.[0]; if (!file || !app) return;
@@ -529,7 +529,7 @@ export default function NewIssuePage() {
                             </Card>
 
                             <Card className="rounded-2xl overflow-hidden bg-white shadow-sm border-slate-200">
-                                <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Locatie & Gebied</CardTitle></CardHeader>
+                                <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Locatie &amp; Gebied</CardTitle></CardHeader>
                                 <CardContent className="p-4 pt-2">
                                     <div className="grid grid-cols-3 gap-3">
                                         <div className="col-span-2"><FormRow label={<>Straatnaam<span className="text-red-500">*</span></>}><FormField control={form.control} name="straatnaam" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow></div>
@@ -546,26 +546,26 @@ export default function NewIssuePage() {
                             </Card>
 
                             {existingMelding && existingMelding.status !== 'Nieuw' && (
-                                <Card className="rounded-2xl overflow-hidden bg-[#3498db] text-white shadow-xl">
-                                    <CardHeader className="bg-white/10 border-b border-white/10 py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-white/60 tracking-widest">Afhandeling & Uitvoering</CardTitle></CardHeader>
+                                <Card className="rounded-2xl overflow-hidden bg-white shadow-sm border-slate-200">
+                                    <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Afhandeling &amp; Uitvoering</CardTitle></CardHeader>
                                     <CardContent className="p-4 space-y-4">
                                         <FormRow label="Afgehandeld door">
-                                            <div className="flex items-center gap-2 bg-white/5 p-2 rounded-xl border border-white/10">
-                                                <User className="h-4 w-4 text-white" />
-                                                <span className="text-xs font-black uppercase tracking-tight">{existingMelding.afgehandeld_door || 'Nog niet afgehandeld'}</span>
+                                            <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-100">
+                                                <User className="h-4 w-4 text-primary" />
+                                                <span className="text-xs font-black uppercase tracking-tight text-slate-900">{existingMelding.afgehandeld_door || 'Nog niet afgehandeld'}</span>
                                             </div>
                                         </FormRow>
                                         <FormRow label="Afhandeling Details">
-                                            <div className="bg-white/5 p-3 rounded-xl border border-white/10 italic text-xs leading-relaxed text-white/80">
+                                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 italic text-xs leading-relaxed text-slate-600">
                                                 {existingMelding.afhandeling_bijzonderheden || 'Geen extra informatie opgegeven.'}
                                             </div>
                                         </FormRow>
                                         <div className="grid grid-cols-2 gap-4">
                                             <FormRow label="Gereed op">
-                                                <span className="text-xs font-bold">{existingMelding.afhandeling_datum || '-'}</span>
+                                                <span className="text-xs font-bold text-slate-900">{existingMelding.afhandeling_datum || '-'}</span>
                                             </FormRow>
                                             <FormRow label="Tijdstip">
-                                                <span className="text-xs font-bold">{existingMelding.afhandeling_tijdstip || '-'}</span>
+                                                <span className="text-xs font-bold text-slate-900">{existingMelding.afhandeling_tijdstip || '-'}</span>
                                             </FormRow>
                                         </div>
                                     </CardContent>
@@ -575,7 +575,7 @@ export default function NewIssuePage() {
 
                         <div className="space-y-4">
                             <Card className="rounded-2xl overflow-hidden bg-white shadow-sm border-slate-200">
-                                <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Categorie & Melder</CardTitle></CardHeader>
+                                <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Categorie &amp; Melder</CardTitle></CardHeader>
                                 <CardContent className="p-4 pt-2">
                                     <div className="grid grid-cols-2 gap-3">
                                         <FormRow label={<>Hoofdtype<span className="text-red-500">*</span></>}>
@@ -611,7 +611,7 @@ export default function NewIssuePage() {
                             </Card>
 
                             <Card className="rounded-2xl overflow-hidden bg-white shadow-sm border-slate-200">
-                                <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Behandeling & Tijden</CardTitle></CardHeader>
+                                <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Behandeling &amp; Tijden</CardTitle></CardHeader>
                                 <CardContent className="p-4 pt-2">
                                     <div className="grid grid-cols-2 gap-3">
                                         <FormRow label="Behandelaar"><FormField control={form.control} name="behandelaar" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
