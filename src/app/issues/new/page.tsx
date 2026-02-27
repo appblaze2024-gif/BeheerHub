@@ -442,7 +442,6 @@ export default function NewIssuePage() {
     <div className="flex flex-col h-screen overflow-hidden bg-slate-50">
         <header className="h-14 bg-white border-b flex items-center justify-between px-6 shrink-0 shadow-sm z-10">
             <div className="flex items-center gap-2">
-                <Button variant="outline" size="icon" onClick={() => router.back()} className="mr-2 h-9 w-9 rounded-full"><ArrowLeft className="h-4 w-4" /></Button>
                 {!isReadOnly && (
                     <>
                         <Button variant="outline" size="sm" className="h-9 font-black gap-2 border-slate-200" onClick={() => document.getElementById('media-doc-input')?.click()}>
@@ -475,7 +474,7 @@ export default function NewIssuePage() {
                         </Button>
                     </>
                 )}
-                {isReadOnly && <Badge className="bg-[#3498db] text-white font-black uppercase px-4 h-9 rounded-xl shadow-lg shadow-blue-500/20">ARCHIEF (READ-ONLY)</Badge>}
+                {isReadOnly && <Badge className="bg-primary text-white font-black uppercase px-4 h-9 rounded-xl shadow-lg shadow-primary/20">ARCHIEF (READ-ONLY)</Badge>}
             </div>
         </header>
 
@@ -547,7 +546,7 @@ export default function NewIssuePage() {
 
                             {existingMelding && existingMelding.status !== 'Nieuw' && (
                                 <Card className="rounded-2xl overflow-hidden bg-white shadow-sm border-slate-200">
-                                    <CardHeader className="bg-[#3498db] border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-white tracking-widest">Afhandeling &amp; Uitvoering</CardTitle></CardHeader>
+                                    <CardHeader className="bg-primary border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-white tracking-widest">Afhandeling &amp; Uitvoering</CardTitle></CardHeader>
                                     <CardContent className="p-4 space-y-4">
                                         <FormRow label="Afgehandeld door">
                                             <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-100">
