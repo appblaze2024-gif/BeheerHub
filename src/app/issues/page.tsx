@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -289,7 +288,11 @@ export default function IssuesPage() {
                       <SelectValue>{filteredMeldingen.length > 0 ? `Meldingen (${filteredMeldingen.length})` : 'Geen meldingen'}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                        {filteredMeldingen.map(m => <SelectItem key={m.id} value={m.id}>{m.intakenummer}: {m.extra_informatie.substring(0, 30)}...</SelectItem>)}
+                        {filteredMeldingen.map(m => (
+                          <SelectItem key={m.id} value={m.id}>
+                            {m.intakenummer}: {(m.extra_informatie || '').substring(0, 30)}...
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                 </Select>
             </div>
