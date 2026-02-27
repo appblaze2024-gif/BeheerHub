@@ -236,191 +236,191 @@ function SmartPasteDialog({ onParsed, instructions }: { onParsed: (data: any) =>
 }
 
 function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { instructions: string, onSave: (val: string, pdfUrl?: string) => void, isSaving: boolean, samplePdfUrl?: string }) {
-    const { toast } = useToast();
-    const [fieldInstructions, setFieldInstructions] = React.useState<Record<string, string>>({});
-    const [previewUrl, setPreviewUrl] = React.useState<string | undefined>(samplePdfUrl || "https://i.ibb.co/nNFZcctf/Schermafbeelding-2026-02-18-104605.png");
-    const [isUploadingSample, setIsUploadingSample] = React.useState(false);
-    const [zoom, setZoom] = React.useState(1);
-    const [activeFieldId, setactiveFieldId] = React.useState<string | null>(null);
-    const [markers, setMarkers] = React.useState<Record<string, { x: number, y: number }>>({});
-    const fileInputRef = React.useRef<HTMLInputElement>(null);
-    const app = useFirebaseApp();
+  const { toast } = useToast();
+  const [fieldInstructions, setFieldInstructions] = React.useState<Record<string, string>>({});
+  const [previewUrl, setPreviewUrl] = React.useState<string | undefined>(samplePdfUrl || "https://i.ibb.co/nNFZcctf/Schermafbeelding-2026-02-18-104605.png");
+  const [isUploadingSample, setIsUploadingSample] = React.useState(false);
+  const [zoom, setZoom] = React.useState(1);
+  const [activeFieldId, setactiveFieldId] = React.useState<string | null>(null);
+  const [markers, setMarkers] = React.useState<Record<string, { x: number, y: number }>>({});
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const app = useFirebaseApp();
 
-    React.useEffect(() => {
-        const parsed: Record<string, string> = {};
-        const lines = instructions.split('\n');
-        lines.forEach(line => {
-            const [key, ...valParts] = line.split(':');
-            if (key && valParts.length > 0) {
-                const cleanKey = key.trim().toLowerCase();
-                const cleanVal = valParts.join(':').trim();
-                parsed[cleanKey] = cleanVal;
-            }
-        });
-        setFieldInstructions(parsed);
-    }, [instructions]);
+  React.useEffect(() => {
+      const parsed: Record<string, string> = {};
+      const lines = instructions.split('\n');
+      lines.forEach(line => {
+          const [key, ...valParts] = line.split(':');
+          if (key && valParts.length > 0) {
+              const cleanKey = key.trim().toLowerCase();
+              const cleanVal = valParts.join(':').trim();
+              parsed[cleanKey] = cleanVal;
+          }
+      });
+      setFieldInstructions(parsed);
+  }, [instructions]);
 
-    const handleFieldChange = (id: string, val: string) => {
-        setFieldInstructions(prev => ({ ...prev, [id.toLowerCase()]: val }));
-    };
+  const handleFieldChange = (id: string, val: string) => {
+      setFieldInstructions(prev => ({ ...prev, [id.toLowerCase()]: val }));
+  };
 
-    const handleImageClick = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (!activeFieldId) {
-            toast({ description: "Selecteer eerst een veld om de locatie te koppelen." });
-            return;
-        }
-        
-        const rect = e.currentTarget.getBoundingClientRect();
-        const x = ((e.clientX - rect.left) / rect.width) * 100;
-        const y = ((e.clientY - rect.top) / rect.height) * 100;
-        
-        setMarkers(prev => ({ ...prev, [activeFieldId.toLowerCase()]: { x, y } }));
-        
-        const posDesc = `Gelegen op circa ${x.toFixed(0)}% van links en ${y.toFixed(0)}% van boven.`;
-        handleFieldChange(activeFieldId, posDesc);
-        
-        toast({ title: "Locatie gekoppeld", description: `Positie voor ${activeFieldId} opgeslagen.` });
-    };
+  const handleImageClick = (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!activeFieldId) {
+          toast({ description: "Selecteer eerst een veld om de locatie te koppelen." });
+          return;
+      }
+      
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      
+      setMarkers(prev => ({ ...prev, [activeFieldId.toLowerCase()]: { x, y } }));
+      
+      const posDesc = `Gelegen op circa ${x.toFixed(0)}% van links en ${y.toFixed(0)}% van boven.`;
+      handleFieldChange(activeFieldId, posDesc);
+      
+      toast({ title: "Locatie gekoppeld", description: `Positie voor ${activeFieldId} opgeslagen.` });
+  };
 
-    const handleSave = () => {
-        const serialized = Object.entries(fieldInstructions)
-            .filter(([_, val]) => val.trim() !== '')
-            .map(([key, val]) => `${key.toUpperCase()}: ${val}`)
-            .join('\n');
-        onSave(serialized, previewUrl);
-    };
+  const handleSave = () => {
+      const serialized = Object.entries(fieldInstructions)
+          .filter(([_, val]) => val.trim() !== '')
+          .map(([key, val]) => `${key.toUpperCase()}: ${val}`)
+          .join('\n');
+      onSave(serialized, previewUrl);
+  };
 
-    const handleUploadSample = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file || !app) return;
+  const handleUploadSample = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file || !app) return;
 
-        setIsUploadingSample(true);
-        const storage = getStorage(app);
-        const storagePath = `settings/ai_training_sample.pdf`;
-        const storageRef = ref(storage, storagePath);
-        
-        try {
-            const uploadTask = uploadBytesResumable(storageRef, file);
-            await uploadTask;
-            const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-            setPreviewUrl(downloadUrl);
-            toast({ title: "Sjabloon geüpload", description: "Het voorbeeld is succesvol opgeslagen." });
-        } catch (err: any) {
-            console.error("Sample upload error:", err);
-            toast({ variant: 'destructive', title: "Upload mislukt", description: "Fout bij opslaan sjabloon." });
-        } finally {
-            setIsUploadingSample(false);
-        }
-    };
+      setIsUploadingSample(true);
+      const storage = getStorage(app);
+      const storagePath = `settings/ai_training_sample.pdf`;
+      const storageRef = ref(storage, storagePath);
+      
+      try {
+          const uploadTask = uploadBytesResumable(storageRef, file);
+          await uploadTask;
+          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+          setPreviewUrl(downloadUrl);
+          toast({ title: "Sjabloon geüpload", description: "Het voorbeeld is succesvol opgeslagen." });
+      } catch (err: any) {
+          console.error("Sample upload error:", err);
+          toast({ variant: 'destructive', title: "Upload mislukt", description: "Fout bij opslaan sjabloon." });
+      } finally {
+          setIsUploadingSample(false);
+      }
+  };
 
-    return (
-        <Dialog>
-            <DialogTrigger asChild>
-                <Button variant="outline" className="h-9 border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold">
-                    <Settings2 className="mr-2 h-4 w-4" /> AI Training
-                </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[1200px] h-[95vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
-                <DialogHeader className="p-6 border-b shrink-0 bg-white">
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <DialogTitle className="text-xl font-bold tracking-tight text-slate-900">AI Training & Sjabloon Beheer</DialogTitle>
-                            <DialogDescription className="font-medium text-slate-500">
-                                Zoom in en klik op de afbeelding om velden te koppelen aan de visuele layout.
-                            </DialogDescription>
-                        </div>
-                        <div className="flex gap-2">
-                            <div className="flex items-center bg-slate-50 border rounded-lg px-2 mr-2">
-                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setZoom(Math.max(0.5, zoom - 0.25))}><ZoomOut className="h-4 w-4" /></Button>
-                                <span className="text-xs font-bold w-12 text-center">{Math.round(zoom * 100)}%</span>
-                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setZoom(Math.min(3, zoom + 0.25))}><ZoomIn className="h-4 w-4" /></Button>
-                            </div>
-                            <input type="file" ref={fileInputRef} onChange={handleUploadSample} className="hidden" accept="application/pdf,image/*" />
-                            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={isUploadingSample} className="h-9">
-                                {isUploadingSample ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4 mr-2" />}
-                                Nieuw Sjabloon
-                            </Button>
-                        </div>
-                    </div>
-                </DialogHeader>
-                
-                <div className="flex-1 flex min-h-0">
-                    <div className="w-2/3 border-r bg-slate-100 flex flex-col relative overflow-hidden group">
-                        <ScrollArea className="h-full">
-                            <div 
-                                className="relative flex items-center justify-center min-h-full"
-                                style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', transition: 'transform 0.2s ease-out' }}
-                                onClick={handleImageClick}
-                            >
-                                <div className="relative w-full h-[1600px] cursor-crosshair">
-                                    <Image 
-                                        src={previewUrl || "https://i.ibb.co/nNFZcctf/Schermafbeelding-2026-02-18-104605.png"} 
-                                        alt="Formulier Sjabloon" 
-                                        fill
-                                        className="object-contain"
-                                        priority
-                                    />
-                                    {Object.entries(markers).map(([id, pos]) => (
-                                        <div 
-                                            key={id} 
-                                            className="absolute w-6 h-6 -ml-3 -mt-3 bg-primary/80 rounded-full border-2 border-white flex items-center justify-center shadow-lg animate-in zoom-in"
-                                            style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
-                                        >
-                                            <Target className="h-3 w-3 text-white" />
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </ScrollArea>
-                    </div>
+  return (
+      <Dialog>
+          <DialogTrigger asChild>
+              <Button variant="outline" className="h-9 border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold">
+                  <Settings2 className="mr-2 h-4 w-4" /> AI Training
+              </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[1200px] h-[95vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
+              <DialogHeader className="p-6 border-b shrink-0 bg-white">
+                  <div className="flex justify-between items-center">
+                      <div>
+                          <DialogTitle className="text-xl font-bold tracking-tight text-slate-900">AI Training & Sjabloon Beheer</DialogTitle>
+                          <DialogDescription className="font-medium text-slate-500">
+                              Zoom in en klik op de afbeelding om velden te koppelen aan de visuele layout.
+                          </DialogDescription>
+                      </div>
+                      <div className="flex gap-2">
+                          <div className="flex items-center bg-slate-50 border rounded-lg px-2 mr-2">
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setZoom(Math.max(0.5, zoom - 0.25))}><ZoomOut className="h-4 w-4" /></Button>
+                              <span className="text-xs font-bold w-12 text-center">{Math.round(zoom * 100)}%</span>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setZoom(Math.min(3, zoom + 0.25))}><ZoomIn className="h-4 w-4" /></Button>
+                          </div>
+                          <input type="file" ref={fileInputRef} onChange={handleUploadSample} className="hidden" accept="application/pdf,image/*" />
+                          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={isUploadingSample} className="h-9">
+                              {isUploadingSample ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4 mr-2" />}
+                              Nieuw Sjabloon
+                          </Button>
+                      </div>
+                  </div>
+              </DialogHeader>
+              
+              <div className="flex-1 flex min-h-0">
+                  <div className="w-2/3 border-r bg-slate-100 flex flex-col relative overflow-hidden group">
+                      <ScrollArea className="h-full">
+                          <div 
+                              className="relative flex items-center justify-center min-h-full"
+                              style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', transition: 'transform 0.2s ease-out' }}
+                              onClick={handleImageClick}
+                          >
+                              <div className="relative w-full h-[1600px] cursor-crosshair">
+                                  <Image 
+                                      src={previewUrl || "https://i.ibb.co/nNFZcctf/Schermafbeelding-2026-02-18-104605.png"} 
+                                      alt="Formulier Sjabloon" 
+                                      fill
+                                      className="object-contain"
+                                      priority
+                                  />
+                                  {Object.entries(markers).map(([id, pos]) => (
+                                      <div 
+                                          key={id} 
+                                          className="absolute w-6 h-6 -ml-3 -mt-3 bg-primary/80 rounded-full border-2 border-white flex items-center justify-center shadow-lg animate-in zoom-in"
+                                          style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+                                      >
+                                          <Target className="h-3 w-3 text-white" />
+                                      </div>
+                                  ))}
+                              </div>
+                          </div>
+                      </ScrollArea>
+                  </div>
 
-                    <div className="w-1/3 flex flex-col bg-white">
-                        <div className="p-4 border-b shrink-0 bg-slate-50">
-                            <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Veld Mapping Instructies</Label>
-                        </div>
-                        <ScrollArea className="flex-1">
-                            <div className="p-6 space-y-6">
-                                <div className="space-y-4">
-                                    {MAPPING_FIELDS.map((field) => (
-                                        <div 
-                                            key={field.id} 
-                                            className={cn(
-                                                "space-y-1.5 p-2 rounded-lg transition-all border",
-                                                activeFieldId === field.id ? "border-primary bg-primary/5" : "border-transparent"
-                                            )}
-                                            onFocus={() => setactiveFieldId(field.id)}
-                                        >
-                                            <Label className="text-[10px] font-bold uppercase text-slate-400 ml-1 flex justify-between items-center">
-                                                {field.label}
-                                                {markers[field.id.toLowerCase()] && <Target className="h-3 w-3 text-primary" />}
-                                            </Label>
-                                            <Input 
-                                                value={fieldInstructions[field.id.toLowerCase()] || ''} 
-                                                onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                                                onFocus={() => setactiveFieldId(field.id)}
-                                                placeholder={`Klik op afbeelding...`}
-                                                className="h-9 text-xs font-semibold border-slate-200 shadow-sm"
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </ScrollArea>
-                    </div>
-                </div>
+                  <div className="w-1/3 flex flex-col bg-white">
+                      <div className="p-4 border-b shrink-0 bg-slate-50">
+                          <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Veld Mapping Instructies</Label>
+                      </div>
+                      <ScrollArea className="flex-1">
+                          <div className="p-6 space-y-6">
+                              <div className="space-y-4">
+                                  {MAPPING_FIELDS.map((field) => (
+                                      <div 
+                                          key={field.id} 
+                                          className={cn(
+                                              "space-y-1.5 p-2 rounded-lg transition-all border",
+                                              activeFieldId === field.id ? "border-primary bg-primary/5" : "border-transparent"
+                                          )}
+                                          onFocus={() => setactiveFieldId(field.id)}
+                                      >
+                                          <Label className="text-[10px] font-bold uppercase text-slate-400 ml-1 flex justify-between items-center">
+                                              {field.label}
+                                              {markers[field.id.toLowerCase()] && <Target className="h-3 w-3 text-primary" />}
+                                          </Label>
+                                          <Input 
+                                              value={fieldInstructions[field.id.toLowerCase()] || ''} 
+                                              onChange={(e) => handleFieldChange(field.id, e.target.value)}
+                                              onFocus={() => setactiveFieldId(field.id)}
+                                              placeholder={`Klik op afbeelding...`}
+                                              className="h-9 text-xs font-semibold border-slate-200 shadow-sm"
+                                          />
+                                      </div>
+                                  ))}
+                              </div>
+                          </div>
+                      </ScrollArea>
+                  </div>
+              </div>
 
-                <DialogFooter className="p-6 border-t shrink-0 bg-slate-50">
-                    <DialogClose asChild>
-                        <Button variant="ghost" className="font-bold">Sluiten</Button>
-                    </DialogClose>
-                    <Button onClick={handleSave} disabled={isSaving} className="font-bold h-11 px-8 shadow-lg shadow-primary/20">
-                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                        Configuratie Opslaan
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
+              <DialogFooter className="p-6 border-t shrink-0 bg-slate-50">
+                  <DialogClose asChild>
+                      <Button variant="ghost" className="font-bold">Sluiten</Button>
+                  </DialogClose>
+                  <Button onClick={handleSave} disabled={isSaving} className="font-bold h-11 px-8 shadow-lg shadow-primary/20">
+                      {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      Configuratie Opslaan
+                  </Button>
+              </DialogFooter>
+          </DialogContent>
+      </Dialog>
+  );
 }
 
 type UploadedFile = {
@@ -439,16 +439,11 @@ export default function NewIssuePage() {
   const { profile } = useProfile();
   const { startProcessing } = useGlobalLoading();
   const app = useFirebaseApp();
-  const { setIsHeaderVisible } = useNavigationUI();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isSavingConfig, setIsSavingConfig] = React.useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = React.useState(false);
 
   const searchParams = useSearchParams();
-  const meldingIdFromUrl = searchParams.get('id');
-  const [isReadOnly, setIsReadOnly] = React.useState(false);
-  const [viewedMelding, setViewedMelding] = React.useState<any | null>(null);
-
   const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
   const [uploadedPhotos, setUploadedPhotos] = React.useState<UploadedFile[]>([]);
   const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
@@ -639,18 +634,18 @@ export default function NewIssuePage() {
                                         <CardContent className="p-3 pt-0">
                                             <FormRow label="Meldingsnummer">
                                                 <FormField control={form.control} name="intakenummer" render={({ field }) => (
-                                                    <FormItem><FormControl><Input {...field} className="h-8 text-xs font-bold border-slate-200" disabled={isReadOnly}/></FormControl></FormItem>
+                                                    <FormItem><FormControl><Input {...field} className="h-8 text-xs font-bold border-slate-200" /></FormControl></FormItem>
                                                 )} />
                                             </FormRow>
                                             <FormRow label="Extern Ref.">
                                                 <FormField control={form.control} name="ext_referentie" render={({ field }) => (
-                                                    <FormItem><FormControl><Input {...field} className="h-8 text-xs font-bold border-slate-200" disabled={isReadOnly}/></FormControl></FormItem>
+                                                    <FormItem><FormControl><Input {...field} className="h-8 text-xs font-bold border-slate-200" /></FormControl></FormItem>
                                                 )} />
                                             </FormRow>
                                             <FormRow label="Status">
                                                 <FormField control={form.control} name="status" render={({ field }) => (
                                                     <FormItem>
-                                                        <Select onValueChange={field.onChange} value={field.value} disabled={isReadOnly}>
+                                                        <Select onValueChange={field.onChange} value={field.value}>
                                                             <FormControl><SelectTrigger className="h-8 text-xs font-bold border-slate-200"><SelectValue /></SelectTrigger></FormControl>
                                                             <SelectContent>{statusOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                                         </Select>
@@ -669,24 +664,24 @@ export default function NewIssuePage() {
                                         <CardContent className="p-3 pt-0">
                                             <FormRow label="Straatnaam">
                                                 <FormField control={form.control} name="straatnaam" render={({ field }) => (
-                                                    <FormItem><FormControl><Input {...field} className="h-8 text-xs font-bold border-slate-200" disabled={isReadOnly} /></FormControl></FormItem>
+                                                    <FormItem><FormControl><Input {...field} className="h-8 text-xs font-bold border-slate-200" /></FormControl></FormItem>
                                                 )} />
                                             </FormRow>
                                             <div className="grid grid-cols-2 gap-2">
                                                 <FormRow label="Huisnr.">
                                                     <FormField control={form.control} name="nummer" render={({ field }) => (
-                                                        <FormItem><FormControl><Input {...field} className="h-8 text-xs font-bold border-slate-200" disabled={isReadOnly} /></FormControl></FormItem>
+                                                        <FormItem><FormControl><Input {...field} className="h-8 text-xs font-bold border-slate-200" /></FormControl></FormItem>
                                                     )} />
                                                 </FormRow>
                                                 <FormRow label="Postcode">
                                                     <FormField control={form.control} name="postcode" render={({ field }) => (
-                                                        <FormItem><FormControl><Input {...field} className="h-8 text-xs font-bold border-slate-200" disabled={isReadOnly} /></FormControl></FormItem>
+                                                        <FormItem><FormControl><Input {...field} className="h-8 text-xs font-bold border-slate-200" /></FormControl></FormItem>
                                                     )} />
                                                 </FormRow>
                                             </div>
                                             <FormRow label="Plaats">
                                                 <FormField control={form.control} name="plaats" render={({ field }) => (
-                                                    <FormItem><FormControl><Input {...field} className="h-8 text-xs font-bold border-slate-200" disabled={isReadOnly} /></FormControl></FormItem>
+                                                    <FormItem><FormControl><Input {...field} className="h-8 text-xs font-bold border-slate-200" /></FormControl></FormItem>
                                                 )} />
                                             </FormRow>
                                         </CardContent>
@@ -704,7 +699,7 @@ export default function NewIssuePage() {
                                             <FormRow label="Hoofdtype">
                                                 <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (
                                                     <FormItem>
-                                                        <Select onValueChange={field.onChange} value={field.value ?? ''} disabled={isReadOnly}>
+                                                        <Select onValueChange={field.onChange} value={field.value ?? ''}>
                                                             <FormControl><SelectTrigger className="h-8 text-xs font-bold border-slate-200"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
                                                             <SelectContent>{hoofdcategorieOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                                         </Select>
@@ -714,7 +709,7 @@ export default function NewIssuePage() {
                                             <FormRow label="Subtype">
                                                 <FormField control={form.control} name="subcategorie" render={({ field }) => (
                                                     <FormItem>
-                                                        <Select onValueChange={field.onChange} value={field.value ?? ''} disabled={isReadOnly}>
+                                                        <Select onValueChange={field.onChange} value={field.value ?? ''}>
                                                             <FormControl><SelectTrigger className="h-8 text-xs font-bold border-slate-200"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
                                                             <SelectContent>{subcategorieMapping[form.watch('hoofdcategorie')]?.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>)) || <SelectItem value="overig">Overig</SelectItem>}</SelectContent>
                                                         </Select>
@@ -733,7 +728,7 @@ export default function NewIssuePage() {
                                         <CardContent className="p-3 pt-0">
                                             <FormRow label="Naam Melder">
                                                 <FormField control={form.control} name="melder" render={({ field }) => (
-                                                    <FormItem><FormControl><Input {...field} className="h-8 text-xs font-bold border-slate-200" disabled={isReadOnly} /></FormControl></FormItem>
+                                                    <FormItem><FormControl><Input {...field} className="h-8 text-xs font-bold border-slate-200" /></FormControl></FormItem>
                                                 )} />
                                             </FormRow>
                                         </CardContent>
@@ -749,18 +744,18 @@ export default function NewIssuePage() {
                                             <div className="grid grid-cols-2 gap-2">
                                                 <FormRow label="Melddatum">
                                                     <FormField control={form.control} name="meldingsdatum" render={({ field }) => (
-                                                        <FormItem><FormControl><Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} className="h-8 text-xs font-bold border-slate-200" disabled={isReadOnly} /></FormControl></FormItem>
+                                                        <FormItem><FormControl><Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} className="h-8 text-xs font-bold border-slate-200" /></FormControl></FormItem>
                                                     )} />
                                                 </FormRow>
                                                 <FormRow label="Uur">
                                                     <FormField control={form.control} name="meldingsuur" render={({ field }) => (
-                                                        <FormItem><FormControl><Input type="time" {...field} className="h-8 text-xs font-bold border-slate-200" disabled={isReadOnly} /></FormControl></FormItem>
+                                                        <FormItem><FormControl><Input type="time" {...field} className="h-8 text-xs font-bold border-slate-200" /></FormControl></FormItem>
                                                     )} />
                                                 </FormRow>
                                             </div>
                                             <FormRow label="Memo">
                                                 <FormField control={form.control} name="extra_informatie" render={({ field }) => (
-                                                    <FormItem><FormControl><Textarea {...field} className="resize-none min-h-[40px] text-xs font-medium border-slate-200 bg-slate-50/30" placeholder="Memo..." disabled={isReadOnly}/></FormControl></FormItem>
+                                                    <FormItem><FormControl><Textarea {...field} className="resize-none min-h-[40px] text-xs font-medium border-slate-200 bg-slate-50/30" placeholder="Memo..." /></FormControl></FormItem>
                                                 )} />
                                             </FormRow>
                                         </CardContent>
@@ -788,33 +783,6 @@ export default function NewIssuePage() {
                                             <input type="file" id="media-photo-input" className="hidden" accept="image/*" multiple onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'fotos')} />
                                         </Button>
                                     </div>
-
-                                    {(uploadedFiles.length > 0 || uploadedPhotos.length > 0) && (
-                                        <div className="grid grid-cols-1 gap-2 pt-1 max-h-32 overflow-y-auto pr-2 custom-scrollbar">
-                                            {uploadedFiles.map(file => (
-                                                <div key={file.storagePath} className="flex items-center justify-between p-1.5 rounded-xl bg-blue-50 border border-blue-100 group">
-                                                    <div className="flex items-center gap-2 min-w-0">
-                                                        <Paperclip className="h-3 w-3 text-blue-500 shrink-0" />
-                                                        <span className="text-[10px] font-bold truncate text-blue-700">{file.name}</span>
-                                                    </div>
-                                                    <Button variant="ghost" size="icon" className="h-5 w-5 rounded-lg text-blue-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setUploadedFiles(prev => prev.filter(f => f.storagePath !== file.storagePath))}>
-                                                        <X className="h-3 w-3" />
-                                                    </Button>
-                                                </div>
-                                            ))}
-                                            {uploadedPhotos.map(photo => (
-                                                <div key={photo.storagePath} className="flex items-center justify-between p-1.5 rounded-xl bg-green-50 border border-green-100 group">
-                                                    <div className="flex items-center gap-2 min-w-0">
-                                                        <Camera className="h-3 w-3 text-green-500 shrink-0" />
-                                                        <span className="text-[10px] font-bold truncate text-green-700">{photo.name}</span>
-                                                    </div>
-                                                    <Button variant="ghost" size="icon" className="h-5 w-5 rounded-lg text-blue-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setUploadedPhotos(prev => prev.filter(f => f.storagePath !== photo.storagePath))}>
-                                                        <X className="h-3 w-3" />
-                                                    </Button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         </form>
@@ -823,13 +791,61 @@ export default function NewIssuePage() {
             </div>
             
             <div className="w-full lg:w-[450px] p-4 bg-slate-50 border-l shrink-0 h-full overflow-hidden flex flex-col gap-4">
-                <Card className="flex-1 relative overflow-hidden border-none shadow-2xl rounded-2xl bg-slate-100">
+                <Card className="h-1/2 relative overflow-hidden border-none shadow-2xl rounded-2xl bg-slate-100">
                     <MapboxView latitude={location?.latitude} longitude={location?.longitude} />
                     <div className="absolute top-3 left-3 z-10 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-lg border border-slate-200 shadow-md flex items-center gap-2">
                         <div className="h-1 w-1 rounded-full bg-red-500 animate-pulse" />
                         <span className="text-[8px] font-bold uppercase tracking-widest text-slate-900">Live Kaart</span>
                     </div>
                 </Card>
+
+                {/* Medialijst in de rechterkolom onder de kaart */}
+                <div className="flex-1 flex flex-col min-h-0 bg-white rounded-2xl p-4 shadow-sm">
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 px-1 border-b pb-2">
+                        Bijlagen ({uploadedFiles.length + uploadedPhotos.length})
+                    </h3>
+                    <ScrollArea className="flex-1 pr-2">
+                        <div className="space-y-2">
+                            {uploadedFiles.map(file => (
+                                <div key={file.storagePath} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100 group transition-all hover:bg-white hover:shadow-md">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className="bg-blue-100 p-1.5 rounded-lg">
+                                            <Paperclip className="h-3.5 w-3.5 text-blue-600" />
+                                        </div>
+                                        <span className="text-[11px] font-bold truncate text-slate-700">{file.name}</span>
+                                    </div>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-300 hover:text-red-600 rounded-full" onClick={() => setUploadedFiles(prev => prev.filter(f => f.storagePath !== file.storagePath))}>
+                                        <X className="h-3.5 w-3.5" />
+                                    </Button>
+                                </div>
+                            ))}
+                            {uploadedPhotos.map(photo => (
+                                <div key={photo.storagePath} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100 group transition-all hover:bg-white hover:shadow-md">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className="bg-green-100 p-1.5 rounded-lg">
+                                            <Camera className="h-3.5 w-3.5 text-green-600" />
+                                        </div>
+                                        <div className="relative h-8 w-8 rounded-md overflow-hidden bg-slate-200">
+                                            <Image src={photo.url} alt={photo.name} fill className="object-cover" />
+                                        </div>
+                                        <span className="text-[11px] font-bold truncate text-slate-700">{photo.name}</span>
+                                    </div>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-300 hover:text-red-600 rounded-full" onClick={() => setUploadedPhotos(prev => prev.filter(f => f.storagePath !== photo.storagePath))}>
+                                        <X className="h-3.5 w-3.5" />
+                                    </Button>
+                                </div>
+                            ))}
+                            {uploadedFiles.length === 0 && uploadedPhotos.length === 0 && (
+                                <div className="py-12 flex flex-col items-center justify-center text-slate-300">
+                                    <div className="bg-slate-50 p-4 rounded-full mb-3">
+                                        <Paperclip className="h-8 w-8 opacity-20" />
+                                    </div>
+                                    <p className="text-[10px] font-black uppercase tracking-widest">Geen bijlagen</p>
+                                </div>
+                            )}
+                        </div>
+                    </ScrollArea>
+                </div>
             </div>
         </main>
     </div>
