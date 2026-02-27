@@ -298,7 +298,8 @@ export type Melding = {
     | 'Dubbel gemeld'
     | 'Afgerond'
     | 'Niet in beheer'
-    | 'Extern doorgezet';
+    | 'Extern doorgezet'
+    | 'Geweigerd';
   datum: string; // Creation date yyyy-MM-dd
   tijdstip: string;
   melder: string;

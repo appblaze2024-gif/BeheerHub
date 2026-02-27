@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -122,7 +123,7 @@ type NewMeldingFormValues = z.infer<typeof newMeldingSchema>;
 
 const statusOptions = [
     "Nieuw", "Intern doorgezet", "In behandeling", "Gepland op korte termijn",
-    "Gepland op langere termijn", "Dubbel gemeld", "Afgerond", "Niet in beheer", "Extern doorgezet"
+    "Gepland op langere termijn", "Dubbel gemeld", "Afgerond", "Niet in beheer", "Extern doorgezet", "Geweigerd"
 ];
 
 const hoofdcategorieOptions = ["Afval", "Weg en straatmeubilair", "Groen", "Water", "Overig", "Zoutkisten"];

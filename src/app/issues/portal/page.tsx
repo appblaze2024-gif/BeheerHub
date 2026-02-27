@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -191,6 +192,10 @@ export default function MeldingenportaalPage() {
                                                     <DropdownMenuItem onClick={() => setSelectedMeldingForForward(melding)} className="font-bold rounded-lg h-10 cursor-pointer">
                                                         <Mail className="mr-2 h-4 w-4 text-primary" />
                                                         Extern doorzetten
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => handleStatusChange(melding, 'Geweigerd')} className="font-bold rounded-lg h-10 text-red-600 cursor-pointer">
+                                                        <XCircle className="mr-2 h-4 w-4" />
+                                                        Melding weigeren
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem onClick={() => handleStatusChange(melding, 'Niet in beheer')} className="font-bold rounded-lg h-10 text-red-600 cursor-pointer">
                                                         <XCircle className="mr-2 h-4 w-4" />

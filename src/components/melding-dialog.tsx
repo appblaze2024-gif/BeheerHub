@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -89,7 +90,9 @@ const statusOptions = [
     "Gepland op langere termijn",
     "Dubbel gemeld",
     "Afgerond",
-    "Niet in beheer"
+    "Niet in beheer",
+    "Extern doorgezet",
+    "Geweigerd"
 ];
 const hoofdcategorieOptions = ["Afval", "Weg en straatmeubilair", "Groen", "Water", "Overig"];
 const subcategorieOptions: Record<string, string[]> = {

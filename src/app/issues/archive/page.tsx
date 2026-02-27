@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -22,7 +23,7 @@ import {
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { LoadingScreen } from '@/components/loading-screen';
 
-const closedStatus = "Afgerond";
+const closedStatuses = ["Afgerond", "Niet in beheer", "Geweigerd", "Dubbel gemeld"];
 
 export default function ArchiveIssuesPage() {
   const firestore = useFirestore();
@@ -44,7 +45,7 @@ export default function ArchiveIssuesPage() {
     if (!firestore) return null;
     return query(
       collection(firestore, 'meldingen'),
-      where('status', '==', closedStatus)
+      where('status', 'in', closedStatuses)
     );
   }, [firestore]);
 
