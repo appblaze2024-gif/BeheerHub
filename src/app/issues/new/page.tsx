@@ -16,22 +16,22 @@ import {
   Settings2, 
   FileText, 
   X, 
-  ZoomIn, 
-  ZoomOut, 
-  Target, 
-  Package, 
-  User,
   Check,
   Calendar,
   Paperclip,
   FileSpreadsheet,
   ClipboardPaste,
-  ChevronRight
+  ChevronRight,
+  Info,
+  User,
+  ShieldCheck,
+  Building2,
+  Phone,
+  Mail
 } from 'lucide-react';
 import { 
   useFirestore, 
   addDocumentNonBlocking, 
-  updateDocumentNonBlocking, 
   useFirebaseApp, 
   useDoc, 
   setDocumentNonBlocking, 
@@ -92,7 +92,7 @@ const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGt
 
 const newMeldingSchema = z.object({
   intakenummer: z.string().min(1, 'Meldingsnummer is verplicht'),
-  ext_referentie: z.string().optional().nullable(),
+  extern_meldingsnummer: z.string().optional().nullable(),
   containernummer: z.string().optional().nullable(),
   soort_melder: z.string().optional().nullable(),
   hoofdcategorie: z.string().optional().nullable(),
@@ -104,16 +104,15 @@ const newMeldingSchema = z.object({
   voorvaltijd: z.string().optional().nullable(),
   meldingsdatum: z.date().optional().nullable(),
   meldingsuur: z.string().optional().nullable(),
-  actiedatum: z.date().optional().nullable(),
   straatnaam: z.string().optional().nullable(),
-  nummer: z.string().optional().nullable(),
+  huisnummer: z.string().optional().nullable(),
   postcode: z.string().optional().nullable(),
   plaats: z.string().optional().nullable(),
   wijk: z.string().optional().nullable(),
   werkgebied: z.string().optional().nullable(),
   melder: z.string().optional().nullable(),
   telefoon_melder: z.string().optional().nullable(),
-  email_melder: z.string().email('Ongeldig emailadres').optional().or(z.literal('')).nullable(),
+  email_melder: z.string().optional().or(z.literal('')).nullable(),
   burgerservicenummer: z.string().optional().nullable(),
   extra_informatie: z.string().optional().nullable(),
   afgehandeld_door: z.string().optional().nullable(),
@@ -142,11 +141,11 @@ const subcategorieMapping: Record<string, string[]> = {
 
 const MAPPING_FIELDS = [
     { id: 'intakenummer', label: 'Intakenummer' },
+    { id: 'extern_meldingsnummer', label: 'Extern Nummer' },
     { id: 'containernummer', label: 'Containernummer' },
     { id: 'datum', label: 'Datum (JJJJ-MM-DD)' },
     { id: 'tijdstip', label: 'Tijdstip (HH:mm)' },
     { id: 'melder', label: 'Naam melder' },
-    { id: 'extern_meldingsnummer', label: 'Extern meldingsnummer' },
     { id: 'behandelaar', label: 'Behandelaar' },
     { id: 'label_1', label: 'Hoofdindeling' },
     { id: 'label_2', label: 'Indeling' },
@@ -158,8 +157,8 @@ const MAPPING_FIELDS = [
 ];
 
 const FormRow = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <div className="flex flex-col gap-0.5 py-0.5 border-b border-slate-100 last:border-0 min-h-[32px]">
-        <FormLabel className="text-[9px] font-black uppercase text-slate-400 tracking-widest">{label}</FormLabel>
+    <div className="flex flex-col gap-0.5 py-1 border-b border-slate-100 last:border-0 min-h-[36px]">
+        <FormLabel className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">{label}</FormLabel>
         <div className="flex-1 min-w-0">
             {children}
         </div>
@@ -197,10 +196,10 @@ function SmartPasteDialog({ onParsed, instructions }: { onParsed: (data: any) =>
             </DialogTrigger>
             <DialogContent className="sm:max-w-xl">
                 <DialogHeader>
-                    <DialogTitle className="font-black uppercase tracking-tight">Smart Paste</DialogTitle>
+                    <DialogTitle className="font-black uppercase tracking-tight">AI Smart Paste</DialogTitle>
                     <DialogDescription className="font-bold text-slate-500">Plak tekst uit een ander systeem om velden automatisch in te vullen.</DialogDescription>
                 </DialogHeader>
-                <div className="py-4"><Textarea placeholder="Plak hier de tekst..." className="min-h-[200px]" value={text} onChange={(e) => setText(e.target.value)} /></div>
+                <div className="py-4"><Textarea placeholder="Plak hier de tekst..." className="min-h-[200px] text-xs font-medium" value={text} onChange={(e) => setText(e.target.value)} /></div>
                 <DialogFooter>
                     <DialogClose asChild><Button variant="ghost">Annuleren</Button></DialogClose>
                     <Button onClick={handlePaste} disabled={isProcessing || !text.trim()} className="font-black uppercase">
@@ -214,7 +213,6 @@ function SmartPasteDialog({ onParsed, instructions }: { onParsed: (data: any) =>
 }
 
 function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { instructions: string, onSave: (val: string, pdfUrl?: string) => void, isSaving: boolean, samplePdfUrl?: string }) {
-  const { toast } = useToast();
   const [fieldInstructions, setFieldInstructions] = React.useState<Record<string, string>>({});
   const [previewUrl, setPreviewUrl] = React.useState<string | undefined>(samplePdfUrl);
   const [isUploadingSample, setIsUploadingSample] = React.useState(false);
@@ -327,13 +325,19 @@ export default function NewIssuePage() {
   const form = useForm<NewMeldingFormValues>({
     resolver: zodResolver(newMeldingSchema),
     defaultValues: {
-      intakenummer: '', status: 'Nieuw', meldingsdatum: new Date(), meldingsuur: format(new Date(), 'HH:mm'),
-      voorvaldatum: new Date(), voorvaltijd: format(new Date(), 'HH:mm'), hoofdcategorie: '', subcategorie: '',
+      intakenummer: `M${Date.now().toString().slice(-6)}`, 
+      status: 'Nieuw', 
+      meldingsdatum: new Date(), 
+      meldingsuur: format(new Date(), 'HH:mm'),
+      voorvaldatum: new Date(), 
+      voorvaltijd: format(new Date(), 'HH:mm'), 
+      hoofdcategorie: '', 
+      subcategorie: '',
     },
   });
 
   // AUTO GEOCODING
-  const watchedAddress = form.watch(['straatnaam', 'nummer', 'plaats']);
+  const watchedAddress = form.watch(['straatnaam', 'huisnummer', 'plaats']);
   React.useEffect(() => {
     const [s, n, p] = watchedAddress;
     const addr = `${s || ''} ${n || ''}, ${p || ''}`.trim();
@@ -370,7 +374,6 @@ export default function NewIssuePage() {
         voorvaldatum: data.voorvaldatum ? format(data.voorvaldatum, 'yyyy-MM-dd') : null,
         meldingsdatum: data.meldingsdatum ? format(data.meldingsdatum, 'yyyy-MM-dd') : null,
         afhandeling_datum: data.afhandeling_datum ? format(data.afhandeling_datum, 'yyyy-MM-dd') : null,
-        actiedatum: data.actiedatum ? format(data.actiedatum, 'yyyy-MM-dd') : null,
         latitude: location?.latitude || 0,
         longitude: location?.longitude || 0,
         files: uploadedFiles,
@@ -379,7 +382,8 @@ export default function NewIssuePage() {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
-      addDocumentNonBlocking(collection(firestore, 'meldingen'), mData);
+      await addDocumentNonBlocking(collection(firestore, 'meldingen'), mData);
+      toast({ title: "Melding opgeslagen", description: `Melding ${data.intakenummer} is aangemaakt.` });
       startProcessing(1000);
       router.push('/issues/open');
     } catch (e) {
@@ -391,25 +395,26 @@ export default function NewIssuePage() {
 
   const onInvalid = (errors: any) => {
     console.error("Form errors:", errors);
-    toast({ variant: 'destructive', title: 'Validatie mislukt', description: 'Vul alle verplichte velden in.' });
+    const firstError = Object.values(errors)[0] as any;
+    toast({ variant: 'destructive', title: 'Validatie mislukt', description: firstError?.message || 'Vul alle verplichte velden in.' });
   };
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-slate-50">
         <header className="h-14 bg-white border-b flex items-center justify-between px-6 shrink-0 shadow-sm z-10">
             <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" className="h-9 font-bold gap-2" onClick={() => document.getElementById('media-doc-input')?.click()}>
-                    <UploadCloud className="h-4 w-4" /> Document
+                <Button variant="outline" size="sm" className="h-9 font-black gap-2 border-slate-200" onClick={() => document.getElementById('media-doc-input')?.click()}>
+                    <UploadCloud className="h-4 w-4 text-primary" /> DOC
                     <input type="file" id="media-doc-input" className="hidden" multiple onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'files')} />
                 </Button>
-                <Button variant="outline" size="sm" className="h-9 font-bold gap-2" onClick={() => document.getElementById('media-photo-input')?.click()}>
-                    <Camera className="h-4 w-4" /> Foto
+                <Button variant="outline" size="sm" className="h-9 font-black gap-2 border-slate-200" onClick={() => document.getElementById('media-photo-input')?.click()}>
+                    <Camera className="h-4 w-4 text-green-600" /> FOTO
                     <input type="file" id="media-photo-input" className="hidden" accept="image/*" multiple onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'fotos')} />
                 </Button>
             </div>
             <div className="flex items-center gap-2">
                 <IssueImportDialog open={false} onOpenChange={() => {}} onSuccess={() => {}}>
-                    <Button variant="outline" size="sm" className="h-9 font-bold text-green-600 border-green-100"><FileSpreadsheet className="mr-2 h-3.5 w-3.5" /> Excel Import</Button>
+                    <Button variant="outline" size="sm" className="h-9 font-bold text-green-600 border-green-100"><FileSpreadsheet className="mr-2 h-3.5 w-3.5" /> EXCEL</Button>
                 </IssueImportDialog>
                 <SmartPasteDialog onParsed={(d) => form.reset({ ...form.getValues(), ...d })} instructions={aiConfig?.instructions || ''} />
                 <AIConfigDialog instructions={aiConfig?.instructions || ''} samplePdfUrl={aiConfig?.samplePdfUrl} onSave={async (v, url) => {
@@ -419,8 +424,8 @@ export default function NewIssuePage() {
                     setIsSavingConfig(false);
                 }} isSaving={isSavingConfig} />
                 <Separator orientation="vertical" className="h-5 mx-1" />
-                <Button type="submit" form="new-melding-form" size="sm" disabled={isSubmitting} className="h-9 font-black uppercase px-6">
-                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />} Opslaan
+                <Button type="submit" form="new-melding-form" size="sm" disabled={isSubmitting} className="h-9 font-black uppercase px-8 shadow-lg shadow-primary/20">
+                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />} OPSLAAN
                 </Button>
             </div>
         </header>
@@ -430,51 +435,74 @@ export default function NewIssuePage() {
                 <Form {...form}>
                     <form id="new-melding-form" onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-4">
-                            <Card className="rounded-xl overflow-hidden bg-white shadow-sm border-slate-200">
-                                <CardHeader className="bg-slate-50 border-b py-1.5 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500">Hoofdgegevens</CardTitle></CardHeader>
-                                <CardContent className="p-3 pt-0">
-                                    <FormRow label="Meldingsnummer">
+                            <Card className="rounded-2xl overflow-hidden bg-white shadow-sm border-slate-200">
+                                <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Hoofdgegevens</CardTitle></CardHeader>
+                                <CardContent className="p-4 pt-2">
+                                    <FormRow label="Meldingsnummer*">
                                         <FormField control={form.control} name="intakenummer" render={({ field }) => (
                                             <FormItem><FormControl><Input {...field} className="h-8 text-xs font-bold" /></FormControl><FormMessage /></FormItem>
                                         )} />
                                     </FormRow>
-                                    <FormRow label="Status">
-                                        <FormField control={form.control} name="status" render={({ field }) => (
-                                            <FormItem>
-                                                <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue /></SelectTrigger></FormControl>
-                                                    <SelectContent>{statusOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
-                                                </Select>
-                                            </FormItem>
-                                        )} />
-                                    </FormRow>
-                                    <FormRow label="Containernummer">
-                                        <FormField control={form.control} name="containernummer" render={({ field }) => (
-                                            <FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>
-                                        )} />
-                                    </FormRow>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <FormRow label="Extern Nummer">
+                                            <FormField control={form.control} name="extern_meldingsnummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} />
+                                        </FormRow>
+                                        <FormRow label="Status*">
+                                            <FormField control={form.control} name="status" render={({ field }) => (
+                                                <FormItem>
+                                                    <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue /></SelectTrigger></FormControl>
+                                                        <SelectContent>{statusOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                                    </Select>
+                                                </FormItem>
+                                            )} />
+                                        </FormRow>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <FormRow label="Containernr.">
+                                            <FormField control={form.control} name="containernummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} />
+                                        </FormRow>
+                                        <FormRow label="Soort Melder">
+                                            <FormField control={form.control} name="soort_melder" render={({ field }) => (
+                                                <FormItem>
+                                                    <Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
+                                                        <SelectContent>
+                                                            <SelectItem value="Inwoner">Inwoner</SelectItem>
+                                                            <SelectItem value="Bedrijf">Bedrijf</SelectItem>
+                                                            <SelectItem value="Gemeente">Gemeente</SelectItem>
+                                                            <SelectItem value="Toezichthouder">Toezichthouder</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </FormItem>
+                                            )} />
+                                        </FormRow>
+                                    </div>
                                 </CardContent>
                             </Card>
 
-                            <Card className="rounded-xl overflow-hidden bg-white shadow-sm border-slate-200">
-                                <CardHeader className="bg-slate-50 border-b py-1.5 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500">Locatie</CardTitle></CardHeader>
-                                <CardContent className="p-3 pt-0">
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <FormRow label="Straatnaam"><FormField control={form.control} name="straatnaam" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
-                                        <FormRow label="Huisnr."><FormField control={form.control} name="nummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                            <Card className="rounded-2xl overflow-hidden bg-white shadow-sm border-slate-200">
+                                <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Locatie & Gebied</CardTitle></CardHeader>
+                                <CardContent className="p-4 pt-2">
+                                    <div className="grid grid-cols-3 gap-3">
+                                        <div className="col-span-2"><FormRow label="Straatnaam"><FormField control={form.control} name="straatnaam" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow></div>
+                                        <FormRow label="Huisnr."><FormField control={form.control} name="huisnummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-2">
+                                    <div className="grid grid-cols-2 gap-3">
                                         <FormRow label="Plaats"><FormField control={form.control} name="plaats" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                                        <FormRow label="Postcode"><FormField control={form.control} name="postcode" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
                                         <FormRow label="Wijk"><FormField control={form.control} name="wijk" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                                        <FormRow label="Werkgebied"><FormField control={form.control} name="werkgebied" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
                                     </div>
                                 </CardContent>
                             </Card>
                         </div>
 
                         <div className="space-y-4">
-                            <Card className="rounded-xl overflow-hidden bg-white shadow-sm border-slate-200">
-                                <CardHeader className="bg-slate-50 border-b py-1.5 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500">Categorie & Behandeling</CardTitle></CardHeader>
-                                <CardContent className="p-3 pt-0">
-                                    <div className="grid grid-cols-2 gap-2">
+                            <Card className="rounded-2xl overflow-hidden bg-white shadow-sm border-slate-200">
+                                <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Categorie & Melder</CardTitle></CardHeader>
+                                <CardContent className="p-4 pt-2">
+                                    <div className="grid grid-cols-2 gap-3">
                                         <FormRow label="Hoofdtype">
                                             <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (
                                                 <FormItem>
@@ -496,24 +524,31 @@ export default function NewIssuePage() {
                                             )} />
                                         </FormRow>
                                     </div>
-                                    <FormRow label="Behandelaar">
-                                        <FormField control={form.control} name="behandelaar" render={({ field }) => (
-                                            <FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>
-                                        )} />
-                                    </FormRow>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <FormRow label="Naam Melder"><FormField control={form.control} name="melder" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                                        <FormRow label="BSN"><FormField control={form.control} name="burgerservicenummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <FormRow label="Telefoon"><FormField control={form.control} name="telefoon_melder" render={({ field }) => (<FormItem><FormControl><Input type="tel" {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                                        <FormRow label="Email"><FormField control={form.control} name="email_melder" render={({ field }) => (<FormItem><FormControl><Input type="email" {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                                    </div>
                                 </CardContent>
                             </Card>
 
-                            <Card className="rounded-xl overflow-hidden bg-white shadow-sm border-slate-200">
-                                <CardHeader className="bg-slate-50 border-b py-1.5 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500">Planning & Melder</CardTitle></CardHeader>
-                                <CardContent className="p-3 pt-0">
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <FormRow label="Melddatum"><FormField control={form.control} name="meldingsdatum" render={({ field }) => (<FormItem><FormControl><Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
-                                        <FormRow label="Melder"><FormField control={form.control} name="melder" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                            <Card className="rounded-2xl overflow-hidden bg-white shadow-sm border-slate-200">
+                                <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Behandeling & Tijden</CardTitle></CardHeader>
+                                <CardContent className="p-4 pt-2">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <FormRow label="Behandelaar"><FormField control={form.control} name="behandelaar" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                                        <FormRow label="Afdeling"><FormField control={form.control} name="behandelende_afdeling" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
                                     </div>
-                                    <FormRow label="Memo">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <FormRow label="Melddatum"><FormField control={form.control} name="meldingsdatum" render={({ field }) => (<FormItem><FormControl><Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                                        <FormRow label="Uur"><FormField control={form.control} name="meldingsuur" render={({ field }) => (<FormItem><FormControl><Input type="time" {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                                    </div>
+                                    <FormRow label="Omschrijving Melding">
                                         <FormField control={form.control} name="extra_informatie" render={({ field }) => (
-                                            <FormItem><FormControl><Textarea {...field} value={field.value || ''} className="resize-none min-h-[60px] text-xs font-medium" placeholder="Aanvullende info..." /></FormControl></FormItem>
+                                            <FormItem><FormControl><Textarea {...field} value={field.value || ''} className="resize-none min-h-[60px] text-xs font-medium border-slate-100 bg-slate-50/30" placeholder="Aanvullende info..." /></FormControl></FormItem>
                                         )} />
                                     </FormRow>
                                 </CardContent>
@@ -524,43 +559,55 @@ export default function NewIssuePage() {
             </div>
             
             <div className="w-full lg:w-[450px] p-4 bg-slate-50 border-l shrink-0 h-full overflow-hidden flex flex-col gap-4">
-                <Card className="h-1/2 relative overflow-hidden border-none shadow-xl rounded-2xl bg-slate-100">
+                <Card className="h-1/2 relative overflow-hidden border-none shadow-xl rounded-3xl bg-slate-100">
                     <MapboxView latitude={location?.latitude} longitude={location?.longitude} />
-                    <div className="absolute top-3 left-3 z-10 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-lg border border-slate-200 shadow-sm flex items-center gap-2">
-                        <div className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
-                        <span className="text-[8px] font-bold uppercase tracking-widest">Live Kaart</span>
+                    <div className="absolute top-4 left-4 z-10 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-2xl border border-slate-200 shadow-xl flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">Live Kaart</span>
                     </div>
                 </Card>
 
-                <div className="flex-1 flex flex-col min-h-0 bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
-                    <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 px-1 border-b pb-2">
-                        Bijlagen ({uploadedFiles.length + uploadedPhotos.length})
-                    </h3>
-                    <ScrollArea className="flex-1 pr-2">
-                        <div className="space-y-2">
+                <div className="flex-1 flex flex-col min-h-0 bg-white rounded-3xl p-5 shadow-sm border border-slate-200">
+                    <div className="flex items-center justify-between border-b pb-3 mb-4">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                            BIJLAGEN ({uploadedFiles.length + uploadedPhotos.length})
+                        </h3>
+                        <Badge variant="secondary" className="bg-slate-100 text-slate-500 font-bold h-5 px-2">Ready</Badge>
+                    </div>
+                    <ScrollArea className="flex-1 pr-3">
+                        <div className="space-y-3">
                             {uploadedFiles.map(f => (
-                                <div key={f.storagePath} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100 group transition-all hover:bg-white hover:shadow-md">
+                                <div key={f.storagePath} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100 group transition-all hover:bg-white hover:shadow-lg hover:scale-[1.02]">
                                     <div className="flex items-center gap-3 min-w-0">
-                                        <div className="bg-blue-100 p-1.5 rounded-lg"><Paperclip className="h-3.5 w-3.5 text-blue-600" /></div>
-                                        <span className="text-[11px] font-bold truncate text-slate-700">{f.name}</span>
+                                        <div className="bg-blue-100 p-2 rounded-xl"><Paperclip className="h-4 w-4 text-blue-600" /></div>
+                                        <div className="min-w-0">
+                                            <p className="text-[11px] font-black truncate text-slate-900 uppercase tracking-tighter">{f.name}</p>
+                                            <p className="text-[9px] font-bold text-slate-400">DOCUMENT • {Math.round(f.size / 1024)} KB</p>
+                                        </div>
                                     </div>
-                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-300 hover:text-red-600 rounded-full" onClick={() => setUploadedFiles(prev => prev.filter(x => x.storagePath !== f.storagePath))}><X className="h-3.5 w-3.5" /></Button>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-600 rounded-full" onClick={() => setUploadedFiles(prev => prev.filter(x => x.storagePath !== f.storagePath))}><Trash2 className="h-4 w-4" /></Button>
                                 </div>
                             ))}
                             {uploadedPhotos.map(p => (
-                                <div key={p.storagePath} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100 group transition-all hover:bg-white hover:shadow-md">
+                                <div key={p.storagePath} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100 group transition-all hover:bg-white hover:shadow-lg hover:scale-[1.02]">
                                     <div className="flex items-center gap-3 min-w-0">
-                                        <div className="bg-green-100 p-1.5 rounded-lg"><Camera className="h-3.5 w-3.5 text-green-600" /></div>
-                                        <div className="relative h-8 w-8 rounded-md overflow-hidden bg-slate-200"><Image src={p.url} alt={p.name} fill className="object-cover" /></div>
-                                        <span className="text-[11px] font-bold truncate text-slate-700">{p.name}</span>
+                                        <div className="bg-green-100 p-2 rounded-xl"><Camera className="h-4 w-4 text-green-600" /></div>
+                                        <div className="relative h-10 w-10 rounded-xl overflow-hidden bg-slate-200 border-2 border-white shadow-sm shrink-0"><Image src={p.url} alt={p.name} fill className="object-cover" /></div>
+                                        <div className="min-w-0">
+                                            <p className="text-[11px] font-black truncate text-slate-900 uppercase tracking-tighter">{p.name}</p>
+                                            <p className="text-[9px] font-bold text-slate-400">BEELD • {Math.round(p.size / 1024)} KB</p>
+                                        </div>
                                     </div>
-                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-300 hover:text-red-600 rounded-full" onClick={() => setUploadedPhotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}><X className="h-3.5 w-3.5" /></Button>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-600 rounded-full" onClick={() => setUploadedPhotos(prev => prev.filter(x => x.storagePath !== p.storagePath))}><Trash2 className="h-4 w-4" /></Button>
                                 </div>
                             ))}
                             {!uploadedFiles.length && !uploadedPhotos.length && (
-                                <div className="py-12 flex flex-col items-center justify-center text-slate-300">
-                                    <Paperclip className="h-8 w-8 opacity-10 mb-2" />
-                                    <p className="text-[9px] font-black uppercase tracking-widest">Geen bijlagen</p>
+                                <div className="py-16 flex flex-col items-center justify-center text-slate-300">
+                                    <div className="bg-slate-50 p-6 rounded-full mb-4 opacity-50">
+                                        <Paperclip className="h-10 w-10 text-slate-200" />
+                                    </div>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em]">Geen bijlagen actief</p>
+                                    <p className="text-[9px] font-bold text-slate-400 mt-1">Upload bestanden via de header</p>
                                 </div>
                             )}
                         </div>
