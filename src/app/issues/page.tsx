@@ -372,8 +372,8 @@ export default function IssuesPage() {
                             <Card className="p-6 space-y-4 shadow-lg">
                                 <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Locatie Details</CardTitle>
                                 <div className="flex justify-between border-b py-2"><span className="text-slate-400 font-bold">Adres:</span><span className="font-black">{selectedMelding.straatnaam} {selectedMelding.huisnummer}</span></div>
-                                <div className="flex justify-between border-b py-2"><span className="text-slate-400 font-bold">Plaats:</span><span className="font-black">{selectedMelding.plaats}</span></div>
-                                <div className="flex justify-between border-b py-2"><span className="text-slate-400 font-bold">Werkgebied:</span><span className="font-black">{selectedMelding.werkgebied || '-'}</span></div>
+                                <div className="flex justify-between border-b py-2"><span className="text-slate-400 font-bold">Plaats:</span><span className="font-black">{selectedMelding.plaats || '-'}</span></div>
+                                <div className="flex justify-between border-b py-2"><span className="text-slate-400 font-bold">Wijk / Gebied:</span><span className="font-black">{selectedMelding.wijk || selectedMelding.werkgebied || '-'}</span></div>
                                 <div className="flex justify-between py-2"><span className="text-slate-400 font-bold">Coördinaten:</span><span className="font-mono text-[10px]">{selectedMelding.latitude.toFixed(6)}, {selectedMelding.longitude.toFixed(6)}</span></div>
                             </Card>
                             <div className="rounded-2xl overflow-hidden border shadow-xl min-h-[350px]">
