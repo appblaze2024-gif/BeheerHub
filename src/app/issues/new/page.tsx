@@ -385,9 +385,12 @@ export default function NewIssuePage() {
     }
     const q = watchContainerNummer.toLowerCase();
     // Prioritize idNummer which contains values like A00031
+    // Filter specifically for 'Brengparkjes HHM' as requested
     const filtered = allMapObjects.filter(obj => 
-      (obj.idNummer || '').toLowerCase().includes(q) ||
-      (obj.id || '').toLowerCase().includes(q)
+      obj.locatieType === 'Brengparkjes HHM' && (
+        (obj.idNummer || '').toLowerCase().includes(q) ||
+        (obj.id || '').toLowerCase().includes(q)
+      )
     ).slice(0, 8);
     setContainerSuggestions(filtered);
   }, [watchContainerNummer, allMapObjects, isReadOnly]);
@@ -541,8 +544,8 @@ export default function NewIssuePage() {
                 <Form {...form}>
                     <form id="new-melding-form" onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-4">
-                            <Card className="rounded-2xl overflow-hidden bg-white shadow-sm border-slate-200">
-                                <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Hoofdgegevens</CardTitle></CardHeader>
+                            <Card className="rounded-2xl bg-white shadow-sm border-slate-200">
+                                <CardHeader className="bg-slate-50 border-b py-2 px-4 rounded-t-2xl"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Hoofdgegevens</CardTitle></CardHeader>
                                 <CardContent className="p-4 pt-2">
                                     <FormRow label={<>Meldingsnummer<span className="text-red-500">*</span></>}>
                                         <FormField control={form.control} name="intakenummer" render={({ field }) => (
@@ -622,8 +625,8 @@ export default function NewIssuePage() {
                                 </CardContent>
                             </Card>
 
-                            <Card className="rounded-2xl overflow-hidden bg-white shadow-sm border-slate-200">
-                                <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Locatie &amp; Gebied</CardTitle></CardHeader>
+                            <Card className="rounded-2xl bg-white shadow-sm border-slate-200">
+                                <CardHeader className="bg-slate-50 border-b py-2 px-4 rounded-t-2xl"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Locatie &amp; Gebied</CardTitle></CardHeader>
                                 <CardContent className="p-4 pt-2">
                                     <div className="grid grid-cols-3 gap-3">
                                         <div className="col-span-2"><FormRow label={<>Straatnaam<span className="text-red-500">*</span></>}><FormField control={form.control} name="straatnaam" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow></div>
@@ -640,8 +643,8 @@ export default function NewIssuePage() {
                             </Card>
 
                             {existingMelding && existingMelding.status !== 'Nieuw' && (
-                                <Card className="rounded-2xl overflow-hidden bg-white shadow-sm border-slate-200">
-                                    <CardHeader className="bg-primary border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-white tracking-widest">Afhandeling &amp; Uitvoering</CardTitle></CardHeader>
+                                <Card className="rounded-2xl bg-white shadow-sm border-slate-200">
+                                    <CardHeader className="bg-primary border-b py-2 px-4 rounded-t-2xl"><CardTitle className="text-[10px] font-black uppercase text-white tracking-widest">Afhandeling &amp; Uitvoering</CardTitle></CardHeader>
                                     <CardContent className="p-4 space-y-4">
                                         <FormRow label="Afgehandeld door">
                                             <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-100">
@@ -668,8 +671,8 @@ export default function NewIssuePage() {
                         </div>
 
                         <div className="space-y-4">
-                            <Card className="rounded-2xl overflow-hidden bg-white shadow-sm border-slate-200">
-                                <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Categorie &amp; Melder</CardTitle></CardHeader>
+                            <Card className="rounded-2xl bg-white shadow-sm border-slate-200">
+                                <CardHeader className="bg-slate-50 border-b py-2 px-4 rounded-t-2xl"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Categorie &amp; Melder</CardTitle></CardHeader>
                                 <CardContent className="p-4 pt-2">
                                     <div className="grid grid-cols-2 gap-3">
                                         <FormRow label={<>Hoofdtype<span className="text-red-500">*</span></>}>
@@ -704,8 +707,8 @@ export default function NewIssuePage() {
                                 </CardContent>
                             </Card>
 
-                            <Card className="rounded-2xl overflow-hidden bg-white shadow-sm border-slate-200">
-                                <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Behandeling &amp; Tijden</CardTitle></CardHeader>
+                            <Card className="rounded-2xl bg-white shadow-sm border-slate-200">
+                                <CardHeader className="bg-slate-50 border-b py-2 px-4 rounded-t-2xl"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Behandeling &amp; Tijden</CardTitle></CardHeader>
                                 <CardContent className="p-4 pt-2">
                                     <div className="grid grid-cols-2 gap-3">
                                         <FormRow label="Behandelaar"><FormField control={form.control} name="behandelaar" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
