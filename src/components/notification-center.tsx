@@ -134,7 +134,7 @@ export function NotificationCenter() {
         (m.fromUserId === selectedChatUser.id && m.toUserId === user.uid) ||
         (m.fromUserId === user.uid && m.toUserId === selectedChatUser.id)
       )
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(b.createdAt).getTime());
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [allMessages, selectedChatUser, user]);
 
   const handleOpenChat = (contactId: string) => {
@@ -225,12 +225,12 @@ export function NotificationCenter() {
   return (
     <Popover onOpenChange={(open) => { if(!open) { setSelectedChatUser(null); setUserSearchQuery(''); } }}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="rounded-xl relative h-10 w-10 hover:bg-slate-100">
-          <Bell className="h-5 w-5 text-slate-600" />
+        <Button variant="ghost" size="icon" className="rounded-xl relative h-10 w-10 text-white hover:bg-white/10">
+          <Bell className="h-5 w-5 text-current" />
           {unreadCount > 0 && (
             <Badge 
               variant="destructive" 
-              className="absolute -top-1 -right-1 h-5 min-w-5 px-1 flex items-center justify-center font-black text-[10px] rounded-full border-2 border-white animate-in zoom-in"
+              className="absolute -top-1 -right-1 h-5 min-w-5 px-1 flex items-center justify-center font-black text-[10px] rounded-full border-2 border-[#3498db] animate-in zoom-in"
             >
               {unreadCount}
             </Badge>

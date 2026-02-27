@@ -23,7 +23,8 @@ import {
   Search, 
   LogOut as LogOutIcon,
   ChevronLeft,
-  Loader2
+  Loader2,
+  Plus
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -38,6 +39,7 @@ import {
 import { signOut } from 'firebase/auth';
 import { LoadingScreen } from '@/components/loading-screen';
 import Link from 'next/link';
+import { NotificationCenter } from '@/components/notification-center';
 
 function ProcessingOverlay() {
   const { isProcessing } = useGlobalLoading();
@@ -111,14 +113,28 @@ function Header() {
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="hidden md:flex items-center bg-white/10 rounded px-3 h-9 w-64 border border-white/20">
+      <div className="flex items-center gap-3">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="hidden md:flex items-center gap-2 text-white hover:bg-white/10 h-9 px-3 border border-white/20 font-bold"
+          onClick={() => router.push('/issues/new')}
+        >
+          <Plus className="h-4 w-4" />
+          <span>Melding maken</span>
+        </Button>
+
+        <div className="hidden md:flex items-center bg-white/10 rounded px-3 h-9 w-48 lg:w-64 border border-white/20">
           <Input 
             type="text" 
             placeholder="Zoeken..." 
             className="bg-transparent border-none text-white text-sm placeholder:text-white/60 focus-visible:ring-0 h-full p-0"
           />
           <Search className="h-4 w-4 text-white/60 ml-2" />
+        </div>
+
+        <div className="flex items-center">
+          <NotificationCenter />
         </div>
 
         <DropdownMenu>
