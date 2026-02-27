@@ -130,7 +130,7 @@ function Header() {
                   {profile?.firstName?.[0]}{profile?.lastName?.[0]}
                 </AvatarFallback>
               </Avatar>
-              <span className="hidden sm:inline text-sm font-medium">{profile?.firstName}</span>
+              <span className="hidden sm:inline text-sm font-medium">{profile?.firstName} {profile?.lastName}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 mt-1">
