@@ -588,9 +588,41 @@ export default function NewIssuePage() {
                                                                     className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b last:border-0 flex items-center justify-between group"
                                                                     onClick={() => {
                                                                         form.setValue('containernummer', obj.idNummer || obj.id);
-                                                                        form.setValue('straatnaam', obj.straatnaam || '');
-                                                                        form.setValue('huisnummer', obj.huisnummer || '');
-                                                                        form.setValue('plaats', obj.plaats || '');
+                                                                        
+                                                                        // Split address if everything is in straatnaam
+                                                                        let rawStreet = obj.straatnaam || '';
+                                                                        let street = rawStreet;
+                                                                        let houseNumber = obj.huisnummer || '';
+                                                                        let postcode = obj.postcode || '';
+                                                                        let city = obj.plaats || '';
+
+                                                                        if (rawStreet.includes(',')) {
+                                                                            const parts = rawStreet.split(',');
+                                                                            const addressPart = parts[0].trim(); // Street + Nr
+                                                                            const cityPart = parts[1]?.trim() || ''; // Postcode + City
+
+                                                                            // Split street and number
+                                                                            const addressMatch = addressPart.match(/^(.*?)\s*(\d+.*)$/);
+                                                                            if (addressMatch) {
+                                                                                street = addressMatch[1].trim();
+                                                                                houseNumber = addressMatch[2].trim();
+                                                                            }
+
+                                                                            // Split postcode and city
+                                                                            const cityMatch = cityPart.match(/^(\d{4}\s*[A-Z]{2})\s*(.*)$/i);
+                                                                            if (cityMatch) {
+                                                                                postcode = cityMatch[1].trim().toUpperCase();
+                                                                                city = cityMatch[2].trim();
+                                                                            } else if (cityPart) {
+                                                                                city = cityPart;
+                                                                            }
+                                                                        }
+
+                                                                        form.setValue('straatnaam', street);
+                                                                        form.setValue('huisnummer', houseNumber);
+                                                                        form.setValue('postcode', postcode);
+                                                                        form.setValue('plaats', city);
+                                                                        
                                                                         setLocation({ latitude: obj.latitude, longitude: obj.longitude });
                                                                         setContainerSuggestions([]);
                                                                     }}
