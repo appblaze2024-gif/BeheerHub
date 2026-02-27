@@ -54,6 +54,7 @@ import * as pdfjs from 'pdfjs-dist';
 
 // UI Components
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { IssueImportDialog } from '@/components/issue-import-dialog';
 import { 
   Dialog, 
