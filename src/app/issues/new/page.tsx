@@ -50,8 +50,6 @@ import { useToast } from '@/components/ui/use-toast';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
-import { PDFDocument } from 'pdf-lib';
-import * as pdfjs from 'pdfjs-dist';
 
 // UI Components
 import { Button } from '@/components/ui/button';
@@ -95,9 +93,6 @@ import { MapboxView } from '@/components/mapbox-view';
 
 // AI Flows
 import { parseIssuePdf } from '@/ai/flows/parse-issue-pdf-flow';
-
-// Configure PDF.js worker with .mjs extension for v4+ compatibility
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -446,7 +441,6 @@ export default function NewIssuePage() {
   const app = useFirebaseApp();
   const { setIsHeaderVisible } = useNavigationUI();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [isParsingPdf, setIsParsingPdf] = React.useState(false);
   const [isSavingConfig, setIsSavingConfig] = React.useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = React.useState(false);
 
@@ -459,7 +453,6 @@ export default function NewIssuePage() {
   const [uploadedPhotos, setUploadedPhotos] = React.useState<UploadedFile[]>([]);
   const [uploadProgress, setUploadProgress] = React.useState<Record<string, number>>({});
   const [location, setLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
-  const pdfInputRef = React.useRef<HTMLInputElement>(null);
 
   const aiConfigRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'pdf_config') : null, [firestore]);
   const { data: aiConfig } = useDoc<{ instructions: string, samplePdfUrl?: string }>(aiConfigRef);
@@ -566,57 +559,16 @@ export default function NewIssuePage() {
     }
   }, [app, form, toast]);
 
-  const handlePdfUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0 || !firestore || !app) return;
-
-    setIsParsingPdf(true);
-    const fileArray = Array.from(files);
-    toast({ description: `AI analyseert ${fileArray.length} document(en)...` });
-
+  const handleSaveAIInstructions = async (val: string, pdfUrl: string | undefined) => {
+    if (!firestore || !aiConfigRef) return;
+    setIsSavingConfig(true);
     try {
-        for (const file of fileArray) {
-            const arrayBuffer = await file.arrayBuffer();
-            const pdf = await pdfjs.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
-            
-            let textContent = '';
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const pg = await pdf.getPage(i);
-                const text = await pg.getTextContent();
-                textContent += text.items.map((it: any) => it.str).join(' ') + '\n';
-            }
-
-            const isTextAvailable = textContent.trim().length > 50;
-            let base64 = '';
-            if (!isTextAvailable) {
-                base64 = await new Promise<string>((resolve) => {
-                    const reader = new FileReader();
-                    reader.onload = (e) => resolve(e.target?.result as string);
-                    reader.readAsDataURL(file);
-                });
-            }
-
-            const result = await parseIssuePdf({ 
-                pdfDataUri: isTextAvailable ? undefined : base64,
-                textContent: isTextAvailable ? textContent : undefined,
-                instructions: pdfInstructions
-            });
-
-            if (result.meldingen.length === 1 && fileArray.length === 1) {
-                const parsed = result.meldingen[0];
-                await handleSmartFill(parsed);
-                toast({ title: "Scan voltooid", description: "Het formulier is ingevuld." });
-            } else {
-                // Bulk creation logic omitted for brevity
-                toast({ title: "Bulk scan voltooid", description: `${result.meldingen.length} meldingen toegevoegd aan portaal.` });
-                router.push('/issues/portal');
-            }
-        }
-    } catch (err: any) {
-        console.error("PDF Scan error:", err);
-        toast({ variant: 'destructive', title: "Fout bij inlezen", description: err.message || "Er is een fout opgetreden." });
+        await updateDocumentNonBlocking(aiConfigRef, { instructions: val, samplePdfUrl: pdfUrl });
+        toast({ title: 'Configuratie opgeslagen' });
+    } catch (e) {
+        toast({ variant: 'destructive', title: 'Fout bij opslaan' });
     } finally {
-        setIsParsingPdf(false);
+        setIsSavingConfig(false);
     }
   };
 
@@ -662,12 +614,7 @@ export default function NewIssuePage() {
                     </Button>
                 </IssueImportDialog>
                 <SmartPasteDialog onParsed={handleSmartFill} instructions={pdfInstructions} />
-                <AIConfigDialog instructions={pdfInstructions} samplePdfUrl={samplePdfUrl} onSave={(val, pdf) => handleSaveAIInstructions(val, pdf)} isSaving={isSavingConfig} />
-                <input type="file" ref={pdfInputRef} onChange={handlePdfUpload} className="hidden" accept="application/pdf" multiple />
-                <Button type="button" variant="outline" size="sm" onClick={() => pdfInputRef.current?.click()} className="h-9 border-blue-200 text-blue-600 hover:bg-blue-50 font-bold" disabled={isParsingPdf}>
-                    {isParsingPdf ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-2 h-3.5 w-3.5" />} 
-                    PDF Scannen
-                </Button>
+                <AIConfigDialog instructions={pdfInstructions} samplePdfUrl={samplePdfUrl} onSave={handleSaveAIInstructions} isSaving={isSavingConfig} />
                 <Separator orientation="vertical" className="h-5 mx-1" />
                 <Button type="submit" form="new-melding-form" size="sm" disabled={isSubmitting} className="h-9 font-bold px-6 shadow-lg shadow-primary/20">
                     {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />} 
@@ -887,8 +834,4 @@ export default function NewIssuePage() {
         </main>
     </div>
   );
-}
-
-function handleSaveAIInstructions(instructions: string, pdfUrl: string | undefined) {
-    throw new Error('Function not implemented.');
 }
