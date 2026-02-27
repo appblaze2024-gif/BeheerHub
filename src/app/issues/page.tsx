@@ -350,7 +350,7 @@ export default function IssuesPage() {
                                 </div>
                             </Card>
                             <div className="rounded-2xl overflow-hidden border-2 border-white shadow-xl min-h-[350px]">
-                                <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} objects={nearbyObjects} />
+                                <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} />
                             </div>
                         </div>
                     </TabsContent>
@@ -376,7 +376,7 @@ export default function IssuesPage() {
                                 <div className="flex justify-between py-2"><span className="text-slate-400 font-bold">Coördinaten:</span><span className="font-mono text-[10px]">{selectedMelding.latitude.toFixed(6)}, {selectedMelding.longitude.toFixed(6)}</span></div>
                             </Card>
                             <div className="rounded-2xl overflow-hidden border shadow-xl min-h-[350px]">
-                                <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} objects={nearbyObjects} />
+                                <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} />
                             </div>
                         </div>
                     </TabsContent>
