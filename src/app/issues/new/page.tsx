@@ -89,7 +89,7 @@ import {
 // Custom components
 import { IssueImportDialog } from '@/components/issue-import-dialog';
 import { MapboxView } from '@/components/mapbox-view';
-import type { Melding, Project } from '@/lib/types';
+import type { Melding, Project, Object as MapObject } from '@/lib/types';
 
 // AI Flows
 import { parseIssuePdf } from '@/ai/flows/parse-issue-pdf-flow';
@@ -323,6 +323,9 @@ export default function NewIssuePage() {
   const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
   const [uploadedPhotos, setUploadedPhotos] = React.useState<UploadedFile[]>([]);
   const [location, setLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
+  
+  // Container suggestions state
+  const [containerSuggestions, setContainerSuggestions] = React.useState<MapObject[]>([]);
 
   const aiConfigRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'pdf_config') : null, [firestore]);
   const { data: aiConfig } = useDoc<{ instructions: string, samplePdfUrl?: string }>(aiConfigRef);
@@ -336,6 +339,10 @@ export default function NewIssuePage() {
   }, [firestore, meldingId]);
 
   const { data: existingMelding, isLoading: isLoadingExisting } = useDoc<Melding>(meldingRef);
+
+  // Fetch all objects for container number matching
+  const objectsSearchQuery = useMemoFirebase(() => firestore ? collection(firestore, 'objects') : null, [firestore]);
+  const { data: allMapObjects } = useCollection<MapObject>(objectsSearchQuery);
 
   const form = useForm<NewMeldingFormValues>({
     resolver: zodResolver(newMeldingSchema),
@@ -368,6 +375,20 @@ export default function NewIssuePage() {
       setLocation({ latitude: existingMelding.latitude, longitude: existingMelding.longitude });
     }
   }, [existingMelding, form]);
+
+  // CONTAINER SEARCH LOGIC
+  const watchContainerNummer = form.watch('containernummer');
+  React.useEffect(() => {
+    if (!watchContainerNummer || watchContainerNummer.length < 2 || isReadOnly || !allMapObjects) {
+      setContainerSuggestions([]);
+      return;
+    }
+    const q = watchContainerNummer.toLowerCase();
+    const filtered = allMapObjects.filter(obj => 
+      (obj.idNummer || obj.id || '').toLowerCase().includes(q)
+    ).slice(0, 6);
+    setContainerSuggestions(filtered);
+  }, [watchContainerNummer, allMapObjects, isReadOnly]);
 
   // AUTO GEOCODING
   const watchedAddress = form.watch(['straatnaam', 'huisnummer', 'plaats']);
@@ -542,7 +563,44 @@ export default function NewIssuePage() {
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
                                         <FormRow label="Containernr.">
-                                            <FormField control={form.control} name="containernummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} />
+                                            <FormField control={form.control} name="containernummer" render={({ field }) => (
+                                                <FormItem className="relative">
+                                                    <FormControl>
+                                                        <Input 
+                                                            {...field} 
+                                                            value={field.value || ''} 
+                                                            disabled={isReadOnly} 
+                                                            className="h-8 text-xs font-bold" 
+                                                            autoComplete="off"
+                                                        />
+                                                    </FormControl>
+                                                    {containerSuggestions.length > 0 && (
+                                                        <div className="absolute z-[100] w-full mt-1 bg-white border-2 border-slate-200 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                                                            {containerSuggestions.map(obj => (
+                                                                <button
+                                                                    key={obj.id}
+                                                                    type="button"
+                                                                    className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b last:border-0 flex items-center justify-between group"
+                                                                    onClick={() => {
+                                                                        form.setValue('containernummer', obj.idNummer || obj.id);
+                                                                        form.setValue('straatnaam', obj.straatnaam || '');
+                                                                        form.setValue('huisnummer', obj.huisnummer || '');
+                                                                        form.setValue('plaats', obj.plaats || '');
+                                                                        setLocation({ latitude: obj.latitude, longitude: obj.longitude });
+                                                                        setContainerSuggestions([]);
+                                                                    }}
+                                                                >
+                                                                    <div className="min-w-0">
+                                                                        <p className="font-black text-[10px] uppercase text-slate-900">{obj.idNummer || obj.id}</p>
+                                                                        <p className="text-[9px] font-bold text-slate-400 truncate">{obj.straatnaam} {obj.huisnummer}</p>
+                                                                    </div>
+                                                                    <ChevronRight className="h-3 w-3 text-slate-300 group-hover:text-primary transition-colors" />
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </FormItem>
+                                            )} />
                                         </FormRow>
                                         <FormRow label={<>Soort Melder<span className="text-red-500">*</span></>}>
                                             <FormField control={form.control} name="soort_melder" render={({ field }) => (
