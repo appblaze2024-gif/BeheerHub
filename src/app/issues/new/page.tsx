@@ -101,9 +101,9 @@ const newMeldingSchema = z.object({
   behandelende_afdeling: z.string().optional().nullable(),
   behandelaar: z.string().optional().nullable(),
   status: z.string().min(1, 'Status is verplicht'),
-  voorvaldatum: z.date().optional().nullable(),
+  voorvaldatum: z.any().optional().nullable(), // Allow string or date for AI compatibility
   voorvaltijd: z.string().optional().nullable(),
-  meldingsdatum: z.date().optional().nullable(),
+  meldingsdatum: z.any().optional().nullable(),
   meldingsuur: z.string().optional().nullable(),
   straatnaam: z.string().optional().nullable(),
   huisnummer: z.string().optional().nullable(),
@@ -368,8 +368,8 @@ export default function NewIssuePage() {
     try {
       const mData = {
         ...data,
-        voorvaldatum: data.voorvaldatum ? format(data.voorvaldatum, 'yyyy-MM-dd') : null,
-        meldingsdatum: data.meldingsdatum ? format(data.meldingsdatum, 'yyyy-MM-dd') : null,
+        voorvaldatum: data.voorvaldatum instanceof Date ? format(data.voorvaldatum, 'yyyy-MM-dd') : (data.voorvaldatum || null),
+        meldingsdatum: data.meldingsdatum instanceof Date ? format(data.meldingsdatum, 'yyyy-MM-dd') : (data.meldingsdatum || null),
         latitude: location?.latitude || 0,
         longitude: location?.longitude || 0,
         files: uploadedFiles,
@@ -383,6 +383,7 @@ export default function NewIssuePage() {
       startProcessing(1000);
       router.push('/issues/portal');
     } catch (e) {
+      console.error("Save error:", e);
       toast({ variant: 'destructive', title: 'Fout bij opslaan' });
     } finally {
       setIsSubmitting(false);
@@ -539,7 +540,7 @@ export default function NewIssuePage() {
                                         <FormRow label="Afdeling"><FormField control={form.control} name="behandelende_afdeling" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
-                                        <FormRow label="Melddatum"><FormField control={form.control} name="meldingsdatum" render={({ field }) => (<FormItem><FormControl><Input type="date" {...field} value={field.value ? format(field.value, 'yyyy-MM-dd') : ''} onChange={e => field.onChange(e.target.valueAsDate)} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                                        <FormRow label="Melddatum"><FormField control={form.control} name="meldingsdatum" render={({ field }) => (<FormItem><FormControl><Input type="date" {...field} value={field.value instanceof Date ? format(field.value, 'yyyy-MM-dd') : (field.value || '')} onChange={e => field.onChange(e.target.valueAsDate)} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
                                         <FormRow label="Uur"><FormField control={form.control} name="meldingsuur" render={({ field }) => (<FormItem><FormControl><Input type="time" {...field} value={field.value || ''} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
                                     </div>
                                     <FormRow label="Omschrijving Melding">
@@ -554,16 +555,16 @@ export default function NewIssuePage() {
                 </Form>
             </div>
             
-            <div className="w-full lg:w-[450px] p-4 bg-slate-50 border-l shrink-0 h-full overflow-hidden flex flex-col gap-4">
-                <Card className="h-1/2 relative overflow-hidden border-none shadow-xl rounded-3xl bg-slate-100">
+            <div className="w-full lg:w-[450px] bg-slate-50 border-l shrink-0 h-full overflow-hidden flex flex-col">
+                <div className="h-1/2 relative overflow-hidden bg-slate-100">
                     <MapboxView latitude={location?.latitude} longitude={location?.longitude} />
                     <div className="absolute top-4 left-4 z-10 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-2xl border border-slate-200 shadow-xl flex items-center gap-2">
                         <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">Live Kaart</span>
                     </div>
-                </Card>
+                </div>
 
-                <div className="flex-1 flex flex-col min-h-0 bg-white rounded-3xl p-5 shadow-sm border border-slate-200">
+                <div className="h-1/2 flex flex-col min-h-0 bg-white p-5 border-t">
                     <div className="flex items-center justify-between border-b pb-3 mb-4">
                         <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
                             BIJLAGEN ({uploadedFiles.length + uploadedPhotos.length})
@@ -573,7 +574,7 @@ export default function NewIssuePage() {
                     <ScrollArea className="flex-1 pr-3">
                         <div className="space-y-3">
                             {uploadedFiles.map(f => (
-                                <div key={f.storagePath} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100 group transition-all hover:bg-white hover:shadow-lg hover:scale-[1.02]">
+                                <div key={f.storagePath} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100 group transition-all hover:bg-white hover:shadow-lg">
                                     <div className="flex items-center gap-3 min-w-0">
                                         <div className="bg-blue-100 p-2 rounded-xl"><Paperclip className="h-4 w-4 text-blue-600" /></div>
                                         <div className="min-w-0">
@@ -585,7 +586,7 @@ export default function NewIssuePage() {
                                 </div>
                             ))}
                             {uploadedPhotos.map(p => (
-                                <div key={p.storagePath} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100 group transition-all hover:bg-white hover:shadow-lg hover:scale-[1.02]">
+                                <div key={p.storagePath} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100 group transition-all hover:bg-white hover:shadow-lg">
                                     <div className="flex items-center gap-3 min-w-0">
                                         <div className="bg-green-100 p-2 rounded-xl"><Camera className="h-4 w-4 text-green-600" /></div>
                                         <div className="relative h-10 w-10 rounded-xl overflow-hidden bg-slate-200 border-2 border-white shadow-sm shrink-0"><Image src={p.url} alt={p.name} fill className="object-cover" /></div>
