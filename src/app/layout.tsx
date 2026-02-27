@@ -114,16 +114,6 @@ function Header() {
       </div>
 
       <div className="flex items-center gap-3">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="hidden md:flex items-center gap-2 text-white hover:bg-white/10 h-9 px-3 border border-white/20 font-bold"
-          onClick={() => router.push('/issues/new')}
-        >
-          <Plus className="h-4 w-4" />
-          <span>Melding maken</span>
-        </Button>
-
         <div className="hidden md:flex items-center bg-white/10 rounded px-3 h-9 w-48 lg:w-64 border border-white/20">
           <Input 
             type="text" 
