@@ -52,7 +52,8 @@ import Image from 'next/image';
 import { PDFDocument } from 'pdf-lib';
 import * as pdfjs from 'pdfjs-dist';
 
-// Components
+// UI Components
+import { Button } from '@/components/ui/button';
 import { IssueImportDialog } from '@/components/issue-import-dialog';
 import { 
   Dialog, 
@@ -71,6 +72,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { MapboxView } from '@/components/mapbox-view';
 
 // AI Flows
@@ -548,7 +551,6 @@ export default function NewIssuePage() {
     return allMeldingen.find(m => m.id === meldingIdFromUrl);
   }, [allMeldingen, meldingIdFromUrl]);
 
-  // Handle incoming data from external sources (Mail, Storage)
   React.useEffect(() => {
     const pendingData = localStorage.getItem('pending_forwarded_melding');
     if (pendingData) {
@@ -566,7 +568,6 @@ export default function NewIssuePage() {
   const handleSmartFill = async (data: any) => {
     if (!data) return;
     
-    // Auto geocode if address is provided
     const address = `${data.straatnaam || ''} ${data.huisnummer || ''}, ${data.plaats || ''}`.trim();
     if (address.length > 5) {
         try {
@@ -1119,7 +1120,6 @@ export default function NewIssuePage() {
                                     </Button>
                                 </div>
 
-                                {/* Progress Bars */}
                                 {Object.entries(uploadProgress).map(([name, progress]) => (
                                     <div key={name} className="bg-white p-2 rounded-lg border border-slate-100 shadow-sm animate-in fade-in">
                                         <div className="flex justify-between items-center mb-1">
@@ -1132,7 +1132,6 @@ export default function NewIssuePage() {
                                     </div>
                                 ))}
 
-                                {/* Uploaded Items List */}
                                 {(uploadedFiles.length > 0 || uploadedPhotos.length > 0) && (
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                                         {uploadedFiles.map(file => (
