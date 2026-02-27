@@ -37,7 +37,8 @@ import {
   ChevronRight,
   Maximize,
   Minimize,
-  Sparkles
+  Sparkles,
+  FastForward
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -181,6 +182,8 @@ function NavigatingView({
     targetSpeedMs: 13.8,
     lastTimestamp: 0
   });
+
+  const totalSimDistanceRef = React.useRef(0);
 
   const nextObject = objectsOnRoute[currentObjectIndex];
 
@@ -372,6 +375,7 @@ function NavigatingView({
     if (!Array.isArray(coords) || coords.length < 2) return;
     let line: any; try { line = turf.lineString(coords); } catch (e) { return; }
     const totalDistance = turf.length(line, { units: 'meters' });
+    totalSimDistanceRef.current = totalDistance;
     if (totalDistance <= 0) return;
     
     simStateRef.current.distanceTravelled = 0;
@@ -460,6 +464,15 @@ function NavigatingView({
         setCurrentObjectIndex(nextIdx);
     } else setCurrentObjectIndex(objectsOnRoute.length); 
     setCurrentRouteGeometry(null); setCurrentLeg(null); lastFetchedTargetId.current = null;
+  };
+
+  const handleJumpToArrival = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (simStateRef.current && totalSimDistanceRef.current > 0) {
+        simStateRef.current.distanceTravelled = Math.max(0, totalSimDistanceRef.current - 40);
+        simStateRef.current.currentSpeedMs = 8; 
+        toast({ title: "Simulatie versneld", description: "Bestemming wordt naderd..." });
+    }
   };
 
   const speedKmh = targetLocation?.speed ? Math.round(targetLocation.speed * 3.6) : 0;
@@ -622,6 +635,11 @@ function NavigatingView({
                     </div>
                     <div className={cn("mt-8 flex gap-4 transition-all duration-300", isDrawerExpanded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 pointer-events-none")}>
                         <Button variant="ghost" size="lg" className="h-14 w-14 rounded-full bg-blue-50 border-none shrink-0" onClick={(e) => { e.stopPropagation(); setIsPaused(!isPaused); }}>{isPaused ? <Play className="h-6 w-6 fill-current text-primary" /> : <Pause className="h-6 w-6 fill-current text-primary" />}</Button>
+                        {isSimulating && (
+                            <Button variant="ghost" size="lg" className="h-14 w-14 rounded-full bg-orange-50 border-none shrink-0" onClick={handleJumpToArrival}>
+                                <FastForward className="h-6 w-6 text-orange-600 fill-current" />
+                            </Button>
+                        )}
                         <Button variant="destructive" size="lg" className="h-14 flex-1 rounded-full text-lg font-black uppercase tracking-tighter" onClick={(e) => { e.stopPropagation(); onExit(); }}>STOP RIT</Button>
                     </div>
                 </Card>
@@ -630,6 +648,11 @@ function NavigatingView({
             <div className="w-full max-w-4xl flex items-end justify-between gap-4">
                 <div className="flex gap-2 p-1.5 bg-white/95 backdrop-blur-xl rounded-full shadow-2xl border border-slate-100">
                     <Button variant="ghost" size="lg" className="h-14 w-14 rounded-full hover:bg-slate-50 transition-all flex items-center justify-center p-0" onClick={() => setIsPaused(!isPaused)}>{isPaused ? <Play className="h-7 w-7 fill-current text-primary" /> : <Pause className="h-7 w-7 fill-current text-primary" />}</Button>
+                    {isSimulating && (
+                        <Button variant="ghost" size="lg" className="h-14 w-14 rounded-full hover:bg-orange-50 transition-all flex items-center justify-center p-0" onClick={handleJumpToArrival}>
+                            <FastForward className="h-7 w-7 fill-current text-orange-600" />
+                        </Button>
+                    )}
                     <Button variant="destructive" size="lg" className="h-14 w-14 rounded-full shadow-xl border-none hover:scale-105 active:scale-95 transition-all flex items-center justify-center p-0" onClick={onExit}><XIcon className="h-7 w-7" /></Button>
                 </div>
                 <Card className="bg-white/95 backdrop-blur-xl border-none shadow-2xl overflow-hidden w-64 hidden md:flex">
