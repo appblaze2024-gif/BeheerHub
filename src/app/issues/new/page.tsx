@@ -44,13 +44,37 @@ import {
 } from '@/firebase';
 import { useProfile } from '@/firebase/profile-provider';
 import { useGlobalLoading } from '@/context/global-loading-context';
-import { collection, doc, serverTimestamp, addDoc, updateDoc } from 'firebase/firestore';
+import { collection, doc, serverTimestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigationUI } from '@/context/navigation-ui-context';
 import Image from 'next/image';
 import { PDFDocument } from 'pdf-lib';
 import * as pdfjs from 'pdfjs-dist';
+
+// Components
+import { IssueImportDialog } from '@/components/issue-import-dialog';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter,
+  DialogDescription,
+  DialogTrigger,
+  DialogClose
+} from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { MapboxView } from '@/components/mapbox-view';
+
+// AI Flows
+import { parseIssuePdf } from '@/ai/flows/parse-issue-pdf-flow';
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
@@ -393,6 +417,15 @@ function AIConfigDialog({ instructions, onSave, isSaving, samplePdfUrl }: { inst
     );
 }
 
+type UploadedFile = {
+  name: string;
+  url: string;
+  size: number;
+  type: string;
+  uploadedAt: string;
+  storagePath: string;
+};
+
 export default function NewIssuePage() {
   const firestore = useFirestore();
   const router = useRouter();
@@ -409,7 +442,7 @@ export default function NewIssuePage() {
   const searchParams = useSearchParams();
   const meldingIdFromUrl = searchParams.get('id');
   const [isReadOnly, setIsReadOnly] = React.useState(false);
-  const [viewedMelding, setViewedMelding] = React.useState<Melding | null>(null);
+  const [viewedMelding, setViewedMelding] = React.useState<any | null>(null);
 
   const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
   const [uploadedPhotos, setUploadedPhotos] = React.useState<UploadedFile[]>([]);
@@ -439,7 +472,7 @@ export default function NewIssuePage() {
   const reporterTypeOptions = reporterTypesData?.names || DEFAULT_REPORTER_TYPES;
 
   const meldingenCollection = useMemoFirebase(() => firestore ? collection(firestore, 'meldingen') : null, [firestore]);
-  const { data: allMeldingen } = useCollection<Melding>(meldingenCollection);
+  const { data: allMeldingen } = useCollection<any>(meldingenCollection);
 
   const now = new Date();
 
@@ -875,7 +908,7 @@ export default function NewIssuePage() {
                 </Button>
                 <Separator orientation="vertical" className="h-5 mx-1" />
                 <Button type="submit" form="new-melding-form" size="sm" disabled={isSubmitting} className="h-9 font-bold px-6 shadow-lg shadow-primary/20">
-                    {isSubmitting ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Check className="mr-2 h-3.5 w-3.5" />} 
+                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />} 
                     Opslaan
                 </Button>
             </div>
