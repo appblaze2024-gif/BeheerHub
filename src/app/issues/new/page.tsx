@@ -28,7 +28,8 @@ import {
   AlertCircle,
   Check,
   Calendar,
-  Paperclip
+  Paperclip,
+  FileSpreadsheet
 } from 'lucide-react';
 import { 
   useFirestore, 
@@ -88,6 +89,7 @@ import { Separator } from '@/components/ui/separator';
 // Custom Components & AI
 import { MapboxView } from '@/components/mapbox-view';
 import { parseIssuePdf } from '@/ai/flows/parse-issue-pdf-flow';
+import { IssueImportDialog } from '@/components/issue-import-dialog';
 
 // Types
 import type { Melding, UploadedFile, Object as MapObject } from '@/lib/types';
@@ -386,6 +388,7 @@ export default function NewIssuePage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isParsingPdf, setIsParsingPdf] = React.useState(false);
   const [isSavingConfig, setIsSavingConfig] = React.useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = React.useState(false);
 
   const searchParams = useSearchParams();
   const meldingIdFromUrl = searchParams.get('id');
@@ -743,6 +746,12 @@ export default function NewIssuePage() {
     <div className="flex flex-col h-screen overflow-hidden bg-slate-50">
         <header className="h-14 bg-white border-b flex items-center justify-end px-6 shrink-0 shadow-sm z-10">
             <div className="flex items-center gap-2">
+                <IssueImportDialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen} onSuccess={() => router.push('/issues/portal')}>
+                    <Button variant="outline" size="sm" className="h-9 border-green-200 text-green-600 hover:bg-green-50 font-bold">
+                        <FileSpreadsheet className="mr-2 h-3.5 w-3.5" />
+                        Excel / CSV Import
+                    </Button>
+                </IssueImportDialog>
                 <AIConfigDialog instructions={pdfInstructions} samplePdfUrl={samplePdfUrl} onSave={handleSaveAIInstructions} isSaving={isSavingConfig} />
                 <input type="file" ref={pdfInputRef} onChange={handlePdfUpload} className="hidden" accept="application/pdf" multiple />
                 <Button type="button" variant="outline" size="sm" onClick={() => pdfInputRef.current?.click()} className="h-9 border-blue-200 text-blue-600 hover:bg-blue-50 font-bold" disabled={isParsingPdf}>
