@@ -472,6 +472,35 @@ export default function NewIssuePage() {
     },
   });
 
+  // WATCH ADDRESS FIELDS FOR AUTO-MAP
+  const watchedAddress = form.watch(['straatnaam', 'nummer', 'plaats']);
+
+  React.useEffect(() => {
+    const [straat, nummer, plaats] = watchedAddress;
+    const fullAddress = `${straat || ''} ${nummer || ''}, ${plaats || ''}`.trim();
+
+    if (fullAddress.length < 5) return;
+
+    const debounceTimer = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+            fullAddress
+          )}.json?access_token=${MAPBOX_TOKEN}&country=NL&limit=1`
+        );
+        const geo = await res.json();
+        if (geo.features?.length > 0) {
+          const [lng, lat] = geo.features[0].center;
+          setLocation({ latitude: lat, longitude: lng });
+        }
+      } catch (e) {
+        console.error("Auto-geocoding error:", e);
+      }
+    }, 1200);
+
+    return () => clearTimeout(debounceTimer);
+  }, [watchedAddress]);
+
   const handleSmartFill = async (data: any) => {
     if (!data) return;
     
