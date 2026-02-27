@@ -384,9 +384,11 @@ export default function NewIssuePage() {
       return;
     }
     const q = watchContainerNummer.toLowerCase();
+    // Prioritize idNummer which contains values like A00031
     const filtered = allMapObjects.filter(obj => 
-      (obj.idNummer || obj.id || '').toLowerCase().includes(q)
-    ).slice(0, 6);
+      (obj.idNummer || '').toLowerCase().includes(q) ||
+      (obj.id || '').toLowerCase().includes(q)
+    ).slice(0, 8);
     setContainerSuggestions(filtered);
   }, [watchContainerNummer, allMapObjects, isReadOnly]);
 
