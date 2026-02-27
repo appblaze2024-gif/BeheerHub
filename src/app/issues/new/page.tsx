@@ -72,7 +72,7 @@ import {
   FormItem, 
   FormLabel, 
   FormMessage 
-} from '@/components/ui/form';
+} from '@/form';
 import { 
   Dialog, 
   DialogContent, 
@@ -635,10 +635,6 @@ export default function NewIssuePage() {
             <div className="w-full lg:w-[450px] bg-slate-50 border-l shrink-0 h-full overflow-hidden flex flex-col">
                 <div className="h-1/2 relative overflow-hidden bg-slate-100">
                     <MapboxView latitude={location?.latitude} longitude={location?.longitude} />
-                    <div className="absolute top-4 left-4 z-10 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-2xl border border-slate-200 shadow-xl flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">Live Kaart</span>
-                    </div>
                 </div>
 
                 <div className="h-1/2 flex flex-col min-h-0 bg-white p-5 border-t">
