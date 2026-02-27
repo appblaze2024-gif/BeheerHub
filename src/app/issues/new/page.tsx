@@ -30,7 +30,8 @@ import {
   Phone,
   Mail,
   Target,
-  ArrowLeft
+  ArrowLeft,
+  Plus
 } from 'lucide-react';
 import { 
   useFirestore, 
@@ -125,14 +126,14 @@ const newMeldingSchema = z.object({
 
 type NewMeldingFormValues = z.infer<typeof newMeldingSchema>;
 
-const statusOptions = [
+const DEFAULT_STATUS_OPTIONS = [
     "Nieuw", "Intern doorgezet", "In behandeling", "Gepland op korte termijn",
     "Gepland op langere termijn", "Dubbel gemeld", "Afgerond", "Niet in beheer", "Extern doorgezet", "Geweigerd"
 ];
 
-const hoofdcategorieOptions = ["Afval", "Weg en straatmeubilair", "Groen", "Water", "Overig", "Zoutkisten"];
+const DEFAULT_HOOFDCATEGORIE_OPTIONS = ["Afval", "Weg en straatmeubilair", "Groen", "Water", "Overig", "Zoutkisten"];
 
-const subcategorieMapping: Record<string, string[]> = {
+const DEFAULT_SUBCATEGORIE_MAPPING: Record<string, string[]> = {
     "Afval": ["Volle of kapotte afvalbak", "Zwerfafval", "Dumping", "Dierenkadaver"],
     "Weg en straatmeubilair": ["Losse tegel(s)", "Gat in de weg", "Kapotte bank/paal/hek"],
     "Groen": ["Overhangende takken", "Onkruid", "Maaien"],
@@ -140,6 +141,8 @@ const subcategorieMapping: Record<string, string[]> = {
     "Zoutkisten": ["Zoutkist leeg"],
     "Overig": ["Overige meldingen"]
 };
+
+const DEFAULT_MELDER_TYPES = ["Inwoner", "Bedrijf", "Gemeente", "Toezichthouder"];
 
 const MAPPING_FIELDS = [
     { id: 'intakenummer', label: 'Intakenummer' },
@@ -158,9 +161,22 @@ const MAPPING_FIELDS = [
     { id: 'extra_informatie', label: 'Memo / Extra informatie' },
 ];
 
-const FormRow = ({ label, children }: { label: React.ReactNode; children: React.ReactNode }) => (
+const FormRow = ({ label, children, onAdd }: { label: React.ReactNode; children: React.ReactNode; onAdd?: () => void }) => (
     <div className="flex flex-col gap-0.5 py-1 border-b border-slate-100 last:border-0 min-h-[36px]">
-        <FormLabel className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">{label}</FormLabel>
+        <div className="flex items-center justify-between">
+            <FormLabel className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">{label}</FormLabel>
+            {onAdd && (
+                <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-4 w-4 text-slate-300 hover:text-primary transition-colors" 
+                    onClick={onAdd}
+                >
+                    <Plus className="h-3 w-3" />
+                </Button>
+            )}
+        </div>
         <div className="flex-1 min-w-0">
             {children}
         </div>
@@ -327,6 +343,18 @@ export default function NewIssuePage() {
   // Container suggestions state
   const [containerSuggestions, setContainerSuggestions] = React.useState<MapObject[]>([]);
 
+  // Dynamic Options States
+  const [addDialog, setAddDialog] = React.useState<{ category: string, label: string, parent?: string } | null>(null);
+  const [newValue, setNewValue] = React.useState('');
+
+  const optionsRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'issue_options') : null, [firestore]);
+  const { data: dbOptions } = useDoc<any>(optionsRef);
+
+  const statuses = dbOptions?.statuses || DEFAULT_STATUS_OPTIONS;
+  const soortenMelder = dbOptions?.soortenMelder || DEFAULT_MELDER_TYPES;
+  const hoofdcategorieen = dbOptions?.hoofdcategorieen || DEFAULT_HOOFDCATEGORIE_OPTIONS;
+  const subcategorieenMap = dbOptions?.subcategorieen || DEFAULT_SUBCATEGORIE_MAPPING;
+
   const aiConfigRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'pdf_config') : null, [firestore]);
   const { data: aiConfig } = useDoc<{ instructions: string, samplePdfUrl?: string }>(aiConfigRef);
 
@@ -384,8 +412,6 @@ export default function NewIssuePage() {
       return;
     }
     const q = watchContainerNummer.toLowerCase();
-    // Prioritize idNummer which contains values like A00031
-    // Filter specifically for 'Brengparkjes HHM' or 'Brenparkjes HHM' as requested
     const filtered = allMapObjects.filter(obj => 
       (obj.locatieType === 'Brengparkjes HHM' || obj.locatieType === 'Brenparkjes HHM') && (
         (obj.idNummer || '').toLowerCase().includes(q) ||
@@ -424,7 +450,6 @@ export default function NewIssuePage() {
       for (const wijk of project.wijken) {
         try {
           const features = JSON.parse(wijk.subGebieden);
-          // Check each polygon in the wijk
           for (const feature of features) {
             if (turf.booleanPointInPolygon(pt, feature as any)) {
               foundWijk = wijk.naam;
@@ -453,6 +478,39 @@ export default function NewIssuePage() {
       const uploaded = { name: file.name, url, size: file.size, type: file.type, uploadedAt: new Date().toISOString(), storagePath: path };
       if (type === 'files') setUploadedFiles(prev => [...prev, uploaded]); else setUploadedPhotos(prev => [...prev, uploaded]);
     }
+  };
+
+  const handleSaveNewOption = async () => {
+    if (!addDialog || !newValue.trim() || !optionsRef) return;
+    
+    let update: any = {};
+    if (addDialog.category === 'subcategorie' && addDialog.parent) {
+        const currentSubs = subcategorieenMap[addDialog.parent] || [];
+        update = { 
+            subcategorieen: { 
+                ...subcategorieenMap, 
+                [addDialog.parent]: Array.from(new Set([...currentSubs, newValue.trim()])) 
+            } 
+        };
+    } else {
+        const key = addDialog.category === 'status' ? 'statuses' : 
+                    addDialog.category === 'soort_melder' ? 'soortenMelder' : 
+                    addDialog.category === 'hoofdcategorie' ? 'hoofdcategorieen' : '';
+        
+        if (key) {
+            const currentList = dbOptions?.[key] || (
+                key === 'statuses' ? DEFAULT_STATUS_OPTIONS :
+                key === 'soortenMelder' ? DEFAULT_MELDER_TYPES :
+                key === 'hoofdcategorieen' ? DEFAULT_HOOFDCATEGORIE_OPTIONS : []
+            );
+            update = { [key]: Array.from(new Set([...currentList, newValue.trim()])) };
+        }
+    }
+    
+    await setDocumentNonBlocking(optionsRef, update, { merge: true });
+    toast({ title: "Optie toegevoegd" });
+    setNewValue('');
+    setAddDialog(null);
   };
 
   const onSubmit = async (data: NewMeldingFormValues) => {
@@ -498,6 +556,9 @@ export default function NewIssuePage() {
     const firstError = Object.values(errors)[0] as any;
     toast({ variant: 'destructive', title: 'Validatie mislukt', description: firstError?.message || 'Vul alle verplichte velden in.' });
   };
+
+  const currentHoofdcategorie = form.watch('hoofdcategorie');
+  const subcategorieen = subcategorieenMap[currentHoofdcategorie] || ["Overig"];
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-slate-50">
@@ -556,11 +617,14 @@ export default function NewIssuePage() {
                                         <FormRow label="Extern Nummer">
                                             <FormField control={form.control} name="extern_meldingsnummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} />
                                         </FormRow>
-                                        <FormRow label="Status">
+                                        <FormRow 
+                                            label="Status" 
+                                            onAdd={() => !isReadOnly && setAddDialog({ category: 'status', label: 'Nieuwe status toevoegen' })}
+                                        >
                                             <FormField control={form.control} name="status" render={({ field }) => (
                                                 <FormItem>
                                                     <Select onValueChange={field.onChange} value={field.value} disabled={isReadOnly}><FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue /></SelectTrigger></FormControl>
-                                                        <SelectContent>{statusOptions.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                                                        <SelectContent>{statuses.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                                                     </Select>
                                                 </FormItem>
                                             )} />
@@ -588,41 +652,30 @@ export default function NewIssuePage() {
                                                                     className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b last:border-0 flex items-center justify-between group"
                                                                     onClick={() => {
                                                                         form.setValue('containernummer', obj.idNummer || obj.id);
-                                                                        
-                                                                        // Split address if everything is in straatnaam
                                                                         let rawStreet = obj.straatnaam || '';
                                                                         let street = rawStreet;
                                                                         let houseNumber = obj.huisnummer || '';
                                                                         let postcode = obj.postcode || '';
                                                                         let city = obj.plaats || '';
-
                                                                         if (rawStreet.includes(',')) {
                                                                             const parts = rawStreet.split(',');
-                                                                            const addressPart = parts[0].trim(); // Street + Nr
-                                                                            const cityPart = parts[1]?.trim() || ''; // Postcode + City
-
-                                                                            // Split street and number
+                                                                            const addressPart = parts[0].trim();
+                                                                            const cityPart = parts[1]?.trim() || '';
                                                                             const addressMatch = addressPart.match(/^(.*?)\s*(\d+.*)$/);
                                                                             if (addressMatch) {
                                                                                 street = addressMatch[1].trim();
                                                                                 houseNumber = addressMatch[2].trim();
                                                                             }
-
-                                                                            // Split postcode and city
                                                                             const cityMatch = cityPart.match(/^(\d{4}\s*[A-Z]{2})\s*(.*)$/i);
                                                                             if (cityMatch) {
                                                                                 postcode = cityMatch[1].trim().toUpperCase();
                                                                                 city = cityMatch[2].trim();
-                                                                            } else if (cityPart) {
-                                                                                city = cityPart;
-                                                                            }
+                                                                            } else if (cityPart) { city = cityPart; }
                                                                         }
-
                                                                         form.setValue('straatnaam', street);
                                                                         form.setValue('huisnummer', houseNumber);
                                                                         form.setValue('postcode', postcode);
                                                                         form.setValue('plaats', city);
-                                                                        
                                                                         setLocation({ latitude: obj.latitude, longitude: obj.longitude });
                                                                         setContainerSuggestions([]);
                                                                     }}
@@ -639,15 +692,15 @@ export default function NewIssuePage() {
                                                 </FormItem>
                                             )} />
                                         </FormRow>
-                                        <FormRow label={<>Soort Melder<span className="text-red-500">*</span></>}>
+                                        <FormRow 
+                                            label={<>Soort Melder<span className="text-red-500">*</span></>}
+                                            onAdd={() => !isReadOnly && setAddDialog({ category: 'soort_melder', label: 'Nieuw soort melder toevoegen' })}
+                                        >
                                             <FormField control={form.control} name="soort_melder" render={({ field }) => (
                                                 <FormItem>
                                                     <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
                                                         <SelectContent>
-                                                            <SelectItem value="Inwoner">Inwoner</SelectItem>
-                                                            <SelectItem value="Bedrijf">Bedrijf</SelectItem>
-                                                            <SelectItem value="Gemeente">Gemeente</SelectItem>
-                                                            <SelectItem value="Toezichthouder">Toezichthouder</SelectItem>
+                                                            {soortenMelder.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}
                                                         </SelectContent>
                                                     </Select>
                                                 </FormItem>
@@ -707,22 +760,36 @@ export default function NewIssuePage() {
                                 <CardHeader className="bg-slate-50 border-b py-2 px-4 rounded-t-2xl"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Categorie & Melder</CardTitle></CardHeader>
                                 <CardContent className="p-4 pt-2">
                                     <div className="grid grid-cols-2 gap-3">
-                                        <FormRow label={<>Hoofdtype<span className="text-red-500">*</span></>}>
+                                        <FormRow 
+                                            label={<>Hoofdtype<span className="text-red-500">*</span></>}
+                                            onAdd={() => !isReadOnly && setAddDialog({ category: 'hoofdcategorie', label: 'Nieuwe hoofdcategorie toevoegen' })}
+                                        >
                                             <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (
                                                 <FormItem>
                                                     <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
                                                         <FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
-                                                        <SelectContent>{hoofdcategorieOptions.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
+                                                        <SelectContent>{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
                                                     </Select>
                                                 </FormItem>
                                             )} />
                                         </FormRow>
-                                        <FormRow label={<>Subtype<span className="text-red-500">*</span></>}>
+                                        <FormRow 
+                                            label={<>Subtype<span className="text-red-500">*</span></>}
+                                            onAdd={() => {
+                                                if (isReadOnly) return;
+                                                const currentHoofd = form.getValues('hoofdcategorie');
+                                                if (!currentHoofd) {
+                                                    toast({ variant: 'destructive', title: "Kies eerst een hoofdtype" });
+                                                    return;
+                                                }
+                                                setAddDialog({ category: 'subcategorie', label: `Nieuw subtype voor '${currentHoofd}'`, parent: currentHoofd });
+                                            }}
+                                        >
                                             <FormField control={form.control} name="subcategorie" render={({ field }) => (
                                                 <FormItem>
                                                     <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
                                                         <FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
-                                                        <SelectContent>{subcategorieMapping[form.watch('hoofdcategorie') || '']?.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>)) || <SelectItem value="Overig">Overig</SelectItem>}</SelectContent>
+                                                        <SelectContent>{subcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent>
                                                     </Select>
                                                 </FormItem>
                                             )} />
@@ -817,6 +884,31 @@ export default function NewIssuePage() {
                 </div>
             </div>
         </main>
+
+        <Dialog open={!!addDialog} onOpenChange={(open) => !open && setAddDialog(null)}>
+            <DialogContent className="sm:max-w-md rounded-3xl border-none shadow-2xl">
+                <DialogHeader>
+                    <DialogTitle className="text-xl font-black uppercase tracking-tight">Optie Toevoegen</DialogTitle>
+                    <DialogDescription className="font-bold text-slate-500">{addDialog?.label}</DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <Input 
+                        placeholder="Naam van de nieuwe optie..." 
+                        value={newValue} 
+                        onChange={(e) => setNewValue(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSaveNewOption()}
+                        autoFocus
+                        className="h-12 font-bold rounded-xl border-slate-100 bg-slate-50 focus:ring-primary/20"
+                    />
+                </div>
+                <DialogFooter>
+                    <Button variant="ghost" onClick={() => setAddDialog(null)} className="font-bold">Annuleren</Button>
+                    <Button onClick={handleSaveNewOption} disabled={!newValue.trim()} className="font-black uppercase tracking-tight px-8 shadow-xl shadow-primary/20">
+                        Toevoegen
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }
