@@ -547,7 +547,7 @@ export default function NewIssuePage() {
 
                             {existingMelding && existingMelding.status !== 'Nieuw' && (
                                 <Card className="rounded-2xl overflow-hidden bg-white shadow-sm border-slate-200">
-                                    <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Afhandeling &amp; Uitvoering</CardTitle></CardHeader>
+                                    <CardHeader className="bg-[#3498db] border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-white tracking-widest">Afhandeling &amp; Uitvoering</CardTitle></CardHeader>
                                     <CardContent className="p-4 space-y-4">
                                         <FormRow label="Afgehandeld door">
                                             <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-100">
