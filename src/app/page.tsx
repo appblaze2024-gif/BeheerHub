@@ -1,181 +1,167 @@
 'use client';
 
 import * as React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { 
-  Bell, 
-  Map as MapIcon,
   ChevronRight,
-  MapPin,
+  GitFork,
+  LayoutGrid,
+  Zap,
+  Activity,
+  ChevronDown,
+  Monitor,
+  Share2,
 } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, limit, doc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MapboxView } from '@/components/mapbox-view';
-import { useProfile } from '@/firebase/profile-provider';
 import { Badge } from '@/components/ui/badge';
-import { useProject } from '@/context/project-context';
 import Image from 'next/image';
+import { cn } from '@/lib/utils';
+
+const filters = [
+  { label: 'Discipline', options: ['Bomen', 'Wegen', 'Verlichting'] },
+  { label: 'Entiteit', options: ['Object', 'Sensormeting'] },
+  { label: 'Standaard', options: ['IMBOR (2022.01.01)', 'IMBOR (2021.04.04)'] },
+  { label: 'Versie', options: ['1.0', '2.0'] },
+  { label: 'Applicatie', options: ['GeoVisia', 'MOON', 'GRIB'] },
+];
+
+const cards = [
+  {
+    title: 'GeoVisia',
+    subtitle: 'DataQuint',
+    tags: [{ label: 'Bomen', color: 'bg-green-100 text-green-700' }, { label: 'Object', color: 'bg-slate-100 text-slate-700' }],
+    footer: 'IMBOR (2022.01.01)',
+    logo: 'https://picsum.photos/seed/gv/100/100',
+  },
+  {
+    title: 'MOON',
+    subtitle: 'Montad',
+    tags: [{ label: 'Verlichting', color: 'bg-yellow-100 text-yellow-700' }, { label: 'Object', color: 'bg-slate-100 text-slate-700' }],
+    footer: 'IMBOR (2022.01.01)',
+    logo: 'https://picsum.photos/seed/moon/100/100',
+  },
+  {
+    title: 'GRIB',
+    subtitle: 'Bomenwacht',
+    tags: [{ label: 'Bomen', color: 'bg-green-100 text-green-700' }, { label: 'Object', color: 'bg-slate-100 text-slate-700' }],
+    footer: 'IMBOR (2022.01.01)',
+    logo: 'https://picsum.photos/seed/grib/100/100',
+  },
+  {
+    title: 'ConnectedGreen',
+    subtitle: 'ConnectedGreen',
+    tags: [{ label: 'Sensoren', color: 'bg-slate-100 text-slate-700' }, { label: 'Sensormeting', color: 'bg-slate-100 text-slate-700' }],
+    footer: 'IMBOR (2022.01.01)',
+    logo: 'https://picsum.photos/seed/cg/100/100',
+  },
+  {
+    title: 'MOON',
+    subtitle: 'Montad',
+    tags: [{ label: 'Verlichting', color: 'bg-yellow-100 text-yellow-700' }, { label: 'Object', color: 'bg-slate-100 text-slate-700' }],
+    footer: 'IMBOR (2021.04.04)',
+    logo: 'https://picsum.photos/seed/moon2/100/100',
+  },
+  {
+    title: 'ConnectedGreen',
+    subtitle: 'ConnectedGreen',
+    tags: [{ label: 'Sensoren', color: 'bg-slate-100 text-slate-700' }, { label: 'Object', color: 'bg-slate-100 text-slate-700' }],
+    footer: 'IMBOR (2021.04.04)',
+    logo: 'https://picsum.photos/seed/cg2/100/100',
+  },
+];
 
 export default function DashboardPage() {
-  const router = useRouter();
-  const firestore = useFirestore();
-  const { profile } = useProfile();
-  const { selectedProjectId } = useProject();
-
-  const bannerRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'dashboard_banner') : null, [firestore]);
-  const { data: banner } = useDoc<any>(bannerRef);
-
-  const issuesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'meldingen'), where('status', '==', 'Nieuw'), limit(20));
-  }, [firestore]);
-
-  const { data: recentIssues } = useCollection<any>(issuesQuery);
-
-  const projectsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'projects');
-  }, [firestore]);
-
-  const { data: projects } = useCollection<any>(projectsQuery);
-
-  const wijkPolygons = React.useMemo(() => {
-    if (!projects) return [];
-    const projectsToUse = selectedProjectId 
-      ? projects.filter((p: any) => p.id === selectedProjectId) 
-      : projects;
-
-    return projectsToUse.flatMap((p: any) => 
-      (p.wijken || []).flatMap((wijk: any) => {
-        try {
-          const features = JSON.parse(wijk.subGebieden);
-          return Array.isArray(features) ? features : [];
-        } catch (e) {
-          console.error("Error parsing wijk geometry:", e);
-          return [];
-        }
-      })
-    );
-  }, [projects, selectedProjectId]);
+  const [activeToggle, setActiveToggle] = React.useState<'bron' | 'afnemer'>('bron');
 
   return (
-    <div className="p-6 space-y-6 h-full flex flex-col">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
-        <div>
-          <h2 className="text-2xl font-black uppercase tracking-tight text-slate-900 leading-none">Dashboard Overzicht</h2>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Real-time status van al uw beheer-objecten en meldingen.</p>
+    <div className="p-10 space-y-8 flex flex-col h-full bg-[#f8fafc] relative">
+      {/* Background Graphic Illustration */}
+      <div className="absolute top-0 right-0 w-[600px] h-[400px] opacity-20 pointer-events-none grayscale">
+        <Image 
+          src="https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&q=80&w=1000" 
+          alt="Illustration" 
+          fill
+          className="object-contain object-right-top"
+        />
+      </div>
+
+      <header className="space-y-6 relative z-10">
+        <h1 className="text-3xl font-black uppercase tracking-tight text-[#4a5ab5]">Bronnen en afnemers</h1>
+        
+        <div className="flex items-center p-1.5 bg-slate-200/50 rounded-lg w-fit">
+          <button 
+            onClick={() => setActiveToggle('bron')}
+            className={cn(
+              "flex items-center gap-2 px-6 py-2 rounded-md text-xs font-bold transition-all",
+              activeToggle === 'bron' ? "bg-white text-[#4a5ab5] shadow-sm" : "text-slate-500 hover:text-slate-700"
+            )}
+          >
+            <Activity className="h-4 w-4" /> Bron
+          </button>
+          <button 
+            onClick={() => setActiveToggle('afnemer')}
+            className={cn(
+              "flex items-center gap-2 px-6 py-2 rounded-md text-xs font-bold transition-all",
+              activeToggle === 'afnemer' ? "bg-white text-[#4a5ab5] shadow-sm" : "text-slate-500 hover:text-slate-700"
+            )}
+          >
+            <Share2 className="h-4 w-4" /> Afnemer
+          </button>
         </div>
       </header>
 
-      {banner?.active && (
-        <div className="relative h-56 w-full rounded-[3rem] overflow-hidden shadow-2xl mb-2 group shrink-0 border-4 border-white animate-in fade-in zoom-in duration-700">
-          <Image 
-            src={banner.imageUrl || "https://images.unsplash.com/photo-1541888946425-d81bb19480c5?auto=format&fit=crop&q=80&w=2070"} 
-            alt="Hero Banner" 
-            fill 
-            className="object-cover transition-transform duration-[2000ms] group-hover:scale-105"
-            priority
-            data-ai-hint="construction road"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/40 to-transparent flex flex-col justify-center px-12">
-            {banner.badgeText && (
-              <Badge className="w-fit mb-4 bg-primary border-none font-black text-[10px] uppercase tracking-[0.2em] h-6 px-4 rounded-full shadow-lg">
-                {banner.badgeText}
-              </Badge>
-            )}
-            <h1 className="text-5xl font-black text-white uppercase tracking-tighter leading-none mb-3 drop-shadow-2xl">
-              {banner.title || 'BeheerHub Dashboard'}
-            </h1>
-            <p className="text-white/80 font-bold text-base max-w-lg leading-relaxed drop-shadow-lg">
-              {banner.description || 'Real-time status van al uw beheer-objecten en meldingen binnen de gemeente.'}
-            </p>
-          </div>
-          <div className="absolute bottom-6 right-8">
-             <div className="h-3 w-3 rounded-full bg-green-400 shadow-[0_0_15px_rgba(74,222,128,0.8)] animate-pulse" />
-          </div>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
-        <Card className="rounded-[2.5rem] border-none shadow-xl flex flex-col overflow-hidden h-full bg-white">
-          <CardHeader className="border-b bg-white py-5 px-8 flex flex-row items-center justify-between shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="bg-red-50 p-2 rounded-xl"><Bell className="h-5 w-5 text-red-600" /></div>
-              <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-900">Recente Meldingen</CardTitle>
+      <Card className="rounded-none border-none shadow-sm relative z-10 overflow-hidden bg-white">
+        <CardContent className="p-0">
+          <div className="flex items-center h-14 bg-slate-50/50 border-b border-slate-100">
+            <div className="px-6 border-r border-slate-100 h-full flex items-center">
+              <span className="text-xs font-bold text-[#4a5ab5]">Filters</span>
             </div>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-primary font-black uppercase text-[10px] tracking-widest hover:bg-primary/5" 
-              onClick={() => router.push('/issues/portal')}
-            >
-              Alles bekijken
-            </Button>
-          </CardHeader>
-          <CardContent className="p-0 flex-1 overflow-hidden">
-            <ScrollArea className="h-full">
-              <div className="divide-y divide-slate-50">
-                {recentIssues?.map((issue: any) => (
-                  <div 
-                    key={issue.id} 
-                    onClick={() => router.push(`/issues/new?id=${issue.id}`)} 
-                    className="px-8 py-5 hover:bg-slate-50 transition-all cursor-pointer flex items-center justify-between group"
-                  >
-                    <div className="flex items-center gap-5 min-w-0">
-                      <div className="h-12 w-12 rounded-2xl bg-slate-100 flex items-center justify-center font-black text-slate-400 group-hover:bg-primary group-hover:text-white transition-all shadow-sm">
-                        {issue.intakenummer?.substring(0, 2)}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-black text-slate-900 truncate uppercase tracking-tight">{issue.subcategorie}</p>
-                        <p className="text-[10px] text-slate-400 truncate font-bold flex items-center gap-1.5 mt-1 uppercase tracking-widest">
-                          <MapPin className="h-3 w-3 text-primary" /> {issue.straatnaam} {issue.huisnummer}
-                        </p>
+            <div className="flex flex-1 divide-x divide-slate-100">
+              {filters.map((filter) => (
+                <button key={filter.label} className="flex-1 px-6 h-14 flex items-center justify-between group hover:bg-slate-100/50 transition-colors">
+                  <span className="text-xs font-medium text-slate-400 group-hover:text-slate-600">{filter.label}</span>
+                  <ChevronDown className="h-3 w-3 text-slate-300" />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <ScrollArea className="flex-1">
+            <div className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+              {cards.map((card, idx) => (
+                <Card key={idx} className="group rounded-xl border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden bg-white">
+                  <CardContent className="p-8 space-y-6">
+                    <div className="h-32 flex items-center justify-center">
+                      <div className="relative h-20 w-20">
+                        <Image src={card.logo} alt={card.title} fill className="object-contain filter grayscale group-hover:grayscale-0 transition-all duration-500" />
                       </div>
                     </div>
-                    <div className="flex items-center gap-6 shrink-0 ml-4">
-                      <div className="text-right hidden sm:block">
-                        <p className="text-[10px] font-black text-slate-900 uppercase tracking-tighter">{issue.datum}</p>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{issue.tijdstip}</p>
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-slate-200 group-hover:text-primary transition-all group-hover:translate-x-1" />
-                    </div>
-                  </div>
-                ))}
-                {(!recentIssues || recentIssues.length === 0) && (
-                  <div className="p-20 text-center text-slate-300 flex flex-col items-center">
-                    <div className="bg-slate-50 p-6 rounded-full mb-4 opacity-50"><Bell className="h-10 w-10" /></div>
-                    <p className="font-black uppercase text-[10px] tracking-widest">Geen nieuwe meldingen</p>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
 
-        <Card className="rounded-[2.5rem] border-none shadow-xl flex flex-col overflow-hidden h-full bg-white">
-          <CardHeader className="border-b bg-white py-5 px-8 flex flex-row items-center justify-between shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="bg-blue-50 p-2 rounded-xl"><MapIcon className="h-5 w-5 text-primary" /></div>
-              <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-900">Gemeente Kaart</CardTitle>
+                    <div className="flex gap-2 justify-center">
+                      {card.tags.map((tag, tIdx) => (
+                        <Badge key={tIdx} className={cn("rounded-md px-2 py-0.5 text-[8px] font-black uppercase tracking-tight border-none shadow-none", tag.color)}>
+                          {tag.label}
+                        </Badge>
+                      ))}
+                    </div>
+
+                    <div className="text-center space-y-1">
+                      <h3 className="text-sm font-black text-[#4a5ab5] uppercase tracking-tight">{card.title}</h3>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{card.subtitle}</p>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-50 text-center">
+                      <span className="text-[8px] font-bold text-slate-300 uppercase tracking-[0.2em]">{card.footer}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-            {profile?.schouwenGemeente && (
-              <Badge variant="outline" className="font-black uppercase text-[9px] tracking-widest border-2 h-6 px-3 bg-white">
-                {profile.schouwenGemeente}
-              </Badge>
-            )}
-          </CardHeader>
-          <CardContent className="p-0 flex-1 relative min-h-[400px]">
-            <MapboxView 
-              interactive={true} 
-              showHeatmap={false} 
-              wijkPolygons={wijkPolygons}
-            />
-          </CardContent>
-        </Card>
-      </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
     </div>
   );
 }

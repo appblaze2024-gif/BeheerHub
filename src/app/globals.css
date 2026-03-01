@@ -24,6 +24,7 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 225 60% 45%;
     --radius: 0.75rem;
+    --sidebar-blue: 225 48% 45%;
   }
 
   .dark {
@@ -84,5 +85,5 @@ html, body, #__next__ {
 }
 
 .sidebar-blue {
-  background-color: #3b51a3;
+  background-color: #4a5ab5;
 }

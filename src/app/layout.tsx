@@ -17,14 +17,9 @@ import { GlobalLoadingProvider, useGlobalLoading } from '@/context/global-loadin
 import { Toaster } from '@/components/ui/toaster';
 import { AppSidebar } from '@/components/app-sidebar';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { 
   Menu, 
-  Search, 
   LogOut as LogOutIcon,
-  ChevronLeft,
-  Loader2,
-  Plus,
   User as UserIcon,
   Info,
   Mail
@@ -32,17 +27,8 @@ import {
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { signOut } from 'firebase/auth';
 import { LoadingScreen } from '@/components/loading-screen';
-import Link from 'next/link';
 import { NotificationCenter } from '@/components/notification-center';
 
 function ProcessingOverlay() {
@@ -53,7 +39,7 @@ function ProcessingOverlay() {
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-white/60 backdrop-blur-md animate-in fade-in duration-300">
       <div className="flex flex-col items-center gap-4 p-8 rounded-3xl bg-white shadow-2xl border border-slate-100 scale-110">
-        <Loader2 className="h-10 w-10 animate-spin text-[#3b51a3]" />
+        <div className="h-10 w-10 animate-spin border-4 border-primary border-t-transparent rounded-full" />
         <p className="text-sm font-black uppercase tracking-[0.2em] text-slate-900">Verwerken...</p>
       </div>
     </div>
@@ -62,93 +48,61 @@ function ProcessingOverlay() {
 
 function Header() {
   const auth = useAuth();
-  const router = useRouter();
-  const pathname = usePathname();
   const { profile } = useProfile();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const getPageTitle = () => {
-    const parts = pathname.split('/').filter(Boolean);
-    if (parts.length === 0) return 'Dashboard';
-    const mapping: Record<string, string> = {
-      'projects': 'Projecten',
-      'employees': 'Personeel',
-      'vehicles': 'Wagenpark',
-      'issues': 'Meldingen',
-      'objects': 'Objecten',
-      'iot': 'IoT Beheer',
-      'mail': 'Mailberichten',
-      'profile': 'Profiel',
-      'settings': 'Instellingen',
-      'work-planning': 'Werkplanning',
-      'annual-planning': 'Jaarplanning',
-      'weekly-reports': 'Weekstaten',
-      'spec-reports': 'Besteksmeldingen',
-      'navigation-module': 'Navigatie',
-      'bestanden': 'Documenten',
-      'minutes': 'Notulen'
-    };
-    const key = parts[0].toLowerCase();
-    return mapping[key] || parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
-  };
-
   return (
-    <header className="h-16 flex items-center justify-between px-6 bg-white border-b sticky top-0 z-50 shadow-sm">
+    <header className="h-20 flex items-center justify-between px-10 bg-transparent absolute top-0 left-0 right-0 z-50">
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="lg:hidden text-slate-600 hover:bg-slate-100">
-                <Menu className="h-6 w-6" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="p-0 border-none w-64 sidebar-blue text-white">
-              <SheetHeader className="sr-only">
-                <SheetTitle>Navigatie</SheetTitle>
-              </SheetHeader>
-              <AppSidebar onNavigate={() => setIsSidebarOpen(false)} />
-            </SheetContent>
-          </Sheet>
-          
-          <div className="flex items-center">
-            <h1 className="text-xl font-black uppercase tracking-tight text-slate-700 leading-none">{getPageTitle()}</h1>
-          </div>
-        </div>
+        <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" className="lg:hidden text-slate-600 hover:bg-slate-100">
+              <Menu className="h-6 w-6" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="p-0 border-none w-24 sidebar-blue text-white">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Navigatie</SheetTitle>
+            </SheetHeader>
+            <AppSidebar onNavigate={() => setIsSidebarOpen(false)} />
+          </SheetContent>
+        </Sheet>
       </div>
 
-      <div className="flex items-center gap-6">
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-slate-400 hover:text-primary">
-            <UserIcon className="h-5 w-5" />
+      <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm p-1.5 rounded-full shadow-sm border border-slate-100">
+        <div className="flex items-center gap-1 pr-4 border-r border-slate-100">
+          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-slate-400 hover:bg-slate-100">
+            <UserIcon className="h-4 w-4" />
           </Button>
-          <NotificationCenter />
-          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-slate-400 hover:text-primary">
-            <Info className="h-5 w-5" />
+          <div className="relative">
+            <NotificationCenter />
+          </div>
+          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-slate-400 hover:bg-slate-100">
+            <Info className="h-4 w-4" />
           </Button>
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-9 w-9 rounded-full text-slate-400 hover:text-red-600"
+            className="h-9 w-9 rounded-full text-slate-400 hover:bg-red-50 hover:text-red-600"
             onClick={() => signOut(auth)}
           >
-            <LogOutIcon className="h-5 w-5" />
+            <LogOutIcon className="h-4 w-4" />
           </Button>
         </div>
 
-        <div className="flex items-center gap-3 pl-6 border-l border-slate-100">
+        <div className="flex items-center gap-3 pl-2">
           <div className="text-right hidden sm:block">
-            <p className="text-[11px] font-black uppercase tracking-tight text-slate-900 leading-none mb-1">
-              {profile?.schouwenGemeente || 'BeheerHub'}
+            <p className="text-[10px] font-bold text-slate-400 leading-none mb-1 uppercase tracking-tight">
+              {profile?.schouwenGemeente || 'Bodegraven-Reeuwijk'}
             </p>
-            <p className="text-xs font-bold text-slate-400 leading-none truncate max-w-[120px]">
+            <p className="text-xs font-black text-slate-900 leading-none">
               {profile?.firstName} {profile?.lastName}
             </p>
-            <Badge variant="secondary" className="mt-1 h-4 text-[8px] font-black uppercase tracking-widest bg-primary/5 text-primary border-none">
-              {profile?.role || 'Gebruiker'}
+            <Badge className="mt-1 h-4 text-[7px] font-black uppercase bg-red-500 text-white border-none py-0 px-2 rounded-sm">
+              {profile?.role || 'Beheerder'}
             </Badge>
           </div>
-          <Avatar className="h-10 w-10 border-2 border-slate-50 shadow-sm">
-            <AvatarImage src={undefined} />
+          <Avatar className="h-10 w-10 border-2 border-white shadow-md ring-1 ring-slate-100">
             <AvatarFallback className="text-xs bg-slate-100 text-primary font-black uppercase">
               {profile?.firstName?.[0]}{profile?.lastName?.[0]}
             </AvatarFallback>
@@ -169,13 +123,13 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      {isHeaderVisible && <Header />}
-      <div className="flex flex-1 min-h-0 relative">
-        <aside className="hidden lg:block w-20 xl:w-24 shrink-0 h-full sidebar-blue shadow-2xl relative z-20">
-          <AppSidebar />
-        </aside>
-        <main className="flex-1 overflow-auto bg-slate-50 custom-scrollbar relative">
+    <div className="flex h-screen overflow-hidden bg-[#f8fafc]">
+      <aside className="hidden lg:block w-24 shrink-0 h-full sidebar-blue relative z-20">
+        <AppSidebar />
+      </aside>
+      <div className="flex-1 flex flex-col min-w-0 relative">
+        {isHeaderVisible && <Header />}
+        <main className="flex-1 overflow-auto custom-scrollbar relative pt-24">
           <ProcessingOverlay />
           {children}
         </main>
