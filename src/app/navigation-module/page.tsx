@@ -613,7 +613,7 @@ function NavigatingView({
 
       {arrivedObject && (
           <div className="absolute inset-0 z-[90] flex items-center justify-center bg-black/40 backdrop-blur-sm p-6">
-              <Card className="w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
+              <Card className="w-full max-sm shadow-2xl animate-in zoom-in-95 duration-200">
                   <CardHeader className="text-center pb-2">
                       <div className="mx-auto bg-blue-100 p-3 rounded-full w-16 h-16 flex items-center justify-center mb-4"><MapPin className="h-8 w-8 text-blue-600 fill-current" /></div>
                       <CardTitle className="text-2xl font-black uppercase tracking-tight">Bestemming Selectie</CardTitle>
@@ -913,7 +913,7 @@ export default function StartNavigationPage() {
           let nearestIdx = 0; let minD = Infinity;
           unvisited.forEach((u, i) => {
             const d = turf.distance(turf.point([currentPos.longitude, currentPos.latitude]), turf.point([u.longitude, u.latitude]));
-            if (d < minD) { minD = d; nearestIdx = i; }
+            if (d < minDist) { minDist = d; nearestIdx = i; }
           });
           const next = unvisited.splice(nearestIdx, 1)[0];
           finalObjects.push(next); 
@@ -984,7 +984,11 @@ export default function StartNavigationPage() {
                     style={{ width: '100%', height: '100%' }} 
                     mapStyle={mapStyle} 
                     mapboxAccessToken={MAPBOX_TOKEN} 
-                    onClick={e => { setUserLocation({ latitude: e.lngLat.lat, longitude: e.lngLat.lng }); }}
+                    onClick={e => { 
+                      if (routeType !== 'meldingen') {
+                        setUserLocation({ latitude: e.lngLat.lat, longitude: e.lngLat.lng }); 
+                      }
+                    }}
                   >
                     {userLocation && (<Marker longitude={userLocation.longitude} latitude={userLocation.latitude} anchor="center"><div className="relative flex flex-col items-center"><div className="absolute h-10 w-10 rounded-full bg-green-500/30 animate-ping" /><div className="relative h-8 w-8 rounded-full bg-green-600 border-4 border-white shadow-xl flex items-center justify-center"><MapPin className="h-4 w-4 text-white fill-current" /></div></div></Marker>)}
                     {urlMeldingLocatie && (<Marker longitude={urlMeldingLocatie.longitude} latitude={urlMeldingLocatie.latitude} anchor="center"><div className="relative flex flex-col items-center"><div className="absolute h-12 w-12 rounded-full bg-blue-50/20 animate-pulse" /><div className="relative h-10 w-10 rounded-full bg-primary border-4 border-white shadow-2xl flex items-center justify-center"><Flag className="h-5 w-5 text-white fill-current" /></div></div></Marker>)}

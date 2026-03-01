@@ -1,9 +1,8 @@
-
 'use client';
 
 import * as React from 'react';
 import MapGL, { Marker, Popup, Source, Layer } from 'react-map-gl';
-import type { FillLayer, LineLayer, SymbolLayer, MapLayerMouseEvent } from 'react-map-gl';
+import type { FillLayer, LineLayer } from 'react-map-gl';
 import * as turf from '@turf/turf';
 import { useProfile } from '@/firebase/profile-provider';
 import { Trash2, Archive } from 'lucide-react';
@@ -200,7 +199,7 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
   const pinToShow = hoveredPin || selectedPin;
 
   return (
-    <div ref={containerRef} className="w-full h-full">
+    <div ref={containerRef} className={cn("w-full h-full", !interactive && "pointer-events-none")}>
       <MapGL
         ref={mapRef}
         initialViewState={initialViewState}
