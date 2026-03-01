@@ -13,10 +13,12 @@ import { cn } from '@/lib/utils';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { allMenuItems, MenuItem, SubMenuItem } from '@/lib/menu-config';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export default function DashboardPage() {
   const router = useRouter();
   const firestore = useFirestore();
+  const isMobile = useIsMobile();
   const [activeModule, setActiveModule] = React.useState<MenuItem | null>(null);
 
   const bannerRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'dashboard_banner') : null, [firestore]);
@@ -41,17 +43,25 @@ export default function DashboardPage() {
     <div className="p-4 md:p-8 space-y-6 flex flex-col h-full bg-[#f8fafc] relative overflow-hidden">
       {/* Dynamic Banner Section */}
       {banner?.active && !activeModule && (
-        <section className="relative h-40 w-full rounded-3xl overflow-hidden shadow-xl animate-in fade-in zoom-in duration-700 shrink-0">
+        <section className={cn(
+          "relative rounded-3xl overflow-hidden shadow-xl animate-in fade-in zoom-in duration-700 shrink-0",
+          isMobile ? "h-32" : "h-40"
+        )}>
           <div className="absolute inset-0 bg-gradient-to-r from-slate-900/80 to-transparent flex flex-col justify-center p-6 md:p-8 text-white">
             <Badge className="w-fit mb-2 bg-primary text-white border-none px-3 py-0.5 font-black uppercase tracking-[0.2em] text-[9px]">
               {banner.badgeText || "Operationeel: OK"}
             </Badge>
-            <h2 className="text-xl md:text-2xl font-black uppercase tracking-tighter mb-1 max-w-xl leading-none">
+            <h2 className={cn(
+              "font-black uppercase tracking-tighter mb-1 max-w-xl leading-none",
+              isMobile ? "text-lg" : "text-2xl"
+            )}>
               {banner.title || "Welkom bij BeheerHub"}
             </h2>
-            <p className="text-xs md:text-sm font-bold text-slate-300 max-w-lg leading-snug">
-              {banner.description || "Centraal beheer van infra- en reinigingsprojecten."}
-            </p>
+            {!isMobile && (
+              <p className="text-xs md:text-sm font-bold text-slate-300 max-w-lg leading-snug">
+                {banner.description || "Centraal beheer van infra- en reinigingsprojecten."}
+              </p>
+            )}
           </div>
         </section>
       )}
@@ -88,7 +98,7 @@ export default function DashboardPage() {
                 <Card 
                   key={item.label}
                   onClick={() => handleCardClick(item)}
-                  className="group relative overflow-hidden rounded-2xl border-none shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer bg-white h-32 md:h-full"
+                  className="group relative overflow-hidden rounded-2xl border-none shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer bg-white h-28 md:h-full"
                 >
                   <CardContent className="p-4 h-full flex flex-col justify-between relative z-10">
                     <div className="flex justify-between items-start mb-2">
@@ -131,7 +141,7 @@ export default function DashboardPage() {
                 <Card 
                   key={sub.id}
                   onClick={() => handleSubItemClick(sub)}
-                  className="group relative overflow-hidden rounded-2xl border-none shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer bg-white h-32 md:h-full"
+                  className="group relative overflow-hidden rounded-2xl border-none shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer bg-white h-28 md:h-full"
                 >
                   <CardContent className="p-4 h-full flex flex-col justify-between relative z-10">
                     <div className="flex justify-between items-start mb-2">

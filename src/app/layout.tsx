@@ -22,6 +22,7 @@ import {
   LogOut as LogOutIcon,
   User as UserIcon,
   Info,
+  Bell,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -29,6 +30,7 @@ import { Badge } from '@/components/ui/badge';
 import { signOut } from 'firebase/auth';
 import { LoadingScreen } from '@/components/loading-screen';
 import { NotificationCenter } from '@/components/notification-center';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 function ProcessingOverlay() {
   const { isProcessing } = useGlobalLoading();
@@ -49,14 +51,15 @@ function Header() {
   const auth = useAuth();
   const { profile } = useProfile();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   return (
-    <header className="h-20 flex items-center justify-between px-4 md:px-10 bg-transparent absolute top-0 left-0 right-0 z-50">
-      <div className="flex items-center gap-4">
+    <header className="h-16 lg:h-20 flex items-center justify-between px-4 lg:px-10 bg-transparent absolute top-0 left-0 right-0 z-50">
+      <div className="flex items-center gap-2">
         <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="lg:hidden text-slate-600 hover:bg-slate-100 bg-white/80 backdrop-blur-sm rounded-full shadow-sm">
-              <Menu className="h-6 w-6" />
+            <Button variant="ghost" size="icon" className="lg:hidden text-slate-600 hover:bg-slate-100 bg-white/90 backdrop-blur-sm rounded-full shadow-sm h-10 w-10">
+              <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="p-0 border-none w-20 sidebar-blue text-white">
@@ -66,19 +69,29 @@ function Header() {
             <AppSidebar onNavigate={() => setIsSidebarOpen(false)} />
           </SheetContent>
         </Sheet>
+        
+        {isMobile && (
+          <div className="bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm border border-slate-100 flex items-center gap-2">
+            <span className="text-[10px] font-black uppercase tracking-tighter text-slate-900 truncate max-w-[100px]">
+              {profile?.firstName}
+            </span>
+          </div>
+        )}
       </div>
 
-      <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm p-1.5 rounded-full shadow-sm border border-slate-100">
-        <div className="flex items-center gap-1 md:pr-4 md:border-r border-slate-100">
+      <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm p-1 rounded-full shadow-sm border border-slate-100">
+        <div className="flex items-center gap-0.5 md:gap-1 md:pr-4 md:border-r border-slate-100">
           <Button variant="ghost" size="icon" className="hidden sm:flex h-9 w-9 rounded-full text-[#3498db] hover:bg-blue-50">
             <UserIcon className="h-4 w-4" />
           </Button>
           <div className="relative">
             <NotificationCenter />
           </div>
-          <Button variant="ghost" size="icon" className="hidden sm:flex h-9 w-9 rounded-full text-[#3498db] hover:bg-blue-50">
-            <Info className="h-4 w-4" />
-          </Button>
+          {!isMobile && (
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-[#3498db] hover:bg-blue-50">
+              <Info className="h-4 w-4" />
+            </Button>
+          )}
           <Button 
             variant="ghost" 
             size="icon" 
@@ -89,24 +102,26 @@ function Header() {
           </Button>
         </div>
 
-        <div className="flex items-center gap-3 pl-2">
-          <div className="text-right hidden md:block">
-            <p className="text-[10px] font-bold text-slate-400 leading-none mb-1 uppercase tracking-tight">
-              {profile?.schouwenGemeente || 'Bodegraven-Reeuwijk'}
-            </p>
-            <p className="text-xs font-black text-slate-900 leading-none">
-              {profile?.firstName} {profile?.lastName}
-            </p>
-            <Badge className="mt-1 h-4 text-[7px] font-black uppercase bg-red-500 text-white border-none py-0 px-2 rounded-sm">
-              {profile?.role || 'Beheerder'}
-            </Badge>
+        {!isMobile && (
+          <div className="flex items-center gap-3 pl-2">
+            <div className="text-right hidden md:block">
+              <p className="text-[10px] font-bold text-slate-400 leading-none mb-1 uppercase tracking-tight">
+                {profile?.schouwenGemeente || 'Bodegraven-Reeuwijk'}
+              </p>
+              <p className="text-xs font-black text-slate-900 leading-none">
+                {profile?.firstName} {profile?.lastName}
+              </p>
+              <Badge className="mt-1 h-4 text-[7px] font-black uppercase bg-red-500 text-white border-none py-0 px-2 rounded-sm">
+                {profile?.role || 'Beheerder'}
+              </Badge>
+            </div>
+            <Avatar className="h-10 w-10 border-2 border-white shadow-md ring-1 ring-slate-100">
+              <AvatarFallback className="text-xs bg-slate-100 text-[#3498db] font-black uppercase">
+                {profile?.firstName?.[0]}{profile?.lastName?.[0]}
+              </AvatarFallback>
+            </Avatar>
           </div>
-          <Avatar className="h-10 w-10 border-2 border-white shadow-md ring-1 ring-slate-100">
-            <AvatarFallback className="text-xs bg-slate-100 text-[#3498db] font-black uppercase">
-              {profile?.firstName?.[0]}{profile?.lastName?.[0]}
-            </AvatarFallback>
-          </Avatar>
-        </div>
+        )}
       </div>
     </header>
   );
@@ -128,7 +143,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
       </aside>
       <div className="flex-1 flex flex-col min-w-0 relative">
         {isHeaderVisible && <Header />}
-        <main className="flex-1 overflow-auto custom-scrollbar relative pt-24 lg:pt-20">
+        <main className="flex-1 overflow-auto custom-scrollbar relative pt-20 lg:pt-20">
           <ProcessingOverlay />
           {children}
         </main>

@@ -6,7 +6,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { format } from 'date-fns';
-import * as turf from '@turf/turf';
 import { 
   Loader2, 
   UploadCloud, 
@@ -14,32 +13,21 @@ import {
   Camera, 
   MapPin, 
   Sparkles, 
-  Settings2, 
-  FileText, 
   X, 
   Check,
-  Calendar,
   Paperclip,
   FileSpreadsheet,
   ClipboardPaste,
   ChevronRight,
-  Info,
-  User,
-  ShieldCheck,
-  Building2,
-  Phone,
-  Mail,
-  Target,
-  ArrowLeft,
   Plus,
-  MoreHorizontal
+  MoreHorizontal,
+  ChevronDown
 } from 'lucide-react';
 import { 
   useFirestore, 
   addDocumentNonBlocking, 
   useFirebaseApp, 
   useDoc, 
-  setDocumentNonBlocking, 
   useMemoFirebase,
   updateDocumentNonBlocking,
   useCollection
@@ -51,6 +39,7 @@ import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/
 import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // UI Components
 import { Button } from '@/components/ui/button';
@@ -68,7 +57,6 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Form, 
   FormControl, 
@@ -93,11 +81,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 // Custom components
 import { IssueImportDialog } from '@/components/issue-import-dialog';
 import { MapboxView } from '@/components/mapbox-view';
-import type { Melding, Project, Object as MapObject } from '@/lib/types';
+import type { Melding, Object as MapObject } from '@/lib/types';
 
 // AI Flows
 import { parseIssuePdf } from '@/ai/flows/parse-issue-pdf-flow';
@@ -152,7 +146,7 @@ const DEFAULT_SUBCATEGORIE_MAPPING: Record<string, string[]> = {
 const DEFAULT_MELDER_TYPES = ["Inwoner", "Bedrijf", "Gemeente", "Toezichthouder"];
 
 const FormRow = ({ label, children, onAdd }: { label: React.ReactNode; children: React.ReactNode; onAdd?: () => void }) => (
-    <div className="flex flex-col gap-0.5 py-1 border-b border-slate-100 last:border-0 min-h-[36px]">
+    <div className="flex flex-col gap-1 py-2 border-b border-slate-100 last:border-0 min-h-[44px]">
         <div className="flex items-center justify-between">
             <FormLabel className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">{label}</FormLabel>
             {onAdd && (
@@ -160,10 +154,10 @@ const FormRow = ({ label, children, onAdd }: { label: React.ReactNode; children:
                     type="button" 
                     variant="ghost" 
                     size="icon" 
-                    className="h-4 w-4 text-slate-300 hover:text-primary transition-colors" 
+                    className="h-5 w-5 text-slate-300 hover:text-primary transition-colors" 
                     onClick={onAdd}
                 >
-                    <Plus className="h-3 w-3" />
+                    <Plus className="h-4 w-4" />
                 </Button>
             )}
         </div>
@@ -232,6 +226,7 @@ export default function NewIssuePage() {
   const { profile } = useProfile();
   const { startProcessing } = useGlobalLoading();
   const app = useFirebaseApp();
+  const isMobile = useIsMobile();
   
   const meldingId = searchParams.get('id');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -251,9 +246,6 @@ export default function NewIssuePage() {
 
   const aiConfigRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'pdf_config') : null, [firestore]);
   const { data: aiConfig } = useDoc<{ instructions: string }>(aiConfigRef);
-
-  const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
-  const { data: projects } = useCollection<any>(projectsQuery);
 
   const meldingRef = useMemoFirebase(() => {
     if (!firestore || !meldingId) return null;
@@ -360,17 +352,189 @@ export default function NewIssuePage() {
   const currentHoofdcategorie = form.watch('hoofdcategorie');
   const subcategorieen = subcategorieenMap[currentHoofdcategorie] || ["Overig"];
 
+  const formContent = (
+    <Form {...form}>
+      <form id="new-melding-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {isMobile ? (
+          <Accordion type="multiple" defaultValue={["section-1"]} className="w-full">
+            <AccordionItem value="section-1" className="border-none">
+              <AccordionTrigger className="hover:no-underline py-3 px-4 bg-slate-50 rounded-xl mb-2">
+                <span className="text-xs font-black uppercase tracking-widest text-slate-900">Basisgegevens</span>
+              </AccordionTrigger>
+              <AccordionContent className="p-4 pt-0 space-y-2">
+                <FormRow label="Meldingsnummer">
+                  <FormField control={form.control} name="intakenummer" render={({ field }) => (
+                    <FormItem><FormControl><Input {...field} disabled={isReadOnly} className="h-11 font-bold" /></FormControl><FormMessage /></FormItem>
+                  )} />
+                </FormRow>
+                <div className="grid grid-cols-2 gap-3">
+                  <FormRow label="Status">
+                    <FormField control={form.control} name="status" render={({ field }) => (
+                      <FormItem>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={isReadOnly}>
+                          <FormControl><SelectTrigger className="h-11 font-bold"><SelectValue /></SelectTrigger></FormControl>
+                          <SelectContent>{statuses.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                        </Select>
+                      </FormItem>
+                    )} />
+                  </FormRow>
+                  <FormRow label="Melder">
+                    <FormField control={form.control} name="soort_melder" render={({ field }) => (
+                      <FormItem>
+                        <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
+                          <FormControl><SelectTrigger className="h-11 font-bold"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
+                          <SelectContent>{soortenMelder.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                        </Select>
+                      </FormItem>
+                    )} />
+                  </FormRow>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="section-2" className="border-none">
+              <AccordionTrigger className="hover:no-underline py-3 px-4 bg-slate-50 rounded-xl mb-2">
+                <span className="text-xs font-black uppercase tracking-widest text-slate-900">Locatie & Gebied</span>
+              </AccordionTrigger>
+              <AccordionContent className="p-4 pt-0 space-y-2">
+                <FormRow label="Straatnaam">
+                  <FormField control={form.control} name="straatnaam" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold" /></FormControl></FormItem>)} />
+                </FormRow>
+                <div className="grid grid-cols-2 gap-3">
+                  <FormRow label="Huisnr.">
+                    <FormField control={form.control} name="huisnummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold" /></FormControl></FormItem>)} />
+                  </FormRow>
+                  <FormRow label="Plaats">
+                    <FormField control={form.control} name="plaats" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold" /></FormControl></FormItem>)} />
+                  </FormRow>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="section-3" className="border-none">
+              <AccordionTrigger className="hover:no-underline py-3 px-4 bg-slate-50 rounded-xl mb-2">
+                <span className="text-xs font-black uppercase tracking-widest text-slate-900">Omschrijving</span>
+              </AccordionTrigger>
+              <AccordionContent className="p-4 pt-0 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <FormRow label="Hoofdtype">
+                    <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className="h-11 font-bold"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></Select></FormItem>)} />
+                  </FormRow>
+                  <FormRow label="Subtype">
+                    <FormField control={form.control} name="subcategorie" render={({ field }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className="h-11 font-bold"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{subcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></Select></FormItem>)} />
+                  </FormRow>
+                </div>
+                <FormRow label="Memo">
+                  <FormField control={form.control} name="extra_informatie" render={({ field }) => (
+                    <FormItem><FormControl><Textarea {...field} value={field.value || ''} disabled={isReadOnly} className="resize-none min-h-[120px] font-bold" placeholder="Aanvullende info..." /></FormControl></FormItem>
+                  )} />
+                </FormRow>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
+              <Card className="rounded-2xl bg-white shadow-sm border-slate-200 overflow-hidden">
+                <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Hoofdgegevens</CardTitle></CardHeader>
+                <CardContent className="p-4 pt-2">
+                  <FormRow label={<>Meldingsnummer<span className="text-red-500">*</span></>}>
+                    <FormField control={form.control} name="intakenummer" render={({ field }) => (
+                      <FormItem><FormControl><Input {...field} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl><FormMessage /></FormItem>
+                    )} />
+                  </FormRow>
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormRow label="Extern Nr."><FormField control={form.control} name="extern_meldingsnummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                    <FormRow label="Status">
+                      <FormField control={form.control} name="status" render={({ field }) => (
+                        <FormItem>
+                          <Select onValueChange={field.onChange} value={field.value} disabled={isReadOnly}><FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue /></SelectTrigger></FormControl>
+                            <SelectContent>{statuses.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                          </Select>
+                        </FormItem>
+                      )} />
+                    </FormRow>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormRow label="Containernr.">
+                      <FormField control={form.control} name="containernummer" render={({ field }) => (
+                        <FormItem className="relative">
+                          <FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" autoComplete="off" /></FormControl>
+                          {containerSuggestions.length > 0 && (
+                            <div className="absolute z-[100] w-full mt-1 bg-white border-2 rounded-xl shadow-2xl overflow-hidden animate-in fade-in duration-200">
+                              {containerSuggestions.map(obj => (
+                                <button key={obj.id} type="button" className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b last:border-0" onClick={() => { form.setValue('containernummer', obj.idNummer || obj.id); form.setValue('straatnaam', obj.straatnaam || ''); form.setValue('huisnummer', obj.huisnummer || ''); setLocation({ latitude: obj.latitude, longitude: obj.longitude }); setContainerSuggestions([]); }}>
+                                  <p className="font-black text-[10px] uppercase text-slate-900">{obj.idNummer || obj.id}</p>
+                                  <p className="text-[9px] font-bold text-slate-400 truncate">{obj.straatnaam} {obj.huisnummer}</p>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </FormItem>
+                      )} />
+                    </FormRow>
+                    <FormRow label={<>Soort Melder<span className="text-red-500">*</span></>}>
+                      <FormField control={form.control} name="soort_melder" render={({ field }) => (
+                        <FormItem>
+                          <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
+                            <FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
+                            <SelectContent>{soortenMelder.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
+                          </Select>
+                        </FormItem>
+                      )} />
+                    </FormRow>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-2xl bg-white shadow-sm border-slate-200 overflow-hidden">
+                <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Locatie & Gebied</CardTitle></CardHeader>
+                <CardContent className="p-4 pt-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-2"><FormRow label={<>Straatnaam<span className="text-red-500">*</span></>}><FormField control={form.control} name="straatnaam" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow></div>
+                    <FormRow label={<>Huisnr.<span className="text-red-500">*</span></>}><FormField control={form.control} name="huisnummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormRow label="Plaats"><FormField control={form.control} name="plaats" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                    <FormRow label="Postcode"><FormField control={form.control} name="postcode" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="space-y-4">
+              <Card className="rounded-2xl bg-white shadow-sm border-slate-200 overflow-hidden">
+                <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Categorie & Melder</CardTitle></CardHeader>
+                <CardContent className="p-4 pt-2">
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormRow label={<>Hoofdtype<span className="text-red-500">*</span></>}><FormField control={form.control} name="hoofdcategorie" render={({ field }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></Select></FormItem>)} /></FormRow>
+                    <FormRow label={<>Subtype<span className="text-red-500">*</span></>}><FormField control={form.control} name="subcategorie" render={({ field }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{subcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></Select></FormItem>)} /></FormRow>
+                  </div>
+                  <FormRow label="Omschrijving Melding">
+                    <FormField control={form.control} name="extra_informatie" render={({ field }) => (
+                      <FormItem><FormControl><Textarea {...field} value={field.value || ''} disabled={isReadOnly} className="resize-none min-h-[100px] text-xs font-medium border-slate-100 bg-slate-50/30" placeholder="Aanvullende info..." /></FormControl></FormItem>
+                    )} />
+                  </FormRow>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+      </form>
+    </Form>
+  );
+
   return (
-    <div className="flex flex-col h-[calc(100vh-6rem)] overflow-hidden bg-slate-50">
-        <header className="h-14 bg-white border-b flex items-center justify-between px-4 md:px-6 shrink-0 shadow-sm z-10">
+    <div className={cn("flex flex-col h-full bg-slate-50", !isMobile && "h-[calc(100vh-6rem)] overflow-hidden")}>
+        <header className="h-14 bg-white border-b flex items-center justify-between px-4 md:px-6 shrink-0 shadow-sm z-10 sticky top-0">
             <div className="flex items-center gap-2">
                 {!isReadOnly && (
                     <>
-                        <Button variant="outline" size="sm" className="h-9 font-black gap-2 border-slate-200" onClick={() => document.getElementById('media-doc-input')?.click()}>
+                        <Button variant="outline" size="sm" className="h-9 font-black gap-2 border-slate-200 rounded-xl" onClick={() => document.getElementById('media-doc-input')?.click()}>
                             <UploadCloud className="h-4 w-4 text-primary" /> <span className="hidden sm:inline">DOC</span>
                             <input type="file" id="media-doc-input" className="hidden" multiple onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'files')} />
                         </Button>
-                        <Button variant="outline" size="sm" className="h-9 font-black gap-2 border-slate-200" onClick={() => document.getElementById('media-photo-input')?.click()}>
+                        <Button variant="outline" size="sm" className="h-9 font-black gap-2 border-slate-200 rounded-xl" onClick={() => document.getElementById('media-photo-input')?.click()}>
                             <Camera className="h-4 w-4 text-green-600" /> <span className="hidden sm:inline">FOTO</span>
                             <input type="file" id="media-photo-input" className="hidden" accept="image/*" multiple onChange={(e) => e.target.files && handleFileUpload(e.target.files, 'fotos')} />
                         </Button>
@@ -382,13 +546,13 @@ export default function NewIssuePage() {
                     <>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="icon" className="h-9 w-9 border-slate-200">
+                                <Button variant="outline" size="icon" className="h-9 w-9 border-slate-200 rounded-xl">
                                     <MoreHorizontal className="h-4 w-4 text-slate-600" />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-xl p-2">
                                 <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="rounded-lg h-10 cursor-pointer font-bold text-green-600">
-                                    <IssueImportDialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen} onSuccess={() => setIsImportDialogOpen(false)}>
+                                    <IssueImportDialog open={isImporting} onOpenChange={setIsImporting} onSuccess={() => setIsImporting(false)}>
                                         <div className="flex items-center w-full">
                                             <FileSpreadsheet className="mr-2 h-4 w-4" /> EXCEL Import
                                         </div>
@@ -408,7 +572,7 @@ export default function NewIssuePage() {
                             </DropdownMenuContent>
                         </DropdownMenu>
                         <Separator orientation="vertical" className="h-5 mx-1" />
-                        <Button type="submit" form="new-melding-form" size="sm" disabled={isSubmitting} className="h-9 font-black uppercase px-4 md:px-8 shadow-lg">
+                        <Button type="submit" form="new-melding-form" size="sm" disabled={isSubmitting} className="h-9 font-black uppercase px-4 md:px-8 shadow-lg rounded-xl">
                             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />} OPSLAAN
                         </Button>
                     </>
@@ -417,104 +581,20 @@ export default function NewIssuePage() {
             </div>
         </header>
 
-        <main className="flex-1 overflow-hidden flex flex-col lg:flex-row min-h-0">
-            <div className="flex-1 overflow-y-auto p-4 lg:p-6 no-scrollbar custom-scrollbar">
-                <Form {...form}>
-                    <form id="new-melding-form" onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-4">
-                            <Card className="rounded-2xl bg-white shadow-sm border-slate-200 overflow-hidden">
-                                <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Hoofdgegevens</CardTitle></CardHeader>
-                                <CardContent className="p-4 pt-2">
-                                    <FormRow label={<>Meldingsnummer<span className="text-red-500">*</span></>}>
-                                        <FormField control={form.control} name="intakenummer" render={({ field }) => (
-                                            <FormItem><FormControl><Input {...field} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl><FormMessage /></FormItem>
-                                        )} />
-                                    </FormRow>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <FormRow label="Extern Nr."><FormField control={form.control} name="extern_meldingsnummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
-                                        <FormRow label="Status">
-                                            <FormField control={form.control} name="status" render={({ field }) => (
-                                                <FormItem>
-                                                    <Select onValueChange={field.onChange} value={field.value} disabled={isReadOnly}><FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue /></SelectTrigger></FormControl>
-                                                        <SelectContent>{statuses.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
-                                                    </Select>
-                                                </FormItem>
-                                            )} />
-                                        </FormRow>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <FormRow label="Containernr.">
-                                            <FormField control={form.control} name="containernummer" render={({ field }) => (
-                                                <FormItem className="relative">
-                                                    <FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" autoComplete="off" /></FormControl>
-                                                    {containerSuggestions.length > 0 && (
-                                                        <div className="absolute z-[100] w-full mt-1 bg-white border-2 rounded-xl shadow-2xl overflow-hidden animate-in fade-in duration-200">
-                                                            {containerSuggestions.map(obj => (
-                                                                <button key={obj.id} type="button" className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b last:border-0" onClick={() => { form.setValue('containernummer', obj.idNummer || obj.id); form.setValue('straatnaam', obj.straatnaam || ''); form.setValue('huisnummer', obj.huisnummer || ''); setLocation({ latitude: obj.latitude, longitude: obj.longitude }); setContainerSuggestions([]); }}>
-                                                                    <p className="font-black text-[10px] uppercase text-slate-900">{obj.idNummer || obj.id}</p>
-                                                                    <p className="text-[9px] font-bold text-slate-400 truncate">{obj.straatnaam} {obj.huisnummer}</p>
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </FormItem>
-                                            )} />
-                                        </FormRow>
-                                        <FormRow label={<>Soort Melder<span className="text-red-500">*</span></>}>
-                                            <FormField control={form.control} name="soort_melder" render={({ field }) => (
-                                                <FormItem>
-                                                    <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
-                                                        <FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
-                                                        <SelectContent>{soortenMelder.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
-                                                    </Select>
-                                                </FormItem>
-                                            )} />
-                                        </FormRow>
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            <Card className="rounded-2xl bg-white shadow-sm border-slate-200 overflow-hidden">
-                                <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Locatie & Gebied</CardTitle></CardHeader>
-                                <CardContent className="p-4 pt-2">
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                        <div className="sm:col-span-2"><FormRow label={<>Straatnaam<span className="text-red-500">*</span></>}><FormField control={form.control} name="straatnaam" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow></div>
-                                        <FormRow label={<>Huisnr.<span className="text-red-500">*</span></>}><FormField control={form.control} name="huisnummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <FormRow label="Plaats"><FormField control={form.control} name="plaats" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
-                                        <FormRow label="Postcode"><FormField control={form.control} name="postcode" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
-
-                        <div className="space-y-4">
-                            <Card className="rounded-2xl bg-white shadow-sm border-slate-200 overflow-hidden">
-                                <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Categorie & Melder</CardTitle></CardHeader>
-                                <CardContent className="p-4 pt-2">
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <FormRow label={<>Hoofdtype<span className="text-red-500">*</span></>}><FormField control={form.control} name="hoofdcategorie" render={({ field }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></Select></FormItem>)} /></FormRow>
-                                        <FormRow label={<>Subtype<span className="text-red-500">*</span></>}><FormField control={form.control} name="subcategorie" render={({ field }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{subcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></Select></FormItem>)} /></FormRow>
-                                    </div>
-                                    <FormRow label="Omschrijving Melding">
-                                        <FormField control={form.control} name="extra_informatie" render={({ field }) => (
-                                            <FormItem><FormControl><Textarea {...field} value={field.value || ''} disabled={isReadOnly} className="resize-none min-h-[100px] text-xs font-medium border-slate-100 bg-slate-50/30" placeholder="Aanvullende info..." /></FormControl></FormItem>
-                                        )} />
-                                    </FormRow>
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </form>
-                </Form>
+        <main className={cn("flex-1 flex flex-col lg:flex-row min-h-0", !isMobile && "overflow-hidden")}>
+            <div className={cn("flex-1 p-4 lg:p-6 custom-scrollbar", !isMobile && "overflow-y-auto no-scrollbar")}>
+                {formContent}
             </div>
             
-            <div className="w-full lg:w-[350px] bg-slate-50 lg:border-l shrink-0 flex flex-col min-h-0">
-                <div className="h-48 md:h-64 lg:h-[40%] relative overflow-hidden bg-slate-100 shrink-0">
+            <div className={cn("w-full lg:w-[350px] bg-slate-50 lg:border-l shrink-0 flex flex-col min-h-0", !isMobile && "overflow-hidden")}>
+                <div className={cn("relative overflow-hidden bg-slate-100 shrink-0", isMobile ? "h-64 mt-4 rounded-3xl mx-4" : "h-[40%] shadow-inner")}>
                     <MapboxView latitude={location?.latitude} longitude={location?.longitude} />
+                    <div className="absolute top-3 left-3 bg-white/90 backdrop-blur px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border border-slate-200 flex items-center gap-1 shadow-sm">
+                        <MapPin className="h-3 w-3 text-primary" /> GIS Locatie
+                    </div>
                 </div>
 
-                <div className="flex-1 lg:h-[40%] flex flex-col min-h-0 bg-white p-5 border-t shrink-0">
+                <div className={cn("flex-1 flex flex-col min-h-0 bg-white p-5 border-t shrink-0", isMobile ? "mt-4 rounded-t-[2.5rem] shadow-2xl border-none" : "lg:h-[40%]")}>
                     <div className="flex items-center justify-between border-b pb-3 mb-4">
                         <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">BIJLAGEN ({uploadedFiles.length + uploadedPhotos.length})</h3>
                         <Badge variant="secondary" className="bg-slate-100 text-slate-500 font-bold h-5 px-2">Ready</Badge>
@@ -543,7 +623,8 @@ export default function NewIssuePage() {
                             {!uploadedFiles.length && !uploadedPhotos.length && (
                                 <div className="py-8 flex flex-col items-center justify-center text-slate-300">
                                     <Paperclip className="h-10 w-10 text-slate-200 opacity-50 mb-2" />
-                                    <p className="text-[10px] font-black uppercase tracking-[0.2em]">Geen bijlagen</p>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em]">Geen bijlagen actief</p>
+                                    <p className="text-[8px] font-bold text-slate-400 mt-1 uppercase">Upload bestanden via de header</p>
                                 </div>
                             )}
                         </div>

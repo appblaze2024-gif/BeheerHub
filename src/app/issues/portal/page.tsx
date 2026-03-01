@@ -27,11 +27,13 @@ import {
 import { ForwardExternalDialog } from '@/components/forward-external-dialog';
 import { LoadingScreen } from '@/components/loading-screen';
 import { Badge } from '@/components/ui/badge';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export default function MeldingenportaalPage() {
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [searchTerm, setSearchTerm] = React.useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = React.useState('');
 
@@ -109,9 +111,9 @@ export default function MeldingenportaalPage() {
             <h1 className="text-lg md:text-xl font-black uppercase tracking-tight text-slate-900">Portaal</h1>
         </div>
         <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
-            <div className="relative w-full sm:w-64">
+            <div className="relative flex-1 sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Zoek..." className="pl-9 h-9 border-slate-200" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                <Input placeholder="Zoek..." className="pl-9 h-9 border-slate-200 rounded-xl" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
         </div>
       </header>
@@ -125,11 +127,11 @@ export default function MeldingenportaalPage() {
                 <p className="font-black uppercase tracking-tight text-slate-900">Geen nieuwe aanvragen</p>
             </div>
         ) : (
-            <div className="border rounded-xl overflow-hidden shadow-sm bg-white overflow-x-auto">
+            <div className="border rounded-2xl overflow-hidden shadow-sm bg-white overflow-x-auto custom-scrollbar">
                 <Table className="min-w-[800px]">
-                    <TableHeader className="bg-slate-100">
+                    <TableHeader className="bg-slate-100 sticky top-0 z-10">
                         <TableRow>
-                            <TableHead className="font-black uppercase text-[10px] text-slate-500">Intakenr.</TableHead>
+                            <TableHead className="font-black uppercase text-[10px] text-slate-500 sticky left-0 bg-slate-100 z-20">Intakenr.</TableHead>
                             <TableHead className="font-black uppercase text-[10px] text-slate-500">Adres</TableHead>
                             <TableHead className="font-black uppercase text-[10px] text-slate-500">Datum</TableHead>
                             <TableHead className="font-black uppercase text-[10px] text-slate-500">Melder</TableHead>
@@ -138,26 +140,26 @@ export default function MeldingenportaalPage() {
                     </TableHeader>
                     <TableBody>
                         {filteredMeldingen.map((melding) => (
-                            <TableRow key={melding.id} className="cursor-pointer hover:bg-slate-50 transition-colors">
-                                <TableCell className="font-black" onClick={() => router.push(`/issues/new?id=${melding.id}`)}>{melding.intakenummer}</TableCell>
+                            <TableRow key={melding.id} className="cursor-pointer hover:bg-slate-50 transition-colors h-14">
+                                <TableCell className="font-black text-xs sticky left-0 bg-white group-hover:bg-slate-50 z-10" onClick={() => router.push(`/issues/new?id=${melding.id}`)}>{melding.intakenummer}</TableCell>
                                 <TableCell className="text-xs font-bold" onClick={() => router.push(`/issues/new?id=${melding.id}`)}>{[melding.straatnaam, melding.plaats].filter(Boolean).join(', ')}</TableCell>
                                 <TableCell className="text-[11px] font-bold text-slate-600" onClick={() => router.push(`/issues/new?id=${melding.id}`)}>{melding.datum ? format(new Date(melding.datum), 'dd-MM-yy') : '-'}</TableCell>
                                 <TableCell className='text-xs font-medium' onClick={() => router.push(`/issues/new?id=${melding.id}`)}>{melding.melder || '-'}</TableCell>
                                 <TableCell className="text-right">
                                     <div className="flex items-center justify-end gap-1">
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600" onClick={() => handleStatusChange(melding, 'In behandeling')}>
-                                            <CheckCircle2 className="h-4 w-4" />
+                                        <Button variant="ghost" size="icon" className="h-10 w-10 text-green-600 rounded-full" onClick={() => handleStatusChange(melding, 'In behandeling')}>
+                                            <CheckCircle2 className="h-5 w-5" />
                                         </Button>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300">
-                                                    <MoreHorizontal className="h-4 w-4" />
+                                                <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-300 rounded-full">
+                                                    <MoreHorizontal className="h-5 w-5" />
                                                 </Button>
                                             </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-xl p-2">
-                                                <DropdownMenuItem onClick={() => handleStatusChange(melding, 'In behandeling')} className="font-bold rounded-lg h-10 cursor-pointer">Accepteren</DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => { setSelectedMelding(melding); setIsForwardDialogOpen(true); }} className="font-bold rounded-lg h-10 cursor-pointer"><Mail className="mr-2 h-4 w-4 text-primary" />Extern doorzetten</DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => handleStatusChange(melding, 'Geweigerd')} className="font-bold rounded-lg h-10 text-red-600 cursor-pointer"><XCircle className="mr-2 h-4 w-4" />Weigeren</DropdownMenuItem>
+                                            <DropdownMenuContent align="end" className="w-56 rounded-2xl shadow-xl p-2 border-slate-100">
+                                                <DropdownMenuItem onClick={() => handleStatusChange(melding, 'In behandeling')} className="font-bold rounded-xl h-11 cursor-pointer">Accepteren</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => { setSelectedMelding(melding); setIsForwardDialogOpen(true); }} className="font-bold rounded-xl h-11 cursor-pointer"><Mail className="mr-2 h-4 w-4 text-primary" />Extern doorzetten</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleStatusChange(melding, 'Geweigerd')} className="font-bold rounded-xl h-11 text-red-600 cursor-pointer"><XCircle className="mr-2 h-4 w-4" />Weigeren</DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </div>
