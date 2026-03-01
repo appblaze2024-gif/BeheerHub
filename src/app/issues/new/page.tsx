@@ -459,6 +459,8 @@ export default function NewIssuePage() {
 
     if (meldingId) {
       updateDocumentNonBlocking(doc(firestore, 'meldingen', meldingId), mData);
+      toast({ title: "Melding bijgewerkt" });
+      router.push('/issues/portal');
     } else {
       mData.createdAt = serverTimestamp();
       addDocumentNonBlocking(collection(firestore, 'meldingen'), mData).then(() => {
@@ -476,7 +478,7 @@ export default function NewIssuePage() {
     toast({ 
       variant: 'destructive', 
       title: 'Validatiefout', 
-      description: 'Controleer alle verplichte velden (*).' 
+      description: 'Niet alle velden ingevuld. Controleer de velden met een rode ster (*).' 
     });
   };
 
@@ -494,25 +496,25 @@ export default function NewIssuePage() {
               </AccordionTrigger>
               <AccordionContent className="p-4 pt-0 space-y-2">
                 <FormRow label={<>Meldingsnummer<span className="text-red-500">*</span></>}>
-                  <FormField control={form.control} name="intakenummer" render={({ field }) => (
-                    <FormItem><FormControl><Input {...field} disabled={isReadOnly} className="h-11 font-bold" /></FormControl><FormMessage /></FormItem>
+                  <FormField control={form.control} name="intakenummer" render={({ field, fieldState }) => (
+                    <FormItem><FormControl><Input {...field} disabled={isReadOnly} className={cn("h-11 font-bold", fieldState.error && "border-4 border-destructive")} /></FormControl><FormMessage /></FormItem>
                   )} />
                 </FormRow>
                 <div className="grid grid-cols-2 gap-3">
                   <FormRow label={<>Datum<span className="text-red-500">*</span></>}>
-                    <FormField control={form.control} name="meldingsdatum" render={({ field }) => (
-                      <FormItem><FormControl><Input type="date" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={(e) => field.onChange(e.target.valueAsDate)} disabled={isReadOnly} className="h-11 font-bold" /></FormControl><FormMessage /></FormItem>
+                    <FormField control={form.control} name="meldingsdatum" render={({ field, fieldState }) => (
+                      <FormItem><FormControl><Input type="date" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={(e) => field.onChange(e.target.valueAsDate)} disabled={isReadOnly} className={cn("h-11 font-bold", fieldState.error && "border-4 border-destructive")} /></FormControl><FormMessage /></FormItem>
                     )} />
                   </FormRow>
                   <FormRow label={<>Tijdstip<span className="text-red-500">*</span></>}>
-                    <FormField control={form.control} name="meldingsuur" render={({ field }) => (
-                      <FormItem><FormControl><Input type="time" {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold" /></FormControl><FormMessage /></FormItem>
+                    <FormField control={form.control} name="meldingsuur" render={({ field, fieldState }) => (
+                      <FormItem><FormControl><Input type="time" {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-11 font-bold", fieldState.error && "border-4 border-destructive")} /></FormControl><FormMessage /></FormItem>
                     )} />
                   </FormRow>
                 </div>
                 <FormRow label={<>Aangenomen door<span className="text-red-500">*</span></>}>
-                  <FormField control={form.control} name="aangenomen_door" render={({ field }) => (
-                    <FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold" /></FormControl><FormMessage /></FormItem>
+                  <FormField control={form.control} name="aangenomen_door" render={({ field, fieldState }) => (
+                    <FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-11 font-bold", fieldState.error && "border-4 border-destructive")} /></FormControl><FormMessage /></FormItem>
                   )} />
                 </FormRow>
                 <div className="grid grid-cols-2 gap-3">
@@ -527,10 +529,10 @@ export default function NewIssuePage() {
                     )} />
                   </FormRow>
                   <FormRow label={<>Melder<span className="text-red-500">*</span></>}>
-                    <FormField control={form.control} name="soort_melder" render={({ field }) => (
+                    <FormField control={form.control} name="soort_melder" render={({ field, fieldState }) => (
                       <FormItem>
                         <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
-                          <FormControl><SelectTrigger className="h-11 font-bold"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
+                          <FormControl><SelectTrigger className={cn("h-11 font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
                           <SelectContent>{soortenMelder.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                         </Select>
                       </FormItem>
@@ -546,11 +548,11 @@ export default function NewIssuePage() {
               </AccordionTrigger>
               <AccordionContent className="p-4 pt-0 space-y-2">
                 <FormRow label={<>Straatnaam<span className="text-red-500">*</span></>}>
-                  <FormField control={form.control} name="straatnaam" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold" /></FormControl></FormItem>)} />
+                  <FormField control={form.control} name="straatnaam" render={({ field, fieldState }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-11 font-bold", fieldState.error && "border-4 border-destructive")} /></FormControl></FormItem>)} />
                 </FormRow>
                 <div className="grid grid-cols-2 gap-3">
                   <FormRow label={<>Huisnr.<span className="text-red-500">*</span></>}>
-                    <FormField control={form.control} name="huisnummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold" /></FormControl></FormItem>)} />
+                    <FormField control={form.control} name="huisnummer" render={({ field, fieldState }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-11 font-bold", fieldState.error && "border-4 border-destructive")} /></FormControl></FormItem>)} />
                   </FormRow>
                   <FormRow label="Plaats">
                     <FormField control={form.control} name="plaats" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold" /></FormControl></FormItem>)} />
@@ -574,10 +576,10 @@ export default function NewIssuePage() {
               <AccordionContent className="p-4 pt-0 space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <FormRow label={<>Hoofdtype<span className="text-red-500">*</span></>}>
-                    <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className="h-11 font-bold"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></Select></FormItem>)} />
+                    <FormField control={form.control} name="hoofdcategorie" render={({ field, fieldState }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className={cn("h-11 font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></Select></FormItem>)} />
                   </FormRow>
                   <FormRow label={<>Subtype<span className="text-red-500">*</span></>}>
-                    <FormField control={form.control} name="subcategorie" render={({ field }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className="h-11 font-bold"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{subcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></Select></FormItem>)} />
+                    <FormField control={form.control} name="subcategorie" render={({ field, fieldState }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className={cn("h-11 font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{subcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></Select></FormItem>)} />
                   </FormRow>
                 </div>
                 <FormRow label="Memo">
@@ -595,25 +597,25 @@ export default function NewIssuePage() {
                 <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Hoofdgegevens</CardTitle></CardHeader>
                 <CardContent className="p-4 pt-2">
                   <FormRow label={<>Meldingsnummer<span className="text-red-500">*</span></>}>
-                    <FormField control={form.control} name="intakenummer" render={({ field }) => (
-                      <FormItem><FormControl><Input {...field} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl><FormMessage /></FormItem>
+                    <FormField control={form.control} name="intakenummer" render={({ field, fieldState }) => (
+                      <FormItem><FormControl><Input {...field} disabled={isReadOnly} className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")} /></FormControl><FormMessage /></FormItem>
                     )} />
                   </FormRow>
                   <div className="grid grid-cols-2 gap-3">
                     <FormRow label={<>Datum<span className="text-red-500">*</span></>}>
-                      <FormField control={form.control} name="meldingsdatum" render={({ field }) => (
-                        <FormItem><FormControl><Input type="date" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={(e) => field.onChange(e.target.valueAsDate)} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl><FormMessage /></FormItem>
+                      <FormField control={form.control} name="meldingsdatum" render={({ field, fieldState }) => (
+                        <FormItem><FormControl><Input type="date" value={field.value ? format(new Date(field.value), 'yyyy-MM-dd') : ''} onChange={(e) => field.onChange(e.target.valueAsDate)} disabled={isReadOnly} className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")} /></FormControl><FormMessage /></FormItem>
                       )} />
                     </FormRow>
                     <FormRow label={<>Tijdstip<span className="text-red-500">*</span></>}>
-                      <FormField control={form.control} name="meldingsuur" render={({ field }) => (
-                        <FormItem><FormControl><Input type="time" {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl><FormMessage /></FormItem>
+                      <FormField control={form.control} name="meldingsuur" render={({ field, fieldState }) => (
+                        <FormItem><FormControl><Input type="time" {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")} /></FormControl><FormMessage /></FormItem>
                       )} />
                     </FormRow>
                   </div>
                   <FormRow label={<>Aangenomen door<span className="text-red-500">*</span></>}>
-                    <FormField control={form.control} name="aangenomen_door" render={({ field }) => (
-                      <FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl><FormMessage /></FormItem>
+                    <FormField control={form.control} name="aangenomen_door" render={({ field, fieldState }) => (
+                      <FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")} /></FormControl><FormMessage /></FormItem>
                     )} />
                   </FormRow>
                   <div className="grid grid-cols-2 gap-3">
@@ -650,10 +652,10 @@ export default function NewIssuePage() {
                       )} />
                     </FormRow>
                     <FormRow label={<>Soort Melder<span className="text-red-500">*</span></>}>
-                      <FormField control={form.control} name="soort_melder" render={({ field }) => (
+                      <FormField control={form.control} name="soort_melder" render={({ field, fieldState }) => (
                         <FormItem>
                           <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
-                            <FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
+                            <FormControl><SelectTrigger className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl>
                             <SelectContent>{soortenMelder.map(opt => (<SelectItem key={opt} value={opt}>{opt}</SelectItem>))}</SelectContent>
                           </Select>
                         </FormItem>
@@ -666,9 +668,9 @@ export default function NewIssuePage() {
               <Card className="rounded-2xl bg-white shadow-sm border-slate-200 overflow-hidden">
                 <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Locatie & Gebied</CardTitle></CardHeader>
                 <CardContent className="p-4 pt-2 space-y-3">
-                  <FormRow label={<>Straatnaam<span className="text-red-500">*</span></>}><FormField control={form.control} name="straatnaam" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                  <FormRow label={<>Straatnaam<span className="text-red-500">*</span></>}><FormField control={form.control} name="straatnaam" render={({ field, fieldState }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")} /></FormControl></FormItem>)} /></FormRow>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <FormRow label={<>Huisnr.<span className="text-red-500">*</span></>}><FormField control={form.control} name="huisnummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                    <FormRow label={<>Huisnr.<span className="text-red-500">*</span></>}><FormField control={form.control} name="huisnummer" render={({ field, fieldState }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")} /></FormControl></FormItem>)} /></FormRow>
                     <FormRow label="Postcode"><FormField control={form.control} name="postcode" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -686,8 +688,8 @@ export default function NewIssuePage() {
                 <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Categorie & Melder</CardTitle></CardHeader>
                 <CardContent className="p-4 pt-2">
                   <div className="grid grid-cols-2 gap-3">
-                    <FormRow label={<>Hoofdtype<span className="text-red-500">*</span></>}><FormField control={form.control} name="hoofdcategorie" render={({ field }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></Select></FormItem>)} /></FormRow>
-                    <FormRow label={<>Subtype<span className="text-red-500">*</span></>}><FormField control={form.control} name="subcategorie" render={({ field }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className="h-8 text-xs font-bold"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{subcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></Select></FormItem>)} /></FormRow>
+                    <FormRow label={<>Hoofdtype<span className="text-red-500">*</span></>}><FormField control={form.control} name="hoofdcategorie" render={({ field, fieldState }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></Select></FormItem>)} /></FormRow>
+                    <FormRow label={<>Subtype<span className="text-red-500">*</span></>}><FormField control={form.control} name="subcategorie" render={({ field, fieldState }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className={cn("h-8 text-xs font-bold", fieldState.error && "border-4 border-destructive")}><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{subcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></Select></FormItem>)} /></FormRow>
                   </div>
                   <FormRow label="Omschrijving Melding">
                     <FormField control={form.control} name="extra_informatie" render={({ field }) => (
