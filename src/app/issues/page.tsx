@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useCollection, useFirestore, useFirebaseApp, updateDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { collection, doc, query, where } from 'firebase/firestore';
-import { ArrowLeft, Navigation, Pencil, FileText, Camera, Package, Clock, Info, Trash2, File as FileIcon, Loader2, MapPin, UploadCloud, X, User, ChevronRight, Mic, MicOff } from 'lucide-react';
+import { ArrowLeft, Navigation, Pencil, FileText, Camera, Package, Clock, Info, Trash2, File as FileIcon, Loader2, MapPin, UploadCloud, X, User, ChevronRight, Mic, MicOff, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -306,7 +306,7 @@ export default function IssuesPage() {
                     </Button>
                   ) : (
                     <Button className="bg-green-600 hover:bg-green-700 text-white font-black uppercase tracking-tight h-11 px-8 rounded-xl shadow-lg shadow-green-600/20" onClick={handleStartWork}>
-                        BON STARTEN
+                        BON AFHANDELEN
                     </Button>
                   )}
               </div>
