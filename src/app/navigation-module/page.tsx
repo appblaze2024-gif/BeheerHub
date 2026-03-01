@@ -756,31 +756,31 @@ export default function StartNavigationPage() {
       return [];
   }, [selectedProject, routeType]);
 
-  const selectedRouteDef = React.useMemo(() => {
+  const selectedRouteIdDef = React.useMemo(() => {
     if (!selectedRouteId || selectedRouteId === '--nieuwe-route--' || !selectedProject) return null;
     const allRoutes = [...(selectedProject.veegroutes || []), ...(selectedProject.prullenbakkenroutes || [])];
     return allRoutes.find(r => r.id === selectedRouteId) || null;
   }, [selectedRouteId, selectedProject]);
 
   const objectsOnRouteQuery = useMemoFirebase(() => {
-    if (!firestore || !selectedRouteDef) return null;
-    return query(collection(firestore, 'objects'), where('locatieWerkgebieden', 'array-contains', selectedRouteDef.naam));
-  }, [firestore, selectedRouteDef?.naam]);
+    if (!firestore || !selectedRouteIdDef) return null;
+    return query(collection(firestore, 'objects'), where('locatieWerkgebieden', 'array-contains', selectedRouteIdDef.naam));
+  }, [firestore, selectedRouteIdDef?.naam]);
 
   const { data: objectsOnMap } = useCollection<MapObject>(objectsOnRouteQuery);
 
   const routeGeoJSONFeatures = React.useMemo(() => {
-    if (!selectedRouteDef) return null;
+    if (!selectedRouteIdDef) return null;
     try {
-      const features = JSON.parse(selectedRouteDef.subGebieden);
+      const features = JSON.parse(selectedRouteIdDef.subGebieden);
       if (Array.isArray(features) && features.length > 0) return { type: 'FeatureCollection' as const, features: features.map((f: any) => ({ type: 'Feature' as const, properties: {}, geometry: f.geometry })) };
     } catch (e) {}
     return null;
-  }, [selectedRouteDef]);
+  }, [selectedRouteIdDef]);
 
   const handleStartRoute = React.useCallback(async (simulate = false, useFixedStart = false) => {
     setIsSimulationMode(simulate);
-    const predefinedStart = selectedRouteDef && 'startLatitude' in selectedRouteDef && (selectedRouteDef as any).startLatitude ? { latitude: (selectedRouteDef as any).startLatitude, longitude: (selectedRouteDef as any).startLongitude } : null;
+    const predefinedStart = selectedRouteIdDef && 'startLatitude' in selectedRouteIdDef && (selectedRouteIdDef as any).startLatitude ? { latitude: (selectedRouteIdDef as any).startLatitude, longitude: (selectedRouteIdDef as any).startLongitude } : null;
     
     let startLoc = userLocation;
     if (useFixedStart) {
@@ -877,7 +877,7 @@ export default function StartNavigationPage() {
             }
         }
         setTripStartLocation(startCoords);
-    } else if (selectedRouteDef && objectsOnMap) {
+    } else if (selectedRouteIdDef && objectsOnMap) {
         const startCoords = startLoc || { latitude: objectsOnMap[0].latitude, longitude: objectsOnMap[0].longitude };
         const unvisited = [...objectsOnMap]; let currentPos = startCoords;
         while (unvisited.length > 0) {
@@ -895,7 +895,7 @@ export default function StartNavigationPage() {
         setTripStartLocation(startLoc || { latitude: urlMeldingLocatie.latitude - 0.005, longitude: urlMeldingLocatie.longitude });
     }
     setObjectsOnRoute(sortedObjects); setNavigationState('navigating'); setIsStarting(false);
-  }, [userLocation, selectedRouteDef, urlMeldingLocatie, routeType, allMeldingen, user, objectsOnMap, toast]);
+  }, [userLocation, selectedRouteIdDef, urlMeldingLocatie, routeType, allMeldingen, user, objectsOnMap, toast]);
 
   const isMeldingenType = routeType === 'meldingen';
 
@@ -928,7 +928,7 @@ export default function StartNavigationPage() {
                   {profile?.role === 'Super admin' && (
                     <Button 
                       variant="outline"
-                      className="h-9 px-4 font-black uppercase tracking-widest border-2 border-white/10 text-white hover:bg-white/10 rounded-xl hidden sm:flex"
+                      className="h-9 px-4 font-black uppercase tracking-widest border-2 border-white/40 text-white hover:bg-white/20 hover:border-white rounded-xl hidden sm:flex bg-white/5 transition-all"
                       onClick={() => handleStartRoute(true)}
                       disabled={(routeType === 'meldingen' ? !allMeldingen?.length : selectedRouteId === '--nieuwe-route--') || isStarting}
                     >
@@ -951,7 +951,7 @@ export default function StartNavigationPage() {
                   >
                     {userLocation && (<Marker longitude={userLocation.longitude} latitude={userLocation.latitude} anchor="center"><div className="relative flex flex-col items-center"><div className="absolute h-10 w-10 rounded-full bg-green-500/30 animate-ping" /><div className="relative h-8 w-8 rounded-full bg-green-600 border-4 border-white shadow-xl flex items-center justify-center"><MapPin className="h-4 w-4 text-white fill-current" /></div></div></Marker>)}
                     {urlMeldingLocatie && (<Marker longitude={urlMeldingLocatie.longitude} latitude={urlMeldingLocatie.latitude} anchor="center"><div className="relative flex flex-col items-center"><div className="absolute h-12 w-12 rounded-full bg-blue-50/20 animate-pulse" /><div className="relative h-10 w-10 rounded-full bg-primary border-4 border-white shadow-2xl flex items-center justify-center"><Flag className="h-5 w-5 text-white fill-current" /></div></div></Marker>)}
-                    {routeGeoJSONFeatures && (<Source id="route-area" type="geojson" data={{ type: 'FeatureCollection', features: routeGeoJSONFeatures.features }}><Layer id="route-area-fill" type="fill" paint={{ 'fill-color': '#32ADE6', 'fill-opacity': 0.05 }} /><Layer id="route-area-outline" type="line" paint={{ 'line-color': '#32ADE6', 'line-width': 1, 'line-dasharray': [2, 2] }} /></Source>)}
+                    {routeGeoJSONFeatures && (<Source id="route-area" type="geojson" data={{ type: 'FeatureCollection', features: routeGeoJSONFeatures }}><Layer id="route-area-fill" type="fill" paint={{ 'fill-color': '#32ADE6', 'fill-opacity': 0.05 }} /><Layer id="route-area-outline" type="line" paint={{ 'line-color': '#32ADE6', 'line-width': 1, 'line-dasharray': [2, 2] }} /></Source>)}
                     {objectsOnMap?.map(obj => (<Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude}><div className="w-4 h-4 bg-primary rounded-full border-2 border-white shadow-lg" /></Marker>))}
                     {routeType === 'meldingen' && allMeldingen?.map(m => (<Marker key={m.id} longitude={m.longitude} latitude={m.latitude}><div className="w-5 h-5 bg-red-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-[8px] font-black text-white">!</div></Marker>))}
                   </MapGL>
