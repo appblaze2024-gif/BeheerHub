@@ -144,6 +144,17 @@ export default function IssuesPage() {
     return meldingen?.find(m => m.id === selectedMeldingId);
   }, [meldingen, selectedMeldingId]);
 
+  // Filter objects within 100m radius of the selected issue
+  const nearbyObjects = React.useMemo(() => {
+    if (!allMapObjects || !location) return [];
+    const issuePt = turf.point([location.longitude, location.latitude]);
+    return allMapObjects.filter(obj => {
+      if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
+      const objPt = turf.point([obj.longitude, obj.latitude]);
+      return turf.distance(issuePt, objPt, { units: 'meters' }) <= 100;
+    });
+  }, [allMapObjects, location]);
+
   React.useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
     return () => clearTimeout(timer);
@@ -332,7 +343,7 @@ export default function IssuesPage() {
                                   latitude={selectedMelding.latitude} 
                                   longitude={selectedMelding.longitude} 
                                   interactive={false} 
-                                  objects={allMapObjects || []}
+                                  objects={nearbyObjects}
                                 />
                             </div>
                         </div>
@@ -369,7 +380,7 @@ export default function IssuesPage() {
                                   latitude={selectedMelding.latitude} 
                                   longitude={selectedMelding.longitude} 
                                   interactive={false} 
-                                  objects={allMapObjects || []}
+                                  objects={nearbyObjects}
                                 />
                             </div>
                         </div>
@@ -460,7 +471,7 @@ export default function IssuesPage() {
                             <p className="text-[10px] font-black uppercase text-blue-300 mb-6 tracking-[0.3em] relative z-10">Actieve Werktijd Registratie</p>
                             <p className="text-7xl font-black text-white tracking-tighter tabular-nums mb-8 relative z-10">{elapsedTime}</p>
                             <div className="flex justify-center gap-2 relative z-10">
-                                <Badge className="bg-green-500 text-white border-none px-6 py-2 font-black uppercase tracking-[0.2em] text-[10px] rounded-full animate-pulse">Live link actief</Badge>
+                                <Badge className="bg-green-50 text-white border-none px-6 py-2 font-black uppercase tracking-[0.2em] text-[10px] rounded-full animate-pulse">Live link actief</Badge>
                             </div>
                         </Card>
                     </TabsContent>

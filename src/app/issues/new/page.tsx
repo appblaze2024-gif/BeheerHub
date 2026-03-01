@@ -329,6 +329,17 @@ export default function NewIssuePage() {
     return () => clearTimeout(timer);
   }, [watchStraat, watchHuisnummer, watchPlaats, isReadOnly]);
 
+  // Filter nearby objects for the map preview (100m radius)
+  const nearbyObjects = React.useMemo(() => {
+    if (!allMapObjects || !location) return [];
+    const issuePt = turf.point([location.longitude, location.latitude]);
+    return allMapObjects.filter(obj => {
+      if (typeof obj.latitude !== 'number' || typeof obj.longitude !== 'number') return false;
+      const objPt = turf.point([obj.longitude, obj.latitude]);
+      return turf.distance(issuePt, objPt, { units: 'meters' }) <= 100;
+    });
+  }, [allMapObjects, location]);
+
   // Effect to automatically determine Werkgebied (Wijk) based on location
   React.useEffect(() => {
     if (!location || !projects || isReadOnly) return;
@@ -773,7 +784,7 @@ export default function NewIssuePage() {
                     <MapboxView 
                       latitude={location?.latitude} 
                       longitude={location?.longitude} 
-                      objects={allMapObjects || []}
+                      objects={nearbyObjects}
                     />
                     <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-xl text-[8px] font-black uppercase tracking-widest border border-slate-200 flex items-center gap-1 shadow-sm">
                         <MapPin className="h-3 w-3 text-primary" /> GIS Locatie
