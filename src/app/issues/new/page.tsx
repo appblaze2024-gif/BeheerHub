@@ -20,8 +20,7 @@ import {
   ClipboardPaste,
   ChevronRight,
   Plus,
-  MoreHorizontal,
-  ChevronDown
+  MoreHorizontal
 } from 'lucide-react';
 import { 
   useFirestore, 
@@ -91,7 +90,7 @@ import {
 // Custom components
 import { IssueImportDialog } from '@/components/issue-import-dialog';
 import { MapboxView } from '@/components/mapbox-view';
-import type { Melding, Object as MapObject } from '@/lib/types';
+import type { Melding, Object as MapObject, UploadedFile } from '@/lib/types';
 
 // AI Flows
 import { parseIssuePdf } from '@/ai/flows/parse-issue-pdf-flow';
@@ -107,7 +106,7 @@ const newMeldingSchema = z.object({
   subcategorie: z.string().min(1, 'Subtype is verplicht'),
   behandelende_afdeling: z.string().optional().nullable(),
   behandelaar: z.string().optional().nullable(),
-  status: z.string().min(1, 'Status is verplicht'),
+  status: z.string().default('Nieuw'),
   voorvaldatum: z.any().optional().nullable(),
   voorvaltijd: z.string().optional().nullable(),
   meldingsdatum: z.any().optional().nullable(),
@@ -216,8 +215,6 @@ function SmartPasteDialog({ onParsed, instructions, trigger }: { onParsed: (data
         </Dialog>
     );
 }
-
-type UploadedFile = { name: string; url: string; size: number; type: string; uploadedAt: string; storagePath: string; };
 
 export default function NewIssuePage() {
   const firestore = useFirestore();
@@ -391,7 +388,7 @@ export default function NewIssuePage() {
                 <span className="text-xs font-black uppercase tracking-widest text-slate-900">Basisgegevens</span>
               </AccordionTrigger>
               <AccordionContent className="p-4 pt-0 space-y-2">
-                <FormRow label="Meldingsnummer">
+                <FormRow label={<>Meldingsnummer<span className="text-red-500">*</span></>}>
                   <FormField control={form.control} name="intakenummer" render={({ field }) => (
                     <FormItem><FormControl><Input {...field} disabled={isReadOnly} className="h-11 font-bold" /></FormControl><FormMessage /></FormItem>
                   )} />
@@ -407,7 +404,7 @@ export default function NewIssuePage() {
                       </FormItem>
                     )} />
                   </FormRow>
-                  <FormRow label="Melder">
+                  <FormRow label={<>Melder<span className="text-red-500">*</span></>}>
                     <FormField control={form.control} name="soort_melder" render={({ field }) => (
                       <FormItem>
                         <Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}>
@@ -426,11 +423,11 @@ export default function NewIssuePage() {
                 <span className="text-xs font-black uppercase tracking-widest text-slate-900">Locatie & Gebied</span>
               </AccordionTrigger>
               <AccordionContent className="p-4 pt-0 space-y-2">
-                <FormRow label="Straatnaam">
+                <FormRow label={<>Straatnaam<span className="text-red-500">*</span></>}>
                   <FormField control={form.control} name="straatnaam" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold" /></FormControl></FormItem>)} />
                 </FormRow>
                 <div className="grid grid-cols-2 gap-3">
-                  <FormRow label="Huisnr.">
+                  <FormRow label={<>Huisnr.<span className="text-red-500">*</span></>}>
                     <FormField control={form.control} name="huisnummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold" /></FormControl></FormItem>)} />
                   </FormRow>
                   <FormRow label="Plaats">
@@ -449,10 +446,10 @@ export default function NewIssuePage() {
               </AccordionTrigger>
               <AccordionContent className="p-4 pt-0 space-y-4">
                 <div className="grid grid-cols-2 gap-3">
-                  <FormRow label="Hoofdtype">
+                  <FormRow label={<>Hoofdtype<span className="text-red-500">*</span></>}>
                     <FormField control={form.control} name="hoofdcategorie" render={({ field }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className="h-11 font-bold"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{hoofdcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></Select></FormItem>)} />
                   </FormRow>
-                  <FormRow label="Subtype">
+                  <FormRow label={<>Subtype<span className="text-red-500">*</span></>}>
                     <FormField control={form.control} name="subcategorie" render={({ field }) => (<FormItem><Select onValueChange={field.onChange} value={field.value || ''} disabled={isReadOnly}><FormControl><SelectTrigger className="h-11 font-bold"><SelectValue placeholder="Kies..." /></SelectTrigger></FormControl><SelectContent>{subcategorieen.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}</SelectContent></Select></FormItem>)} />
                   </FormRow>
                 </div>
@@ -467,7 +464,7 @@ export default function NewIssuePage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-4">
-              <Card className="rounded-2xl bg-white shadow-sm border-slate-200 overflow-visible">
+              <Card className="rounded-2xl bg-white shadow-sm border-slate-200 relative overflow-visible">
                 <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Hoofdgegevens</CardTitle></CardHeader>
                 <CardContent className="p-4 pt-2">
                   <FormRow label={<>Meldingsnummer<span className="text-red-500">*</span></>}>
@@ -555,7 +552,7 @@ export default function NewIssuePage() {
   );
 
   return (
-    <div className={cn("flex flex-col h-full bg-slate-50", !isMobile && "h-[calc(100vh-6rem)] overflow-hidden")}>
+    <div className={cn("flex flex-col bg-slate-50", !isMobile ? "h-[calc(100vh-5rem)] overflow-hidden" : "min-h-screen")}>
         <header className="h-14 bg-white border-b flex items-center justify-between px-4 md:px-6 shrink-0 shadow-sm z-10 sticky top-0">
             <div className="flex items-center gap-2">
                 {!isReadOnly && (
@@ -611,12 +608,12 @@ export default function NewIssuePage() {
             </div>
         </header>
 
-        <main className={cn("flex-1 flex flex-col lg:flex-row min-h-0", !isMobile && "overflow-hidden")}>
-            <div className={cn("flex-1 p-4 lg:p-6 custom-scrollbar", !isMobile && "overflow-y-auto no-scrollbar")}>
+        <main className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
+            <div className="flex-1 p-4 lg:p-6 overflow-y-auto no-scrollbar">
                 {formContent}
             </div>
             
-            <div className={cn("w-full lg:w-[350px] bg-slate-50 lg:border-l shrink-0 flex flex-col min-h-0", !isMobile && "overflow-hidden")}>
+            <div className="w-full lg:w-[350px] bg-slate-50 lg:border-l shrink-0 flex flex-col min-h-0 overflow-hidden">
                 <div className={cn("relative overflow-hidden bg-slate-100 shrink-0", isMobile ? "h-64 mt-4 rounded-3xl mx-4" : "h-[40%] shadow-inner")}>
                     <MapboxView latitude={location?.latitude} longitude={location?.longitude} />
                     <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-xl text-[8px] font-black uppercase tracking-widest border border-slate-200 flex items-center gap-1 shadow-sm">
