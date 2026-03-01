@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -830,27 +829,35 @@ export default function StartNavigationPage() {
     if (!mapRef.current) return;
     const map = mapRef.current.getMap();
 
-    if (routeType === 'meldingen' && previewRouteGeometry) {
-        try {
-            const line = turf.lineString(previewRouteGeometry.coordinates);
-            const bbox = turf.bbox(line);
-            if (bbox[0] !== Infinity) {
-                map.fitBounds(bbox as [number, number, number, number], {
-                    padding: 80,
-                    duration: 1500
-                });
-            }
-        } catch (e) {}
-    } else if (routeType !== 'meldingen' && routeGeoJSONFeatures) {
-        try {
-            const bbox = turf.bbox(routeGeoJSONFeatures);
-            if (bbox[0] !== Infinity) {
-                map.fitBounds(bbox as [number, number, number, number], {
-                    padding: 80,
-                    duration: 1500
-                });
-            }
-        } catch (e) {}
+    const fitRoute = () => {
+        if (routeType === 'meldingen' && previewRouteGeometry) {
+            try {
+                const line = turf.lineString(previewRouteGeometry.coordinates);
+                const bbox = turf.bbox(line);
+                if (bbox[0] !== Infinity) {
+                    map.fitBounds(bbox as [number, number, number, number], {
+                        padding: 80,
+                        duration: 1500
+                    });
+                }
+            } catch (e) {}
+        } else if (routeType !== 'meldingen' && routeGeoJSONFeatures) {
+            try {
+                const bbox = turf.bbox(routeGeoJSONFeatures);
+                if (bbox[0] !== Infinity) {
+                    map.fitBounds(bbox as [number, number, number, number], {
+                        padding: 80,
+                        duration: 1500
+                    });
+                }
+            } catch (e) {}
+        }
+    };
+
+    if (map.isStyleLoaded()) {
+        fitRoute();
+    } else {
+        map.on('load', fitRoute);
     }
   }, [previewRouteGeometry, routeGeoJSONFeatures, routeType]);
 

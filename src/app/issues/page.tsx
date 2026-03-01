@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -47,7 +46,6 @@ type MeldingFormValues = z.infer<typeof meldingFormSchema>;
 const werkbonNavItems = [
     { label: 'Werkzaamheden', icon: Pencil },
     { label: 'Opmerkingen', icon: FileText },
-    { label: 'Locatiegegevens', icon: MapPin },
     { label: 'Documenten', icon: FileText },
     { label: "Foto's", icon: Camera },
     { label: 'Hoeveelheid', icon: Package },
@@ -362,28 +360,6 @@ export default function IssuesPage() {
                                 />
                             </CardContent>
                         </Card>
-                    </TabsContent>
-
-                    <TabsContent value="Locatiegegevens" className="mt-0">
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            <Card className="rounded-3xl shadow-xl border-none bg-white overflow-hidden">
-                                <CardHeader className="bg-slate-50 border-b p-6"><CardTitle className="text-xs font-black uppercase tracking-widest text-slate-400">Locatie Details</CardTitle></CardHeader>
-                                <CardContent className="p-8 space-y-6">
-                                    <div className="flex justify-between items-center border-b border-slate-50 pb-4"><span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Adres</span><span className="font-black text-slate-900">{selectedMelding.straatnaam} {selectedMelding.huisnummer}</span></div>
-                                    <div className="flex justify-between items-center border-b border-slate-50 pb-4"><span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Plaats</span><span className="font-black text-slate-900">{selectedMelding.plaats || '-'}</span></div>
-                                    <div className="flex justify-between items-center border-b border-slate-50 pb-4"><span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Wijk / Gebied</span><span className="font-black text-slate-900 uppercase">{selectedMelding.wijk || '-'}</span></div>
-                                    <div className="flex justify-between items-center py-2"><span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Coördinaten</span><span className="font-mono text-xs font-bold text-primary">{selectedMelding.latitude.toFixed(6)}, {selectedMelding.longitude.toFixed(6)}</span></div>
-                                </CardContent>
-                            </Card>
-                            <div className="rounded-[2.5rem] overflow-hidden border-2 border-white shadow-2xl min-h-[450px]">
-                                <MapboxView 
-                                  latitude={selectedMelding.latitude} 
-                                  longitude={selectedMelding.longitude} 
-                                  interactive={false} 
-                                  objects={nearbyObjects}
-                                />
-                            </div>
-                        </div>
                     </TabsContent>
 
                     <TabsContent value="Documenten" className="mt-0">
