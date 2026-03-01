@@ -14,7 +14,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useProfile } from '@/firebase/profile-provider';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const topMenuItems = [
@@ -53,12 +52,12 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
                       <div className={cn(
                         "flex items-center justify-center h-10 w-10 rounded-full transition-all duration-300",
                         isActive 
-                          ? "bg-white text-[#4a5ab5] shadow-lg" 
-                          : "text-blue-100 hover:bg-white/10 hover:text-white"
+                          ? "bg-white text-[#3498db] shadow-lg" 
+                          : "text-blue-50 hover:bg-white/10 hover:text-white"
                       )}>
                         <Icon className="h-5 w-5" />
                       </div>
-                      <span className="text-[8px] font-bold text-blue-100 group-hover:text-white transition-colors text-center px-1 leading-tight">{item.label}</span>
+                      <span className="text-[8px] font-bold text-blue-50 group-hover:text-white transition-colors text-center px-1 leading-tight">{item.label}</span>
                     </Link>
                   </TooltipTrigger>
                   <TooltipContent side="right" sideOffset={15} className="font-bold text-[10px] bg-slate-900 text-white border-none">
@@ -88,12 +87,12 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
                     <div className={cn(
                       "flex items-center justify-center h-10 w-10 rounded-full transition-all duration-300",
                       isActive 
-                        ? "bg-white text-[#4a5ab5] shadow-lg" 
-                        : "text-blue-100 hover:bg-white/10 hover:text-white"
+                        ? "bg-white text-[#3498db] shadow-lg" 
+                        : "text-blue-50 hover:bg-white/10 hover:text-white"
                     )}>
                       <Icon className="h-5 w-5" />
                     </div>
-                    <span className="text-[8px] font-bold text-blue-100 group-hover:text-white transition-colors text-center px-1 leading-tight">{item.label}</span>
+                    <span className="text-[8px] font-bold text-blue-50 group-hover:text-white transition-colors text-center px-1 leading-tight">{item.label}</span>
                   </Link>
                 </TooltipTrigger>
                 <TooltipContent side="right" sideOffset={15} className="font-bold text-[10px] bg-slate-900 text-white border-none">

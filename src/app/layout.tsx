@@ -70,19 +70,19 @@ function Header() {
 
       <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm p-1.5 rounded-full shadow-sm border border-slate-100">
         <div className="flex items-center gap-1 pr-4 border-r border-slate-100">
-          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-blue-400 hover:bg-blue-50">
+          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-[#3498db] hover:bg-blue-50">
             <UserIcon className="h-4 w-4" />
           </Button>
           <div className="relative">
             <NotificationCenter />
           </div>
-          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-blue-400 hover:bg-blue-50">
+          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-[#3498db] hover:bg-blue-50">
             <Info className="h-4 w-4" />
           </Button>
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-9 w-9 rounded-full text-blue-400 hover:bg-red-50 hover:text-red-600"
+            className="h-9 w-9 rounded-full text-[#3498db] hover:bg-red-50 hover:text-red-600"
             onClick={() => signOut(auth)}
           >
             <LogOutIcon className="h-4 w-4" />
@@ -102,7 +102,7 @@ function Header() {
             </Badge>
           </div>
           <Avatar className="h-10 w-10 border-2 border-white shadow-md ring-1 ring-slate-100">
-            <AvatarFallback className="text-xs bg-slate-100 text-primary font-black uppercase">
+            <AvatarFallback className="text-xs bg-slate-100 text-[#3498db] font-black uppercase">
               {profile?.firstName?.[0]}{profile?.lastName?.[0]}
             </AvatarFallback>
           </Avatar>
