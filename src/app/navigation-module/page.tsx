@@ -539,9 +539,11 @@ function NavigatingView({
             const inRange = isTarget && hasReachedCurrentTarget;
             
             const isMelding = routeType === 'meldingen';
-            const isSpecificPrullenbak = obj.locatieType === 'Prullenbakken (2026)' || obj.locatieType === 'Prullenbakken (data meerlanden)';
             const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
             const isBrengpark = typeStr.includes('brengpark');
+            const isSpecificPrullenbak = 
+                obj.locatieType === 'Prullenbakken (2026)' || 
+                obj.locatieType?.toLowerCase() === 'prullenbakken (data meerlanden)';
             const isHHM = typeStr.includes('hhm');
             
             const useRecyclingBin = !isMelding && (isSpecificPrullenbak || (isHHM && !isBrengpark));
@@ -800,7 +802,9 @@ export default function StartNavigationPage() {
   const getObjectPriority = (obj: any) => {
     const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
     const isBrengpark = typeStr.includes('brengpark');
-    const isSpecificPrullenbak = obj.locatieType === 'Prullenbakken (2026)' || obj.locatieType === 'Prullenbakken (data meerlanden)';
+    const isSpecificPrullenbak = 
+        obj.locatieType === 'Prullenbakken (2026)' || 
+        obj.locatieType?.toLowerCase() === 'prullenbakken (data meerlanden)';
     const isHHM = typeStr.includes('hhm');
     if (isSpecificPrullenbak || (isHHM && !isBrengpark)) return 3;
     if (typeStr.includes('container') || typeStr.includes('ondergrond') || typeStr.includes('ondergr') || typeStr.includes('verzamel') || isBrengpark) return 2;
@@ -1066,9 +1070,11 @@ export default function StartNavigationPage() {
                     )}
 
                     {routeType !== 'meldingen' && uniqueObjectsOnMap?.map(obj => {
-                        const isSpecificPrullenbak = obj.locatieType === 'Prullenbakken (2026)' || obj.locatieType === 'Prullenbakken (data meerlanden)';
                         const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
                         const isBrengpark = typeStr.includes('brengpark');
+                        const isSpecificPrullenbak = 
+                            obj.locatieType === 'Prullenbakken (2026)' || 
+                            obj.locatieType?.toLowerCase() === 'prullenbakken (data meerlanden)';
                         const isHHM = typeStr.includes('hhm');
                         
                         const useRecyclingBin = isSpecificPrullenbak || (isHHM && !isBrengpark);

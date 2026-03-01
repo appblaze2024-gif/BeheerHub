@@ -76,7 +76,9 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
     const getPriority = (obj: MapObject) => {
         const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
         const isBrengpark = typeStr.includes('brengpark');
-        const isSpecificPrullenbak = obj.locatieType === 'Prullenbakken (2026)' || obj.locatieType === 'Prullenbakken (data meerlanden)';
+        const isSpecificPrullenbak = 
+            obj.locatieType === 'Prullenbakken (2026)' || 
+            obj.locatieType?.toLowerCase() === 'prullenbakken (data meerlanden)';
         const isHHM = typeStr.includes('hhm');
         
         if (isSpecificPrullenbak || (isHHM && !isBrengpark)) return 3; // New icon priority
@@ -166,7 +168,9 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
         
         const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
         const isBrengpark = typeStr.includes('brengpark');
-        const isSpecificPrullenbak = obj.locatieType === 'Prullenbakken (2026)' || obj.locatieType === 'Prullenbakken (data meerlanden)';
+        const isSpecificPrullenbak = 
+            obj.locatieType === 'Prullenbakken (2026)' || 
+            obj.locatieType?.toLowerCase() === 'prullenbakken (data meerlanden)';
         const isHHM = typeStr.includes('hhm');
         
         const useRecyclingBin = isSpecificPrullenbak || (isHHM && !isBrengpark);
