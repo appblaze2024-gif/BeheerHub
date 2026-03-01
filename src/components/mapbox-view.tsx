@@ -75,19 +75,22 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
     
     const getPriority = (obj: MapObject) => {
         const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
-        const isBrengpark = typeStr.includes('brengpark');
-        const isSpecificPrullenbak = 
-            obj.locatieType === 'Prullenbakken (2026)' || 
-            obj.locatieType?.toLowerCase() === 'prullenbakken (data meerlanden)';
-        const isHHM = typeStr.includes('hhm');
         
-        if (isSpecificPrullenbak || (isHHM && !isBrengpark)) return 3; // New icon priority
-        if (typeStr.includes('container') || typeStr.includes('ondergrond') || typeStr.includes('ondergr') || typeStr.includes('verzamel') || isBrengpark) return 2; // Underground priority
-        return 1; // Default
+        // Priority logic:
+        // 1. Prullenbakken (Data Meerlanden) -> 3 (recycling-bin)
+        // 2. Brengparkje HHM -> 2 (waste-bin)
+        // 3. Other underground -> 2 (waste-bin)
+        // 4. Default -> 1
+        
+        const isPrullenbakMeerlanden = typeStr.includes('prullenbakken (data meerlanden)');
+        const isBrengpark = typeStr.includes('brengparkje hhm') || typeStr.includes('brengpark');
+        
+        if (isPrullenbakMeerlanden) return 3;
+        if (isBrengpark || typeStr.includes('container') || typeStr.includes('ondergrond')) return 2;
+        return 1;
     };
 
     objects.forEach(obj => {
-      // Use 5 decimal places (~1 meter precision) to collapse icons that are visually on top of each other
       const key = `${obj.latitude.toFixed(5)}_${obj.longitude.toFixed(5)}`;
       const existing = locationMap.get(key);
       
@@ -167,20 +170,16 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
         const color = showHeatmap ? getHeatmapColor(obj.vulgraad) : 'hsl(221, 83%, 53%)';
         
         const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
-        const isBrengpark = typeStr.includes('brengpark');
-        const isSpecificPrullenbak = 
-            obj.locatieType === 'Prullenbakken (2026)' || 
-            obj.locatieType?.toLowerCase() === 'prullenbakken (data meerlanden)';
-        const isHHM = typeStr.includes('hhm');
         
-        const useRecyclingBin = isSpecificPrullenbak || (isHHM && !isBrengpark);
-        const isUnderground = !useRecyclingBin && (
-          typeStr.includes('container') || 
-          typeStr.includes('ondergrond') ||
-          typeStr.includes('ondergr') ||
-          typeStr.includes('verzamel') ||
-          isBrengpark
-        );
+        const isBrengpark = typeStr.includes('brengparkje hhm') || typeStr.includes('brengpark');
+        const isPrullenbakMeerlanden = typeStr.includes('prullenbakken (data meerlanden)');
+        
+        // User request: 
+        // 1. "Prullenbakken (Data Meerlanden)" -> recycling-bin.png
+        // 2. "brengparkje HHM" -> waste-bin.png (3-color icon)
+        
+        const useRecyclingBin = isPrullenbakMeerlanden;
+        const useWasteBin = isBrengpark || typeStr.includes('container') || typeStr.includes('ondergrond');
                               
         const Icon = Trash2;
 
@@ -220,7 +219,7 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
                       filter: isSelected ? 'drop-shadow(0 0 4px #fbbf24)' : 'drop-shadow(0 2px 2px rgba(0,0,0,0.4))'
                     }}
                   />
-                ) : isUnderground ? (
+                ) : useWasteBin ? (
                   <img 
                     src="https://i.ibb.co/FbgGHW1G/waste-bin.png" 
                     alt="container"

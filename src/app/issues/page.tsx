@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useCollection, useFirestore, useFirebaseApp, updateDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { collection, doc, query, where } from 'firebase/firestore';
-import { ArrowLeft, Navigation, Pencil, FileText, Camera, Package, Clock, Info, Trash2, File as FileIcon, Loader2, MapPin, UploadCloud, X, User, ChevronRight, Mic, MicOff, Check, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Navigation, Pencil, FileText, Camera, Package, Clock, Info, Trash2, File as FileIcon, Loader2, MapPin, UploadCloud, X, User, ChevronRight, Mic, MicOff, Check, AlertCircle, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,6 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LoadingScreen } from '@/components/loading-screen';
 import { MapboxView } from '@/components/mapbox-view';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { translateToDutch } from '@/ai/flows/translate-to-dutch-flow';
 
 const meldingFormSchema = z.object({
   hoofdcategorie: z.string().min(1, 'Hoofdcategorie is verplicht'),
@@ -78,6 +79,8 @@ export default function IssuesPage() {
   const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
   const [elapsedTime, setElapsedTime] = React.useState<string>("0 uur en 0 minuten");
   const [userLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
+
+  const [isTranslating, setIsTranslating] = React.useState(false);
 
   const isPrivileged = profile?.role === 'Super admin' || profile?.role === 'toezichthouder';
 
@@ -240,6 +243,23 @@ export default function IssuesPage() {
     recognition.start();
   };
 
+  const handleAITranslate = async () => {
+    const currentText = form.getValues('afhandeling_bijzonderheden');
+    if (!currentText || isTranslating) return;
+
+    setIsTranslating(true);
+    try {
+      const result = await translateToDutch(currentText);
+      form.setValue('afhandeling_bijzonderheden', result.translatedText);
+      toast({ title: 'AI Vertaling gereed', description: 'De tekst is omgezet naar zakelijk Nederlands.' });
+    } catch (err) {
+      console.error(err);
+      toast({ variant: 'destructive', title: 'Vertaalfout', description: 'AI kon de tekst niet vertalen.' });
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
   const handleStartWork = async () => {
     if (!firestore || !selectedMelding?.id) return;
     await updateDocumentNonBlocking(doc(firestore, 'meldingen', selectedMelding.id), { workStartedAt: new Date().toISOString() });
@@ -396,19 +416,31 @@ export default function IssuesPage() {
                         <Card className="rounded-3xl border-none shadow-xl bg-white overflow-hidden h-full flex flex-col">
                             <CardHeader className="bg-slate-50 border-b p-6 flex flex-row items-center justify-between">
                                 <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-400">Uitvoeringsnotities</CardTitle>
-                                <Button 
-                                    variant={isListening ? "destructive" : "outline"} 
-                                    size="icon" 
-                                    className="rounded-full h-12 w-12 shadow-lg shrink-0"
-                                    onClick={toggleListening}
-                                    title={isListening ? "Stoppen" : "Dicteren"}
-                                >
-                                    {isListening ? (
-                                        <Loader2 className="h-6 w-6 animate-spin" />
-                                    ) : (
-                                        <Mic className="h-6 w-6 text-primary" />
-                                    )}
-                                </Button>
+                                <div className="flex gap-2">
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        className="h-9 px-4 font-black uppercase text-[10px] gap-2 border-primary/20 text-primary rounded-xl"
+                                        onClick={handleAITranslate}
+                                        disabled={isTranslating || !form.getValues('afhandeling_bijzonderheden')}
+                                    >
+                                        {isTranslating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                                        AI Vertaal naar NL
+                                    </Button>
+                                    <Button 
+                                        variant={isListening ? "destructive" : "outline"} 
+                                        size="icon" 
+                                        className="rounded-full h-9 w-9 shadow-lg shrink-0"
+                                        onClick={toggleListening}
+                                        title={isListening ? "Stoppen" : "Dicteren"}
+                                    >
+                                        {isListening ? (
+                                            <Loader2 className="h-5 w-5 animate-spin" />
+                                        ) : (
+                                            <Mic className="h-5 w-5 text-primary" />
+                                        )}
+                                    </Button>
+                                </div>
                             </CardHeader>
                             <CardContent className="p-6 flex-1">
                                 <Textarea 

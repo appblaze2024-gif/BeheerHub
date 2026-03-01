@@ -540,19 +540,17 @@ function NavigatingView({
             
             const isMelding = routeType === 'meldingen';
             const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
-            const isBrengpark = typeStr.includes('brengpark');
-            const isSpecificPrullenbak = 
-                obj.locatieType === 'Prullenbakken (2026)' || 
-                obj.locatieType?.toLowerCase() === 'prullenbakken (data meerlanden)';
-            const isHHM = typeStr.includes('hhm');
             
-            const useRecyclingBin = !isMelding && (isSpecificPrullenbak || (isHHM && !isBrengpark));
-            const isUnderground = !isMelding && !useRecyclingBin && (
+            const isBrengpark = typeStr.includes('brengparkje hhm') || typeStr.includes('brengpark');
+            const isPrullenbakMeerlanden = typeStr.includes('prullenbakken (data meerlanden)');
+            
+            const useRecyclingBin = !isMelding && isPrullenbakMeerlanden;
+            const useWasteBin = !isMelding && !useRecyclingBin && (
+              isBrengpark || 
               typeStr.includes('container') || 
               typeStr.includes('ondergrond') ||
               typeStr.includes('ondergr') ||
-              typeStr.includes('verzamel') ||
-              isBrengpark
+              typeStr.includes('verzamel')
             );
             
             const Icon = isMelding ? Bell : Trash2;
@@ -575,7 +573,7 @@ function NavigatingView({
                         )}>
                             {useRecyclingBin ? (
                                 <img src="https://i.ibb.co/Xxrq1zP3/recycling-bin.png" alt="recycling bin" className="h-6 w-6" />
-                            ) : isUnderground ? (
+                            ) : useWasteBin ? (
                                 <img src="https://i.ibb.co/FbgGHW1G/waste-bin.png" alt="container" className="h-6 w-6" />
                             ) : (
                                 <Icon className="h-5 w-5 text-white stroke-[2.5]" />
@@ -801,13 +799,12 @@ export default function StartNavigationPage() {
   // Define priority logic centrally
   const getObjectPriority = (obj: any) => {
     const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
-    const isBrengpark = typeStr.includes('brengpark');
-    const isSpecificPrullenbak = 
-        obj.locatieType === 'Prullenbakken (2026)' || 
-        obj.locatieType?.toLowerCase() === 'prullenbakken (data meerlanden)';
-    const isHHM = typeStr.includes('hhm');
-    if (isSpecificPrullenbak || (isHHM && !isBrengpark)) return 3;
-    if (typeStr.includes('container') || typeStr.includes('ondergrond') || typeStr.includes('ondergr') || typeStr.includes('verzamel') || isBrengpark) return 2;
+    
+    const isBrengpark = typeStr.includes('brengparkje hhm') || typeStr.includes('brengpark');
+    const isPrullenbakMeerlanden = typeStr.includes('prullenbakken (data meerlanden)');
+    
+    if (isPrullenbakMeerlanden) return 3;
+    if (isBrengpark || typeStr.includes('container') || typeStr.includes('ondergrond')) return 2;
     return 1;
   };
 
@@ -1071,26 +1068,24 @@ export default function StartNavigationPage() {
 
                     {routeType !== 'meldingen' && uniqueObjectsOnMap?.map(obj => {
                         const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
-                        const isBrengpark = typeStr.includes('brengpark');
-                        const isSpecificPrullenbak = 
-                            obj.locatieType === 'Prullenbakken (2026)' || 
-                            obj.locatieType?.toLowerCase() === 'prullenbakken (data meerlanden)';
-                        const isHHM = typeStr.includes('hhm');
                         
-                        const useRecyclingBin = isSpecificPrullenbak || (isHHM && !isBrengpark);
-                        const isUnderground = !useRecyclingBin && (
+                        const isBrengpark = typeStr.includes('brengparkje hhm') || typeStr.includes('brengpark');
+                        const isPrullenbakMeerlanden = typeStr.includes('prullenbakken (data meerlanden)');
+                        
+                        const useRecyclingBin = isPrullenbakMeerlanden;
+                        const useWasteBin = !useRecyclingBin && (
+                          isBrengpark || 
                           typeStr.includes('container') || 
                           typeStr.includes('ondergrond') ||
                           typeStr.includes('ondergr') ||
-                          typeStr.includes('verzamel') ||
-                          isBrengpark
+                          typeStr.includes('verzamel')
                         );
                         
                         return (
                             <Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude} anchor="center">
                                 {useRecyclingBin ? (
                                     <img src="https://i.ibb.co/Xxrq1zP3/recycling-bin.png" alt="recycling bin" className="h-5 w-5 drop-shadow-md" />
-                                ) : isUnderground ? (
+                                ) : useWasteBin ? (
                                     <img src="https://i.ibb.co/FbgGHW1G/waste-bin.png" alt="container" className="h-5 w-5 drop-shadow-md" />
                                 ) : (
                                     <div className="w-4 h-4 bg-primary rounded-full border-2 border-white shadow-lg" />
