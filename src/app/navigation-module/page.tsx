@@ -69,7 +69,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
-// Vaste coördinaten voor de Aarbergerweg in Rijsenhout
+// Vaste coördinaten voor de Aarbergerweg 5 in Rijsenhout
 const SIMULATION_START_LOCATION = { latitude: 52.2644, longitude: 4.7242 };
 
 const routeLayer: Layer = {
@@ -749,12 +749,13 @@ export default function StartNavigationPage() {
 
   const { data: allMeldingen } = useCollection<Melding>(meldingenQuery);
 
-  // Optimized route calculation for meldingen
+  // Optimized route calculation for meldingen starting from Rijsenhout
   const sortedMeldingen = React.useMemo(() => {
     if (routeType !== 'meldingen' || !allMeldingen || allMeldingen.length === 0) return [];
     
     let unvisited = [...allMeldingen];
-    let currentPos = userLocation || { latitude: unvisited[0].latitude, longitude: unvisited[0].longitude };
+    // Gebruik de vaste startlocatie in Rijsenhout als uitgangspunt voor de routevolgorde
+    let currentPos = SIMULATION_START_LOCATION;
     let sorted: Melding[] = [];
 
     while (unvisited.length > 0) {
@@ -775,13 +776,17 @@ export default function StartNavigationPage() {
       currentPos = { latitude: next.latitude, longitude: next.longitude };
     }
     return sorted;
-  }, [allMeldingen, routeType, userLocation]);
+  }, [allMeldingen, routeType]);
 
   // Fetch preview route geometry for meldingen
   React.useEffect(() => {
     const fetchPreview = async () => {
-        if (routeType === 'meldingen' && sortedMeldingen.length >= 2) {
-            const waypoints = sortedMeldingen.slice(0, 25).map(m => `${m.longitude},${m.latitude}`).join(';');
+        if (routeType === 'meldingen' && sortedMeldingen.length >= 1) {
+            // Voeg de vaste startlocatie toe aan de waypoints voor de preview lijn
+            const startWaypoint = `${SIMULATION_START_LOCATION.longitude},${SIMULATION_START_LOCATION.latitude}`;
+            const meldingWaypoints = sortedMeldingen.slice(0, 24).map(m => `${m.longitude},${m.latitude}`).join(';');
+            const waypoints = `${startWaypoint};${meldingWaypoints}`;
+            
             const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${waypoints}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
             try {
                 const res = await fetch(url);
@@ -831,7 +836,9 @@ export default function StartNavigationPage() {
     setIsSimulationMode(simulate);
     const predefinedStart = selectedRouteIdDef && 'startLatitude' in selectedRouteIdDef && (selectedRouteIdDef as any).startLatitude ? { latitude: (selectedRouteIdDef as any).startLatitude, longitude: (selectedRouteIdDef as any).startLongitude } : null;
     
-    let startLoc = userLocation;
+    // Bij werkbonnen altijd starten vanaf de vestiging in Rijsenhout
+    let startLoc = routeType === 'meldingen' ? SIMULATION_START_LOCATION : userLocation;
+    
     if (useFixedStart) {
         startLoc = SIMULATION_START_LOCATION;
     } else if (simulate && predefinedStart) {
@@ -857,7 +864,7 @@ export default function StartNavigationPage() {
             return; 
         }
         finalObjects = sortedMeldingen.map(m => ({ id: m.id, latitude: m.latitude, longitude: m.longitude, name: m.intakenummer } as MapObject));
-        setTripStartLocation(startLoc || { latitude: sortedMeldingen[0].latitude, longitude: sortedMeldingen[0].longitude });
+        setTripStartLocation(SIMULATION_START_LOCATION);
     } else if (selectedRouteIdDef && objectsOnMap) {
         const startCoords = startLoc || { latitude: objectsOnMap[0].latitude, longitude: objectsOnMap[0].longitude };
         const unvisited = [...objectsOnMap]; let currentPos = startCoords;
