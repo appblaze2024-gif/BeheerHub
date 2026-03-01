@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useCollection, useFirestore, updateDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { collection, doc, query, where, orderBy } from 'firebase/firestore';
-import { Search, ListFilter, ArrowLeft, MoreHorizontal, Mail, Info, CheckCircle2, XCircle } from 'lucide-react';
+import { Search, ListFilter, ArrowLeft, MoreHorizontal, Mail, Info, CheckCircle2, XCircle, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { Melding } from '@/lib/types';
@@ -140,11 +140,12 @@ export default function MeldingenportaalPage() {
             </div>
         ) : (
             <div className="border rounded-2xl overflow-hidden shadow-sm bg-white overflow-x-auto custom-scrollbar">
-                <Table className="min-w-[800px]">
+                <Table className="min-w-[1000px]">
                     <TableHeader className="bg-slate-100 sticky top-0 z-10">
                         <TableRow>
                             <TableHead className="font-black uppercase text-[10px] text-slate-500 sticky left-0 bg-slate-100 z-20">Intakenr.</TableHead>
                             <TableHead className="font-black uppercase text-[10px] text-slate-500">Adres</TableHead>
+                            <TableHead className="font-black uppercase text-[10px] text-slate-500">Omschrijving</TableHead>
                             <TableHead className="font-black uppercase text-[10px] text-slate-500">Datum</TableHead>
                             <TableHead className="font-black uppercase text-[10px] text-slate-500">Melder</TableHead>
                             <TableHead className="text-right font-black uppercase text-[10px] text-slate-500">Acties</TableHead>
@@ -156,7 +157,20 @@ export default function MeldingenportaalPage() {
                             return (
                                 <TableRow key={melding.id} className="cursor-pointer hover:bg-slate-50 transition-colors h-14">
                                     <TableCell className="font-black text-xs sticky left-0 bg-white group-hover:bg-slate-50 z-10" onClick={() => router.push(`/issues/new?id=${melding.id}`)}>{melding.intakenummer}</TableCell>
-                                    <TableCell className="text-xs font-bold" onClick={() => router.push(`/issues/new?id=${melding.id}`)}>{[melding.straatnaam, melding.plaats].filter(Boolean).join(', ')}</TableCell>
+                                    <TableCell className="text-xs font-bold" onClick={() => router.push(`/issues/new?id=${melding.id}`)}>
+                                        <div className="flex flex-col">
+                                            <span className="truncate max-w-[200px]">{[melding.straatnaam, melding.huisnummer].filter(Boolean).join(' ')}</span>
+                                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none mt-0.5">{[melding.postcode, melding.plaats].filter(Boolean).join(' ')}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-xs max-w-[250px]" onClick={() => router.push(`/issues/new?id=${melding.id}`)}>
+                                        <div className="flex items-center gap-2">
+                                            <MessageSquare className="h-3 w-3 text-slate-300 shrink-0" />
+                                            <p className="truncate text-slate-500 italic font-medium" title={melding.extra_informatie}>
+                                                {melding.extra_informatie || '-'}
+                                            </p>
+                                        </div>
+                                    </TableCell>
                                     <TableCell className="text-[11px] font-bold text-slate-600" onClick={() => router.push(`/issues/new?id=${melding.id}`)}>
                                         {meldDatum ? format(new Date(meldDatum), 'dd-MM-yy') : '-'}
                                     </TableCell>
