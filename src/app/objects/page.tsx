@@ -74,6 +74,7 @@ import { LoadingScreen } from '@/components/loading-screen';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
+import { useProfile } from '@/firebase/profile-provider';
 import {
   DropdownMenu,
   DropdownMenuContent,
