@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation';
 import { 
   Home,
   Share2,
-  LayoutGrid,
   Users,
   RefreshCw,
   Settings,
@@ -19,7 +18,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 const topMenuItems = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/projects', label: 'Koppelingen', icon: Share2 },
-  { href: '/annual-planning', label: 'Mijn Store', icon: LayoutGrid },
   { href: '/objects', label: 'Store', icon: Store },
 ];
 
