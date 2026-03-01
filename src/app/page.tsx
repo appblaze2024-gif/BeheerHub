@@ -98,7 +98,7 @@ export default function DashboardPage() {
                   onClick={() => handleCardClick(item)}
                   className="group relative overflow-hidden rounded-2xl border-none shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer bg-white h-full"
                 >
-                  <CardContent className="p-4 h-full flex flex-col justify-between">
+                  <CardContent className="p-4 h-full flex flex-col justify-between relative z-10">
                     <div className="flex justify-between items-start mb-2">
                       <div className="bg-slate-50 p-2.5 rounded-xl group-hover:bg-[#4a5ab5] group-hover:text-white transition-all duration-500 shadow-inner">
                         <Icon className="h-5 w-5" />
@@ -108,7 +108,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     
-                    <div className="relative z-10">
+                    <div className="relative">
                       <div className="mb-2">
                         <h3 className="text-xs font-black text-slate-900 uppercase tracking-tight mb-1 group-hover:text-[#4a5ab5] transition-colors truncate">
                           {item.label}
@@ -124,8 +124,8 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   </CardContent>
-                  <div className="absolute right-2 bottom-2 opacity-[0.03] group-hover:opacity-[0.08] transition-all duration-700 pointer-events-none transform group-hover:scale-110 group-hover:-rotate-12">
-                    <Icon className="h-24 w-24" />
+                  <div className="absolute right-4 bottom-4 opacity-[0.05] group-hover:opacity-20 group-hover:text-sky-400 transition-all duration-700 pointer-events-none transform group-hover:scale-110 group-hover:rotate-[180deg]">
+                    <Icon className="h-20 w-20" />
                   </div>
                 </Card>
               );
@@ -141,7 +141,7 @@ export default function DashboardPage() {
                   onClick={() => handleSubItemClick(sub)}
                   className="group relative overflow-hidden rounded-2xl border-none shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer bg-white h-full"
                 >
-                  <CardContent className="p-4 h-full flex flex-col justify-between">
+                  <CardContent className="p-4 h-full flex flex-col justify-between relative z-10">
                     <div className="flex justify-between items-start mb-2">
                       <div className="bg-slate-50 p-2.5 rounded-xl group-hover:bg-[#4a5ab5] group-hover:text-white transition-all duration-500 shadow-inner">
                         <Icon className="h-5 w-5" />
@@ -151,7 +151,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     
-                    <div className="relative z-10">
+                    <div className="relative">
                       <div className="mb-2">
                         <h3 className="text-xs font-black text-slate-900 uppercase tracking-tight mb-1 group-hover:text-[#4a5ab5] transition-colors truncate">
                           {sub.label}
@@ -167,8 +167,8 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   </CardContent>
-                  <div className="absolute right-2 bottom-2 opacity-[0.03] group-hover:opacity-[0.08] transition-all duration-700 pointer-events-none transform group-hover:scale-110 group-hover:-rotate-12">
-                    <Icon className="h-24 w-24" />
+                  <div className="absolute right-4 bottom-4 opacity-[0.05] group-hover:opacity-20 group-hover:text-sky-400 transition-all duration-700 pointer-events-none transform group-hover:scale-110 group-hover:rotate-[180deg]">
+                    <Icon className="h-20 w-20" />
                   </div>
                 </Card>
               );
