@@ -983,12 +983,7 @@ export default function StartNavigationPage() {
                     initialViewState={{ longitude: userLocation?.longitude || 5.2913, latitude: userLocation?.latitude || 52.1326, zoom: userLocation ? 14 : 7 }} 
                     style={{ width: '100%', height: '100%' }} 
                     mapStyle={mapStyle} 
-                    mapboxAccessToken={MAPBOX_TOKEN} 
-                    onClick={e => { 
-                      if (routeType !== 'meldingen') {
-                        setUserLocation({ latitude: e.lngLat.lat, longitude: e.lngLat.lng }); 
-                      }
-                    }}
+                    mapboxAccessToken={MAPBOX_TOKEN}
                   >
                     {userLocation && (<Marker longitude={userLocation.longitude} latitude={userLocation.latitude} anchor="center"><div className="relative flex flex-col items-center"><div className="absolute h-10 w-10 rounded-full bg-green-500/30 animate-ping" /><div className="relative h-8 w-8 rounded-full bg-green-600 border-4 border-white shadow-xl flex items-center justify-center"><MapPin className="h-4 w-4 text-white fill-current" /></div></div></Marker>)}
                     {urlMeldingLocatie && (<Marker longitude={urlMeldingLocatie.longitude} latitude={urlMeldingLocatie.latitude} anchor="center"><div className="relative flex flex-col items-center"><div className="absolute h-12 w-12 rounded-full bg-blue-50/20 animate-pulse" /><div className="relative h-10 w-10 rounded-full bg-primary border-4 border-white shadow-2xl flex items-center justify-center"><Flag className="h-5 w-5 text-white fill-current" /></div></div></Marker>)}
@@ -1001,13 +996,21 @@ export default function StartNavigationPage() {
                         </div>
                     </Marker>
 
-                    {/* Melding markers with sequence numbers */}
+                    {/* Melding markers with sequence numbers and assigned user "cloud" */}
                     {routeType === 'meldingen' && sortedMeldingen?.map((m, idx) => (
                         <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => {
-                            if (mapRef.current) mapRef.current.getMap().flyTo({ center: [m.longitude, m.latitude], zoom: 17 });
+                            if (mapRef.current) mapRef.current.getMap().flyTo({ center: [m.longitude, m.latitude], zoom: 17, speed: 1.5 });
                         }}>
-                            <div className="w-6 h-6 bg-red-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-[10px] font-black text-white hover:scale-125 transition-transform cursor-pointer">
-                                {idx + 1}
+                            <div className="relative flex flex-col items-center">
+                                {isPrivileged && m.behandelaar && (
+                                    <div className="absolute -top-8 bg-white/95 backdrop-blur-sm px-2 py-0.5 rounded-md border border-slate-200 shadow-md text-[8px] font-black text-slate-900 uppercase tracking-tighter whitespace-nowrap z-10 animate-in fade-in slide-in-from-bottom-1">
+                                        {m.behandelaar}
+                                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-white border-r border-b border-slate-200 rotate-45" />
+                                    </div>
+                                )}
+                                <div className="w-6 h-6 bg-red-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-[10px] font-black text-white hover:scale-125 transition-transform cursor-pointer relative z-0">
+                                    {idx + 1}
+                                </div>
                             </div>
                         </Marker>
                     ))}
