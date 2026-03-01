@@ -1086,7 +1086,8 @@ export default function StartNavigationPage() {
                                           <TableCell colSpan={7} className="text-center py-12 text-muted-foreground opacity-30">
                                               <LayoutGrid className="h-8 w-8 mx-auto mb-2" />
                                               <p className="font-black uppercase tracking-widest text-[10px]">Geen openstaande meldingen voor uitvoering</p>
-                                          </TableRow>
+                                          </TableCell>
+                                      </TableRow>
                                   )}
                               </TableBody>
                           </Table>
