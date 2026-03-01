@@ -86,7 +86,7 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion";
+} from "@/components/accordion";
 
 // Custom components
 import { IssueImportDialog } from '@/components/issue-import-dialog';
@@ -268,6 +268,7 @@ export default function NewIssuePage() {
       voorvaltijd: format(new Date(), 'HH:mm'), 
       hoofdcategorie: '', 
       subcategorie: '',
+      plaats: 'Bodegraven-Reeuwijk', // Standaard plaats
     },
   });
 
@@ -288,6 +289,36 @@ export default function NewIssuePage() {
       setLocation({ latitude: existingMelding.latitude, longitude: existingMelding.longitude });
     }
   }, [existingMelding, form]);
+
+  // Geocoding logic: Watch address fields and update location
+  const watchStraat = form.watch('straatnaam');
+  const watchHuisnummer = form.watch('huisnummer');
+  const watchPlaats = form.watch('plaats');
+
+  React.useEffect(() => {
+    const geocodeAddress = async () => {
+      // Only geocode if we have at least street and city
+      if (!watchStraat || !watchPlaats || isReadOnly) return;
+      
+      const fullAddress = `${watchStraat} ${watchHuisnummer || ''}, ${watchPlaats}, Nederland`;
+      try {
+        const response = await fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(fullAddress)}.json?access_token=${MAPBOX_TOKEN}&country=NL&limit=1`
+        );
+        const data = await response.json();
+        if (data.features && data.features.length > 0) {
+          const [lng, lat] = data.features[0].center;
+          setLocation({ latitude: lat, longitude: lng });
+        }
+      } catch (error) {
+        console.error('Geocoding error:', error);
+      }
+    };
+
+    // Debounce to prevent too many API calls while typing
+    const timer = setTimeout(geocodeAddress, 800);
+    return () => clearTimeout(timer);
+  }, [watchStraat, watchHuisnummer, watchPlaats, isReadOnly]);
 
   const watchContainernummer = form.watch('containernummer');
   React.useEffect(() => {
@@ -573,7 +604,7 @@ export default function NewIssuePage() {
                         </DropdownMenu>
                         <Separator orientation="vertical" className="h-5 mx-1" />
                         <Button type="submit" form="new-melding-form" size="sm" disabled={isSubmitting} className="h-9 font-black uppercase px-4 md:px-8 shadow-lg rounded-xl">
-                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />} OPSLAAN
+                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />} {meldingId ? 'BIJWERKEN' : 'OPSLAAN'}
                         </Button>
                     </>
                 )}
