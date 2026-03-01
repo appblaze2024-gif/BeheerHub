@@ -541,11 +541,12 @@ function NavigatingView({
             const inRange = isTarget && hasReachedCurrentTarget;
             
             const isMelding = routeType === 'meldingen';
-            const typeStr = (obj.locatieType || '').toLowerCase();
+            const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
             const isUnderground = !isMelding && (typeStr.includes('container') || 
                                   typeStr.includes('ondergrond') ||
                                   typeStr.includes('brengpark') ||
-                                  typeStr.includes('ondergr'));
+                                  typeStr.includes('ondergr') ||
+                                  typeStr.includes('verzamel'));
             const Icon = isMelding ? Bell : (isUnderground ? Archive : Trash2);
 
             return (
@@ -974,13 +975,11 @@ export default function StartNavigationPage() {
                     {routeGeoJSONFeatures && (<Source id="route-area" type="geojson" data={{ type: 'FeatureCollection', features: routeGeoJSONFeatures }}><Layer id="route-area-fill" type="fill" paint={{ 'fill-color': '#32ADE6', 'fill-opacity': 0.05 }} /><Layer id="route-area-outline" type="line" paint={{ 'fill-color': '#32ADE6', 'fill-width': 1, 'line-dasharray': [2, 2] }} /></Source>)}
                     
                     {/* Base location marker */}
-                    {routeType === 'meldingen' && (
-                        <Marker longitude={SIMULATION_START_LOCATION.longitude} latitude={SIMULATION_START_LOCATION.latitude} anchor="center">
-                            <div className="w-8 h-8 bg-red-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-white">
-                                <Home className="h-4 w-4 fill-current" />
-                            </div>
-                        </Marker>
-                    )}
+                    <Marker longitude={SIMULATION_START_LOCATION.longitude} latitude={SIMULATION_START_LOCATION.latitude} anchor="center">
+                        <div className="w-8 h-8 bg-red-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-white">
+                            <Home className="h-4 w-4 fill-current" />
+                        </div>
+                    </Marker>
 
                     {/* Melding markers with sequence numbers */}
                     {routeType === 'meldingen' && sortedMeldingen?.map((m, idx) => (
