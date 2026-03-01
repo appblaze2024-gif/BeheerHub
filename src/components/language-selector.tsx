@@ -33,13 +33,16 @@ export function LanguageSelector() {
     if (select) {
       select.value = langCode;
       select.dispatchEvent(new Event('change'));
+    } else {
+      // Fallback if the element isn't ready yet
+      console.warn('Vertaalmodule nog niet geladen...');
     }
   };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="hidden sm:flex h-9 w-9 rounded-full text-[#3498db] hover:bg-blue-50 transition-all active:scale-95">
+        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-[#3498db] hover:bg-blue-50 transition-all active:scale-95">
           <Languages className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>

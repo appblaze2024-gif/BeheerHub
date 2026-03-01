@@ -126,3 +126,16 @@ body {
     border: none !important;
     box-shadow: none !important;
 }
+
+/* Hide the Google Translate floating bar completely */
+iframe.goog-te-banner-frame {
+  display: none !important;
+}
+
+.goog-te-balloon-frame {
+  display: none !important;
+}
+
+#goog-gt-tt {
+  display: none !important;
+}
