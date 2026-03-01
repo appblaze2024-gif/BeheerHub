@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -769,7 +770,11 @@ export default function NewIssuePage() {
             
             <div className="w-full lg:w-[350px] bg-slate-50 lg:border-l shrink-0 flex flex-col min-h-0 overflow-hidden">
                 <div className={cn("relative overflow-hidden bg-slate-100 shrink-0", isMobile ? "h-64 mt-4 rounded-3xl mx-4" : "h-[40%] shadow-inner")}>
-                    <MapboxView latitude={location?.latitude} longitude={location?.longitude} />
+                    <MapboxView 
+                      latitude={location?.latitude} 
+                      longitude={location?.longitude} 
+                      objects={allMapObjects || []}
+                    />
                     <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-xl text-[8px] font-black uppercase tracking-widest border border-slate-200 flex items-center gap-1 shadow-sm">
                         <MapPin className="h-3 w-3 text-primary" /> GIS Locatie
                     </div>

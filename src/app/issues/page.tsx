@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -99,6 +100,13 @@ export default function IssuesPage() {
   }, [firestore]);
 
   const { data: meldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenQuery);
+
+  const objectsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'objects');
+  }, [firestore]);
+
+  const { data: allMapObjects } = useCollection<MapObject>(objectsQuery);
 
   const filteredMeldingen = React.useMemo(() => {
     if (!meldingen) return [];
@@ -320,7 +328,12 @@ export default function IssuesPage() {
                                 </CardContent>
                             </Card>
                             <div className="rounded-[2.5rem] overflow-hidden border-2 border-white shadow-2xl min-h-[450px]">
-                                <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} interactive={false} />
+                                <MapboxView 
+                                  latitude={selectedMelding.latitude} 
+                                  longitude={selectedMelding.longitude} 
+                                  interactive={false} 
+                                  objects={allMapObjects || []}
+                                />
                             </div>
                         </div>
                     </TabsContent>
@@ -352,7 +365,12 @@ export default function IssuesPage() {
                                 </CardContent>
                             </Card>
                             <div className="rounded-[2.5rem] overflow-hidden border-2 border-white shadow-2xl min-h-[450px]">
-                                <MapboxView latitude={selectedMelding.latitude} longitude={selectedMelding.longitude} interactive={false} />
+                                <MapboxView 
+                                  latitude={selectedMelding.latitude} 
+                                  longitude={selectedMelding.longitude} 
+                                  interactive={false} 
+                                  objects={allMapObjects || []}
+                                />
                             </div>
                         </div>
                     </TabsContent>

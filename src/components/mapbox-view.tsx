@@ -137,7 +137,8 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
         const color = showHeatmap ? getHeatmapColor(obj.vulgraad) : 'hsl(221, 83%, 53%)';
         
         const isUnderground = obj.locatieType?.toLowerCase().includes('container') || 
-                              obj.locatieType?.toLowerCase().includes('ondergrond');
+                              obj.locatieType?.toLowerCase().includes('ondergrond') ||
+                              obj.locatieType?.toLowerCase().includes('brengpark');
         const Icon = isUnderground ? Archive : Trash2;
 
         return (
