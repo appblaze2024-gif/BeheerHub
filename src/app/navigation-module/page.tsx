@@ -38,7 +38,8 @@ import {
   Minimize,
   Sparkles,
   FastForward,
-  LayoutGrid
+  LayoutGrid,
+  MessageSquare
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -995,26 +996,27 @@ export default function StartNavigationPage() {
               {/* List Section for Meldingen (40%) */}
               {isMeldingenType && (
                   <div className="flex-1 overflow-hidden flex flex-col bg-white border-t-4 border-slate-900">
-                      <div className="p-4 bg-slate-50 border-b flex items-center justify-between">
+                      <div className="p-3 bg-slate-50 border-b flex items-center justify-between shrink-0">
                           <div className="flex items-center gap-3">
-                              <div className="bg-primary/10 p-2 rounded-xl"><FileText className="h-4 w-4 text-primary" /></div>
-                              <h3 className="font-black uppercase tracking-tighter text-sm text-slate-900">Overzicht Werkbonnen</h3>
-                              <Badge variant="outline" className="h-5 px-2 font-black text-[9px] border-2 bg-white">{allMeldingen?.length || 0} Openstaand</Badge>
+                              <div className="bg-primary/10 p-1.5 rounded-lg"><FileText className="h-3.5 w-3.5 text-primary" /></div>
+                              <h3 className="font-black uppercase tracking-tighter text-xs text-slate-900">Overzicht Werkbonnen</h3>
+                              <Badge variant="outline" className="h-4.5 px-1.5 font-black text-[8px] border-2 bg-white">{allMeldingen?.length || 0} Openstaand</Badge>
                           </div>
                           <div className="flex items-center gap-2">
-                              <Button variant="ghost" size="sm" className="h-8 text-[10px] font-black uppercase tracking-widest text-slate-400">Excel Export</Button>
+                              <Button variant="ghost" size="sm" className="h-7 text-[9px] font-black uppercase tracking-widest text-slate-400">Excel Export</Button>
                           </div>
                       </div>
                       <ScrollArea className="flex-1">
-                          <Table className="min-w-[1000px] border-collapse">
+                          <Table className="min-w-[1200px] border-collapse">
                               <TableHeader className="bg-slate-100 sticky top-0 z-10 shadow-sm">
-                                  <TableRow className="h-10 hover:bg-transparent">
-                                      <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-500 border-r">Intakenr.</TableHead>
-                                      <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-500 border-r">Adresgegevens</TableHead>
-                                      <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-500 border-r">Hoofdtype</TableHead>
-                                      <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-500 border-r">Subtype</TableHead>
-                                      <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-500 border-r">Werkgebied</TableHead>
-                                      <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-500">Status</TableHead>
+                                  <TableRow className="h-8 hover:bg-transparent">
+                                      <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Intakenr.</TableHead>
+                                      <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Adresgegevens</TableHead>
+                                      <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Omschrijving</TableHead>
+                                      <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Hoofdtype</TableHead>
+                                      <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Subtype</TableHead>
+                                      <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Werkgebied</TableHead>
+                                      <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 px-3">Status</TableHead>
                                   </TableRow>
                               </TableHeader>
                               <TableBody>
@@ -1022,29 +1024,35 @@ export default function StartNavigationPage() {
                                       allMeldingen.map((m) => (
                                           <TableRow 
                                             key={m.id} 
-                                            className="h-12 hover:bg-blue-50 transition-colors border-b border-slate-100 cursor-pointer group"
+                                            className="h-9 hover:bg-blue-50 transition-colors border-b border-slate-100 cursor-pointer group"
                                             onClick={() => {
                                                 if (mapRef.current) {
                                                     mapRef.current.getMap().flyTo({ center: [m.longitude, m.latitude], zoom: 17, speed: 1.5 });
                                                 }
                                             }}
                                           >
-                                              <TableCell className="font-black text-xs border-r group-hover:text-primary transition-colors">{m.intakenummer}</TableCell>
-                                              <TableCell className="text-xs font-bold border-r">
-                                                  <div className="flex flex-col">
+                                              <TableCell className="font-black text-[11px] border-r group-hover:text-primary transition-colors px-3">{m.intakenummer}</TableCell>
+                                              <TableCell className="text-[11px] font-bold border-r px-3">
+                                                  <div className="flex flex-col leading-tight">
                                                       <span>{m.straatnaam} {m.huisnummer}</span>
-                                                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{m.postcode} {m.plaats}</span>
+                                                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{m.postcode} {m.plaats}</span>
                                                   </div>
                                               </TableCell>
-                                              <TableCell className="text-xs font-medium border-r text-slate-500 uppercase">{m.hoofdcategorie}</TableCell>
-                                              <TableCell className="text-xs font-black border-r text-slate-900 uppercase tracking-tight">{m.subcategorie}</TableCell>
-                                              <TableCell className="border-r">
-                                                  <Badge variant="outline" className="h-5 px-2 text-[9px] font-black uppercase bg-slate-50 border-slate-200">
+                                              <TableCell className="text-[11px] border-r px-3 max-w-[250px]">
+                                                  <div className="flex items-center gap-1.5">
+                                                      <MessageSquare className="h-2.5 w-2.5 text-slate-300 shrink-0" />
+                                                      <p className="truncate text-slate-500 font-medium italic" title={m.extra_informatie}>{m.extra_informatie || '-'}</p>
+                                                  </div>
+                                              </TableCell>
+                                              <TableCell className="text-[10px] font-medium border-r text-slate-500 uppercase px-3">{m.hoofdcategorie}</TableCell>
+                                              <TableCell className="text-[10px] font-black border-r text-slate-900 uppercase tracking-tight px-3">{m.subcategorie}</TableCell>
+                                              <TableCell className="border-r px-3">
+                                                  <Badge variant="outline" className="h-4 px-1.5 text-[8px] font-black uppercase bg-slate-50 border-slate-200">
                                                       {m.werkgebied || '-'}
                                                   </Badge>
                                               </TableCell>
-                                              <TableCell>
-                                                  <Badge className="h-5 px-2 text-[9px] font-black uppercase bg-blue-500 text-white border-none shadow-sm">
+                                              <TableCell className="px-3">
+                                                  <Badge className="h-4 px-1.5 text-[8px] font-black uppercase bg-blue-500 text-white border-none shadow-sm">
                                                       {m.status}
                                                   </Badge>
                                               </TableCell>
@@ -1052,9 +1060,9 @@ export default function StartNavigationPage() {
                                       ))
                                   ) : (
                                       <TableRow>
-                                          <TableCell colSpan={6} className="text-center py-20 text-muted-foreground opacity-30">
-                                              <LayoutGrid className="h-12 w-12 mx-auto mb-4" />
-                                              <p className="font-black uppercase tracking-widest text-xs">Geen openstaande meldingen voor uitvoering</p>
+                                          <TableCell colSpan={7} className="text-center py-12 text-muted-foreground opacity-30">
+                                              <LayoutGrid className="h-8 w-8 mx-auto mb-2" />
+                                              <p className="font-black uppercase tracking-widest text-[10px]">Geen openstaande meldingen voor uitvoering</p>
                                           </TableCell>
                                       </TableRow>
                                   )}
