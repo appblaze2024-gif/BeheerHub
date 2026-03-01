@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -5,7 +6,7 @@ import MapGL, { Marker, Popup, Source, Layer } from 'react-map-gl';
 import type { FillLayer, LineLayer, SymbolLayer, MapLayerMouseEvent } from 'react-map-gl';
 import * as turf from '@turf/turf';
 import { useProfile } from '@/firebase/profile-provider';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Archive } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 
@@ -16,6 +17,8 @@ interface MapObject {
   latitude: number;
   longitude: number;
   vulgraad?: number;
+  locatieType?: string;
+  locatieSubType?: string;
   [key: string]: any;
 }
 
@@ -88,7 +91,7 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
   const initialViewState = {
     longitude: longitude || 5.2913,
     latitude: latitude || 52.1326,
-    zoom: longitude && latitude ? 18 : 7,
+    zoom: longitude && latitude ? 19 : 7,
   };
   
   React.useEffect(() => {
@@ -113,7 +116,7 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
         console.error("Error fitting bounds:", e);
       }
     } else if (longitude && latitude) {
-      map.flyTo({ center: [longitude, latitude], zoom: 18});
+      map.flyTo({ center: [longitude, latitude], zoom: 19});
     } else if (!longitude && !latitude) {
         // Reset to default view if no polygons and no specific coords
          map.flyTo({
@@ -132,6 +135,11 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
         const isSelected = selectedObjects.some(so => so.id === obj.id);
         const isHighlighted = highlightedObject?.id === obj.id;
         const color = showHeatmap ? getHeatmapColor(obj.vulgraad) : 'hsl(221, 83%, 53%)';
+        
+        const isUnderground = obj.locatieType?.toLowerCase().includes('container') || 
+                              obj.locatieType?.toLowerCase().includes('ondergrond');
+        const Icon = isUnderground ? Archive : Trash2;
+
         return (
             <Marker
               key={`obj-${obj.id}`}
@@ -153,7 +161,7 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
                 {isHighlighted && (
                   <div className="absolute w-6 h-6 rounded-full bg-black/70 animate-pulse" />
                 )}
-                <Trash2 
+                <Icon 
                   className={cn(
                       "relative h-5 w-5 cursor-pointer stroke-white stroke-[1.5] transition-transform",
                       isSelected && "scale-125"
