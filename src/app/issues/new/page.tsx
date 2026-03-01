@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -148,7 +149,7 @@ const DEFAULT_MELDER_TYPES = ["Inwoner", "Bedrijf", "Gemeente", "Toezichthouder"
 const FormRow = ({ label, children, onAdd }: { label: React.ReactNode; children: React.ReactNode; onAdd?: () => void }) => (
     <div className="flex flex-col gap-1 py-2 border-b border-slate-100 last:border-0 min-h-[44px]">
         <div className="flex items-center justify-between">
-            <FormLabel className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">{label}</FormLabel>
+            <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">{label}</Label>
             {onAdd && (
                 <Button 
                     type="button" 
@@ -405,7 +406,7 @@ export default function NewIssuePage() {
     if (!firestore || isSubmitting || isReadOnly) return;
     setIsSubmitting(true);
     try {
-      const mData = {
+      const mData: any = {
         ...data,
         voorvaldatum: data.voorvaldatum instanceof Date ? format(data.voorvaldatum, 'yyyy-MM-dd') : (data.voorvaldatum || null),
         meldingsdatum: data.meldingsdatum instanceof Date ? format(data.meldingsdatum, 'yyyy-MM-dd') : (data.meldingsdatum || null),
@@ -418,6 +419,9 @@ export default function NewIssuePage() {
         updatedAt: serverTimestamp(),
       };
 
+      // Sanitize mData: remove undefined properties
+      Object.keys(mData).forEach(key => mData[key] === undefined && delete mData[key]);
+
       if (meldingId) {
         await updateDocumentNonBlocking(doc(firestore, 'meldingen', meldingId), mData);
       } else {
@@ -428,6 +432,7 @@ export default function NewIssuePage() {
       startProcessing(1000);
       router.push('/issues/portal');
     } catch (e) {
+      console.error("Save error:", e);
       toast({ variant: 'destructive', title: 'Fout bij opslaan' });
     } finally {
       setIsSubmitting(false);
@@ -443,7 +448,7 @@ export default function NewIssuePage() {
         {isMobile ? (
           <Accordion type="multiple" defaultValue={["section-1"]} className="w-full">
             <AccordionItem value="section-1" className="border-none">
-              <AccordionTrigger className="hover:no-underline py-3 px-4 bg-slate-50 rounded-xl mb-2">
+              <AccordionTrigger className="hover:no-underline py-3 px-4 bg-white rounded-xl mb-2 shadow-sm border border-slate-100">
                 <span className="text-xs font-black uppercase tracking-widest text-slate-900">Basisgegevens</span>
               </AccordionTrigger>
               <AccordionContent className="p-4 pt-0 space-y-2">
@@ -478,7 +483,7 @@ export default function NewIssuePage() {
             </AccordionItem>
 
             <AccordionItem value="section-2" className="border-none">
-              <AccordionTrigger className="hover:no-underline py-3 px-4 bg-slate-50 rounded-xl mb-2">
+              <AccordionTrigger className="hover:no-underline py-3 px-4 bg-white rounded-xl mb-2 shadow-sm border border-slate-100">
                 <span className="text-xs font-black uppercase tracking-widest text-slate-900">Locatie & Gebied</span>
               </AccordionTrigger>
               <AccordionContent className="p-4 pt-0 space-y-2">
@@ -500,7 +505,7 @@ export default function NewIssuePage() {
             </AccordionItem>
 
             <AccordionItem value="section-3" className="border-none">
-              <AccordionTrigger className="hover:no-underline py-3 px-4 bg-slate-50 rounded-xl mb-2">
+              <AccordionTrigger className="hover:no-underline py-3 px-4 bg-white rounded-xl mb-2 shadow-sm border border-slate-100">
                 <span className="text-xs font-black uppercase tracking-widest text-slate-900">Omschrijving</span>
               </AccordionTrigger>
               <AccordionContent className="p-4 pt-0 space-y-4">
