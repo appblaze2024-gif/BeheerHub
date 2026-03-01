@@ -132,6 +132,21 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   const { isHeaderVisible } = useNavigationUI();
   const { isUserLoading } = useUser();
   const { isLoading: isProfileLoading } = useProfile();
+  const pathname = usePathname();
+
+  // Re-trigger translation when navigation occurs
+  useEffect(() => {
+    const triggerTranslation = () => {
+      const combo = document.querySelector('.goog-te-combo') as HTMLSelectElement;
+      if (combo && combo.value !== 'nl') {
+        combo.dispatchEvent(new Event('change'));
+      }
+    };
+    
+    // Small delay to ensure React has rendered new components
+    const timer = setTimeout(triggerTranslation, 500);
+    return () => clearTimeout(timer);
+  }, [pathname]);
 
   if (isUserLoading || isProfileLoading) {
     return <LoadingScreen className="h-screen" />;

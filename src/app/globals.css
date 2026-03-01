@@ -97,12 +97,17 @@ body[style*="pointer-events: none"] {
 .goog-te-banner-frame.skiptranslate, 
 .goog-te-gadget-icon,
 .goog-te-gadget-simple img,
-.goog-te-menu-value span {
+.goog-te-menu-value span,
+.goog-te-banner,
+.goog-te-banner-frame,
+#goog-gt-tt,
+.skiptranslate > iframe {
     display: none !important;
 }
 
 body {
     top: 0px !important;
+    position: static !important;
 }
 
 .goog-te-gadget {
