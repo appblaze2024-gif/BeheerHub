@@ -5,12 +5,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { 
   ChevronRight,
   ArrowLeft,
-  LayoutDashboard
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -24,7 +22,7 @@ export default function DashboardPage() {
   const bannerRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'dashboard_banner') : null, [firestore]);
   const { data: banner } = useDoc<any>(bannerRef);
 
-  // Filter out 'Dashboard' itself from the grid to avoid recursion
+  // Filter out 'Dashboard' itself from the grid
   const mainNavItems = allMenuItems.filter(item => item.href !== '/');
 
   const handleCardClick = (item: MenuItem) => {
@@ -40,18 +38,18 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="p-6 lg:p-8 space-y-6 flex flex-col h-full bg-[#f8fafc] relative overflow-hidden">
+    <div className="p-4 md:p-8 space-y-6 flex flex-col h-full bg-[#f8fafc] relative overflow-hidden">
       {/* Dynamic Banner Section */}
       {banner?.active && !activeModule && (
-        <section className="relative h-40 w-full rounded-2xl overflow-hidden shadow-xl animate-in fade-in zoom-in duration-700 shrink-0">
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-900/80 to-transparent flex flex-col justify-center p-8 text-white">
+        <section className="relative h-40 w-full rounded-3xl overflow-hidden shadow-xl animate-in fade-in zoom-in duration-700 shrink-0">
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-900/80 to-transparent flex flex-col justify-center p-6 md:p-8 text-white">
             <Badge className="w-fit mb-2 bg-primary text-white border-none px-3 py-0.5 font-black uppercase tracking-[0.2em] text-[9px]">
               {banner.badgeText || "Operationeel: OK"}
             </Badge>
-            <h2 className="text-2xl font-black uppercase tracking-tighter mb-1 max-w-xl leading-none">
+            <h2 className="text-xl md:text-2xl font-black uppercase tracking-tighter mb-1 max-w-xl leading-none">
               {banner.title || "Welkom bij BeheerHub"}
             </h2>
-            <p className="text-sm font-bold text-slate-300 max-w-lg leading-snug">
+            <p className="text-xs md:text-sm font-bold text-slate-300 max-w-lg leading-snug">
               {banner.description || "Centraal beheer van infra- en reinigingsprojecten."}
             </p>
           </div>
@@ -71,7 +69,7 @@ export default function DashboardPage() {
             </Button>
           )}
           <div>
-            <h1 className="text-2xl font-black uppercase tracking-tight text-[#3498db]">
+            <h1 className="text-xl md:text-2xl font-black uppercase tracking-tight text-[#3498db]">
               {activeModule ? activeModule.label : 'Systeem Menu'}
             </h1>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
@@ -81,16 +79,16 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-hidden relative z-10">
+      <div className="flex-1 overflow-y-auto no-scrollbar relative z-10">
         {!activeModule ? (
-          <div className="grid grid-cols-4 grid-rows-3 gap-4 pb-6 h-full">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-10">
             {mainNavItems.map((item) => {
               const Icon = item.icon;
               return (
                 <Card 
                   key={item.label}
                   onClick={() => handleCardClick(item)}
-                  className="group relative overflow-hidden rounded-2xl border-none shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer bg-white h-full"
+                  className="group relative overflow-hidden rounded-2xl border-none shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer bg-white h-32 md:h-full"
                 >
                   <CardContent className="p-4 h-full flex flex-col justify-between relative z-10">
                     <div className="flex justify-between items-start mb-2">
@@ -119,21 +117,21 @@ export default function DashboardPage() {
                     </div>
                   </CardContent>
                   <div className="absolute right-2 bottom-2 opacity-[0.05] group-hover:opacity-20 group-hover:text-[#3498db] transition-all duration-700 pointer-events-none transform">
-                    <Icon className="h-20 w-20" />
+                    <Icon className="h-16 w-16 md:h-20 md:w-20" />
                   </div>
                 </Card>
               );
             })}
           </div>
         ) : (
-          <div className="grid grid-cols-4 grid-rows-3 gap-4 pb-6 h-full animate-in fade-in slide-in-from-right-4 duration-500">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-10 animate-in fade-in slide-in-from-right-4 duration-500">
             {activeModule.subItems?.map((sub) => {
-              const Icon = activeModule.icon; // Use parent icon for subs if no specific icon
+              const Icon = activeModule.icon; 
               return (
                 <Card 
                   key={sub.id}
                   onClick={() => handleSubItemClick(sub)}
-                  className="group relative overflow-hidden rounded-2xl border-none shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer bg-white h-full"
+                  className="group relative overflow-hidden rounded-2xl border-none shadow-sm hover:shadow-xl transition-all duration-500 cursor-pointer bg-white h-32 md:h-full"
                 >
                   <CardContent className="p-4 h-full flex flex-col justify-between relative z-10">
                     <div className="flex justify-between items-start mb-2">
@@ -162,7 +160,7 @@ export default function DashboardPage() {
                     </div>
                   </CardContent>
                   <div className="absolute right-2 bottom-2 opacity-[0.05] group-hover:opacity-20 group-hover:text-[#3498db] transition-all duration-700 pointer-events-none transform">
-                    <Icon className="h-20 w-20" />
+                    <Icon className="h-16 w-16 md:h-20 md:w-20" />
                   </div>
                 </Card>
               );
