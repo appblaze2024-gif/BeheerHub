@@ -118,6 +118,7 @@ export default function ObjectsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const isTablet = useIsMobile(1024);
+  const { profile } = useProfile();
   const [isImporting, setIsImporting] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');
   const [selectedObject, setSelectedObject] = React.useState<any | null>(null);
@@ -379,12 +380,14 @@ export default function ObjectsPage() {
             <Input placeholder="Snelzoeken..." className="pl-9 h-9 text-xs font-medium rounded-lg border-slate-200 bg-slate-50" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} disabled={!typeFilter} />
           </div>
           
-          <ObjectImportDialog open={isImporting} onOpenChange={setIsImporting} onSuccess={() => setIsImporting(false)}>
-            <Button variant="outline" size="sm" className="h-9 font-bold rounded-lg border-primary/20 text-primary hover:bg-primary/5">
-              <Upload className="h-4 w-4 mr-2" /> 
-              Import
-            </Button>
-          </ObjectImportDialog>
+          {profile?.role === 'Super admin' && (
+            <ObjectImportDialog open={isImporting} onOpenChange={setIsImporting} onSuccess={() => setIsImporting(false)}>
+              <Button variant="outline" size="sm" className="h-9 font-bold rounded-lg border-primary/20 text-primary hover:bg-primary/5">
+                <Upload className="h-4 w-4 mr-2" /> 
+                Import
+              </Button>
+            </ObjectImportDialog>
+          )}
 
           <Button variant="outline" size="sm" className="h-9 font-bold rounded-lg" disabled={!typeFilter}><Download className="h-4 w-4 mr-2" /> Export</Button>
         </div>
