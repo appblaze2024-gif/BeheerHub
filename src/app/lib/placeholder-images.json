@@ -1,3 +1,4 @@
+
 {
   "placeholderImages": [
     {
@@ -17,6 +18,12 @@
       "description": "Aerial view of a clean city street.",
       "imageUrl": "https://images.unsplash.com/photo-1541888946425-d81bb19480c5?auto=format&fit=crop&q=80&w=2070",
       "imageHint": "clean city"
+    },
+    {
+      "id": "dashboard-bg-map",
+      "description": "Defocused map with pinpoints.",
+      "imageUrl": "https://i.ibb.co/5W313N9x/defocused-map-with-pinpoints.jpg",
+      "imageHint": "map pinpoints"
     }
   ]
 }

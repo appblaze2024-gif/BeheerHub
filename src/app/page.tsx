@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -27,13 +28,14 @@ export default function DashboardPage() {
 
   return (
     <div className="p-6 lg:p-8 space-y-6 flex flex-col h-full bg-[#f8fafc] relative overflow-hidden">
-      {/* Background Graphic Illustration - Compact and in Color */}
-      <div className="absolute top-0 right-0 w-[400px] h-[300px] opacity-[0.12] pointer-events-none transition-all duration-1000">
+      {/* Background Graphic Illustration - Large and Subtle */}
+      <div className="absolute -top-20 -right-20 w-[1200px] h-[900px] opacity-[0.08] pointer-events-none transition-all duration-1000 overflow-hidden">
         <Image 
-          src="https://i.ibb.co/qMLXjXqz/top-view-paper-style-community-map-1.jpg" 
-          alt="Community Map Illustration" 
+          src="https://i.ibb.co/5W313N9x/defocused-map-with-pinpoints.jpg" 
+          alt="Map Illustration" 
           fill
-          className="object-contain object-right-top"
+          className="object-cover object-right-top"
+          data-ai-hint="map pinpoints"
           priority
         />
       </div>
@@ -66,7 +68,7 @@ export default function DashboardPage() {
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Selecteer een module om te starten</p>
       </header>
 
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden relative z-10">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-6 h-full auto-rows-fr">
           {navItems.map((item) => {
             const Icon = item.icon;
