@@ -38,7 +38,8 @@ import {
   Maximize,
   Minimize,
   Sparkles,
-  FastForward
+  FastForward,
+  LayoutGrid
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -55,6 +56,15 @@ import { RouteHistoryDialog } from '@/components/route-history-dialog';
 import { LoadingScreen } from '@/components/loading-screen';
 import { addSeconds, format as formatDate } from 'date-fns';
 import { nl } from 'date-fns/locale';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGphbmcwbzAiLCJhIjoiY21kNG5zZDJhMGN2djJscXBvNGtzcWRrdCJ9.e371yZYDeXyMnWKUWQcqAg';
 
@@ -892,169 +902,175 @@ export default function StartNavigationPage() {
     const isMeldingenRoute = routeType === 'meldingen';
     const isReadyToAutoStart = !!urlMeldingLocatie || (isMeldingenRoute && allMeldingen && allMeldingen.length > 0);
 
-    if (isReadyToAutoStart && navigationState === 'setup' && !autoStartAttempted.current) {
-      if (userLocation) {
-        autoStartAttempted.current = true;
-        handleStartRoute(false);
-      } else {
-        const timer = setTimeout(() => {
-          if (!userLocation) {
-            setAutoStartTimeoutReached(true);
-          }
-        }, 5000);
-        return () => clearTimeout(timer);
-      }
-    }
+    // AUTO-START LOGIC: Removed as per user request to disable the 5-second simulator start.
+    // The rit will now be started manually via the UI.
   }, [userLocation, urlMeldingLocatie, routeType, allMeldingen, navigationState, handleStartRoute]);
 
-  const isAutoMeldingen = searchParams.get('type') === 'meldingen';
-  const showSetupCard = !isAutoMeldingen && (!urlMeldingLocatie || userLocation || autoStartTimeoutReached);
+  const isMeldingenType = routeType === 'meldingen';
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {navigationState === 'navigating' ? (
-        <NavigatingView objectsOnRoute={objectsOnRoute} onExit={() => { setNavigationState('setup'); setObjectsOnRoute([]); if (searchParams.has('lat')) router.back(); }} initialUserLocation={tripStartLocation} isSimulationMode={isSimulationMode} routeType={routeType} />
+        <NavigatingView objectsOnRoute={objectsOnRoute} onExit={() => { setNavigationState('setup'); setObjectsOnRoute([]); if (searchParams.has('lat')) router.back(); }} initialUserLocation={tripStartLocation} isSimulating={isSimulationMode} routeType={routeType} />
       ) : (
-        <div className="w-full h-full relative">
-          <MapGL ref={mapRef} initialViewState={{ longitude: userLocation?.longitude || 5.2913, latitude: userLocation?.latitude || 52.1326, zoom: userLocation ? 14 : 7 }} style={{ width: '100%', height: '100%' }} mapStyle={mapStyle} mapboxAccessToken={MAPBOX_TOKEN} onClick={e => { setUserLocation({ latitude: e.lngLat.lat, longitude: e.lngLat.lng }); }}>
-            {userLocation && (<Marker longitude={userLocation.longitude} latitude={userLocation.latitude} anchor="center"><div className="relative flex flex-col items-center"><div className="absolute h-10 w-10 rounded-full bg-green-500/30 animate-ping" /><div className="relative h-8 w-8 rounded-full bg-green-600 border-4 border-white shadow-xl flex items-center justify-center"><MapPin className="h-4 w-4 text-white fill-current" /></div></div></Marker>)}
-            {urlMeldingLocatie && (<Marker longitude={urlMeldingLocatie.longitude} latitude={urlMeldingLocatie.latitude} anchor="center"><div className="relative flex flex-col items-center"><div className="absolute h-12 w-12 rounded-full bg-blue-50/20 animate-pulse" /><div className="relative h-10 w-10 rounded-full bg-primary border-4 border-white shadow-2xl flex items-center justify-center"><Flag className="h-5 w-5 text-white fill-current" /></div></div></Marker>)}
-            {routeGeoJSONFeatures && (<Source id="route-area" type="geojson" data={{ type: 'FeatureCollection', features: routeGeoJSONFeatures.features }}><Layer id="route-area-fill" type="fill" paint={{ 'fill-color': '#32ADE6', 'fill-opacity': 0.05 }} /><Layer id="route-area-outline" type="line" paint={{ 'line-color': '#32ADE6', 'line-width': 1, 'line-dasharray': [2, 2] }} /></Source>)}
-            {objectsOnMap?.map(obj => (<Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude}><div className="w-4 h-4 bg-primary rounded-full border-2 border-white shadow-lg" /></Marker>))}
-            {routeType === 'meldingen' && allMeldingen?.map(m => (<Marker key={m.id} longitude={m.longitude} latitude={m.latitude}><div className="w-5 h-5 bg-red-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-[8px] font-black text-white">!</div></Marker>))}
-          </MapGL>
-          
-          {(autoStartTimeoutReached && !userLocation && isAutoMeldingen) && (
-            <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-6">
-                <Card className="w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-300 border-none rounded-3xl overflow-hidden">
-                    <CardHeader className="text-center pb-2 bg-slate-900 text-white">
-                        <div className="mx-auto bg-white/10 p-4 rounded-full w-20 h-20 flex items-center justify-center mb-4"><SignalLow className="h-10 w-10 text-white animate-pulse" /></div>
-                        <CardTitle className="text-xl font-black uppercase tracking-tight text-white">Geen Locatie Gevonden</CardTitle>
-                        <CardDescription className="text-slate-400 font-bold">We kunnen uw GPS-positie momenteel niet vaststellen.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-8 space-y-4 bg-white">
-                        <p className="text-center text-sm font-medium text-slate-500 leading-relaxed">
-                            Wilt u een simulatie starten vanaf de bedrijfslocatie om de werkbonnen te bekijken?
-                        </p>
-                        <Button onClick={() => handleStartRoute(true, true)} className="w-full h-14 bg-primary hover:bg-primary/90 text-sm font-black uppercase tracking-widest gap-2 shadow-xl shadow-primary/20">
-                            <Sparkles className="h-5 w-5" /> Start Simulatie (Aarbergerweg)
-                        </Button>
-                        <Button variant="ghost" onClick={() => router.push('/')} className="w-full font-bold text-slate-400">
-                            Terug naar Dashboard
-                        </Button>
-                    </CardContent>
-                </Card>
-            </div>
-          )}
-
-          {showSetupCard && (
-            <Card className="absolute top-4 left-4 z-10 w-full max-w-[280px] shadow-2xl bg-white/95 backdrop-blur border-2 border-slate-100 rounded-2xl shadow-2xl p-4 hidden sm:block animate-in slide-in-from-left-4 duration-300">
-                <CardHeader className="p-3 border-b bg-slate-50/50">
-                  <div className="flex items-center gap-3">
-                    <Button variant="ghost" size="icon" onClick={() => router.push('/')} className="h-7 w-7 hover:bg-white rounded-full flex items-center justify-center">
-                      <ArrowLeft className="h-3.5 w-3.5" />
-                    </Button>
-                    <CardTitle className="text-sm font-black uppercase tracking-tighter">Navigatie Setup</CardTitle>
+        <div className="w-full h-full relative flex flex-col">
+          {/* Top Bar with Navigation Start */}
+          <header className="h-16 bg-slate-900 text-white flex items-center justify-between px-6 shrink-0 z-20 shadow-xl">
+              <div className="flex items-center gap-4">
+                  <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-full" onClick={() => router.push('/')}>
+                      <ArrowLeft className="h-5 w-5" />
+                  </Button>
+                  <div>
+                      <h2 className="text-lg font-black uppercase tracking-tight leading-none mb-0.5">Navigatie Setup</h2>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{routeType === 'meldingen' ? 'Werkbonnen Route' : 'Route Selectie'}</p>
                   </div>
-                </CardHeader>
-                <CardContent className="p-3 space-y-3">
-                  <div className="space-y-1">
-                    <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Project</Label>
-                    <Select value={selectedProjectId || ''} onValueChange={v => setSelectedProjectId(v || null)} disabled={isLoadingProjects}>
-                      <SelectTrigger className="h-8 border font-bold text-xs">
-                        <SelectValue placeholder="Kies project" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {projects?.map(p => (
-                          <SelectItem key={p.id} value={p.id!}>{p.projectnaam}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+              </div>
+              <div className="flex items-center gap-3">
+                  <Button 
+                    className="h-11 px-8 font-black uppercase tracking-widest bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 rounded-xl"
+                    onClick={() => handleStartRoute(false)}
+                    disabled={(routeType === 'meldingen' ? !allMeldingen?.length : selectedRouteId === '--nieuwe-route--') || isStarting}
+                  >
+                      {isStarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4 fill-current" />}
+                      START RIT
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    className="h-11 px-6 font-black uppercase tracking-widest border-2 border-white/10 text-white hover:bg-white/10 rounded-xl hidden sm:flex"
+                    onClick={() => handleStartRoute(true)}
+                    disabled={(routeType === 'meldingen' ? !allMeldingen?.length : selectedRouteId === '--nieuwe-route--') || isStarting}
+                  >
+                      <Gauge className="mr-2 h-4 w-4" /> SIMULATOR
+                  </Button>
+              </div>
+          </header>
 
-                  {!urlMeldingLocatie && (
-                    <>
-                      <div className="space-y-1">
-                        <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Type Inzet</Label>
-                        <div className="grid grid-cols-3 gap-1">
-                          <Button 
-                            variant={routeType === 'veeg' ? 'default' : 'outline'} 
-                            onClick={() => setRouteType('veeg')} 
-                            disabled={!selectedProjectId} 
-                            className={cn("font-black h-8 border text-[9px] p-1", routeType === 'veeg' ? "bg-primary border-primary text-white" : "border-slate-200")}
-                          >
-                            Veeg
-                          </Button>
-                          <Button 
-                            variant={routeType === 'prullenbak' ? 'default' : 'outline'} 
-                            onClick={() => setRouteType('prullenbak')} 
-                            disabled={!selectedProjectId} 
-                            className={cn("font-black h-8 border text-[9px] p-1", routeType === 'prullenbak' ? "bg-primary border-primary text-white" : "border-slate-200")}
-                          >
-                            Bakken
-                          </Button>
-                          <Button 
-                            variant={routeType === 'meldingen' ? 'default' : 'outline'} 
-                            onClick={() => setRouteType('meldingen')} 
-                            disabled={!selectedProjectId} 
-                            className={cn("font-black h-8 border text-[9px] p-1", routeType === 'meldingen' ? "bg-primary border-primary text-white" : "border-slate-200")}
-                          >
-                            Melding
-                          </Button>
-                        </div>
-                      </div>
+          <div className={cn("flex flex-col flex-1 min-h-0", isMeldingenType ? "" : "relative")}>
+              {/* Map Section */}
+              <div className={cn("relative overflow-hidden shrink-0", isMeldingenType ? "h-[60%]" : "h-full")}>
+                  <MapGL 
+                    ref={mapRef} 
+                    initialViewState={{ longitude: userLocation?.longitude || 5.2913, latitude: userLocation?.latitude || 52.1326, zoom: userLocation ? 14 : 7 }} 
+                    style={{ width: '100%', height: '100%' }} 
+                    mapStyle={mapStyle} 
+                    mapboxAccessToken={MAPBOX_TOKEN} 
+                    onClick={e => { setUserLocation({ latitude: e.lngLat.lat, longitude: e.lngLat.lng }); }}
+                  >
+                    {userLocation && (<Marker longitude={userLocation.longitude} latitude={userLocation.latitude} anchor="center"><div className="relative flex flex-col items-center"><div className="absolute h-10 w-10 rounded-full bg-green-500/30 animate-ping" /><div className="relative h-8 w-8 rounded-full bg-green-600 border-4 border-white shadow-xl flex items-center justify-center"><MapPin className="h-4 w-4 text-white fill-current" /></div></div></Marker>)}
+                    {urlMeldingLocatie && (<Marker longitude={urlMeldingLocatie.longitude} latitude={urlMeldingLocatie.latitude} anchor="center"><div className="relative flex flex-col items-center"><div className="absolute h-12 w-12 rounded-full bg-blue-50/20 animate-pulse" /><div className="relative h-10 w-10 rounded-full bg-primary border-4 border-white shadow-2xl flex items-center justify-center"><Flag className="h-5 w-5 text-white fill-current" /></div></div></Marker>)}
+                    {routeGeoJSONFeatures && (<Source id="route-area" type="geojson" data={{ type: 'FeatureCollection', features: routeGeoJSONFeatures.features }}><Layer id="route-area-fill" type="fill" paint={{ 'fill-color': '#32ADE6', 'fill-opacity': 0.05 }} /><Layer id="route-area-outline" type="line" paint={{ 'line-color': '#32ADE6', 'line-width': 1, 'line-dasharray': [2, 2] }} /></Source>)}
+                    {objectsOnMap?.map(obj => (<Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude}><div className="w-4 h-4 bg-primary rounded-full border-2 border-white shadow-lg" /></Marker>))}
+                    {routeType === 'meldingen' && allMeldingen?.map(m => (<Marker key={m.id} longitude={m.longitude} latitude={m.latitude}><div className="w-5 h-5 bg-red-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-[8px] font-black text-white">!</div></Marker>))}
+                  </MapGL>
 
-                      {routeType !== 'meldingen' && (
-                        <div className="space-y-1">
-                          <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Route Keuze</Label>
-                          <Select onValueChange={setSelectedRouteId} value={selectedRouteId} disabled={!routeType}>
-                            <SelectTrigger className="h-8 border font-bold text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="--nieuwe-route--">-- Kies een route --</SelectItem>
-                              {availableRoutes.map((r: any) => (
-                                <SelectItem key={r.id} value={r.id}>{r.naam}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-                    </>
+                  {/* Settings Card overlay for non-meldingen types */}
+                  {!isMeldingenType && (
+                    <Card className="absolute top-4 left-4 z-10 w-full max-w-[280px] shadow-2xl bg-white/95 backdrop-blur border-2 border-slate-100 rounded-2xl p-4 hidden sm:block animate-in slide-in-from-left-4 duration-300">
+                        <CardHeader className="p-3 border-b bg-slate-50/50">
+                            <CardTitle className="text-sm font-black uppercase tracking-tighter">Instellingen</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-3 space-y-3">
+                            <div className="space-y-1">
+                                <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Project</Label>
+                                <Select value={selectedProjectId || ''} onValueChange={v => setSelectedProjectId(v || null)} disabled={isLoadingProjects}>
+                                    <SelectTrigger className="h-8 border font-bold text-xs"><SelectValue placeholder="Kies project" /></SelectTrigger>
+                                    <SelectContent>{projects?.map(p => (<SelectItem key={p.id} value={p.id!}>{p.projectnaam}</SelectItem>))}</SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-1">
+                                <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Type Inzet</Label>
+                                <div className="grid grid-cols-2 gap-1">
+                                    <Button variant={routeType === 'veeg' ? 'default' : 'outline'} onClick={() => setRouteType('veeg')} className={cn("font-black h-8 border text-[9px] p-1", routeType === 'veeg' ? "bg-primary border-primary text-white" : "border-slate-200")}>Veeg</Button>
+                                    <Button variant={routeType === 'prullenbak' ? 'default' : 'outline'} onClick={() => setRouteType('prullenbak')} className={cn("font-black h-8 border text-[9px] p-1", routeType === 'prullenbak' ? "bg-primary border-primary text-white" : "border-slate-200")}>Bakken</Button>
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Route Keuze</Label>
+                                <Select onValueChange={setSelectedRouteId} value={selectedRouteId}>
+                                    <SelectTrigger className="h-8 border font-bold text-xs"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="--nieuwe-route--">-- Kies een route --</SelectItem>
+                                        {availableRoutes.map((r: any) => (<SelectItem key={r.id} value={r.id}>{r.naam}</SelectItem>))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </CardContent>
+                    </Card>
                   )}
+              </div>
 
-                  <div className="flex flex-col gap-1.5 pt-1">
-                    <Button 
-                      className="w-full h-9 text-xs font-black bg-primary hover:bg-primary/90 shadow-lg uppercase tracking-tighter" 
-                      onClick={() => handleStartRoute(false)} 
-                      disabled={(urlMeldingLocatie ? !userLocation : (routeType === 'meldingen' ? false : selectedRouteId === '--nieuwe-route--')) || isStarting}
-                    >
-                      {isStarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4 fill-current" />} 
-                      {urlMeldingLocatie ? 'START RIT' : 'START LIVE RIT'}
-                    </Button>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {isPrivileged && (
-                        <Button 
-                          variant="outline" 
-                          className="h-8 border-slate-200 text-slate-600 font-black uppercase text-[9px]" 
-                          onClick={() => setIsHistoryDialogOpen(true)}
-                        >
-                          <History className="mr-1.5 h-3 w-3" /> GESCHIEDENIS
-                        </Button>
-                      )}
-                      <Button 
-                        variant="outline" 
-                        className="h-8 border-dashed border-primary/30 text-primary font-black uppercase text-[9px]" 
-                        onClick={() => handleStartRoute(true)} 
-                        disabled={(urlMeldingLocatie ? false : (routeType === 'meldingen' ? false : selectedRouteId === '--nieuwe-route--')) || isStarting}
-                      >
-                        <Gauge className="mr-1.5 h-3 w-3" /> SIMULATOR
-                      </Button>
-                    </div>
+              {/* List Section for Meldingen (40%) */}
+              {isMeldingenType && (
+                  <div className="flex-1 overflow-hidden flex flex-col bg-white border-t-4 border-slate-900">
+                      <div className="p-4 bg-slate-50 border-b flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                              <div className="bg-primary/10 p-2 rounded-xl"><FileText className="h-4 w-4 text-primary" /></div>
+                              <h3 className="font-black uppercase tracking-tighter text-sm text-slate-900">Overzicht Werkbonnen</h3>
+                              <Badge variant="outline" className="h-5 px-2 font-black text-[9px] border-2 bg-white">{allMeldingen?.length || 0} Openstaand</Badge>
+                          </div>
+                          <div className="flex items-center gap-2">
+                              <Button variant="ghost" size="sm" className="h-8 text-[10px] font-black uppercase tracking-widest text-slate-400">Excel Export</Button>
+                          </div>
+                      </div>
+                      <ScrollArea className="flex-1">
+                          <Table className="min-w-[1000px] border-collapse">
+                              <TableHeader className="bg-slate-100 sticky top-0 z-10 shadow-sm">
+                                  <TableRow className="h-10 hover:bg-transparent">
+                                      <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-500 border-r">Intakenr.</TableHead>
+                                      <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-500 border-r">Adresgegevens</TableHead>
+                                      <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-500 border-r">Hoofdtype</TableHead>
+                                      <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-500 border-r">Subtype</TableHead>
+                                      <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-500 border-r">Werkgebied</TableHead>
+                                      <TableHead className="font-black uppercase tracking-widest text-[10px] text-slate-500">Status</TableHead>
+                                  </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                  {allMeldingen && allMeldingen.length > 0 ? (
+                                      allMeldingen.map((m) => (
+                                          <TableRow 
+                                            key={m.id} 
+                                            className="h-12 hover:bg-blue-50 transition-colors border-b border-slate-100 cursor-pointer group"
+                                            onClick={() => {
+                                                if (mapRef.current) {
+                                                    mapRef.current.getMap().flyTo({ center: [m.longitude, m.latitude], zoom: 17, speed: 1.5 });
+                                                }
+                                            }}
+                                          >
+                                              <TableCell className="font-black text-xs border-r group-hover:text-primary transition-colors">{m.intakenummer}</TableCell>
+                                              <TableCell className="text-xs font-bold border-r">
+                                                  <div className="flex flex-col">
+                                                      <span>{m.straatnaam} {m.huisnummer}</span>
+                                                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{m.postcode} {m.plaats}</span>
+                                                  </div>
+                                              </TableCell>
+                                              <TableCell className="text-xs font-medium border-r text-slate-500 uppercase">{m.hoofdcategorie}</TableCell>
+                                              <TableCell className="text-xs font-black border-r text-slate-900 uppercase tracking-tight">{m.subcategorie}</TableCell>
+                                              <TableCell className="border-r">
+                                                  <Badge variant="outline" className="h-5 px-2 text-[9px] font-black uppercase bg-slate-50 border-slate-200">
+                                                      {m.werkgebied || '-'}
+                                                  </Badge>
+                                              </TableCell>
+                                              <TableCell>
+                                                  <Badge className="h-5 px-2 text-[9px] font-black uppercase bg-blue-500 text-white border-none shadow-sm">
+                                                      {m.status}
+                                                  </Badge>
+                                              </TableCell>
+                                          </TableRow>
+                                      ))
+                                  ) : (
+                                      <TableRow>
+                                          <TableCell colSpan={6} className="text-center py-20 text-muted-foreground opacity-30">
+                                              <LayoutGrid className="h-12 w-12 mx-auto mb-4" />
+                                              <p className="font-black uppercase tracking-widest text-xs">Geen openstaande meldingen voor uitvoering</p>
+                                          </TableCell>
+                                      </TableRow>
+                                  )}
+                              </TableBody>
+                          </Table>
+                      </ScrollArea>
                   </div>
-                </CardContent>
-            </Card>
-          )}
+              )}
+          </div>
         </div>
       )}
       {isPrivileged && (<RouteHistoryDialog open={isHistoryDialogOpen} onOpenChange={setIsHistoryDialogOpen} projectId={selectedProjectId} />)}
