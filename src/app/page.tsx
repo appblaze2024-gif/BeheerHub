@@ -67,7 +67,7 @@ export default function DashboardPage() {
       </header>
 
       <div className="flex-1 overflow-hidden">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 pb-6 h-full auto-rows-fr">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-6 h-full auto-rows-fr">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
