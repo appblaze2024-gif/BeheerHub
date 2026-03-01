@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -566,9 +567,8 @@ function NavigatingView({
                     <div className="relative flex flex-col items-center">
                         <div className={cn("absolute h-12 w-12 rounded-full bg-blue-500/20", inRange && "animate-pulse")} />
                         <div className={cn("relative h-10 w-10 rounded-full border-4 border-white shadow-2xl flex items-center justify-center transition-all", isTarget ? "bg-primary scale-125 ring-4 ring-primary/30" : "bg-slate-400", inRange && "scale-125 bg-green-600")}>
-                            <Flag className="h-5 w-5 text-white fill-current" />
+                            <span className="font-black text-white text-xs">{idx + 1}</span>
                         </div>
-                        <div className="mt-1 bg-black/60 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow uppercase">{idx + 1}</div>
                     </div>
                 </Marker>
             );
@@ -705,11 +705,11 @@ export default function StartNavigationPage() {
   const [isStarting, setIsStarting] = React.useState(false);
   const [isSimulationMode, setIsSimulationMode] = React.useState(false);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = React.useState(false);
-  const [autoStartTimeoutReached, setAutoStartTimeoutReached] = React.useState(false);
   const [urlMeldingLocatie, setUrlMeldingLocatie] = React.useState<{ latitude: number; longitude: number; straat?: string } | null>(null);
   
+  const [previewRouteGeometry, setPreviewRouteGeometry] = React.useState<any>(null);
+
   const mapRef = React.useRef<MapRef>(null);
-  const autoStartAttempted = React.useRef(false);
 
   React.useEffect(() => {
     if (navigationState === 'navigating') setIsHeaderVisible(false);
@@ -748,6 +748,54 @@ export default function StartNavigationPage() {
   }, [firestore, routeType]);
 
   const { data: allMeldingen } = useCollection<Melding>(meldingenQuery);
+
+  // Optimized route calculation for meldingen
+  const sortedMeldingen = React.useMemo(() => {
+    if (routeType !== 'meldingen' || !allMeldingen || allMeldingen.length === 0) return [];
+    
+    let unvisited = [...allMeldingen];
+    let currentPos = userLocation || { latitude: unvisited[0].latitude, longitude: unvisited[0].longitude };
+    let sorted: Melding[] = [];
+
+    while (unvisited.length > 0) {
+      let nearestIdx = 0;
+      let minD = Infinity;
+      unvisited.forEach((u, i) => {
+        const d = turf.distance(
+          turf.point([currentPos.longitude, currentPos.latitude]),
+          turf.point([u.longitude, u.latitude])
+        );
+        if (d < minD) {
+          minD = d;
+          nearestIdx = i;
+        }
+      });
+      const next = unvisited.splice(nearestIdx, 1)[0];
+      sorted.push(next);
+      currentPos = { latitude: next.latitude, longitude: next.longitude };
+    }
+    return sorted;
+  }, [allMeldingen, routeType, userLocation]);
+
+  // Fetch preview route geometry for meldingen
+  React.useEffect(() => {
+    const fetchPreview = async () => {
+        if (routeType === 'meldingen' && sortedMeldingen.length >= 2) {
+            const waypoints = sortedMeldingen.slice(0, 25).map(m => `${m.longitude},${m.latitude}`).join(';');
+            const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${waypoints}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data.routes && data.routes.length > 0) {
+                    setPreviewRouteGeometry(data.routes[0].geometry);
+                }
+            } catch (e) {}
+        } else {
+            setPreviewRouteGeometry(null);
+        }
+    };
+    fetchPreview();
+  }, [sortedMeldingen, routeType]);
 
   const selectedProject = React.useMemo(() => projects?.find(p => p.id === selectedProjectId) || null, [projects, selectedProjectId]);
   const availableRoutes = React.useMemo(() => {
@@ -800,84 +848,16 @@ export default function StartNavigationPage() {
     }
 
     setIsStarting(true);
-    let sortedObjects: MapObject[] = [];
+    let finalObjects: MapObject[] = [];
     
-    if (routeType === 'meldingen' && allMeldingen) {
-        if (allMeldingen.length === 0) { 
+    if (routeType === 'meldingen') {
+        if (sortedMeldingen.length === 0) { 
             toast({ title: "Geen meldingen", description: "Geen openstaande meldingen." }); 
             setIsStarting(false); 
             return; 
         }
-        
-        const startCoords = startLoc || { latitude: allMeldingen[0].latitude, longitude: allMeldingen[0].longitude };
-        
-        try {
-            // Road distance sorting using Mapbox Matrix API
-            const subset = allMeldingen.slice(0, 24);
-            const points = [startCoords, ...subset.map(m => ({ longitude: m.longitude, latitude: m.latitude }))];
-            const coordsString = points.map(p => `${p.longitude},${p.latitude}`).join(';');
-            
-            const matrixUrl = `https://api.mapbox.com/directions-matrix/v1/mapbox/driving/${coordsString}?annotations=distance&access_token=${MAPBOX_TOKEN}`;
-            const response = await fetch(matrixUrl);
-            const data = await response.json();
-
-            if (data.code === 'Ok' && data.distances) {
-                let currentIndex = 0; 
-                let unvisitedIndices = subset.map((_, i) => i + 1); 
-
-                while (unvisitedIndices.length > 0) {
-                    let nearestIndex = -1;
-                    let minDistance = Infinity;
-
-                    for (const idx of unvisitedIndices) {
-                        const d = data.distances[currentIndex][idx];
-                        if (d !== null && d < minDistance) {
-                            minDistance = d;
-                            nearestIndex = idx;
-                        }
-                    }
-
-                    if (nearestIndex === -1) {
-                        nearestIndex = unvisitedIndices[0];
-                    }
-
-                    const melding = subset[nearestIndex - 1];
-                    sortedObjects.push({ 
-                        id: melding.id, 
-                        latitude: melding.latitude, 
-                        longitude: melding.longitude, 
-                        name: melding.intakenummer 
-                    } as MapObject);
-
-                    unvisitedIndices = unvisitedIndices.filter(i => i !== nearestIndex);
-                    currentIndex = nearestIndex;
-                }
-                
-                if (allMeldingen.length > 24) {
-                    const remaining = allMeldingen.slice(24);
-                    remaining.forEach(next => {
-                        sortedObjects.push({ id: next.id, latitude: next.latitude, longitude: next.longitude, name: next.intakenummer } as MapObject);
-                    });
-                }
-            } else {
-                throw new Error("Matrix API non-OK response");
-            }
-        } catch (error) {
-            console.warn("Road distance sort failed, falling back to straight-line:", error);
-            const unvisited = [...allMeldingen];
-            let currentPos = startCoords;
-            while (unvisited.length > 0) {
-                let nearestIdx = 0; let minD = Infinity;
-                unvisited.forEach((u, i) => {
-                    const d = turf.distance(turf.point([currentPos.longitude, currentPos.latitude]), turf.point([u.longitude, u.latitude]));
-                    if (d < minD) { minD = d; nearestIdx = i; }
-                });
-                const next = unvisited.splice(nearestIdx, 1)[0];
-                sortedObjects.push({ id: next.id, latitude: next.latitude, longitude: next.longitude, name: next.intakenummer } as MapObject);
-                currentPos = { latitude: next.latitude, longitude: next.longitude };
-            }
-        }
-        setTripStartLocation(startCoords);
+        finalObjects = sortedMeldingen.map(m => ({ id: m.id, latitude: m.latitude, longitude: m.longitude, name: m.intakenummer } as MapObject));
+        setTripStartLocation(startLoc || { latitude: sortedMeldingen[0].latitude, longitude: sortedMeldingen[0].longitude });
     } else if (selectedRouteIdDef && objectsOnMap) {
         const startCoords = startLoc || { latitude: objectsOnMap[0].latitude, longitude: objectsOnMap[0].longitude };
         const unvisited = [...objectsOnMap]; let currentPos = startCoords;
@@ -888,15 +868,15 @@ export default function StartNavigationPage() {
             if (d < minD) { minD = d; nearestIdx = i; }
           });
           const next = unvisited.splice(nearestIdx, 1)[0];
-          sortedObjects.push(next); currentPos = { latitude: next.latitude, longitude: next.longitude };
+          finalObjects.push(next); currentPos = { latitude: next.latitude, longitude: next.longitude };
         }
         setTripStartLocation(startCoords);
     } else if (urlMeldingLocatie) {
-        sortedObjects = [{ id: 'Bestemming', latitude: urlMeldingLocatie.latitude, longitude: urlMeldingLocatie.longitude, name: urlMeldingLocatie.straat || 'Melding' }];
+        finalObjects = [{ id: 'Bestemming', latitude: urlMeldingLocatie.latitude, longitude: urlMeldingLocatie.longitude, name: urlMeldingLocatie.straat || 'Melding' }];
         setTripStartLocation(startLoc || { latitude: urlMeldingLocatie.latitude - 0.005, longitude: urlMeldingLocatie.longitude });
     }
-    setObjectsOnRoute(sortedObjects); setNavigationState('navigating'); setIsStarting(false);
-  }, [userLocation, selectedRouteIdDef, urlMeldingLocatie, routeType, allMeldingen, user, objectsOnMap, toast]);
+    setObjectsOnRoute(finalObjects); setNavigationState('navigating'); setIsStarting(false);
+  }, [userLocation, selectedRouteIdDef, urlMeldingLocatie, routeType, sortedMeldingen, objectsOnMap, toast]);
 
   const isMeldingenType = routeType === 'meldingen';
 
@@ -927,7 +907,7 @@ export default function StartNavigationPage() {
                           variant="outline"
                           className="h-10 px-4 font-black uppercase tracking-widest border-none text-slate-900 bg-white/90 backdrop-blur-md hover:bg-white rounded-2xl shadow-2xl transition-all hidden sm:flex"
                           onClick={() => handleStartRoute(true)}
-                          disabled={(routeType === 'meldingen' ? !allMeldingen?.length : selectedRouteId === '--nieuwe-route--') || isStarting}
+                          disabled={(routeType === 'meldingen' ? !sortedMeldingen.length : selectedRouteId === '--nieuwe-route--') || isStarting}
                         >
                             <Gauge className="mr-2 h-4 w-4" /> SIMULATOR
                         </Button>
@@ -935,7 +915,7 @@ export default function StartNavigationPage() {
                       <Button 
                         className="h-10 px-6 font-black uppercase tracking-widest bg-primary text-white hover:bg-primary/90 shadow-2xl rounded-2xl"
                         onClick={() => handleStartRoute(false)}
-                        disabled={(routeType === 'meldingen' ? !allMeldingen?.length : selectedRouteId === '--nieuwe-route--') || isStarting}
+                        disabled={(routeType === 'meldingen' ? !sortedMeldingen.length : selectedRouteId === '--nieuwe-route--') || isStarting}
                       >
                           {isStarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4 fill-current" />}
                           START RIT
@@ -953,8 +933,35 @@ export default function StartNavigationPage() {
                     {userLocation && (<Marker longitude={userLocation.longitude} latitude={userLocation.latitude} anchor="center"><div className="relative flex flex-col items-center"><div className="absolute h-10 w-10 rounded-full bg-green-500/30 animate-ping" /><div className="relative h-8 w-8 rounded-full bg-green-600 border-4 border-white shadow-xl flex items-center justify-center"><MapPin className="h-4 w-4 text-white fill-current" /></div></div></Marker>)}
                     {urlMeldingLocatie && (<Marker longitude={urlMeldingLocatie.longitude} latitude={urlMeldingLocatie.latitude} anchor="center"><div className="relative flex flex-col items-center"><div className="absolute h-12 w-12 rounded-full bg-blue-50/20 animate-pulse" /><div className="relative h-10 w-10 rounded-full bg-primary border-4 border-white shadow-2xl flex items-center justify-center"><Flag className="h-5 w-5 text-white fill-current" /></div></div></Marker>)}
                     {routeGeoJSONFeatures && (<Source id="route-area" type="geojson" data={{ type: 'FeatureCollection', features: routeGeoJSONFeatures }}><Layer id="route-area-fill" type="fill" paint={{ 'fill-color': '#32ADE6', 'fill-opacity': 0.05 }} /><Layer id="route-area-outline" type="line" paint={{ 'line-color': '#32ADE6', 'line-width': 1, 'line-dasharray': [2, 2] }} /></Source>)}
-                    {objectsOnMap?.map(obj => (<Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude}><div className="w-4 h-4 bg-primary rounded-full border-2 border-white shadow-lg" /></Marker>))}
-                    {routeType === 'meldingen' && allMeldingen?.map(m => (<Marker key={m.id} longitude={m.longitude} latitude={m.latitude}><div className="w-5 h-5 bg-red-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-[8px] font-black text-white">!</div></Marker>))}
+                    
+                    {/* Melding markers with sequence numbers */}
+                    {routeType === 'meldingen' && sortedMeldingen?.map((m, idx) => (
+                        <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => {
+                            if (mapRef.current) mapRef.current.getMap().flyTo({ center: [m.longitude, m.latitude], zoom: 17 });
+                        }}>
+                            <div className="w-6 h-6 bg-red-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-[10px] font-black text-white hover:scale-125 transition-transform cursor-pointer">
+                                {idx + 1}
+                            </div>
+                        </Marker>
+                    ))}
+
+                    {/* Show route preview line */}
+                    {isMeldingenType && previewRouteGeometry && (
+                        <Source id="preview-route" type="geojson" data={{ type: 'Feature', properties: {}, geometry: previewRouteGeometry }}>
+                            <Layer 
+                                id="preview-route-line" 
+                                type="line" 
+                                paint={{ 
+                                    'line-color': '#ef4444', 
+                                    'line-width': 4,
+                                    'line-opacity': 0.6,
+                                    'line-dasharray': [2, 1]
+                                }} 
+                            />
+                        </Source>
+                    )}
+
+                    {routeType !== 'meldingen' && objectsOnMap?.map(obj => (<Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude}><div className="w-4 h-4 bg-primary rounded-full border-2 border-white shadow-lg" /></Marker>))}
                   </MapGL>
 
                   {/* Settings Card overlay for non-meldingen types */}
@@ -1000,7 +1007,7 @@ export default function StartNavigationPage() {
                           <div className="flex items-center gap-3">
                               <div className="bg-primary/10 p-1.5 rounded-lg"><FileText className="h-3.5 w-3.5 text-primary" /></div>
                               <h3 className="font-black uppercase tracking-tighter text-xs text-slate-900">Overzicht Werkbonnen</h3>
-                              <Badge variant="outline" className="h-4.5 px-1.5 font-black text-[8px] border-2 bg-white">{allMeldingen?.length || 0} Openstaand</Badge>
+                              <Badge variant="outline" className="h-4.5 px-1.5 font-black text-[8px] border-2 bg-white">{sortedMeldingen.length} Route Volgorde</Badge>
                           </div>
                           <div className="flex items-center gap-2">
                               <Button variant="ghost" size="sm" className="h-7 text-[9px] font-black uppercase tracking-widest text-slate-400">Excel Export</Button>
@@ -1010,6 +1017,7 @@ export default function StartNavigationPage() {
                           <Table className="min-w-[1200px] border-collapse">
                               <TableHeader className="bg-slate-100 sticky top-0 z-10 shadow-sm">
                                   <TableRow className="h-8 hover:bg-transparent">
+                                      <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3 w-12 text-center">#</TableHead>
                                       <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Intakenr.</TableHead>
                                       <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Adresgegevens</TableHead>
                                       <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Omschrijving</TableHead>
@@ -1019,8 +1027,8 @@ export default function StartNavigationPage() {
                                   </TableRow>
                               </TableHeader>
                               <TableBody>
-                                  {allMeldingen && allMeldingen.length > 0 ? (
-                                      allMeldingen.map((m) => (
+                                  {sortedMeldingen.length > 0 ? (
+                                      sortedMeldingen.map((m, index) => (
                                           <TableRow 
                                             key={m.id} 
                                             className="h-9 hover:bg-blue-50 transition-colors border-b border-slate-100 cursor-pointer group"
@@ -1030,6 +1038,7 @@ export default function StartNavigationPage() {
                                                 }
                                             }}
                                           >
+                                              <TableCell className="font-black text-xs text-center border-r bg-slate-50/50 text-primary w-12">{index + 1}</TableCell>
                                               <TableCell className="font-black text-[11px] border-r group-hover:text-primary transition-colors px-3">{m.intakenummer}</TableCell>
                                               <TableCell className="text-[11px] font-bold border-r px-3">
                                                   <div className="flex flex-col leading-tight">
@@ -1054,7 +1063,7 @@ export default function StartNavigationPage() {
                                       ))
                                   ) : (
                                       <TableRow>
-                                          <TableCell colSpan={6} className="text-center py-12 text-muted-foreground opacity-30">
+                                          <TableCell colSpan={7} className="text-center py-12 text-muted-foreground opacity-30">
                                               <LayoutGrid className="h-8 w-8 mx-auto mb-2" />
                                               <p className="font-black uppercase tracking-widest text-[10px]">Geen openstaande meldingen voor uitvoering</p>
                                           </TableCell>
