@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -83,7 +84,17 @@ export const allMenuItems: MenuItem[] = [
         { href: '/issues/archive', label: 'Archief', id: 'archive' },
       ]
     },
-    { href: '/objects', label: 'Objecten', icon: MapPin, module: 'objects' },
+    { 
+      href: '/objects', 
+      label: 'Objecten', 
+      icon: MapPin, 
+      module: 'objects',
+      subItems: [
+        { href: '/objects', label: 'Overzicht', id: 'overzicht' },
+        { href: '/objects?action=import', label: 'Import', id: 'import' },
+        { href: '/objects?action=export', label: 'Export', id: 'export' },
+      ]
+    },
     { href: '/spec-reports', label: 'Bestek', icon: FileWarning, module: 'specReports' },
     { href: '/navigation-module', label: 'Navigatie', icon: Navigation, module: 'navigation' },
     { href: '/iot', label: 'Internet of Things', icon: Cpu, module: 'iot' },

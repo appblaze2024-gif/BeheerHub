@@ -44,7 +44,16 @@ export const permissionConfig = [
             { id: 'documents', label: 'Documenten' },
         ]
     },
-    { module: 'objects', label: 'Objecten', actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }] },
+    { 
+        module: 'objects', 
+        label: 'Objecten', 
+        actions: [{ id: 'view', label: 'Bekijken' }, { id: 'create', label: 'Aanmaken' }, { id: 'edit', label: 'Bewerken' }, { id: 'delete', label: 'Verwijderen' }],
+        tabs: [
+            { id: 'overzicht', label: 'Overzicht' },
+            { id: 'import', label: 'Import' },
+            { id: 'export', label: 'Export' },
+        ]
+    },
     { module: 'inventory', label: 'Voorraadbeheer', actions: [{ id: 'view', label: 'Bekijken' }] },
     { 
         module: 'issues', 

@@ -1,6 +1,8 @@
+
 'use client';
 
 import * as React from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   Filter,
   Save,
@@ -65,9 +67,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { MapboxView } from '@/components/mapbox-view';
 import { ObjectImportDialog } from '@/components/object-import-dialog';
+import { ObjectExportDialog } from '@/components/object-export-dialog';
 import { useCollection, useFirestore, updateDocumentNonBlocking, useMemoFirebase, useDoc, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, query, where, arrayRemove, writeBatch } from 'firebase/firestore';
-import type { Wijk } from '@/lib/types';
+import type { Wijk, Project } from '@/lib/types';
 import * as turf from '@turf/turf';
 import { Label } from '@/components/ui/label';
 import { LoadingScreen } from '@/components/loading-screen';
@@ -117,14 +120,18 @@ const DAYS_OF_WEEK = [
 
 export default function ObjectsPage() {
   const firestore = useFirestore();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const { toast } = useToast();
   const isTablet = useIsMobile(1024);
   const { profile } = useProfile();
+  
   const [isImporting, setIsImporting] = React.useState(false);
+  const [isExporting, setIsExporting] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');
   const [selectedObject, setSelectedObject] = React.useState<any | null>(null);
   const [viewMode, setViewMode] = React.useState<'list' | 'map'>('list');
-  const [typeFilter, setTypeFilter] = React.useState<string | null>(null);
+  const [typeFilter, setTypeFilter] = React.useState<string | null>('all');
   const [isAddFilterDialogOpen, setIsAddFilterDialogOpen] = React.useState(false);
   const [newFilterName, setNewFilterName] = React.useState('');
   const [isSavingFilter, setIsSavingFilter] = React.useState(false);
@@ -135,6 +142,23 @@ export default function ObjectsPage() {
   const [isProximityFilterActive, setIsProximityFilterActive] = React.useState(false);
   const [currentUserCoords, setCurrentUserCoords] = React.useState<{ latitude: number; longitude: number } | null>(null);
   const [isFindingLocation, setIsFindingLocation] = React.useState(false);
+
+  // Action handling from menu
+  React.useEffect(() => {
+    const action = searchParams.get('action');
+    if (action === 'import' && profile?.role === 'Super admin') {
+      setIsImporting(true);
+      // Clean URL
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('action');
+      router.replace(`/objects?${params.toString()}`);
+    } else if (action === 'export') {
+      setIsExporting(true);
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('action');
+      router.replace(`/objects?${params.toString()}`);
+    }
+  }, [searchParams, profile, router]);
 
   const objectsQuery = useMemoFirebase(() => {
     if (!firestore || !typeFilter) return null;
@@ -147,6 +171,9 @@ export default function ObjectsPage() {
   const customFilters = filtersData?.custom || [];
 
   const { data: objects, isLoading: isLoadingObjects } = useCollection<any>(objectsQuery);
+
+  const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
+  const { data: projects } = useCollection<Project>(projectsQuery);
 
   const filteredObjectsList = React.useMemo(() => {
     if (!objects) return [];
@@ -329,7 +356,7 @@ export default function ObjectsPage() {
             <DropdownMenuContent align="start" className="w-64 rounded-xl shadow-xl p-1.5 border-slate-200">
               <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 py-1">Systeem Categorieën</DropdownMenuLabel>
               <DropdownMenuItem onClick={() => setTypeFilter('all')} className="rounded-lg h-9 text-xs font-semibold">
-                Toon alles (Hoge belasting)
+                Toon alles
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-2 py-1">Filters</DropdownMenuLabel>
@@ -390,7 +417,9 @@ export default function ObjectsPage() {
             </ObjectImportDialog>
           )}
           
-          <Button variant="outline" size="sm" className="h-9 font-bold rounded-lg border-slate-200" disabled={!typeFilter}><Download className="h-4 w-4 mr-2" /> Export</Button>
+          <ObjectExportDialog objects={objects} projects={projects}>
+            <Button variant="outline" size="sm" className="h-9 font-bold rounded-lg border-slate-200" disabled={!typeFilter}><Download className="h-4 w-4 mr-2" /> Export</Button>
+          </ObjectExportDialog>
         </div>
       </header>
 
@@ -402,7 +431,7 @@ export default function ObjectsPage() {
             </div>
             <h3 className="text-xl font-bold mb-2 text-slate-900">Selecteer een Categorie</h3>
             <p className="text-sm text-slate-500 font-medium max-w-xs mx-auto leading-relaxed">
-              Kies linksboven een filter om de bijbehorende objecten te laden. Dit bespaart reads en zorgt voor een snellere interface.
+              Kies linksboven een filter om de bijbehorende objecten te laden.
             </p>
           </div>
         ) : (

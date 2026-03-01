@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -110,20 +111,21 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
         const bbox = turf.bbox(featureCollection);
         if (bbox[0] !== Infinity) {
           map.fitBounds(bbox as [number, number, number, number], { padding: 40, duration: 1000 });
+          return;
         }
       } catch (e) {
         console.error("Error fitting bounds:", e);
       }
     } else if (longitude && latitude) {
       map.flyTo({ center: [longitude, latitude], zoom: 19});
-    } else if (!longitude && !latitude) {
+    } else if (!longitude && !latitude && !objects) {
          map.flyTo({
             center: [5.2913, 52.1326],
             zoom: 7,
             duration: 1000
         });
     }
-  }, [wijkPolygons, longitude, latitude, highlightedObject]);
+  }, [wijkPolygons, longitude, latitude, highlightedObject, objects]);
 
   const markers = React.useMemo(() => {
     const markerElements: React.ReactNode[] = [];
