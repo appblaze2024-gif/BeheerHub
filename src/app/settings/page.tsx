@@ -8,15 +8,22 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { useFirestore, useDoc, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
+import { useFirestore, useDoc, setDocumentNonBlocking, useMemoFirebase, useFirebaseApp } from '@/firebase';
 import { doc } from 'firebase/firestore';
+import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/components/ui/use-toast';
-import { Loader2, Save, Layout, ImageIcon } from 'lucide-react';
+import { Loader2, Save, Layout, ImageIcon, UploadCloud } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Progress } from '@/components/ui/progress';
 
 export default function SettingsPage() {
   const firestore = useFirestore();
+  const app = useFirebaseApp();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = React.useState(false);
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [uploadProgress, setUploadProgress] = React.useState<number | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const bannerRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'dashboard_banner') : null, [firestore]);
   const { data: banner, isLoading } = useDoc<any>(bannerRef);
@@ -40,6 +47,41 @@ export default function SettingsPage() {
       });
     }
   }, [banner]);
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !app || !firestore) return;
+
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    const storage = getStorage(app);
+    const storagePath = `settings/banners/${Date.now()}_${file.name}`;
+    const storageRef = ref(storage, storagePath);
+    const uploadTask = uploadBytesResumable(storageRef, file);
+
+    uploadTask.on(
+      'state_changed',
+      (snapshot) => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        setUploadProgress(progress);
+      },
+      (error) => {
+        console.error('Upload failed:', error);
+        setIsUploading(false);
+        setUploadProgress(null);
+        toast({ variant: 'destructive', title: 'Upload mislukt', description: 'Kon de afbeelding niet uploaden.' });
+      },
+      () => {
+        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+          setFormData(prev => ({ ...prev, imageUrl: downloadURL }));
+          setIsUploading(false);
+          setUploadProgress(null);
+          toast({ title: 'Afbeelding geüpload', description: 'Vergeet niet de instellingen op te slaan.' });
+        });
+      }
+    );
+  };
 
   const handleSave = async () => {
     if (!bannerRef) return;
@@ -116,31 +158,58 @@ export default function SettingsPage() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Achtergrondafbeelding URL</Label>
-              <div className="flex gap-2">
-                <Input 
-                  value={formData.imageUrl} 
-                  onChange={e => setFormData(prev => ({ ...prev, imageUrl: e.target.value }))}
-                  placeholder="https://images.unsplash.com/photo-..."
-                  className="h-12 font-mono text-xs rounded-xl border-slate-200 focus:ring-primary/20"
-                />
+            <div className="space-y-4">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Achtergrondafbeelding</Label>
+              <div className="flex flex-col md:flex-row gap-4 items-start">
+                <div className="flex-1 space-y-2 w-full">
+                  <div className="flex gap-2">
+                    <Input 
+                      value={formData.imageUrl} 
+                      onChange={e => setFormData(prev => ({ ...prev, imageUrl: e.target.value }))}
+                      placeholder="https://images.unsplash.com/photo-..."
+                      className="h-12 font-mono text-xs rounded-xl border-slate-200 focus:ring-primary/20"
+                    />
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      onChange={handleFileUpload} 
+                      className="hidden" 
+                      accept="image/*" 
+                    />
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      className="h-12 px-4 rounded-xl border-slate-200 gap-2 font-bold"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading}
+                    >
+                      {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
+                      Upload
+                    </Button>
+                  </div>
+                  {isUploading && uploadProgress !== null && (
+                    <div className="space-y-1">
+                      <Progress value={uploadProgress} className="h-1" />
+                      <p className="text-[9px] font-black uppercase text-primary text-right">{Math.round(uploadProgress)}% geüpload</p>
+                    </div>
+                  )}
+                </div>
                 <div className={cn(
-                  "h-12 w-12 rounded-xl shrink-0 border-2 overflow-hidden bg-slate-50 flex items-center justify-center",
+                  "h-24 w-40 rounded-2xl shrink-0 border-2 overflow-hidden bg-slate-50 flex items-center justify-center shadow-inner",
                   formData.imageUrl ? "border-primary/20" : "border-slate-100"
                 )}>
                   {formData.imageUrl ? (
                     <img src={formData.imageUrl} alt="Preview" className="h-full w-full object-cover" />
                   ) : (
-                    <ImageIcon className="h-5 w-5 text-slate-200" />
+                    <ImageIcon className="h-8 w-8 text-slate-200" />
                   )}
                 </div>
               </div>
-              <p className="text-[9px] font-bold text-slate-400 italic">Tip: Gebruik Unsplash voor professionele foto's van werkzaamheden of stadsbeelden.</p>
+              <p className="text-[9px] font-bold text-slate-400 italic">Tip: Upload een eigen foto of gebruik een URL van Unsplash.</p>
             </div>
 
             <div className="pt-6 border-t border-slate-100 flex justify-end">
-              <Button onClick={handleSave} disabled={isSaving} className="h-12 px-12 font-black uppercase tracking-tight shadow-xl shadow-primary/20 rounded-xl">
+              <Button onClick={handleSave} disabled={isSaving || isUploading} className="h-12 px-12 font-black uppercase tracking-tight shadow-xl shadow-primary/20 rounded-xl">
                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                 Instellingen Opslaan
               </Button>
