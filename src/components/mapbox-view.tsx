@@ -68,17 +68,33 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
   const { profile } = useProfile();
   const mapStyle = profile?.schouwenMapStyle || 'mapbox://styles/mapbox/streets-v12';
 
-  // De-duplicate objects by location to prevent overlapping icons
+  // De-duplicate objects by location with priority
   const uniqueObjects = React.useMemo(() => {
     if (!objects) return [];
-    const seen = new Set();
-    return objects.filter(obj => {
-      // Use 6 decimal places for coordinate key (~10cm precision)
-      const key = `${obj.latitude.toFixed(6)}_${obj.longitude.toFixed(6)}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
+    const locationMap = new Map<string, MapObject>();
+    
+    const getPriority = (obj: MapObject) => {
+        const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
+        const isBrengpark = typeStr.includes('brengpark');
+        const isSpecificPrullenbak = obj.locatieType === 'Prullenbakken (2026)' || obj.locatieType === 'Prullenbakken (data meerlanden)';
+        const isHHM = typeStr.includes('hhm');
+        
+        if (isSpecificPrullenbak || (isHHM && !isBrengpark)) return 3; // New icon priority
+        if (typeStr.includes('container') || typeStr.includes('ondergrond') || typeStr.includes('ondergr') || typeStr.includes('verzamel') || isBrengpark) return 2; // Underground priority
+        return 1; // Default
+    };
+
+    objects.forEach(obj => {
+      // Use 5 decimal places (~1 meter precision) to collapse icons that are visually on top of each other
+      const key = `${obj.latitude.toFixed(5)}_${obj.longitude.toFixed(5)}`;
+      const existing = locationMap.get(key);
+      
+      if (!existing || getPriority(obj) > getPriority(existing)) {
+        locationMap.set(key, obj);
+      }
     });
+    
+    return Array.from(locationMap.values());
   }, [objects]);
 
   const geojson: turf.FeatureCollection<turf.Geometry> = React.useMemo(() => {
@@ -153,10 +169,7 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
         const isSpecificPrullenbak = obj.locatieType === 'Prullenbakken (2026)' || obj.locatieType === 'Prullenbakken (data meerlanden)';
         const isHHM = typeStr.includes('hhm');
         
-        // Priority logic: Specific types get the 3-colored bin
         const useRecyclingBin = isSpecificPrullenbak || (isHHM && !isBrengpark);
-        
-        // Only consider it underground if it's NOT already tagged as a specific recycling bin
         const isUnderground = !useRecyclingBin && (
           typeStr.includes('container') || 
           typeStr.includes('ondergrond') ||

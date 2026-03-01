@@ -789,6 +789,40 @@ export default function StartNavigationPage() {
 
   const { data: allMeldingen } = useCollection<Melding>(meldingenQuery);
 
+  const objectsOnRouteQuery = useMemoFirebase(() => {
+    if (!firestore || !selectedRouteIdDef) return null;
+    return query(collection(firestore, 'objects'), where('locatieWerkgebieden', 'array-contains', selectedRouteIdDef.naam));
+  }, [firestore, selectedRouteIdDef?.naam]);
+
+  const { data: objectsOnMap } = useCollection<MapObject>(objectsOnRouteQuery);
+
+  // Define priority logic centrally
+  const getObjectPriority = (obj: any) => {
+    const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
+    const isBrengpark = typeStr.includes('brengpark');
+    const isSpecificPrullenbak = obj.locatieType === 'Prullenbakken (2026)' || obj.locatieType === 'Prullenbakken (data meerlanden)';
+    const isHHM = typeStr.includes('hhm');
+    if (isSpecificPrullenbak || (isHHM && !isBrengpark)) return 3;
+    if (typeStr.includes('container') || typeStr.includes('ondergrond') || typeStr.includes('ondergr') || typeStr.includes('verzamel') || isBrengpark) return 2;
+    return 1;
+  };
+
+  const uniqueObjectsOnMap = React.useMemo(() => {
+    if (!objectsOnMap) return [];
+    const locationMap = new Map<string, MapObject>();
+    
+    objectsOnMap.forEach(obj => {
+      // Use 5 decimal places (~1 meter precision) to collapse icons that are visually on top of each other
+      const key = `${obj.latitude.toFixed(5)}_${obj.longitude.toFixed(5)}`;
+      const existing = locationMap.get(key);
+      if (!existing || getObjectPriority(obj) > getObjectPriority(existing)) {
+        locationMap.set(key, obj);
+      }
+    });
+    
+    return Array.from(locationMap.values());
+  }, [objectsOnMap]);
+
   const sortedMeldingen = React.useMemo(() => {
     if (routeType !== 'meldingen' || !allMeldingen || allMeldingen.length === 0) return [];
     
@@ -882,13 +916,6 @@ export default function StartNavigationPage() {
     }
   }, [previewRouteGeometry, routeGeoJSONFeatures, routeType]);
 
-  const objectsOnRouteQuery = useMemoFirebase(() => {
-    if (!firestore || !selectedRouteIdDef) return null;
-    return query(collection(firestore, 'objects'), where('locatieWerkgebieden', 'array-contains', selectedRouteIdDef.naam));
-  }, [firestore, selectedRouteIdDef?.naam]);
-
-  const { data: objectsOnMap } = useCollection<MapObject>(objectsOnRouteQuery);
-
   const handleStartRoute = React.useCallback(async (simulate = false) => {
     setIsSimulationMode(simulate);
     
@@ -915,14 +942,8 @@ export default function StartNavigationPage() {
         setObjectsOnRoute(finalObjects);
         setTripStartLocation(startLoc);
     } else if (selectedRouteIdDef && objectsOnMap) {
-        // De-duplicate by location
-        const seen = new Set();
-        const unique = (objectsOnMap || []).filter(obj => {
-          const key = `${obj.latitude.toFixed(6)}_${obj.longitude.toFixed(6)}`;
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        });
+        // Use the priority-deduplicated list
+        const unique = uniqueObjectsOnMap;
 
         const unvisited = [...unique]; 
         let currentPos = startLoc;
@@ -946,7 +967,7 @@ export default function StartNavigationPage() {
 
     setNavigationState('navigating');
     setIsStarting(false);
-  }, [userLocation, selectedRouteIdDef, urlMeldingLocatie, routeType, sortedMeldingen, objectsOnMap, toast]);
+  }, [userLocation, selectedRouteIdDef, urlMeldingLocatie, routeType, sortedMeldingen, objectsOnMap, uniqueObjectsOnMap, toast]);
 
   const isMeldingenType = routeType === 'meldingen';
 
@@ -1044,7 +1065,7 @@ export default function StartNavigationPage() {
                         </Source>
                     )}
 
-                    {routeType !== 'meldingen' && objectsOnMap?.map(obj => {
+                    {routeType !== 'meldingen' && uniqueObjectsOnMap?.map(obj => {
                         const isSpecificPrullenbak = obj.locatieType === 'Prullenbakken (2026)' || obj.locatieType === 'Prullenbakken (data meerlanden)';
                         const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
                         const isBrengpark = typeStr.includes('brengpark');
