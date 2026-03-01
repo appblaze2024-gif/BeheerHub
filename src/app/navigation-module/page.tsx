@@ -42,7 +42,6 @@ import {
   MessageSquare,
   Cpu,
   Trash2,
-  Archive,
   Bell
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
@@ -546,7 +545,7 @@ function NavigatingView({
                                   typeStr.includes('brengpark') ||
                                   typeStr.includes('ondergr') ||
                                   typeStr.includes('verzamel'));
-            const Icon = isMelding ? Bell : (isUnderground ? Archive : Trash2);
+            const Icon = isMelding ? Bell : Trash2;
 
             return (
                 <Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude} anchor="center" onClick={(e) => {
@@ -564,7 +563,11 @@ function NavigatingView({
                             isTarget ? "bg-primary scale-125 ring-4 ring-primary/30" : "bg-slate-400", 
                             inRange && "scale-125 bg-green-600"
                         )}>
-                            <Icon className="h-5 w-5 text-white stroke-[2.5]" />
+                            {isUnderground ? (
+                                <img src="https://i.ibb.co/FbgGHW1G/waste-bin.png" alt="container" className="h-6 w-6 brightness-0 invert" />
+                            ) : (
+                                <Icon className="h-5 w-5 text-white stroke-[2.5]" />
+                            )}
                             <div className="absolute -top-2 -right-2 bg-white text-primary rounded-full w-5 h-5 flex items-center justify-center border-2 border-primary shadow-sm">
                                 <span className="font-black text-[9px]">{idx + 1}</span>
                             </div>
@@ -1035,7 +1038,23 @@ export default function StartNavigationPage() {
                         </Source>
                     )}
 
-                    {routeType !== 'meldingen' && objectsOnMap?.map(obj => (<Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude}><div className="w-4 h-4 bg-primary rounded-full border-2 border-white shadow-lg" /></Marker>))}
+                    {routeType !== 'meldingen' && objectsOnMap?.map(obj => {
+                        const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
+                        const isUnderground = typeStr.includes('container') || 
+                                              typeStr.includes('ondergrond') ||
+                                              typeStr.includes('brengpark') ||
+                                              typeStr.includes('ondergr') ||
+                                              typeStr.includes('verzamel');
+                        return (
+                            <Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude}>
+                                {isUnderground ? (
+                                    <img src="https://i.ibb.co/FbgGHW1G/waste-bin.png" alt="container" className="h-5 w-5 drop-shadow-md" />
+                                ) : (
+                                    <div className="w-4 h-4 bg-primary rounded-full border-2 border-white shadow-lg" />
+                                )}
+                            </Marker>
+                        );
+                    })}
                   </MapGL>
 
                   {/* Settings Card overlay for non-meldingen types */}

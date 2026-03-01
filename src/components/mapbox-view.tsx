@@ -5,7 +5,7 @@ import MapGL, { Marker, Popup, Source, Layer } from 'react-map-gl';
 import type { FillLayer, LineLayer } from 'react-map-gl';
 import * as turf from '@turf/turf';
 import { useProfile } from '@/firebase/profile-provider';
-import { Trash2, Archive } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 
@@ -143,7 +143,7 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
                               typeStr.includes('ondergr') ||
                               typeStr.includes('verzamel');
                               
-        const Icon = isUnderground ? Archive : Trash2;
+        const Icon = Trash2;
 
         return (
             <Marker
@@ -166,16 +166,30 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
                 {isHighlighted && (
                   <div className="absolute w-6 h-6 rounded-full bg-black/70 animate-pulse" />
                 )}
-                <Icon 
-                  className={cn(
-                      "relative h-5 w-5 cursor-pointer stroke-white stroke-[1.5] transition-transform",
+                {isUnderground ? (
+                  <img 
+                    src="https://i.ibb.co/FbgGHW1G/waste-bin.png" 
+                    alt="container"
+                    className={cn(
+                      "relative h-7 w-7 cursor-pointer transition-transform",
                       isSelected && "scale-125"
-                  )} 
-                  style={{
-                      fill: isSelected ? 'hsl(48, 96%, 56%)' : color,
-                      filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.4))'
-                  }}
-                />
+                    )}
+                    style={{
+                      filter: isSelected ? 'drop-shadow(0 0 4px #fbbf24)' : 'drop-shadow(0 2px 2px rgba(0,0,0,0.4))'
+                    }}
+                  />
+                ) : (
+                  <Icon 
+                    className={cn(
+                        "relative h-5 w-5 cursor-pointer stroke-white stroke-[1.5] transition-transform",
+                        isSelected && "scale-125"
+                    )} 
+                    style={{
+                        fill: isSelected ? 'hsl(48, 96%, 56%)' : color,
+                        filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.4))'
+                    }}
+                  />
+                )}
               </div>
             </Marker>
         )
