@@ -138,7 +138,7 @@ export default function OpenIssuesPage() {
                             <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Indeling</TableHead>
                             <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Adres</TableHead>
                             <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200 hidden xl:table-cell">Wijk</TableHead>
-                            <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Behandelaar</TableHead>
+                            <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Toegewezen gebruiker</TableHead>
                             <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500">Status</TableHead>
                         </TableRow>
                         </TableHeader>
