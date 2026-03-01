@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -138,12 +137,13 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
         
         const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
         const isBrengpark = typeStr.includes('brengpark');
+        const isSpecificPrullenbak = obj.locatieType === 'Prullenbakken (2026)' || obj.locatieType === 'Prullenbakken (data meerlanden)';
         const isHHM = typeStr.includes('hhm');
-        const isUnderground = typeStr.includes('container') || 
+        const isUnderground = !isSpecificPrullenbak && (typeStr.includes('container') || 
                               typeStr.includes('ondergrond') ||
                               typeStr.includes('ondergr') ||
                               typeStr.includes('verzamel') ||
-                              isBrengpark;
+                              isBrengpark);
                               
         const Icon = Trash2;
 
@@ -170,7 +170,7 @@ export function MapboxView({ longitude, latitude, objects, selectedObjects = [],
                 {isHighlighted && (
                   <div className="absolute w-6 h-6 rounded-full bg-black/70 animate-pulse" />
                 )}
-                {isHHM && !isBrengpark ? (
+                {isSpecificPrullenbak || (isHHM && !isBrengpark) ? (
                   <img 
                     src="https://i.ibb.co/Xxrq1zP3/recycling-bin.png" 
                     alt="recycling bin"

@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -540,14 +539,16 @@ function NavigatingView({
             const inRange = isTarget && hasReachedCurrentTarget;
             
             const isMelding = routeType === 'meldingen';
+            const isSpecificPrullenbak = obj.locatieType === 'Prullenbakken (2026)' || obj.locatieType === 'Prullenbakken (data meerlanden)';
             const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
             const isBrengpark = typeStr.includes('brengpark');
             const isHHM = typeStr.includes('hhm');
-            const isUnderground = !isMelding && (typeStr.includes('container') || 
+            const isUnderground = !isMelding && !isSpecificPrullenbak && (typeStr.includes('container') || 
                                   typeStr.includes('ondergrond') ||
                                   typeStr.includes('ondergr') ||
                                   typeStr.includes('verzamel') ||
                                   isBrengpark);
+            const useRecyclingBin = !isMelding && (isSpecificPrullenbak || (isHHM && !isBrengpark));
             const Icon = isMelding ? Bell : Trash2;
 
             return (
@@ -566,7 +567,7 @@ function NavigatingView({
                             isTarget ? "bg-primary scale-125 ring-4 ring-primary/30" : "bg-slate-400", 
                             inRange && "scale-125 bg-green-600"
                         )}>
-                            {isHHM && !isBrengpark ? (
+                            {useRecyclingBin ? (
                                 <img src="https://i.ibb.co/Xxrq1zP3/recycling-bin.png" alt="recycling bin" className="h-6 w-6" />
                             ) : isUnderground ? (
                                 <img src="https://i.ibb.co/FbgGHW1G/waste-bin.png" alt="container" className="h-6 w-6" />
@@ -1031,17 +1032,20 @@ export default function StartNavigationPage() {
                     )}
 
                     {routeType !== 'meldingen' && objectsOnMap?.map(obj => {
+                        const isSpecificPrullenbak = obj.locatieType === 'Prullenbakken (2026)' || obj.locatieType === 'Prullenbakken (data meerlanden)';
                         const typeStr = ((obj.locatieType || '') + ' ' + (obj.locatieSubType || '')).toLowerCase();
                         const isBrengpark = typeStr.includes('brengpark');
                         const isHHM = typeStr.includes('hhm');
-                        const isUnderground = typeStr.includes('container') || 
+                        const isUnderground = !isSpecificPrullenbak && (typeStr.includes('container') || 
                                               typeStr.includes('ondergrond') ||
                                               typeStr.includes('ondergr') ||
                                               typeStr.includes('verzamel') ||
-                                              isBrengpark;
+                                              isBrengpark);
+                        const useRecyclingBin = isSpecificPrullenbak || (isHHM && !isBrengpark);
+                        
                         return (
                             <Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude}>
-                                {isHHM && !isBrengpark ? (
+                                {useRecyclingBin ? (
                                     <img src="https://i.ibb.co/Xxrq1zP3/recycling-bin.png" alt="recycling bin" className="h-5 w-5 drop-shadow-md" />
                                 ) : isUnderground ? (
                                     <img src="https://i.ibb.co/FbgGHW1G/waste-bin.png" alt="container" className="h-5 w-5 drop-shadow-md" />
