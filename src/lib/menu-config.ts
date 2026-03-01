@@ -23,6 +23,7 @@ export interface SubMenuItem {
     href: string;
     label: string;
     id: string;
+    module?: string; // Optioneel: als het sub-item naar een andere module verwijst (bv. Werkplanning)
 }
 
 export interface MenuItem {
@@ -56,7 +57,7 @@ export const allMenuItems: MenuItem[] = [
       module: 'employees',
       subItems: [
         { href: '/employees', label: 'Medewerkers', id: 'overzicht' },
-        { href: '/work-planning', label: 'Werkplanning', id: 'work-planning' },
+        { href: '/work-planning', label: 'Werkplanning', id: 'work-planning', module: 'workPlanning' },
       ]
     },
     { 

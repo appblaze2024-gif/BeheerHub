@@ -15,27 +15,38 @@ import {
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useProfile } from '@/firebase/profile-provider';
 
 const topMenuItems = [
   { href: '/', label: 'Home', icon: Home },
-  { href: '/projects', label: 'Koppelingen', icon: Share2 },
+  { href: '/projects', label: 'Koppelingen', icon: Share2, module: 'projects' },
 ];
 
 const bottomMenuItems = [
-  { href: '/users', label: 'Gebruikers', icon: ShieldCheck },
-  { href: '/projects', label: 'Organisatie', icon: RefreshCw },
+  { href: '/users', label: 'Gebruikers', icon: ShieldCheck, module: 'users' },
+  { href: '/projects', label: 'Organisatie', icon: RefreshCw, module: 'projects' },
   { href: '/settings', label: 'Instellingen', icon: Settings },
 ];
 
 export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const { profile } = useProfile();
+
+  const canView = (moduleName?: string) => {
+    if (profile?.role === 'Super admin') return true;
+    if (!moduleName) return true;
+    return !!profile?.permissions?.[moduleName]?.view || !!profile?.permissions?.[moduleName]?.use;
+  };
+
+  const filteredTopItems = topMenuItems.filter(item => canView(item.module));
+  const filteredBottomItems = bottomMenuItems.filter(item => canView(item.module));
 
   return (
     <div className="flex flex-col h-full sidebar-blue text-white items-center py-4">
       <ScrollArea className="flex-1 w-full">
         <TooltipProvider delayDuration={0}>
           <div className="flex flex-col gap-4 items-center">
-            {topMenuItems.map((item) => {
+            {filteredTopItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
               
@@ -70,7 +81,7 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
 
       <div className="mt-auto flex flex-col gap-4 items-center pt-4 border-t border-white/10 w-full">
         <TooltipProvider delayDuration={0}>
-          {bottomMenuItems.map((item) => {
+          {filteredBottomItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
             

@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -14,11 +15,13 @@ import { useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase
 import { doc, collection, query, where } from 'firebase/firestore';
 import { allMenuItems, MenuItem, SubMenuItem } from '@/lib/menu-config';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useProfile } from '@/firebase/profile-provider';
 import type { Melding } from '@/lib/types';
 
 export default function DashboardPage() {
   const router = useRouter();
   const firestore = useFirestore();
+  const { profile } = useProfile();
   const isMobile = useIsMobile();
   const [activeModule, setActiveModule] = React.useState<MenuItem | null>(null);
 
@@ -37,12 +40,49 @@ export default function DashboardPage() {
   const { data: newMeldingen } = useCollection<Melding>(portalQuery);
   const newCount = newMeldingen?.length || 0;
 
-  // Filter out 'Dashboard' itself from the grid
-  const mainNavItems = allMenuItems.filter(item => item.href !== '/');
+  // Permissie helpers
+  const canViewModule = (moduleName?: string) => {
+    if (profile?.role === 'Super admin') return true;
+    if (!moduleName) return true;
+    const modulePerms = profile?.permissions?.[moduleName];
+    return !!modulePerms?.view || !!modulePerms?.use;
+  };
+
+  const canViewSubItem = (parentModule: string | undefined, sub: SubMenuItem) => {
+    if (profile?.role === 'Super admin') return true;
+    
+    // Als het sub-item naar een eigen module verwijst
+    if (sub.module) {
+      return !!profile?.permissions?.[sub.module]?.view;
+    }
+
+    // Als het een tab is in de module van de ouder
+    if (parentModule) {
+      const modulePerms = profile?.permissions?.[parentModule];
+      if (modulePerms?.tabs) {
+        return !!modulePerms.tabs[sub.id];
+      }
+    }
+
+    return true;
+  };
+
+  // Filter modules voor de grid
+  const mainNavItems = React.useMemo(() => {
+    return allMenuItems
+      .filter(item => item.href !== '/') // Dashboard zelf niet tonen
+      .filter(item => canViewModule(item.module));
+  }, [profile]);
 
   const handleCardClick = (item: MenuItem) => {
-    if (item.subItems && item.subItems.length > 0) {
-      setActiveModule(item);
+    // Filter subItems op permissies
+    const visibleSubItems = item.subItems?.filter(sub => canViewSubItem(item.module, sub));
+    
+    if (visibleSubItems && visibleSubItems.length > 0) {
+      setActiveModule({
+        ...item,
+        subItems: visibleSubItems
+      });
     } else {
       router.push(item.href);
     }
