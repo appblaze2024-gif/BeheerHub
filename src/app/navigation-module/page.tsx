@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -898,14 +897,6 @@ export default function StartNavigationPage() {
     setObjectsOnRoute(sortedObjects); setNavigationState('navigating'); setIsStarting(false);
   }, [userLocation, selectedRouteDef, urlMeldingLocatie, routeType, allMeldingen, user, objectsOnMap, toast]);
 
-  React.useEffect(() => {
-    const isMeldingenRoute = routeType === 'meldingen';
-    const isReadyToAutoStart = !!urlMeldingLocatie || (isMeldingenRoute && allMeldingen && allMeldingen.length > 0);
-
-    // AUTO-START LOGIC: Removed as per user request to disable the 5-second simulator start.
-    // The rit will now be started manually via the UI.
-  }, [userLocation, urlMeldingLocatie, routeType, allMeldingen, navigationState, handleStartRoute]);
-
   const isMeldingenType = routeType === 'meldingen';
 
   return (
@@ -927,21 +918,23 @@ export default function StartNavigationPage() {
               </div>
               <div className="flex items-center gap-3">
                   <Button 
-                    className="h-11 px-8 font-black uppercase tracking-widest bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 rounded-xl"
+                    className="h-9 px-6 font-black uppercase tracking-widest bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 rounded-xl"
                     onClick={() => handleStartRoute(false)}
                     disabled={(routeType === 'meldingen' ? !allMeldingen?.length : selectedRouteId === '--nieuwe-route--') || isStarting}
                   >
                       {isStarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4 fill-current" />}
                       START RIT
                   </Button>
-                  <Button 
-                    variant="outline"
-                    className="h-11 px-6 font-black uppercase tracking-widest border-2 border-white/10 text-white hover:bg-white/10 rounded-xl hidden sm:flex"
-                    onClick={() => handleStartRoute(true)}
-                    disabled={(routeType === 'meldingen' ? !allMeldingen?.length : selectedRouteId === '--nieuwe-route--') || isStarting}
-                  >
-                      <Gauge className="mr-2 h-4 w-4" /> SIMULATOR
-                  </Button>
+                  {profile?.role === 'Super admin' && (
+                    <Button 
+                      variant="outline"
+                      className="h-9 px-4 font-black uppercase tracking-widest border-2 border-white/10 text-white hover:bg-white/10 rounded-xl hidden sm:flex"
+                      onClick={() => handleStartRoute(true)}
+                      disabled={(routeType === 'meldingen' ? !allMeldingen?.length : selectedRouteId === '--nieuwe-route--') || isStarting}
+                    >
+                        <Gauge className="mr-2 h-4 w-4" /> SIMULATOR
+                    </Button>
+                  )}
               </div>
           </header>
 
