@@ -126,7 +126,6 @@ export default function ObjectsPage() {
   const isTablet = useIsMobile(1024);
   const { profile } = useProfile();
   
-  // Permission checks
   const isSuperUser = profile?.role === 'Super admin';
   const canImport = isSuperUser || !!profile?.permissions?.objects?.tabs?.import;
   const canExport = isSuperUser || !!profile?.permissions?.objects?.tabs?.export;
@@ -138,19 +137,17 @@ export default function ObjectsPage() {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [selectedObject, setSelectedObject] = React.useState<any | null>(null);
   const [viewMode, setViewMode] = React.useState<'list' | 'map'>('list');
-  const [typeFilter, setTypeFilter] = React.useState<string | null>('all');
+  const [typeFilter, setTypeFilter] = React.useState<string | null>(null);
   const [isAddFilterDialogOpen, setIsAddFilterDialogOpen] = React.useState(false);
   const [newFilterName, setNewFilterName] = React.useState('');
   const [isSavingFilter, setIsSavingFilter] = React.useState(false);
   const [filterToRename, setFilterToRename] = React.useState<string | null>(null);
   const [isDeletingAll, setIsDeletingAll] = React.useState(false);
 
-  // Proximity Filter States
   const [isProximityFilterActive, setIsProximityFilterActive] = React.useState(false);
   const [currentUserCoords, setCurrentUserCoords] = React.useState<{ latitude: number; longitude: number } | null>(null);
   const [isFindingLocation, setIsFindingLocation] = React.useState(false);
 
-  // Action handling from menu
   React.useEffect(() => {
     const action = searchParams.get('action');
     if (action === 'import' && canImport) {
@@ -238,7 +235,7 @@ export default function ObjectsPage() {
       (error) => {
         console.error("Geolocation error:", error);
         setIsFindingLocation(false);
-        toast({ variant: 'destructive', title: 'Locatiefout', description: 'Kon uw huidige locatie niet bepalen. Controleer uw GPS instellingen.' });
+        toast({ variant: 'destructive', title: 'Locatiefout', description: 'Kon uw huidige locatie niet bepalen.' });
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
@@ -262,7 +259,7 @@ export default function ObjectsPage() {
       }
       toast({ 
         title: 'Gereed', 
-        description: `${itemsToDelete.length} objecten verwijderd uit categorie ${typeFilter === 'all' ? 'Alle Objecten' : typeFilter}.` 
+        description: `${itemsToDelete.length} objecten verwijderd.` 
       });
       setSelectedObject(null);
     } catch (error) {
@@ -286,12 +283,11 @@ export default function ObjectsPage() {
     setIsSavingFilter(true);
     try {
         await setDocumentNonBlocking(filtersRef, { custom: Array.from(new Set([...customFilters, newFilterName.trim()])) }, { merge: true });
-        toast({ title: 'Filter toegevoegd', description: `De categorie '${newFilterName}' is toegevoegd aan de filters.` });
+        toast({ title: 'Filter toegevoegd', description: `De categorie '${newFilterName}' is toegevoegd.` });
         setNewFilterName('');
     } catch (error) {
         toast({ variant: 'destructive', title: 'Fout', description: 'Kon het filter niet opslaan.' });
     } finally {
-        setIsAddFilterDialogOpen(false);
         setIsSavingFilter(false);
     }
   };
@@ -303,7 +299,6 @@ export default function ObjectsPage() {
     
     try {
         const batch = writeBatch(firestore);
-        
         const updatedFilters = customFilters.map(f => f === filterToRename ? newFilterName.trim() : f);
         batch.set(filtersRef, { custom: updatedFilters }, { merge: true });
         
@@ -316,10 +311,8 @@ export default function ObjectsPage() {
         }
 
         await batch.commit();
-        
         if (typeFilter === filterToRename) setTypeFilter(newFilterName.trim());
-        
-        toast({ title: 'Filter hernoemd', description: `De categorie '${filterToRename}' is nu '${newFilterName}'. De gekoppelde objecten zijn bijgewerkt.` });
+        toast({ title: 'Filter hernoemd', description: `De categorie '${filterToRename}' is nu '${newFilterName}'.` });
         setFilterToRename(null);
         setNewFilterName('');
     } catch (error) {
@@ -375,20 +368,10 @@ export default function ObjectsPage() {
                     </DropdownMenuItem>
                     {canEdit && (
                       <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-7 w-7 text-slate-300 hover:text-primary"
-                            onClick={(e) => { e.stopPropagation(); openRenameDialog(filter); }}
-                          >
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-300 hover:text-primary" onClick={(e) => { e.stopPropagation(); openRenameDialog(filter); }}>
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-7 w-7 text-slate-300 hover:text-red-600"
-                            onClick={(e) => { e.stopPropagation(); handleDeleteFilter(filter); }}
-                          >
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-300 hover:text-red-600" onClick={(e) => { e.stopPropagation(); handleDeleteFilter(filter); }}>
                             <X className="h-3.5 w-3.5" />
                           </Button>
                       </div>
@@ -466,16 +449,7 @@ export default function ObjectsPage() {
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button 
-                              variant={isProximityFilterActive ? "default" : "outline"} 
-                              size="icon" 
-                              className={cn(
-                                  "h-9 w-9 rounded-xl transition-all", 
-                                  isProximityFilterActive ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" : "text-slate-400 border-slate-200"
-                              )}
-                              onClick={handleToggleProximityFilter}
-                              disabled={isLoadingObjects}
-                          >
+                          <Button variant={isProximityFilterActive ? "default" : "outline"} size="icon" className={cn("h-9 w-9 rounded-xl transition-all", isProximityFilterActive ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" : "text-slate-400 border-slate-200")} onClick={handleToggleProximityFilter} disabled={isLoadingObjects}>
                               {isFindingLocation ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
                           </Button>
                         </TooltipTrigger>
@@ -488,11 +462,7 @@ export default function ObjectsPage() {
                         <TooltipProvider>
                           <Tooltip>
                             <AlertDialogTrigger asChild>
-                              <Button 
-                                variant="outline" 
-                                size="icon" 
-                                className="h-9 w-9 rounded-xl text-red-400 border-slate-200 hover:text-red-600 hover:bg-red-50"
-                              >
+                              <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl text-red-400 border-slate-200 hover:text-red-600 hover:bg-red-50">
                                 {isDeletingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                               </Button>
                             </AlertDialogTrigger>
@@ -502,9 +472,7 @@ export default function ObjectsPage() {
                         <AlertDialogContent>
                           <AlertDialogHeader>
                             <AlertDialogTitle>Weet u het zeker?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Dit zal <strong>{filteredObjectsList.length} objecten</strong> definitief verwijderen uit de categorie <strong>{typeFilter === 'all' ? 'Alle Objecten' : typeFilter}</strong>. Deze actie kan niet ongedaan worden gemaakt.
-                            </AlertDialogDescription>
+                            <AlertDialogDescription>Dit zal <strong>{filteredObjectsList.length} objecten</strong> definitief verwijderen.</AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Annuleren</AlertDialogCancel>
@@ -606,75 +574,6 @@ export default function ObjectsPage() {
                         </div>
                     </div>
 
-                    <div className="space-y-6">
-                        <h3 className="text-lg font-bold text-slate-900 border-b pb-3 flex items-center gap-2"><Calendar className="h-5 w-5 text-primary" /> Weekplanning</h3>
-                        <p className="text-sm text-slate-500 font-medium">Selecteer de dagen waarop deze unit geleegd of gecontroleerd moet worden.</p>
-                        <div className="flex flex-wrap gap-3">
-                            {DAYS_OF_WEEK.map((day) => {
-                                const isActive = selectedObject.planningDagen?.includes(day.id);
-                                return (
-                                    <Button
-                                        key={day.id}
-                                        variant={isActive ? 'default' : 'outline'}
-                                        size="sm"
-                                        className={cn(
-                                            "h-12 w-12 rounded-xl font-bold transition-all duration-300",
-                                            isActive 
-                                                ? "bg-primary text-white shadow-lg scale-110 border-primary ring-4 ring-primary/10" 
-                                                : "text-slate-400 border-slate-200 hover:border-slate-400 hover:text-slate-600"
-                                        )}
-                                        disabled={!canEdit}
-                                        onClick={() => {
-                                            if (!canEdit) return;
-                                            const current = selectedObject.planningDagen || [];
-                                            const next = isActive 
-                                                ? current.filter((d: string) => d !== day.id)
-                                                : [...current, day.id];
-                                            handleUpdateField('planningDagen', next);
-                                        }}
-                                    >
-                                        {day.label}
-                                    </Button>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    {selectedObject.locatieWerkgebieden && selectedObject.locatieWerkgebieden.length > 0 && (
-                        <div className="space-y-4">
-                            <h3 className="text-lg font-bold text-slate-900 border-b pb-3 flex items-center gap-2"><MapPinned className="h-5 w-5 text-primary" /> Werkgebieden & Routes</h3>
-                            <div className="flex flex-wrap gap-2">
-                                {selectedObject.locatieWerkgebieden.map((area: string) => (
-                                    <Badge key={area} variant="secondary" className="px-3 py-1 font-medium text-xs rounded-lg bg-slate-100 border-slate-200">{area}</Badge>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="p-6 bg-slate-50 border rounded-2xl space-y-6">
-                      <h3 className="text-lg font-bold text-slate-900 border-b pb-3 flex items-center gap-2"><Settings2 className="h-5 w-5 text-primary" /> Configuratie</h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                        <div className="flex items-center justify-between">
-                          <div className="space-y-0.5">
-                            <p className="text-sm font-bold text-slate-900">Actieve status</p>
-                            <p className="text-xs font-medium text-slate-500">Object opnemen in routes</p>
-                          </div>
-                          <Switch checked={selectedObject.isActief} onCheckedChange={c => handleUpdateField('isActief', c)} disabled={!canEdit} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs font-medium text-slate-500 ml-1">Kwaliteit</Label>
-                          <Select value={selectedObject.kwaliteit} onValueChange={v => handleUpdateField('kwaliteit', v)} disabled={!canEdit}>
-                            <SelectTrigger className="h-10 font-medium bg-white border-slate-200"><SelectValue /></SelectTrigger>
-                            <SelectContent className="rounded-xl shadow-xl">
-                              <SelectItem value="A" className="font-medium">A - Hoog</SelectItem>
-                              <SelectItem value="B" className="font-medium">B - Standaard</SelectItem>
-                              <SelectItem value="C" className="font-medium">C - Laag</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    </div>
-
                     <div className="space-y-2">
                       <Label className="text-xs font-medium text-slate-500 ml-1">Memo / Waarschuwing</Label>
                       <Textarea value={selectedObject.waarschuwing || ''} onChange={e => handleUpdateField('waarschuwing', e.target.value)} placeholder="Bijzonderheden..." className="min-h-[120px] rounded-2xl border-slate-200 font-medium resize-none leading-relaxed" disabled={!canEdit} />
@@ -709,11 +608,9 @@ export default function ObjectsPage() {
       <Dialog open={isAddFilterDialogOpen} onOpenChange={setIsAddFilterDialogOpen}>
         <DialogContent className="rounded-2xl border-none shadow-2xl p-8 max-w-sm">
           <DialogHeader>
-            <DialogTitle>
-                {!!filterToRename ? 'Filter hernoemen' : 'Nieuw filter'}
-            </DialogTitle>
+            <DialogTitle>{!!filterToRename ? 'Filter hernoemen' : 'Nieuw filter'}</DialogTitle>
             <DialogDescription className="font-medium text-slate-500">
-                {!!filterToRename ? `Wijzig de naam van '${filterToRename}'. Dit werkt ook alle objecten bij.` : 'Geef een naam op voor de nieuwe categorie.'}
+                {!!filterToRename ? `Wijzig de naam van '${filterToRename}'.` : 'Geef een naam op voor de nieuwe categorie.'}
             </DialogDescription>
           </DialogHeader>
           <div className="py-6">
