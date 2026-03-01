@@ -15,7 +15,7 @@ import {
   User,
   FileWarning,
   Cpu,
-  ScrollText,
+  ShieldCheck,
 } from 'lucide-react';
 import { ElementType } from 'react';
 
@@ -35,7 +35,6 @@ export interface MenuItem {
 
 /**
  * Centrale configuratie voor de navigatie van BeheerHub.
- * De knop "Werkbonnen" is nu direct gekoppeld aan de navigatiemodule voor een snellere workflow.
  */
 export const allMenuItems: MenuItem[] = [
     { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -90,6 +89,7 @@ export const allMenuItems: MenuItem[] = [
     { href: '/navigation-module', label: 'Navigatie', icon: Navigation, module: 'navigation' },
     { href: '/iot', label: 'Internet of Things', icon: Cpu, module: 'iot' },
     { href: '/mail', label: 'Mail', icon: Mail, module: 'mail' },
-    { href: '/profile', label: 'Mijn Profiel', icon: User, module: 'users' },
+    { href: '/users', label: 'Gebruikers', icon: ShieldCheck, module: 'users' },
+    { href: '/profile', label: 'Mijn Profiel', icon: User },
     { href: '/settings', label: 'Instellingen', icon: Settings },
 ];

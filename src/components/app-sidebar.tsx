@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -9,6 +10,7 @@ import {
   Users,
   RefreshCw,
   Settings,
+  ShieldCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -20,7 +22,7 @@ const topMenuItems = [
 ];
 
 const bottomMenuItems = [
-  { href: '/employees', label: 'Gebruikers', icon: Users },
+  { href: '/users', label: 'Gebruikers', icon: ShieldCheck },
   { href: '/projects', label: 'Organisatie', icon: RefreshCw },
   { href: '/settings', label: 'Instellingen', icon: Settings },
 ];
