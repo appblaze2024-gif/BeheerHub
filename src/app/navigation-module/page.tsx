@@ -155,8 +155,6 @@ function NavigatingView({
   const lastDistanceCalcTimeRef = React.useRef(0);
   const lastGeometryUpdateTimeRef = React.useRef(0);
 
-  const isWorkOrder = routeType === 'meldingen';
-
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY;
   };
@@ -318,14 +316,9 @@ function NavigatingView({
           setDistanceRemainingToDestination(roundedRemaining);
           lastUpdateDistRef.current = roundedRemaining;
           setHasReachedCurrentTarget(roundedRemaining < 150);
-          
-          // Automatisch openen van werkbonnen bij aankomst (binnen 25 meter)
-          if (isWorkOrder && roundedRemaining < 25 && nextObject) {
-              router.push(`/issues?id=${nextObject.id}`);
-          }
       }
     } catch (e) {}
-  }, [snappedLocation?.latitude, snappedLocation?.longitude, currentRouteGeometry, isCalculatingRoute, isWorkOrder, nextObject, router]);
+  }, [snappedLocation?.latitude, snappedLocation?.longitude, currentRouteGeometry, isCalculatingRoute]);
 
   React.useEffect(() => {
     if (!currentRouteGeometry || !snappedLocation) { 
@@ -539,30 +532,10 @@ function NavigatingView({
             return (
                 <Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude} anchor="center" onClick={(e) => {
                     e.originalEvent.stopPropagation();
-                    
-                    if (routeType === 'meldingen') {
-                        // Werkbonnen: Geen afstandsbeperking
+                    if (routeType === 'meldingen' || (targetLocation && turf.distance(turf.point([targetLocation.longitude, targetLocation.latitude]), turf.point([obj.longitude, obj.latitude]), { units: 'meters' }) < 150)) {
                         setArrivedObject(obj);
-                    } else {
-                        // Prullenbakken/Veegroutes: Moet binnen 150m zijn
-                        if (!targetLocation) {
-                            toast({ title: "GPS Signaal", description: "Wachten op locatiebepaling...", variant: "destructive" });
-                            return;
-                        }
-                        const dist = turf.distance(
-                            turf.point([targetLocation.longitude, targetLocation.latitude]),
-                            turf.point([obj.longitude, obj.latitude]),
-                            { units: 'meters' }
-                        );
-                        if (dist < 150) {
-                            setArrivedObject(obj);
-                        } else {
-                            toast({ 
-                                title: "Te ver weg", 
-                                description: `U moet binnen 150m van de ${routeType === 'prullenbak' ? 'bak' : 'locatie'} zijn om deze af te melden.`,
-                                variant: "destructive" 
-                            });
-                        }
+                    } else if (targetLocation) {
+                        toast({ title: "Te ver weg", description: `U moet binnen 150m van de ${routeType === 'prullenbak' ? 'bak' : 'locatie'} zijn om deze af te melden.`, variant: "destructive" });
                     }
                 }}>
                     <div className="relative flex flex-col items-center">
@@ -587,7 +560,7 @@ function NavigatingView({
                 <CardContent className="p-3 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-2">
                         <Badge className="bg-primary text-white font-black text-xs h-6 px-3">{completedObjects.length}/{objectsOnRoute.length}</Badge>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{isWorkOrder ? 'Bonnen gereed' : 'Bakken gereed'}</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{routeType === 'meldingen' ? 'Bonnen gereed' : 'Bakken gereed'}</span>
                     </div>
                     <div className="flex-1 max-w-[120px]">
                         <Progress value={(completedObjects.length / objectsOnRoute.length) * 100} className="h-1.5" />
@@ -618,10 +591,10 @@ function NavigatingView({
                   <CardHeader className="text-center pb-2">
                       <div className="mx-auto bg-blue-100 p-3 rounded-full w-16 h-16 flex items-center justify-center mb-4"><MapPin className="h-8 w-8 text-blue-600 fill-current" /></div>
                       <CardTitle className="text-2xl font-black uppercase tracking-tight">Bestemming Selectie</CardTitle>
-                      <CardDescription className="font-bold text-slate-500">{isWorkOrder ? 'Meldingsnummer' : 'Object ID'}: <span className="text-slate-900">{arrivedObject.name || arrivedObject.id}</span></CardDescription>
+                      <CardDescription className="font-bold text-slate-500">{routeType === 'meldingen' ? 'Meldingsnummer' : 'Object ID'}: <span className="text-slate-900">{arrivedObject.name || arrivedObject.id}</span></CardDescription>
                   </CardHeader>
                   <CardContent className="p-6 pt-2 space-y-3">
-                      <Button onClick={() => { if (isWorkOrder) router.push(`/issues?id=${arrivedObject.id}`); else router.push(`/objects?id=${arrivedObject.id}`); }} className="w-full h-14 bg-primary hover:bg-primary/90 text-lg font-black uppercase tracking-tight gap-2">
+                      <Button onClick={() => { if (routeType === 'meldingen') router.push(`/issues?id=${arrivedObject.id}`); else router.push(`/objects?id=${arrivedObject.id}`); }} className="w-full h-14 bg-primary hover:bg-primary/90 text-lg font-black uppercase tracking-tight gap-2">
                           <FileText className="h-5 w-5" /> Open Details
                       </Button>
                       <Button variant="outline" onClick={() => handleArrivedAction('finish')} className="w-full h-12 border-2 font-black uppercase tracking-tight gap-2">
@@ -947,6 +920,15 @@ export default function StartNavigationPage() {
                     {urlMeldingLocatie && (<Marker longitude={urlMeldingLocatie.longitude} latitude={urlMeldingLocatie.latitude} anchor="center"><div className="relative flex flex-col items-center"><div className="absolute h-12 w-12 rounded-full bg-blue-50/20 animate-pulse" /><div className="relative h-10 w-10 rounded-full bg-primary border-4 border-white shadow-2xl flex items-center justify-center"><Flag className="h-5 w-5 text-white fill-current" /></div></div></Marker>)}
                     {routeGeoJSONFeatures && (<Source id="route-area" type="geojson" data={{ type: 'FeatureCollection', features: routeGeoJSONFeatures }}><Layer id="route-area-fill" type="fill" paint={{ 'fill-color': '#32ADE6', 'fill-opacity': 0.05 }} /><Layer id="route-area-outline" type="line" paint={{ 'line-color': '#32ADE6', 'line-width': 1, 'line-dasharray': [2, 2] }} /></Source>)}
                     
+                    {/* Base location marker */}
+                    {routeType === 'meldingen' && (
+                        <Marker longitude={SIMULATION_START_LOCATION.longitude} latitude={SIMULATION_START_LOCATION.latitude} anchor="center">
+                            <div className="w-8 h-8 bg-red-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-white">
+                                <Home className="h-4 w-4 fill-current" />
+                            </div>
+                        </Marker>
+                    )}
+
                     {/* Melding markers with sequence numbers */}
                     {routeType === 'meldingen' && sortedMeldingen?.map((m, idx) => (
                         <Marker key={m.id} longitude={m.longitude} latitude={m.latitude} anchor="center" onClick={() => {
