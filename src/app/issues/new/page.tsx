@@ -230,10 +230,10 @@ export default function NewIssuePage() {
   
   const meldingId = searchParams.get('id');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isImporting, setIsImporting] = React.useState(false);
   const [uploadedFiles, setUploadedFiles] = React.useState<UploadedFile[]>([]);
   const [uploadedPhotos, setUploadedPhotos] = React.useState<UploadedFile[]>([]);
   const [location, setLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
-  const [isImporting, setIsImporting] = React.useState(false);
   const [containerSuggestions, setContainerSuggestions] = React.useState<MapObject[]>([]);
 
   const optionsRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'issue_options') : null, [firestore]);
@@ -339,7 +339,7 @@ export default function NewIssuePage() {
         await addDocumentNonBlocking(collection(firestore, 'meldingen'), mData);
       }
 
-      toast({ title: "Melding bijgewerkt" : "Melding opgeslagen" });
+      toast({ title: meldingId ? "Melding bijgewerkt" : "Melding opgeslagen" });
       startProcessing(1000);
       router.push('/issues/portal');
     } catch (e) {
@@ -589,7 +589,7 @@ export default function NewIssuePage() {
             <div className={cn("w-full lg:w-[350px] bg-slate-50 lg:border-l shrink-0 flex flex-col min-h-0", !isMobile && "overflow-hidden")}>
                 <div className={cn("relative overflow-hidden bg-slate-100 shrink-0", isMobile ? "h-64 mt-4 rounded-3xl mx-4" : "h-[40%] shadow-inner")}>
                     <MapboxView latitude={location?.latitude} longitude={location?.longitude} />
-                    <div className="absolute top-3 left-3 bg-white/90 backdrop-blur px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border border-slate-200 flex items-center gap-1 shadow-sm">
+                    <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-xl text-[8px] font-black uppercase tracking-widest border border-slate-200 flex items-center gap-1 shadow-sm">
                         <MapPin className="h-3 w-3 text-primary" /> GIS Locatie
                     </div>
                 </div>
