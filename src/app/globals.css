@@ -102,7 +102,8 @@ body[style*="pointer-events: none"] {
 .goog-te-banner-frame,
 #goog-gt-tt,
 .skiptranslate > iframe,
-.goog-te-spinner-pos {
+.goog-te-spinner-pos,
+.goog-te-gadget-simple {
     display: none !important;
     visibility: hidden !important;
 }

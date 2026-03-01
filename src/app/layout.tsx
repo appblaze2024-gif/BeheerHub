@@ -134,7 +134,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   const { isLoading: isProfileLoading } = useProfile();
   const pathname = usePathname();
 
-  // Re-trigger translation when navigation occurs or cookie changes
+  // Re-trigger translation when navigation occurs to ensure whole page is translated
   useEffect(() => {
     const triggerTranslation = () => {
       const select = document.querySelector('.goog-te-combo') as HTMLSelectElement;
@@ -150,8 +150,8 @@ function MainLayout({ children }: { children: React.ReactNode }) {
       }
     };
     
-    // Small delay to ensure React has rendered new components
-    const timer = setTimeout(triggerTranslation, 1000);
+    // Small delay to ensure React has rendered new components, then force translation engine to re-scan
+    const timer = setTimeout(triggerTranslation, 500);
     return () => clearTimeout(timer);
   }, [pathname]);
 
