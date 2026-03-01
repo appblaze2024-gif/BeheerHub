@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useCollection, useFirestore, useFirebaseApp, updateDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { collection, doc, query, where } from 'firebase/firestore';
-import { ArrowLeft, Navigation, Pencil, FileText, Camera, Package, Clock, Info, Trash2, File as FileIcon, Loader2, MapPin, UploadCloud, X, User, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Navigation, Pencil, FileText, Camera, Package, Clock, Info, Trash2, File as FileIcon, Loader2, MapPin, UploadCloud, X, User, ChevronRight, Mic, MicOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -78,6 +78,10 @@ export default function IssuesPage() {
   const [newHoeveelheidAantal, setNewHoeveelheidAantal] = React.useState('');
   const [elapsedTime, setElapsedTime] = React.useState<string>("0 uur en 0 minuten");
   const [userLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
+
+  // Speech Recognition state
+  const [isListening, setIsListening] = React.useState(false);
+  const recognitionRef = React.useRef<any>(null);
 
   const meldingIdFromUrl = searchParams.get('id');
 
@@ -193,6 +197,39 @@ export default function IssuesPage() {
       setElapsedTime(`${Math.floor(min / 60)} uur en ${min % 60} minuten`);
     }
   }, [selectedMelding]);
+
+  // Speech Recognition logic
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast({ variant: 'destructive', title: 'Niet ondersteund', description: 'Uw browser ondersteunt geen spraakherkenning.' });
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'nl-NL';
+    recognition.continuous = true;
+    recognition.interimResults = false;
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => setIsListening(false);
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[event.results.length - 1][0].transcript;
+      const currentVal = form.getValues('afhandeling_bijzonderheden') || '';
+      form.setValue('afhandeling_bijzonderheden', currentVal + (currentVal ? ' ' : '') + transcript);
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
 
   const handleStartWork = async () => {
     if (!firestore || !selectedMelding?.id) return;
@@ -347,15 +384,27 @@ export default function IssuesPage() {
                     </TabsContent>
                     
                     <TabsContent value="Opmerkingen" className="mt-0">
-                        <Card className="rounded-3xl border-none shadow-xl bg-white overflow-hidden">
-                            <CardHeader className="bg-slate-50 border-b p-6"><CardTitle className="text-xs font-black uppercase tracking-widest text-slate-400">Uitvoeringsnotities</CardTitle></CardHeader>
-                            <CardContent className="p-6">
+                        <Card className="rounded-3xl border-none shadow-xl bg-white overflow-hidden h-full flex flex-col">
+                            <CardHeader className="bg-slate-50 border-b p-6 flex flex-row items-center justify-between">
+                                <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-400">Uitvoeringsnotities</CardTitle>
+                                <Button 
+                                    variant={isListening ? "destructive" : "outline"} 
+                                    size="sm" 
+                                    className="rounded-full h-10 px-4 font-black uppercase gap-2"
+                                    onClick={toggleListening}
+                                >
+                                    {isListening ? (
+                                        <><Loader2 className="h-4 w-4 animate-spin" /> STOPPEN</>
+                                    ) : (
+                                        <><Mic className="h-4 w-4 text-primary" /> DICTEER</>
+                                    )}
+                                </Button>
+                            </CardHeader>
+                            <CardContent className="p-6 flex-1">
                                 <Textarea 
-                                    placeholder="Voeg hier bijzonderheden toe over de uitvoering..." 
-                                    rows={15} 
-                                    className="resize-none text-sm font-medium leading-relaxed rounded-2xl border-slate-100 bg-slate-50 focus:ring-primary/20"
-                                    onChange={(e) => form.setValue('afhandeling_bijzonderheden', e.target.value)} 
-                                    defaultValue={selectedMelding.afhandeling_bijzonderheden} 
+                                    placeholder="Voeg hier bijzonderheden toe over de uitvoering of gebruik de dicteerknop..." 
+                                    className="resize-none text-sm font-medium leading-relaxed rounded-2xl border-slate-100 bg-slate-50 focus:ring-primary/20 h-full min-h-[400px]"
+                                    {...form.register('afhandeling_bijzonderheden')}
                                 />
                             </CardContent>
                         </Card>
