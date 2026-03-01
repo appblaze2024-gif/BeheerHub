@@ -86,7 +86,7 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/accordion";
+} from "@/components/ui/accordion";
 
 // Custom components
 import { IssueImportDialog } from '@/components/issue-import-dialog';
