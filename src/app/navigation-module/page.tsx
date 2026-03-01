@@ -1015,8 +1015,7 @@ export default function StartNavigationPage() {
                                       <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Omschrijving</TableHead>
                                       <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Hoofdtype</TableHead>
                                       <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Subtype</TableHead>
-                                      <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 border-r px-3">Werkgebied</TableHead>
-                                      <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 px-3">Status</TableHead>
+                                      <TableHead className="font-black uppercase tracking-widest text-[9px] text-slate-500 px-3">Werkgebied</TableHead>
                                   </TableRow>
                               </TableHeader>
                               <TableBody>
@@ -1046,21 +1045,16 @@ export default function StartNavigationPage() {
                                               </TableCell>
                                               <TableCell className="text-[10px] font-medium border-r text-slate-500 uppercase px-3">{m.hoofdcategorie}</TableCell>
                                               <TableCell className="text-[10px] font-black border-r text-slate-900 uppercase tracking-tight px-3">{m.subcategorie}</TableCell>
-                                              <TableCell className="border-r px-3">
+                                              <TableCell className="px-3">
                                                   <Badge variant="outline" className="h-4 px-1.5 text-[8px] font-black uppercase bg-slate-50 border-slate-200">
                                                       {m.werkgebied || '-'}
-                                                  </Badge>
-                                              </TableCell>
-                                              <TableCell className="px-3">
-                                                  <Badge className="h-4 px-1.5 text-[8px] font-black uppercase bg-blue-500 text-white border-none shadow-sm">
-                                                      {m.status}
                                                   </Badge>
                                               </TableCell>
                                           </TableRow>
                                       ))
                                   ) : (
                                       <TableRow>
-                                          <TableCell colSpan={7} className="text-center py-12 text-muted-foreground opacity-30">
+                                          <TableCell colSpan={6} className="text-center py-12 text-muted-foreground opacity-30">
                                               <LayoutGrid className="h-8 w-8 mx-auto mb-2" />
                                               <p className="font-black uppercase tracking-widest text-[10px]">Geen openstaande meldingen voor uitvoering</p>
                                           </TableCell>
