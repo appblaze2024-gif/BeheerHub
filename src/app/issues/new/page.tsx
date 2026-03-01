@@ -20,7 +20,8 @@ import {
   ClipboardPaste,
   ChevronRight,
   Plus,
-  MoreHorizontal
+  MoreHorizontal,
+  LayoutGrid
 } from 'lucide-react';
 import { 
   useFirestore, 
@@ -86,10 +87,12 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
+import * as turf from '@turf/turf';
+
 // Custom components
 import { IssueImportDialog } from '@/components/issue-import-dialog';
 import { MapboxView } from '@/components/mapbox-view';
-import type { Melding, Object as MapObject, UploadedFile } from '@/lib/types';
+import type { Melding, Object as MapObject, UploadedFile, Project } from '@/lib/types';
 
 // AI Flows
 import { parseIssuePdf } from '@/ai/flows/parse-issue-pdf-flow';
@@ -245,6 +248,9 @@ export default function NewIssuePage() {
   const aiConfigRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'pdf_config') : null, [firestore]);
   const { data: aiConfig } = useDoc<{ instructions: string }>(aiConfigRef);
 
+  const projectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'projects') : null, [firestore]);
+  const { data: projects } = useCollection<Project>(projectsQuery);
+
   const meldingRef = useMemoFirebase(() => {
     if (!firestore || !meldingId) return null;
     return doc(firestore, 'meldingen', meldingId);
@@ -321,6 +327,40 @@ export default function NewIssuePage() {
     const timer = setTimeout(geocodeAddress, 800);
     return () => clearTimeout(timer);
   }, [watchStraat, watchHuisnummer, watchPlaats, isReadOnly]);
+
+  // Effect to automatically determine Werkgebied (Wijk) based on location
+  React.useEffect(() => {
+    if (!location || !projects || isReadOnly) return;
+
+    const point = turf.point([location.longitude, location.latitude]);
+    let foundWijk = '';
+
+    for (const project of projects) {
+      if (project.wijken) {
+        for (const wijk of project.wijken) {
+          try {
+            const features = JSON.parse(wijk.subGebieden);
+            if (Array.isArray(features)) {
+              for (const feature of features) {
+                if (turf.booleanPointInPolygon(point, feature)) {
+                  foundWijk = wijk.naam;
+                  break;
+                }
+              }
+            }
+          } catch (e) {
+            // ignore invalid geojson
+          }
+          if (foundWijk) break;
+        }
+      }
+      if (foundWijk) break;
+    }
+
+    if (foundWijk) {
+      form.setValue('werkgebied', foundWijk);
+    }
+  }, [location, projects, form, isReadOnly]);
 
   const watchContainernummer = form.watch('containernummer');
   React.useEffect(() => {
@@ -421,12 +461,14 @@ export default function NewIssuePage() {
       updateDocumentNonBlocking(doc(firestore, 'meldingen', meldingId), mData);
     } else {
       mData.createdAt = serverTimestamp();
-      addDocumentNonBlocking(collection(firestore, 'meldingen'), mData);
+      addDocumentNonBlocking(collection(firestore, 'meldingen'), mData).then(() => {
+        toast({ title: "Melding opgeslagen", description: `Melding ${data.intakenummer} is aangemaakt.` });
+        startProcessing(1000);
+        router.push('/issues/portal');
+      }).catch(() => {
+        setIsSubmitting(false);
+      });
     }
-
-    toast({ title: meldingId ? "Melding bijgewerkt" : "Melding opgeslagen" });
-    startProcessing(1000);
-    router.push('/issues/portal');
   };
 
   const onSaveError = (errors: any) => {
@@ -514,9 +556,14 @@ export default function NewIssuePage() {
                     <FormField control={form.control} name="plaats" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold" /></FormControl></FormItem>)} />
                   </FormRow>
                 </div>
-                <FormRow label="Postcode">
-                  <FormField control={form.control} name="postcode" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold" /></FormControl></FormItem>)} />
-                </FormRow>
+                <div className="grid grid-cols-2 gap-3">
+                  <FormRow label="Postcode">
+                    <FormField control={form.control} name="postcode" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold" /></FormControl></FormItem>)} />
+                  </FormRow>
+                  <FormRow label="Werkgebied">
+                    <FormField control={form.control} name="werkgebied" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled className="h-11 font-black bg-slate-50 text-primary border-primary/20" /></FormControl></FormItem>)} />
+                  </FormRow>
+                </div>
               </AccordionContent>
             </AccordionItem>
 
@@ -620,10 +667,15 @@ export default function NewIssuePage() {
                 <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Locatie & Gebied</CardTitle></CardHeader>
                 <CardContent className="p-4 pt-2 space-y-3">
                   <FormRow label={<>Straatnaam<span className="text-red-500">*</span></>}><FormField control={form.control} name="straatnaam" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <FormRow label={<>Huisnr.<span className="text-red-500">*</span></>}><FormField control={form.control} name="huisnummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
                     <FormRow label="Postcode"><FormField control={form.control} name="postcode" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <FormRow label="Plaats"><FormField control={form.control} name="plaats" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
+                    <FormRow label={<span className="flex items-center gap-1"><LayoutGrid className="h-3 w-3" /> Werkgebied</span>}>
+                      <FormField control={form.control} name="werkgebied" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled className="h-8 text-[10px] font-black uppercase bg-slate-50 text-primary border-primary/20 shadow-inner" placeholder="Wordt berekend..." /></FormControl></FormItem>)} />
+                    </FormRow>
                   </div>
                 </CardContent>
               </Card>
