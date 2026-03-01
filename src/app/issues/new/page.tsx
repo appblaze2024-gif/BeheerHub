@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -585,7 +584,7 @@ export default function NewIssuePage() {
   const subcategorieen = subcategorieenMap[currentHoofdcategorie] || ["Overig"];
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-slate-50">
+    <div className="flex flex-col h-[calc(100vh-5rem)] overflow-hidden bg-slate-50">
         <header className="h-14 bg-white border-b flex items-center justify-between px-6 shrink-0 shadow-sm z-10">
             <div className="flex items-center gap-2">
                 {!isReadOnly && (
@@ -885,11 +884,11 @@ export default function NewIssuePage() {
             </div>
             
             <div className="w-full lg:w-[350px] bg-slate-50 border-l shrink-0 h-full overflow-hidden flex flex-col">
-                <div className="h-[40%] relative overflow-hidden bg-slate-100">
+                <div className="h-[40%] relative overflow-hidden bg-slate-100 shrink-0">
                     <MapboxView latitude={location?.latitude} longitude={location?.longitude} />
                 </div>
 
-                <div className="h-[40%] flex flex-col min-h-0 bg-white p-5 border-t">
+                <div className="h-[40%] flex flex-col min-h-0 bg-white p-5 border-t shrink-0">
                     <div className="flex items-center justify-between border-b pb-3 mb-4">
                         <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
                             BIJLAGEN ({uploadedFiles.length + uploadedPhotos.length})
@@ -937,6 +936,8 @@ export default function NewIssuePage() {
                         </div>
                     </ScrollArea>
                 </div>
+                
+                <div className="flex-1 bg-slate-50 min-h-0" />
             </div>
         </main>
 
