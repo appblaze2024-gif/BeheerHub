@@ -126,6 +126,13 @@ export default function ObjectsPage() {
   const isTablet = useIsMobile(1024);
   const { profile } = useProfile();
   
+  // Permission checks
+  const isSuperUser = profile?.role === 'Super admin';
+  const canImport = isSuperUser || !!profile?.permissions?.objects?.tabs?.import;
+  const canExport = isSuperUser || !!profile?.permissions?.objects?.tabs?.export;
+  const canEdit = isSuperUser || !!profile?.permissions?.objects?.edit;
+  const canDelete = isSuperUser || !!profile?.permissions?.objects?.delete;
+
   const [isImporting, setIsImporting] = React.useState(false);
   const [isExporting, setIsExporting] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -146,19 +153,18 @@ export default function ObjectsPage() {
   // Action handling from menu
   React.useEffect(() => {
     const action = searchParams.get('action');
-    if (action === 'import' && profile?.role === 'Super admin') {
+    if (action === 'import' && canImport) {
       setIsImporting(true);
-      // Clean URL
       const params = new URLSearchParams(searchParams.toString());
       params.delete('action');
       router.replace(`/objects?${params.toString()}`);
-    } else if (action === 'export') {
+    } else if (action === 'export' && canExport) {
       setIsExporting(true);
       const params = new URLSearchParams(searchParams.toString());
       params.delete('action');
       router.replace(`/objects?${params.toString()}`);
     }
-  }, [searchParams, profile, router]);
+  }, [searchParams, canImport, canExport, router]);
 
   const objectsQuery = useMemoFirebase(() => {
     if (!firestore || !typeFilter) return null;
@@ -239,7 +245,7 @@ export default function ObjectsPage() {
   };
 
   const handleDeleteFilteredObjects = async () => {
-    if (!firestore || !filteredObjectsList.length || !typeFilter) return;
+    if (!firestore || !filteredObjectsList.length || !typeFilter || !canDelete) return;
     
     setIsDeletingAll(true);
     const batchSize = 500;
@@ -268,14 +274,14 @@ export default function ObjectsPage() {
   };
 
   const handleUpdateField = (field: string, value: any) => {
-    if (!firestore || !selectedObject) return;
+    if (!firestore || !selectedObject || !canEdit) return;
     const objectRef = doc(firestore, 'objects', selectedObject.id);
     updateDocumentNonBlocking(objectRef, { [field]: value });
     setSelectedObject((prev: any) => ({ ...prev, [field]: value }));
   };
 
   const handleAddCustomFilter = async () => {
-    if (!firestore || !newFilterName.trim() || !filtersRef) return;
+    if (!firestore || !newFilterName.trim() || !filtersRef || !canEdit) return;
     setIsAddFilterDialogOpen(false);
     setIsSavingFilter(true);
     try {
@@ -291,7 +297,7 @@ export default function ObjectsPage() {
   };
 
   const handleRenameFilter = async () => {
-    if (!firestore || !newFilterName.trim() || !filtersRef || !filterToRename) return;
+    if (!firestore || !newFilterName.trim() || !filtersRef || !filterToRename || !canEdit) return;
     setIsSavingFilter(true);
     setIsAddFilterDialogOpen(false);
     
@@ -325,7 +331,7 @@ export default function ObjectsPage() {
   };
 
   const handleDeleteFilter = async (filterName: string) => {
-    if (!firestore || !filtersRef) return;
+    if (!firestore || !filtersRef || !canEdit) return;
     try {
         await updateDocumentNonBlocking(filtersRef, { custom: arrayRemove(filterName) });
         if (typeFilter === filterName) setTypeFilter(null);
@@ -336,6 +342,7 @@ export default function ObjectsPage() {
   };
 
   const openRenameDialog = (filterName: string) => {
+    if (!canEdit) return;
     setFilterToRename(filterName);
     setNewFilterName(filterName);
     setIsAddFilterDialogOpen(true);
@@ -366,31 +373,37 @@ export default function ObjectsPage() {
                     <DropdownMenuItem onClick={() => setTypeFilter(filter)} className="flex-1 rounded-lg h-9 text-xs font-semibold">
                       {filter}
                     </DropdownMenuItem>
-                    <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-7 w-7 text-slate-300 hover:text-primary"
-                          onClick={(e) => { e.stopPropagation(); openRenameDialog(filter); }}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-7 w-7 text-slate-300 hover:text-red-600"
-                          onClick={(e) => { e.stopPropagation(); handleDeleteFilter(filter); }}
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </Button>
-                    </div>
+                    {canEdit && (
+                      <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 text-slate-300 hover:text-primary"
+                            onClick={(e) => { e.stopPropagation(); openRenameDialog(filter); }}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 text-slate-300 hover:text-red-600"
+                            onClick={(e) => { e.stopPropagation(); handleDeleteFilter(filter); }}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </ScrollArea>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => { setFilterToRename(null); setNewFilterName(''); setIsAddFilterDialogOpen(true); }} className="rounded-lg h-9 text-xs font-bold text-primary">
-                <PlusCircle className="mr-2 h-4 w-4" /> Nieuwe categorie
-              </DropdownMenuItem>
+              {canEdit && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => { setFilterToRename(null); setNewFilterName(''); setIsAddFilterDialogOpen(true); }} className="rounded-lg h-9 text-xs font-bold text-primary">
+                    <PlusCircle className="mr-2 h-4 w-4" /> Nieuwe categorie
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -408,7 +421,7 @@ export default function ObjectsPage() {
             <Input placeholder="Snelzoeken..." className="pl-9 h-9 text-xs font-medium rounded-lg border-slate-200 bg-slate-50" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} disabled={!typeFilter} />
           </div>
           
-          {profile?.role === 'Super admin' && (
+          {canImport && (
             <ObjectImportDialog open={isImporting} onOpenChange={setIsImporting} onSuccess={() => setIsImporting(false)}>
               <Button variant="default" size="sm" className="h-9 font-black uppercase tracking-tight bg-primary text-white shadow-lg shadow-primary/20 px-4 rounded-xl">
                 <Upload className="h-4 w-4 mr-2" /> 
@@ -417,9 +430,11 @@ export default function ObjectsPage() {
             </ObjectImportDialog>
           )}
           
-          <ObjectExportDialog objects={objects} projects={projects}>
-            <Button variant="outline" size="sm" className="h-9 font-bold rounded-lg border-slate-200" disabled={!typeFilter}><Download className="h-4 w-4 mr-2" /> Export</Button>
-          </ObjectExportDialog>
+          {canExport && (
+            <ObjectExportDialog objects={objects} projects={projects}>
+              <Button variant="outline" size="sm" className="h-9 font-bold rounded-lg border-slate-200" disabled={!typeFilter}><Download className="h-4 w-4 mr-2" /> Export</Button>
+            </ObjectExportDialog>
+          )}
         </div>
       </header>
 
@@ -468,7 +483,7 @@ export default function ObjectsPage() {
                       </Tooltip>
                     </TooltipProvider>
 
-                    {filteredObjectsList.length > 0 && (
+                    {filteredObjectsList.length > 0 && canDelete && (
                       <AlertDialog>
                         <TooltipProvider>
                           <Tooltip>
@@ -560,19 +575,19 @@ export default function ObjectsPage() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                             <div className="space-y-2">
                                 <Label className="text-xs font-medium text-slate-500 ml-1">Straatnaam</Label>
-                                <Input value={selectedObject.straatnaam || ''} onChange={e => handleUpdateField('straatnaam', e.target.value)} className="h-11 font-medium rounded-lg border-slate-200" />
+                                <Input value={selectedObject.straatnaam || ''} onChange={e => handleUpdateField('straatnaam', e.target.value)} className="h-11 font-medium rounded-lg border-slate-200" disabled={!canEdit} />
                             </div>
                             <div className="space-y-2">
                                 <Label className="text-xs font-medium text-slate-500 ml-1">Huisnummer</Label>
-                                <Input value={selectedObject.huisnummer || ''} onChange={e => handleUpdateField('huisnummer', e.target.value)} className="h-11 font-medium rounded-lg border-slate-200" />
+                                <Input value={selectedObject.huisnummer || ''} onChange={e => handleUpdateField('huisnummer', e.target.value)} className="h-11 font-medium rounded-lg border-slate-200" disabled={!canEdit} />
                             </div>
                             <div className="space-y-2">
                                 <Label className="text-xs font-medium text-slate-500 ml-1">Postcode</Label>
-                                <Input value={selectedObject.postcode || ''} onChange={e => handleUpdateField('postcode', e.target.value)} className="h-11 font-medium rounded-lg border-slate-200" />
+                                <Input value={selectedObject.postcode || ''} onChange={e => handleUpdateField('postcode', e.target.value)} className="h-11 font-medium rounded-lg border-slate-200" disabled={!canEdit} />
                             </div>
                             <div className="space-y-2">
                                 <Label className="text-xs font-medium text-slate-500 ml-1">Plaats</Label>
-                                <Input value={selectedObject.plaats || ''} onChange={e => handleUpdateField('plaats', e.target.value)} className="h-11 font-medium rounded-lg border-slate-200" />
+                                <Input value={selectedObject.plaats || ''} onChange={e => handleUpdateField('plaats', e.target.value)} className="h-11 font-medium rounded-lg border-slate-200" disabled={!canEdit} />
                             </div>
                         </div>
                     </div>
@@ -582,11 +597,11 @@ export default function ObjectsPage() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                             <div className="space-y-2">
                                 <Label className="text-xs font-medium text-slate-500 ml-1">Hoofdtype</Label>
-                                <Input value={selectedObject.locatieType || ''} onChange={e => handleUpdateField('locatieType', e.target.value)} className="h-11 font-medium rounded-lg border-slate-200" />
+                                <Input value={selectedObject.locatieType || ''} onChange={e => handleUpdateField('locatieType', e.target.value)} className="h-11 font-medium rounded-lg border-slate-200" disabled={!canEdit} />
                             </div>
                             <div className="space-y-2">
                                 <Label className="text-xs font-medium text-slate-500 ml-1">Subtype</Label>
-                                <Input value={selectedObject.locatieSubType || ''} onChange={e => handleUpdateField('locatieSubType', e.target.value)} className="h-11 font-medium rounded-lg border-slate-200" />
+                                <Input value={selectedObject.locatieSubType || ''} onChange={e => handleUpdateField('locatieSubType', e.target.value)} className="h-11 font-medium rounded-lg border-slate-200" disabled={!canEdit} />
                             </div>
                         </div>
                     </div>
@@ -608,7 +623,9 @@ export default function ObjectsPage() {
                                                 ? "bg-primary text-white shadow-lg scale-110 border-primary ring-4 ring-primary/10" 
                                                 : "text-slate-400 border-slate-200 hover:border-slate-400 hover:text-slate-600"
                                         )}
+                                        disabled={!canEdit}
                                         onClick={() => {
+                                            if (!canEdit) return;
                                             const current = selectedObject.planningDagen || [];
                                             const next = isActive 
                                                 ? current.filter((d: string) => d !== day.id)
@@ -642,11 +659,11 @@ export default function ObjectsPage() {
                             <p className="text-sm font-bold text-slate-900">Actieve status</p>
                             <p className="text-xs font-medium text-slate-500">Object opnemen in routes</p>
                           </div>
-                          <Switch checked={selectedObject.isActief} onCheckedChange={c => handleUpdateField('isActief', c)} />
+                          <Switch checked={selectedObject.isActief} onCheckedChange={c => handleUpdateField('isActief', c)} disabled={!canEdit} />
                         </div>
                         <div className="space-y-2">
                           <Label className="text-xs font-medium text-slate-500 ml-1">Kwaliteit</Label>
-                          <Select value={selectedObject.kwaliteit} onValueChange={v => handleUpdateField('kwaliteit', v)}>
+                          <Select value={selectedObject.kwaliteit} onValueChange={v => handleUpdateField('kwaliteit', v)} disabled={!canEdit}>
                             <SelectTrigger className="h-10 font-medium bg-white border-slate-200"><SelectValue /></SelectTrigger>
                             <SelectContent className="rounded-xl shadow-xl">
                               <SelectItem value="A" className="font-medium">A - Hoog</SelectItem>
@@ -660,7 +677,7 @@ export default function ObjectsPage() {
 
                     <div className="space-y-2">
                       <Label className="text-xs font-medium text-slate-500 ml-1">Memo / Waarschuwing</Label>
-                      <Textarea value={selectedObject.waarschuwing || ''} onChange={e => handleUpdateField('waarschuwing', e.target.value)} placeholder="Bijzonderheden..." className="min-h-[120px] rounded-2xl border-slate-200 font-medium resize-none leading-relaxed" />
+                      <Textarea value={selectedObject.waarschuwing || ''} onChange={e => handleUpdateField('waarschuwing', e.target.value)} placeholder="Bijzonderheden..." className="min-h-[120px] rounded-2xl border-slate-200 font-medium resize-none leading-relaxed" disabled={!canEdit} />
                     </div>
                   </div>
 
