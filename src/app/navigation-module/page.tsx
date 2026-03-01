@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -777,7 +776,16 @@ export default function StartNavigationPage() {
   const sortedMeldingen = React.useMemo(() => {
     if (routeType !== 'meldingen' || !allMeldingen || allMeldingen.length === 0) return [];
     
-    let unvisited = [...allMeldingen];
+    // FILTER: standard employees only see their assigned reports
+    let visibleMeldingen = allMeldingen;
+    if (!isPrivileged) {
+        const userName = profile?.displayName || profile?.email || 'Onbekend';
+        visibleMeldingen = allMeldingen.filter(m => m.behandelaar === userName);
+    }
+
+    if (visibleMeldingen.length === 0) return [];
+
+    let unvisited = [...visibleMeldingen];
     // Gebruik de actieve sort base (Rijsenhout of Gebruiker)
     let currentPos = currentActiveSortBase;
     let sorted: Melding[] = [];
@@ -800,7 +808,7 @@ export default function StartNavigationPage() {
       currentPos = { latitude: next.latitude, longitude: next.longitude };
     }
     return sorted;
-  }, [allMeldingen, routeType, currentActiveSortBase]);
+  }, [allMeldingen, routeType, currentActiveSortBase, isPrivileged, profile]);
 
   // Fetch preview route geometry for meldingen
   React.useEffect(() => {
@@ -881,7 +889,7 @@ export default function StartNavigationPage() {
     // Als we werkbonnen doen en we zijn niet op de basis, toon loader en herbereken route
     if (routeType === 'meldingen') {
         if (sortedMeldingen.length === 0) { 
-            toast({ title: "Geen meldingen", description: "Geen openstaande meldingen." }); 
+            toast({ title: "Geen meldingen", description: "Geen aan u toegewezen meldingen gevonden." }); 
             setIsStarting(false); 
             return; 
         }
@@ -1098,7 +1106,7 @@ export default function StartNavigationPage() {
                                                       <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{m.postcode} {m.plaats}</span>
                                                   </div>
                                               </TableCell>
-                                              <TableCell className="text-[11px] border-r px-3 max-w-[250px]">
+                                              <TableCell className="text-[11px] font-bold border-r px-3 max-w-[250px]">
                                                   <div className="flex items-center gap-1.5">
                                                       <MessageSquare className="h-2.5 w-2.5 text-slate-300 shrink-0" />
                                                       <p className="truncate text-slate-500 font-medium italic" title={m.extra_informatie}>{m.extra_informatie || '-'}</p>

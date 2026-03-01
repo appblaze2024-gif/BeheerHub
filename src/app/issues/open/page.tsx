@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { format, isToday } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { useRouter } from 'next/navigation';
+import { useProfile } from '@/firebase/profile-provider';
 import {
   Table,
   TableBody,
@@ -33,8 +34,11 @@ const openStatuses = [
 export default function OpenIssuesPage() {
   const firestore = useFirestore();
   const router = useRouter();
+  const { profile } = useProfile();
   const [searchTerm, setSearchTerm] = React.useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = React.useState('');
+
+  const isPrivileged = profile?.role === 'Super admin' || profile?.role === 'toezichthouder';
 
   // OPTIMIZED QUERY: Only fetch meldingen with open statuses
   const meldingenQuery = useMemoFirebase(() => {
@@ -59,15 +63,23 @@ export default function OpenIssuesPage() {
 
   const filteredMeldingen = React.useMemo(() => {
     if (!openMeldingen) return [];
-    if (!debouncedSearchTerm) return openMeldingen;
+    
+    // FILTER: Standard employees only see their assigned reports
+    let visibleMeldingen = openMeldingen;
+    if (!isPrivileged) {
+        const userName = profile?.displayName || profile?.email || 'Onbekend';
+        visibleMeldingen = openMeldingen.filter(m => m.behandelaar === userName);
+    }
+
+    if (!debouncedSearchTerm) return visibleMeldingen;
 
     const lowercasedFilter = debouncedSearchTerm.toLowerCase();
-    return openMeldingen.filter(melding => {
+    return visibleMeldingen.filter(melding => {
       return Object.values(melding).some(value =>
         String(value).toLowerCase().includes(lowercasedFilter)
       );
     });
-  }, [openMeldingen, debouncedSearchTerm]);
+  }, [openMeldingen, debouncedSearchTerm, isPrivileged, profile]);
   
   const statusColorMap: { [key: string]: string } = {
     "Nieuw": "bg-red-500",

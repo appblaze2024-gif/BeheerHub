@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useCollection, useFirestore, useFirebaseApp, updateDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { collection, doc, query, where } from 'firebase/firestore';
-import { ArrowLeft, Navigation, Pencil, FileText, Camera, Package, Clock, Info, Trash2, File as FileIcon, Loader2, MapPin, UploadCloud, X, User, ChevronRight, Mic, MicOff, Check } from 'lucide-react';
+import { ArrowLeft, Navigation, Pencil, FileText, Camera, Package, Clock, Info, Trash2, File as FileIcon, Loader2, MapPin, UploadCloud, X, User, ChevronRight, Mic, MicOff, Check, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -79,6 +79,8 @@ export default function IssuesPage() {
   const [elapsedTime, setElapsedTime] = React.useState<string>("0 uur en 0 minuten");
   const [userLocation] = React.useState<{ latitude: number; longitude: number } | null>(null);
 
+  const isPrivileged = profile?.role === 'Super admin' || profile?.role === 'toezichthouder';
+
   // Speech Recognition state
   const [isListening, setIsListening] = React.useState(false);
   const recognitionRef = React.useRef<any>(null);
@@ -100,7 +102,7 @@ export default function IssuesPage() {
     );
   }, [firestore]);
 
-  const { data: meldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenQuery);
+  const { data: rawMeldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenQuery);
 
   const objectsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -110,11 +112,19 @@ export default function IssuesPage() {
   const { data: allMapObjects } = useCollection<MapObject>(objectsQuery);
 
   const filteredMeldingen = React.useMemo(() => {
-    if (!meldingen) return [];
-    const result = debouncedSearchQuery ? meldingen.filter(m => {
+    if (!rawMeldingen) return [];
+    
+    // FILTER: Standard employees only see their assigned reports
+    let visibleMeldingen = rawMeldingen;
+    if (!isPrivileged) {
+        const userName = profile?.displayName || profile?.email || 'Onbekend';
+        visibleMeldingen = rawMeldingen.filter(m => m.behandelaar === userName);
+    }
+
+    const result = debouncedSearchQuery ? visibleMeldingen.filter(m => {
       const q = debouncedSearchQuery.toLowerCase();
       return ['intakenummer', 'straatnaam', 'plaats', 'subcategorie'].some(f => (m as any)[f]?.toLowerCase().includes(q));
-    }) : meldingen;
+    }) : visibleMeldingen;
 
     if (userLocation) {
         const userPt = turf.point([userLocation.longitude, userLocation.latitude]);
@@ -125,7 +135,7 @@ export default function IssuesPage() {
         });
     }
     return result;
-  }, [meldingen, debouncedSearchQuery, userLocation]);
+  }, [rawMeldingen, debouncedSearchQuery, userLocation, isPrivileged, profile]);
 
   React.useEffect(() => {
     if (filteredMeldingen.length > 0 && !selectedMeldingId) {
@@ -142,8 +152,8 @@ export default function IssuesPage() {
   });
 
   const selectedMelding = React.useMemo(() => {
-    return meldingen?.find(m => m.id === selectedMeldingId);
-  }, [meldingen, selectedMeldingId]);
+    return filteredMeldingen?.find(m => m.id === selectedMeldingId);
+  }, [filteredMeldingen, selectedMeldingId]);
 
   // Filter objects within 100m radius of the selected issue
   const nearbyObjects = React.useMemo(() => {
@@ -162,25 +172,24 @@ export default function IssuesPage() {
   }, [searchQuery]);
 
   React.useEffect(() => {
-    const melding = meldingen?.find(m => m.id === selectedMeldingId);
-    if (melding) {
-      setUploadedFiles(melding.files || []);
-      setUploadedPhotos(melding.fotos || []);
-      setAfhandelingFotos(melding.afhandeling_fotos || []);
-      setLocation({ latitude: melding.latitude, longitude: melding.longitude });
-      setHoeveelheden(melding.hoeveelheden || []);
+    if (selectedMelding) {
+      setUploadedFiles(selectedMelding.files || []);
+      setUploadedPhotos(selectedMelding.fotos || []);
+      setAfhandelingFotos(selectedMelding.afhandeling_fotos || []);
+      setLocation({ latitude: selectedMelding.latitude, longitude: selectedMelding.longitude });
+      setHoeveelheden(selectedMelding.hoeveelheden || []);
       form.reset({
-        hoofdcategorie: melding.hoofdcategorie,
-        subcategorie: melding.subcategorie,
-        extra_informatie: melding.extra_informatie,
-        status: melding.status,
-        straatnaam: melding.straatnaam,
-        plaats: melding.plaats,
-        postcode: melding.postcode,
-        afhandeling_bijzonderheden: melding.afhandeling_bijzonderheden || '',
+        hoofdcategorie: selectedMelding.hoofdcategorie,
+        subcategorie: selectedMelding.subcategorie,
+        extra_informatie: selectedMelding.extra_informatie,
+        status: selectedMelding.status,
+        straatnaam: selectedMelding.straatnaam,
+        plaats: selectedMelding.plaats,
+        postcode: selectedMelding.postcode,
+        afhandeling_bijzonderheden: selectedMelding.afhandeling_bijzonderheden || '',
       });
     }
-  }, [selectedMeldingId, meldingen, form]);
+  }, [selectedMelding, form]);
 
   React.useEffect(() => {
     if (!selectedMelding) { setElapsedTime("0 uur en 0 minuten"); return; }
@@ -274,7 +283,7 @@ export default function IssuesPage() {
         (snapshot) => setUploadProgress(prev => ({...prev, [file.name]: (snapshot.bytesTransferred / snapshot.totalBytes) * 100})),
         () => {},
         () => getDownloadURL(uploadTask.snapshot.ref).then(url => {
-            const uploaded: UploadedFile = { name: file.name, url, size: file.size, type: file.type, uploadedAt: new Date().toISOString(), storagePath: path };
+            const uploaded: UploadedFile = { name: file.name, url, url, size: file.size, type: file.type, uploadedAt: new Date().toISOString(), storagePath: path };
             if (type === 'documents') setUploadedFiles(prev => [...prev, uploaded]);
             else setAfhandelingFotos(prev => [...prev, uploaded]);
             setUploadProgress(prev => { const n = {...prev}; delete n[file.name]; return n; });
@@ -495,11 +504,11 @@ export default function IssuesPage() {
             <div className="flex-1 flex items-center justify-center p-12 text-center bg-slate-50">
                 <div className="max-w-md space-y-8 animate-in zoom-in-95 duration-500">
                     <div className="bg-white p-12 rounded-[3rem] shadow-2xl mx-auto w-48 h-48 flex items-center justify-center border-4 border-slate-100">
-                        <Navigation className="h-20 w-20 text-primary animate-pulse fill-current opacity-20" />
+                        <AlertCircle className="h-20 w-20 text-primary animate-pulse fill-current opacity-20" />
                     </div>
                     <div className="space-y-3">
-                        <p className="text-2xl font-black uppercase tracking-tight text-slate-900">Geen werkbon geselecteerd</p>
-                        <p className="text-slate-500 font-medium leading-relaxed">U bent momenteel in de detail-modus. Keer terug naar de kaart om een opdracht te selecteren voor uitvoering.</p>
+                        <p className="text-2xl font-black uppercase tracking-tight text-slate-900">Geen toegang</p>
+                        <p className="text-slate-500 font-medium leading-relaxed">U heeft geen toegang tot deze werkbon of deze is niet meer actief. Keer terug naar de kaart om uw eigen opdrachten te bekijken.</p>
                     </div>
                     <Button variant="outline" className="h-14 px-12 rounded-2xl border-2 border-primary text-primary hover:bg-primary hover:text-white font-black uppercase tracking-widest transition-all shadow-xl shadow-primary/10 gap-3" onClick={() => router.push('/navigation-module?type=meldingen')}>
                         <Navigation className="h-5 w-5" /> TERUG NAAR KAART
