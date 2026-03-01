@@ -99,29 +99,6 @@ export default function IssuesPage() {
 
   const { data: meldingen, isLoading: isLoadingMeldingen } = useCollection<Melding>(meldingenQuery);
 
-  const form = useForm<MeldingFormValues>({
-    resolver: zodResolver(meldingFormSchema),
-  });
-
-  const selectedMelding = React.useMemo(() => {
-    return meldingen?.find(m => m.id === selectedMeldingId);
-  }, [meldingen, selectedMeldingId]);
-
-  React.useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  React.useEffect(() => {
-    if (filteredMeldingen.length > 0 && !selectedMeldingId) {
-      if (meldingIdFromUrl && filteredMeldingen.find(m => m.id === meldingIdFromUrl)) {
-        setSelectedMeldingId(meldingIdFromUrl);
-      } else if (!meldingIdFromUrl) {
-        setSelectedMeldingId(filteredMeldingen[0].id);
-      }
-    }
-  }, [filteredMeldingen, selectedMeldingId, meldingIdFromUrl]);
-
   const filteredMeldingen = React.useMemo(() => {
     if (!meldingen) return [];
     let result = debouncedSearchQuery ? meldingen.filter(m => {
@@ -139,6 +116,29 @@ export default function IssuesPage() {
     }
     return result;
   }, [meldingen, debouncedSearchQuery, userLocation]);
+
+  React.useEffect(() => {
+    if (filteredMeldingen.length > 0 && !selectedMeldingId) {
+      if (meldingIdFromUrl && filteredMeldingen.find(m => m.id === meldingIdFromUrl)) {
+        setSelectedMeldingId(meldingIdFromUrl);
+      } else if (!meldingIdFromUrl) {
+        setSelectedMeldingId(filteredMeldingen[0].id);
+      }
+    }
+  }, [filteredMeldingen, selectedMeldingId, meldingIdFromUrl]);
+
+  const form = useForm<MeldingFormValues>({
+    resolver: zodResolver(meldingFormSchema),
+  });
+
+  const selectedMelding = React.useMemo(() => {
+    return meldingen?.find(m => m.id === selectedMeldingId);
+  }, [meldingen, selectedMeldingId]);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchQuery(searchQuery), 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   React.useEffect(() => {
     const melding = meldingen?.find(m => m.id === selectedMeldingId);
