@@ -9,7 +9,6 @@ import {
   Users,
   RefreshCw,
   Settings,
-  Store,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -18,7 +17,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 const topMenuItems = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/projects', label: 'Koppelingen', icon: Share2 },
-  { href: '/objects', label: 'Store', icon: Store },
 ];
 
 const bottomMenuItems = [
