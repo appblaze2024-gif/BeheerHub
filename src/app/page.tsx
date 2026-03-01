@@ -27,8 +27,8 @@ export default function DashboardPage() {
 
   return (
     <div className="p-10 space-y-10 flex flex-col h-full bg-[#f8fafc] relative">
-      {/* Background Graphic Illustration */}
-      <div className="absolute top-0 right-0 w-[800px] h-[600px] opacity-[0.12] pointer-events-none grayscale transition-all duration-1000">
+      {/* Background Graphic Illustration - Compact and in Color */}
+      <div className="absolute top-0 right-0 w-[500px] h-[400px] opacity-[0.15] pointer-events-none transition-all duration-1000">
         <Image 
           src="https://i.ibb.co/qMLXjXqz/top-view-paper-style-community-map-1.jpg" 
           alt="Community Map Illustration" 
