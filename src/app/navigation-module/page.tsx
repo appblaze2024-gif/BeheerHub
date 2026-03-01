@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -1029,7 +1030,7 @@ export default function StartNavigationPage() {
                                 <Label className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Project</Label>
                                 <Select value={selectedProjectId || ''} onValueChange={v => setSelectedProjectId(v || null)} disabled={isLoadingProjects}>
                                     <SelectTrigger className="h-8 border font-bold text-xs"><SelectValue placeholder="Kies project" /></SelectTrigger>
-                                    <SelectContent>{projects?.map(p => (<SelectItem key={p.id} value={p.id!}>{p.projectnaam}</SelectItem>))}</SelectContent>
+                                    <SelectContent>{projects?.filter(p => !!p.id).map(p => (<SelectItem key={p.id} value={p.id!}>{p.projectnaam}</SelectItem>))}</SelectContent>
                                 </Select>
                             </div>
                             <div className="space-y-1">
@@ -1045,7 +1046,7 @@ export default function StartNavigationPage() {
                                     <SelectTrigger className="h-8 border font-bold text-xs"><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="--nieuwe-route--">-- Kies een route --</SelectItem>
-                                        {availableRoutes.map((r: any) => (<SelectItem key={r.id} value={r.id}>{r.naam}</SelectItem>))}
+                                        {availableRoutes.filter((r: any) => !!r.id).map((r: any) => (<SelectItem key={r.id} value={r.id}>{r.naam}</SelectItem>))}
                                     </SelectContent>
                                 </Select>
                             </div>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -424,10 +425,10 @@ export function ObjectImportDialog({
                                         <SelectItem value="prullenbak">Prullenbakken</SelectItem>
                                         <SelectItem value="container">Ondergrondse containers</SelectItem>
                                     </SelectGroup>
-                                    {customFilters.length > 0 && (
+                                    {customFilters.filter(f => !!f).length > 0 && (
                                         <SelectGroup>
                                             <SelectLabel>Uw Filters</SelectLabel>
-                                            {customFilters.map(cf => (
+                                            {customFilters.filter(f => !!f).map(cf => (
                                                 <SelectItem key={cf} value={cf}>{cf}</SelectItem>
                                             ))}
                                         </SelectGroup>
@@ -475,7 +476,7 @@ export function ObjectImportDialog({
                                 </SelectTrigger>
                                 <SelectContent>
                                 <SelectItem value="--ignore--">-- Negeer --</SelectItem>
-                                {headers.map((header, idx) => (
+                                {headers.filter(h => !!h).map((header, idx) => (
                                     <SelectItem key={`${header}-${idx}`} value={header}>
                                     {header}
                                     </SelectItem>
@@ -512,7 +513,6 @@ export function ObjectImportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden border-none shadow-2xl rounded-3xl">
         <DialogHeader className="p-8 border-b bg-slate-50 shrink-0">
           <DialogTitle className="text-2xl font-black uppercase tracking-tight">Objecten Importeren</DialogTitle>

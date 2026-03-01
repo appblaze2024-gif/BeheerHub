@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -198,7 +199,7 @@ export function OrganisatieContactDialog({
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="geen_wijk">-- Geen --</SelectItem>
-                      {wijken?.map((wijk) => (
+                      {wijken?.filter(w => !!w.naam).map((wijk) => (
                         <SelectItem key={wijk.id} value={wijk.naam}>
                           {wijk.naam}
                         </SelectItem>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -209,7 +210,7 @@ export function VehicleImportDialog({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="--ignore--">Negeer</SelectItem>
-                      {headers.map((header) => (
+                      {headers.filter(h => !!h).map((header) => (
                         <SelectItem key={header} value={header}>
                           {header}
                         </SelectItem>

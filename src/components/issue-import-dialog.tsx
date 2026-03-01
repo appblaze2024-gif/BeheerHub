@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -206,7 +207,7 @@ export function IssueImportDialog({
                                         <SelectTrigger className="h-9 text-xs font-bold"><SelectValue placeholder="Koppel kolom..." /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="--ignore--">-- Overslaan --</SelectItem>
-                                            {headers.map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}
+                                            {headers.filter(h => !!h).map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </div>

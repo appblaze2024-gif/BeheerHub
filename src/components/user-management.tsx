@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -359,7 +360,7 @@ function UserDialog({
                             <FormControl><SelectTrigger><SelectValue placeholder="Koppel aan wijk" /></SelectTrigger></FormControl>
                             <SelectContent>
                                 <SelectItem value="geen_wijk">-- Geen wijk --</SelectItem>
-                                {wijken.map((w: Wijk) => (<SelectItem key={w.id} value={w.naam}>{w.naam}</SelectItem>))}
+                                {wijken.filter(w => !!w.naam).map((w: Wijk) => (<SelectItem key={w.id} value={w.naam}>{w.naam}</SelectItem>))}
                             </SelectContent>
                         </Select>
                         <FormMessage />
@@ -372,7 +373,7 @@ function UserDialog({
                             <FormControl><SelectTrigger><SelectValue placeholder="Koppel aan veegroute" /></SelectTrigger></FormControl>
                             <SelectContent>
                                 <SelectItem value="geen_veegroute">-- Geen veegroute --</SelectItem>
-                                {veegroutes.map((w: Wijk) => (<SelectItem key={w.id} value={w.naam}>{w.naam}</SelectItem>))}
+                                {veegroutes.filter(w => !!w.naam).map((w: Wijk) => (<SelectItem key={w.id} value={w.naam}>{w.naam}</SelectItem>))}
                             </SelectContent>
                         </Select>
                         <FormMessage />
@@ -385,7 +386,7 @@ function UserDialog({
                             <FormControl><SelectTrigger><SelectValue placeholder="Koppel aan route" /></SelectTrigger></FormControl>
                             <SelectContent>
                                 <SelectItem value="geen_prullenbakkenroute">-- Geen prullenbakkenroute --</SelectItem>
-                                {prullenbakkenroutes.map((w: Wijk) => (<SelectItem key={w.id} value={w.naam}>{w.naam}</SelectItem>))}
+                                {prullenbakkenroutes.filter(w => !!w.naam).map((w: Wijk) => (<SelectItem key={w.id} value={w.naam}>{w.naam}</SelectItem>))}
                             </SelectContent>
                         </Select>
                         <FormMessage />
