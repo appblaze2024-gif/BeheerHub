@@ -662,7 +662,7 @@ export default function ObjectsPage() {
       <Dialog open={isAddFilterDialogOpen} onOpenChange={setIsAddFilterDialogOpen}>
         <DialogContent className="rounded-2xl border-none shadow-2xl p-8 max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">
+            <DialogTitle>
                 {isRenaming ? 'Filter hernoemen' : 'Nieuw filter'}
             </DialogTitle>
             <DialogDescription className="font-medium text-slate-500">
