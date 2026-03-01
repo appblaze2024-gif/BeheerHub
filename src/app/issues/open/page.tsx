@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
-import { Search, ListFilter, ArrowLeft, Info } from 'lucide-react';
+import { Search, ListFilter, ArrowLeft, Info, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -138,6 +138,7 @@ export default function OpenIssuesPage() {
                             <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Indeling</TableHead>
                             <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Adres</TableHead>
                             <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200 hidden xl:table-cell">Wijk</TableHead>
+                            <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500 border-r border-slate-200">Behandelaar</TableHead>
                             <TableHead className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-slate-500">Status</TableHead>
                         </TableRow>
                         </TableHeader>
@@ -161,6 +162,14 @@ export default function OpenIssuesPage() {
                                     <TableCell className="py-2 px-4 border-r border-slate-100 font-bold text-slate-900">{melding.subcategorie || '-'}</TableCell>
                                     <TableCell className="truncate py-2 px-4 border-r border-slate-100 max-w-[200px] text-xs font-medium">{[melding.straatnaam, melding.huisnummer].filter(Boolean).join(' ') || '-'}</TableCell>
                                     <TableCell className="truncate py-2 px-4 border-r border-slate-100 hidden xl:table-cell text-xs">{melding.wijk || '-'}</TableCell>
+                                    <TableCell className="py-2 px-4 border-r border-slate-100">
+                                        <div className="flex items-center gap-2">
+                                            <User className="h-3.5 w-3.5 text-slate-400" />
+                                            <span className="text-[11px] font-black text-slate-700 truncate max-w-[120px]">
+                                                {melding.behandelaar || '-'}
+                                            </span>
+                                        </div>
+                                    </TableCell>
                                     <TableCell className="py-2 px-4">
                                         <Badge
                                             className={cn(
