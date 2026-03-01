@@ -4,7 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
-  Activity,
+  Home,
   Share2,
   LayoutGrid,
   Users,
@@ -17,7 +17,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const topMenuItems = [
-  { href: '/', label: 'Monitor', icon: Activity },
+  { href: '/', label: 'Home', icon: Home },
   { href: '/projects', label: 'Koppelingen', icon: Share2 },
   { href: '/annual-planning', label: 'Mijn Store', icon: LayoutGrid },
   { href: '/objects', label: 'Store', icon: Store },
