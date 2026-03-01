@@ -724,6 +724,31 @@ export default function StartNavigationPage() {
 
   const { data: allMeldingen } = useCollection<Melding>(meldingenQuery);
 
+  // Memoized values defined before hooks that use them
+  const selectedProject = React.useMemo(() => projects?.find(p => p.id === selectedProjectId) || null, [projects, selectedProjectId]);
+  
+  const availableRoutes = React.useMemo(() => {
+      if (!selectedProject) return [];
+      if (routeType === 'veeg') return selectedProject.veegroutes || [];
+      if (routeType === 'prullenbak') return selectedProject.prullenbakkenroutes || [];
+      return [];
+  }, [selectedProject, routeType]);
+
+  const selectedRouteIdDef = React.useMemo(() => {
+    if (!selectedRouteId || selectedRouteId === '--nieuwe-route--' || !selectedProject) return null;
+    const allRoutes = [...(selectedProject.veegroutes || []), ...(selectedProject.prullenbakkenroutes || [])];
+    return allRoutes.find(r => r.id === selectedRouteId) || null;
+  }, [selectedRouteId, selectedProject]);
+
+  const routeGeoJSONFeatures = React.useMemo(() => {
+    if (!selectedRouteIdDef) return null;
+    try {
+      const features = JSON.parse(selectedRouteIdDef.subGebieden);
+      if (Array.isArray(features) && features.length > 0) return { type: 'FeatureCollection' as const, features: features.map((f: any) => ({ type: 'Feature' as const, properties: {}, geometry: f.geometry })) };
+    } catch (e) {}
+    return null;
+  }, [selectedRouteIdDef]);
+
   // Optimized route calculation for meldingen
   const sortedMeldingen = React.useMemo(() => {
     if (routeType !== 'meldingen' || !allMeldingen || allMeldingen.length === 0) return [];
@@ -805,35 +830,12 @@ export default function StartNavigationPage() {
     }
   }, [previewRouteGeometry, routeGeoJSONFeatures, routeType]);
 
-  const selectedProject = React.useMemo(() => projects?.find(p => p.id === selectedProjectId) || null, [projects, selectedProjectId]);
-  const availableRoutes = React.useMemo(() => {
-      if (!selectedProject) return [];
-      if (routeType === 'veeg') return selectedProject.veegroutes || [];
-      if (routeType === 'prullenbak') return selectedProject.prullenbakkenroutes || [];
-      return [];
-  }, [selectedProject, routeType]);
-
-  const selectedRouteIdDef = React.useMemo(() => {
-    if (!selectedRouteId || selectedRouteId === '--nieuwe-route--' || !selectedProject) return null;
-    const allRoutes = [...(selectedProject.veegroutes || []), ...(selectedProject.prullenbakkenroutes || [])];
-    return allRoutes.find(r => r.id === selectedRouteId) || null;
-  }, [selectedRouteId, selectedProject]);
-
   const objectsOnRouteQuery = useMemoFirebase(() => {
     if (!firestore || !selectedRouteIdDef) return null;
     return query(collection(firestore, 'objects'), where('locatieWerkgebieden', 'array-contains', selectedRouteIdDef.naam));
   }, [firestore, selectedRouteIdDef?.naam]);
 
   const { data: objectsOnMap } = useCollection<MapObject>(objectsOnRouteQuery);
-
-  const routeGeoJSONFeatures = React.useMemo(() => {
-    if (!selectedRouteIdDef) return null;
-    try {
-      const features = JSON.parse(selectedRouteIdDef.subGebieden);
-      if (Array.isArray(features) && features.length > 0) return { type: 'FeatureCollection' as const, features: features.map((f: any) => ({ type: 'Feature' as const, properties: {}, geometry: f.geometry })) };
-    } catch (e) {}
-    return null;
-  }, [selectedRouteIdDef]);
 
   const handleStartRoute = React.useCallback(async (simulate = false) => {
     setIsSimulationMode(simulate);
