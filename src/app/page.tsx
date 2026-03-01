@@ -143,7 +143,7 @@ export default function DashboardPage() {
                     {item.label === 'Meldingen' && newCount > 0 && (
                       <Badge 
                         variant="destructive" 
-                        className="absolute -top-1 -right-1 h-6 min-w-6 flex items-center justify-center font-black rounded-full border-2 border-white shadow-lg animate-in zoom-in"
+                        className="absolute top-2 right-2 h-6 min-w-6 flex items-center justify-center font-black rounded-full border-2 border-white shadow-lg animate-in zoom-in"
                       >
                         {newCount}
                       </Badge>
