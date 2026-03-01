@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -11,7 +10,6 @@ import {
   Bell,
   Navigation,
   Mail,
-  Settings,
   User,
   FileWarning,
   Cpu,
@@ -92,5 +90,4 @@ export const allMenuItems: MenuItem[] = [
     { href: '/mail', label: 'Mail', icon: Mail, module: 'mail' },
     { href: '/users', label: 'Gebruikers', icon: ShieldCheck, module: 'users' },
     { href: '/profile', label: 'Mijn Profiel', icon: User },
-    { href: '/settings', label: 'Instellingen', icon: Settings },
 ];

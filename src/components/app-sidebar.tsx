@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -25,7 +24,6 @@ const topMenuItems = [
 const bottomMenuItems = [
   { href: '/users', label: 'Gebruikers', icon: ShieldCheck, module: 'users' },
   { href: '/projects', label: 'Organisatie', icon: RefreshCw, module: 'projects' },
-  { href: '/settings', label: 'Instellingen', icon: Settings },
 ];
 
 export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
