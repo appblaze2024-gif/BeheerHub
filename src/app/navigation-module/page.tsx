@@ -905,42 +905,42 @@ export default function StartNavigationPage() {
         <NavigatingView objectsOnRoute={objectsOnRoute} onExit={() => { setNavigationState('setup'); setObjectsOnRoute([]); if (searchParams.has('lat')) router.back(); }} initialUserLocation={tripStartLocation} isSimulating={isSimulationMode} routeType={routeType} />
       ) : (
         <div className="w-full h-full relative flex flex-col">
-          {/* Top Bar with Navigation Start */}
-          <header className="h-16 bg-slate-900 text-white flex items-center justify-between px-6 shrink-0 z-20 shadow-xl">
-              <div className="flex items-center gap-4">
-                  <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-full" onClick={() => router.push('/')}>
-                      <ArrowLeft className="h-5 w-5" />
-                  </Button>
-                  <div>
-                      <h2 className="text-lg font-black uppercase tracking-tight leading-none mb-0.5">Navigatie Setup</h2>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{routeType === 'meldingen' ? 'Werkbonnen Route' : 'Route Selectie'}</p>
-                  </div>
-              </div>
-              <div className="flex items-center gap-3">
-                  <Button 
-                    className="h-9 px-6 font-black uppercase tracking-widest bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 rounded-xl"
-                    onClick={() => handleStartRoute(false)}
-                    disabled={(routeType === 'meldingen' ? !allMeldingen?.length : selectedRouteId === '--nieuwe-route--') || isStarting}
-                  >
-                      {isStarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4 fill-current" />}
-                      START RIT
-                  </Button>
-                  {profile?.role === 'Super admin' && (
-                    <Button 
-                      variant="outline"
-                      className="h-9 px-4 font-black uppercase tracking-widest border-2 border-white/40 text-white hover:bg-white/20 hover:border-white rounded-xl hidden sm:flex bg-white/5 transition-all"
-                      onClick={() => handleStartRoute(true)}
-                      disabled={(routeType === 'meldingen' ? !allMeldingen?.length : selectedRouteId === '--nieuwe-route--') || isStarting}
-                    >
-                        <Gauge className="mr-2 h-4 w-4" /> SIMULATOR
-                    </Button>
-                  )}
-              </div>
-          </header>
-
           <div className={cn("flex flex-col flex-1 min-h-0", isMeldingenType ? "" : "relative")}>
               {/* Map Section */}
               <div className={cn("relative overflow-hidden shrink-0", isMeldingenType ? "h-[60%]" : "h-full")}>
+                  {/* Floating Top Controls */}
+                  <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
+                      <Button 
+                        variant="secondary" 
+                        size="icon" 
+                        className="h-10 w-10 rounded-full shadow-2xl bg-white/90 backdrop-blur-md border-none text-slate-900 hover:bg-white" 
+                        onClick={() => router.push('/')}
+                      >
+                          <ArrowLeft className="h-5 w-5" />
+                      </Button>
+                  </div>
+
+                  <div className="absolute top-4 right-4 z-20 flex items-center gap-3">
+                      {profile?.role === 'Super admin' && (
+                        <Button 
+                          variant="outline"
+                          className="h-10 px-4 font-black uppercase tracking-widest border-none text-slate-900 bg-white/90 backdrop-blur-md hover:bg-white rounded-2xl shadow-2xl transition-all hidden sm:flex"
+                          onClick={() => handleStartRoute(true)}
+                          disabled={(routeType === 'meldingen' ? !allMeldingen?.length : selectedRouteId === '--nieuwe-route--') || isStarting}
+                        >
+                            <Gauge className="mr-2 h-4 w-4" /> SIMULATOR
+                        </Button>
+                      )}
+                      <Button 
+                        className="h-10 px-6 font-black uppercase tracking-widest bg-primary text-white hover:bg-primary/90 shadow-2xl rounded-2xl"
+                        onClick={() => handleStartRoute(false)}
+                        disabled={(routeType === 'meldingen' ? !allMeldingen?.length : selectedRouteId === '--nieuwe-route--') || isStarting}
+                      >
+                          {isStarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Navigation className="mr-2 h-4 w-4 fill-current" />}
+                          START RIT
+                      </Button>
+                  </div>
+
                   <MapGL 
                     ref={mapRef} 
                     initialViewState={{ longitude: userLocation?.longitude || 5.2913, latitude: userLocation?.latitude || 52.1326, zoom: userLocation ? 14 : 7 }} 
@@ -958,7 +958,7 @@ export default function StartNavigationPage() {
 
                   {/* Settings Card overlay for non-meldingen types */}
                   {!isMeldingenType && (
-                    <Card className="absolute top-4 left-4 z-10 w-full max-w-[280px] shadow-2xl bg-white/95 backdrop-blur border-2 border-slate-100 rounded-2xl p-4 hidden sm:block animate-in slide-in-from-left-4 duration-300">
+                    <Card className="absolute top-20 left-4 z-10 w-full max-w-[280px] shadow-2xl bg-white/95 backdrop-blur border-2 border-slate-100 rounded-2xl p-4 hidden sm:block animate-in slide-in-from-left-4 duration-300">
                         <CardHeader className="p-3 border-b bg-slate-50/50">
                             <CardTitle className="text-sm font-black uppercase tracking-tighter">Instellingen</CardTitle>
                         </CardHeader>
