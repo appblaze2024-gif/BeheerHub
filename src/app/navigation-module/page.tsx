@@ -40,7 +40,9 @@ import {
   FastForward,
   LayoutGrid,
   MessageSquare,
-  Cpu
+  Cpu,
+  Trash2,
+  Archive
 } from 'lucide-react';
 import { useProject } from '@/context/project-context';
 import { useNavigationUI } from '@/context/navigation-ui-context';
@@ -535,6 +537,11 @@ function NavigatingView({
             if (completedObjects.includes(obj.id)) return null;
             const isTarget = idx === currentObjectIndex;
             const inRange = isTarget && hasReachedCurrentTarget;
+            
+            const isUnderground = obj.locatieType?.toLowerCase().includes('container') || 
+                                  obj.locatieType?.toLowerCase().includes('ondergrond');
+            const Icon = isUnderground ? Archive : Trash2;
+
             return (
                 <Marker key={obj.id} longitude={obj.longitude} latitude={obj.latitude} anchor="center" onClick={(e) => {
                     e.originalEvent.stopPropagation();
@@ -546,8 +553,15 @@ function NavigatingView({
                 }}>
                     <div className="relative flex flex-col items-center">
                         <div className={cn("absolute h-12 w-12 rounded-full bg-blue-500/20", inRange && "animate-pulse")} />
-                        <div className={cn("relative h-10 w-10 rounded-full border-4 border-white shadow-2xl flex items-center justify-center transition-all", isTarget ? "bg-primary scale-125 ring-4 ring-primary/30" : "bg-slate-400", inRange && "scale-125 bg-green-600")}>
-                            <span className="font-black text-white text-xs">{idx + 1}</span>
+                        <div className={cn(
+                            "relative h-10 w-10 rounded-full border-4 border-white shadow-2xl flex items-center justify-center transition-all", 
+                            isTarget ? "bg-primary scale-125 ring-4 ring-primary/30" : "bg-slate-400", 
+                            inRange && "scale-125 bg-green-600"
+                        )}>
+                            <Icon className="h-5 w-5 text-white stroke-[2.5]" />
+                            <div className="absolute -top-2 -right-2 bg-white text-primary rounded-full w-5 h-5 flex items-center justify-center border-2 border-primary shadow-sm">
+                                <span className="font-black text-[9px]">{idx + 1}</span>
+                            </div>
                         </div>
                     </div>
                 </Marker>
@@ -602,9 +616,6 @@ function NavigatingView({
                   <CardContent className="p-6 pt-2 space-y-3">
                       <Button onClick={() => { if (routeType === 'meldingen') router.push(`/issues?id=${arrivedObject.id}`); else router.push(`/objects?id=${arrivedObject.id}`); }} className="w-full h-14 bg-primary hover:bg-primary/90 text-lg font-black uppercase tracking-tight gap-2">
                           <FileText className="h-5 w-5" /> Open Details
-                      </Button>
-                      <Button variant="outline" onClick={() => handleArrivedAction('finish')} className="w-full h-12 border-2 font-black uppercase tracking-tight gap-2">
-                          <CheckCircle2 className="h-4 w-4" /> Marker Verbergen
                       </Button>
                       <Button variant="ghost" onClick={() => setArrivedObject(null)} className="w-full">Sluiten</Button>
                   </CardContent>
