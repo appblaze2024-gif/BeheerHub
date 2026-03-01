@@ -132,7 +132,7 @@ const DEFAULT_STATUS_OPTIONS = [
     "Gepland op langere termijn", "Dubbel gemeld", "Afgerond", "Niet in beheer", "Extern doorgezet", "Geweigerd"
 ];
 
-const DEFAULT_HOOFDCATEGORIE_OPTIONS = ["Afval", "Weg en straatmeubilair", "Groen", "Water", "Overig", "Zoutkisten"];
+const DEFAULT_HOOFDCATEGORIE_OPTIONS = ["Afval", "Weg en straatmeubilair", "Groen", "Water", "Overig", "Zoutkisten", "Ondergrondse container rest"];
 
 const DEFAULT_SUBCATEGORIE_MAPPING: Record<string, string[]> = {
     "Afval": ["Volle of kapotte afvalbak", "Zwerfafval", "Dumping", "Dierenkadaver"],
@@ -140,6 +140,7 @@ const DEFAULT_SUBCATEGORIE_MAPPING: Record<string, string[]> = {
     "Groen": ["Overhangende takken", "Onkruid", "Maaien"],
     "Water": ["Wateroverlast", "Verstopte put"],
     "Zoutkisten": ["Zoutkist leeg"],
+    "Ondergrondse container rest": ["Container vol", "Container storing", "Container kapot"],
     "Overig": ["Overige meldingen"]
 };
 
@@ -268,7 +269,7 @@ export default function NewIssuePage() {
       voorvaltijd: format(new Date(), 'HH:mm'), 
       hoofdcategorie: '', 
       subcategorie: '',
-      plaats: 'Bodegraven-Reeuwijk', // Standaard plaats
+      plaats: 'Bodegraven-Reeuwijk', 
     },
   });
 
@@ -290,14 +291,12 @@ export default function NewIssuePage() {
     }
   }, [existingMelding, form]);
 
-  // Geocoding logic: Watch address fields and update location
   const watchStraat = form.watch('straatnaam');
   const watchHuisnummer = form.watch('huisnummer');
   const watchPlaats = form.watch('plaats');
 
   React.useEffect(() => {
     const geocodeAddress = async () => {
-      // Only geocode if we have at least street and city
       if (!watchStraat || !watchPlaats || isReadOnly) return;
       
       const fullAddress = `${watchStraat} ${watchHuisnummer || ''}, ${watchPlaats}, Nederland`;
@@ -315,7 +314,6 @@ export default function NewIssuePage() {
       }
     };
 
-    // Debounce to prevent too many API calls while typing
     const timer = setTimeout(geocodeAddress, 800);
     return () => clearTimeout(timer);
   }, [watchStraat, watchHuisnummer, watchPlaats, isReadOnly]);
@@ -439,6 +437,9 @@ export default function NewIssuePage() {
                     <FormField control={form.control} name="plaats" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold" /></FormControl></FormItem>)} />
                   </FormRow>
                 </div>
+                <FormRow label="Postcode">
+                  <FormField control={form.control} name="postcode" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-11 font-bold" /></FormControl></FormItem>)} />
+                </FormRow>
               </AccordionContent>
             </AccordionItem>
 
@@ -466,7 +467,7 @@ export default function NewIssuePage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-4">
-              <Card className="rounded-2xl bg-white shadow-sm border-slate-200 overflow-hidden">
+              <Card className="rounded-2xl bg-white shadow-sm border-slate-200 overflow-visible">
                 <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Hoofdgegevens</CardTitle></CardHeader>
                 <CardContent className="p-4 pt-2">
                   <FormRow label={<>Meldingsnummer<span className="text-red-500">*</span></>}>
@@ -520,15 +521,13 @@ export default function NewIssuePage() {
 
               <Card className="rounded-2xl bg-white shadow-sm border-slate-200 overflow-hidden">
                 <CardHeader className="bg-slate-50 border-b py-2 px-4"><CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Locatie & Gebied</CardTitle></CardHeader>
-                <CardContent className="p-4 pt-2">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="sm:col-span-2"><FormRow label={<>Straatnaam<span className="text-red-500">*</span></>}><FormField control={form.control} name="straatnaam" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow></div>
-                    <FormRow label={<>Huisnr.<span className="text-red-500">*</span></>}><FormField control={form.control} name="huisnummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
-                  </div>
+                <CardContent className="p-4 pt-2 space-y-3">
+                  <FormRow label={<>Straatnaam<span className="text-red-500">*</span></>}><FormField control={form.control} name="straatnaam" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
                   <div className="grid grid-cols-2 gap-3">
+                    <FormRow label={<>Huisnr.<span className="text-red-500">*</span></>}><FormField control={form.control} name="huisnummer" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
                     <FormRow label="Plaats"><FormField control={form.control} name="plaats" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
-                    <FormRow label="Postcode"><FormField control={form.control} name="postcode" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
                   </div>
+                  <FormRow label="Postcode"><FormField control={form.control} name="postcode" render={({ field }) => (<FormItem><FormControl><Input {...field} value={field.value || ''} disabled={isReadOnly} className="h-8 text-xs font-bold" /></FormControl></FormItem>)} /></FormRow>
                 </CardContent>
               </Card>
             </div>
