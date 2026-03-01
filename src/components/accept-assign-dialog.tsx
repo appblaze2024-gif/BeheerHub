@@ -67,7 +67,7 @@ export function AcceptAssignDialog({ open, onOpenChange, melding, onSuccess }: A
       const meldingRef = doc(firestore, 'meldingen', melding.id);
       const behandelaarName = selectedUser.displayName || selectedUser.email || 'Onbekend';
       
-      await updateDocumentNonBlocking(meldingRef, {
+      updateDocumentNonBlocking(meldingRef, {
         status: 'In behandeling',
         behandelaar: behandelaarName,
         updatedAt: new Date().toISOString()
@@ -78,8 +78,9 @@ export function AcceptAssignDialog({ open, onOpenChange, melding, onSuccess }: A
         description: `Melding ${melding.intakenummer} is toegewezen aan ${behandelaarName}.`,
       });
       
-      onSuccess();
+      // Close dialog before triggering potential parent state updates to avoid freezing
       onOpenChange(false);
+      onSuccess();
     } catch (error) {
       console.error("Error assigning melding:", error);
       toast({

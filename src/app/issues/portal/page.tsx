@@ -93,7 +93,7 @@ export default function MeldingenportaalPage() {
     if (!firestore) return;
     const mRef = doc(firestore, 'meldingen', melding.id);
     try {
-        await updateDocumentNonBlocking(mRef, { 
+        updateDocumentNonBlocking(mRef, { 
             status: newStatus,
             updatedAt: new Date().toISOString()
         });
@@ -168,10 +168,10 @@ export default function MeldingenportaalPage() {
                                                     <MoreHorizontal className="h-5 w-5" />
                                                 </Button>
                                             </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="w-56 rounded-2xl shadow-xl p-2 border-slate-100">
-                                                <DropdownMenuItem onClick={() => handleOpenAccept(melding)} className="font-bold rounded-xl h-11 cursor-pointer">Accepteren</DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => handleOpenForward(melding)} className="font-bold rounded-xl h-11 cursor-pointer"><Mail className="mr-2 h-4 w-4 text-primary" />Extern doorzetten</DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => handleStatusChange(melding, 'Geweigerd')} className="font-bold rounded-xl h-11 text-red-600 cursor-pointer"><XCircle className="mr-2 h-4 w-4" />Weigeren</DropdownMenuItem>
+                                            <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-xl p-2 border-slate-100">
+                                                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleOpenAccept(melding); }} className="font-bold rounded-xl h-11 cursor-pointer">Accepteren</DropdownMenuItem>
+                                                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleOpenForward(melding); }} className="font-bold rounded-xl h-11 cursor-pointer"><Mail className="mr-2 h-4 w-4 text-primary" />Extern doorzetten</DropdownMenuItem>
+                                                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleStatusChange(melding, 'Geweigerd'); }} className="font-bold rounded-xl h-11 text-red-600 cursor-pointer"><XCircle className="mr-2 h-4 w-4" />Weigeren</DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </div>

@@ -63,6 +63,11 @@ html, body, #__next__ {
   height: 100%;
 }
 
+/* Fix for Radix UI Dialogs/Dropdowns leaving body in pointer-events: none state */
+body[style*="pointer-events: none"] {
+  pointer-events: auto !important;
+}
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
